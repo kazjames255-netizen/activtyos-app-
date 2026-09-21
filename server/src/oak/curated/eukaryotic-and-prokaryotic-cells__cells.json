@@ -1,0 +1,648 @@
+{
+  "agent": "w4-comb-bio",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify that all cells have some structures in common and I can explain that all organisms are unicellular or multicellular."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "All living things are made of {cells}"
+            },
+            {
+              "title": "{Unicellular} or {multicellular}?"
+            },
+            {
+              "title": "{Sub-cellular} structures and their jobs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "organism",
+              "def": "A living thing made of one or more cells."
+            },
+            {
+              "term": "cell",
+              "def": "The basic unit of all forms of life."
+            },
+            {
+              "term": "multicellular",
+              "def": "An organism made of many cells."
+            },
+            {
+              "term": "micro-organism",
+              "def": "An organism that can only be viewed through a microscope."
+            },
+            {
+              "term": "unicellular",
+              "def": "An organism that consists of a single cell."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Everything alive is made of cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All organisms, including animals, plants, fungi and micro-organisms, are made up of one or more living cells."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Animals"
+            },
+            {
+              "title": "Plants"
+            },
+            {
+              "title": "Fungi"
+            },
+            {
+              "title": "Micro-organisms"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Effectively, everything alive is made up of {cells}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Unicellular or multicellular?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some living organisms are multicellular. Some are unicellular. Tap each word to break it down."
+        },
+        {
+          "t": "roots",
+          "items": [
+            {
+              "word": "{multi}cellular",
+              "root": "multi = many, cellular = made of cells. So multicellular means made up of many cells."
+            },
+            {
+              "word": "{uni}cellular",
+              "root": "uni = one, cellular = made of cells. So unicellular means made up of one cell."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Think of a unicycle: a bike with only one wheel. **Uni** means one."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Multicellular organisms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Many animals and plants are multicellular. Most things that we see in everyday life are multicellular."
+        },
+        {
+          "t": "text",
+          "text": "Their cells are organised in a hierarchy. The smallest part of an organism is always the cell."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Lots of similar cells work together to form a **tissue**.",
+            "Different tissues work together to form an **organ**, which has a specific job.",
+            "Several organs work together to form an **organ system**.",
+            "Different organ systems work together to form the whole **organism**."
+          ]
+        },
+        {
+          "t": "chips",
+          "items": [
+            "cell",
+            "tissue",
+            "organ",
+            "organ system",
+            "organism"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plants have tissues and organs too",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It is a mistake to think that only animals have tissues, organs and organ systems. Plants do too. Think about a plant:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Cells",
+              "sub": "lots of different types"
+            },
+            {
+              "title": "Tissues",
+              "sub": "different tissues make up the leaf"
+            },
+            {
+              "title": "Organ",
+              "sub": "the leaf"
+            },
+            {
+              "title": "Organ system",
+              "sub": "the root system or the shoot system"
+            },
+            {
+              "title": "Organism",
+              "sub": "the whole plant"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Tissues are not only found in animals. Many multicellular organisms have tissues, for example mesophyll tissue in plants."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Unicellular organisms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Micro-organisms such as bacteria are unicellular. They are made of just one cell."
+        },
+        {
+          "t": "text",
+          "text": "E. coli bacteria are tiny rod-shaped organisms. Each rod is one whole organism, made of one cell. They are extremely small, so we need a microscope to see them."
+        },
+        {
+          "t": "callout",
+          "text": "**Unicellular** = one cell. **Multicellular** = many cells."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Not just bacteria!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are also unicellular organisms that are not bacteria. Phytoplankton are unicellular plant-like organisms. Amoeba are unicellular protists."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Bacteria are unicellular, but they are not the only unicellular organisms. So it is wrong to say that all unicellular organisms are bacteria."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is a unicellular organism that is not a bacterium?",
+          "options": [
+            "amoeba",
+            "E. coli",
+            "rose bush"
+          ],
+          "answer": 0,
+          "why": "An amoeba is a unicellular protist. E. coli is a bacterium and a rose bush is a multicellular plant."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Unicellular or multicellular?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each organism in the correct column.",
+          "columns": [
+            "Unicellular",
+            "Multicellular"
+          ],
+          "items": [
+            {
+              "text": "human",
+              "col": 1
+            },
+            {
+              "text": "E. coli bacterium",
+              "col": 0
+            },
+            {
+              "text": "rose bush",
+              "col": 1
+            },
+            {
+              "text": "amoeba",
+              "col": 0
+            },
+            {
+              "text": "orca",
+              "col": 1
+            },
+            {
+              "text": "phytoplankton",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Inside cells: the structures",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Cells are three-dimensional and have different shapes and sub-cellular structures depending on their functions. Cells are hard to draw in 3D, so they are often drawn as 2D diagrams."
+        },
+        {
+          "t": "text",
+          "text": "A typical animal cell has these sub-cellular structures:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Nucleus"
+            },
+            {
+              "title": "Cell membrane"
+            },
+            {
+              "title": "Cytoplasm"
+            },
+            {
+              "title": "Mitochondria"
+            },
+            {
+              "title": "Ribosomes"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A typical plant cell has all of these, and also three extra structures:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "cell wall",
+            "chloroplasts",
+            "large permanent vacuole"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "All cells have some structures in common: the {cell membrane} and the {cytoplasm}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do the structures do?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each sub-cellular structure has a specific function. Tap a structure to see its job."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell membrane",
+              "def": "Controls what enters and exits the cell. It is partially permeable: it lets some substances diffuse through but not others, which helps regulate the cell’s internal environment."
+            },
+            {
+              "term": "cytoplasm",
+              "def": "A jelly-like substance with dissolved nutrients and salts. It surrounds the sub-cellular structures and is where many chemical reactions essential to life take place."
+            },
+            {
+              "term": "nucleus",
+              "def": "Contains DNA (genetic information), which controls the activities of the cell."
+            },
+            {
+              "term": "ribosomes",
+              "def": "Very small structures where protein synthesis takes place. Synthesis means to make."
+            },
+            {
+              "term": "mitochondria",
+              "def": "Where aerobic respiration occurs. This releases a lot of energy for cellular processes. One is a mitochondrion."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Extra structures in plant cells",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell wall",
+              "def": "The outermost layer of a plant cell. It contains cellulose, which provides strength and support to the cell."
+            },
+            {
+              "term": "chloroplast",
+              "def": "The site of photosynthesis. It contains a green pigment called chlorophyll that absorbs sunlight."
+            },
+            {
+              "term": "permanent vacuole",
+              "def": "Contains sap, which helps keep the cell turgid."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why don’t animal cells need chloroplasts?",
+          "text": "Plants make glucose through photosynthesis, and this happens in the chloroplasts. Animals get their glucose from food and drink, so they do not need chloroplasts."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "In both, or in plant cells only?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each structure in the correct column.",
+          "columns": [
+            "Plant and animal cells",
+            "Plant cells only"
+          ],
+          "items": [
+            {
+              "text": "nucleus",
+              "col": 0
+            },
+            {
+              "text": "cell wall",
+              "col": 1
+            },
+            {
+              "text": "cytoplasm",
+              "col": 0
+            },
+            {
+              "text": "chloroplast",
+              "col": 1
+            },
+            {
+              "text": "ribosomes",
+              "col": 0
+            },
+            {
+              "text": "permanent vacuole",
+              "col": 1
+            },
+            {
+              "text": "mitochondria",
+              "col": 0
+            },
+            {
+              "text": "cell membrane",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Structure or job?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "A cell needs to make proteins. Which structures do this?",
+              "options": [
+                "nucleus",
+                "ribosomes",
+                "cell wall"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which is the outermost layer of a plant cell?",
+              "options": [
+                "cell wall",
+                "cell membrane",
+                "chloroplast"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Where does aerobic respiration take place?",
+              "options": [
+                "ribosomes",
+                "nucleus",
+                "mitochondria"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which structure contains cell sap?",
+              "options": [
+                "chloroplast",
+                "permanent vacuole",
+                "nucleus"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why do animal cells not need chloroplasts?",
+              "options": [
+                "Animals get glucose from food and drink",
+                "Animals make glucose in the nucleus",
+                "Animals do not need glucose"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "All organisms are made up of one or more living cells.",
+            "All cells have some structures in common and have a three-dimensional shape.",
+            "Chemical reactions essential to life occur in the cytoplasm, and the cell membrane regulates the cell’s internal environment.",
+            "Many animals and plants are multicellular: many cells organised to form tissues and organs.",
+            "Micro-organisms such as bacteria are unicellular: they are made of just one cell."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an organism?",
+      "back": "A living thing made of one or more cells."
+    },
+    {
+      "front": "What is a cell?",
+      "back": "The basic unit of all forms of life."
+    },
+    {
+      "front": "What does multicellular mean?",
+      "back": "An organism made of many cells.\n\nmulti = many"
+    },
+    {
+      "front": "What does unicellular mean?",
+      "back": "An organism that consists of a single cell.\n\nuni = one (like a unicycle)"
+    },
+    {
+      "front": "What is a micro-organism?",
+      "back": "An organism that can only be viewed through a microscope.\n\nExample: bacteria, which are unicellular."
+    },
+    {
+      "front": "Are all unicellular organisms bacteria?",
+      "back": "No.\n\nPhytoplankton are unicellular plant-like organisms and amoeba are unicellular protists."
+    },
+    {
+      "front": "In a multicellular organism, what do lots of similar cells working together form?",
+      "back": "A tissue.\n\nTissues form organs, organs form organ systems and organ systems form the organism."
+    },
+    {
+      "front": "Which two structures do all cells have in common?",
+      "back": "The cell membrane and the cytoplasm."
+    },
+    {
+      "front": "What does the cell membrane do?",
+      "back": "It controls what enters and exits the cell.\n\nIt is partially permeable: it lets some substances through but not others."
+    },
+    {
+      "front": "What is the cytoplasm?",
+      "back": "A jelly-like substance containing dissolved nutrients and salts.\n\nMany chemical reactions essential to life take place here."
+    },
+    {
+      "front": "Which three structures do plant cells have that animal cells do not?",
+      "back": "The cell wall, chloroplasts and a large permanent vacuole."
+    },
+    {
+      "front": "Where does aerobic respiration take place in a cell?",
+      "back": "In the mitochondria (one is a mitochondrion).\n\nA lot of energy is released."
+    },
+    {
+      "front": "What is the job of the ribosomes?",
+      "back": "Protein synthesis: this is where proteins are made."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Cells",
+    "instructions": "Write a short answer to each question. Use the words from the lesson.",
+    "questions": [
+      {
+        "prompt": "Which structure of a plant cell contains chlorophyll and is where photosynthesis takes place?",
+        "answer": "chloroplast",
+        "explanation": "Chloroplasts contain the green pigment chlorophyll and are the site of photosynthesis."
+      },
+      {
+        "prompt": "Which sub-cellular structures are where protein synthesis occurs?",
+        "answer": "ribosomes",
+        "accepted": [
+          "ribosome"
+        ],
+        "explanation": "Ribosomes are very small structures where proteins are made (synthesised)."
+      },
+      {
+        "prompt": "Which sub-cellular structure is where energy is released through aerobic respiration?",
+        "answer": "mitochondria",
+        "accepted": [
+          "mitochondrion"
+        ],
+        "explanation": "Aerobic respiration occurs in the mitochondria, releasing a lot of energy."
+      },
+      {
+        "prompt": "Which sub-cellular structure contains DNA, which controls the activities of the cell?",
+        "answer": "nucleus",
+        "explanation": "The nucleus contains the genetic information (DNA) that controls the cell’s activities."
+      },
+      {
+        "prompt": "What is the name of the jelly-like substance in a cell where many chemical reactions take place?",
+        "answer": "cytoplasm",
+        "explanation": "The cytoplasm contains dissolved nutrients and salts, and is where many chemical reactions essential to life take place."
+      },
+      {
+        "prompt": "Which substance in the cell wall provides strength and support to the plant cell?",
+        "answer": "cellulose",
+        "explanation": "The cell wall contains cellulose, which strengthens and supports the cell."
+      },
+      {
+        "prompt": "A permanent ___ is a structure filled with cell sap that helps keep a plant cell turgid. Write the missing word.",
+        "answer": "vacuole",
+        "explanation": "The permanent vacuole contains sap, which helps keep the cell turgid."
+      },
+      {
+        "prompt": "Which structure controls what enters and exits the cell? (two words)",
+        "answer": "cell membrane",
+        "accepted": [
+          "the cell membrane"
+        ],
+        "explanation": "The partially permeable cell membrane controls what enters and exits the cell."
+      },
+      {
+        "prompt": "What word describes an organism that consists of a single cell?",
+        "answer": "unicellular",
+        "explanation": "Uni means one, so unicellular organisms are made of one cell."
+      },
+      {
+        "prompt": "What word describes an organism made of many cells?",
+        "answer": "multicellular",
+        "explanation": "Multi means many, so multicellular organisms are made of many cells."
+      },
+      {
+        "prompt": "In a multicellular organism, cells form tissues. Tissues form ___, which form organ systems. Write the missing word.",
+        "answer": "organs",
+        "accepted": [
+          "organ"
+        ],
+        "explanation": "The order is cell, tissue, organ, organ system, organism."
+      },
+      {
+        "prompt": "How many cells is a bacterium made of? Write a number.",
+        "answer": "1",
+        "accepted": [
+          "one"
+        ],
+        "explanation": "Bacteria are unicellular: they are made of just one cell."
+      }
+    ]
+  }
+}

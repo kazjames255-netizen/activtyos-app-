@@ -813,6 +813,8 @@ tags:
   - name: meta
   - name: ai
     description: AI assistant — plain-English Q&A over the caller's own live data (read-only)
+  - name: learning-hub
+    description: Learning Hub (tutoring) — topics, notes, questions, quizzes & diagnostics, attempts, mastery, homework, flashcards, live lessons
   - name: platform-hq
     description: Platform (HQ) tools — the sales pipeline and the support inbox (platform role only; bug reports come from any signed-in account)
 
@@ -1610,7 +1612,12 @@ paths:
       description: |
         Body `{dataUrl}` — a base64 `data:image/*` URL (the builder's
         canvas-compressed JPEGs). Returns the public URL to store in the
-        listing/library. Max ~900KB decoded.
+        listing/library. Max 750KB decoded (= 1,000,000 base64 chars, so the
+        image doc stays under Firestore's 1MiB; the old 900KB cap overflowed it
+        and 500'd). `purpose:"private"` = a signed, expiring link (children's
+        photos, receipts; staff may upload these only); a PDF is private-only
+        and capped on its base64 (~750KB). `kind:"hub"` tags a Learning Hub
+        worksheet/resource — only files tagged so can be attached to a hub note.
       requestBody:
         required: true
         content:
@@ -1620,6 +1627,8 @@ paths:
               required: [dataUrl]
               properties:
                 dataUrl: { type: string, example: "data:image/jpeg;base64,/9j/4AAQ…" }
+                purpose: { type: string, enum: [public, private], default: public }
+                kind: { type: string, enum: [hub] }
       responses:
         "201":
           description: Uploaded
@@ -2572,7 +2581,7 @@ paths:
     post:
       tags: [platform-hq]
       summary: Create a lead
-      description: "Enums: source cold_call|email|social|referral|event|inbound; plan freelancer|company|franchise; stage new|contacted|interested|demo|trial|won|lost. Server stamps createdAt/updatedAt/createdBy. PUT /api/platform/leads/{id} updates/moves stage; DELETE removes; POST /{id}/activities appends {type,note,outcome?} (server stamps at/by); POST /bulk imports an array, deduped by email, returns {added,skipped}. On signup, register-role auto-converts a matching open lead (email OR phone digits OR business name) to stage won with a \"Signed up 🎉\" activity."
+      description: "Enums: source cold_call|email|social|referral|event|inbound; plan freelancer|company|franchise; stage new|contacted|interested|demo|trial|won|lost. Server stamps createdAt/updatedAt/createdBy. GET /api/platform/leads/{id} returns one lead (the in-portal call page); PUT /api/platform/leads/{id} updates/moves stage; DELETE removes; POST /{id}/activities appends {type,note,outcome?} (server stamps at/by); POST /bulk imports an array, deduped by email, returns {added,skipped}. On signup, register-role auto-converts a matching open lead (email OR phone digits OR business name) to stage won with a \"Signed up 🎉\" activity."
       responses: { "201": { description: The created lead }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
 
   /api/platform/support:
@@ -4157,6 +4166,1768 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  # ── Learning Hub: questions, assessments, attempts, mastery (agent B1) ──────────
+  /api/learning-hub/config:
+    get:
+      tags: [learning-hub]
+      summary: The hub's settings (question kinds, pass mark, reveal policy, mastery bands, retake policy, year groups)
+      description: >
+        `settings.hub` merged over the defaults. Parents pass `?tenantId=` (an
+        enrolled provider); operators use their own tenant. Also returns `bands`
+        (the mastery bands, lowest first), `limits` (what `PUT /config` accepts and the
+        caps other endpoints enforce) and `groupColours` (the palette ids a student group may use).
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+      responses:
+        "200":
+          description: The merged config
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubConfig" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [learning-hub]
+      summary: Change the hub's own settings from the hub (tutors)
+      description: >
+        `{hub: Partial<HubSettings>}` — validated, merged into the caller's OWN library `settings.hub`
+        (a franchise and its staff edit their own Setup, not head office's), and applied at once.
+        Staff need the Learning Hub area on Edit. Editable keys: `masteryBands` (2–8 levels, first `min` 0,
+        strictly ascending whole-number `min`s 0–100, unique 1–24-character labels), `passMarkPct` 0–100,
+        `requireDiagnostic`, `revealAnswers` (`after_pass` default | `after_submit` | `after_marked` | `never`), `homeworkDueDays` 1–90, `srsMinEase` 1.1–2.5, `retakePolicy`,
+        `retakeCooldownHours` 1–720, `retakeBreakAfter` 0–10 (0 = off), `retakeBreakMinutes` 5–720, `yearGroups` (1–30 labels of ≤24 characters, de-duplicated), `subjectColours` (the WHOLE map of lower-cased subject name → palette key, ≤80 entries; keys: blue, green, red, purple, orange, teal, pink, amber, indigo, slate; a subject left out wears its default colour).
+        `questionKinds` and unknown keys are refused (400). The response is the same body as `GET /config`
+        (the merged settings are `hub`, and are also spread at the top level).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [hub]
+              properties:
+                hub: { $ref: "#/components/schemas/HubSettings" }
+      responses:
+        "200":
+          description: The merged config
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubConfig" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/questions:
+    get:
+      tags: [learning-hub]
+      summary: The question bank (tutors only) — filterable, paginated
+      description: >
+        Full questions, answer key included, oldest first. `topicId` (or a comma list `topicIds`) also pulls in that
+        topic's subtopics. **Scale (~5,000 questions per provider):** an un-paged call returns AT MOST 200 rows
+        (`X-Total-Count` says how many match); pass `?limit=&cursor=` to get `{items, total, nextCursor}` (default 50, max 200).
+        `light=1` drops options / answer key / explanation from every row (`{id, topicId, kind, prompt (≤200 chars), marks,
+        published, hasImage, franchiseId, usedBy, updatedAt}`) — use `GET /questions/{id}` to open one. Extra filters:
+        `subject`, `kind`, `published=0|1`, `q` (text in the prompt), `sort=topic` (subject › topic › subtopic, then prompt A–Z) or `sort=prompt` (prompt A–Z); the default is oldest first.
+      parameters:
+        - { name: topicId, in: query, schema: { type: string } }
+        - { name: topicIds, in: query, schema: { type: string }, description: "Comma list of topic ids (each includes its subtopics)" }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: kind, in: query, schema: { type: string } }
+        - { name: published, in: query, schema: { type: string, enum: ["0", "1"] } }
+        - { name: q, in: query, schema: { type: string }, description: "Case-insensitive text in the prompt" }
+        - { name: light, in: query, schema: { type: string, enum: ["1"] } }
+        - { name: sort, in: query, schema: { type: string, enum: [topic, prompt] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 }, description: "Turns the reply into {items,total,nextCursor}" }
+        - { name: cursor, in: query, schema: { type: string }, description: "`nextCursor` from the previous page" }
+      responses:
+        "200":
+          description: Questions (an array, or `{items,total,nextCursor}` when `limit`/`cursor` is given)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HubQuestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Add a question (tutors only)
+      description: >
+        Validated against the marking rule of `kind` (`settings.hub.questionKinds`):
+        choice needs 2+ options and one correct option id; multi a set of option ids;
+        exact a string (+ `acceptedAnswers`); numeric a number (+ `tolerance`);
+        match 3–8 `pairs` `[{term, definition, termImage?, definitionImage?}]` (both texts required, no pair twice);
+        order 2–8 `items` (strings) stored in the CORRECT order;
+        manual has no key. Option ids are generated when omitted. `match` / `order` have no `answer`: the key is
+        the pairing / the sequence itself, and it never reaches a student (see `HubAttemptStart`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HubQuestionInput" }
+      responses:
+        "201":
+          description: The created question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubQuestion" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/questions/counts:
+    get:
+      tags: [learning-hub]
+      summary: "Questions per topic (tutors) — `{ byTopic: { topicId: { total, published } } }`, own rows only (not rolled up)"
+      responses:
+        "200": { description: Counts }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/questions/{id}:
+    get:
+      tags: [learning-hub]
+      summary: One question in full (tutors) — answer key, options, explanation, signed picture links
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: The question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubQuestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [learning-hub]
+      summary: Replace a question
+      description: A question used by a published assessment can't be unpublished (409 `question_in_use`).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HubQuestionInput" }
+      responses:
+        "200":
+          description: The updated question
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubQuestion" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Used by a published assessment (`code` question_in_use) }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a question
+      description: Refused (409 `question_in_use`) while a published assessment uses it; draft assessments just lose the reference.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Used by a published assessment (`code` question_in_use) }
+
+  /api/learning-hub/assessments:
+    get:
+      tags: [learning-hub]
+      summary: List quizzes / diagnostics
+      description: >
+        Tutors: every visible assessment (with `questionIds`, drafts included).
+        Parents (`?tenantId=&childId=`): only PUBLISHED ones for the child's enrolled
+        subjects, as summaries (never questions), each with `lastAttempt`; quizzes
+        carry `locked`/`lockedReason` when `requireDiagnostic` applies, diagnostics
+        carry `done`. Every row returns its `audience`. **Audience:** a family sees only assessments that are
+        FOR their child (year group and age range both fit); a child whose year group / age is unknown still
+        sees them, flagged `audienceUnknown: true` — never silently hidden. Tutors see all, with
+        `eligibleCount` (students it is offered to: fits, or unknown) and `audienceUnknownCount`.
+        With a child (`childId`), each row adds `retake: {allowed, reason, nextAvailableAt}`.
+        **Scale (~500 papers per provider):** reads a cached copy of the assessment rows and the light question index —
+        never question documents or the attempts of other students. Extra filters: `yearGroup` (audience reaches it; an
+        "everyone" paper reaches every year), `published=0|1` (tutors), `q` (title), `light=1` (tutors: no `questionIds`; each
+        row carries `kindCounts` instead), `ids=a,b,c` (tutors, ≤300: just those papers — Results / Marking look up the rows
+        their attempts point at). `?limit=&cursor=` returns `{items, total, nextCursor, facets:{subjects:[{subject,count}],
+        yearGroups:[{yearGroup,count}], allYearGroups, anyYearTargeted, types:{quiz,diagnostic}, published, drafts}}` (default
+        40, max 100) — `subjects` / `types` count the matches WITHOUT that facet's own filter, so filter chips can show "Maths 12";
+        `yearGroups` lists every configured year group with the papers that reach it (an "everyone" paper counts for all),
+        `allYearGroups` the matches ignoring the year filter, `anyYearTargeted` whether any of them names year groups;
+        `published` / `drafts` split the matches. Without `limit`/`cursor` it is the plain array it always was — **the tutor UI
+        no longer reads the whole library** (8.5k papers = 4.9 MB); always page it.
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: childId, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string, enum: [quiz, diagnostic] } }
+        - { name: topicId, in: query, schema: { type: string } }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: yearGroup, in: query, schema: { type: string } }
+        - { name: published, in: query, schema: { type: string, enum: ["0", "1"] }, description: "Tutors only" }
+        - { name: q, in: query, schema: { type: string }, description: "Text in the title" }
+        - { name: light, in: query, schema: { type: string, enum: ["1"] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Assessments (an array, or the paged envelope with `facets` when `limit`/`cursor` is given)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HubAssessment" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Create an assessment (tutors only)
+      description: >
+        Every question must be in `subject`. Publishing needs at least one question, all
+        published. Several published diagnostics (placement tests) may share a subject when their
+        `audience`s differ; one with an IDENTICAL audience (same year-group set and age range) in the same
+        subject and tenant+franchise is refused (409 `diagnostic_exists`). A child's baseline is still set
+        once per (child, subject).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HubAssessmentInput" }
+      responses:
+        "201":
+          description: The created assessment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubAssessment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Another diagnostic with the same audience is already published for the subject (`diagnostic_exists`) }
+
+  /api/learning-hub/assessments/{id}:
+    get:
+      tags: [learning-hub]
+      summary: One assessment for the builder (tutors) — the row with `questionIds` and its questions as light rows, in order
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "The assessment + `questions: [{id, topicId, kind, prompt, marks, published}]`" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [learning-hub]
+      summary: Replace an assessment (type is immutable)
+      description: "`audience`, `retakePolicy` and `retakeCooldownHours`, when omitted, keep their stored values."
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HubAssessmentInput" }
+      responses:
+        "200":
+          description: The updated assessment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubAssessment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Another diagnostic with the same audience is already published for the subject (`diagnostic_exists`) }
+    delete:
+      tags: [learning-hub]
+      summary: Delete an assessment
+      description: Refused (409) once students have attempts (`has_attempts` — unpublish instead) or homework uses it (`in_use`).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Has attempts or is used by homework }
+
+  /api/learning-hub/assessments/{id}/attempts:
+    post:
+      tags: [learning-hub]
+      summary: Start an attempt
+      description: >
+        Parents pass `?tenantId=&childId=` (an enrolled child of theirs); a tutor may
+        start one for a student with body `childId`. Only PUBLISHED assessments, in the
+        child's enrolled subjects. Questions come back WITHOUT answer keys. A still-running
+        attempt is resumed (`resumed: true`). Refusals: 409 `diagnostic_required`
+        (`settings.hub.requireDiagnostic`, when a published diagnostic exists and the
+        subject has none taken/waived — only a published diagnostic FOR this child counts), 409 `diagnostic_done`,
+        409 `no_questions`, 409 `not_for_this_child` (the assessment's audience excludes this child's year group /
+        age; unknown year/age is let through), 409 `retake_blocked` (`reason` once | cooldown, `nextAvailableAt` —
+        the child already FINISHED it and the retake policy forbids another go; a running attempt is always resumed
+        and a tutor's `allow-retake` lets one more through). Pictures in the questions are short-lived signed links.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: childId, in: query, description: "Parents — required", schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string, description: Tutors starting on a student's behalf }
+                homeworkId: { type: string, nullable: true }
+      responses:
+        "200": { description: A running attempt resumed, content: { application/json: { schema: { $ref: "#/components/schemas/HubAttemptStart" } } } }
+        "201": { description: Started, content: { application/json: { schema: { $ref: "#/components/schemas/HubAttemptStart" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`diagnostic_required` | `diagnostic_done` | `no_questions` | `not_published` | `not_for_this_child` | `retake_blocked`" }
+
+  /api/learning-hub/attempts:
+    get:
+      tags: [learning-hub]
+      summary: List attempts, newest first
+      description: Parents — their child's (`childId` required unless they have one child); tutors — one child or every visible student.
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: childId, in: query, schema: { type: string } }
+        - { name: assessmentId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Attempt summaries (no answers)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/HubAttemptSummary" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/attempts/{id}:
+    get:
+      tags: [learning-hub]
+      summary: One attempt — the result with prompts
+      description: >
+        Running attempts return the (key-free) questions only. Submitted ones return
+        marks per answer; `correctAnswer`/`explanation` appear for tutors always and for
+        a family only when `settings.hub.revealAnswers` allows (`after_pass` (default: this attempt reached the pass mark,
+        or the child has passed this quiz before) | `after_submit` | `after_marked` | `never`). While `after_pass` holds the key back on a marked attempt the
+        result carries `keyHeld:true` (per-answer `correct` / marks are still sent; `correctAnswer`, `acceptedAnswers` and `explanation` are not). A foreign attempt is a 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      responses:
+        "200":
+          description: The attempt
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubAttemptResult" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/attempts/{id}/draft:
+    put:
+      tags: [learning-hub]
+      summary: Save a running attempt's answers-so-far (so Resume works on another device)
+      description: >
+        Body `{answers:[{questionId,response}], idx?}` (max 300 answers; each response cleaned like a submit; ids not in the attempt are dropped; empty
+        answers are not stored; whole draft capped at 200 KB, else 413 `draft_too_large`). REPLACES the previous draft. Not marked and never shown to anyone:
+        it only comes back as `draft:{answers,idx,savedAt}` on the attempt's own resume (`POST /assessments/{id}/attempts` with `resumed:true`) and is
+        deleted when the attempt is submitted. Only the attempt's OWNER may save it (the parent whose child it is, or the tutor who started it); anyone else
+        gets 404. A submitted attempt is 409 `already_submitted`. Writes no realtime ping.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers: { type: array, items: { type: object, required: [questionId], properties: { questionId: { type: string }, response: {} } } }
+                idx: { type: integer, minimum: 0, maximum: 299 }
+      responses:
+        "200": { description: "`{ok:true, savedAt}`" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`already_submitted`" }
+        "413": { description: "`draft_too_large`" }
+
+  /api/learning-hub/attempts/{id}/submit:
+    post:
+      tags: [learning-hub]
+      summary: Submit answers — the server marks them
+      description: >
+        Marking follows each question's `mark` rule. `manual` answers make the attempt
+        `pending_marking` (excluded from `pct` until a tutor marks). Mastery is recomputed.
+        Submitting twice is a 409 `already_submitted`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    required: [questionId]
+                    properties:
+                      questionId: { type: string }
+                      response: { description: "Option id (choice), option id[] (multi), text (exact/manual) or number/numeric text (numeric); match `{kind:\"match\", pairs:[{term, definition}]}` (a term-text paired with a definition-text); order `{kind:\"order\", items:[string]}` (the items in the student's sequence); omit/null = unanswered. match and order are all-or-nothing, compared trimmed / case-insensitive." }
+      responses:
+        "200":
+          description: The result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubAttemptResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Already submitted }
+
+  /api/learning-hub/attempts/{id}/mark:
+    put:
+      tags: [learning-hub]
+      summary: Award marks (tutors) — written answers, or override an auto-mark
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    required: [questionId, marksAwarded]
+                    properties:
+                      questionId: { type: string }
+                      marksAwarded: { type: number, minimum: 0 }
+                      feedback: { type: string }
+      responses:
+        "200":
+          description: The updated result (status `marked` once no answer is pending)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubAttemptResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Not submitted yet }
+
+  /api/learning-hub/attempts/{id}/reset-baseline:
+    post:
+      tags: [learning-hub]
+      summary: Let a student retake a diagnostic (tutors)
+      description: The attempt stops counting as the baseline; the student may sit that subject's diagnostic again.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Reset }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Not a submitted diagnostic }
+
+  /api/learning-hub/students/{childId}/diagnostic-waive:
+    post:
+      tags: [learning-hub]
+      summary: Waive (or re-require) a subject's diagnostic for a student (tutors)
+      description: A waived subject's quizzes aren't locked by `requireDiagnostic`.
+      parameters:
+        - { name: childId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject]
+              properties:
+                subject: { type: string }
+                waived: { type: boolean, default: true }
+      responses:
+        "200":
+          description: The subjects now waived (lower-cased)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  childId: { type: string }
+                  waived: { type: array, items: { type: string } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/mastery:
+    get:
+      tags: [learning-hub]
+      summary: One student's mastery dashboard
+      description: >
+        Computed fresh from the child's attempts. Per topic: weighted mastery of the last 5
+        marked quiz slices (weight 0.5^i, newest first) + band; diagnostics set `baselinePct`
+        once and never feed mastery. Subject rollup = mean of attempted topics, `coverage`
+        = attempted / topics with published questions (0..1), `growthPct` = mean
+        (mastery − baseline). Topics with only a baseline have `masteryPct: null`.
+        `trend` = last 20 marked quiz attempts, oldest first. `overall` is where the child ACTUALLY is
+        (mean of their attempted subjects → the tenant's band), `bands` the tenant's bands lowest first;
+        `overall` is null until something has been marked.
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: childId, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Mastery
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubMastery" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/mastery/overview:
+    get:
+      tags: [learning-hub]
+      summary: Every student at a glance (tutors)
+      description: Read from the stored `hubMastery` rows.
+      responses:
+        "200":
+          description: Students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        childId: { type: string }
+                        childName: { type: string }
+                        lastActive: { type: string, nullable: true }
+                        subjects:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              subject: { type: string }
+                              masteryPct: { type: integer }
+                              band: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/mastery/recompute:
+    post:
+      tags: [learning-hub]
+      summary: Rebuild the stored mastery rows (tutors)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string, description: Omit for every visible student }
+      responses:
+        "200":
+          description: Rebuilt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  children: { type: integer }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/assessments/{id}/allow-retake:
+    post:
+      tags: [learning-hub]
+      summary: Let one student have exactly one more attempt (tutors)
+      description: >
+        Idempotent; spent when the student starts the next attempt (or immediately lifts nothing if their retake
+        policy already allows one). Needs to see the assessment and teach the student (a franchise tutor may allow a
+        retake of a head-office quiz for their own student). Resetting a diagnostic baseline also grants one.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [childId], properties: { childId: { type: string } } }
+      responses:
+        "200": { description: "{ok, childId, assessmentId, retake:{allowed:true,…}}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Assessment or student not found (or not the caller's) }
+
+  /api/learning-hub/groups:
+    get:
+      tags: [learning-hub]
+      summary: Student groups with their members (tutors)
+      description: >
+        A tutor's named sets of enrolled students for quick actions (homework `assignedGroupIds`, lessons `groupIds`).
+        Scope is the student scope: tenant-level tutors see every group, a franchise its own. Families never see groups.
+      responses:
+        "200": { description: Groups, by name, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/HubGroup" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [learning-hub]
+      summary: Create a group (tutors)
+      description: Members must be ACTIVE enrolments in the caller's scope (404 otherwise). A child may be in many groups. Names are unique per scope (409 `group_exists`); up to 100 groups and 100 members each.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 60 }
+                colour: { type: string, description: "A `groupColours` id (default blue)" }
+                childIds: { type: array, items: { type: string }, maxItems: 100 }
+      responses:
+        "201": { description: The group, content: { application/json: { schema: { $ref: "#/components/schemas/HubGroup" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: A child isn't an enrolled active student of the caller }
+        "409": { description: Name already used (`group_exists`) }
+
+  /api/learning-hub/groups/{id}:
+    put:
+      tags: [learning-hub]
+      summary: Rename / recolour / change a group's members (tutors)
+      description: "`childIds` is the whole new membership. A student who is un-enrolled (`DELETE /students/{childId}`), paused (`active:false`) or erased (parent deletes the child) leaves every group."
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                colour: { type: string }
+                childIds: { type: array, items: { type: string } }
+      responses:
+        "200": { description: The group, content: { application/json: { schema: { $ref: "#/components/schemas/HubGroup" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Name already used (`group_exists`) }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a group (tutors) — homework and lessons already sent to it keep their students
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/students:
+    get:
+      tags: [learning-hub]
+      summary: The roster (tutors) / a family's enrolled children
+      description: >
+        Tutor rows: `{childId, childName, parentEmail, franchiseId, subjects, tutorUid, tutorName, active, createdAt,
+        yearGroup, yearGroupAuto, audienceUnknown}`. `yearGroup` is the year group NOW: as tagged by a tutor, or
+        (`yearGroupAuto: true`) worked out from the child's date of birth by the UK school-year rule (age on 31 August;
+        Reception = 4, Year 1 = 5 …) and kept current each September. `audienceUnknown` = neither a year group nor an age is known
+        (year-targeted assessments show for them flagged). The date of birth itself is never returned.
+      responses:
+        "200": { description: Students }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [learning-hub]
+      summary: Enrol a child (tutors; idempotent)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId]
+              properties:
+                childId: { type: string }
+                subjects: { type: array, items: { type: string } }
+                tutorUid: { type: string, nullable: true }
+                tutorName: { type: string }
+                yearGroup: { type: string, nullable: true, description: "Omit = automatic from the date of birth (only if the tenant's `yearGroups` has that label); a value = as tagged; null = unknown" }
+                yearGroupAuto: { type: boolean, description: "true = (re)derive from the date of birth" }
+      responses:
+        "200": { description: Re-enrolled }
+        "201": { description: Enrolled }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/tutors:
+    get:
+      tags: [learning-hub]
+      summary: The people a student can be assigned to (tutors)
+      description: "Owner + staff logins of this business in the caller's scope (a franchise: its own). `[{uid, name, role, me}]`. Enrolment `tutorUid` must be one of these (400 otherwise); a staff tutor enrolling a child takes them by default, an owner leaves them unassigned."
+      responses:
+        "200": { description: Tutors }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/family-invites:
+    get:
+      tags: [learning-hub]
+      summary: This business's family invite links (tutors)
+      description: "`[{id, token (pending only), status: pending|claimed|expired|revoked, forName, subjects, tutorName, createdAt, expiresAt, claimedAt, childNames}]`."
+      responses:
+        "200": { description: Invites }
+    post:
+      tags: [learning-hub]
+      summary: Make an invite link for a family who has not booked (tutors)
+      description: >
+        Returns `{token, url}` (`/custdash/learninghub?invite=<token>`). No email is sent: the tutor shares the link. Valid 30 days, bound to the
+        first parent account that accepts it. Optional `forName`, `subjects`, `yearGroup`, `tutorUid` are applied to the enrolment.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                forName: { type: string }
+                subjects: { type: array, items: { type: string } }
+                yearGroup: { type: string, nullable: true }
+                tutorUid: { type: string, nullable: true }
+      responses:
+        "201": { description: The invite }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/learning-hub/family-invites/{token}:
+    get:
+      tags: [learning-hub]
+      summary: A parent previews an invite (parents only)
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "`{providerName, tutorName, forName, subjects, alreadyEnrolled}`" }
+        "403": { description: Not a parent account }
+        "404": { description: Not a valid link }
+        "409": { description: "Used by another account (`invite_used`) or the hub is off (`feature_off`)" }
+        "410": { description: Expired or withdrawn }
+    delete:
+      tags: [learning-hub]
+      summary: Withdraw an unused invite (tutors)
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Withdrawn }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Already used }
+
+  /api/learning-hub/family-invites/{token}/accept:
+    post:
+      tags: [learning-hub]
+      summary: A parent enrols one of THEIR OWN children through an invite (parents only)
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId]
+              properties:
+                childId: { type: string, description: "Must be a child on the caller's own account (else 404)" }
+      responses:
+        "200": { description: Already enrolled / re-activated }
+        "201": { description: Enrolled }
+        "404": { description: Child not on this account, or invalid link }
+        "409": { description: Used by another account, or hub off }
+        "410": { description: Expired or withdrawn }
+
+  /api/learning-hub/students/{childId}:
+    put:
+      tags: [learning-hub]
+      summary: Change subjects / tutor / year group, or pause (tutors)
+      description: "`yearGroup` (string | null) tags the student; `yearGroupAuto: true` returns to automatic. `active:false` also removes the student from every group."
+      parameters:
+        - { name: childId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subjects: { type: array, items: { type: string } }
+                active: { type: boolean }
+                tutorUid: { type: string, nullable: true }
+                tutorName: { type: string }
+                yearGroup: { type: string, nullable: true }
+                yearGroupAuto: { type: boolean }
+      responses:
+        "200": { description: The updated student row }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [learning-hub]
+      summary: Un-enrol (soft) — the student also leaves every group
+      parameters:
+        - { name: childId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/notes:
+    get:
+      tags: [learning-hub]
+      summary: Course notes & resources (families see published ones only) — LIGHT list, no bodies
+      description: >
+        Each row carries `attachments[]` (signed links), `videos[]` (`HubVideo`, YouTube only), an `excerpt` (≤160 chars),
+        `hasBody` and `readMinutes` — but NOT the note `body` (a written library is ~1 MB of markdown that no list shows):
+        open one with `GET /notes/{id}`. `?full=1` restores the old shape (body on every row, read for just the returned rows).
+        Extra filters: `subject`, `q` (title + body, case-insensitive), `published=0|1` (tutors), `ids=a,b,c`, `sort=topic`
+        (subject › topic › subtopic, then title; default is title). `?limit=&cursor=` returns `{items, total, nextCursor}`
+        (default 60, max 200); without them the reply is still a plain array.
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: topicId, in: query, schema: { type: string } }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: year, in: query, schema: { type: integer, minimum: 1, maximum: 13 }, description: "Lessons for that school year (the lesson's own `year`, or a topic whose subtopic is \"Year N\"). List rows of interactive lessons carry `lessonYear`." }
+        - { name: lessons, in: query, schema: { type: string, enum: ["1"] }, description: "Interactive lessons only" }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: ids, in: query, schema: { type: string }, description: "Comma list of note ids" }
+        - { name: full, in: query, schema: { type: string, enum: ["1"] }, description: "Legacy shape: include `body`" }
+        - { name: sort, in: query, schema: { type: string, enum: [topic] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200": { description: "Notes (array, or `{items,total,nextCursor}` when `limit`/`cursor` is given)" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Add a note (tutors)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [topicId, title]
+              properties:
+                topicId: { type: string }
+                title: { type: string }
+                body: { type: string }
+                published: { type: boolean }
+                attachments: { type: array, items: { type: object } }
+                videos: { type: array, maxItems: 6, items: { $ref: "#/components/schemas/HubVideoInput" }, description: "YouTube links only; omitted on PUT = keep, [] = clear" }
+      responses:
+        "201": { description: The note }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/notes/counts:
+    get:
+      tags: [learning-hub]
+      summary: "Note counts without listing notes — `{ total, drafts, files, fresh (created in the last 7 days), byTopic: { topicId: n } }` (own rows per topic; same visibility as GET /notes)"
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+      responses:
+        "200": { description: Counts }
+
+  /api/learning-hub/notes/{id}:
+    get:
+      tags: [learning-hub]
+      summary: "One note WITH its `body` (a family never gets a draft; a foreign / out-of-scope id is 404)"
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: The note }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [learning-hub]
+      summary: Replace a note (tutors) — same body as POST; omitted `videos` keeps the current ones
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: The note }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a note (tutors)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "{ok:true}" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/learning-hub/notes/{id}/homework-pack:
+    get:
+      tags: [learning-hub]
+      summary: "Ready-made homework for a lesson (tutors) — built on the fly from the lesson's own data, nothing stored"
+      description: |
+        Pure function `server/src/lib/hubHomeworkPack.ts`. Returns `{noteId, title ("Homework: <lesson title>"), instructions (goal, revise the key ideas + key words,
+        do the lesson quiz, review the lesson's N flashcards, hand in), dueInDays (settings.hub.homeworkDueDays), dueAt, noteIds:[noteId], assessmentId (the lesson's exit quiz, or null),
+        quiz {id,title,questionCount,published}|null, flashcardTopicId + flashcardCount (only when the lesson has published cards), year ("5"|null), interactive, worksheetAssessmentId, basis}`.
+        Only facts already in the lesson are used. Feed it (edited or not) to `POST /homework` — that request shape is unchanged.
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: The suggested homework }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── learning-hub: homework, flashcards & live lessons (docs/learning-hub.md) ──
+  # Parents pass ?tenantId= (the provider) on every call and, where noted, ?childId=
+  # (one of THEIR enrolled children). Foreign ids are always 404. Parent emails are never returned.
+  /api/learning-hub/homework:
+    get:
+      tags: [learning-hub]
+      summary: Homework — tutors' list with progress counts; a family's rows per enrolled child
+      description: >
+        **Tutor** → `[{id,title,instructions,assessmentId,noteIds,flashcardTopicId,dueAt,assignedChildIds,counts:{assigned,submitted,marked},…}]`.
+        **Parent** (`?tenantId=`, optional `?childId=`) → one row per (homework, enrolled child):
+        `[{id,childId,childName,title,instructions,dueAt,assessmentId,flashcardTopicId,notes:[{id,title,interactive}],submission:{id,status,text,attachments[],attemptId,submittedAt,mark,late}}]`.
+        Only published notes are listed (`interactive` = an interactive lesson the pupil opens in the lesson player); the mark never carries the marker's uid.
+      parameters:
+        - { name: tenantId, in: query, schema: { type: string }, description: "Parents only — the provider" }
+        - { name: childId, in: query, schema: { type: string }, description: "Parents only — narrow to one enrolled child" }
+      responses:
+        "200": { description: Array of homework rows }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Set homework and assign it (tutors) — creates one submission per enrolled, active, in-scope child
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              description: At least one student must result — from `assignedChildIds`, from the members of `assignedGroupIds`, or both (the union).
+              properties:
+                title: { type: string }
+                instructions: { type: string }
+                assessmentId: { type: string, nullable: true, description: "A PUBLISHED quiz of this provider" }
+                noteIds: { type: array, items: { type: string } }
+                flashcardTopicId: { type: string, nullable: true }
+                dueAt: { type: string, description: "ISO date-time or YYYY-MM-DD (end of that day). Default = now + settings.hub.homeworkDueDays" }
+                assignedChildIds: { type: array, items: { type: string }, maxItems: 100 }
+                assignedGroupIds: { type: array, items: { type: string }, maxItems: 20, description: "Student groups (404 if not the caller's). Their currently ACTIVE members are added to the students; the row stores `groupIds` for display. On PUT, naming only groups ADDS their members." }
+                videos: { type: array, maxItems: 6, items: { $ref: "#/components/schemas/HubVideoInput" }, description: "YouTube links only; omitted on PUT = keep, [] = clear. Rows return `videos[]` (HubVideo)." }
+      responses:
+        "201": { description: The homework (with `counts`); assigned families get a `learning` notification }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: A child isn't an enrolled active student of the caller, or a referenced quiz/note/topic isn't theirs }
+
+  /api/learning-hub/homework/inbox:
+    get:
+      tags: [learning-hub]
+      summary: The marking inbox (tutors)
+      description: >
+        `[{submissionId,homeworkId,title,childId,childName,status,submittedAt,dueAt,attemptPending}]`
+        plus `text`, `attachments[]` (signed links), `attemptId`, `mark`, `late`, `franchiseId` so a marking screen needs no second call.
+        Ordered submitted (oldest first) → assigned → marked.
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [submitted, marked, assigned] } }]
+      responses:
+        "200": { description: Array of inbox rows }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/homework/{id}:
+    put:
+      tags: [learning-hub]
+      summary: Edit homework (tutors) — any subset of the create fields
+      description: >
+        Adding children creates their submissions (and notifies them); removing a child drops their submission only
+        while it is still `assigned` — a submitted or marked one is kept.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The updated homework }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [learning-hub]
+      summary: Delete homework and every child's submission of it (tutors)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/submissions/{id}/mark:
+    put:
+      tags: [learning-hub]
+      summary: Mark a submission (tutors) — {score, max, feedback}
+      description: Sets status `marked` and notifies the family (first mark only). `score` ≤ `max`; a never-submitted (paper) homework can be marked too.
+      parameters: [{ name: id, in: path, required: true, description: "`${homeworkId}__${childId}`", schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [score, max]
+              properties:
+                score: { type: number, minimum: 0 }
+                max: { type: number, exclusiveMinimum: 0 }
+                feedback: { type: string }
+      responses:
+        "200": { description: "{id, homeworkId, childId, status:'marked', mark}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/submissions/{id}/files:
+    post:
+      tags: [learning-hub]
+      summary: Upload a photo / PDF for a homework hand-in (parents)
+      description: >
+        Parents can't use `/api/uploads` (operators only). Same validation (image magic-byte sniff, real `%PDF-`,
+        ≈750KB image / ≈750KB PDF caps). Stored as a private `kind:"hub"` file tied to this submission and uploader;
+        it only counts once listed in `…/submit` `attachments`. Max 8 uploads per submission. 409 `already_marked` once marked.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: tenantId, in: query, required: true, schema: { type: string } }
+        - { name: childId, in: query, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dataUrl, name]
+              properties:
+                dataUrl: { type: string, description: "data:image/(jpeg|png|webp|gif);base64,… or data:application/pdf;base64,…" }
+                name: { type: string }
+      responses:
+        "201": { description: "{id, name, contentType, size}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Already marked, or the per-submission upload limit reached }
+        "413": { description: File too large }
+
+  /api/learning-hub/submissions/{id}/submit:
+    post:
+      tags: [learning-hub]
+      summary: Hand homework in (parents, for their own enrolled child)
+      description: >
+        `{text?, attachments?:[{id,name}], attemptId?}` — at least one of text / a file / a quiz attempt. Files must be ones this
+        parent uploaded via `…/files` for this submission. `attemptId` must be an attempt the SAME child made at the same provider
+        (for this homework or none) and not still in progress; if the homework is a quiz and none is given, the child's latest
+        attempt made for it is linked automatically. Re-submitting before marking replaces the earlier hand-in; 409 `already_marked` after.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: tenantId, in: query, required: true, schema: { type: string } }
+        - { name: childId, in: query, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+                attachments: { type: array, maxItems: 5, items: { type: object, required: [id], properties: { id: { type: string }, name: { type: string } } } }
+                attemptId: { type: string, nullable: true }
+      responses:
+        "200": { description: The submission (status `submitted`) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`already_marked`, or the linked attempt is still in progress" }
+
+  /api/learning-hub/flashcards:
+    get:
+      tags: [learning-hub]
+      summary: The tutor's deck, drafts included (tutors) — filterable, paginated
+      description: >
+        **Scale (~4,500 cards per provider):** an un-paged call returns at most 500 (`X-Total-Count` says how many match); `?limit=&cursor=`
+        returns `{items,total,nextCursor}` (default 60, max 200). Extra filters: `subject`, `q` (front/back text), `published=0|1`, `sort=topic`.
+      parameters:
+        - { name: topicId, in: query, schema: { type: string }, description: "Includes the topic's subtopics" }
+        - { name: subject, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: published, in: query, schema: { type: string, enum: ["0", "1"] } }
+        - { name: sort, in: query, schema: { type: string, enum: [topic] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200": { description: "[{id,topicId,front,back,published,franchiseId,createdAt,updatedAt}] (or the paged envelope)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Add a card (tutors) — {topicId, front, back, published?}
+      responses:
+        "201": { description: The card }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Per-provider card cap (20000) reached }
+
+  /api/learning-hub/flashcards/stats:
+    get:
+      tags: [learning-hub]
+      summary: Deck + per-student progress (tutors)
+      description: >
+        `{totalCards, publishedCards, topics:[{topicId,subject,topic,subtopic,cards}],
+        students:[{childId,childName,cardsAvailable,reviewed,due,new,mastered,lastReviewedAt}]}` — `mastered` = next review ≥ 21 days away.
+      responses:
+        "200": { description: Stats }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/flashcards/due:
+    get:
+      tags: [learning-hub]
+      summary: A child's study queue (parents)
+      description: >
+        `{due:[{id,topicId,front,back,isNew}], dueCount, newCount, upcoming}` — due cards first (most overdue first), then never-seen
+        ones, at most 50 per fetch; the counts are totals. `back` is included (the client reveals it). `upcoming` = reviewed cards
+        scheduled for later. Only published cards from head office / the child's franchise in the child's enrolled subjects.
+      parameters:
+        - { name: tenantId, in: query, required: true, schema: { type: string } }
+        - { name: childId, in: query, schema: { type: string }, description: "Required when the family has several enrolled children here" }
+        - { name: topicId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: The queue }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/flashcards/{id}/review:
+    post:
+      tags: [learning-hub]
+      summary: Review a card (parents) — SM-2 runs server-side
+      description: >
+        `{childId, quality}` with quality 1 Again / 3 Hard / 4 Good / 5 Easy. Returns `{nextDueAt, intervalDays, easeFactor, repetitions}`.
+        q<3 → interval 1 day, repetitions 0; else 1 / 6 / round(interval × EF); EF floored at `settings.hub.srsMinEase`.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: tenantId, in: query, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId, quality]
+              properties:
+                childId: { type: string }
+                quality: { type: integer, enum: [1, 3, 4, 5] }
+      responses:
+        "200": { description: The new schedule }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/flashcards/{id}:
+    put:
+      tags: [learning-hub]
+      summary: Edit a card (tutors) — any subset of topicId/front/back/published
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The card }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a card and every child's review state for it (tutors)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/lessons:
+    get:
+      tags: [learning-hub]
+      summary: Live lessons — tutors' schedule (last 90 days on); a family's upcoming + recent (30 days)
+      description: >
+        Every row carries `opensAt` / `closesAt` (the join window: 10 min before start → 30 min after the end) and `joinable`.
+        **Tutor** rows add `students[]`, `attendance{childId→firstJoinedAt}`, `roomName`, `tutorJoinedAt`. **Parent** rows list only their own
+        children (`childIds`, `students`), `attended`, and never other families' attendance. `notes` is shown to families.
+      parameters:
+        - { name: tenantId, in: query, schema: { type: string }, description: "Parents only" }
+        - { name: childId, in: query, schema: { type: string }, description: "Parents only" }
+        - { name: mine, in: query, schema: { type: string, enum: ["1", "true"] }, description: "Tutors: only the lessons I scheduled (`tutorUid` = me) — 'My lessons' in a multi-tutor business" }
+      responses:
+        "200": { description: "Array of lessons. Tutor rows also carry `seriesId/seriesIndex/seriesCount` (a weekly repeat) and `held` (logged after the fact)." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Schedule a lesson (tutors) — optionally weekly, or log one already held
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, startsAt, durationMins]
+              description: At least one student must result — from `childIds`, from the members of `groupIds`, or both (max 30).
+              properties:
+                title: { type: string }
+                topicId: { type: string, nullable: true }
+                startsAt: { type: string, description: "ISO date-time (a bare date is refused)" }
+                durationMins: { type: integer, minimum: 10, maximum: 480 }
+                childIds: { type: array, items: { type: string }, maxItems: 30, description: "Enrolled, active, in-scope students" }
+                groupIds: { type: array, items: { type: string }, maxItems: 20, description: "Student groups; their active members are added. Tutor rows return `groupIds`; a family's never do." }
+                notes: { type: string }
+                videos: { type: array, maxItems: 6, items: { $ref: "#/components/schemas/HubVideoInput" }, description: "YouTube links shown with the lesson notes; omitted on PUT = keep. Rows return `videos[]` (HubVideo)." }
+                tutorName: { type: string }
+                noteIds: { type: array, maxItems: 12, items: { type: string }, description: "Library lessons attached from the start (shown first beside the video)" }
+                repeatWeeks: { type: integer, minimum: 2, maximum: 26, description: "Weekly repeat: create this many lessons in total (this one included), same wall-clock time in `timeZone` (default Europe/London) across clock changes. They share `seriesId`; each is an ordinary lesson (edit / cancel one on its own). The response is the first lesson plus `seriesIds`. Families get ONE notification." }
+                timeZone: { type: string, description: "IANA zone for `repeatWeeks`" }
+                held: { type: boolean, description: "Log a lesson that already happened: the start may be in the past (up to 89 days), the lesson must have finished; created `ended`, with no room and no family notification. Refused with `repeatWeeks`. Join / reopen are refused for it." }
+                attendedChildIds: { type: array, items: { type: string }, description: "With `held`: which of the students attended (stored as attendance)" }
+      responses:
+        "201": { description: The lesson (status `scheduled`, or `ended` when `held`); the room is created on first join. Families get a `learning` notification }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: A child isn't an enrolled active student of the caller, or the topic isn't theirs }
+
+  /api/learning-hub/lessons/{id}:
+    put:
+      tags: [learning-hub]
+      summary: Edit / reschedule / cancel a lesson (tutors)
+      description: Any subset of the create fields, or `{status:"cancelled"}`. A closed (ended/cancelled) lesson only takes `notes`. Families are notified of a move or cancellation. `{status:"cancelled", applyTo:"following"}` on a weekly-series lesson also cancels every later open lesson in the series (one notification).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The lesson }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`lesson_closed`" }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a lesson (tutors) — removes its Daily room; families told if it was still to come
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/lessons/{id}/end:
+    post:
+      tags: [learning-hub]
+      summary: End a lesson (tutors) — status `ended`, the Daily room is deleted (ejects anyone still in); families can't rejoin or "Stay" until a tutor joins again
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The lesson }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`lesson_closed` (cancelled)" }
+
+  /api/learning-hub/lessons/{id}/join:
+    post:
+      tags: [learning-hub]
+      summary: Join a live lesson — mints a per-join Daily meeting token
+      description: >
+        Returns `{url, token, roomName, userName, isOwner, childIds}` — embed with daily-js `createFrame` and `join({url, token})`. The room is PRIVATE
+        and expiring; the URL alone admits nobody. A token is minted only for (a) a tutor who can write the lesson (`isOwner:true`), or
+        (b) a parent whose enrolled child is in `childIds` (`?childId=` / body `childId` picks which; body `childIds:[a,b]` joins siblings sharing one device as ONE participant named "Ava and Ben", whiteboard identity `c:<first>`). Attendance is NOT recorded here (a token is minted before
+        anyone has connected): the family's client calls `POST /lessons/{id}/attended` once Daily reports it joined. Only inside the join
+        window and not for a cancelled lesson. Safeguarding: once a tutor has ENDED (or reopened) a lesson, a FAMILY cannot join (or recreate the room) until a tutor
+        has joined again: 409 `waiting_for_tutor` (family lesson rows carry `waitingForTutor:true` meanwhile). A tutor's join clears it and makes the lesson `live`.
+        Errors: 409 `outside_join_window` `{state:"early"|"closed",opensAt,closesAt}`, 409 `lesson_closed`, 409 `waiting_for_tutor`,
+        400 `child_required` `{children}` (a parent with 2+ children in the lesson who did not say which is joining), 404 `not_your_lesson` (a parent with no
+        enrolled child in it, e.g. a second guardian), 503 `video_unavailable` (no `DAILY_API_KEY`, or Daily unreachable). A lesson of another provider is 404.
+        The room has Daily chat off; family tokens cannot screenshare.
+        A family token is minted with `user_id: "c:<childId>"` (a tutor's has none): Daily signs it into the token and a client cannot change it, so the
+        whiteboard binds each student's identity (per-student write permission, private "workings" pads) to it and ignores any child id a peer claims in a message.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: tenantId, in: query, schema: { type: string }, description: "Parents only" }
+        - { name: childId, in: query, schema: { type: string }, description: "Parents only" }
+      responses:
+        "200": { description: The join credentials }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`outside_join_window`, `lesson_closed` or `waiting_for_tutor`" }
+        "503": { description: "`video_unavailable`" }
+
+  /api/learning-hub/lessons/{id}/attended:
+    post:
+      tags: [learning-hub]
+      summary: A family confirms its child really joined the call (records attendance)
+      description: >
+        Called by the family's client on Daily `joined-meeting`. Records the FIRST time per child (`attendance.<childId>`), idempotent. Parents only (a tutor
+        gets `{ok:true}` and nothing is recorded). Siblings on one device: body `childIds:[a,b]` (with or alongside `childId` / `?childId=`) records EVERY named child of the
+        parent who is in the lesson (ids that aren't theirs or aren't in the lesson are ignored); the reply lists them as `childIds`. 404 when none of them is in the lesson; 409 `outside_join_window` outside the window / cancelled.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: tenantId, in: query, schema: { type: string } }
+        - { name: childId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: "`{ok:true}`" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`outside_join_window`" }
+
+  /api/learning-hub/in-person/sessions:
+    post:
+      tags: [learning-hub]
+      summary: Start an IN-PERSON lesson (tutors) — a lesson/quiz run on the tutor's device with children beside them, no video
+      description: >
+        Creates a session: an ordinary `hubLessons` row with `mode:"in_person"`, `status:"live"`, no room, never listed by `GET /lessons` and refused by
+        join / extend / reopen / edit there. Body `{childIds[]?, groupIds[]?, noteId?, assessmentId?, title?, key?}` (at least one student overall, max 30;
+        every child must be an ACTIVE enrolment of THIS tenant inside the caller's scope, groups expand to their active members — else 404 `Student not found`).
+        `attendance` starts as "everyone chosen is here" (change it with `PUT …/attendance`). `key` (client-generated, 6-80 chars) makes a double tap / retry
+        return the SAME session. Families are NOT notified at start. Tutors only (403 for a family).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childIds: { type: array, items: { type: string }, maxItems: 30 }
+                groupIds: { type: array, items: { type: string }, maxItems: 20 }
+                noteId: { type: string, nullable: true }
+                assessmentId: { type: string, nullable: true }
+                title: { type: string }
+                key: { type: string }
+      responses:
+        "200": { description: The existing session (same `key`) }
+        "201": { description: "The session `{id, mode:'in_person', title, status, startsAt, endedAt, noteId, assessmentId, childIds, attendance{childId:iso}, students[{childId,childName,present}], warmup[]}`" }
+        "400": { description: No student chosen, or more than 30 }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      tags: [learning-hub]
+      summary: Recent in-person sessions (tutors) — `?status=live|ended`; how a tutor resumes an open one
+      parameters: [{ name: status, in: query, schema: { type: string, enum: [live, ended] } }]
+      responses:
+        "200": { description: "Up to 20 sessions, newest first" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/learning-hub/in-person/sessions/{id}:
+    get:
+      tags: [learning-hub]
+      summary: One in-person session with every result recorded for it so far (tutors)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "The session plus `results[{attemptId, childId, childName, assessmentId, assessmentTitle, status, scoreMarks, maxMarks, pct, passMarkPct, passed, homeworkId, answers[{questionId, correct, marksAwarded, marksMax, pending}]}]`" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/in-person/sessions/{id}/attendance:
+    put:
+      tags: [learning-hub]
+      summary: Set who is here (tutors) — the only way attendance is set for an in-person session
+      description: >
+        Body `{present: {childId: boolean}, add?: [childId]}`. `present:false` removes that child's attendance mark, `true` (re)sets it. Every key must be a child
+        in the session (404 otherwise); `add` puts a late arrival into the session (and marks them here) after the same enrolment / scope check as at start.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                present: { type: object, additionalProperties: { type: boolean } }
+                add: { type: array, items: { type: string } }
+      responses:
+        "200": { description: The session }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`lesson_closed` (cancelled)" }
+
+  /api/learning-hub/in-person/sessions/{id}/questions:
+    get:
+      tags: [learning-hub]
+      summary: The quiz as ONE class sees it, with the tutor's key (tutors)
+      description: >
+        `?assessmentId=` (default: the session's). One snapshot for the whole class; a match / order question is shuffled with a SESSION seed, so every child
+        gets the same arrangement and one projected screen matches everyone's answers (the seed only changes what is shown — marking reads the canonical key).
+        Each question is the same shape a child gets plus `rule` and `key {correctAnswer, acceptedAnswers?, explanation?}` (tutor only; the UI keeps it behind
+        "Show answer"). 409 `not_published` for a draft.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: assessmentId, in: query, schema: { type: string } }
+      responses:
+        "200": { description: "`{assessment:{id,title,type,subject,passMarkPct}, questions[]}`" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`not_published`" }
+
+  /api/learning-hub/in-person/sessions/{id}/submit:
+    post:
+      tags: [learning-hub]
+      summary: Hand in for the class — one REAL, marked attempt per child (tutors)
+      description: >
+        Body `{assessmentId, children:[{childId, answers:[{questionId, response?, verdict?}]}], override?, linkHomework?}`. Per child the SERVER snapshots the
+        questions, marks the responses (`lib/hubScoring`), and stores an ordinary `hubAttempts` row (`mode:"in_person"`, `sessionId`, `startedBy = submittedBy` = the
+        tutor, `parentUid` = the child's parent) — so it reaches the family's Latest results, mastery, XP-style stats and homework exactly like a paper the child sat.
+        `verdict:"right"|"wrong"` is the tutor's own call for oral / hands-on work: full marks or none, replaces marking that answer (a tutor-marked attempt). A manual
+        question with a response but no verdict waits in the marking queue as usual. Rules, per child (never failing the batch): a child not in the session, not an
+        active enrolment of this tenant/scope, or a quiz not for them → row `status:"skipped"` (`code: not_in_session | not_for_this_child | no_questions`) and NOTHING is
+        recorded; the start gates (`retake_blocked`, `diagnostic_required`, `not_for_this_child`) skip the child unless `override:true` (a tutor in the room decided);
+        `diagnostic_done` is never overridden (reset the baseline first). IDEMPOTENT: the attempt id is fixed by (session, quiz, child), so a retry / double tap
+        returns `status:"duplicate"` with the stored result. `linkHomework` (default true): the child's one open (still `assigned`) homework for this quiz is
+        handed in with the attempt (`homeworkId` on the attempt, submission `submitted`). Attendance is set for every child recorded. After the batch: mastery is
+        recomputed once per child, one realtime ping, and ONE notification per child ("Lesson done with your tutor" with that child's score; category `learning`).
+        Rows: `{childId, childName, status: recorded|duplicate|skipped, attemptId?, code?, message?, attemptStatus?, scoreMarks?, maxMarks?, pct?, passed?, homeworkId?, answers?[]}`.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assessmentId, children]
+              properties:
+                assessmentId: { type: string }
+                override: { type: boolean }
+                linkHomework: { type: boolean }
+                children:
+                  type: array
+                  maxItems: 30
+                  items:
+                    type: object
+                    required: [childId, answers]
+                    properties:
+                      childId: { type: string }
+                      answers:
+                        type: array
+                        items:
+                          type: object
+                          required: [questionId]
+                          properties:
+                            questionId: { type: string }
+                            response: {}
+                            verdict: { type: string, enum: [right, wrong] }
+      responses:
+        "200": { description: "`{sessionId, assessmentId, results[]}`" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`lesson_closed` / `not_published`" }
+
+  /api/learning-hub/in-person/sessions/{id}/end:
+    post:
+      tags: [learning-hub]
+      summary: Finish an in-person session (tutors)
+      description: >
+        Sets `status:"ended"`. Body `{warmup?: [{childId, correct, total}]}` stores the oral warm-up tallies (children outside the session are dropped; class-level
+        practice — nothing here feeds mastery). Children who were here but have no quiz result get a "Lesson done with your tutor" notification (those with a result
+        were already told). Idempotent: ending twice notifies once.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The session plus its results }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "`lesson_closed` (cancelled)" }
+
+  /api/learning-hub/lessons/{id}/board:
+    get:
+      tags: [learning-hub]
+      summary: The lesson's saved whiteboard (Round 4)
+      description: >
+        The saved copy of the live whiteboard (`hubBoards/{lessonId}`) — the tutor's client autosaves it every ~5 s while drawing and on leave, so a
+        reload or rejoin restores it. Access follows the lesson: a tutor who can see the lesson's students (a franchise sees only its own), or a
+        parent whose ENROLLED child is in it (`?tenantId=&childId=`; read-only, `readOnly:true`). A lesson with nothing saved returns one empty
+        page `p1`. Image elements are references (`imageId`, a private `kind:"hub"` upload of the tenant); each response re-signs a `url`
+        (6 h link) for them. Student drawings carry only `cid` (childId) and `by` (first name). A lesson of another tenant / unknown id / a family
+        with no enrolled child in it is 404.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: tenantId, in: query, schema: { type: string }, description: "Parents only" }
+        - { name: childId, in: query, schema: { type: string }, description: "Parents only" }
+      responses:
+        "200":
+          description: The board
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HubBoard" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [learning-hub]
+      summary: Save the lesson's whiteboard (tutors only; last write wins)
+      description: >
+        Replaces the whole saved board. The board is assembled live from many peers' messages, so this endpoint SANITISES rather than rejects: each
+        element is repaired (over-long strings clipped, coordinates clamped, an over-long `cid` removed) or DROPPED if it still fails the element schema
+        (unknown kind, non-numeric points, an id over 60 chars…); an unknown background becomes `blank`; a page with a duplicate id is dropped; images
+        that are not this tenant's private hub uploads (`POST /api/uploads {kind:"hub"}`) are dropped, never stored. The 200 response says how many things
+        were dropped (`dropped`). Limits: ≤30 pages, ≤4000 elements per page; element kinds `stroke|shape|text|sticky|image|stamp`; unknown fields are
+        stripped, `url` is never stored. Only a body with no usable page at all is `400`. The JSON body must be ≤ 700 KB — the client simplifies long
+        strokes to fit; over the cap (or Firestore's own 1 MiB document limit) is `413 {code:"board_too_large"}` with a friendly message.
+        `cid` values that aren't children of the lesson are dropped. A parent gets 403.
+        Deleting the lesson deletes its board; a child's board drawings are erased when the parent deletes the child.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pages]
+              properties:
+                pages:
+                  type: array
+                  minItems: 1
+                  maxItems: 30
+                  items: { $ref: "#/components/schemas/HubBoardPage" }
+      responses:
+        "200": { description: "{ok:true, updatedAt, bytes, dropped}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "413": { description: "`board_too_large` — over 700 KB of JSON" }
+
+  /api/learning-hub/board-templates:
+    get:
+      tags: [learning-hub]
+      summary: The tutor's saved whiteboard templates ("My templates")
+      description: Tenant-scoped (a franchise sees head office's plus its own), tutors only. Each row carries its elements (image elements get a fresh signed `url`).
+      responses:
+        "200": { description: "[{id, name, background, createdAt, elements[]}]" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [learning-hub]
+      summary: Save a board page as a template (tutors only)
+      description: >
+        `{name ≤80, background, elements[1..600]}` (the same element shape as the board; a student's own elements are dropped, so a template never carries a
+        child's work). ≤ 250 KB (`413 template_too_large`), ≤ 40 per scope (`409 template_limit`); image ids must be this tenant's private hub uploads.
+      responses:
+        "201": { description: "{id, name}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "`template_limit`" }
+        "413": { description: "`template_too_large`" }
+
+  /api/learning-hub/board-templates/{id}:
+    delete:
+      tags: [learning-hub]
+      summary: Delete a saved template (tutors; a franchise only its own)
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/providers:
+    get:
+      tags: [learning-hub]
+      summary: The hubs this account can open
+      description: >
+        Operators (company/franchise/freelancer/staff): one row — their own tenant — with `canEdit` (a staff role with
+        only "View" on the Learning Hub gets a read-only page), `franchiseId`, `role`, `uid` and the business name.
+        Parents: one row per provider where one of their children is ENROLLED (hubEnrolments, not bookings) AND the
+        provider has the hub switched on (Setup → Features, opt-in), each with `children[]`. Empty = no hub to show;
+        the family nav hides the Learning Hub on that (lib/use-customer-area.ts).
+      responses:
+        "200": { description: "[{ tenantId, name, canEdit, franchiseId, role, uid, children: [{childId, childName, ...}] }]" }
+
+  /api/learning-hub/topics:
+    get:
+      tags: [learning-hub]
+      summary: The whole visible taxonomy (flat — the client builds the subject › topic › subtopic tree)
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+      responses:
+        "200": { description: "Topics (rows carry subject, topic, subtopic?, parentTopicId?, franchiseId)" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [learning-hub]
+      summary: Add a topic `{subject, topic}` or a subtopic `{parentTopicId, subtopic}` (tutors)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject: { type: string }
+                topic: { type: string }
+                parentTopicId: { type: string }
+                subtopic: { type: string }
+      responses:
+        "201": { description: The topic }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: "Duplicate name under the same parent, or the tenant's topic cap (2000) reached" }
+
+  /api/learning-hub/topics/rename-subject:
+    post:
+      tags: [learning-hub]
+      summary: Rename a subject across all of the caller's own topics (tutors)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [from, to]
+              properties:
+                from: { type: string }
+                to: { type: string }
+      responses:
+        "200": { description: "{ ok, renamed }" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/learning-hub/topics/{id}:
+    put:
+      tags: [learning-hub]
+      summary: Rename a topic or subtopic (tutors)
+      description: A topic's new name cascades to its subtopics' denormalised `topic`; a subtopic can only change its own name.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, properties: { topic: { type: string }, subtopic: { type: string } } }
+      responses:
+        "200": { description: The topic }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [learning-hub]
+      summary: Delete a topic (tutors) — refused while it has subtopics or anything (notes, questions, flashcards…) points at it
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: "{ok:true}" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Still referenced }
+
+  /api/learning-hub/notes/{id}/lesson-questions:
+    get:
+      tags: [learning-hub]
+      summary: The interactive lesson player's warm-up questions and linked quiz for a note
+      description: >
+        `{ warmup: [...published questions on the note's topic the student may see, answer keys stripped], quiz: {id, title, questionCount} | null }`.
+        Families get only what fits their child (year group / franchise); drafts are tutor-only.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: childId, in: query, schema: { type: string }, description: "Parents: which child is doing the lesson" }
+      responses:
+        "200": { description: "{ warmup, quiz }" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [learning-hub]
+      summary: Change a note's lesson settings without touching its body (tutors)
+      description: |
+        `{ lesson: { widget?: string|null, slides?: object[], deckSlides?: object[] } }` — at least one; `slides` (our summary slides) is capped at 120 slides / 400,000 chars of JSON, `deckSlides` at 120 slides / 500,000 chars. Both get the same picture checks.
+
+        `deckSlides` = the lesson's REAL slide deck (Oak's own slides imported as editable slides, `server/src/oak/deckConvert.ts`), kept beside `slides`. Each slide is `{kind:"explain", title, blocks:[{t:"canvas", w, h, bg?, els:[…]}]}`; `els` (max 300, in z-order) are `img` / `text` / `shape` elements with geometry as fractions of the slide, font sizes in points on a `w`-pt-wide slide, optional `step` / `until` (reveal / hide on that click). An `img` element has EXACTLY ONE source: `sid` (an imported picture in Firebase Storage, `<sha256>.webp` — the tenant folder `hubSlides/<tenantId>/` is added by the server, never sent), `imageId` (a private hub upload of this tenant, same rules as `image.id`) or `picId` (a verified library picture). Colours are hex only, unknown keys (incl. any client `url`) are dropped, text is capped at 30,000 chars per slide. On every read each `sid` / `imageId` element comes back with a short-lived signed `url` (Storage V4 URL, ~1 h; never stored). `deckSlides: []` removes the real deck (the player falls back to the embedded Oak deck).
+
+        Slide PICTURES are validated strictly (the rest of a slide is loose JSON the web app normalises). Per slide, all optional:
+        `pics: [{id}]` (max 3) — ids from the verified picture library only, 400 otherwise; `image: {id, alt}` — a private hub upload of
+        this tenant (`POST /api/uploads {purpose:"private", kind:"hub"}`, PNG/JPEG/WebP), `alt` required (min 1 char), 400 if the file is
+        another tenant's, a hand-in, or already used by a question; `artLock: true` — the tutor removed / replaced / added the picture, so
+        the factory / importer never re-picks that slide's art. On every read the image id comes back as `image: {id, alt, url}` with a
+        short-lived signed `url` (never stored; a `url` sent by the client is dropped).
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lesson]
+              properties:
+                lesson:
+                  type: object
+                  properties:
+                    widget: { type: string, nullable: true, pattern: "^[A-Za-z0-9_-]{1,40}$" }
+                    deckSlides:
+                      type: array
+                      maxItems: 120
+                      items: { type: object, additionalProperties: true, description: "A canvas slide, see the operation description" }
+                    slides:
+                      type: array
+                      maxItems: 120
+                      items:
+                        type: object
+                        additionalProperties: true
+                        properties:
+                          pics: { type: array, maxItems: 3, items: { type: object, required: [id], properties: { id: { type: string, pattern: "^[a-z0-9-]{1,60}$" } } } }
+                          image: { type: object, nullable: true, required: [id, alt], properties: { id: { type: string }, alt: { type: string, minLength: 1, maxLength: 300 } } }
+                          artLock: { type: boolean, enum: [true] }
+      responses:
+        "200": { description: The note }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/notes/{id}/warmup-check:
+    post:
+      tags: [learning-hub]
+      summary: Instant check of one warm-up answer inside the lesson player
+      description: "`{questionId, response}` → `{ correct, ... }` marked server-side with the tenant's question-kind rules; nothing is stored as an attempt."
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [questionId, response], properties: { questionId: { type: string }, response: {} } }
+      responses:
+        "200": { description: The verdict }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/homework/reach:
+    get:
+      tags: [learning-hub]
+      summary: Which ACTIVE students in the caller's scope a quiz can't reach, and why (the homework form's warning; tutors)
+      parameters:
+        - { name: assessmentId, in: query, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      responses:
+        "200": { description: "{ unreachable: [{childId, childName, reason}] }" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/learning-hub/flashcards/publish:
+    post:
+      tags: [learning-hub]
+      summary: Publish (or un-publish) many flashcards in ONE request (tutors)
+      description: Cards outside the caller's scope, or that head office owns, are skipped rather than failed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, published]
+              properties:
+                ids: { type: array, items: { type: string } }
+                published: { type: boolean }
+      responses:
+        "200": { description: "{ updated, skipped }" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
+  /api/learning-hub/lessons/{id}/extend:
+    post:
+      tags: [learning-hub]
+      summary: "\"Stay on the call\" — push the room's closing time on by 15 minutes for everyone in it"
+      description: >
+        Either the tutor or a family in the lesson may press it; it stops at 4 hours after the scheduled end. `{childId?}` from a parent
+        names which enrolled child is in the room.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { $ref: "#/components/parameters/hubTenantId" }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { childId: { type: string } } }
+      responses:
+        "200": { description: The lesson }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Not live, or already at the 4-hour cap }
+
+  /api/learning-hub/lessons/{id}/reopen:
+    post:
+      tags: [learning-hub]
+      summary: Start a FRESH session of a lesson that has ended (tutors) — undo an early End, or run it again for revision
+      description: Opens a new 60-minute window from now for the tutor and the enrolled families ("Rejoin"). Only a cancelled lesson can't be reopened; the video room is recreated on the next join.
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: The lesson }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Cancelled }
+
 components:
   securitySchemes:
     firebaseIdToken:
@@ -4166,6 +5937,11 @@ components:
       description: Firebase ID token (see the Authentication section above).
 
   parameters:
+    hubTenantId:
+      name: tenantId
+      in: query
+      description: Parents only — the provider (an enrolled one). Operators use their own tenant.
+      schema: { type: string }
     refPath:
       name: ref
       in: path
@@ -4196,6 +5972,434 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
   schemas:
+    HubBoardPage:
+      type: object
+      required: [id, background, elements]
+      properties:
+        id: { type: string, maxLength: 40 }
+        background: { type: string, enum: [blank, lined, squared, graph, numberline, isometric, handwriting, dotgrid, tianzige, twocol, storymap, diagram, vocab] }
+        elements:
+          type: array
+          maxItems: 4000
+          items: { $ref: "#/components/schemas/HubBoardElement" }
+    HubBoardElement:
+      type: object
+      description: >
+        One vector element. `k` picks the kind; `own` is "T" (tutor) or "c:<childId>"; `v` is the last-writer-wins version, `z` the stacking order.
+        stroke → `pts` flat [x,y,pressure(0–100),…], `c`, `w`, `hl` (highlighter). shape → `shape` (line|arrow|rect|ellipse|triangle), x1,y1,x2,y2, `c`, `w`, `fill`.
+        text → x,y,`text`,`size`,`bold`,`c`. sticky → x,y,w,h,`text`,`c`. image → `imageId` (+ x,y,w,h; a `url` is added on GET). stamp → `stamp`
+        (numberline|fractions|coordgrid|timestable|clock|ruler|protractor), x,y,w,h,`rot`,`opts`.
+      required: [id, k, own, z, v]
+      properties:
+        id: { type: string }
+        k: { type: string, enum: [stroke, shape, text, sticky, image, stamp] }
+        own: { type: string }
+        by: { type: string, description: "A student's first name" }
+        cid: { type: string, description: "A student's childId (erased with the child)" }
+        z: { type: number }
+        v: { type: number }
+      additionalProperties: true
+    HubBoard:
+      type: object
+      properties:
+        lessonId: { type: string }
+        pages: { type: array, items: { $ref: "#/components/schemas/HubBoardPage" } }
+        updatedAt: { type: string, format: date-time, nullable: true }
+        updatedBy: { type: string, nullable: true }
+        readOnly: { type: boolean, description: "True for a family" }
+    HubSettings:
+      type: object
+      description: settings.hub merged over the defaults (lib/hubConfig.ts).
+      properties:
+        questionKinds:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              label: { type: string }
+              mark: { type: string, enum: [choice, multi, exact, numeric, match, order, manual] }
+        passMarkPct: { type: integer }
+        requireDiagnostic: { type: boolean }
+        revealAnswers: { type: string, enum: [after_pass, after_submit, after_marked, never], description: "Default after_pass" }
+        masteryBands:
+          type: array
+          items:
+            type: object
+            properties:
+              min: { type: number }
+              label: { type: string }
+        homeworkDueDays: { type: integer }
+        srsMinEase: { type: number }
+        retakePolicy:
+          type: string
+          enum: [unlimited, once, cooldown]
+          description: "Retakes of a quiz / placement test the child has already FINISHED. An assessment may override it."
+        retakeCooldownHours: { type: integer, minimum: 1, maximum: 720 }
+        retakeBreakAfter: { type: integer, minimum: 0, maximum: 10, description: "With retakePolicy unlimited: after this many NOT-passed attempts in a row at one quiz, each further go waits retakeBreakMinutes (409 retake_blocked reason \"break\"). 0 = off. Default 3. A tutor's one-more-go grant skips it." }
+        retakeBreakMinutes: { type: integer, minimum: 5, maximum: 720, description: "Default 30" }
+        yearGroups:
+          type: array
+          items: { type: string }
+          description: The year groups a quiz can be aimed at and a student tagged with (per tenant; default Reception, Year 1 … Year 13)
+        subjectColours:
+          type: object
+          additionalProperties: { type: string, enum: [blue, green, red, purple, orange, teal, pink, amber, indigo, slate] }
+          description: "The colour a tutor chose per subject (key = lower-cased subject name). Families read it too, so every card, chip and tile for that subject changes everywhere. Absent = the subject's default colour."
+
+    HubConfig:
+      type: object
+      properties:
+        hub: { $ref: "#/components/schemas/HubSettings" }
+        canEdit: { type: boolean }
+        bands:
+          type: array
+          description: The mastery bands, lowest first
+          items: { type: object, properties: { min: { type: integer }, label: { type: string } } }
+        limits:
+          type: object
+          description: The ranges `PUT /config` validates against, plus caps used elsewhere (`maxVideos`, `age`, `questionImageBytes`, `groupNameMax`)
+          additionalProperties: true
+        groupColours:
+          type: array
+          items: { type: string }
+
+    HubQuestionInput:
+      type: object
+      required: [topicId, kind, prompt]
+      properties:
+        topicId: { type: string }
+        kind: { type: string, description: "One of settings.hub.questionKinds[].id" }
+        prompt: { type: string }
+        image:
+          type: object
+          nullable: true
+          description: >
+            A picture the question shows. `id` is a private hub upload of THIS provider
+            (`POST /api/uploads {purpose:"private", kind:"hub"}`, PNG/JPEG/WebP/GIF ≤750KB; never a note attachment
+            or a homework file). `alt` is required. On an edit, omit to keep the current picture, `null` to remove it.
+          required: [id, alt]
+          properties:
+            id: { type: string }
+            alt: { type: string, maxLength: 300 }
+        options:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, description: Generated when omitted }
+              text: { type: string, description: "May be empty when the option has a picture" }
+              image:
+                type: object
+                nullable: true
+                description: A picture answer — a hub upload id (same rules as `image`)
+                properties:
+                  id: { type: string }
+        answer: { description: "choice → option id; multi → option id[]; exact → string; numeric → number; match / order / manual → omit (null)" }
+        pairs:
+          type: array
+          description: "match only: 3–8 correct pairs. Pictures are `{url (https), alt}` and optional; marking uses the text only."
+          items:
+            type: object
+            required: [term, definition]
+            properties:
+              term: { type: string, maxLength: 300 }
+              definition: { type: string, maxLength: 300 }
+              termImage: { type: object, nullable: true, properties: { url: { type: string }, alt: { type: string } } }
+              definitionImage: { type: object, nullable: true, properties: { url: { type: string }, alt: { type: string } } }
+        items:
+          type: array
+          description: "order only: 2–8 items in the CORRECT order (students get them shuffled per attempt)"
+          items: { type: string, maxLength: 300 }
+        acceptedAnswers: { type: array, items: { type: string } }
+        tolerance: { type: number, minimum: 0, default: 0 }
+        marks: { type: integer, minimum: 1, default: 1 }
+        explanation: { type: string }
+        published: { type: boolean, default: true }
+
+    HubQuestion:
+      allOf:
+        - $ref: "#/components/schemas/HubQuestionInput"
+        - type: object
+          properties:
+            id: { type: string }
+            usedBy: { type: integer, description: Assessments (any status) that include it }
+            updatedAt: { type: string }
+            image:
+              type: object
+              nullable: true
+              description: Tutor view — the stored `id` and `alt`, plus a short-lived signed preview `url`
+              properties: { id: { type: string }, alt: { type: string }, url: { type: string } }
+            options:
+              type: array
+              description: "Options may carry `image: {id, url}` (tutor view: id to send back, signed preview url)"
+              items: { type: object }
+
+    HubAssessmentInput:
+      type: object
+      required: [type, title, subject]
+      properties:
+        type: { type: string, enum: [quiz, diagnostic] }
+        title: { type: string }
+        subject: { type: string }
+        topicIds: { type: array, items: { type: string }, description: Extended with the questions' topics }
+        questionIds: { type: array, items: { type: string } }
+        timeLimitMins: { type: integer, nullable: true }
+        passMarkPct: { type: integer, description: Defaults to settings.hub.passMarkPct }
+        published: { type: boolean, default: false }
+        audience: { $ref: "#/components/schemas/HubAudience" }
+        retakePolicy: { type: string, enum: [inherit, unlimited, once, cooldown], description: "inherit (default) = settings.hub.retakePolicy" }
+        retakeCooldownHours: { type: integer, minimum: 1, maximum: 720, nullable: true, description: "Only with retakePolicy cooldown; null = the tutor default" }
+
+    HubAudience:
+      type: object
+      description: Who an assessment is for. Empty `yearGroups` and null ages = everyone. Year groups AND the age range must both fit where set.
+      properties:
+        yearGroups: { type: array, items: { type: string }, maxItems: 30, description: "Labels from settings.hub.yearGroups (case-insensitive)" }
+        ageMin: { type: integer, minimum: 0, maximum: 25, nullable: true, description: Whole years, inclusive }
+        ageMax: { type: integer, minimum: 0, maximum: 25, nullable: true }
+
+    HubAssessment:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [quiz, diagnostic] }
+        title: { type: string }
+        subject: { type: string }
+        topicIds: { type: array, items: { type: string } }
+        questionIds: { type: array, items: { type: string }, description: Tutors only }
+        questionCount: { type: integer }
+        totalMarks: { type: integer }
+        timeLimitMins: { type: integer, nullable: true }
+        passMarkPct: { type: integer }
+        published: { type: boolean, description: Tutors only }
+        lastAttempt:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            pct: { type: integer, nullable: true }
+            status: { type: string }
+            submittedAt: { type: string, nullable: true }
+        done: { type: boolean, description: "Diagnostics: sat, and not reset" }
+        locked: { type: boolean, description: Quizzes — behind a required diagnostic }
+        lockedReason: { type: string }
+        audience: { $ref: "#/components/schemas/HubAudience" }
+        audienceUnknown: { type: boolean, description: "Family rows — shown although the child's year group / age is unknown" }
+        lessonNoteId: { type: string, nullable: true, description: "Family rows — this quiz is the exit quiz of that lesson (a published note); the UI does not offer it as a loose quiz until the lesson has been taken" }
+        lessonTitle: { type: string, nullable: true, description: "Family rows — title of that lesson" }
+        eligibleCount: { type: integer, description: "Tutors — students it is offered to (fits, or year/age unknown)" }
+        audienceUnknownCount: { type: integer, description: "Tutors — of those, how many are only shown because their year/age is unknown" }
+        retakePolicy: { type: string, enum: [inherit, unlimited, once, cooldown], description: Tutors }
+        retakeCooldownHours: { type: integer, nullable: true, description: Tutors }
+        retake:
+          type: object
+          description: "With a child — may they start it again? (a running attempt is always resumable)"
+          properties:
+            allowed: { type: boolean }
+            reason: { type: string, enum: [once, cooldown], nullable: true }
+            nextAvailableAt: { type: string, nullable: true }
+
+    HubAttemptStart:
+      type: object
+      properties:
+        attemptId: { type: string }
+        resumed: { type: boolean }
+        assessmentTitle: { type: string }
+        assessmentType: { type: string }
+        timeLimitMins: { type: integer, nullable: true }
+        startedAt: { type: string }
+        questions:
+          type: array
+          description: Never includes the answer key
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              kind: { type: string }
+              prompt: { type: string }
+              marks: { type: integer }
+              topicId: { type: string }
+              image:
+                type: object
+                nullable: true
+                description: The question's picture — a short-lived signed URL (never a bare id) and its alt text
+                properties: { url: { type: string }, alt: { type: string } }
+              options:
+                type: array
+                description: choice / multi only
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    text: { type: string }
+                    image:
+                      type: object
+                      description: A picture answer (signed URL); absent when the option has none
+                      properties: { url: { type: string } }
+              terms:
+                type: array
+                description: "match only: the terms as written. Which definition goes with which is NOT sent."
+                items: { type: object, properties: { text: { type: string }, image: { type: object, properties: { url: { type: string }, alt: { type: string } } } } }
+              definitions:
+                type: array
+                description: "match only: the definitions, SHUFFLED — deterministic per attempt + question (a refresh or resume shows the same arrangement) and never the key in place."
+                items: { type: object, properties: { text: { type: string }, image: { type: object, properties: { url: { type: string }, alt: { type: string } } } } }
+              items:
+                type: array
+                description: "order only: the items SHUFFLED (deterministic per attempt + question, never the correct sequence)."
+                items: { type: string }
+
+    HubAttemptSummary:
+      type: object
+      properties:
+        id: { type: string }
+        assessmentId: { type: string }
+        assessmentType: { type: string, enum: [quiz, diagnostic] }
+        assessmentTitle: { type: string }
+        subject: { type: string }
+        homeworkId: { type: string, nullable: true }
+        childId: { type: string }
+        childName: { type: string }
+        status: { type: string, enum: [in_progress, pending_marking, marked] }
+        scoreMarks: { type: number }
+        maxMarks: { type: number }
+        pct: { type: integer, nullable: true }
+        passed: { type: boolean, nullable: true, description: null while pending marking }
+        passMarkPct: { type: integer }
+        startedAt: { type: string }
+        submittedAt: { type: string, nullable: true }
+        timeLimitMins: { type: integer, nullable: true }
+        autoMarks: { type: number, description: Marks earned on the auto-marked (non-written) questions }
+        autoMax: { type: number, description: Marks available on the auto-marked questions }
+        writtenPending: { type: integer, description: Written answers waiting for a tutor }
+        awaitingWritten: { type: boolean, description: "writtenPending > 0 — show 'Auto-marked 5/6 · 1 written answer being reviewed', never a bare 'Awaiting marking'" }
+
+    HubAttemptResult:
+      allOf:
+        - $ref: "#/components/schemas/HubAttemptSummary"
+        - type: object
+          properties:
+            byTopic:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  got: { type: number }
+                  max: { type: number }
+            late: { type: boolean }
+            markedAt: { type: string, nullable: true }
+            questions: { type: array, description: Running attempts only, items: { type: object } }
+            answers:
+              type: array
+              items:
+                type: object
+                properties:
+                  questionId: { type: string }
+                  correct: { type: boolean, nullable: true }
+                  marksAwarded: { type: number }
+                  marksMax: { type: number }
+                  response: {}
+                  feedback: { type: string }
+                  pending: { type: boolean, description: Tutors only }
+                  topicId: { type: string, description: "GET /attempts/{id} only" }
+                  kind: { type: string }
+                  prompt: { type: string }
+                  image: { type: object, nullable: true, description: "GET /attempts/{id} only — signed picture {url, alt}", properties: { url: { type: string }, alt: { type: string } } }
+                  options: { type: array, items: { type: object }, description: "id, text and (signed) image {url}" }
+                  correctAnswer: { description: Only when revealed }
+                  acceptedAnswers: { type: array, items: { type: string } }
+                  explanation: { type: string, description: Only when revealed }
+
+    HubMastery:
+      type: object
+      properties:
+        childId: { type: string }
+        childName: { type: string }
+        subjects:
+          type: array
+          items:
+            type: object
+            properties:
+              subject: { type: string }
+              masteryPct: { type: integer, nullable: true }
+              band: { type: string, nullable: true }
+              coverage: { type: number }
+              baselinePct: { type: integer, nullable: true }
+              growthPct: { type: integer, nullable: true }
+              topics:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    topicId: { type: string }
+                    topic: { type: string }
+                    subtopic: { type: string, nullable: true }
+                    masteryPct: { type: integer, nullable: true }
+                    band: { type: string, nullable: true }
+                    attempts: { type: integer }
+                    baselinePct: { type: integer, nullable: true }
+                    lastAttemptAt: { type: string, nullable: true }
+        trend:
+          type: array
+          items:
+            type: object
+            properties:
+              at: { type: string }
+              pct: { type: integer }
+              subject: { type: string }
+              title: { type: string }
+        overall:
+          type: object
+          nullable: true
+          properties:
+            masteryPct: { type: integer, nullable: true }
+            band: { type: string, nullable: true }
+            bandIndex: { type: integer, description: 0-based index into `bands` }
+            bandCount: { type: integer }
+            next: { type: object, nullable: true, description: The next band up, or null at the top, properties: { label: { type: string }, min: { type: integer } } }
+            toNext: { type: integer, nullable: true, description: Percentage points to the next band }
+            subjectsCounted: { type: integer }
+        bands:
+          type: array
+          items: { type: object, properties: { min: { type: integer }, label: { type: string } } }
+
+    HubVideoInput:
+      type: object
+      required: [url]
+      description: >
+        A YouTube link. Only youtube.com/watch?v=, youtu.be/, youtube.com/shorts/, youtube.com/embed/ and
+        youtube-nocookie.com/embed/ are accepted (11-character id); anything else is a 400.
+        `start` (seconds) may also be given as `?t=`/`?start=` in the link (the body wins).
+      properties:
+        url: { type: string }
+        title: { type: string, maxLength: 120 }
+        start: { type: integer, minimum: 0, maximum: 86400 }
+
+    HubVideo:
+      type: object
+      description: Only the id is stored; the URLs are built from it.
+      properties:
+        id: { type: string }
+        title: { type: string }
+        start: { type: integer, nullable: true }
+        url: { type: string, example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }
+        embedUrl: { type: string, example: "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=30" }
+
+    HubGroup:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        colour: { type: string, description: A palette id from `GET /config` `groupColours` }
+        childIds: { type: array, items: { type: string } }
+        members: { type: array, items: { type: object, properties: { childId: { type: string }, childName: { type: string }, active: { type: boolean } } } }
+        count: { type: integer }
+        franchiseId: { type: string, nullable: true }
+        createdByName: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
     Role:
       type: string
       enum: [platform, company, franchise, freelancer, staff, parent]

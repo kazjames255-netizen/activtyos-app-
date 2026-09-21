@@ -1,0 +1,598 @@
+{
+  "agent": "spanish-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can say what someone else and I want to do on a summer trip to Lanzarote using ‘querer’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Recite a {tongue twister}"
+            },
+            {
+              "title": "Revisit {vocabulary}"
+            },
+            {
+              "title": "Describe with {adjectives}"
+            },
+            {
+              "title": "Say what someone {wants} to do"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "querer",
+              "def": "A verb meaning to want, wanting."
+            },
+            {
+              "term": "quiero",
+              "def": "I want. Part of the verb querer."
+            },
+            {
+              "term": "quieres",
+              "def": "You want. Part of the verb querer."
+            },
+            {
+              "term": "quiere",
+              "def": "She, he, it wants. Part of the verb querer."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tongue twisters",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lucas and Sam read a book of trabalenguas (tongue twisters). Reciting tongue twisters is a good way of practising sound-spelling correspondences and pronunciation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Tres tristes tigres tragan trigo en un trigal. = Three sad tigers swallow wheat in a wheat field.",
+            "Cómo poco coco como, poco coco compro. = As I eat little coconut, I buy little coconut."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Pablito tongue twister",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Pablito clavó un clavito. = Pablito nailed a tiny nail.",
+            "¿Qué clavito clavó Pablito? = What tiny nail did Pablito nail?",
+            "El clavo quedó clavado. = The nail stayed nailed.",
+            "¡Claro! Lo clavó Pablito. = Of course! Pablito nailed the tiny nail."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In Spanish, the ‘v’ is a ‘b’ sound. Say [que] as in ‘queso’ and [v] as in ‘ver’."
+        },
+        {
+          "t": "text",
+          "text": "Start slowly and get faster and faster!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does it mean?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each line of the tongue twister to its English.",
+          "pairs": [
+            {
+              "a": "Pablito clavó un clavito.",
+              "b": "Pablito nailed a tiny nail."
+            },
+            {
+              "a": "¿Qué clavito clavó Pablito?",
+              "b": "What tiny nail did Pablito nail?"
+            },
+            {
+              "a": "El clavo quedó clavado.",
+              "b": "The nail stayed nailed."
+            },
+            {
+              "a": "¡Claro! Lo clavó Pablito.",
+              "b": "Of course! Pablito nailed the tiny nail."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Revisit words (1)",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Revisiting vocabulary helps develop confidence and communication. Match the Spanish and English."
+        },
+        {
+          "t": "match",
+          "q": "Match the Spanish and English.",
+          "pairs": [
+            {
+              "a": "probar",
+              "b": "to try"
+            },
+            {
+              "a": "el avión",
+              "b": "plane"
+            },
+            {
+              "a": "el aeropuerto",
+              "b": "airport"
+            },
+            {
+              "a": "la gente",
+              "b": "people"
+            },
+            {
+              "a": "aburrido",
+              "b": "boring"
+            },
+            {
+              "a": "la bandera",
+              "b": "flag"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Revisit words (2)",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the Spanish and English.",
+          "pairs": [
+            {
+              "a": "la costa",
+              "b": "coast"
+            },
+            {
+              "a": "nunca",
+              "b": "never"
+            },
+            {
+              "a": "el río",
+              "b": "river"
+            },
+            {
+              "a": "el puerto",
+              "b": "port"
+            },
+            {
+              "a": "a menudo",
+              "b": "often"
+            },
+            {
+              "a": "el tráfico",
+              "b": "traffic"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adjectives follow the noun",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofía says what she wants to do. Look where the describing word (adjective) goes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Quiero ir a la playa {tranquila}.",
+            "Quiero ver el volcán {famoso}.",
+            "Quiero ir a un jardín {bonito}. = I want to go to a beautiful garden."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "In English the adjective comes before the noun: a **beautiful** garden. In Spanish, many adjectives come **after** the noun: un jardín **bonito**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adjectives agree with the noun",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Adjectives also agree with the gender and number of the noun they describe."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Quiero comer la comida rápida. = I want to eat fast food.",
+            "Quiero visitar los puertos viejos. = I want to visit the old ports."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "When we describe more than one person or animal, we add **-s** after -o, -a and -e."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "viejo",
+              "add": "s",
+              "result": "viejos",
+              "note": "old (more than one)"
+            },
+            {
+              "root": "pequeña",
+              "add": "s",
+              "result": "pequeñas",
+              "note": "small (more than one)"
+            },
+            {
+              "root": "importante",
+              "add": "s",
+              "result": "importantes",
+              "note": "important (more than one)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pick the adjective",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the adjective that agrees with the noun.",
+          "items": [
+            {
+              "q": "la playa ___",
+              "options": [
+                "tranquilo",
+                "tranquila",
+                "tranquilos"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "el volcán ___",
+              "options": [
+                "famoso",
+                "famosa",
+                "famosas"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "los puertos ___",
+              "options": [
+                "viejo",
+                "vieja",
+                "viejos"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "las tapas ___",
+              "options": [
+                "pequeñas",
+                "pequeño",
+                "pequeña"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Masculine or feminine?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which noun would each adjective describe: a masculine one (un/el) or a feminine one (una/la)?",
+          "columns": [
+            "masculine noun (el / un)",
+            "feminine noun (la / una)"
+          ],
+          "items": [
+            {
+              "text": "tranquilo",
+              "col": 0
+            },
+            {
+              "text": "divertida",
+              "col": 1
+            },
+            {
+              "text": "pequeño",
+              "col": 0
+            },
+            {
+              "text": "bonita",
+              "col": 1
+            },
+            {
+              "text": "famoso",
+              "col": 0
+            },
+            {
+              "text": "pequeña",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Remember querer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb querer means to want, wanting. It does not follow the general rules: ‘quer-’ changes to ‘quier-’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{quiero}",
+              "sub": "I want"
+            },
+            {
+              "title": "{quieres}",
+              "sub": "you want"
+            },
+            {
+              "title": "{quiere}",
+              "sub": "she, he, it wants"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Querer is followed by the **infinitive**. Example: Quiere visitar el teatro grande. = She wants to visit the big theatre."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Translate step by step",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Let’s translate: ‘I want to visit a quiet village.’"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Step 1: ‘I want’ is **quiero**.",
+            "Step 2: ‘to visit’ is the infinitive **visitar**.",
+            "Step 3: ‘a village’ is **un pueblo**.",
+            "Step 4: the adjective goes after the noun: **tranquilo**."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Quiero visitar un pueblo {tranquilo}."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Translate into Spanish",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct Spanish.",
+          "items": [
+            {
+              "q": "I want to see the famous volcano.",
+              "options": [
+                "Quieres ver el volcán famoso.",
+                "Quiero ver el volcán famoso.",
+                "Quiere ver el volcán famoso."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "You want to try a big paella.",
+              "options": [
+                "Quieres probar una paella grande.",
+                "Quiero probar una paella grande.",
+                "Quieres probar una grande paella."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "I want to eat fast food.",
+              "options": [
+                "Quiere comer la comida rápida.",
+                "Quiero comer la comida rápida.",
+                "Quiero comer la comida rápido."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Timanfaya and more",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Lanzarote there is a national park with a volcano: el parque Timanfaya. The Jameos del Agua are famous caves. The typical food is papas arrugadas, which you can try with the sauce ‘mojo picón’."
+        },
+        {
+          "t": "choice",
+          "q": "What is the national park with the volcano in Lanzarote called?",
+          "options": [
+            "Timanfaya",
+            "Jameos del Agua",
+            "Papas arrugadas"
+          ],
+          "answer": 0,
+          "why": "En el parque Timanfaya hay un volcán. The Jameos del Agua are famous caves, and papas arrugadas is typical food."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Reciting tongue twisters is a good way of practising sound-spelling correspondences and pronunciation.",
+            "Revisiting vocabulary helps develop confidence and communication.",
+            "Many adjectives follow the noun and agree in gender and number with the noun they describe.",
+            "Querer means to want, wanting: **quiero** (I want), **quieres** (you want), **quiere** (she, he, it wants), followed by an **infinitive**."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Why do we recite tongue twisters?",
+      "back": "It is a good way of practising sound-spelling correspondences and pronunciation."
+    },
+    {
+      "front": "What does ‘Pablito clavó un clavito’ mean?",
+      "back": "Pablito nailed a tiny nail."
+    },
+    {
+      "front": "What does ‘El clavo quedó clavado’ mean?",
+      "back": "The nail stayed nailed."
+    },
+    {
+      "front": "What sound does the letter ‘v’ make in Spanish?",
+      "back": "A ‘b’ sound."
+    },
+    {
+      "front": "Where do many adjectives go in Spanish?",
+      "back": "After the noun.\n\nun jardín bonito = a beautiful garden"
+    },
+    {
+      "front": "What must an adjective agree with?",
+      "back": "The gender and number of the noun it describes."
+    },
+    {
+      "front": "How do we describe more than one person or animal?",
+      "back": "Add -s after -o, -a and -e.\n\nlos puertos viejos = the old ports"
+    },
+    {
+      "front": "What does ‘Quiero comer la comida rápida’ mean?",
+      "back": "I want to eat fast food."
+    },
+    {
+      "front": "How do you say ‘I want’, ‘you want’, ‘she, he, it wants’?",
+      "back": "quiero, quieres, quiere"
+    },
+    {
+      "front": "What comes after a form of querer?",
+      "back": "The infinitive.\n\nQuiere visitar el teatro grande. = She wants to visit the big theatre."
+    },
+    {
+      "front": "What do ‘la costa’, ‘el río’ and ‘el puerto’ mean?",
+      "back": "la costa = coast\nel río = river\nel puerto = port"
+    },
+    {
+      "front": "What is the national park with a volcano in Lanzarote called?",
+      "back": "Timanfaya."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Lanzarote in summer: translate sentences with ‘querer’ from memory",
+    "instructions": "Answer each question with a short answer. Write the Spanish words in lower case. Remember: many adjectives come after the noun.",
+    "questions": [
+      {
+        "prompt": "Write in English: ‘Pablito clavó un clavito’.",
+        "answer": "pablito nailed a tiny nail",
+        "explanation": "This is the first line of the Pablito tongue twister."
+      },
+      {
+        "prompt": "Write in English: ‘El clavo quedó clavado’.",
+        "answer": "the nail stayed nailed",
+        "explanation": "This is the third line of the Pablito tongue twister."
+      },
+      {
+        "prompt": "Write in Spanish: ‘I want to visit an important theatre’.",
+        "answer": "quiero visitar un teatro importante",
+        "accepted": [
+          "yo quiero visitar un teatro importante"
+        ],
+        "explanation": "Quiero + the infinitive visitar, then the noun un teatro, then the adjective after it."
+      },
+      {
+        "prompt": "Write in Spanish: ‘You want to try a big paella’.",
+        "answer": "quieres probar una paella grande",
+        "explanation": "Quieres means ‘you want’. The adjective grande goes after the noun paella."
+      },
+      {
+        "prompt": "Write in Spanish: ‘You want to go to quiet cities’.",
+        "answer": "quieres ir a ciudades tranquilas",
+        "explanation": "Cities is plural, so the adjective adds -s: tranquilas. It goes after the noun."
+      },
+      {
+        "prompt": "Complete with the correct adjective ending: ‘los puertos viej___’. Write the whole adjective.",
+        "answer": "viejos",
+        "explanation": "Puertos is masculine and more than one, so viejo becomes viejos."
+      },
+      {
+        "prompt": "Do most adjectives come before or after the noun in Spanish? Answer with one word.",
+        "answer": "after",
+        "explanation": "Many adjectives follow the noun: un jardín bonito."
+      },
+      {
+        "prompt": "Write in Spanish: ‘I want to visit a quiet village’.",
+        "answer": "quiero visitar un pueblo tranquilo",
+        "accepted": [
+          "yo quiero visitar un pueblo tranquilo"
+        ],
+        "explanation": "Quiero + the infinitive visitar, then un pueblo, then the adjective tranquilo after the noun."
+      },
+      {
+        "prompt": "Which national park in Lanzarote has a volcano? Answer with one word.",
+        "answer": "timanfaya",
+        "explanation": "En el parque Timanfaya hay un volcán."
+      }
+    ]
+  }
+}

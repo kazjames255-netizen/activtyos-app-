@@ -1,0 +1,890 @@
+{
+  "agent": "w4-english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the meaning and the correct pronunciation of homonyms based on their context."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{homonyms}",
+              "sub": "same spelling, different meaning"
+            },
+            {
+              "title": "{context}",
+              "sub": "the words around a word give us clues"
+            },
+            {
+              "title": "community and leisure",
+              "sub": "two curriculum words"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "homonym",
+              "def": "Words that have the same spelling as other words but a different meaning. Sometimes they are pronounced differently too."
+            },
+            {
+              "term": "homophone",
+              "def": "Words that sound the same, but have different spellings and meanings."
+            },
+            {
+              "term": "word class",
+              "def": "The different types of words that are used to form sentences."
+            },
+            {
+              "term": "context",
+              "def": "The surrounding words or sentences that help determine the meaning of a word or phrase."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homophones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The word homophone comes from Greek. ‘Homos’ means ‘one and the same’ and ‘phon’ means ‘sound’. So homophones have the same sound."
+        },
+        {
+          "t": "callout",
+          "text": "Homophones sound the same, but they have different spellings and different meanings."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Learning from the {past} can help us to prepare for the future.",
+            "Mr Jones waved as he {passed} me on his bike."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "past or passed?",
+          "text": "**past** is about things that happened previously in time. **passed** is a past tense verb: going past someone. They sound the same, but the spellings and meanings are different."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homonyms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The word homonym comes from Greek too. ‘Nym’ means ‘word’ or ‘name’, so homonym means ‘same word’ or ‘same name’."
+        },
+        {
+          "t": "callout",
+          "text": "Homonyms have the {same spelling} as other words, but different meanings. Sometimes they are pronounced differently too."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The dog began to {bark}.",
+              "sub": "a verb: to bark"
+            },
+            {
+              "title": "The {bark} of a tree.",
+              "sub": "a noun: the bark on a tree"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Homophones or homonyms?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a pair, then tap the column it belongs in.",
+          "columns": [
+            "Homophones (sound the same, spelt differently)",
+            "Homonyms (spelt the same)"
+          ],
+          "items": [
+            {
+              "text": "hear / here",
+              "col": 0
+            },
+            {
+              "text": "past / passed",
+              "col": 0
+            },
+            {
+              "text": "heard / herd",
+              "col": 0
+            },
+            {
+              "text": "aisle / isle",
+              "col": 0
+            },
+            {
+              "text": "bark (of a dog) / bark (of a tree)",
+              "col": 1
+            },
+            {
+              "text": "match (a game) / match (to light a fire)",
+              "col": 1
+            },
+            {
+              "text": "train (a vehicle) / train (to train hard)",
+              "col": 1
+            },
+            {
+              "text": "tear (from an eye) / tear (a piece of paper)",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One word, three meanings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The word {match} is a homonym. Look at the different meanings it can have."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "a football {match}",
+              "sub": "Will you come and watch my football match next week?"
+            },
+            {
+              "title": "colours that {match}",
+              "sub": "The colours in your outfit match perfectly."
+            },
+            {
+              "title": "a {match} for a fire",
+              "sub": "We need to find a match to light the fire."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The context and position within a sentence tells us the meaning of the homonym."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same spelling, different sound",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The word {tear} is a homonym that can be pronounced in two ways."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "A single {tear} rolled down my cheek.",
+              "sub": "makes the /ear/ sound"
+            },
+            {
+              "title": "If you {tear} the paper in half, we can each have a piece.",
+              "sub": "makes the /air/ sound"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How do we know which way to say it?",
+          "text": "The context, and the position of the word in the sentence, tells us how to pronounce it."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Say it the right way",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the context to decide how to say the word.",
+          "items": [
+            {
+              "q": "‘A tear ran down her face.’ How is ‘tear’ pronounced?",
+              "options": [
+                "Like ‘ear’",
+                "Like ‘air’"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "‘Be careful not to tear your coat.’ How is ‘tear’ pronounced?",
+              "options": [
+                "Like ‘ear’",
+                "Like ‘air’"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "‘Yesterday I read a whole chapter.’ How is ‘read’ said here?",
+              "options": [
+                "Like ‘reed’ (present tense)",
+                "Like ‘red’ (past tense)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "‘Please read the sign.’ How is ‘read’ said here?",
+              "options": [
+                "Like ‘reed’ (present tense)",
+                "Like ‘red’ (past tense)"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Read’ in the past tense sounds like ‘red’, the colour. Watch out for that one!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homonyms that sound the same",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These homonyms are spelt the same and they sound the same, however you use them. Only the meaning changes."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{scale}",
+              "sub": "to climb a building, or a scale to weigh something on"
+            },
+            {
+              "title": "{rose}",
+              "sub": "a flower, or ‘I rose from my chair’"
+            },
+            {
+              "title": "{saw}",
+              "sub": "‘I saw you’, or a saw to cut through wood"
+            },
+            {
+              "title": "{fair}",
+              "sub": "a fair coming to town, or ‘that is not fair’"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homonyms that sound different",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These homonyms are spelt the same, but can be pronounced differently and have different meanings."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{wind}",
+              "sub": "the wind that blew, or ‘I had to wind it up’"
+            },
+            {
+              "title": "{wound}",
+              "sub": "a wound in battle, or ‘I wound it up’"
+            },
+            {
+              "title": "{read}",
+              "sub": "‘I read the page’, or ‘you must read it’"
+            },
+            {
+              "title": "{tear}",
+              "sub": "a tear from the eye, or to tear paper"
+            },
+            {
+              "title": "{bow}",
+              "sub": "can be said in different ways"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Unlike many spelling rules, there are no patterns for homonyms and homophones. We just have to learn them, and use the context to know which meaning is which."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Word class",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The meaning and word class of a homonym can be worked out from its context. Homonyms can be nouns, verbs or adjectives."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "I travelled by {train}.",
+              "sub": "a noun: the thing you travel on"
+            },
+            {
+              "title": "I am going to {train} hard today.",
+              "sub": "a verb: something you do"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Can a homonym belong to different word classes?",
+          "text": "Yes. The word ‘train’ can be both a noun and a verb, depending on the context."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Noun or verb?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Use the context to decide the word class of the word before the colon.",
+          "columns": [
+            "Noun",
+            "Verb"
+          ],
+          "items": [
+            {
+              "text": "saw: The gardener used a saw to cut the branch.",
+              "col": 0
+            },
+            {
+              "text": "saw: I saw you at the shops.",
+              "col": 1
+            },
+            {
+              "text": "wound: The doctor cleaned the wound.",
+              "col": 0
+            },
+            {
+              "text": "wound: She wound the wool into a ball.",
+              "col": 1
+            },
+            {
+              "text": "scale: Put the fruit on the scale.",
+              "col": 0
+            },
+            {
+              "text": "scale: Please scale the wall.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use the context",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "After flying the kite, Sam carefully wound the string in. You would wind some string up, you wouldn’t get a wound in it. So the context tells us this is the verb ‘wound’, the act of winding something up."
+        },
+        {
+          "t": "choices",
+          "q": "Which meaning of the word in bold fits the sentence?",
+          "items": [
+            {
+              "q": "The nurse put a plaster on the **wound**.",
+              "options": [
+                "an injury",
+                "the act of winding something up"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Dad **wound** the string onto a stick.",
+              "options": [
+                "an injury",
+                "the act of winding something up"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Mum struck a **match** to light the campfire.",
+              "options": [
+                "a game between two teams",
+                "a thing you strike to start a fire",
+                "to go together well"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The sun **rose** above the hills.",
+              "options": [
+                "a flower",
+                "moved upwards"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Curriculum words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now for two words to learn by heart."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "co{mm}unity",
+              "sub": "a group of people living together"
+            },
+            {
+              "title": "leis{ure}",
+              "sub": "your free time when you are not working"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "**community** has a double m, which can be hard to remember.",
+            "**leisure** has the letters ‘ei’ in the middle, which is a rare spelling. It ends in s-u-r-e, so you can remember there is ‘sure’ in leisure."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spell it!",
+      "blocks": [
+        {
+          "t": "spell",
+          "q": "Listen, then type the word.",
+          "words": [
+            "community",
+            "leisure"
+          ],
+          "tips": [
+            "sound it out.",
+            "think about the tricky parts.",
+            "read the word and check."
+          ]
+        },
+        {
+          "t": "lcwc",
+          "q": "Look, cover, write, check.",
+          "words": [
+            "community",
+            "leisure"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What did you learn?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Two or more words that are spelt the same but have different meanings are called **homonyms**.",
+            "Some homonyms are spelt the same but have contrasting sounds and different meanings, like tear, wind, wound or read.",
+            "The context of a sentence helps us work out the meaning and the word class of a homonym.",
+            "Homophones sound the same, but have different spellings and meanings.",
+            "Curriculum words: community and leisure."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a homonym?",
+      "back": "A word with the same spelling as another word but a different meaning. Some homonyms are pronounced differently too.\n\nExample: tear, wind, wound, read."
+    },
+    {
+      "front": "What is a homophone?",
+      "back": "Words that sound the same, but have different spellings and meanings.\n\nExample: hear / here."
+    },
+    {
+      "front": "Are ‘hear’ and ‘here’ homophones or homonyms?",
+      "back": "Homophones. They sound the same but are spelt differently and have different meanings."
+    },
+    {
+      "front": "‘The dog began to bark.’ and ‘the bark of a tree’. What do we call the word bark?",
+      "back": "A homonym: the same spelling, but different meanings. In the first it is a verb, in the second it is a noun."
+    },
+    {
+      "front": "What helps us work out the meaning of a homonym?",
+      "back": "The context: the surrounding words or sentences."
+    },
+    {
+      "front": "Give three meanings of the homonym ‘match’.",
+      "back": "A football match, colours that match, and a match to light a fire."
+    },
+    {
+      "front": "How is ‘tear’ said in ‘A single tear rolled down my cheek’ and in ‘If you tear the paper’?",
+      "back": "First: the /ear/ sound. Second: the /air/ sound."
+    },
+    {
+      "front": "Name four homonyms that sound the same however you use them.",
+      "back": "scale, rose, saw and fair."
+    },
+    {
+      "front": "Name homonyms that can be pronounced in different ways.",
+      "back": "bow, wind, wound, read (and tear)."
+    },
+    {
+      "front": "What word class is ‘train’ in ‘I travelled by train’, and in ‘I am going to train hard today’?",
+      "back": "A noun in the first sentence, a verb in the second."
+    },
+    {
+      "front": "How does ‘read’ sound in the past tense?",
+      "back": "Like ‘red’, the colour. Aisha read the instructions carefully."
+    },
+    {
+      "front": "Is there a spelling pattern that helps with homonyms and homophones?",
+      "back": "No. We just need to learn them and use the context to work out their meaning."
+    },
+    {
+      "front": "Spell the word for a group of people living together.",
+      "back": "community\n\nWatch out for the double m."
+    },
+    {
+      "front": "Spell the word for your free time when you are not working.",
+      "back": "leisure\n\nThe ‘ei’ is a rare spelling. There is ‘sure’ in leisure."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Spelling homonyms",
+    "instructions": "Read each sentence carefully and use the context to help you. Type your answer as a single word (or as instructed).",
+    "questions": [
+      {
+        "prompt": "Complete the sentence with the homonym for the drop that rolls down a cheek: He wiped a ___ away as the train departed.",
+        "answer": "tear",
+        "explanation": "A tear from the eye. The same spelling is also used for tear (to rip paper), but the context tells us the meaning."
+      },
+      {
+        "prompt": "Complete the sentence with the homonym that means an injury: The doctor used a clean bandage to dress the ___.",
+        "answer": "wound",
+        "explanation": "A wound is an injury. It is spelt the same as ‘wound’ (winding something up) but is said differently."
+      },
+      {
+        "prompt": "Complete the instruction with the homonym that means to pair things that go together: ___ each sentence to its correct answer.",
+        "answer": "match",
+        "explanation": "To match things is to pair them up. The word match also names a football game and a thing you strike to light a fire."
+      },
+      {
+        "prompt": "Complete the sentence with the past tense of the verb ‘to read’: The novel was gripping, so I ___ it in one sitting.",
+        "answer": "read",
+        "explanation": "The past tense is spelt ‘read’ and sounds like the colour ‘red’. The context (‘so I ... it in one sitting’) shows it is past tense."
+      },
+      {
+        "prompt": "Complete the sentence with the homonym for a flower: Despite the bad weather, one beautiful ___ grew.",
+        "answer": "rose",
+        "explanation": "A rose is a flower you might find in the garden. ‘Rose’ can also be a verb, as in ‘the mountain rose above the clouds’."
+      },
+      {
+        "prompt": "In ‘If you tear the paper in half’, does ‘tear’ sound like ‘ear’ or like ‘air’? Write ear or air.",
+        "answer": "air",
+        "explanation": "Here tear means to rip, and it makes the /air/ sound. (In ‘a single tear rolled down my cheek’ it makes the /ear/ sound.)"
+      },
+      {
+        "prompt": "What word class is ‘train’ in the sentence ‘I am going to train hard today’? Write noun or verb.",
+        "answer": "verb",
+        "explanation": "It is something you do, so it is a verb. In ‘I travelled by train’ it is a noun."
+      },
+      {
+        "prompt": "What word class is ‘wound’ in the sentence ‘The soldier suffered a serious wound during the battle’? Write noun or verb.",
+        "answer": "noun",
+        "explanation": "A wound is an injury: a thing, so it is a noun."
+      },
+      {
+        "prompt": "Spell the word for a group of people living together. It has a double m.",
+        "answer": "community",
+        "explanation": "community: com-mu-ni-ty, with a double m."
+      },
+      {
+        "prompt": "Spell the word for your free time when you are not working. It has ‘ei’ in the middle and ends in s-u-r-e.",
+        "answer": "leisure",
+        "explanation": "leisure: the ‘ei’ is a rare spelling, and there is ‘sure’ in leisure."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 5,
+        "doThis": [
+          "Read the goal together, then look at the four key words: homonym, homophone, word class and context.",
+          "Ask the student what each word might mean before showing the meaning.",
+          "Recall the strategy for practising spellings: look, cover, write, check."
+        ],
+        "say": "I can identify the meaning and the correct pronunciation of homonyms based on their context.",
+        "keywords": [
+          {
+            "term": "homonym",
+            "meaning": "Words that have the same spelling as other words but a different meaning. Sometimes they are pronounced differently too."
+          },
+          {
+            "term": "homophone",
+            "meaning": "words that sound the same, but have different spellings and meanings"
+          },
+          {
+            "term": "word class",
+            "meaning": "different types of words that are used to form sentences"
+          },
+          {
+            "term": "context",
+            "meaning": "the surrounding words or sentences that help determine the meaning of a word or phrase"
+          }
+        ],
+        "checkFor": {
+          "ask": "What is the context of a word?",
+          "lookFor": "The surrounding words or sentences that help determine the meaning of a word or phrase."
+        },
+        "recap": [
+          "Our goal: I can identify the meaning and the correct pronunciation of homonyms based on their context.",
+          "Homonyms are spelt the same as other words but have a different meaning. The context is the surrounding words that help us decide which meaning it is."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Homophones and homonyms",
+        "minutes": 6,
+        "doThis": [
+          "Explain that homophones are words that sound the same but have different spellings and different meanings, such as hear and here.",
+          "Explain that homonyms are words that have the same spelling as other words but different meanings, such as bark (a dog barking) and bark (on a tree).",
+          "Ask whether hear and here are homophones or homonyms, and why."
+        ],
+        "keyIdeas": [
+          "Homophones are words that sound the same, but have different spellings and meanings.",
+          "Two or more words that are spelt the same but have different meanings are called homonyms."
+        ],
+        "examples": [
+          "hear and here are homophones: they sound the same but are spelt differently and have different meanings.",
+          "past and passed are homophones: past is about things that happened previously in time, and passed is a past tense verb meaning going past someone.",
+          "bark is a homonym: 'The dog began to bark' (a verb) and 'the bark of a tree' (a noun) are spelt the same but have different meanings."
+        ],
+        "checkFor": {
+          "ask": "Are hear and here homophones or homonyms, and why?",
+          "lookFor": "Homophones: they sound the same but are spelt differently and have different meanings. They are not homonyms because they are not spelt the same."
+        },
+        "recap": [
+          "Homophones sound the same but are spelt differently, like hear and here.",
+          "Homonyms are spelt the same but have different meanings, like the bark of a tree and a dog beginning to bark."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Using context to find the meaning",
+        "minutes": 6,
+        "doThis": [
+          "Show that match is a homonym with three meanings: a football match, colours that match, and a match to light a fire.",
+          "Explain that the context and position within a sentence tell us the meaning of a homonym.",
+          "Show that a homonym can belong to different word classes: train is a noun in 'I travelled by train' and a verb when it means to train hard today."
+        ],
+        "keyIdeas": [
+          "The meaning and word class of homonyms can be determined by their context.",
+          "Homonyms can be nouns, verbs or adjectives."
+        ],
+        "keywords": [
+          {
+            "term": "context",
+            "meaning": "the surrounding words or sentences that help determine the meaning of a word or phrase"
+          },
+          {
+            "term": "word class",
+            "meaning": "different types of words that are used to form sentences"
+          }
+        ],
+        "examples": [
+          "match: a football match, colours that match, and a match to light a fire.",
+          "train: 'I travelled by train' (a noun, the thing you travel on) and to train hard today (a verb, something you do).",
+          "scale: 'Measure the ingredients on the scale' (a noun) and 'We must scale the hill' (a verb, the act of climbing up).",
+          "rose: 'The mountain rose above the clouds' (a verb) and 'I picked a beautiful rose in the garden' (a noun, a flower)."
+        ],
+        "checkFor": {
+          "ask": "When train means to train hard today, is it a noun or a verb?",
+          "lookFor": "A verb: it is something you do."
+        },
+        "recap": [
+          "The context of a sentence tells us the meaning of a homonym.",
+          "A homonym can be a noun in one sentence and a verb in another, like train."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Homonyms that sound different",
+        "minutes": 6,
+        "doThis": [
+          "Read the two tear sentences aloud: 'A single tear rolled down my cheek' makes the /ear/ sound, and 'If you tear the paper in half' makes the /air/ sound.",
+          "Show that read and wound also change: read in the past tense sounds like the colour red, and a wound (an injury) is said differently from wound (winding something up).",
+          "Explain that scale, rose, saw and fair sound the same however they are used, while bow, wind, wound, read and tear can be pronounced in different ways."
+        ],
+        "keyIdeas": [
+          "Some homonyms are spelt the same, but have contrasting sounds and different meanings (e.g. tear, wind, wound or read).",
+          "Unlike many spelling rules, there are no patterns for homonyms and homophones: they are words to learn, with their spelling and meaning in context."
+        ],
+        "examples": [
+          "tear: 'A single tear rolled down my cheek' (/ear/ sound) and 'If you tear the paper in half' (/air/ sound).",
+          "read: 'She read the instructions carefully before she began' (past tense, sounds like the colour red) and 'I like to read before I go to sleep each night' (present tense).",
+          "wound: 'After flying the kite, he carefully wound the string in' (a verb, winding it up) and 'The soldier suffered a serious wound' (a noun, an injury)."
+        ],
+        "checkFor": {
+          "ask": "In 'If you tear the paper in half', does tear make the /ear/ sound or the /air/ sound, and how do we know?",
+          "lookFor": "The /air/ sound. The context (tearing paper in half) tells us which word it is."
+        },
+        "recap": [
+          "Some homonyms are spelt the same but sound different, like tear, wind, wound and read.",
+          "Read the whole sentence to find out how to say the word."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Curriculum words: community and leisure",
+        "minutes": 4,
+        "doThis": [
+          "Read the two words: community (a group of people living together) and leisure (free time when not working).",
+          "Look at the tricky parts: community has a double m, and leisure has the letters ei in the middle, which is a rare spelling, and ends in s-u-r-e.",
+          "Ask the student how they will remember each spelling, for example 'there is sure in leisure'."
+        ],
+        "keyIdeas": [
+          "How to spell the curriculum words: community and leisure."
+        ],
+        "checkFor": {
+          "ask": "What is tricky about spelling community and leisure?",
+          "lookFor": "Community has a double m. Leisure has ei in the middle and ends in s-u-r-e, so there is 'sure' in leisure."
+        },
+        "recap": [
+          "Community has a double m.",
+          "Leisure has ei in the middle and 'sure' at the end: there is sure in leisure."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Choose the right homonym",
+        "minutes": 6,
+        "doThis": [
+          "Read each sentence aloud with a gap and ask the student to choose the right homonym: tear, wound, match, read or rose.",
+          "Ask the student which words in the sentence gave the clue, and how the word is said.",
+          "Include match in the sense of pairing things up, as in 'match each sentence to the correct answer'."
+        ],
+        "examples": [
+          "He wiped a tear away as the train departed.",
+          "The doctor used a clean bandage to dress the wound.",
+          "The novel was gripping, so I read it in one sitting.",
+          "Despite the bad weather, one beautiful rose grew."
+        ],
+        "checkFor": {
+          "ask": "In 'The novel was gripping, so I ___ it in one sitting', which word fits and how is it said?",
+          "lookFor": "read, said like the colour red, because it is the past tense."
+        },
+        "recap": [
+          "Use the words around the gap to choose the right homonym.",
+          "Check the spelling of tear, wound, match, read and rose."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Write a whole sentence",
+        "minutes": 6,
+        "doThis": [
+          "Read the sentence aloud, then ask the student to hold it in their head: picture what is happening, count the words and say it several times out loud.",
+          "Ask the student to write it, sounding out each word, looking out for common exception words and checking the punctuation.",
+          "Check together: a comma comes after 'time' (after the fronted adverbial) and after 'book' (to separate items in a list)."
+        ],
+        "say": "During leisure time, one friend read her book, another trained for a match and a third practised scales on the piano.",
+        "checkFor": {
+          "ask": "Which word in the sentence is a curriculum word, and which words are homonyms?",
+          "lookFor": "Leisure is the curriculum word. Homonyms include read, match and scales."
+        },
+        "recap": [
+          "Hold the sentence in your head: picture it, count the words and say it out loud.",
+          "Then sound out each word, watch for leisure, and check your punctuation."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to match homonyms, homophones and near-homophones to their definitions, to spell tear and community, to give the word class of wound and match, and to pick the sentences that apply to homonyms.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 4,
+        "doThis": [
+          "Ask the student to explain what homonyms are and how context helps.",
+          "Finish with the summary: homonyms are spelt the same but have different meanings; some also sound different (tear, wind, wound, read); context tells us the meaning and word class; the curriculum words are community and leisure."
+        ],
+        "checkFor": {
+          "ask": "How do we work out which meaning, and which sound, a homonym has?",
+          "lookFor": "By using the context: the surrounding words and the position of the word in the sentence."
+        },
+        "recap": [
+          "Can you do it now? I can identify the meaning and the correct pronunciation of homonyms based on their context.",
+          "Homonyms are spelt the same but mean different things, and the context tells us which meaning it is."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils may pronounce homonyms incorrectly in sentences.",
+        "fix": "Show that the context of the sentence helps uncover the meaning of the homonym, and therefore its pronunciation: read the whole sentence first, then say the word."
+      },
+      {
+        "mistake": "Pupils may call words like hear and here homonyms.",
+        "fix": "Words that sound the same but are spelt differently are homophones. Only words that are spelt the same as other words, with a different meaning, are homonyms."
+      }
+    ],
+    "watchOut": [
+      "Give the student a whole sentence and ask which meaning and which sound the homonym has before they write anything: the sentence is the clue.",
+      "Read in the past tense sounds like red, the colour, so watch out for that one.",
+      "Do not look for a spelling rule: there are no patterns for homonyms and homophones, so each word and its meaning in context has to be learnt.",
+      "The quiz also uses the word near-homophones (words that sound similar to other words but have a different spelling), so explain it if the student has not met it."
+    ]
+  }
+}

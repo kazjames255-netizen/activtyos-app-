@@ -1,0 +1,562 @@
+{
+  "agent": "w4-comb-chem",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the properties of graphene and fullerenes, relating them back to their structures."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Graphene}"
+            },
+            {
+              "title": "{Fullerenes} and nanotubes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "allotrope",
+              "def": "A different structural form of an element, e.g. graphite and diamond are allotropes of carbon."
+            },
+            {
+              "term": "graphene",
+              "def": "An allotrope of carbon consisting of a sheet that is one-atom-thick. Each atom is covalently bonded to three others arranged in hexagonal rings."
+            },
+            {
+              "term": "fullerene",
+              "def": "A molecular allotrope of carbon. Each atom is covalently bonded to three others, forming nanoparticles with hollow spheres or tubes."
+            },
+            {
+              "term": "Buckminsterfullerene",
+              "def": "A spherical fullerene composed of 60 carbon atoms (held together by covalent bonds). It is a very stable structure."
+            },
+            {
+              "term": "nanotube",
+              "def": "A cylindrical fullerene, essentially a tube of graphene. A nanoparticle known for its strength and electrical conductivity."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphene: one layer of graphite",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Diamond and graphite are allotropes of carbon that have a giant structure. Graphite is made of layers of hexagonal rings of carbon atoms."
+        },
+        {
+          "t": "callout",
+          "text": "Each layer of carbon atoms in graphite is called {graphene}. It is another allotrope of carbon: a sheet that is one atom thick."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A single layer of carbon atoms arranged in hexagonal rings.",
+            "Each carbon atom is covalently bonded to three others."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of graphene",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Like graphite, graphene has a giant structure, so:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "High melting and boiling points",
+              "sub": "strong covalent bonds need large amounts of energy to break"
+            },
+            {
+              "title": "Conducts electricity",
+              "sub": "each carbon atom gives one delocalised electron that can move and carry charge"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Even though it is only one atom thick, graphene is very strong. The pattern of strong covalent bonds between the carbon atoms is unbroken."
+        },
+        {
+          "t": "text",
+          "text": "Graphene is also very lightweight, flexible and practically transparent. That makes it useful in flexible electronics."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Test your graphene knowledge",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "How many layers of carbon atoms does graphene have?",
+              "options": [
+                "one",
+                "three",
+                "many"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many other carbon atoms is each carbon atom in graphene bonded to?",
+              "options": [
+                "2",
+                "3",
+                "4"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why can graphene conduct electricity?",
+              "options": [
+                "It has delocalised electrons that move and carry charge.",
+                "It has weak forces between its layers.",
+                "Its carbon atoms are delocalised and move."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Graphene is a…",
+              "options": [
+                "giant structure",
+                "collection of simple molecules"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Graphene is not a multi-layered structure held together by weak forces. That describes graphite. Graphene has only one layer of carbon atoms, each atom held by strong covalent bonds."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphite and graphene compared",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "They share properties because both have giant covalent structures: a high melting point and electrical conductivity."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Graphite",
+              "sub": "a three-dimensional structure with weak forces between its layers. The layers slide over each other, so it can be a lubricant"
+            },
+            {
+              "title": "Graphene",
+              "sub": "a single layer. Extremely strong but also flexible, because every carbon atom is bonded to three others"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Fullerenes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Fullerenes are molecular allotropes of carbon. Each atom is covalently bonded to three others, forming hollow spheres or tubes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Fullerenes have a defined number of atoms in their structure, so they are molecules.",
+            "They are simple molecular substances, not giant covalent structures.",
+            "The structure is based on hexagonal rings of carbon atoms, or on rings of five or seven atoms."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How is C₆₀ written?",
+          "text": "C₆₀ tells us that there are 60 carbon atoms in the molecule."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Buckminsterfullerene, C₆₀",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The first fullerene to be discovered was Buckminsterfullerene. It has 60 carbon atoms."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{60} carbon atoms"
+            },
+            {
+              "title": "Cage-like fused rings",
+              "sub": "hexagons and pentagons, like a football"
+            },
+            {
+              "title": "Three bonds each",
+              "sub": "every carbon atom is bonded to three others"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "It is a black solid that dissolves in organic solvents to make a violet solution.",
+            "Its nickname is buckyballs.",
+            "C₆₀ is the most stable fullerene."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More about fullerenes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "C₂₀ is the smallest fullerene, but fullerenes can have hundreds, or potentially even thousands, of carbon atoms."
+        },
+        {
+          "t": "text",
+          "text": "Fullerenes are made of rings of five and six carbon atoms, and sometimes seven."
+        },
+        {
+          "t": "text",
+          "text": "Because they are simple molecules, fullerenes have low melting and boiling points. There are only weak forces between the molecules."
+        },
+        {
+          "t": "callout",
+          "text": "What makes fullerenes different from diamond, graphite and graphene? They are simple molecules and they form a closed, cage-like structure."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Do fullerenes conduct electricity?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each carbon atom in a fullerene has only three covalent bonds, so there is one extra electron per atom that is delocalised."
+        },
+        {
+          "t": "text",
+          "text": "But spherical fullerenes are separate molecules. The electrons cannot move from one molecule to another, so **spherical fullerenes cannot conduct electricity**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Giant or molecular?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which type of structure has each substance?",
+          "columns": [
+            "Giant covalent",
+            "Simple molecular"
+          ],
+          "items": [
+            {
+              "text": "diamond",
+              "col": 0
+            },
+            {
+              "text": "graphite",
+              "col": 0
+            },
+            {
+              "text": "graphene",
+              "col": 0
+            },
+            {
+              "text": "C₆₀ (Buckminsterfullerene)",
+              "col": 1
+            },
+            {
+              "text": "a spherical fullerene",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Carbon nanotubes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Cylindrical fullerenes are known as **carbon nanotubes**. A nanotube is effectively a sheet of graphene rolled into a cylinder."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They have a very high length to diameter ratio: they are very long compared to their width.",
+            "They have delocalised electrons that can move along the tube and carry a charge or current.",
+            "They have a very high tensile strength. This means they resist breaking or stretching.",
+            "They are also quite lightweight and flexible."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "These properties make them useful in composites, specialised materials, electronics and nanotechnology."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Conductor or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does each substance conduct electricity?",
+          "columns": [
+            "Conducts electricity",
+            "Does not conduct electricity"
+          ],
+          "items": [
+            {
+              "text": "graphite",
+              "col": 0
+            },
+            {
+              "text": "graphene",
+              "col": 0
+            },
+            {
+              "text": "a carbon nanotube",
+              "col": 0
+            },
+            {
+              "text": "diamond",
+              "col": 1
+            },
+            {
+              "text": "C₆₀",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Final check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Why can nanotubes conduct electricity when spherical fullerenes cannot?",
+          "options": [
+            "Nanotubes are long structures, so electrons can move along them. Spherical fullerenes are separate molecules.",
+            "Spherical fullerenes have no delocalised electrons at all.",
+            "Nanotubes have weak forces between layers."
+          ],
+          "answer": 0,
+          "why": "Spherical fullerenes do have delocalised electrons, but the electrons cannot move from one molecule to the next."
+        },
+        {
+          "t": "choice",
+          "q": "Why do fullerenes like C₆₀ have low melting points compared with graphene?",
+          "options": [
+            "They are molecules with weak forces between them, so less energy is needed to change state.",
+            "They have weaker covalent bonds than graphene.",
+            "They only have one layer."
+          ],
+          "answer": 0,
+          "why": "Fullerenes are discrete molecules held to each other by weak forces. Graphene has strong covalent bonds throughout that must all be broken to melt it."
+        },
+        {
+          "t": "choice",
+          "q": "Spherical fullerenes are described as slippery. Why?",
+          "options": [
+            "Their shape lets them roll over each other easily, which reduces friction.",
+            "Their layers slide over each other.",
+            "They are very hard."
+          ],
+          "answer": 0,
+          "why": "Graphite is slippery because its layers slide. Spherical fullerenes are slippery because they roll over each other."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Graphene and fullerenes",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Graphene is a single layer of graphite, is very strong and conducts electricity.",
+            "Fullerenes are molecules of carbon with hollow shapes.",
+            "The structure of fullerenes is based on hexagonal rings of carbon atoms, or on carbon rings of five or seven atoms.",
+            "A Buckminsterfullerene is a spherical fullerene of sixty carbon atoms (C₆₀).",
+            "A carbon nanotube is a tube of graphene that is very long compared to its diameter and has a high tensile strength."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is graphene?",
+      "back": "A single layer of graphite: a sheet of carbon atoms one atom thick, arranged in hexagonal rings."
+    },
+    {
+      "front": "How many other carbon atoms is each carbon atom bonded to in graphene?",
+      "back": "Three, with strong covalent bonds."
+    },
+    {
+      "front": "Name three properties of graphene.",
+      "back": "Very strong, conducts electricity, and a high melting point. It is also lightweight, flexible and practically transparent."
+    },
+    {
+      "front": "Why does graphene conduct electricity?",
+      "back": "Each carbon atom provides one delocalised electron that is free to move and carry a charge or current."
+    },
+    {
+      "front": "What are fullerenes?",
+      "back": "Molecular allotropes of carbon with hollow shapes: spheres or tubes."
+    },
+    {
+      "front": "What are fullerene structures based on?",
+      "back": "Hexagonal rings of carbon atoms, and sometimes rings of five or seven atoms."
+    },
+    {
+      "front": "What is Buckminsterfullerene?",
+      "back": "A spherical fullerene of 60 carbon atoms (C₆₀). It is very stable and is nicknamed buckyballs."
+    },
+    {
+      "front": "What is the smallest fullerene?",
+      "back": "C₂₀, with 20 carbon atoms. Fullerenes can also have hundreds or even thousands."
+    },
+    {
+      "front": "Why do fullerenes such as C₆₀ have low melting and boiling points?",
+      "back": "They are simple molecules with weak forces between the molecules, so not much energy is needed to change state."
+    },
+    {
+      "front": "Why can spherical fullerenes not conduct electricity?",
+      "back": "They have delocalised electrons, but the electrons cannot move from one molecule to another."
+    },
+    {
+      "front": "What is a carbon nanotube?",
+      "back": "A cylindrical fullerene: effectively a sheet of graphene rolled into a tube, very long compared with its diameter."
+    },
+    {
+      "front": "What does high tensile strength mean?",
+      "back": "Resistant to breaking or stretching. Nanotubes have it."
+    },
+    {
+      "front": "Give some uses of carbon nanotubes.",
+      "back": "Composites, specialised materials, electronics and nanotechnology."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Graphene and fullerenes",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "Graphene is a single layer of which allotrope of carbon?",
+        "answer": "graphite",
+        "explanation": "Each layer of carbon atoms in graphite is called graphene."
+      },
+      {
+        "prompt": "How many other carbon atoms is each carbon atom bonded to in graphene? Write a number.",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "Each carbon atom in graphene is covalently bonded to three others in hexagonal rings."
+      },
+      {
+        "prompt": "What type of structure does graphene have: giant covalent or simple molecular?",
+        "answer": "giant covalent",
+        "explanation": "Graphene has strong covalent bonds throughout the sheet, so it is a giant covalent structure."
+      },
+      {
+        "prompt": "How many carbon atoms are in one molecule of Buckminsterfullerene, C₆₀? Write a number.",
+        "answer": "60",
+        "accepted": [
+          "sixty"
+        ],
+        "explanation": "C₆₀ has 60 carbon atoms."
+      },
+      {
+        "prompt": "Buckminsterfullerene has a common nickname that starts with the letters b-u-c-k-y. What is it?",
+        "answer": "buckyballs",
+        "accepted": [
+          "buckyball"
+        ],
+        "explanation": "Buckminsterfullerene is nicknamed buckyballs."
+      },
+      {
+        "prompt": "What type of structure does C₆₀ have: giant covalent or simple molecular?",
+        "answer": "simple molecular",
+        "accepted": [
+          "simple molecule",
+          "simple molecules"
+        ],
+        "explanation": "C₆₀ has a defined number of atoms, so it is a simple molecule."
+      },
+      {
+        "prompt": "Does C₆₀ have a high or a low melting point? Answer with the word high or low.",
+        "answer": "low",
+        "explanation": "C₆₀ is a simple molecular substance with weak forces between its molecules."
+      },
+      {
+        "prompt": "Can spherical fullerenes such as C₆₀ conduct electricity? Answer yes or no.",
+        "answer": "no",
+        "explanation": "Their delocalised electrons cannot move from one molecule to another."
+      },
+      {
+        "prompt": "What name is given to a cylindrical fullerene?",
+        "answer": "nanotube",
+        "accepted": [
+          "carbon nanotube",
+          "a nanotube",
+          "a carbon nanotube"
+        ],
+        "explanation": "Cylindrical fullerenes are known as carbon nanotubes."
+      },
+      {
+        "prompt": "How many carbon atoms are in C₂₀, the smallest fullerene? Write a number.",
+        "answer": "20",
+        "accepted": [
+          "twenty"
+        ],
+        "explanation": "The number in the formula is the number of carbon atoms, so C₂₀ has 20."
+      }
+    ]
+  }
+}

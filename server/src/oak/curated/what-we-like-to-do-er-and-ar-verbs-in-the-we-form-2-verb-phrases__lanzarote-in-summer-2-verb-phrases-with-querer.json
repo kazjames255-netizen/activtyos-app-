@@ -1,0 +1,636 @@
+{
+  "agent": "spanish-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand what someone wants to do and say what I want to do in Lanzarote in the summer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Explore {Lanzarote}"
+            },
+            {
+              "title": "What someone {wants} to do"
+            },
+            {
+              "title": "Say what I {want} to do and react"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "querer",
+              "def": "A verb meaning to want, wanting."
+            },
+            {
+              "term": "quiero",
+              "def": "I want. Part of the verb querer."
+            },
+            {
+              "term": "quieres",
+              "def": "You want. Part of the verb querer."
+            },
+            {
+              "term": "quiere",
+              "def": "She, he, it wants. Part of the verb querer."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Exploring Lanzarote",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofía and Quique’s mum, Elena, is organising a family trip to Lanzarote."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Lanzarote is an island. It is one of the Islas Canarias (the Canary Islands), to the west of Africa.",
+            "In Lanzarote there is an airport, lots of ports, a stadium, and a long coast with lots of pretty beaches."
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "el {aeropuerto}",
+              "sub": "the airport"
+            },
+            {
+              "title": "un {estadio}",
+              "sub": "a stadium"
+            },
+            {
+              "title": "playas {bonitas}",
+              "sub": "pretty beaches"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Famous things in Lanzarote",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lanzarote is famous for these places."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "la {cueva}",
+              "sub": "cave: the Jameos del Agua"
+            },
+            {
+              "title": "el {jardín} de cactus",
+              "sub": "the cactus garden",
+              "emoji": "🌵"
+            },
+            {
+              "title": "el {volcán}",
+              "sub": "the volcano",
+              "emoji": "🌋"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It is typical to eat ‘papas arrugadas’ with ‘mojo picón’, a delicious sauce."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These words are useful for talking about the trip. Match each Spanish word to its English meaning."
+        },
+        {
+          "t": "match",
+          "q": "Match the Spanish and English.",
+          "pairs": [
+            {
+              "a": "aburrido",
+              "b": "boring"
+            },
+            {
+              "a": "un avión",
+              "b": "a plane"
+            },
+            {
+              "a": "probar",
+              "b": "to try, trying"
+            },
+            {
+              "a": "nunca",
+              "b": "never"
+            },
+            {
+              "a": "a menudo",
+              "b": "often"
+            },
+            {
+              "a": "bonito",
+              "b": "pretty"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The verb querer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Spanish, **querer** means **to want, wanting**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{quiero}",
+              "sub": "I want"
+            },
+            {
+              "title": "{quieres}",
+              "sub": "you want"
+            },
+            {
+              "title": "{quiere}",
+              "sub": "she, he, it wants"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "querer changes: quer → quier",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb querer does not follow the general rules. ‘Quer-’ changes to ‘quier-’."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "quier",
+              "add": "o",
+              "result": "quiero",
+              "note": "I want"
+            },
+            {
+              "root": "quier",
+              "add": "es",
+              "result": "quieres",
+              "note": "you want"
+            },
+            {
+              "root": "quier",
+              "add": "e",
+              "result": "quiere",
+              "note": "she, he, it wants"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The endings are the same as for all -er verbs. They match the person of the verb."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "querer + infinitive",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To say someone wants to do something, use the right form of querer. Then use the **infinitive** straight after it."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Quiero {nadar} en el mar. = I want to swim in the sea.",
+            "Quiere {ver} el río. = She wants to see the river.",
+            "Quiero {probar} churros. = I want to try churros.",
+            "Quiero {comer} muchas tapas. = I want to eat many tapas."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "In English we say ‘want **to** do’. In Spanish you do not need a word for ‘to’. Just use the correct form of querer and the infinitive."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which form of querer?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose quiero, quieres or quiere.",
+          "items": [
+            {
+              "q": "___ nadar en el mar. (I want)",
+              "options": [
+                "Quiero",
+                "Quieres",
+                "Quiere"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ ver el río. (She wants)",
+              "options": [
+                "Quiero",
+                "Quieres",
+                "Quiere"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "___ visitar una cueva. (You want)",
+              "options": [
+                "Quiere",
+                "Quieres",
+                "Quiero"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ hablar con la gente. (I want)",
+              "options": [
+                "Quieres",
+                "Quiere",
+                "Quiero"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Understand what someone wants",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct English.",
+          "items": [
+            {
+              "q": "Quiere ir a un festival.",
+              "options": [
+                "I want to go to a festival.",
+                "She wants to go to a festival.",
+                "You want to go to a festival."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Quieres aprender sobre la cultura.",
+              "options": [
+                "You want to learn about the culture.",
+                "I want to learn about the culture.",
+                "She wants to learn about the culture."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Quiero comprar la ropa en el mercado.",
+              "options": [
+                "She wants to buy clothes at the market.",
+                "You want to buy clothes at the market.",
+                "I want to buy clothes at the market."
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say what you want",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct Spanish.",
+          "items": [
+            {
+              "q": "I want to eat many tapas.",
+              "options": [
+                "Quieres comer muchas tapas.",
+                "Quiero comer muchas tapas.",
+                "Quiere comer muchas tapas."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "You want to try churros.",
+              "options": [
+                "Quieres probar churros.",
+                "Quiero probar churros.",
+                "Quiere probar churros."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "She wants to see the volcano.",
+              "options": [
+                "Quiero ver el volcán.",
+                "Quiere ver el volcán.",
+                "Quieres ver el volcán."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Giving an opinion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To give an opinion, use **es** and an adjective. Tap each adjective to see its meaning."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "fantástico",
+              "def": "fantastic"
+            },
+            {
+              "term": "importante",
+              "def": "important"
+            },
+            {
+              "term": "interesante",
+              "def": "interesting"
+            },
+            {
+              "term": "diferente",
+              "def": "different"
+            },
+            {
+              "term": "terrible",
+              "def": "terrible"
+            },
+            {
+              "term": "triste",
+              "def": "sad"
+            },
+            {
+              "term": "tranquilo",
+              "def": "calm, peaceful"
+            },
+            {
+              "term": "pesado",
+              "def": "annoying"
+            },
+            {
+              "term": "feo",
+              "def": "ugly"
+            },
+            {
+              "term": "aburrido",
+              "def": "boring"
+            },
+            {
+              "term": "divertido",
+              "def": "fun"
+            },
+            {
+              "term": "bonito",
+              "def": "pretty, nice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sofía and Quique talk",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofía says what she wants to do. Quique gives his opinion."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Quiero visitar el volcán. — Yo también. {Es interesante.}",
+            "Quiero ver un jardín de cactus. — ¡Yo no! {¡Es aburrido!}"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Quique’s opinions start with **es** and then an adjective: es interesante, es aburrido."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Give an opinion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct English.",
+          "items": [
+            {
+              "q": "¡Es divertido!",
+              "options": [
+                "It is fun!",
+                "It is boring!",
+                "It is ugly!"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "¡Es terrible!",
+              "options": [
+                "It is fantastic!",
+                "It is terrible!",
+                "It is different!"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Es tranquilo.",
+              "options": [
+                "It is sad.",
+                "It is annoying.",
+                "It is calm."
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Sound-spelling correspondences can be practised through reading and cultural learning about Lanzarote.",
+            "Querer means to want, wanting: **quiero** (I want), **quieres** (you want), **quiere** (she, he, it wants).",
+            "To say someone wants to do something, use the right form of querer followed by an **infinitive**.",
+            "To give an opinion, use **es** and an adjective."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does ‘querer’ mean?",
+      "back": "To want, wanting."
+    },
+    {
+      "front": "How do you say ‘I want’ in Spanish?",
+      "back": "quiero"
+    },
+    {
+      "front": "How do you say ‘you want’ in Spanish?",
+      "back": "quieres"
+    },
+    {
+      "front": "How do you say ‘she, he, it wants’ in Spanish?",
+      "back": "quiere"
+    },
+    {
+      "front": "How does querer not follow the general rules?",
+      "back": "‘Quer-’ changes to ‘quier-’.\n\nquiero, quieres, quiere"
+    },
+    {
+      "front": "What comes straight after querer when you say what someone wants to do?",
+      "back": "The infinitive. You do not need a word for ‘to’.\n\nQuiero nadar en el mar."
+    },
+    {
+      "front": "What does ‘Quiero nadar en el mar’ mean?",
+      "back": "I want to swim in the sea."
+    },
+    {
+      "front": "What does ‘Quiere ver el río’ mean?",
+      "back": "She wants to see the river."
+    },
+    {
+      "front": "Say ‘I want to eat many tapas’ in Spanish.",
+      "back": "Quiero comer muchas tapas."
+    },
+    {
+      "front": "How do you give an opinion in Spanish?",
+      "back": "Use ‘es’ and an adjective.\n\nEs interesante. = It is interesting."
+    },
+    {
+      "front": "Where is Lanzarote?",
+      "back": "It is an island in the Islas Canarias (the Canary Islands), to the west of Africa."
+    },
+    {
+      "front": "What is it typical to eat in Lanzarote?",
+      "back": "‘Papas arrugadas’ with ‘mojo picón’, a delicious sauce."
+    },
+    {
+      "front": "What do ‘nunca’ and ‘a menudo’ mean?",
+      "back": "nunca = never\na menudo = often"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Lanzarote in summer: 2-verb phrases with ‘querer’",
+    "instructions": "Answer each question with a short answer. Write the Spanish words in lower case.",
+    "questions": [
+      {
+        "prompt": "Write ‘I want’ in Spanish (a form of querer).",
+        "answer": "quiero",
+        "explanation": "Quiero means ‘I want’."
+      },
+      {
+        "prompt": "Write ‘you want’ in Spanish (a form of querer).",
+        "answer": "quieres",
+        "explanation": "Quieres means ‘you want’."
+      },
+      {
+        "prompt": "Write ‘she wants’ in Spanish (a form of querer).",
+        "answer": "quiere",
+        "explanation": "Quiere means ‘she, he, it wants’."
+      },
+      {
+        "prompt": "Complete: ‘Quiero ___ en el mar.’ (I want to swim in the sea.) Write the infinitive.",
+        "answer": "nadar",
+        "explanation": "After quiero we use an infinitive: nadar."
+      },
+      {
+        "prompt": "Write in English: ‘Quiero ver el volcán’.",
+        "answer": "i want to see the volcano",
+        "explanation": "Quiero means ‘I want’ and ver el volcán means ‘to see the volcano’."
+      },
+      {
+        "prompt": "Write in English: ‘Quiere ir a la playa’.",
+        "answer": "she wants to go to the beach",
+        "accepted": [
+          "he wants to go to the beach"
+        ],
+        "explanation": "Quiere means ‘she, he, it wants’."
+      },
+      {
+        "prompt": "Write in Spanish: ‘I want to eat many tapas’.",
+        "answer": "quiero comer muchas tapas",
+        "accepted": [
+          "yo quiero comer muchas tapas"
+        ],
+        "explanation": "Use quiero for ‘I want’, then the infinitive comer."
+      },
+      {
+        "prompt": "What does ‘nunca’ mean in English? Answer with one word.",
+        "answer": "never",
+        "explanation": "‘Lanzarote nunca es aburrido’ means ‘Lanzarote is never boring’."
+      },
+      {
+        "prompt": "What does ‘a menudo’ mean in English? Answer with one word.",
+        "answer": "often",
+        "explanation": "‘A menudo, hay un mercado en la plaza’ means ‘Often, there is a market in the square’."
+      },
+      {
+        "prompt": "Lanzarote is one of the ___ Islands. Which islands? Answer with one word.",
+        "answer": "canary",
+        "explanation": "Lanzarote is an island of the Islas Canarias (the Canary Islands), to the west of Africa."
+      }
+    ]
+  }
+}

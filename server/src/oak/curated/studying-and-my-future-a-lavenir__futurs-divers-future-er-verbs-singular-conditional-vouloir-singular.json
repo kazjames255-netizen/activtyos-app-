@@ -1,0 +1,561 @@
+{
+  "agent": "w4-french-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand descriptions of personal future plans using verbs in the simple future and in the conditional with ‘vouloir’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Expanding vocabulary"
+            },
+            {
+              "title": "The 1-verb future",
+              "sub": "what will happen"
+            },
+            {
+              "title": "Conditional ‘vouloir’",
+              "sub": "what you would like"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "1-verb future",
+              "def": "a form of future that describes what will happen"
+            },
+            {
+              "term": "conditional",
+              "def": "a form of verb that describes what would happen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The 1-verb future",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The 1-verb future translates what **will** happen. It is the equivalent of ‘will’ + verb, and it is formed with **one word**. Its name in French is ‘le futur simple’."
+        },
+        {
+          "t": "reveal",
+          "label": "Where is the word ‘will’?",
+          "text": "There is no separate word for ‘will’ in French. The spelling of the verb carries the whole meaning."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Building the 1-verb future",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For predictable -er verbs, use the infinitive and add {-ai}, {-as}, {-a}. Tap a row to build the word."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ai",
+              "result": "je parlerai",
+              "note": "I will speak"
+            },
+            {
+              "root": "parler",
+              "add": "as",
+              "result": "tu parleras",
+              "note": "you (singular) will speak"
+            },
+            {
+              "root": "parler",
+              "add": "a",
+              "result": "il, elle parlera",
+              "note": "he, she will speak"
+            },
+            {
+              "root": "parler",
+              "add": "a",
+              "result": "on parlera",
+              "note": "we will speak"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The endings are the same as present tense ‘avoir’. That is a useful memory hook!"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the 1-verb future",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which sentence is in the 1-verb future?",
+          "options": [
+            "Il étudie beaucoup.",
+            "Il étudiera beaucoup.",
+            "Il étudiait beaucoup."
+          ],
+          "answer": 1,
+          "why": "étudiera is the infinitive étudier + -a, so it means ‘he will study’. There is no separate word for ‘will’: the ending does the job."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the 1-verb future",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct 1-verb future form. The English clue tells you who is speaking.",
+          "items": [
+            {
+              "q": "Je ___ avec mon copain. (parler: I will speak)",
+              "options": [
+                "parlerai",
+                "parleras",
+                "parlera"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu ___ au foot. (jouer: you will play)",
+              "options": [
+                "jouerai",
+                "joueras",
+                "jouera"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Elle ___ une ile française. (visiter: she will visit)",
+              "options": [
+                "visiteras",
+                "visiterai",
+                "visitera"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Il ___ son apprentissage. (commencer: he will start)",
+              "options": [
+                "commencera",
+                "commenceras",
+                "commencerai"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the 1-verb future",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each 1-verb future form to its English meaning.",
+          "pairs": [
+            {
+              "a": "je parlerai",
+              "b": "I will speak"
+            },
+            {
+              "a": "tu rêveras",
+              "b": "you will dream"
+            },
+            {
+              "a": "elle imaginera",
+              "b": "she will imagine"
+            },
+            {
+              "a": "on étudiera",
+              "b": "we will study"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Conditional ‘vouloir’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The conditional says what **would** happen. ‘Vouloir’ in the conditional means **would like**, so it is useful for expressing a wish. Here are the singular forms."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "je voudrais",
+              "sub": "I would like"
+            },
+            {
+              "title": "tu voudrais",
+              "sub": "you (singular) would like"
+            },
+            {
+              "title": "il, elle voudrait",
+              "sub": "he, she would like"
+            },
+            {
+              "title": "on voudrait",
+              "sub": "we would like"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The singular endings all sound the same!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘Vouloir’ + noun or infinitive",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Conditional ‘vouloir’ can be followed by an **infinitive** verb or by a **noun**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Il voudrait visiter Paris = He would like to visit Paris (infinitive).",
+            "Ma mère voudrait me rendre visite = My mother would like to visit me (infinitive).",
+            "Je voudrais un cadeau = I would like a present (noun).",
+            "Je voudrais une carte pour ma grand-mère = I would like a card for my grandmother (noun)."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Voudrais or voudrait?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form of conditional ‘vouloir’. Look at who is speaking.",
+          "items": [
+            {
+              "q": "Tu ___ un chien. (you would like a dog)",
+              "options": [
+                "voudrais",
+                "voudrait"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Mon copain ___ visiter Paris. (my friend would like to visit Paris)",
+              "options": [
+                "voudrais",
+                "voudrait"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Je ___ un cheval. (I would like a horse)",
+              "options": [
+                "voudrait",
+                "voudrais"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Elle ___ un lapin. (she would like a rabbit)",
+              "options": [
+                "voudrait",
+                "voudrais"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! ‘Will’ and ‘would’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The 1-verb future means ‘will’ + verb. The conditional means ‘would’ + verb. Both are **simple** forms: all the meaning is contained in a single word."
+        },
+        {
+          "t": "reveal",
+          "label": "Is there a French word for ‘would’?",
+          "text": "No. There is no separate word for ‘will’ or ‘would’ in French. Look at the verb’s ending to tell which one you have: je parlerai means ‘I will speak’ and je voudrais means ‘I would like’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Future or conditional?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each verb in the 1-verb future (will) or the conditional (would)?",
+          "columns": [
+            "1-verb future (will)",
+            "Conditional (would)"
+          ],
+          "items": [
+            {
+              "text": "On mangera au restaurant",
+              "col": 0
+            },
+            {
+              "text": "Je voudrais un lapin et deux chats",
+              "col": 1
+            },
+            {
+              "text": "Un jour, je visiterai toutes les capitales",
+              "col": 0
+            },
+            {
+              "text": "Tu voudrais faire un voyage en Afrique",
+              "col": 1
+            },
+            {
+              "text": "Tu joueras au foot",
+              "col": 0
+            },
+            {
+              "text": "Elle voudrait en savoir plus",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Expanding vocabulary",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the new words to their meanings.",
+          "pairs": [
+            {
+              "a": "imaginer",
+              "b": "to imagine"
+            },
+            {
+              "a": "un lapin",
+              "b": "a rabbit"
+            },
+            {
+              "a": "un cheval",
+              "b": "a horse"
+            },
+            {
+              "a": "un lien",
+              "b": "a link"
+            },
+            {
+              "a": "une majorité",
+              "b": "a majority"
+            },
+            {
+              "a": "une minorité",
+              "b": "a minority"
+            },
+            {
+              "a": "nommer",
+              "b": "to call, name"
+            },
+            {
+              "a": "même si",
+              "b": "even if"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Friends in French",
+          "text": "‘Un copain’ and ‘une copine’ mean a friend. They can also mean a boyfriend or girlfriend."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Léa’s plans",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Léa says: ‘Après nos vacances en Corse, je commencerai mon apprentissage en informatique.’"
+        },
+        {
+          "t": "choice",
+          "q": "How can you tell that Léa is talking about the future?",
+          "options": [
+            "The verb commencerai is the infinitive commencer + -ai",
+            "There is a separate word for ‘will’ in the sentence",
+            "The verb ends in -ais"
+          ],
+          "answer": 0,
+          "why": "commencer + -ai gives je commencerai. The ending carries the meaning ‘will’, and the ending is -ai, not -ais."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The 1-verb future translates ‘will’ + verb. It is formed with one word.",
+            "For -er verbs, add {-ai}, {-as}, {-a} to the infinitive: je parlerai, tu parleras, il/elle/on parlera.",
+            "Conditional ‘vouloir’ expresses a wish (would like). It can be followed by a noun or an infinitive.",
+            "The singular forms sound the same: je voudrais, tu voudrais, il/elle/on voudrait."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does the 1-verb future describe?",
+      "back": "What will happen. It is the equivalent of ‘will’ + verb and it is formed with one word."
+    },
+    {
+      "front": "What is the French name for the 1-verb future?",
+      "back": "le futur simple"
+    },
+    {
+      "front": "How do you form the 1-verb future of a predictable -er verb for je, tu, il/elle/on?",
+      "back": "Add -ai, -as, -a to the infinitive.\n\nparler → je parlerai, tu parleras, il/elle/on parlera"
+    },
+    {
+      "front": "Which verb’s present-tense forms are the same as the 1-verb future endings -ai, -as, -a?",
+      "back": "avoir. That is a useful memory hook."
+    },
+    {
+      "front": "Say ‘I will speak’ in French (1-verb future of parler).",
+      "back": "Je parlerai."
+    },
+    {
+      "front": "Is there a separate French word for ‘will’?",
+      "back": "No. The spelling of the verb carries the whole meaning."
+    },
+    {
+      "front": "What does the conditional describe?",
+      "back": "What would happen."
+    },
+    {
+      "front": "What does ‘vouloir’ in the conditional mean, and what is it useful for?",
+      "back": "It means ‘would like’. It is useful for expressing a wish."
+    },
+    {
+      "front": "Give the singular conditional forms of ‘vouloir’.",
+      "back": "je voudrais, tu voudrais, il/elle voudrait, on voudrait"
+    },
+    {
+      "front": "What can conditional ‘vouloir’ be followed by?",
+      "back": "A noun or an infinitive.\n\nJe voudrais un cadeau. Il voudrait visiter Paris."
+    },
+    {
+      "front": "Do the singular forms of conditional ‘vouloir’ sound different from each other?",
+      "back": "No. Je voudrais, tu voudrais and il/elle voudrait all sound the same."
+    },
+    {
+      "front": "Put ‘On étudie beaucoup’ (we are studying a lot) into the 1-verb future.",
+      "back": "On étudiera beaucoup. (We will study a lot.)"
+    },
+    {
+      "front": "What does ‘même si’ mean?",
+      "back": "even if"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Futurs divers : future -er verbs (singular), conditional ‘vouloir’ (singular)",
+    "instructions": "Write your answers in French unless the question asks for English. Include the pronoun when the question shows one, and check your accents.",
+    "questions": [
+      {
+        "prompt": "Write in French, using the 1-verb future of parler: ‘I will speak’.",
+        "answer": "je parlerai",
+        "explanation": "parler + -ai gives je parlerai."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of étudier and the pronoun on: ‘we will study’.",
+        "answer": "on étudiera",
+        "explanation": "For on, add -a to the infinitive: étudier + -a = on étudiera."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of rêver: ‘you (singular) will dream’.",
+        "answer": "tu rêveras",
+        "explanation": "For tu, add -as to the infinitive: rêver + -as = tu rêveras."
+      },
+      {
+        "prompt": "Which ending do you add to the infinitive of a predictable -er verb to make the 1-verb future for tu? Write the ending only.",
+        "answer": "as",
+        "accepted": [
+          "-as"
+        ],
+        "explanation": "The singular endings are -ai, -as, -a: tu takes -as."
+      },
+      {
+        "prompt": "Fill the gap with the conditional of vouloir: Je ______ une carte pour ma grand-mère. (I would like a card for my grandmother.)",
+        "answer": "voudrais",
+        "explanation": "With je, conditional ‘vouloir’ is je voudrais, and it can be followed by a noun."
+      },
+      {
+        "prompt": "Fill the gap with the conditional of vouloir: Ma mère ______ me rendre visite. (My mother would like to visit me.)",
+        "answer": "voudrait",
+        "explanation": "With il, elle (and ma mère), conditional ‘vouloir’ is voudrait."
+      },
+      {
+        "prompt": "Write in French, using the conditional of vouloir: ‘He would like to visit Paris.’",
+        "answer": "il voudrait visiter paris",
+        "explanation": "il voudrait + the infinitive visiter."
+      },
+      {
+        "prompt": "‘On mangera au restaurant.’ Is the verb in the 1-verb future or the conditional? Answer with one word: future or conditional.",
+        "answer": "future",
+        "explanation": "mangera is the infinitive manger + -a, so it means ‘will eat’."
+      },
+      {
+        "prompt": "‘Tu voudrais faire un voyage en Afrique.’ Is the verb in the 1-verb future or the conditional? Answer with one word: future or conditional.",
+        "answer": "conditional",
+        "explanation": "voudrais is conditional ‘vouloir’: ‘you would like’."
+      },
+      {
+        "prompt": "What does ‘même si’ mean in English?",
+        "answer": "even if",
+        "explanation": "même si means ‘even if’."
+      },
+      {
+        "prompt": "Write in French: ‘a rabbit’ (include the word for ‘a’).",
+        "answer": "un lapin",
+        "explanation": "‘Un lapin’ is a rabbit."
+      }
+    ]
+  }
+}

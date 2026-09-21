@@ -1,0 +1,629 @@
+{
+  "agent": "german-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can correctly apply word order rules when there are two object nouns in a sentence."
+        },
+        {
+          "t": "text",
+          "text": "You will also practise pronouncing final [d] and final [b]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Final {[d]} and final {[b]}"
+            },
+            {
+              "title": "Object pronouns"
+            },
+            {
+              "title": "Two objects: which comes first?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "final [d]",
+              "def": "Pronounced as in ‘und’, the same sound as [t]."
+            },
+            {
+              "term": "final [b]",
+              "def": "Pronounced as in ‘halb’, the same sound as [p]."
+            },
+            {
+              "term": "pronoun",
+              "def": "A word that takes the place of a noun, like ‘it’, ‘you’, ‘she’."
+            },
+            {
+              "term": "direct object",
+              "def": "A noun in the accusative case, directly affected by the action of the verb."
+            },
+            {
+              "term": "indirect object",
+              "def": "A noun in the dative case, indirectly affected by the action of the verb."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Final [d] sounds like [t]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A [d] at the end of a word sounds the same as [t]."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "un{d}",
+            "run{d}",
+            "Lan{d}",
+            "Han{d}",
+            "Grun{d} (reason)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In other places in a word, [d] sounds the same as English ‘d’."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "{d}ein",
+            "die Klei{d}ung"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "So [d] is **not** always pronounced like [t]. It depends where it is in the word."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Final [b] sounds like [p]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A [b] at the end of a word sounds the same as [p]."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "hal{b}",
+            "lie{b}",
+            "gel{b}"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In other places in a word, [b] sounds the same as English ‘b’."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "{b}ekommen",
+            "das {B}eispiel"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What happens in the plural?",
+          "text": "When a word ending in final [d] or [b] gets an ending, the sound changes because the letter is not the last one any more: Kleid → Kleider, Hund → Hunde, gelb → gelbe, Verb → Verben."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which [d] is different?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "In which word does [d] sound like English ‘d’ (not like [t])?",
+          "options": [
+            "Hand",
+            "dein",
+            "Land"
+          ],
+          "answer": 1,
+          "why": "In ‘dein’ the [d] is at the start of the word, so it sounds like English ‘d’. In Hand and Land it is the final letter, so it sounds like [t]."
+        },
+        {
+          "t": "choice",
+          "q": "In which word does [b] sound like [p]?",
+          "options": [
+            "gelb",
+            "bekommen",
+            "Beispiel"
+          ],
+          "answer": 0,
+          "why": "In ‘gelb’ the [b] is the last letter, so it sounds like [p]. In bekommen and Beispiel it is at the start, so it sounds like English ‘b’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Revisiting object pronouns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Pronouns replace nouns. Their form changes depending on whether the noun is the subject or an object in the sentence."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Direct object pronouns (accusative): mich = me, dich = you, ihn = him / it, es = it",
+            "Indirect object pronouns (dative): mir = to me, dir = to you, ihr = to her / it, ihm = to him / it"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: ‘Er lernt Deutsch.’ → ‘Er lernt es.’ ‘Deutsch’ is the direct object, so it is replaced by a direct object pronoun."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Direct or indirect?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Direct objects** are directly affected by the action of the verb. They are in the accusative case."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Ich sehe {den Mann}."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Indirect objects** are indirectly affected by the action of the verb. They are in the dative case."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Ich antworte {dir}."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which pronoun replaces ‘den Rock’?",
+          "text": "‘Den Rock’ is a masculine accusative noun, so it becomes **ihn**: ‘Das Mädchen mag den Rock.’ → ‘Das Mädchen mag ihn.’"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the pronouns",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each pronoun to its English meaning.",
+          "pairs": [
+            {
+              "a": "mich",
+              "b": "me"
+            },
+            {
+              "a": "dich",
+              "b": "you (accusative)"
+            },
+            {
+              "a": "mir",
+              "b": "to me"
+            },
+            {
+              "a": "dir",
+              "b": "to you (dative)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Replace the object",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "‘Ich sehe den Mann.’ Which pronoun replaces ‘den Mann’?",
+          "options": [
+            "ihm",
+            "ihn",
+            "ihr"
+          ],
+          "answer": 1,
+          "why": "‘Den Mann’ is a direct object (accusative), masculine, so the pronoun is ‘ihn’: Ich sehe ihn."
+        },
+        {
+          "t": "choice",
+          "q": "‘Ich antworte dem Lehrer.’ Which pronoun replaces ‘dem Lehrer’?",
+          "options": [
+            "ihn",
+            "ihm",
+            "ihr"
+          ],
+          "answer": 1,
+          "why": "‘Antworten’ takes an indirect object (dative), like ‘Ich antworte dir’. The teacher is a ‘he’, so ‘ihm’: Ich antworte ihm."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One object: the usual word order",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When a sentence has one object noun, the usual word order is subject, verb, object."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Ich",
+              "sub": "subject"
+            },
+            {
+              "title": "bringe",
+              "sub": "verb"
+            },
+            {
+              "title": "das Buch",
+              "sub": "object",
+              "emoji": "📖"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Ich bringe das Buch. Ich helfe der Frau."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two objects: indirect first",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When a sentence has both a direct object noun and an indirect object noun, the indirect object noun always comes first."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Ich",
+              "sub": "subject"
+            },
+            {
+              "title": "bringe",
+              "sub": "verb"
+            },
+            {
+              "title": "dem Lehrer",
+              "sub": "indirect object: (to) the teacher"
+            },
+            {
+              "title": "das Buch",
+              "sub": "direct object: the book",
+              "emoji": "📖"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "German: indirect object {first}, then direct object. If there are two objects in a sentence, one of them will be an indirect object."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out for English!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "English word order is more flexible. Both of these are fine in English:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "I bring the book to the teacher.",
+            "I bring the teacher the book."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Do not copy English word order. In German, the indirect object (dative) comes before the direct object (accusative): Ich bringe dem Lehrer das Buch."
+        },
+        {
+          "t": "text",
+          "text": "Tip: identify the direct and indirect object nouns first."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the objects",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "These phrases come from ‘Wir zeigen dem Lehrer das Heft’ and ‘Mia schenkt ihrer Mutter einen Kuchen’. Which are indirect objects and which are direct objects?",
+          "columns": [
+            "Indirect object (dative)",
+            "Direct object (accusative)"
+          ],
+          "items": [
+            {
+              "text": "dem Lehrer",
+              "col": 0
+            },
+            {
+              "text": "das Heft",
+              "col": 1
+            },
+            {
+              "text": "ihrer Mutter",
+              "col": 0
+            },
+            {
+              "text": "einen Kuchen",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Correct word order",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which sentence uses the correct word order?",
+          "items": [
+            {
+              "options": [
+                "Wir zeigen der Klasse das Buch.",
+                "Wir zeigen das Buch der Klasse."
+              ],
+              "answer": 0
+            },
+            {
+              "options": [
+                "Sie schenkt die Jacke dem Kind.",
+                "Sie schenkt dem Kind die Jacke."
+              ],
+              "answer": 1
+            },
+            {
+              "options": [
+                "Der Lehrer gibt dem Schüler die Antwort.",
+                "Der Lehrer gibt die Antwort dem Schüler."
+              ],
+              "answer": 0
+            },
+            {
+              "options": [
+                "Ich schreibe nette Nachrichten meinem Freund.",
+                "Ich schreibe meinem Freund nette Nachrichten."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Who gets what?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Ich erkläre meiner Lehrerin meine Fragen. (from Heidi’s text)"
+        },
+        {
+          "t": "choice",
+          "q": "Which words are the indirect object in this sentence?",
+          "options": [
+            "meiner Lehrerin",
+            "meine Fragen",
+            "Ich erkläre"
+          ],
+          "answer": 0,
+          "why": "‘Meiner Lehrerin’ (to my teacher) is in the dative and comes first. ‘Meine Fragen’ (my questions) is the direct object."
+        },
+        {
+          "t": "choice",
+          "q": "In ‘Eine Mutter kocht ihrem Sohn gesundes Essen’, which is the direct object?",
+          "options": [
+            "ihrem Sohn",
+            "gesundes Essen",
+            "Eine Mutter"
+          ],
+          "answer": 1,
+          "why": "The indirect object ‘ihrem Sohn’ comes first. The direct object ‘gesundes Essen’ (healthy food) comes second."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Final [d] sounds like [t], as in ‘und’. Final [b] sounds like [p], as in ‘halb’.",
+            "Pronouns replace nouns. Their form changes depending on whether the noun is the subject or an object.",
+            "Direct objects are in the accusative, e.g. ‘Ich sehe den Mann’. Indirect objects are in the dative, e.g. ‘Ich antworte dir’.",
+            "When two object nouns are in a sentence, the indirect object (dative) comes before the direct object (accusative)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How does a [d] at the end of a word sound?",
+      "back": "Like [t].\n\nund"
+    },
+    {
+      "front": "How does a [b] at the end of a word sound?",
+      "back": "Like [p].\n\nhalb"
+    },
+    {
+      "front": "How does [d] sound elsewhere in a word (not at the end)?",
+      "back": "Like English ‘d’.\n\ndein"
+    },
+    {
+      "front": "Why does the [d] sound change in Kleid → Kleider?",
+      "back": "Because the [d] is not the final letter any more."
+    },
+    {
+      "front": "What is a pronoun?",
+      "back": "A word that takes the place of a noun, like ‘it’, ‘you’, ‘she’."
+    },
+    {
+      "front": "What is a direct object?",
+      "back": "A noun in the accusative case, directly affected by the action of the verb.\n\nIch sehe den Mann."
+    },
+    {
+      "front": "What is an indirect object?",
+      "back": "A noun in the dative case, indirectly affected by the action of the verb.\n\nIch antworte dir."
+    },
+    {
+      "front": "Which direct object pronoun replaces the masculine noun ‘den Rock’?",
+      "back": "ihn\n\nDas Mädchen mag ihn."
+    },
+    {
+      "front": "In a sentence with two object nouns, which object comes first?",
+      "back": "The indirect object (dative), then the direct object (accusative).\n\nIch bringe dem Lehrer das Buch."
+    },
+    {
+      "front": "Is German word order the same as English when there are two objects?",
+      "back": "No. English can say ‘I bring the book to the teacher’, but German puts the indirect object first: Ich bringe dem Lehrer das Buch."
+    },
+    {
+      "front": "If there are two objects in a sentence, one of them will be which kind of object?",
+      "back": "An indirect object."
+    },
+    {
+      "front": "What is the first thing to do with a sentence with two objects?",
+      "back": "Identify the direct and indirect object nouns first."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: At school: word order in sentences with two objects",
+    "instructions": "Answer each question. For the sentence-ordering questions, write the whole sentence starting with the subject.",
+    "questions": [
+      {
+        "prompt": "Task A: Which letter completes the German word ‘Stran_’: d or t?",
+        "answer": "d",
+        "accepted": [],
+        "explanation": "The word is Strand, spelt with a d, even though a final [d] sounds like [t]."
+      },
+      {
+        "prompt": "Task A: Which letter completes the German word ‘Solda_’: d or t?",
+        "answer": "t",
+        "accepted": [
+          "T"
+        ],
+        "explanation": "The word is Soldat, spelt with a t."
+      },
+      {
+        "prompt": "Task A: Which letter completes the German word ‘Maßsta_’ (Maßstab, scale): b or p?",
+        "answer": "b",
+        "accepted": [
+          "B"
+        ],
+        "explanation": "The word is Maßstab, spelt with a b; a final [b] sounds like [p]."
+      },
+      {
+        "prompt": "Task A: Which letter completes the German word ‘Prinzi_’: b or p?",
+        "answer": "p",
+        "accepted": [
+          "P"
+        ],
+        "explanation": "The word is Prinzip, spelt with a p."
+      },
+      {
+        "prompt": "Task B: In ‘Ich antworte ihm.’, is ‘ihm’ a direct or an indirect object pronoun?",
+        "answer": "indirect",
+        "accepted": [
+          "an indirect object pronoun",
+          "indirect object pronoun",
+          "indirect object"
+        ],
+        "explanation": "‘Ihm’ (to him / to it) is a dative pronoun, so it is an indirect object pronoun."
+      },
+      {
+        "prompt": "Task B: In ‘Er lernt es.’, the word ‘es’ replaces ‘Deutsch’. Is ‘es’ a direct or an indirect object pronoun?",
+        "answer": "direct",
+        "accepted": [
+          "a direct object pronoun",
+          "direct object pronoun",
+          "direct object"
+        ],
+        "explanation": "‘Deutsch’ is directly affected by the verb (accusative), so ‘es’ is a direct object pronoun."
+      },
+      {
+        "prompt": "Task C: Put the words in the right order, beginning with the subject pronoun: der Frau / schenkt / Er / einen Gutschein",
+        "answer": "Er schenkt der Frau einen Gutschein.",
+        "accepted": [
+          "Er schenkt der Frau einen Gutschein"
+        ],
+        "explanation": "Subject, verb, then the indirect object (der Frau) before the direct object (einen Gutschein)."
+      },
+      {
+        "prompt": "Task C: Put the words in the right order, beginning with the subject pronoun: meinem Bruder / neue Hefte / Sie / kauft",
+        "answer": "Sie kauft meinem Bruder neue Hefte.",
+        "accepted": [
+          "Sie kauft meinem Bruder neue Hefte"
+        ],
+        "explanation": "The indirect object (meinem Bruder) comes before the direct object (neue Hefte)."
+      },
+      {
+        "prompt": "Task C: Put the words in the right order, beginning with the subject: gibt / die Antwort / Der Lehrer / dem Schüler",
+        "answer": "Der Lehrer gibt dem Schüler die Antwort.",
+        "accepted": [
+          "Der Lehrer gibt dem Schüler die Antwort"
+        ],
+        "explanation": "The indirect object (dem Schüler) comes before the direct object (die Antwort)."
+      },
+      {
+        "prompt": "Task C: Put the words in the right order, beginning with the subject pronoun: unsere Nummer / der Lehrerin / gegeben / Wir / haben",
+        "answer": "Wir haben der Lehrerin unsere Nummer gegeben.",
+        "accepted": [
+          "Wir haben der Lehrerin unsere Nummer gegeben"
+        ],
+        "explanation": "The indirect object (der Lehrerin) comes before the direct object (unsere Nummer)."
+      },
+      {
+        "prompt": "Task C: In Heidi’s text, ‘Eine Mutter kocht ihrem Sohn gesundes Essen.’ Copy the indirect object (two words).",
+        "answer": "ihrem Sohn",
+        "explanation": "‘Ihrem Sohn’ is in the dative and comes first; ‘gesundes Essen’ is the direct object."
+      }
+    ]
+  }
+}

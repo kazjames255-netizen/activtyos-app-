@@ -1,0 +1,533 @@
+{
+  "agent": "maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can evaluate different statistical measures to draw conclusions about a data set."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Summary statistics",
+              "sub": "mean, median, mode and range"
+            },
+            {
+              "title": "Drawing conclusions",
+              "sub": "and checking how the data was collected"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You have met these words before. Tap each one to check what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Arithmetic mean",
+              "def": "The (arithmetic) mean for a set of numerical data is the sum of the values divided by the number of values. It is a measure of central tendency representing the average of the values."
+            },
+            {
+              "term": "Median",
+              "def": "The median is the central (middle) piece of data when the data are in numerical order. It is a measure of central tendency representing the average of the values."
+            },
+            {
+              "term": "Mode",
+              "def": "The mode is the most frequent value. It is a measure of central tendency representing the average of the values."
+            },
+            {
+              "term": "Range",
+              "def": "The range is a measure of spread. It is found by finding the difference between the highest and lowest values."
+            },
+            {
+              "term": "Population",
+              "def": "The population is the entire set of people, creatures, plants or items that make up the whole group which is being studied."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Central tendency and spread",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A statistical summary involves the mean, median, mode and range. Each summary gives us a different insight into a data set."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Mean}, {median}, {mode}",
+              "sub": "measures of central tendency (the average)"
+            },
+            {
+              "title": "{Range}",
+              "sub": "a measure of spread"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Mean, median and mode are all types of average. The range is **not** an average: it tells us how spread out the data is."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Four small data sets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Real data sets are usually very large. These four are small (only seven values each) so we can see them all. They are fairly different from each other."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Set 1: 4, 4, 4, 4, 4, 4, 4",
+            "Set 2: 1, 2, 3, 4, 5, 6, 7",
+            "Set 3: 1, 1, 1, 1, 3, 5, 16",
+            "Set 4: 1, 2, 2, 4, 4, 5, 10"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "What do the summary statistics tell us about them? Add up each set and divide by 7."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see the mean of each set",
+          "text": "Every set adds up to 28, and 28 ÷ 7 = 4. All four sets have a **mean of 4**, even though the sets are different."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Median, mode and range of the four sets",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Set 1: median 4, mode 4, range 0",
+            "Set 2: median 4, no mode, range 6",
+            "Set 3: median 1, mode 1, range 15",
+            "Set 4: median 4, modes 2 and 4, range 9"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Three of the four sets have a median of 4. The mode is different in every set. The range is different in every set."
+        },
+        {
+          "t": "callout",
+          "text": "The more measures of central tendency and spread we use, the greater our understanding of the data set."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Same mean, same set?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Two data sets have the same mean value. What does that tell us?",
+          "options": [
+            "The two sets must be identical.",
+            "The two sets can still be quite different from each other.",
+            "The two sets must have the same range."
+          ],
+          "answer": 1,
+          "why": "All four sets on the last slides had a mean of 4, but their medians, modes and ranges were not all the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Choosing between two goal shooters",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A netball manager needs to choose a goal shooter for the next match. The club statistician gives summary statistics for goals scored over the last 20 matches."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Mean goals per match: 21 for both goal shooters. On this information alone, the manager could choose either.",
+            "Range: 18 for goal shooter 1 and 7 for goal shooter 2. So goal shooter 2 is more consistent.",
+            "Mode: 25 for goal shooter 1 and 20 for goal shooter 2. So goal shooter 1 has the higher modal value."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Each summary gives a different insight. Use all of them before you decide."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Extreme values",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The mean is affected by extreme values. The median is not. Look at what happens when the biggest value in a data set changes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Data set 1: 5, 6, 6, 7, 8. The values add up to 32, so the mean is 32 ÷ 5 = 6.4. The median is 6, the mode is 6 and the range is 3.",
+            "Data set 2: 5, 6, 6, 7, 40. The values add up to 64, so the mean is 64 ÷ 5 = 12.8. The median is 6, the mode is 6 and the range is 35."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Changing 8 to 40 doubled the mean (6.4 to 12.8) and made the range much bigger, but the median stayed at 6."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What changed?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "In 5, 6, 6, 7, 8 the biggest value 8 is changed to 40. Which summary statistics change?",
+          "options": [
+            "Only the mean",
+            "The mean and the range",
+            "The median and the mode"
+          ],
+          "answer": 1,
+          "why": "The mean goes from 6.4 to 12.8 and the range from 3 to 35. The median and mode both stay at 6."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Comparing two data sets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To compare data sets well, use as many summary statistics as you can. Where possible, always use at least one measure of central tendency (mean, median or mode) and one measure of spread (range)."
+        },
+        {
+          "t": "text",
+          "text": "Bakery X and Bakery Y sold these numbers of cakes over five days. X: 12, 15, 15, 16, 17. Y: 10, 11, 15, 20, 24."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Bakery X: mean 15, median 15, mode 15, range 5",
+            "Bakery Y: mean 16, median 15, no mode, range 14"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for a conclusion",
+          "text": "On average Bakery Y sold slightly more cakes (mean 16 compared with 15), but the medians are the same. Bakery X was more consistent (range 5 compared with 14)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Central tendency or spread?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each item: is it a measure of central tendency or a measure of spread?",
+          "columns": [
+            "Central tendency (average)",
+            "Spread"
+          ],
+          "items": [
+            {
+              "text": "Mean",
+              "col": 0
+            },
+            {
+              "text": "Median",
+              "col": 0
+            },
+            {
+              "text": "Mode",
+              "col": 0
+            },
+            {
+              "text": "Range",
+              "col": 1
+            },
+            {
+              "text": "The sum of the values divided by the number of values",
+              "col": 0
+            },
+            {
+              "text": "The highest value minus the lowest value",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Reading summary statistics",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct conclusion.",
+          "items": [
+            {
+              "q": "Runner P’s times have a range of 0.4 s. Runner Q’s times have a range of 1.9 s. Which runner’s times are more consistent?",
+              "options": [
+                "Runner P",
+                "Runner Q"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Shop A has a mean of 8 sales a day. Shop B has a mean of 6 sales a day. Which shop has the higher typical number of sales?",
+              "options": [
+                "Shop A",
+                "Shop B"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Class X’s scores have a range of 3. Class Y’s scores have a range of 12. Which class’s scores are more varied?",
+              "options": [
+                "Class X",
+                "Class Y"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Mia’s median quiz score was 17 in Term 1 and 19 in Term 2. What does that show?",
+              "options": [
+                "Her middle score was higher in Term 2.",
+                "Her middle score was higher in Term 1.",
+                "Her scores were more varied in Term 2."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How was the data collected?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Conclusions may be affected by the way the data was collected. Care should be taken not to over-generalise the results of an investigation."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Swimming pool",
+              "sub": "Adults surveyed at a pool have a mean of 2 h 15 min swimming a week. The people at the pool may swim more than the general population."
+            },
+            {
+              "title": "Gaming café",
+              "sub": "Customers of a gaming café are biased towards adults who play board games regularly."
+            },
+            {
+              "title": "Cambridge cycling",
+              "sub": "16.8% of people in Cambridge travel to work by bicycle. In the UK the figure is 2% (2021 Census), so Cambridge cannot stand for the whole UK."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Conclusions from a sample may only be valid for the sample, or for a population that is fully represented by the sample."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Can we conclude that?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Decide whether each conclusion is fair.",
+          "items": [
+            {
+              "q": "Izzy surveyed 4 pupils from each year group in her school about journey time. Is it fair to say the mean applies to pupils in her school?",
+              "options": [
+                "Yes, her sample represents the whole school.",
+                "No, four pupils is never enough."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Izzy uses the same survey to say the mean journey time applies to all school children in the UK. Is that fair?",
+              "options": [
+                "Yes, the sample is from a school.",
+                "No, the sample does not fully represent all school children in the UK."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Sam asks all the customers of a gaming café how many hours a week they play board games, then says all adults play about that much. Is that fair?",
+              "options": [
+                "Yes, he asked everyone in the café.",
+                "No, the sample may be biased towards adults who play board games regularly."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Izzy asks 10 classmates their favourite pizza topping and says all pupils her age like the most common one best. Is that fair?",
+              "options": [
+                "Yes, 10 people is enough.",
+                "No, the sample may not represent all pupils of her age."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A statistical summary involves the mean, median, mode and range.",
+            "Each summary gives a different insight into a data set. The more summaries we use, the better we understand it.",
+            "Compare data sets using at least one measure of central tendency and one measure of spread.",
+            "Conclusions need to be mindful of how the data was collected and the limitations of the sample."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How do you find the mean of a data set?",
+      "back": "Add up all the values and divide by the number of values."
+    },
+    {
+      "front": "What is the median?",
+      "back": "The central (middle) piece of data when the data are in numerical order."
+    },
+    {
+      "front": "What is the mode?",
+      "back": "The most frequent value."
+    },
+    {
+      "front": "How do you find the range?",
+      "back": "Highest value minus lowest value. The range is a measure of spread."
+    },
+    {
+      "front": "Which of mean, median, mode and range are measures of central tendency?",
+      "back": "Mean, median and mode. The range is a measure of spread."
+    },
+    {
+      "front": "Four different data sets can all have a mean of 4. What does this show?",
+      "back": "The same mean does not mean the sets are identical. Their medians, modes and ranges can differ."
+    },
+    {
+      "front": "Why use more than one summary statistic to describe a data set?",
+      "back": "Each one gives a different insight. The more measures of central tendency and spread we use, the greater our understanding."
+    },
+    {
+      "front": "When comparing two data sets, which measures should you use where possible?",
+      "back": "At least one measure of central tendency (mean, median or mode) and one measure of spread (range)."
+    },
+    {
+      "front": "Which average is affected by extreme values: the mean or the median?",
+      "back": "The mean.\n\n5, 6, 6, 7, 8 has mean 6.4. Change 8 to 40 and the mean becomes 12.8, but the median stays 6."
+    },
+    {
+      "front": "What does the range tell you about two data sets?",
+      "back": "The range measures variety. The set with the smaller range is more consistent."
+    },
+    {
+      "front": "What is a population in statistics?",
+      "back": "The entire set of people, creatures, plants or items that make up the whole group being studied."
+    },
+    {
+      "front": "Adults surveyed at a swimming pool swim a mean of 2 h 15 min a week. Why can’t we say that is true for all adults?",
+      "back": "The people at the swimming pool may swim more than the general population."
+    },
+    {
+      "front": "When are conclusions from a sample valid?",
+      "back": "Only for the sample, or for a population that is fully represented by the sample."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking understanding of statistical problems",
+    "instructions": "Answer each question with a number or a short word. Work out the summary statistics carefully, and use what you learned about drawing conclusions.",
+    "questions": [
+      {
+        "prompt": "Find the mean of this data: 2, 5, 5, 6, 7, 8, 9.",
+        "answer": "6",
+        "explanation": "The values add up to 42 and 42 ÷ 7 = 6."
+      },
+      {
+        "prompt": "Find the median of this data: 2, 5, 5, 6, 7, 8, 9.",
+        "answer": "6",
+        "explanation": "The data is already in order and the middle (fourth) value is 6."
+      },
+      {
+        "prompt": "Find the mode of this data: 2, 5, 5, 6, 7, 8, 9.",
+        "answer": "5",
+        "explanation": "5 appears twice and every other value appears once."
+      },
+      {
+        "prompt": "Find the range of this data: 2, 5, 5, 6, 7, 8, 9.",
+        "answer": "7",
+        "explanation": "The range is the highest value minus the lowest value: 9 − 2 = 7."
+      },
+      {
+        "prompt": "Find the median of this data: 1, 1, 1, 1, 3, 5, 16.",
+        "answer": "1",
+        "explanation": "The data is in order and the middle (fourth) value is 1."
+      },
+      {
+        "prompt": "Find the mean of this data: 5, 6, 6, 7, 40.",
+        "answer": "12.8",
+        "explanation": "The values add up to 64 and 64 ÷ 5 = 12.8."
+      },
+      {
+        "prompt": "Which is the better summary of a data set that has one very large extreme value: the mean or the median? Answer with one word.",
+        "answer": "median",
+        "explanation": "The mean is affected by extreme values but the median is not."
+      },
+      {
+        "prompt": "Two data sets have the same mean. True or false: the two data sets must be identical.",
+        "answer": "false",
+        "explanation": "Different data sets can have the same mean, for example 4, 4, 4, 4, 4, 4, 4 and 1, 2, 3, 4, 5, 6, 7."
+      },
+      {
+        "prompt": "Bakery X sold cakes with a range of 5 over five days. Bakery Y had a range of 14. Which bakery was more consistent? Answer X or Y.",
+        "answer": "x",
+        "accepted": [
+          "bakery x"
+        ],
+        "explanation": "A smaller range means the values are less spread out, so more consistent."
+      },
+      {
+        "prompt": "In Cambridge 16.8% of people travel to work by bicycle, but in the UK the figure is 2%. Can the Cambridge data be used to conclude that 16.8% of people in the UK cycle to work? Answer yes or no.",
+        "answer": "no",
+        "explanation": "The sample only uses data from a single location, so it does not represent the whole UK."
+      }
+    ]
+  }
+}

@@ -1,0 +1,596 @@
+{
+  "agent": "maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can see why samples are used and why different selection methods exist."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Ways of collecting a sample"
+            },
+            {
+              "title": "The simple random sample"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "This lesson is about the collecting stage of the Statistical Enquiry Cycle, and specifically collecting primary data."
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Population",
+              "def": "The population is the entire set of people, creatures, plants or items that make up the whole group which is being studied."
+            },
+            {
+              "term": "Sample",
+              "def": "A sample is a subset of the population."
+            },
+            {
+              "term": "Bias",
+              "def": "Bias can be present in any sample collected from a population and may affect the results of a statistical investigation."
+            },
+            {
+              "term": "Simple random sample",
+              "def": "A simple random sample is where every item in a population has an equal chance of being selected for the sample."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Population and sample",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes you collect data from an entire population, and other times only from a sample. A sample is a group of people or things selected from the population, usually small enough to be manageable but big enough to be useful."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Population: all the sweets in a jar",
+              "sub": "Sample: a random handful of sweets from the jar"
+            },
+            {
+              "title": "Population: the people who live in Oakfield",
+              "sub": "Sample: the pupils at Oakfield academy"
+            },
+            {
+              "title": "Population: the pupils at Oakfield academy",
+              "sub": "Sample: the pupils in year 11"
+            },
+            {
+              "title": "Population: the rabbits in a forest",
+              "sub": "Sample: the baby rabbits in that same forest"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The population depends on the investigation. The hope is that what we find out about the sample can be generalised to the whole population."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Population or sample?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "The population is the pupils who go to a school. Which of these is a sample from it?",
+              "options": [
+                "The pupils on the school netball team",
+                "The teachers at the school",
+                "The parents of the pupils"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A scientist plans to find what percentage of fish in Oakfield lake are carp. What is the population?",
+              "options": [
+                "The carp in Oakfield lake",
+                "The fish in Oakfield lake",
+                "The fish in all the lakes in the area"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The scientist collects fish from several different lakes in the area. Why are these fish not a sample of the population?",
+              "options": [
+                "Not all the fish were carp",
+                "Not all the fish were from Oakfield lake",
+                "Too few fish were caught"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Jacob wants to check whether the ants in his ant farm are healthy. What is the population?",
+              "options": [
+                "The ants in the ant farm",
+                "All ants in the world",
+                "The first 70 ants he sees"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why use a sample? Big populations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Collecting data from a whole population gives full insight into it. But it can be difficult when the population is large, or when the size of the population is unknown."
+        },
+        {
+          "t": "list",
+          "items": [
+            "It is impractical and time consuming to check every ant in a big ant farm.",
+            "It is difficult to guarantee that you have checked them all."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A sample is not only for big populations. Samples are also used with small populations when the investigation would damage or destroy the population."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why use a sample? Damage or destruction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You want to check whether a bunch of grapes is sour before giving it to a child. Eating all the grapes would leave none for the child. Taking a sample of 2 or 3 gives you an idea of whether the rest are sour."
+        },
+        {
+          "t": "reveal",
+          "label": "Another example",
+          "text": "A company makes 20 engines and wants to know if they break at 15 000 rpm. Testing all 20 is a waste if they all break. About 3 or 4 is sensible: if all of these break, the others are likely to break as well."
+        },
+        {
+          "t": "choice",
+          "q": "A baker wants to check that a batch of 60 muffins is sweet enough by tasting them. What is most sensible?",
+          "options": [
+            "Taste all 60 muffins",
+            "Taste a sample of 2 or 3 muffins",
+            "Taste none of them"
+          ],
+          "answer": 1,
+          "why": "Tasting destroys the muffins, so it makes no sense to test the whole population. A sample gives an idea of the rest."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ways of collecting a sample",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are many ways to collect a sample, and each has benefits and drawbacks. Laura wants a sample of 50 people from Oakfield. She could:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "stand in one spot and ask the first 50 people she sees",
+            "knock on 50 doors on one street",
+            "post a questionnaire through 50 random doors on her way to school",
+            "ask the first 10 pupils, the first 25 parents and the first 15 elderly people she sees"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Two headmasters each want to know how long pupils take to travel to school. Rowanwood’s asks the first 20 pupils who get off the school bus. Oakfield’s chooses a random pupil from each classroom."
+        },
+        {
+          "t": "reveal",
+          "label": "Whose method is more sensible?",
+          "text": "Oakfield’s. All 20 pupils at Rowanwood took the same bus, so most likely had similar travel times, and pupils who walk are ignored. Oakfield’s sample is more likely to represent several different locations and methods of travel."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Biased samples",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We want a sample to look like a smaller version of the whole population. Some sampling methods only take a sample from one part of the population, or ignore groups altogether. These “unfair” samples are called biased samples."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Biased sample",
+              "def": "A biased sample is when a member or group are more or less likely to be chosen for a sample compared to other members of the population."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If a sample is not representative, what we find out from it cannot be generalised to the whole population."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The simple random sample",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a simple random sample every member of the population has an equal chance of being chosen. For a small population, a basic way is to put the name of each member into a hat once, then pick names at random until you have enough for the sample."
+        },
+        {
+          "t": "callout",
+          "text": "Each name picked from the hat should result in exactly one member being chosen. No name should be used more than once."
+        },
+        {
+          "t": "text",
+          "text": "Picking names from a hat is fair, but it is also really time consuming for large populations."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Names in a hat",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A teacher wants a simple random sample of 4 pupils from a class of 20 using names in a hat. How many names should go in the hat?",
+              "options": [
+                "4",
+                "20",
+                "24"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Three names have been pulled out so far. Can one of those three names be the fourth name chosen?",
+              "options": [
+                "Yes, every name has an equal chance each time",
+                "No, each name picked results in exactly one member being chosen"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The teacher pulls out four names and two of them are the same, but every pupil has a different name. What does this mean?",
+              "options": [
+                "That name was put in the hat more than once, so it is no longer a simple random sample",
+                "It is still a simple random sample because the names were pulled out at random"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Random number generators",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Computers and calculators can help with a simple random sample. They use a random number generator (RNG). Every number an RNG generates has an equal chance of being generated."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Give every member of the population a unique number, for example going 1, 2, 3, 4 down a register.",
+            "Use the RNG to generate a random number in the range you give it. On a calculator you type RanInt#(smallest, largest), for example RanInt#(1, 6), then press execute. Press execute again for another number.",
+            "The member with that number is chosen. If a number is generated that is not assigned to anyone, or belongs to someone already chosen, generate another.",
+            "Keep going until the sample is big enough."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Once a member has been chosen, they cannot be selected again, even if their number appears a second time."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A class has 12 pupils. Pick a simple random sample of 3."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Number the pupils 1 to 12 using the register.",
+            "Type RanInt#(1, 12) into the calculator.",
+            "Press execute. It generates 7, so pupil 7 is chosen.",
+            "Press execute. It generates 3, so pupil 3 is chosen.",
+            "Press execute. It generates 7 again. Pupil 7 is already chosen, so generate again.",
+            "Press execute. It generates 11, so pupil 11 is chosen."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Who is in the sample?",
+          "text": "Pupils 3, 7 and 11. Each pupil had an equal chance of being chosen."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Is it a simple random sample?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A class has 10 pupils numbered 1 to 10. Each pupil has one number, unless it says otherwise."
+        },
+        {
+          "t": "choices",
+          "q": "Decide whether each calculator entry gives a simple random sample.",
+          "items": [
+            {
+              "q": "RanInt#(1, 10)",
+              "options": [
+                "Yes, every pupil has an equal chance of being chosen",
+                "No, some pupils cannot be chosen",
+                "No, some pupils have more numbers than others"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "RanInt#(1, 8)",
+              "options": [
+                "Yes, every pupil has an equal chance of being chosen",
+                "No, some pupils cannot be chosen",
+                "No, some pupils have more numbers than others"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "RanInt#(3, 10)",
+              "options": [
+                "Yes, every pupil has an equal chance of being chosen",
+                "No, some pupils cannot be chosen",
+                "No, some pupils have more numbers than others"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Pupil 4 is also given the numbers 11 and 12, and the teacher types RanInt#(1, 12).",
+              "options": [
+                "Yes, every pupil has an equal chance of being chosen",
+                "No, some pupils cannot be chosen",
+                "No, some pupils have more numbers than others"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Setting up the numbers",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Six pupils are each given 5 numbers, in order from 1. Which numbers does the third pupil get?",
+              "options": [
+                "10 - 14",
+                "11 - 15",
+                "15 - 19"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Four pupils are each given 3 numbers, from 1 to 12. Which entry gives a simple random sample of these pupils?",
+              "options": [
+                "RanInt#(1, 4)",
+                "RanInt#(1, 12)",
+                "RanInt#(3, 12)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A headteacher wants a simple random sample of 80 pupils from a school of 960. Why are names in a hat not practical?",
+              "options": [
+                "You cannot pick 80 names from a hat",
+                "It is not practical to expect all 960 names to go in the hat without some being missed or falling out"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How could an RNG be used to collect that sample of 80 pupils?",
+              "options": [
+                "Give each pupil a unique number from 1 to 960 using a register, then use the RNG at least 80 times",
+                "Give each pupil a unique number from 1 to 80, then use the RNG once"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Samples are used when using the whole population would be impractical or destructive.",
+            "There are various sampling methods, and biased methods make some members more or less likely to be chosen.",
+            "A simple random sample is one of the easiest samples to collect: every member has an equal chance of being selected.",
+            "A random number generator can be used to collect a simple random sample."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a population?",
+      "back": "The entire set of people, creatures, plants or items that make up the whole group being studied."
+    },
+    {
+      "front": "What is a sample?",
+      "back": "A subset of the population: a group selected from it, usually small enough to be manageable."
+    },
+    {
+      "front": "Give two reasons for using a sample rather than the whole population.",
+      "back": "The population is large or its size is unknown, so checking everything is impractical. Or the investigation would damage or destroy the population."
+    },
+    {
+      "front": "Why can a sample be better even for a small population?",
+      "back": "If the investigation destroys what it tests, for example tasting all the grapes would leave none. A sample of 2 or 3 gives an idea of the rest."
+    },
+    {
+      "front": "What is a biased sample?",
+      "back": "A sample where a member or group is more or less likely to be chosen than others in the population."
+    },
+    {
+      "front": "What is a simple random sample?",
+      "back": "A sample where every item in the population has an equal chance of being selected."
+    },
+    {
+      "front": "How does the names in a hat method work?",
+      "back": "Put each member’s name in the hat once, then pick names at random until you have enough. Each name picked gives exactly one member."
+    },
+    {
+      "front": "Why is names in a hat not practical for 960 pupils?",
+      "back": "It is hard to fit them all in and you cannot guarantee that none are missed or fall out."
+    },
+    {
+      "front": "What does RNG stand for?",
+      "back": "Random number generator. Every number it generates has an equal chance of being generated."
+    },
+    {
+      "front": "How do you use an RNG to pick a simple random sample?",
+      "back": "Give every member a unique number, then generate random integers in that range. Repeat until you have enough different members."
+    },
+    {
+      "front": "What do you type into a calculator to generate a random integer from 1 to 30?",
+      "back": "RanInt#(1, 30)\n\nThe first number is the smallest and the second is the largest integer it can generate."
+    },
+    {
+      "front": "What if the RNG generates a number for someone already chosen?",
+      "back": "They cannot be selected again. Generate another number."
+    },
+    {
+      "front": "Why is RanInt#(3, 9) not a simple random sample for pupils numbered 1 to 9?",
+      "back": "Pupils numbered 1 and 2 can never be chosen, so not every pupil has an equal chance."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Sampling methods",
+    "instructions": "Answer each question with a number or one word.",
+    "questions": [
+      {
+        "prompt": "What is the entire set of people, creatures, plants or items that make up the whole group being studied called?",
+        "answer": "population",
+        "accepted": [
+          "the population"
+        ],
+        "explanation": "The whole group being studied is the population."
+      },
+      {
+        "prompt": "What do we call a subset of a population that is selected for an investigation?",
+        "answer": "sample",
+        "accepted": [
+          "a sample",
+          "the sample"
+        ],
+        "explanation": "A sample is a subset of the population."
+      },
+      {
+        "prompt": "A simple ___ sample is where every item in a population has an equal chance of being selected. Which word is missing?",
+        "answer": "random",
+        "explanation": "That is the definition of a simple random sample."
+      },
+      {
+        "prompt": "A teacher wants a simple random sample of 6 pupils from a class of 15 by putting names into a hat. How many names should be in the hat?",
+        "answer": "15",
+        "accepted": [
+          "15 names",
+          "fifteen"
+        ],
+        "explanation": "Each member of the population of 15 goes in the hat once."
+      },
+      {
+        "prompt": "A sample where some members are more or less likely to be chosen than others is called what type of sample? Answer with one word.",
+        "answer": "biased",
+        "accepted": [
+          "a biased sample",
+          "biased sample"
+        ],
+        "explanation": "This is the definition of a biased sample."
+      },
+      {
+        "prompt": "Laura buys a pack of 10 batteries and tests all of them until they lose all charge. How many batteries does she have left to use?",
+        "answer": "0",
+        "accepted": [
+          "none",
+          "zero",
+          "no batteries"
+        ],
+        "explanation": "Testing destroys the batteries, so testing the whole population leaves none. A sample of one or two would be better."
+      },
+      {
+        "prompt": "A school has 960 pupils, each given a unique number from 1 to 960. What is the largest integer the RNG should be able to generate?",
+        "answer": "960",
+        "explanation": "The numbers assigned go up to 960, so RanInt#(1, 960) is used."
+      },
+      {
+        "prompt": "For the same school, at least how many times must the RNG be used to collect a simple random sample of 80 pupils?",
+        "answer": "80",
+        "accepted": [
+          "80 times",
+          "eighty"
+        ],
+        "explanation": "You need 80 different pupils, so at least 80 numbers must be generated (more if a repeat comes up)."
+      },
+      {
+        "prompt": "Six pupils are each given 5 numbers, in order starting from 1. What is the largest number the RNG should be able to generate?",
+        "answer": "30",
+        "explanation": "6 × 5 = 30, so the numbers run from 1 to 30."
+      },
+      {
+        "prompt": "Ten pupils are numbered 1 to 10 and the teacher types RanInt#(3, 10). How many pupils can never be chosen?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Numbers 1 and 2 can never be generated, so those two pupils have no chance."
+      }
+    ]
+  }
+}

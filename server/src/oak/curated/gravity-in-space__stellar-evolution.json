@@ -1,0 +1,608 @@
+{
+  "agent": "physics-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the life cycles of stars and the variations that depend on the mass of a star."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Main sequence stars"
+            },
+            {
+              "title": "Red giant and white dwarf stars"
+            },
+            {
+              "title": "Supernova, neutron stars and black holes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "main sequence star",
+              "def": "A star which is fusing hydrogen in its core. These stars are stable for long periods of time."
+            },
+            {
+              "term": "red giant star",
+              "def": "A larger, cooler star formed after hydrogen in the core has been depleted."
+            },
+            {
+              "term": "white dwarf star",
+              "def": "The white hot core of a star after its outer layers have escaped into space."
+            },
+            {
+              "term": "supernova",
+              "def": "An exploding star, caused by a gravitational collapse after the fuel is exhausted."
+            },
+            {
+              "term": "neutron star",
+              "def": "An incredibly dense star, formed after a supernova."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two forces in a star",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stars are powered by nuclear fusion reactions in their cores, where the temperature and pressure are extremely high. Within a star, two forces compete:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Gravitational force",
+              "sub": "Pulls matter inwards, compressing the core"
+            },
+            {
+              "title": "Radiation pressure",
+              "sub": "Pushes matter outwards, from the radiation released by fusion"
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Check yourself.",
+          "items": [
+            {
+              "q": "If the inward forces in a star were greater than the outward forces, the star would…",
+              "options": [
+                "contract (get smaller)",
+                "expand (get bigger)"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "If the outward forces were greater than the inward forces, the star would…",
+              "options": [
+                "contract (get smaller)",
+                "expand (get bigger)"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The main sequence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "While a star is fusing hydrogen it is in its {main sequence}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The inwards and outwards forces are in balance, so the star is stable.",
+            "It stays at a constant size and emits radiation at a steady rate.",
+            "It stays in the main sequence as long as it has enough hydrogen fuel in its core.",
+            "The Sun has been in its main sequence for about 5 billion years."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mass and time in the main sequence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stars with greater mass have greater pressures and temperatures in their cores. They use up their fuel much more quickly, so they stay in the main sequence for a shorter time."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Half the mass of the Sun",
+              "sub": "About 100 billion years",
+              "emoji": "☀️"
+            },
+            {
+              "title": "Similar mass to the Sun",
+              "sub": "About 10 billion years",
+              "emoji": "☀️"
+            },
+            {
+              "title": "10 times the mass of the Sun",
+              "sub": "About 20 million years",
+              "emoji": "☀️"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A bigger star has more fuel to start with, but it uses that fuel up at a far greater rate, so it lasts for less time."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: mass and time",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A star has 50 times the mass of the Sun. Compared with the Sun, it stays in the main sequence for…",
+              "options": [
+                "a much shorter time",
+                "a much longer time",
+                "the same time"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many times longer is 100 billion years than 10 billion years?",
+              "options": [
+                "1000 times",
+                "10 times",
+                "100 times"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which star stays in the main sequence longest?",
+              "options": [
+                "A star with the same mass as the Sun",
+                "A star with 10 times the mass of the Sun",
+                "A star with half the mass of the Sun"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hydrogen runs out",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Fusion changes the core over time. The concentration of helium nuclei increases and the concentration of hydrogen nuclei decreases. Eventually it is more difficult for hydrogen nuclei to fuse, because there are fewer of them."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The helium forms a new core. There is not enough hydrogen in it to keep fusion going, so the outwards radiation pressure decreases.",
+            "Gravity can now compress the core. The pressure rises enough to start hydrogen fusion in a layer outside the core.",
+            "This layer releases far more energy than the old core, so the outwards radiation pressure increases and the star expands greatly."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Red giant",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When the Sun reaches this stage in about 5 billion years, it will change dramatically."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Its diameter will increase to around 100 times its current diameter.",
+            "As it expands it cools, so its surface temperature decreases and its colour becomes much more red.",
+            "It has become a {red giant} star.",
+            "Helium keeps collecting in the core. Later, the higher helium concentration and temperature let helium nuclei fuse into nuclei of heavier elements. This raises the radiation pressure and the star expands even further."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why red?",
+          "text": "A cooler surface glows redder. It is a bit like heating metal: very hot metal glows white, but at lower temperatures it glows red."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "White dwarf and black dwarf",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The outer layers of the red giant are far from its centre, so gravity acts on them less strongly. Over time they drift off into space. Eventually only the core remains: much smaller than the original star, but very hot. This is a {white dwarf}."
+        },
+        {
+          "t": "text",
+          "text": "The star does not suddenly go out. It stays hot and dense enough to release energy for many more billions of years, gradually becoming cooler and dimmer. When it is too cool to emit light it has become a **black dwarf**."
+        },
+        {
+          "t": "callout",
+          "text": "We do not think there are any black dwarfs yet: the Universe is not old enough for the first ones to have formed."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: a star like the Sun",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "What happens to a star’s surface temperature when it expands into a red giant?",
+              "options": [
+                "It decreases",
+                "It increases",
+                "It stays the same"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is left when the outer layers of a red giant have drifted off into space?",
+              "options": [
+                "A protostar",
+                "A white dwarf",
+                "A supernova"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why have black dwarfs not been observed yet?",
+              "options": [
+                "They give out too much light",
+                "They are too close to Earth",
+                "The Universe is not old enough for any to have formed"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Red supergiants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stars with a mass similar to the Sun follow the life cycle above. Stars with much greater mass follow a different path after the main sequence: they form an extremely large red giant called a **red supergiant**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Red supergiants have several layers in their cores, each fusing lighter nuclei into more massive ones. This is called nucleosynthesis, the making of new nuclei.",
+            "Elements up to iron in the periodic table are produced this way.",
+            "Nuclei heavier than iron cannot be fused in red supergiants.",
+            "Once the core has run out of nuclei lighter than iron, fusion stops, and it stops very quickly."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gravitational collapse and supernova",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When fusion stops, no outward force balances gravity. The material of the star is pulled inwards in a **gravitational collapse**, falling towards the iron core. This produces temperatures and pressures far greater than ever before."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A massive amount of fusion happens and the star explodes. This is a {supernova}.",
+            "For a few weeks it is incredibly bright and may outshine an entire galaxy.",
+            "The explosion spreads material across huge distances. Some of the heavy elements on Earth were made in supernova explosions before our solar system formed."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Neutron stars and black holes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The huge pressure on the iron core makes the iron nuclei collapse into each other. Protons and electrons combine to form neutrons. Most of the mass of the star ends up in a sphere only a few kilometres across, made of just neutrons: a {neutron star}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A neutron star is far more dense than normal matter. A 1 cm cube of it would have a mass of around 10¹² kg (a trillion kilograms).",
+            "If the star is large enough, the neutron star has so much mass that it collapses completely and a **black hole** forms.",
+            "A black hole can have a mass many times that of the Sun, squeezed into a single point called a singularity. Light cannot escape from the region of space around it.",
+            "We cannot see a black hole, but material falling into it emits large amounts of radiation, which can be detected."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which life cycle?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap each stage, then tap the type of star whose life cycle it belongs to.",
+          "columns": [
+            "A star with a similar mass to the Sun",
+            "A star with much greater mass than the Sun"
+          ],
+          "items": [
+            {
+              "text": "Red giant",
+              "col": 0
+            },
+            {
+              "text": "White dwarf",
+              "col": 0
+            },
+            {
+              "text": "Black dwarf",
+              "col": 0
+            },
+            {
+              "text": "Red supergiant",
+              "col": 1
+            },
+            {
+              "text": "Supernova",
+              "col": 1
+            },
+            {
+              "text": "Neutron star",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: massive stars",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Up to which element are nuclei fused in a red supergiant?",
+              "options": [
+                "Iron",
+                "Gold",
+                "Uranium"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is a neutron star made of?",
+              "options": [
+                "Hydrogen gas",
+                "Just neutrons",
+                "Just protons"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What do we call the collapse of a star’s material inwards when fusion stops?",
+              "options": [
+                "Nucleosynthesis",
+                "Radiation pressure",
+                "Gravitational collapse"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which of these is TRUE about black holes?",
+              "options": [
+                "They can absorb matter from their surroundings",
+                "They have no mass",
+                "They are made of only protons"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "All stars form from a collapsed nebula, but their full life cycle depends on their initial mass.",
+            "On the main sequence a star fuses hydrogen. Inwards gravitational forces balance outwards radiation pressure. The greater the mass, the shorter the time on the main sequence.",
+            "A star with a similar mass to the Sun: main sequence, red giant, white dwarf, black dwarf.",
+            "A star with much greater mass: main sequence, red supergiant, supernova, neutron star (or, for the largest, a black hole)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What two forces act in a main sequence star?",
+      "back": "Gravitational force pulls matter inwards; radiation pressure from fusion pushes outwards."
+    },
+    {
+      "front": "When a star is in balance, how do the two forces compare?",
+      "back": "The outwards radiation pressure equals the inwards gravitational force, so the star stays a constant size."
+    },
+    {
+      "front": "What is a main sequence star?",
+      "back": "A star which is fusing hydrogen in its core. These stars are stable for long periods of time."
+    },
+    {
+      "front": "How long is the main sequence for a star with a similar mass to the Sun?",
+      "back": "About 10 billion years."
+    },
+    {
+      "front": "Why do stars with more mass spend less time in the main sequence?",
+      "back": "Their core pressures and temperatures are greater, so they use up fuel much more rapidly."
+    },
+    {
+      "front": "What happens to the star’s size if outward forces are bigger than inward forces?",
+      "back": "It expands. (If inward forces are bigger, it contracts.)"
+    },
+    {
+      "front": "What is a red giant?",
+      "back": "A larger, cooler star formed after hydrogen in the core has been depleted."
+    },
+    {
+      "front": "Why does a red giant look red?",
+      "back": "It has expanded and cooled, so its surface temperature is lower."
+    },
+    {
+      "front": "What is a white dwarf?",
+      "back": "The white hot core of a star after its outer layers have escaped into space."
+    },
+    {
+      "front": "Why have no black dwarfs been observed?",
+      "back": "The Universe is not old enough for any to have formed yet."
+    },
+    {
+      "front": "What is a supernova?",
+      "back": "An exploding star, caused by a gravitational collapse after the fuel is exhausted."
+    },
+    {
+      "front": "What is a red supergiant?",
+      "back": "An extremely large red giant formed by a star with much greater mass than the Sun, after the main sequence."
+    },
+    {
+      "front": "What is a neutron star?",
+      "back": "An incredibly dense star, formed after a supernova, made of just neutrons and a few kilometres across."
+    },
+    {
+      "front": "What is a black hole?",
+      "back": "A very massive object squeezed into a single point (a singularity). Light cannot escape from the region of space around it."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Stellar evolution",
+    "instructions": "Answer each question with a word, a name or a number. Use what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "What is the name of the force that pushes outwards in a main sequence star?",
+        "answer": "radiation pressure",
+        "accepted": [
+          "the radiation pressure"
+        ],
+        "explanation": "Radiation pressure from fusion pushes outwards, balancing gravity."
+      },
+      {
+        "prompt": "A star with a similar mass to the Sun stays in the main sequence for about 10 billion years. A star with half its mass stays for about 100 billion years. How many times longer is that?",
+        "answer": "10",
+        "accepted": [
+          "ten",
+          "10 times",
+          "ten times"
+        ],
+        "explanation": "100 billion ÷ 10 billion = 10."
+      },
+      {
+        "prompt": "When the Sun becomes a red giant, its diameter will increase to about how many times its current diameter?",
+        "answer": "100",
+        "accepted": [
+          "100 times",
+          "about 100",
+          "one hundred"
+        ],
+        "explanation": "Its diameter will increase to around 100 times its current diameter."
+      },
+      {
+        "prompt": "A white dwarf gradually cools and dims until it is too cool to emit light. What is it then called?",
+        "answer": "black dwarf",
+        "accepted": [
+          "a black dwarf"
+        ],
+        "explanation": "When a white dwarf is too cool to emit light it has become a black dwarf."
+      },
+      {
+        "prompt": "What is the name for the explosion of a red supergiant after its gravitational collapse?",
+        "answer": "supernova",
+        "accepted": [
+          "a supernova"
+        ],
+        "explanation": "The collapse causes a massive amount of fusion and the star explodes as a supernova."
+      },
+      {
+        "prompt": "Fusion in red supergiants produces elements up to which element in the periodic table?",
+        "answer": "iron",
+        "accepted": [],
+        "explanation": "Nuclei heavier than iron cannot be fused in red supergiants."
+      },
+      {
+        "prompt": "What name is given to the star formed when the iron core collapses so that protons and electrons combine to form neutrons?",
+        "answer": "neutron star",
+        "accepted": [
+          "a neutron star"
+        ],
+        "explanation": "The collapsed core, made of just neutrons, is a neutron star."
+      },
+      {
+        "prompt": "What type of particle is a neutron star made of?",
+        "answer": "neutrons",
+        "accepted": [
+          "neutron"
+        ],
+        "explanation": "Protons and electrons combine to form neutrons, so it is composed of just neutrons."
+      },
+      {
+        "prompt": "What is the single point that a black hole’s mass is compressed into called?",
+        "answer": "singularity",
+        "accepted": [
+          "a singularity"
+        ],
+        "explanation": "A black hole’s mass is compressed into a single point called a singularity."
+      },
+      {
+        "prompt": "What type of star is the Sun at the moment: main sequence, red giant or white dwarf?",
+        "answer": "main sequence",
+        "accepted": [
+          "main sequence star",
+          "a main sequence star",
+          "the main sequence"
+        ],
+        "explanation": "The Sun has been fusing hydrogen in its core for about 5 billion years, so it is a main sequence star."
+      }
+    ]
+  }
+}

@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
+import { EnableHubCard } from "@/features/learninghub/home/EnableHubCard";
 import { LIGHT_PALETTE, CollapsibleStats } from "@/components/OperatorPage";
 import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
@@ -346,7 +347,7 @@ export function DashboardApp() {
   const [dashVenue, setDashVenue] = useState("");
   // A second, card-local location filter just for Revenue by activity.
   const [activityLoc, setActivityLoc] = useState("");
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading, save: saveSettings } = useSettings();
   const seasons = settings.seasons ?? [];
   // Just for the greeting — the person's name, not the business name.
   const [me, setMe] = useState<{ name?: string } | null>(null);
@@ -553,6 +554,8 @@ export function DashboardApp() {
         />
       </div>
       </CollapsibleStats>
+
+      <EnableHubCard portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />
 
       {/* Live clock-in board. Not for a freelancer: the card exists to answer
           "are the children covered, and by whom" across a team, and a solo

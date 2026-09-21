@@ -1,0 +1,538 @@
+{
+  "agent": "w4-maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can appreciate the structure of patterns and sequences."
+        },
+        {
+          "t": "text",
+          "text": "We will look at two kinds of number pattern and find out how each one works."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Constant {additive} pattern",
+              "sub": "the same number is added each time"
+            },
+            {
+              "title": "Constant {multiplicative} pattern",
+              "sub": "the same number multiplies each time"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Sequence",
+              "def": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A sequence that adds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at this sequence of numbers. The dots mean it carries on in the same pattern."
+        },
+        {
+          "t": "lead",
+          "text": "3, 6, 9, 12, …"
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "If you add 3 to the previous number, you get the next number. It is the beginning of the 3 times table."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Times tables are sequences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a section of the 2 times table: 34, 36, 38, 40, …"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Each number goes up by 2. The rule is add 2.",
+            "The next number after 40 is 40 + 2 = 42.",
+            "To go backwards we do the inverse. The number before 34 is 34 − 2 = 32."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Multiplication tables are sequences with a constant {additive} pattern: we add the same value each time."
+        },
+        {
+          "t": "text",
+          "text": "Successive numbers (numbers next to each other) in the 2 times table have a difference of 2. In the 3 times table the difference is 3, and in the 4 times table it is 4."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the times table",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is a section of the 8 times table?",
+          "options": [
+            "48, 54, 62, 70",
+            "48, 56, 64, 72",
+            "40, 48, 58, 64"
+          ],
+          "answer": 1,
+          "why": "The 8 times table goes up by 8 each time: 48 + 8 = 56, 56 + 8 = 64, 64 + 8 = 72."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding the difference",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To find what a sequence adds each time, subtract two numbers that are next to each other: later number − earlier number."
+        },
+        {
+          "t": "list",
+          "items": [
+            "14, 19, …  gives 19 − 14 = 5, so the rule is add 5.",
+            "To find the previous number, do the inverse: 14 − 5 = 9.",
+            "7.8, 9.2, 10.6, …  gives 9.2 − 7.8 = 1.4, so the rule is add 1.4.",
+            "258, 584, 910, …  gives 584 − 258 = 326 (910 − 584 = 326 too)."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If the pattern is constant, any two neighbouring numbers give the same difference. Written methods, like column subtraction, are always fine to use."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adding a negative number",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at 23, 19, … The difference is 19 − 23 = −4, so we are adding −4 each time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Adding −4 is the same as subtracting 4.",
+            "Next number: 19 − 4 = 15.",
+            "Previous number: 23 + 4 = 27 (the inverse)."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Forming a sequence by adding a negative value makes a {decreasing} sequence."
+        }
+      ],
+      "pics": [
+        {
+          "id": "negative-number-line"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Does 27, 41, 57, … have a constant additive pattern?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to check",
+          "text": "No. 41 − 27 = 14 but 57 − 41 = 16. The same value has not been added each time."
+        },
+        {
+          "t": "text",
+          "text": "Now try 9, 19, 29, 39, 49, … These are not the 9 times table, but they do have a constant additive pattern: we add 10 each time."
+        },
+        {
+          "t": "callout",
+          "text": "Times tables are just one type of additive sequence. They are not the only type."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the sequences",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is the pattern constant additive or constant multiplicative? Put each sequence in the correct column.",
+          "columns": [
+            "Constant additive",
+            "Constant multiplicative"
+          ],
+          "items": [
+            {
+              "text": "7, 14, 21, 28",
+              "col": 0
+            },
+            {
+              "text": "50, 44, 38, 32",
+              "col": 0
+            },
+            {
+              "text": "0.5, 1.7, 2.9, 4.1",
+              "col": 0
+            },
+            {
+              "text": "3, 9, 27, 81",
+              "col": 1
+            },
+            {
+              "text": "64, 32, 16, 8",
+              "col": 1
+            },
+            {
+              "text": "1, −2, 4, −8",
+              "col": 1
+            },
+            {
+              "text": "5, 0.5, 0.05, 0.005",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A multiplicative pattern",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some sequences follow a rule other than adding the same value each time. Some follow a constant multiplicative pattern: we multiply by the same number each time."
+        },
+        {
+          "t": "text",
+          "text": "In 2, 4, 8, 16, … each number is multiplied by 2 to get the next one."
+        },
+        {
+          "t": "text",
+          "text": "To find the multiplier, divide a number by the one before it. Take 6, 18, 54, …"
+        },
+        {
+          "t": "list",
+          "items": [
+            "18 ÷ 6 = 3",
+            "54 ÷ 18 = 3 (the same, so the pattern is constant)",
+            "The multiplier is 3. The next number is 54 × 3 = 162."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Decimal and fraction multipliers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sequences can have decimal or fractional multipliers. Take 80, 20, 5, …"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Multiplier: 20 ÷ 80 = 1/4 (or 0.25). Check: 5 ÷ 20 = 1/4 too.",
+            "Next number: 5 × 1/4 = 1.25.",
+            "Previous number: 80 ÷ 1/4 = 320 (the inverse of multiplying is dividing)."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Multiplying a positive number by a value between 0 and 1 gives a smaller number, so a sequence like 27, 9, 3, 1, … decreases."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Negative multipliers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sequences can have negative multipliers. Take 4, −20, 100, …"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Multiplier: −20 ÷ 4 = −5 (and 100 ÷ (−20) = −5).",
+            "Next number: 100 × (−5) = −500.",
+            "Previous number: 4 ÷ (−5) = −0.8."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "With a negative multiplier the numbers switch between positive and negative."
+        },
+        {
+          "t": "reveal",
+          "label": "Is 1, −1, 1, −1, … additive?",
+          "text": "No. We add −2, then add 2, so the amount added is not constant. Each value is multiplied by −1 to get the next value, so it is a constant multiplicative pattern."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Find the multiplier",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Each sequence has a constant multiplicative pattern. What is the multiplier?",
+          "items": [
+            {
+              "options": [
+                "4",
+                "6",
+                "1/4",
+                "−4"
+              ],
+              "answer": 0,
+              "q": "2, 8, 32, …"
+            },
+            {
+              "options": [
+                "10",
+                "0.1",
+                "−81",
+                "81"
+              ],
+              "answer": 1,
+              "q": "90, 9, 0.9, …"
+            },
+            {
+              "options": [
+                "5",
+                "−2",
+                "2",
+                "−5"
+              ],
+              "answer": 1,
+              "q": "5, −10, 20, …"
+            },
+            {
+              "options": [
+                "3/2",
+                "−6",
+                "2/3",
+                "1/6"
+              ],
+              "answer": 2,
+              "q": "18, 12, 8, …"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Continue the sequence",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the next number in each sequence.",
+          "items": [
+            {
+              "options": [
+                "15.5",
+                "16",
+                "16.5",
+                "27"
+              ],
+              "answer": 1,
+              "q": "8.5, 11, 13.5, … (constant additive)"
+            },
+            {
+              "options": [
+                "75",
+                "135",
+                "90",
+                "60"
+              ],
+              "answer": 1,
+              "q": "5, 15, 45, … (constant multiplicative)"
+            },
+            {
+              "options": [
+                "−9",
+                "−6",
+                "−1",
+                "3"
+              ],
+              "answer": 0,
+              "q": "3, −1, −5, … (constant additive)"
+            },
+            {
+              "options": [
+                "4",
+                "−48",
+                "1",
+                "8"
+              ],
+              "answer": 0,
+              "q": "256, 64, 16, … (constant multiplicative)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Checking understanding of sequences",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A sequence is a succession of objects, diagrams or values usually formed according to a rule.",
+            "Multiplication tables are examples of sequences. Their difference is the number of the table.",
+            "In a constant additive sequence, the difference between neighbouring numbers is always the same. Later − earlier finds it.",
+            "In a constant multiplicative sequence, there is a specific multiplier. Later ÷ earlier finds it.",
+            "Multipliers can be decimals, fractions or negative. A negative multiplier switches between positive and negative numbers.",
+            "Writing the sequence out with arrows and using written methods helps with larger numbers."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a sequence?",
+      "back": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+    },
+    {
+      "front": "Multiplication tables are an example of what kind of sequence?",
+      "back": "A sequence with a constant additive pattern. The 4 times table goes up by 4 each time."
+    },
+    {
+      "front": "How do you find the difference in a constant additive sequence?",
+      "back": "Subtract the earlier number from the later number that is next to it.\n\n19 − 14 = 5"
+    },
+    {
+      "front": "How do you find the previous number in an additive sequence that adds 5?",
+      "back": "Do the inverse: subtract 5.\n\n14 − 5 = 9"
+    },
+    {
+      "front": "What does adding a negative number, such as +(−4), do to a sequence?",
+      "back": "It makes a decreasing sequence. Adding −4 is the same as subtracting 4."
+    },
+    {
+      "front": "Does 27, 41, 57, … have a constant additive pattern?",
+      "back": "No. 41 − 27 = 14 but 57 − 41 = 16, so the same value is not added each time."
+    },
+    {
+      "front": "How do you find the multiplier in a constant multiplicative sequence?",
+      "back": "Divide a number by the number before it.\n\nIn 6, 18, 54, … the multiplier is 18 ÷ 6 = 3."
+    },
+    {
+      "front": "Find the next number in 6, 18, 54, … (constant multiplicative)",
+      "back": "162\n\nThe multiplier is 3 and 54 × 3 = 162."
+    },
+    {
+      "front": "How do you find the previous number in a multiplicative sequence?",
+      "back": "Do the inverse: divide by the multiplier."
+    },
+    {
+      "front": "Can a multiplier be a fraction or a decimal?",
+      "back": "Yes. 80, 20, 5, … has a multiplier of 1/4 (0.25)."
+    },
+    {
+      "front": "What happens to the signs in a sequence with a negative multiplier?",
+      "back": "The numbers switch between positive and negative.\n\n4, −20, 100, −500, …"
+    },
+    {
+      "front": "What is the rule for 1, −1, 1, −1, … ?",
+      "back": "Multiply by −1 each time. It is not additive because we add −2, then add 2."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking understanding of sequences",
+    "instructions": "Each sequence has either a constant additive pattern or a constant multiplicative pattern. Work out the difference or the multiplier first, then answer. Type a minus sign as - and write decimals with a decimal point.",
+    "questions": [
+      {
+        "prompt": "A sequence has a constant additive pattern and starts 14, 19, … What is the 6th number in the sequence?",
+        "answer": "39",
+        "explanation": "Each step adds 19 − 14 = 5. There are 5 steps from the 1st to the 6th number: 14 + 5 × 5 = 39."
+      },
+      {
+        "prompt": "The sequence 258, 584, 910, … has a constant additive pattern. What number is added each time?",
+        "answer": "326",
+        "explanation": "584 − 258 = 326, and 910 − 584 = 326."
+      },
+      {
+        "prompt": "What is the next number in the constant additive sequence 7.8, 9.2, 10.6, …?",
+        "answer": "12",
+        "explanation": "9.2 − 7.8 = 1.4, so add 1.4 to 10.6 to get 12.",
+        "accepted": [
+          "12.0"
+        ]
+      },
+      {
+        "prompt": "A sequence has a constant additive pattern and starts 31, 26, … What is the next number?",
+        "answer": "21",
+        "explanation": "The difference is 26 − 31 = −5, so add −5 (subtract 5): 26 − 5 = 21."
+      },
+      {
+        "prompt": "The constant additive sequence …, ?, 12.7, 13.3, … has a number missing before 12.7. What is it?",
+        "answer": "12.1",
+        "explanation": "The difference is 13.3 − 12.7 = 0.6. To go back, subtract 0.6: 12.7 − 0.6 = 12.1."
+      },
+      {
+        "prompt": "What is the next number in the constant multiplicative sequence 2, 8, 32, …?",
+        "answer": "128",
+        "explanation": "The multiplier is 8 ÷ 2 = 4, and 32 × 4 = 128."
+      },
+      {
+        "prompt": "The sequence 24, 96, … has a constant multiplicative pattern. What is the multiplier?",
+        "answer": "4",
+        "explanation": "96 ÷ 24 = 4."
+      },
+      {
+        "prompt": "What is the next number in the constant multiplicative sequence 1000, 100, 10, …?",
+        "answer": "1",
+        "explanation": "The multiplier is 100 ÷ 1000 = 0.1, and 10 × 0.1 = 1.",
+        "accepted": [
+          "1.0"
+        ]
+      },
+      {
+        "prompt": "What is the next number in the constant multiplicative sequence 80, 20, 5, …? Give your answer as a decimal.",
+        "answer": "1.25",
+        "explanation": "The multiplier is 20 ÷ 80 = 1/4 = 0.25, and 5 × 0.25 = 1.25."
+      },
+      {
+        "prompt": "What is the next number in the constant multiplicative sequence 1, −3, 9, −27, …?",
+        "answer": "81",
+        "explanation": "The multiplier is −3, and (−27) × (−3) = 81."
+      }
+    ]
+  }
+}

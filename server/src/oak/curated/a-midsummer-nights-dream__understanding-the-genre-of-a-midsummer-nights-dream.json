@@ -1,0 +1,602 @@
+{
+  "agent": "english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how I know that ‘A Midsummer Night’s Dream’ is a comedy."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Shakespeare’s genres"
+            },
+            {
+              "title": "Features of comedies"
+            },
+            {
+              "title": "Spotting the genre"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "genre",
+              "def": "the style or type of text: for example science fiction"
+            },
+            {
+              "term": "Shakespearean comedy",
+              "def": "a play designed to make you laugh, often involving misunderstandings and ending in marriage"
+            },
+            {
+              "term": "intricate",
+              "def": "complicated"
+            },
+            {
+              "term": "slapstick humour",
+              "def": "physical comedy, sometimes violent but intended to make people laugh"
+            },
+            {
+              "term": "First Folio",
+              "def": "the first collection of most of Shakespeare’s plays, published in 1623 (seven years after his death)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a genre?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **genre** is the style or type of text, for example science fiction. Shakespeare’s plays are often sorted by genre."
+        },
+        {
+          "t": "text",
+          "text": "Laura says: “I haven’t really seen any Shakespeare plays, but I have heard of ‘Romeo and Juliet’. I know it’s meant to be really sad, and ends in the death of both Romeo and Juliet who are young and in love. I think that means it’s a tragedy.”"
+        },
+        {
+          "t": "reveal",
+          "label": "How did Laura work out the genre?",
+          "text": "She used what she knew about the play: it is really sad and it ends in death. A play’s features can tell us its genre."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The First Folio",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The first collection of Shakespeare’s plays was published in 1623, seven years after his death. It is commonly known as the **First Folio**."
+        },
+        {
+          "t": "text",
+          "text": "The First Folio contains 36 of Shakespeare’s plays and divides them into three genres:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Comedies",
+              "sub": "for example, ‘A Midsummer Night’s Dream’"
+            },
+            {
+              "title": "Histories",
+              "sub": "for example, ‘Richard III’"
+            },
+            {
+              "title": "Tragedies",
+              "sub": "for example, ‘Romeo and Juliet’"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "The First Folio: check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "How many genres does the First Folio use to divide Shakespeare’s plays?",
+          "options": [
+            "Two",
+            "Three",
+            "Four"
+          ],
+          "answer": 1,
+          "why": "The First Folio divides the plays into comedies, histories and tragedies: three genres."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is NOT one of the First Folio’s genres?",
+          "options": [
+            "Comedies",
+            "Histories",
+            "Tragicomedies"
+          ],
+          "answer": 2,
+          "why": "Tragicomedy is an extra genre that was added later; it is not one of the First Folio’s three genres."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tragedies",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tragedies have some common features:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "They explore complex ideas like power, ambition and jealousy.",
+            "They include a hero who dies because of some sort of weakness in themselves."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "‘Romeo and Juliet’ is an example of a tragedy."
+        },
+        {
+          "t": "reveal",
+          "label": "Laura’s view of tragedy",
+          "text": "Laura likes the idea that the hero is brought down by their own weakness, and that tragedies explore intense things like power and jealousy."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Histories",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The history plays also share common features:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "There are 10 plays that focus on English history.",
+            "The central question seems to be: what makes a good monarch (king or queen)?"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "‘Richard III’ is an example of a history play."
+        },
+        {
+          "t": "reveal",
+          "label": "Jun’s idea",
+          "text": "Jun says that because there are ten history plays, Shakespeare must have explored what it means to be a monarch in a lot of different ways."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Comedies",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The comedies have common features too:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "They often focus on love and end in marriage.",
+            "The plot is **intricate** (complicated) and full of surprises.",
+            "There can be **slapstick humour**: physical comedy, sometimes violent but intended to make people laugh."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Shakespearean comedies usually focus on love, and end in marriage."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tragicomedies",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There is one more genre. **Tragicomedies** are plays which combine both tragic and comic elements."
+        },
+        {
+          "t": "text",
+          "text": "Tragicomedy is not one of the genres in the First Folio. It is a genre that scholars added."
+        },
+        {
+          "t": "choice",
+          "q": "Who added tragicomedy to Shakespeare’s genres?",
+          "options": [
+            "The First Folio",
+            "Scholars",
+            "Laura"
+          ],
+          "answer": 1,
+          "why": "Tragicomedy was not included in the First Folio; it was added by scholars to describe plays that combine tragic and comic elements."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the features",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each feature under the genre it belongs to.",
+          "columns": [
+            "Tragedy",
+            "History",
+            "Comedy",
+            "Tragicomedy"
+          ],
+          "items": [
+            {
+              "text": "A hero who dies because of a weakness in themselves",
+              "col": 0
+            },
+            {
+              "text": "Explores power, ambition and jealousy",
+              "col": 0
+            },
+            {
+              "text": "Asks what makes a good monarch",
+              "col": 1
+            },
+            {
+              "text": "One of 10 plays about English history",
+              "col": 1
+            },
+            {
+              "text": "Often focuses on love and ends in marriage",
+              "col": 2
+            },
+            {
+              "text": "An intricate plot full of surprises",
+              "col": 2
+            },
+            {
+              "text": "Can include slapstick humour",
+              "col": 2
+            },
+            {
+              "text": "Combines elements of tragedy and comedy",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the play to its genre",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each play to its genre in the First Folio.",
+          "pairs": [
+            {
+              "a": "‘Romeo and Juliet’",
+              "b": "a tragedy"
+            },
+            {
+              "a": "‘Richard III’",
+              "b": "a history"
+            },
+            {
+              "a": "‘A Midsummer Night’s Dream’",
+              "b": "a comedy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The plot of the play",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the plot of ‘A Midsummer Night’s Dream’. How does it tell us that the play is a comedy?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Act 1: Hermia and Lysander run away from Athens.",
+            "Act 2: Lysander falls in love with Helena.",
+            "Act 3: Titania falls in love with Bottom (transformed into a donkey); Demetrius falls in love with Helena.",
+            "Act 4: the magical love potion is removed from Lysander and Titania.",
+            "Act 5: the Athenian nobles get married and then watch a play."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Comedy clue: love and marriage",
+          "text": "The plot focuses on love, with people falling in and out of love, and it ends with marriages, such as Hermia and Lysander, and Helena and Demetrius."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Twists and slapstick",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Act 3, Puck tells Oberon: “Titania waked and straightway loved an ass.” (3.2.34-42)"
+        },
+        {
+          "t": "reveal",
+          "label": "A moment of slapstick",
+          "text": "A character becomes an ass. An ‘ass’ is a donkey, and also another word for a fool. This is physical comedy, a moment of slapstick."
+        },
+        {
+          "t": "text",
+          "text": "Then Puck realises he has put the magical love potion on the wrong person: “This is the woman, but not this the man.”"
+        },
+        {
+          "t": "reveal",
+          "label": "A plot twist",
+          "text": "The story becomes more intricate as misunderstandings build and build."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Compare with ‘Macbeth’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘Macbeth’ is another Shakespearean play. Here is its plot:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Macbeth, an ambitious soldier, is told by three witches that he will become King of Scotland.",
+            "Macbeth kills the current King of Scotland and takes the throne.",
+            "Macbeth kills a number of people to hold onto his power; he sees the ghost of one of them.",
+            "Macbeth speaks to the witches again; the people of Scotland are very unhappy with how he rules them.",
+            "Macbeth is killed and a better king takes over Scotland."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What genre is it?",
+          "text": "It is a tragedy. It explores ambition and power, and the hero dies. It does not focus on love and end in marriage like ‘A Midsummer Night’s Dream’."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Why is it a comedy?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer these questions about ‘A Midsummer Night’s Dream’.",
+          "items": [
+            {
+              "q": "Which is the best reason that the play is a comedy?",
+              "options": [
+                "The hero dies because of a weakness",
+                "It focuses on love, has surprises and ends in marriages",
+                "It asks what makes a good monarch"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Puck puts the love potion on the wrong person and the plot gets more complicated. Which key word describes this kind of plot?",
+              "options": [
+                "intricate",
+                "tragic",
+                "historical"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which key word means physical comedy, sometimes violent but intended to make people laugh?",
+              "options": [
+                "genre",
+                "slapstick humour",
+                "First Folio"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A comedy can still have sad moments. When we decide on the genre, we look at the overall tone, plot and features of the play."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Understanding the genre of ‘A Midsummer Night’s Dream’",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The First Folio divides Shakespeare’s plays into tragedies, histories and comedies.",
+            "An additional genre, tragicomedies, has been used to describe plays which combine both tragic and comic elements.",
+            "Shakespearean comedies usually focus on love, and end in marriage.",
+            "The plots of comedies are often intricate and include a number of surprises and plot twists.",
+            "Shakespearean comedies often include slapstick humour."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a genre?",
+      "back": "The style or type of text, for example science fiction."
+    },
+    {
+      "front": "What is the First Folio?",
+      "back": "The first collection of most of Shakespeare’s plays, published in 1623 (seven years after his death)."
+    },
+    {
+      "front": "What three genres does the First Folio divide the plays into?",
+      "back": "Comedies, histories and tragedies."
+    },
+    {
+      "front": "How many of Shakespeare’s plays does the First Folio contain?",
+      "back": "36."
+    },
+    {
+      "front": "What are the features of a Shakespearean tragedy?",
+      "back": "It explores complex ideas like power, ambition and jealousy, and includes a hero who dies because of a weakness in themselves.\n\nExample: ‘Romeo and Juliet’."
+    },
+    {
+      "front": "What are the features of a Shakespearean history play?",
+      "back": "It focuses on English history (there are 10) and asks what makes a good monarch.\n\nExample: ‘Richard III’."
+    },
+    {
+      "front": "What are the features of a Shakespearean comedy?",
+      "back": "It often focuses on love and ends in marriage; the plot is intricate and full of surprises; there can be slapstick humour.\n\nExample: ‘A Midsummer Night’s Dream’."
+    },
+    {
+      "front": "What is a tragicomedy?",
+      "back": "A play that combines elements of both tragedy and comedy. It was not in the First Folio; scholars added the genre."
+    },
+    {
+      "front": "What does ‘intricate’ mean?",
+      "back": "Complicated."
+    },
+    {
+      "front": "What is slapstick humour?",
+      "back": "Physical comedy, sometimes violent but intended to make people laugh."
+    },
+    {
+      "front": "Which moment in Act 3 of ‘A Midsummer Night’s Dream’ is slapstick?",
+      "back": "Bottom’s head is turned into a donkey’s head (an ass) and Titania falls in love with him."
+    },
+    {
+      "front": "Which moment in Act 3 is a plot twist that makes the story more intricate?",
+      "back": "Puck realises he has put the magical love potion on the wrong person."
+    },
+    {
+      "front": "How does the ending of ‘A Midsummer Night’s Dream’ show it is a comedy?",
+      "back": "It ends with marriages: the Athenian nobles get married."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Understanding the genre of William Shakespeare’s ‘A Midsummer Night’s Dream’",
+    "instructions": "Answer each question with a word, a number or a short phrase, using what you learned about Shakespeare’s genres.",
+    "questions": [
+      {
+        "prompt": "What is the name of the first collection of Shakespeare’s plays?",
+        "answer": "First Folio",
+        "accepted": [
+          "the First Folio",
+          "first folio",
+          "The First Folio",
+          "1st Folio"
+        ],
+        "explanation": "The First Folio was published in 1623, seven years after Shakespeare’s death."
+      },
+      {
+        "prompt": "In which year was the First Folio published?",
+        "answer": "1623",
+        "accepted": [
+          "1623"
+        ],
+        "explanation": "It was published in 1623, seven years after Shakespeare’s death."
+      },
+      {
+        "prompt": "How many of Shakespeare’s plays does the First Folio contain?",
+        "answer": "36",
+        "accepted": [
+          "36",
+          "thirty-six",
+          "thirty six"
+        ],
+        "explanation": "The First Folio contains 36 of Shakespeare’s plays."
+      },
+      {
+        "prompt": "Which genre includes a hero who dies because of a weakness in themselves?",
+        "answer": "tragedy",
+        "accepted": [
+          "Tragedy",
+          "tragedies",
+          "Tragedies",
+          "a tragedy",
+          "tragic"
+        ],
+        "explanation": "Tragedies explore power, ambition and jealousy, with a hero brought down by their own weakness."
+      },
+      {
+        "prompt": "How many history plays are there? (Write the number.)",
+        "answer": "10",
+        "accepted": [
+          "10",
+          "ten",
+          "Ten"
+        ],
+        "explanation": "There are 10 plays that focus on English history."
+      },
+      {
+        "prompt": "Which word means ‘complicated’ and describes the plots of comedies?",
+        "answer": "intricate",
+        "accepted": [
+          "Intricate"
+        ],
+        "explanation": "Comedies often have intricate plots full of surprises."
+      },
+      {
+        "prompt": "Which type of humour is physical comedy, sometimes violent but intended to make people laugh?",
+        "answer": "slapstick",
+        "accepted": [
+          "slapstick humour",
+          "Slapstick humour",
+          "Slapstick",
+          "slapstick humor"
+        ],
+        "explanation": "That is the definition of slapstick humour."
+      },
+      {
+        "prompt": "Which genre combines elements of both tragedy and comedy?",
+        "answer": "tragicomedy",
+        "accepted": [
+          "Tragicomedy",
+          "tragicomedies",
+          "Tragicomedies",
+          "tragic comedy",
+          "tragic comedies",
+          "a tragicomedy"
+        ],
+        "explanation": "Tragicomedies combine tragic and comic elements. Scholars added this genre; it is not in the First Folio."
+      },
+      {
+        "prompt": "In the plot of ‘Macbeth’, an ambitious soldier is told by three witches he will be king and he is later killed. Which genre is ‘Macbeth’?",
+        "answer": "tragedy",
+        "accepted": [
+          "Tragedy",
+          "a tragedy",
+          "tragedies"
+        ],
+        "explanation": "It explores ambition and power and ends with the hero’s death, so it is a tragedy."
+      }
+    ]
+  }
+}

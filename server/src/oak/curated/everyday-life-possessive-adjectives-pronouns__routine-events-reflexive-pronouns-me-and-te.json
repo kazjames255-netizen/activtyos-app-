@@ -1,0 +1,620 @@
+{
+  "agent": "spanish-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use reflexive pronouns ‘me’ and ‘te’ to describe my daily routine and ask you questions about yours."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{me} = myself"
+            },
+            {
+              "title": "{te} = yourself"
+            },
+            {
+              "title": "daily {routine}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "reflexive pronoun",
+              "def": "used to indicate doing something to yourself, words like ‘myself’ and ‘yourself’"
+            },
+            {
+              "term": "me",
+              "def": "reflexive pronoun ‘myself’"
+            },
+            {
+              "term": "te",
+              "def": "reflexive pronoun ‘yourself’"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Verbs for routines",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are some verbs that the López family use to talk about routines. Each one is an infinitive."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "desayunar",
+              "sub": "to have breakfast"
+            },
+            {
+              "title": "presentar",
+              "sub": "to present, to introduce"
+            },
+            {
+              "title": "llamar",
+              "sub": "to call"
+            },
+            {
+              "title": "preparar",
+              "sub": "to prepare"
+            },
+            {
+              "title": "lavar",
+              "sub": "to wash"
+            },
+            {
+              "title": "preguntar",
+              "sub": "to ask"
+            },
+            {
+              "title": "despertar",
+              "sub": "to wake"
+            },
+            {
+              "title": "levantar",
+              "sub": "to get up"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "One more: **poner** means to put."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the verbs",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each Spanish verb to its English meaning.",
+          "pairs": [
+            {
+              "a": "preparar",
+              "b": "to prepare"
+            },
+            {
+              "a": "preguntar",
+              "b": "to ask"
+            },
+            {
+              "a": "poner",
+              "b": "to put"
+            },
+            {
+              "a": "presentar",
+              "b": "to present, to introduce"
+            },
+            {
+              "a": "llamar",
+              "b": "to call"
+            },
+            {
+              "a": "desayunar",
+              "b": "to have breakfast"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The ‘I’ and ‘you’ endings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With regular -ar verbs, the ‘I’ form ends in **-o** and the ‘you’ form ends in **-as**. Remove the -ar, then add the ending."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "lav",
+              "add": "o",
+              "result": "lavo",
+              "note": "lavar → lavo (I wash)"
+            },
+            {
+              "root": "llam",
+              "add": "o",
+              "result": "llamo",
+              "note": "llamar → llamo (I call)"
+            },
+            {
+              "root": "lav",
+              "add": "as",
+              "result": "lavas",
+              "note": "lavar → lavas (you wash)"
+            },
+            {
+              "root": "llam",
+              "add": "as",
+              "result": "llamas",
+              "note": "llamar → llamas (you call)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘Myself’: me",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To say that **I** do something to **myself**, add the reflexive pronoun **me**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Presento a mi amigo. (I introduce my friend.)",
+            "Me presento. (I introduce myself.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The reflexive pronoun goes {before} the verb in Spanish, but after it in English. The verb ending is still -o."
+        },
+        {
+          "t": "reveal",
+          "label": "Me llamo … or llamo …?",
+          "text": "‘Me llamo …’ means ‘I call myself …’. A more natural translation is ‘I’m called …’ or ‘My name is …’. ‘Llamo …’ means ‘I call (someone else)’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘Yourself’: te",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To say that **you** do something to **yourself**, add the reflexive pronoun **te** before the verb."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Despiertas a tu hermano. (You wake your brother up.)",
+            "Te despiertas. (You wake (yourself) up.)",
+            "Lavas … (You wash …)",
+            "Te lavas … (You wash (yourself).)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The verb ending is still {-as}. The infinitive ‘lavar’ just means ‘to wash’: you need a reflexive pronoun to mean ‘wash yourself’."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "In English, we often drop the reflexive pronoun, but it is always needed in Spanish."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Despertar changes its spelling",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some verbs, like **despertar**, have a stem change from -e to -ie in some forms."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "(yo) desp{ie}rto",
+            "(tú) desp{ie}rtas",
+            "(él, ella) desp{ie}rta",
+            "(ellos, ellas) desp{ie}rtan"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How do I say ‘I wake up’?",
+          "text": "Me despierto. The reflexive pronoun ‘me’ goes before the verb, and the verb has the spelling change: despierto."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Putting on clothes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb **poner** has an irregular ‘I’ form: **pongo**. The other present tense forms are regular. Used reflexively, poner means to put clothing on."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Me pongo un vestido. (I put a dress on.)",
+            "Te pones el reloj. (You put your watch on.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In English, we usually say ‘my’ or ‘your’ before the noun. In Spanish, just use {el} or {la}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Routine verbs with me and te",
+      "blocks": [
+        {
+          "t": "chips",
+          "items": [
+            "Me despierto. (I wake up.)",
+            "Me levanto. (I get up.)",
+            "Me lavo. (I wash.)",
+            "Me pongo … (I put … on.)",
+            "Me preparo. (I get ready.)",
+            "Te levantas. (You get up.)",
+            "Te preparas. (You get ready.)",
+            "Te llamas … (You’re called …)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Me preparo’ is literally ‘I prepare myself’. But **desayunar** is never used with reflexive pronouns: ‘I have breakfast’ is just **desayuno**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say it in Spanish",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct Spanish.",
+          "items": [
+            {
+              "q": "I get ready",
+              "options": [
+                "me preparo",
+                "preparo",
+                "te preparas"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "You wash (yourself)",
+              "options": [
+                "lavas",
+                "te lavas",
+                "me lavo"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "You get (yourself) up",
+              "options": [
+                "me levanto",
+                "te levantas",
+                "levantas"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I put a dress on",
+              "options": [
+                "Me pongo un vestido.",
+                "Pongo un vestido.",
+                "Te pongo un vestido."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "I have breakfast",
+              "options": [
+                "me desayuno",
+                "desayuno",
+                "te desayunas"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "me and te, or mi and tu?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Me** and **te** look very like **mi** and **tu**, but we use them differently."
+        },
+        {
+          "t": "list",
+          "items": [
+            "{Me} (myself) is followed by a verb: Me lavo. (I wash (myself).)",
+            "{Mi} (my) is usually followed by a noun: Mi libro es nuevo. (My book is new.)",
+            "{Te} (yourself) is followed by a verb: Te levantas. (You get (yourself) up.)",
+            "{Tu} (your) is usually followed by a noun: Tu móvil es rojo. (Your phone is red.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Take care not to pronounce Spanish **me** like English ‘me’: that is the same sound as Spanish **mi**, and could confuse things!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "me, mi, te or tu?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the word after the gap. Is it a verb or a noun?"
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct word to complete each sentence.",
+          "items": [
+            {
+              "q": "Hoy ___ levanto temprano. (Today I get up early.)",
+              "options": [
+                "me",
+                "mi"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ móvil está encima de la mesa. (My phone is on top of the table.)",
+              "options": [
+                "Me",
+                "Mi"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "¿Por qué no ___ lavas ahora? (Why don’t you wash now?)",
+              "options": [
+                "te",
+                "tu"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "¿Dónde está ___ reloj? (Where is your watch?)",
+              "options": [
+                "te",
+                "tu"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Daniel, ___ preparas para el colegio. (Daniel, you get ready for school.)",
+              "options": [
+                "te",
+                "tu"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Clothes and questions",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "How do you say ‘I put my watch on’?",
+          "options": [
+            "Me pongo el reloj.",
+            "Me pongo mi reloj.",
+            "Pongo el reloj."
+          ],
+          "answer": 0,
+          "why": "With poner used reflexively, Spanish uses el or la (not mi or tu) before the clothing, and the reflexive pronoun me goes before the verb."
+        },
+        {
+          "t": "choice",
+          "q": "¿Desayunas? What does it mean?",
+          "options": [
+            "Do you have breakfast?",
+            "Do you wake up?",
+            "Do you wash?"
+          ],
+          "answer": 0,
+          "why": "Desayunar means to have breakfast, and the ‘you’ form ends in -as. No reflexive pronoun is used."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The ‘I’ form of regular -ar verbs like lavar ends in -o. The ‘you’ form ends in -as.",
+            "Some verbs like despertar have a stem change from -e to -ie in some forms, e.g. despierto (I wake up).",
+            "To say that I do something to myself, use me before the verb: me presento (I introduce myself).",
+            "To say that you do something to yourself, use te before the verb: te llamas (you call yourself).",
+            "Me and te look like mi and tu, but they are different: me and te are followed by a verb; mi and tu are usually followed by a noun."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a reflexive pronoun?",
+      "back": "A word used to indicate doing something to yourself, words like ‘myself’ and ‘yourself’."
+    },
+    {
+      "front": "What does the reflexive pronoun “me” mean?",
+      "back": "myself\n\nMe presento. (I introduce myself.)"
+    },
+    {
+      "front": "What does the reflexive pronoun “te” mean?",
+      "back": "yourself\n\nTe llamas … (You call yourself …)"
+    },
+    {
+      "front": "Where does the reflexive pronoun go in Spanish?",
+      "back": "Before the verb. (In English it goes after the verb.)"
+    },
+    {
+      "front": "How does the “I” form of a regular -ar verb like “lavar” end?",
+      "back": "-o\n\nlavo (I wash)"
+    },
+    {
+      "front": "How does the “you” form of a regular -ar verb like “lavar” end?",
+      "back": "-as\n\nlavas (you wash)"
+    },
+    {
+      "front": "Which stem change does “despertar” have in some forms?",
+      "back": "-e to -ie\n\ndespierto (I wake up)"
+    },
+    {
+      "front": "How do you say “I wash (myself)” in Spanish?",
+      "back": "Me lavo."
+    },
+    {
+      "front": "What is the “I” form of “poner”?",
+      "back": "pongo (it is irregular)\n\nMe pongo un vestido. (I put a dress on.)"
+    },
+    {
+      "front": "What word do you use instead of “my” or “your” before clothing with “poner”?",
+      "back": "el or la\n\nTe pones el reloj. (You put your watch on.)"
+    },
+    {
+      "front": "Which verb is never used with reflexive pronouns: “desayunar” or “lavar”?",
+      "back": "desayunar\n\nDesayuno = I have breakfast."
+    },
+    {
+      "front": "What is the difference between “me” and “mi”?",
+      "back": "Me (myself) is followed by a verb: me lavo.\nMi (my) is usually followed by a noun: mi libro."
+    },
+    {
+      "front": "What is the difference between “te” and “tu”?",
+      "back": "Te (yourself) is followed by a verb: te levantas.\nTu (your) is usually followed by a noun: tu móvil."
+    },
+    {
+      "front": "What does “me llamo” mean in natural English?",
+      "back": "I’m called … / My name is …"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Routine events: reflexive pronouns ‘me’ and ‘te’",
+    "instructions": "Answer each question with a short answer. Some answers are in Spanish and some are in English. Remember: me and te go before a verb; mi and tu go before a noun.",
+    "questions": [
+      {
+        "prompt": "Complete with me or mi: ___ lavo más tarde. (I wash later.)",
+        "answer": "me",
+        "explanation": "Lavo is a verb, so we need the reflexive pronoun me."
+      },
+      {
+        "prompt": "Complete with me or mi: ___ reloj dice que son las ocho. (My watch says it is eight o’clock.)",
+        "answer": "mi",
+        "explanation": "Reloj is a noun, so we need the possessive adjective mi."
+      },
+      {
+        "prompt": "Complete with me or mi: ___ hermano está en la cocina. (My brother is in the kitchen.)",
+        "answer": "mi",
+        "explanation": "Hermano is a noun, so we need mi."
+      },
+      {
+        "prompt": "Complete with me or mi: ___ preparo para el colegio. (I get ready for school.)",
+        "answer": "me",
+        "explanation": "Preparo is a verb, so we need me."
+      },
+      {
+        "prompt": "Write in English: “tu hijo”",
+        "answer": "your son",
+        "explanation": "Tu is ‘your’ before a singular noun, and hijo is son."
+      },
+      {
+        "prompt": "Write in English: “mi ordenador”",
+        "answer": "my computer",
+        "explanation": "Mi is ‘my’ before a singular noun, and ordenador is computer."
+      },
+      {
+        "prompt": "Write in Spanish: “do you get up?” (use the ‘you’ form with the reflexive pronoun)",
+        "answer": "te levantas",
+        "accepted": [
+          "¿te levantas?",
+          "tú te levantas",
+          "¿tú te levantas?"
+        ],
+        "explanation": "Te goes before the verb, and the ‘you’ form of levantar ends in -as."
+      },
+      {
+        "prompt": "Write in English: “¿te preparas?”",
+        "answer": "are you getting ready?",
+        "accepted": [
+          "are you getting ready",
+          "do you get ready?",
+          "do you get ready",
+          "you get ready"
+        ],
+        "explanation": "Te preparas is the ‘you’ form of preparar used reflexively, meaning ‘you get ready’."
+      },
+      {
+        "prompt": "Write in Spanish: “I put on” (clothes), using the reflexive pronoun and the ‘I’ form of poner.",
+        "answer": "me pongo",
+        "accepted": [
+          "yo me pongo"
+        ],
+        "explanation": "Me goes before the verb, and the ‘I’ form of poner is pongo."
+      },
+      {
+        "prompt": "Write in Spanish: “I’m getting ready”",
+        "answer": "me preparo",
+        "accepted": [
+          "yo me preparo"
+        ],
+        "explanation": "Me goes before the verb, and the ‘I’ form of preparar ends in -o."
+      },
+      {
+        "prompt": "One of these verbs is never used with reflexive pronouns: llamar, desayunar, lavar. Which one?",
+        "answer": "desayunar",
+        "explanation": "Desayunar is never used with reflexive pronouns: desayuno means ‘I have breakfast’."
+      }
+    ]
+  }
+}

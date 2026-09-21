@@ -1,0 +1,568 @@
+{
+  "agent": "maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can determine the likelihood of an outcome by designing and carrying out an experiment."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes we cannot tell how likely an outcome is just by looking. Then we can test it, again and again."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "planning and {conducting} experiments"
+            },
+            {
+              "title": "considering the {number of trials} required"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "experiment",
+              "def": "An experiment is a repetition of a trial multiple times in order to observe how often each outcome occurs."
+            },
+            {
+              "term": "trial",
+              "def": "A trial is a single predefined test."
+            },
+            {
+              "term": "outcome",
+              "def": "An outcome is a result of a trial."
+            },
+            {
+              "term": "likelihood",
+              "def": "Likelihood describes the chance that a particular event will occur."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "An experiment is one trial repeated many times."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A fair coin",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When you flip a fair coin, there are two possible outcomes: it lands showing heads or it lands showing tails. The trial is flipping the coin once."
+        },
+        {
+          "t": "callout",
+          "text": "ξ = ❴heads, tails❵"
+        },
+        {
+          "t": "text",
+          "text": "Each outcome is equally likely. Because these are the only two possible outcomes, the likelihood of each one is an **even chance**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A frisbee flip",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob and Sofia flip a frisbee in the air. There are two possible ways it could land: open side up or open side down. Are the two outcomes equally likely?"
+        },
+        {
+          "t": "text",
+          "text": "Sofia says the shape of the frisbee means its two sides are different, so it could be more likely to land one way than the other."
+        },
+        {
+          "t": "reveal",
+          "label": "How could they investigate?",
+          "text": "Flip the frisbee in the air several times and see which outcome happens the most. That gives an indication of whether one outcome is more likely than the other."
+        },
+        {
+          "t": "text",
+          "text": "To make it easier to talk about, they call one outcome ‘heads’ and the other ‘tails’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How many flips are enough?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob and Sofia record what happens. The number of times an outcome happens is its **frequency**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "10 flips",
+              "sub": "4 heads, 6 tails: tails might be more likely, but Sofia is not convinced"
+            },
+            {
+              "title": "20 flips",
+              "sub": "13 heads, 7 tails: a different conclusion, heads seems more likely"
+            },
+            {
+              "title": "500 flips",
+              "sub": "281 heads, 219 tails: heads seems more likely, and this is more convincing"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Are they now absolutely certain?",
+          "text": "No. We don’t know for absolute certain, but the results from 500 flips could be convincing enough to conclude that the frisbee is more likely to land on heads than tails."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Big ideas about experiments",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If one outcome has a greater frequency than the others, that outcome could have a greater likelihood of happening again.",
+            "The more trials an experiment contains, the more confident we can be about any conclusions.",
+            "We might not be able to be absolutely certain that our conclusions from an experiment are true."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "More {trials} means more confidence."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Showing the result on the scale",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the 500-flip experiment, tails happened 219 times and heads 281 times. Where do they go on the scale of likelihoods?"
+        },
+        {
+          "t": "text",
+          "text": "Step 1: Half of the 500 trials is 250."
+        },
+        {
+          "t": "text",
+          "text": "Step 2: Tails happened fewer than 250 times, so tails has less than an even chance. It goes before the halfway point of the scale."
+        },
+        {
+          "t": "text",
+          "text": "Step 3: Heads happened more than 250 times, so heads has more than an even chance. The more likely the frisbee is to land heads, the less likely it is to land tails."
+        },
+        {
+          "t": "callout",
+          "text": "An outcome needs a frequency of more than {half} the number of trials to have more than an even chance."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The toy brick",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A toy building brick that is thrown into the air could land in four ways: connectors up, connectors down, long face or short face. How could you find out which is more likely?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the answer",
+          "text": "Conduct an experiment: throw the brick into the air many times and record how often each outcome happens."
+        },
+        {
+          "t": "text",
+          "text": "Suppose the brick is thrown 100 times and the outcome with the tallest bar (the highest frequency) is ‘connectors down’. Based on these results, that is the most likely outcome to happen next."
+        },
+        {
+          "t": "text",
+          "text": "But if none of the bars reaches 50 (half of 100), none of the four outcomes has more than an even chance."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Planning an experiment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To find out how likely an outcome is:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Decide what the trial is and list the possible outcomes (the sample space).",
+            "Repeat the trial many times in the same way. For example: drop a cone onto the floor from the same height 200 times.",
+            "Record how many times each outcome happens.",
+            "Compare the frequencies. The outcome with the greater frequency seems more likely, and more trials make you more confident."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: reading experiment results",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Read the results and choose the best answer.",
+          "items": [
+            {
+              "q": "A drawing pin is dropped 60 times. It lands point up 45 times and point down 15 times. Which outcome appears more likely?",
+              "options": [
+                "point up",
+                "point down",
+                "They are equally likely"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "In the same experiment (60 trials), half of the trials is 30. Point up happened 45 times. What is the likelihood of point up?",
+              "options": [
+                "more than an even chance",
+                "an even chance",
+                "less than an even chance"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "An outcome happened 80 times in an experiment of 200 trials. Half of 200 is 100. What is its likelihood?",
+              "options": [
+                "more than an even chance",
+                "an even chance",
+                "less than an even chance"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A cone is dropped 40 times. It lands base down 26 times and curve down 14 times. Which outcome appears more likely?",
+              "options": [
+                "base down",
+                "curve down"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Is the dice fair?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura thinks a dice is not fair because it keeps landing on some numbers more than others. They run an experiment and roll it 120 times. The frequency for 5 is higher than the others."
+        },
+        {
+          "t": "text",
+          "text": "They roll the dice 120 times again. The results look quite different this time, so now they are not sure the dice is unfair. Maybe 120 trials isn’t enough."
+        },
+        {
+          "t": "text",
+          "text": "They roll 1200 times (with help from lots of friends). This time, the numbers on the dice look more equally likely."
+        },
+        {
+          "t": "callout",
+          "text": "Even when events are equally likely, they do not always happen an equal number of times. One event may happen more than another by {chance}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Small and large experiments",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A fair coin has two equally likely outcomes, but in an experiment of 100 flips you can still get more heads than tails."
+        },
+        {
+          "t": "text",
+          "text": "The other way round can happen too. A frisbee may be slightly more likely to land heads than tails, but you can still get more tails than heads."
+        },
+        {
+          "t": "list",
+          "items": [
+            "An unlikely event can happen more often than a likely event, just by chance. This tends to happen more in experiments with a small number of trials.",
+            "Experiments with a small number of trials (like rolling a dice 60 times) can produce very different results each time.",
+            "Experiments with a large number of trials (like rolling a dice 6000 times) give more consistent results."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out! True or false?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "If event A is more likely than event B, then A will always happen more often than B during an experiment.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "An event with a lower likelihood may still happen more often by chance, especially in an experiment with few trials."
+        },
+        {
+          "t": "choice",
+          "q": "If event A has a greater frequency than event B in an experiment, the experiment proves that A is more likely than B.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "The results only suggest it. We might not be able to be absolutely certain, and more trials make the conclusion more reliable."
+        },
+        {
+          "t": "choice",
+          "q": "How could an experiment be made more reliable?",
+          "options": [
+            "Use a greater number of trials",
+            "Use a smaller number of trials",
+            "An experiment can never be improved"
+          ],
+          "answer": 0,
+          "why": "The more trials an experiment contains, the more confident we can be about its conclusions."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: how many trials?",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Sam wants to know which way a slice of toast is most likely to land. Which number of trials gives the most reliable conclusion?",
+              "options": [
+                "5",
+                "50",
+                "500"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Sam flips a coin 8 times and gets 6 heads. Can Sam reliably conclude that heads is more likely than tails?",
+              "options": [
+                "Yes, 6 is more than 2",
+                "No, there are too few trials to be reliable"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A fair coin is flipped 100 times. Is it possible to get more heads than tails?",
+              "options": [
+                "Yes, it can happen by chance",
+                "No, the outcomes are equally likely so the numbers must be equal"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "An experiment can be designed to investigate whether one event is more likely than another.",
+            "The results from an experiment can be used to determine the likelihood of each event.",
+            "A large number of trials may be needed in an experiment to produce reliable results."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Repeat the trial, record the frequencies, and use as many trials as you sensibly can."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an experiment (in probability)?",
+      "back": "A repetition of a trial multiple times in order to observe how often each outcome occurs."
+    },
+    {
+      "front": "What is the likelihood of heads when you flip a fair coin?",
+      "back": "An even chance.\n\nξ = ❴heads, tails❵ and the two outcomes are equally likely."
+    },
+    {
+      "front": "How can you investigate whether one outcome is more likely than another?",
+      "back": "Repeat the trial many times, record the results and see which outcome happens the most."
+    },
+    {
+      "front": "If one outcome has a greater frequency than the others in an experiment, what could that suggest?",
+      "back": "That outcome could have a greater likelihood of happening again in the future."
+    },
+    {
+      "front": "How does the number of trials affect how confident we can be in a conclusion?",
+      "back": "The more trials an experiment contains, the more confident we can be."
+    },
+    {
+      "front": "Can an experiment tell us for absolute certain how likely an outcome is?",
+      "back": "Not necessarily.\n\nWe might not be able to be absolutely certain that our conclusions are true."
+    },
+    {
+      "front": "Jacob and Sofia flip a frisbee 500 times: 281 heads, 219 tails. Is tails more or less than an even chance?",
+      "back": "Less than an even chance.\n\nTails happened fewer than half the time (fewer than 250 of 500)."
+    },
+    {
+      "front": "To have more than an even chance in 100 trials, how many times must an outcome happen?",
+      "back": "More than 50 times (more than half of the trials)."
+    },
+    {
+      "front": "Can equally likely outcomes happen an unequal number of times in an experiment?",
+      "back": "Yes, by chance.\n\nA fair coin flipped 100 times can still give more heads than tails."
+    },
+    {
+      "front": "In an experiment, can a less likely event happen more often than a more likely event?",
+      "back": "Yes, by chance, and this is more common when there are few trials."
+    },
+    {
+      "front": "A dice was rolled 120 times, twice, with quite different results. Rolled 1200 times, the numbers looked more equally likely. Why?",
+      "back": "More trials give a more accurate picture of the likelihoods."
+    },
+    {
+      "front": "How can an experiment be improved to give more reliable results?",
+      "back": "Use a greater number of trials."
+    },
+    {
+      "front": "What is the frequency of an outcome in an experiment?",
+      "back": "The number of times that outcome happened."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Experiments to determine how likely an outcome is",
+    "instructions": "Answer each question with a number, a word or a short phrase. Use what you know about experiments, frequency and the number of trials.",
+    "questions": [
+      {
+        "prompt": "Fill in the gap: an ______ is a repetition of a trial multiple times in order to observe how often each outcome occurs.",
+        "answer": "experiment",
+        "accepted": [
+          "experiment",
+          "an experiment"
+        ],
+        "explanation": "That is the definition of an experiment."
+      },
+      {
+        "prompt": "A cone is dropped 40 times. It lands base down 26 times and curve down 14 times. Which outcome appears more likely to happen next time?",
+        "answer": "base down",
+        "accepted": [
+          "base down",
+          "Base down"
+        ],
+        "explanation": "Base down has the greater frequency (26 compared with 14), so it seems more likely."
+      },
+      {
+        "prompt": "A frisbee is flipped 500 times and lands heads 281 times. How many times did it land tails?",
+        "answer": "219",
+        "accepted": [
+          "219",
+          "219 times"
+        ],
+        "explanation": "500 - 281 = 219."
+      },
+      {
+        "prompt": "Half of 500 trials is 250. Tails happened 219 times. Is the likelihood of tails more than, less than, or equal to an even chance?",
+        "answer": "less than an even chance",
+        "accepted": [
+          "less than an even chance",
+          "less than",
+          "less",
+          "less than even chance"
+        ],
+        "explanation": "219 is fewer than 250, so tails happened less than half the time."
+      },
+      {
+        "prompt": "An experiment has 100 trials. An outcome must happen more than how many times to have more than an even chance?",
+        "answer": "50",
+        "accepted": [
+          "50",
+          "more than 50",
+          "over 50",
+          "fifty"
+        ],
+        "explanation": "An even chance is half of the trials, and half of 100 is 50."
+      },
+      {
+        "prompt": "Which experiment gives the more reliable conclusion: one with 20 trials or one with 500 trials?",
+        "answer": "500 trials",
+        "accepted": [
+          "500 trials",
+          "500",
+          "the one with 500 trials"
+        ],
+        "explanation": "The more trials an experiment contains, the more confident we can be in its conclusions."
+      },
+      {
+        "prompt": "True or false: if event A is more likely than event B, then A will always happen more often than B in an experiment.",
+        "answer": "false",
+        "accepted": [
+          "false",
+          "False"
+        ],
+        "explanation": "An event with a lower likelihood may still happen more often by chance."
+      },
+      {
+        "prompt": "A fair coin is flipped 100 times. Is it possible to get more heads than tails? (yes or no)",
+        "answer": "yes",
+        "accepted": [
+          "yes",
+          "Yes",
+          "it is possible"
+        ],
+        "explanation": "Even when outcomes are equally likely, one can happen more often than the other by chance."
+      },
+      {
+        "prompt": "How could an experiment be improved to make its results more reliable?",
+        "answer": "use more trials",
+        "accepted": [
+          "use more trials",
+          "more trials",
+          "a greater number of trials",
+          "increase the number of trials",
+          "do more trials",
+          "use a greater number of trials"
+        ],
+        "explanation": "A greater number of trials makes the conclusions more reliable."
+      },
+      {
+        "prompt": "A dice is rolled 120 times, and then 1200 times. Which experiment is more likely to show the numbers as equally likely: the 120 trials or the 1200 trials?",
+        "answer": "1200 trials",
+        "accepted": [
+          "1200 trials",
+          "1200",
+          "the 1200 trials",
+          "the one with 1200 trials"
+        ],
+        "explanation": "The more trials we run, the more it looks like the numbers on the dice are equally likely."
+      }
+    ]
+  }
+}

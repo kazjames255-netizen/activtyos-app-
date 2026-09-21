@@ -1,0 +1,575 @@
+{
+  "agent": "science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can measure extensions of a spring for a good range of stretching forces."
+        },
+        {
+          "t": "text",
+          "text": "You will plan an experiment where weights pull on a spring, and learn how to measure the results accurately."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Measuring the extension of a spring"
+            },
+            {
+              "title": "Making accurate extension measurements"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "extension",
+              "def": "The extension of a spring is the change in length."
+            },
+            {
+              "term": "gravitational force",
+              "def": "Masses will have a gravitational force that pulls them downwards."
+            },
+            {
+              "term": "hanging masses",
+              "def": "Hanging masses (weights) can be used to put a known force onto a spring."
+            },
+            {
+              "term": "mass hanger",
+              "def": "A mass hanger can be attached to a spring; adding masses to it causes the spring to stretch in a controlled way."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stretching a spring",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Pull on the end of a spring and the coils move further apart. The spring gets longer. We say it has {extended}."
+        },
+        {
+          "t": "callout",
+          "text": "The {extension} is the increase in length. The larger the stretching force, the greater the extension."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "12 cm (original length)",
+              "add": "4 cm (extension)",
+              "result": "16 cm (new length)",
+              "note": "new length = original length + extension"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Length or extension?",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The length of the spring is not the extension. The extension is only how much LONGER the spring has become."
+        },
+        {
+          "t": "choice",
+          "q": "A spring is 9.0 cm long with no force on it. With a force on it, it is 15.5 cm long. What is its extension?",
+          "options": [
+            "15.5 cm",
+            "9.0 cm",
+            "6.5 cm",
+            "24.5 cm"
+          ],
+          "answer": 2,
+          "why": "Extension = increase in length = 15.5 − 9.0 = 6.5 cm."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A controlled force",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If you just pull a spring by hand, the force is uncontrolled and you cannot measure it. To get a controlled force we hang masses from a **mass hanger** on the end of the spring."
+        },
+        {
+          "t": "callout",
+          "text": "The mass hanger and each 100 g mass pull down on the spring with an extra force of {1 N} each."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "hanger only: 1 N",
+            "hanger + one 100 g mass: 2 N",
+            "hanger + two masses: 3 N",
+            "hanger + three masses: 4 N"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Work out the force",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Each 100 g mass and the hanger pull down with 1 N each.",
+          "items": [
+            {
+              "q": "What is the total downward force from a hanger and 2 masses?",
+              "options": [
+                "2 N",
+                "3 N",
+                "200 N",
+                "300 N"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is the total downward force from a hanger and 5 masses?",
+              "options": [
+                "5 N",
+                "6 N",
+                "500 N",
+                "600 N"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Adding a mass pulls down harder, so the spring stretches more."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You will test whether there is a pattern in the relationship between the force on a spring and its extension."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Clamp stand",
+              "sub": "hang the spring from it"
+            },
+            {
+              "title": "Spring",
+              "sub": "with a mass hanger"
+            },
+            {
+              "title": "Vertical ruler",
+              "sub": "zero level with the bottom of the spring"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Line up the {zero on the ruler} exactly with the {bottom of the spring} before you add any masses."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the mistake",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A pupil’s ruler is tilted to one side. What is the problem?",
+              "options": [
+                "Nothing, it does not matter",
+                "The ruler should be vertical or the readings will be wrong",
+                "The spring is too short",
+                "The masses are too heavy"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which piece of equipment makes it easier to keep the measuring line level with the bottom of the spring, giving more accurate readings?",
+              "options": [
+                "A clamp stand",
+                "A set square",
+                "A mass hanger",
+                "A bigger mass"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A set square is easier to keep level (horizontal) than a second ruler, so it helps you read the scale more accurately."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading an extension",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With the ruler’s zero at the bottom of the unloaded spring, you can read the extension straight off the ruler: the reading at the bottom of the stretched spring IS the extension."
+        },
+        {
+          "t": "text",
+          "text": "**Example.** A 1 N force pulls the bottom of the spring down to the 3.0 cm mark. The extension is 3.0 cm. Add another 100 g mass (2 N) and the spring reaches the 6.0 cm mark. The extension is now 6.0 cm."
+        },
+        {
+          "t": "choice",
+          "q": "With zero lined up, the bottom of a loaded spring is at the 8.5 cm mark. What is the extension?",
+          "options": [
+            "0 cm",
+            "8.5 cm",
+            "85 cm",
+            "Cannot tell"
+          ],
+          "answer": 1,
+          "why": "Zero was lined up with the bottom of the unloaded spring, so the reading is the extension."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Steps of the experiment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You add masses one at a time up to 6 N in total, then take them off one at a time. You do not want to overextend the spring."
+        },
+        {
+          "t": "sort",
+          "q": "Which stage does each step belong to?",
+          "columns": [
+            "Setting up",
+            "Adding masses (loading)",
+            "Removing masses (unloading)"
+          ],
+          "items": [
+            {
+              "text": "Line up zero on the ruler with the bottom of the spring",
+              "col": 0
+            },
+            {
+              "text": "Hang the spring from a clamp stand",
+              "col": 0
+            },
+            {
+              "text": "Put on one more 100 g mass and measure the extension",
+              "col": 1
+            },
+            {
+              "text": "Take off one mass and measure the extension again",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Recording the results",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Record two sets of extensions in a table: one as you add the masses (loading) and one as you remove them (unloading)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Force (N) in the first column",
+            "Extension when loading (cm) in the second column",
+            "Extension when unloading (cm) in the third column"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Your values will be different from someone else’s, but the pattern should be the same: the greater the force, the bigger the extension."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Are the measurements accurate?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Two sets of data can show whether the measurements were accurate."
+        },
+        {
+          "t": "callout",
+          "text": "If the loading and unloading results match closely, with only small differences, the measurements are {accurate}. If they are very different, some readings may be inaccurate."
+        },
+        {
+          "t": "choice",
+          "q": "Which pupil’s results were measured most accurately for the same force?",
+          "options": [
+            "Loading 8.0 cm, unloading 9.6 cm",
+            "Loading 8.0 cm, unloading 6.5 cm",
+            "Loading 8.0 cm, unloading 8.1 cm",
+            "Loading 8.0 cm, unloading 10.0 cm"
+          ],
+          "answer": 2,
+          "why": "The two readings are closest together (only 0.1 cm apart), so the measurements match closely."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Scientific diagrams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **scientific diagram** shows how equipment is set up and used. It can also show how measurements should be made."
+        },
+        {
+          "t": "match",
+          "q": "Match each item in a diagram to what it does.",
+          "pairs": [
+            {
+              "a": "Clamp stand",
+              "b": "Holds the spring up"
+            },
+            {
+              "a": "Mass hanger",
+              "b": "Holds the masses on the end of the spring"
+            },
+            {
+              "a": "Ruler",
+              "b": "Measures the extension"
+            },
+            {
+              "a": "Set square",
+              "b": "Helps you read the scale level with the bottom of the spring"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Test yourself",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "What does the extension of a spring tell you?",
+              "options": [
+                "How long it is in total",
+                "How heavy it is",
+                "How many coils it has",
+                "How much its length has changed"
+              ],
+              "answer": 3
+            },
+            {
+              "q": "You add more masses to the hanger. What happens to the extension?",
+              "options": [
+                "It gets smaller",
+                "It gets bigger",
+                "It stays exactly the same",
+                "It becomes zero"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A spring is 14.0 cm long unloaded and 17.5 cm long with a force. What is the extension?",
+              "options": [
+                "17.5 cm",
+                "31.5 cm",
+                "3.5 cm",
+                "14.0 cm"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A spring extends (gets longer) when a force pulls on it. Extension is the increase in length.",
+            "The greater the force, the bigger the extension.",
+            "A mass hanger with 100 g masses gives controlled forces: 1 N for the hanger and 1 N for each mass.",
+            "Line up zero on the ruler with the bottom of the spring. A set square helps accuracy.",
+            "Measure while loading and unloading. If both sets match closely, the measurements are accurate."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What happens to a spring when a force pulls on it?",
+      "back": "It extends (gets longer): the coils move further apart."
+    },
+    {
+      "front": "What is the extension of a spring?",
+      "back": "The change (increase) in its length."
+    },
+    {
+      "front": "A spring is 12 cm long unloaded and 16 cm long when stretched. What is the extension?",
+      "back": "4 cm\n\nextension = 16 − 12"
+    },
+    {
+      "front": "What is a mass hanger used for?",
+      "back": "It attaches to a spring, and masses are added to it to make the spring stretch in a controlled way."
+    },
+    {
+      "front": "What force do the mass hanger and each 100 g mass pull down with?",
+      "back": "1 N each (a hanger and two masses give 3 N)."
+    },
+    {
+      "front": "What are hanging masses used for?",
+      "back": "To put a known force onto a spring."
+    },
+    {
+      "front": "How do you set up the ruler before measuring extensions?",
+      "back": "Vertical, with its zero exactly level with the bottom of the spring."
+    },
+    {
+      "front": "Why use a set square when measuring an extension?",
+      "back": "It is easier to keep level, so the readings are more accurate."
+    },
+    {
+      "front": "Why measure the extension as masses are taken off, as well as when they are added?",
+      "back": "If the loading and unloading measurements match closely, the measurements are accurate."
+    },
+    {
+      "front": "What pattern do you expect between force and extension for a spring?",
+      "back": "The greater the force, the bigger the extension."
+    },
+    {
+      "front": "What does a scientific diagram show?",
+      "back": "How equipment is set up and used, and how measurements should be made."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Stretching springs",
+    "instructions": "Answer each question in a word, a number or a short phrase. Give units where they are asked for.",
+    "questions": [
+      {
+        "prompt": "What word means the change in length of a spring when a force acts on it?",
+        "answer": "extension",
+        "accepted": [
+          "the extension",
+          "Extension"
+        ],
+        "explanation": "The extension of a spring is its change in length."
+      },
+      {
+        "prompt": "A spring is 9.0 cm long unloaded. With masses on it, it is 15.5 cm long. What is its extension? Give your answer in cm.",
+        "answer": "6.5 cm",
+        "accepted": [
+          "6.5",
+          "6.5cm"
+        ],
+        "explanation": "Extension = 15.5 − 9.0 = 6.5 cm."
+      },
+      {
+        "prompt": "The mass hanger and each 100 g mass pull down with 1 N. What total force is produced by a mass hanger with 2 masses on it? Give your answer in newtons.",
+        "answer": "3 N",
+        "accepted": [
+          "3",
+          "3N",
+          "three newtons"
+        ],
+        "explanation": "Hanger 1 N + 2 masses × 1 N = 3 N."
+      },
+      {
+        "prompt": "What is the total force from a mass hanger with 5 masses of 100 g each? Give your answer in newtons.",
+        "answer": "6 N",
+        "accepted": [
+          "6",
+          "6N",
+          "six newtons"
+        ],
+        "explanation": "Hanger 1 N + 5 masses × 1 N = 6 N."
+      },
+      {
+        "prompt": "The ruler’s zero is lined up with the bottom of the unloaded spring. With a load, the bottom of the spring is at the 7.5 cm mark. What is the extension? Give your answer in cm.",
+        "answer": "7.5 cm",
+        "accepted": [
+          "7.5",
+          "7.5cm"
+        ],
+        "explanation": "The zero is lined up with the unloaded spring, so the reading is the extension."
+      },
+      {
+        "prompt": "What piece of equipment holds the masses on the end of the spring?",
+        "answer": "mass hanger",
+        "accepted": [
+          "a mass hanger",
+          "hanger",
+          "mass holder",
+          "a mass holder"
+        ],
+        "explanation": "Masses are added to a mass hanger (holder) attached to the spring."
+      },
+      {
+        "prompt": "Which piece of equipment, easier to keep level than a ruler, gives more accurate readings of the extension?",
+        "answer": "set square",
+        "accepted": [
+          "a set square",
+          "the set square"
+        ],
+        "explanation": "A set square is easier to keep level, so the readings are more accurate."
+      },
+      {
+        "prompt": "Pupil A’s results for 2 N are: loading 6.0 cm and unloading 6.1 cm. Pupil B’s are: loading 6.0 cm and unloading 7.4 cm. Which pupil’s measurements match more closely, showing better accuracy? Answer A or B.",
+        "answer": "A",
+        "accepted": [
+          "Pupil A",
+          "pupil a",
+          "a"
+        ],
+        "explanation": "A’s two readings differ by only 0.1 cm, B’s by 1.4 cm."
+      },
+      {
+        "prompt": "A spring extends 3.0 cm when the force is 1 N. If the force increases, does the extension get bigger or smaller?",
+        "answer": "bigger",
+        "accepted": [
+          "it gets bigger",
+          "larger",
+          "greater",
+          "increases",
+          "it increases"
+        ],
+        "explanation": "The greater the force, the bigger the extension."
+      }
+    ]
+  }
+}

@@ -10,6 +10,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { Card } from "@/components/ui";
 import { NAV_GROUPS } from "@/lib/nav/config";
 import { CORE_VIEWS } from "@/lib/use-customer-area";
+import { isFeatureOff } from "@/lib/accessMap";
 
 interface FrFeatures { franchiseId: string; name: string; features: Record<string, boolean> }
 
@@ -89,7 +90,7 @@ export function FranchiseFeaturesApp() {
 
   useEffect(() => { apiGet<FrFeatures[]>("/api/franchises/features").then(setRows).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load")); }, []);
 
-  const isOn = (f: FrFeatures, view: string) => f.features[view] !== false;
+  const isOn = (f: FrFeatures, view: string) => !isFeatureOff(f.features, view);
   const allOn = (view: string) => (rows ?? []).length > 0 && (rows ?? []).every((f) => isOn(f, view));
 
   async function toggle(fid: string, view: string, on: boolean) {

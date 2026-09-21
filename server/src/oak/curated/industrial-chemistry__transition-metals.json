@@ -1,0 +1,795 @@
+{
+  "agent": "chem-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the physical and chemical properties and some uses of transition metals, and compare them to Group 1 metals."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Physical} properties",
+              "sub": "strength, density, melting point"
+            },
+            {
+              "title": "{Chemical} properties",
+              "sub": "ions, colours and reactions"
+            },
+            {
+              "title": "{Uses}",
+              "sub": "construction and catalysts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "transition metal",
+              "def": "A metal element placed in the block between Groups 2 and 3 in the periodic table."
+            },
+            {
+              "term": "catalyst",
+              "def": "A chemical that speeds up the rate of a reaction without itself being used up."
+            },
+            {
+              "term": "ion",
+              "def": "An atom or group of atoms with a positive or negative charge due to the loss or gain of electrons."
+            },
+            {
+              "term": "density",
+              "def": "Calculated by dividing the mass of a substance by its volume; a measurement of how tightly packed a substance’s particles are per unit volume."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where are the transition metals?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Transition metals are found in the {centre} of the periodic table, between Groups 2 and 3."
+        },
+        {
+          "t": "text",
+          "text": "This block contains most of the metals on the periodic table, including familiar ones like silver, gold, iron and copper."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "chromium (Cr)",
+            "manganese (Mn)",
+            "iron (Fe)",
+            "cobalt (Co)",
+            "nickel (Ni)",
+            "copper (Cu)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It helps to keep a periodic table to hand and get to know some of the symbols."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Physical properties of transition metals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Transition metals have the typical physical properties of metals. Tap the three tricky words."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "malleable",
+              "def": "Can be bent or hammered into shape without shattering."
+            },
+            {
+              "term": "ductile",
+              "def": "Can be drawn out into long wires without snapping or breaking."
+            },
+            {
+              "term": "sonorous",
+              "def": "Makes a ringing sound when you tap it."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "good conductors of heat and electricity",
+            "shiny",
+            "high density",
+            "high melting and boiling points (other than mercury)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Mercury is the exception: it is a liquid at room temperature. Its melting point is −39 °C."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Magnetic metals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some transition metals are {magnetic}."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "iron (Fe)",
+            "cobalt (Co)",
+            "nickel (Ni)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Uses that rely on magnetic metals:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "generators",
+            "transformers",
+            "loudspeakers",
+            "powerful permanent magnets",
+            "computer hard drives",
+            "electric motors"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Not all transition metals are magnetic. Iron, nickel and cobalt are magnetic, but it is not a property of every transition metal."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Transition metals vs Group 1 metals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Transition metals are generally **stronger**, **harder** and **denser** than Group 1 metals, and they have **higher melting points**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "potassium (Group 1)",
+              "sub": "melts at 63.5 °C; density 0.86 g/cm³"
+            },
+            {
+              "title": "iron (transition)",
+              "sub": "melts at 1538 °C; density 7.87 g/cm³"
+            },
+            {
+              "title": "copper (transition)",
+              "sub": "melts at 1085 °C"
+            },
+            {
+              "title": "chromium (transition)",
+              "sub": "melts at 1907 °C"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How much higher?",
+          "text": "Iron melts at 1538 °C and potassium at 63.5 °C. 1538 − 63.5 = 1474.5, so iron’s melting point is 1474.5 °C higher."
+        },
+        {
+          "t": "reveal",
+          "label": "Worked example: density",
+          "text": "Density = mass ÷ volume. A piece of metal has a mass of 78.7 g and a volume of 10 cm³. Density = 78.7 ÷ 10 = 7.87 g/cm³, which is the density of iron."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Uses in construction and manufacturing",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Their strength and other physical properties make transition metals useful in construction and manufacturing."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{chromium}",
+              "sub": "used in stainless steel"
+            },
+            {
+              "title": "{manganese}",
+              "sub": "improves the toughness of steel"
+            },
+            {
+              "title": "{iron}",
+              "sub": "used in building materials"
+            },
+            {
+              "title": "{cobalt}",
+              "sub": "high-strength alloys, e.g. jet engines"
+            },
+            {
+              "title": "{nickel}",
+              "sub": "used in coins"
+            },
+            {
+              "title": "{copper}",
+              "sub": "used in electrical wiring"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Check: physical properties",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each statement about Group 1 metals (like potassium) or transition metals?",
+          "columns": [
+            "Group 1 metals",
+            "Transition metals"
+          ],
+          "items": [
+            {
+              "text": "Generally harder",
+              "col": 1
+            },
+            {
+              "text": "Lower melting points",
+              "col": 0
+            },
+            {
+              "text": "Generally less dense",
+              "col": 0
+            },
+            {
+              "text": "Generally stronger",
+              "col": 1
+            },
+            {
+              "text": "Very soft: can be cut with a scalpel",
+              "col": 0
+            },
+            {
+              "text": "Higher melting points",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which of these is used in electrical wiring?",
+              "options": [
+                "nickel",
+                "copper",
+                "cobalt"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Manganese is added to steel to improve its …",
+              "options": [
+                "colour",
+                "toughness",
+                "magnetism"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these is one of the magnetic metals named in this lesson?",
+              "options": [
+                "chromium",
+                "copper",
+                "iron"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ions with different charges",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Transition metals can form ions with different charges. This is because their atoms can lose different numbers of electrons."
+        },
+        {
+          "t": "text",
+          "text": "Iron can form both Fe²⁺ and Fe³⁺ ions. The iron atom either gives away two electrons or three electrons."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "compounds with {Fe²⁺}",
+              "sub": "pale green"
+            },
+            {
+              "title": "compounds with {Fe³⁺}",
+              "sub": "orange-brown (iron hydroxide) or red-brown (iron oxide, rust)"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "How many electrons the metal loses changes the properties of its compounds, including their colour."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Coloured compounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Transition metals are known for forming coloured compounds and solutions. Many paints and pigments contain transition metal compounds."
+        },
+        {
+          "t": "text",
+          "text": "Most other metals form white compounds, which become colourless when dissolved in water. Sodium chloride solution is colourless."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Cr²⁺} and {Cu²⁺}",
+              "sub": "blue compounds"
+            },
+            {
+              "title": "{Cr³⁺}",
+              "sub": "green"
+            },
+            {
+              "title": "{Mn²⁺}",
+              "sub": "pink"
+            },
+            {
+              "title": "{Mn⁷⁺}",
+              "sub": "purple solution"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The same metal ion can give different colours depending on the other ions present: copper sulfate (CuSO₄) is blue but copper oxide (CuO) is black."
+        },
+        {
+          "t": "match",
+          "q": "Match each ion to the colour of its compounds.",
+          "pairs": [
+            {
+              "a": "Fe²⁺",
+              "b": "pale green"
+            },
+            {
+              "a": "Fe³⁺",
+              "b": "orange-brown"
+            },
+            {
+              "a": "Mn²⁺",
+              "b": "pink"
+            },
+            {
+              "a": "Cr²⁺",
+              "b": "blue"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Roman numerals and formulae",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Because a transition metal can form more than one ion, we put a Roman numeral in its name to show the charge. Chromium(II) means Cr²⁺ and chromium(III) means Cr³⁺."
+        },
+        {
+          "t": "text",
+          "text": "The charges in a compound must balance so that the compound is neutral overall. Look at the two iron families:"
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "iron(II)",
+              "add": "chloride",
+              "result": "FeCl₂"
+            },
+            {
+              "root": "iron(III)",
+              "add": "chloride",
+              "result": "FeCl₃"
+            },
+            {
+              "root": "iron(II)",
+              "add": "oxide",
+              "result": "FeO"
+            },
+            {
+              "root": "iron(III)",
+              "add": "oxide",
+              "result": "Fe₂O₃"
+            },
+            {
+              "root": "iron(II)",
+              "add": "nitrate",
+              "result": "Fe(NO₃)₂"
+            },
+            {
+              "root": "iron(III)",
+              "add": "nitrate",
+              "result": "Fe(NO₃)₃"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "That is why the Roman numerals matter: iron(II) and iron(III) make different compounds."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked examples: writing formulae",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Step 1: use the Roman numeral to find the metal ion. Step 2: balance the charges. Tap each row."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "Cu²⁺",
+              "add": "SO₄²⁻",
+              "result": "CuSO₄",
+              "note": "copper(II) sulfate: the charges are equal and opposite, so you need one of each."
+            },
+            {
+              "root": "Ni²⁺",
+              "add": "2 × NO₃⁻",
+              "result": "Ni(NO₃)₂",
+              "note": "nickel(II) nitrate: nitrate is 1−, so you need two nitrate ions for one nickel ion. Put the nitrate in brackets with a subscript 2."
+            },
+            {
+              "root": "2 × Cr³⁺",
+              "add": "3 × O²⁻",
+              "result": "Cr₂O₃",
+              "note": "chromium(III) oxide: two 3+ ions (6+) balance three 2− oxide ions (6−)."
+            },
+            {
+              "root": "Mn⁴⁺",
+              "add": "2 × O²⁻",
+              "result": "MnO₂",
+              "note": "manganese(IV) oxide: the manganese ion is 4+, and oxide is 2−, so you need two oxide ions per manganese ion."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: formulae",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Copper(II) chloride contains Cu²⁺ ions and chloride ions (Cl⁻). What is its formula?",
+              "options": [
+                "CuCl",
+                "CuCl₂",
+                "Cu₂Cl"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Chromium(III) chloride contains Cr³⁺ ions and chloride ions (Cl⁻). What is its formula?",
+              "options": [
+                "CrCl₂",
+                "CrCl₃",
+                "Cr₃Cl"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In Fe₂O₃ each oxide ion is O²⁻. What is the charge on each iron ion?",
+              "options": [
+                "2+",
+                "3+",
+                "6+"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is the name of Fe(NO₃)₃?",
+              "options": [
+                "iron(II) nitrate",
+                "iron(III) nitrate",
+                "iron(I) nitrate"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reactions of transition metals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Unlike Group 1 metals, transition metals react slowly with water or do not react at all."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "With {water}",
+              "sub": "Group 1: vigorous, forming hydroxides and hydrogen gas. Transition metals: slow or none (more reactive with steam)."
+            },
+            {
+              "title": "With {oxygen}",
+              "sub": "Group 1: form oxides when left in air. Transition metals: form oxides when heated (metal powder burns)."
+            },
+            {
+              "title": "With {halogens}",
+              "sub": "Group 1: vigorous. Transition metals: less vigorous. Both form metal halides."
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A piece of iron is put into cold water. What is most likely to happen?",
+              "options": [
+                "It reacts slowly or not at all",
+                "It reacts vigorously and gives off hydrogen",
+                "It explodes"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A catalyst …",
+              "options": [
+                "is used up in the reaction",
+                "speeds up a reaction without being used up",
+                "stops a reaction"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Transition metals as catalysts",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Many transition metals are widely used as {catalysts} in industrial processes."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "chromium",
+              "sub": "making polymers used in packaging and containers"
+            },
+            {
+              "title": "manganese",
+              "sub": "decomposing hydrogen peroxide; oxidising alkenes"
+            },
+            {
+              "title": "iron",
+              "sub": "turning nitrogen and hydrogen into ammonia (Haber process)"
+            },
+            {
+              "title": "cobalt",
+              "sub": "turning hydrogen and carbon monoxide into liquid fuels and waxes"
+            },
+            {
+              "title": "nickel",
+              "sub": "hydrogenating oils to make margarine"
+            },
+            {
+              "title": "copper",
+              "sub": "turning hydrogen, carbon monoxide and carbon dioxide into methanol"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Hydrogen peroxide breaks down slowly into water and oxygen: 2H₂O₂(aq) → 2H₂O(l) + O₂(g). A catalyst speeds this up. Comparing four metal oxides, manganese(IV) oxide made a large number of bubbles very quickly, while zinc(II) oxide made very few and the reaction was very slow."
+        },
+        {
+          "t": "reveal",
+          "label": "Fair testing idea",
+          "text": "The best catalyst is the one that makes the most bubbles of oxygen. To improve the method, collect the gas in a gas syringe and measure the volume of gas in a set time (for example one minute), then calculate the reaction rate."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Transition metals are generally stronger, harder and denser than Group 1 metals, and have higher melting points.",
+            "Transition metals react slowly with water or don’t react with it at all.",
+            "Transition metals are often catalysts that speed up chemical reactions.",
+            "Transition metals can form ions with different charges, and their compounds often have vibrant colours."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Where are the transition metals in the periodic table?",
+      "back": "In the centre block, between Groups 2 and 3."
+    },
+    {
+      "front": "Transition metals compared with Group 1 metals: strength, hardness, density and melting point?",
+      "back": "Generally stronger, harder and denser, with higher melting points."
+    },
+    {
+      "front": "Which transition metals are magnetic?",
+      "back": "Iron, cobalt and nickel (but not all transition metals are magnetic)."
+    },
+    {
+      "front": "Which metal element is a liquid at room temperature?",
+      "back": "Mercury, the exception to the high melting points of transition metals. Its melting point is −39 °C."
+    },
+    {
+      "front": "How do transition metals typically react with water?",
+      "back": "Slowly, or not at all (unlike Group 1 metals). They are more reactive with steam."
+    },
+    {
+      "front": "Why can transition metals form ions with different charges?",
+      "back": "Their atoms can lose different numbers of electrons.\n\nIron forms Fe²⁺ and Fe³⁺."
+    },
+    {
+      "front": "What colour are compounds containing Fe²⁺ and Fe³⁺?",
+      "back": "Fe²⁺: pale green.\nFe³⁺: orange-brown (or red-brown, as in rust)."
+    },
+    {
+      "front": "What do Roman numerals in a name like chromium(III) show?",
+      "back": "The charge on the metal ion: chromium(III) is Cr³⁺."
+    },
+    {
+      "front": "What colour are most compounds of metals that are not transition metals?",
+      "back": "White (and colourless when dissolved in water)."
+    },
+    {
+      "front": "What is a catalyst?",
+      "back": "A chemical that speeds up the rate of a reaction without itself being used up."
+    },
+    {
+      "front": "Which transition metal is the catalyst in the Haber process?",
+      "back": "Iron (turning nitrogen and hydrogen into ammonia)."
+    },
+    {
+      "front": "What is the formula for copper(II) sulfate?",
+      "back": "CuSO₄\n\nCu²⁺ and SO₄²⁻ have equal and opposite charges, so one of each."
+    },
+    {
+      "front": "How do you calculate density?",
+      "back": "Density = mass ÷ volume."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Transition metals",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "Which of these transition metals is used in electrical wiring: chromium, manganese, iron, cobalt, nickel or copper?",
+        "answer": "copper",
+        "explanation": "Copper is a good conductor of electricity and is used in electrical wiring."
+      },
+      {
+        "prompt": "Transition metals react ______ with water, or not at all. Fill in the gap with one word.",
+        "answer": "slowly",
+        "explanation": "Unlike Group 1 metals, transition metals react slowly with water or not at all."
+      },
+      {
+        "prompt": "Hydrogen peroxide breaks down into water and which gas?",
+        "answer": "oxygen",
+        "explanation": "The equation is 2H₂O₂ → 2H₂O + O₂."
+      },
+      {
+        "prompt": "A piece of metal has a mass of 78.7 g and a volume of 10 cm³. What is its density in g/cm³? Give just the number.",
+        "answer": "7.87",
+        "accepted": [
+          "7.87 g/cm3",
+          "7.87 g/cm³"
+        ],
+        "explanation": "Density = mass ÷ volume = 78.7 ÷ 10 = 7.87 g/cm³."
+      },
+      {
+        "prompt": "Iron melts at 1538 °C and potassium melts at 63.5 °C. How many °C higher is the melting point of iron? Give just the number.",
+        "answer": "1474.5",
+        "accepted": [
+          "1474.5 °c"
+        ],
+        "explanation": "1538 − 63.5 = 1474.5."
+      },
+      {
+        "prompt": "An iron atom loses electrons to form an Fe³⁺ ion. How many electrons does it lose?",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "A 3+ ion is formed when an atom loses three electrons."
+      },
+      {
+        "prompt": "What colour are compounds containing manganese(II) ions?",
+        "answer": "pink",
+        "explanation": "Compounds containing Mn²⁺ ions are pink."
+      },
+      {
+        "prompt": "How many nitrate ions (NO₃⁻) are needed for one nickel(II) ion (Ni²⁺) in nickel(II) nitrate? Give a number.",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Nickel(II) is 2+ and nitrate is 1−, so two nitrate ions balance one nickel ion: Ni(NO₃)₂."
+      },
+      {
+        "prompt": "How many oxide ions (O²⁻) balance two chromium(III) ions (Cr³⁺) in chromium(III) oxide? Give a number.",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "Two 3+ ions give 6+, and three 2− ions give 6−, so the formula is Cr₂O₃."
+      },
+      {
+        "prompt": "Which word describes a chemical that speeds up a reaction without being used up?",
+        "answer": "catalyst",
+        "explanation": "That is the meaning of catalyst."
+      }
+    ]
+  }
+}

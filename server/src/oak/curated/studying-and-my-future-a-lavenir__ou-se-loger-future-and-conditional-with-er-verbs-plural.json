@@ -1,0 +1,678 @@
+{
+  "agent": "w4-french-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can recognise the future tense and the conditional of -er verbs in a range of texts about places to live."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Using future and conditional -er verbs"
+            },
+            {
+              "title": "Talking about places to live"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "conditional",
+              "def": "a form of verb used to express what would happen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Words for places to live",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘Les logements’ means accommodation. Here are some words for the rooms and things inside."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "la cuisine",
+              "sub": "kitchen"
+            },
+            {
+              "title": "la chambre",
+              "sub": "bedroom"
+            },
+            {
+              "title": "le salon",
+              "sub": "lounge, living room"
+            },
+            {
+              "title": "l’escalier",
+              "sub": "stairs"
+            },
+            {
+              "title": "la fenêtre",
+              "sub": "window"
+            },
+            {
+              "title": "la clé",
+              "sub": "key"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The 1-verb future: all six forms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The 1-verb future says what will happen. Regular -er verbs use the infinitive as the stem plus the future endings {-ai}, {-as}, {-a}, {-ons}, {-ez}, {-ont}."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ai",
+              "result": "je parlerai"
+            },
+            {
+              "root": "parler",
+              "add": "as",
+              "result": "tu parleras"
+            },
+            {
+              "root": "parler",
+              "add": "a",
+              "result": "il, elle, on parlera"
+            },
+            {
+              "root": "parler",
+              "add": "ons",
+              "result": "nous parlerons"
+            },
+            {
+              "root": "parler",
+              "add": "ez",
+              "result": "vous parlerez"
+            },
+            {
+              "root": "parler",
+              "add": "ont",
+              "result": "ils, elles parleront"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There is no separate word for ‘will’: the spelling of the verb contains the future meaning."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How the future sounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Listen for three sounds: [i] as in ‘midi’, [on] as in ‘non’ and [ez] as in ‘nez’. The plural future endings have the sounds [ez] and [on]: parlerons, parlerez, parleront."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "[i]",
+              "sub": "as in midi"
+            },
+            {
+              "title": "[on]",
+              "sub": "as in non"
+            },
+            {
+              "title": "[ez]",
+              "sub": "as in nez"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "-s and -t are silent at the end of a word, so ‘parlerons’ and ‘parleront’ sound the same. Most future endings (ai, as, a, ont) are ‘avoir’ in the present tense, which makes them easier to remember."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the 1-verb future",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct 1-verb future form.",
+          "items": [
+            {
+              "q": "nous ___ (habiter: we will live)",
+              "options": [
+                "habiterons",
+                "habiterez",
+                "habiteront"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "vous ___ (chercher: you plural will look for)",
+              "options": [
+                "chercherons",
+                "chercheront",
+                "chercherez"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "ils ___ (décider: they will decide)",
+              "options": [
+                "déciderons",
+                "décideront",
+                "déciderez"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "tu ___ (voter: you will vote)",
+              "options": [
+                "voterai",
+                "votera",
+                "voteras"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "elle ___ (surveiller: she will keep an eye on)",
+              "options": [
+                "surveillera",
+                "surveilleras",
+                "surveillerai"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The conditional: all six forms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The conditional says what would happen. Regular -er verbs use the infinitive as the stem plus the imperfect endings {-ais}, {-ais}, {-ait}, {-ions}, {-iez}, {-aient}."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "je parlerais"
+            },
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "tu parlerais"
+            },
+            {
+              "root": "parler",
+              "add": "ait",
+              "result": "il, elle, on parlerait"
+            },
+            {
+              "root": "parler",
+              "add": "ions",
+              "result": "nous parlerions"
+            },
+            {
+              "root": "parler",
+              "add": "iez",
+              "result": "vous parleriez"
+            },
+            {
+              "root": "parler",
+              "add": "aient",
+              "result": "ils, elles parleraient"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There is no separate word for ‘would’ either. The verb’s spelling contains the full conditional meaning."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How the conditional sounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The ‘nous’ and ‘vous’ conditional forms have the sound [i] (parlerions, parleriez). That makes them sound different from the future forms."
+        },
+        {
+          "t": "callout",
+          "text": "Be careful: ‘ais’, ‘ait’ and ‘aient’ sound the same. The silent final consonants come after -ai, so they all sound like [è]."
+        },
+        {
+          "t": "text",
+          "text": "So je chercherais, tu chercherais, on chercherait and elles chercheraient all sound the same. Pay close attention to the subject of the verb to know which spelling to use."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the subject",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which pronoun fits the conditional verb?",
+          "items": [
+            {
+              "q": "___ mangeriez",
+              "options": [
+                "vous",
+                "ils"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ visiterions",
+              "options": [
+                "tu",
+                "nous"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ déciderais",
+              "options": [
+                "tu",
+                "il"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ étudieraient",
+              "options": [
+                "elle",
+                "elles"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ chercheraient",
+              "options": [
+                "ils",
+                "il"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Future or conditional?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each verb in the 1-verb future (will) or the conditional (would)?",
+          "columns": [
+            "1-verb future (will)",
+            "Conditional (would)"
+          ],
+          "items": [
+            {
+              "text": "nous habiterons",
+              "col": 0
+            },
+            {
+              "text": "vous chercherez",
+              "col": 0
+            },
+            {
+              "text": "ils décideront",
+              "col": 0
+            },
+            {
+              "text": "vous voterez",
+              "col": 0
+            },
+            {
+              "text": "nous déciderions",
+              "col": 1
+            },
+            {
+              "text": "vous mangeriez",
+              "col": 1
+            },
+            {
+              "text": "elles étudieraient",
+              "col": 1
+            },
+            {
+              "text": "nous visiterions",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Either … or",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use ‘soit … soit’ to mean ‘either … or’. Place ‘soit’ before each alternative."
+        },
+        {
+          "t": "list",
+          "items": [
+            "J’habiterai soit en ville, soit à la campagne = I will live either in town or in the countryside.",
+            "Vous achèterez soit une maison, soit un appartement = You will buy either a house or a flat.",
+            "Ils habiteront soit au Royaume-Uni, soit en Corse = They will live either in the United Kingdom or in Corsica."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Blog vocabulary",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These words come from a blog about where people will live in the future. Tap a word to see its meaning."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "le coin",
+              "def": "corner, local area"
+            },
+            {
+              "term": "apprécier",
+              "def": "to appreciate, like"
+            },
+            {
+              "term": "bénéficier de",
+              "def": "to benefit from"
+            },
+            {
+              "term": "s’adapter",
+              "def": "to get used to"
+            },
+            {
+              "term": "adapter",
+              "def": "to adapt, adjust"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Places and travel words",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French words to their English meanings.",
+          "pairs": [
+            {
+              "a": "la côte",
+              "b": "coast"
+            },
+            {
+              "a": "le logement",
+              "b": "accommodation"
+            },
+            {
+              "a": "le touriste",
+              "b": "tourist"
+            },
+            {
+              "a": "le trafic",
+              "b": "traffic"
+            },
+            {
+              "a": "le Royaume-Uni",
+              "b": "United Kingdom"
+            },
+            {
+              "a": "la Corse",
+              "b": "Corsica"
+            },
+            {
+              "a": "agréable",
+              "b": "pleasant, nice"
+            },
+            {
+              "a": "l’entrée",
+              "b": "entrance"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Where would they live?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam writes: ‘Un jour, j’aimerais habiter dans un appartement de quatre chambres sur la côte en Corse.’"
+        },
+        {
+          "t": "choice",
+          "q": "Where would Sam like to live?",
+          "options": [
+            "a 4-bedroom house near a British beach",
+            "a 4-bedroom flat on the coast in Corsica",
+            "a 4-bedroom flat far from the beach"
+          ],
+          "answer": 1,
+          "why": "‘Un appartement de quatre chambres sur la côte en Corse’ is a four-bedroom flat on the coast in Corsica."
+        },
+        {
+          "t": "text",
+          "text": "Alex writes: ‘Moi, je voudrais vivre près d’un lac, à la campagne, pour bénéficier de la nature.’"
+        },
+        {
+          "t": "choice",
+          "q": "Where would Alex like to live?",
+          "options": [
+            "far from a lake",
+            "near a lake in the countryside",
+            "in the middle of the traffic"
+          ],
+          "answer": 1,
+          "why": "‘Près d’un lac, à la campagne’ means near a lake, in the countryside."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Read the blog verbs",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "In the blog: ‘Certains apprécieront la vie urbaine.’ What does ‘apprécieront’ mean?",
+          "options": [
+            "they would appreciate",
+            "they will appreciate"
+          ],
+          "answer": 1,
+          "why": "The ending -ont is a 1-verb future ending, so apprécieront means ‘they will appreciate’."
+        },
+        {
+          "t": "choice",
+          "q": "In the blog: ‘…elles adapteraient leurs maisons…’ What does ‘adapteraient’ mean?",
+          "options": [
+            "they will adapt",
+            "they would adapt"
+          ],
+          "answer": 1,
+          "why": "The ending -aient is a conditional ending (the imperfect endings on the infinitive stem), so adapteraient means ‘they would adapt’."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[i] is pronounced as in ‘midi’, [on] as in ‘non’ and [ez] as in ‘nez’.",
+            "The 1-verb future of -er verbs: add -ai, -as, -a, -ons, -ez, -ont to the infinitive.",
+            "The conditional uses the same stem as the 1-verb future (the infinitive).",
+            "The conditional endings are the same as the imperfect: -ais, -ais, -ait, -ions, -iez, -aient."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the six endings of the 1-verb future for regular -er verbs (je, tu, il/elle/on, nous, vous, ils/elles)?",
+      "back": "-ai, -as, -a, -ons, -ez, -ont, added to the infinitive."
+    },
+    {
+      "front": "Give the 1-verb future of parler for nous, vous and ils/elles.",
+      "back": "nous parlerons, vous parlerez, ils/elles parleront"
+    },
+    {
+      "front": "What are the six conditional endings?",
+      "back": "-ais, -ais, -ait, -ions, -iez, -aient.\n\nThey are the same as the imperfect endings."
+    },
+    {
+      "front": "Give the conditional of parler for nous, vous and ils/elles.",
+      "back": "nous parlerions, vous parleriez, ils/elles parleraient"
+    },
+    {
+      "front": "What stem does the conditional use?",
+      "back": "The same stem as the 1-verb future: the infinitive."
+    },
+    {
+      "front": "Which words help you remember the sounds [i], [on] and [ez]?",
+      "back": "[i] as in midi, [on] as in non, [ez] as in nez."
+    },
+    {
+      "front": "Do ‘parlerons’ and ‘parleront’ sound different?",
+      "back": "No. The final -s and -t are silent, so they sound the same."
+    },
+    {
+      "front": "Which conditional endings sound the same?",
+      "back": "-ais, -ait and -aient. The final consonants come after -ai and are silent, so they all sound like [è]."
+    },
+    {
+      "front": "Which conditional forms sound different from the future forms because of the sound [i]?",
+      "back": "The nous and vous forms: parlerions, parleriez."
+    },
+    {
+      "front": "Which 1-verb future endings are the same as ‘avoir’ in the present tense?",
+      "back": "ai, as, a, ont. That makes them easier to remember."
+    },
+    {
+      "front": "How do you say ‘either … or’ in French?",
+      "back": "soit … soit\n\nPlace soit before each alternative: J’habiterai soit en ville, soit à la campagne."
+    },
+    {
+      "front": "What does ‘la côte’ mean?",
+      "back": "coast"
+    },
+    {
+      "front": "What does ‘le coin’ mean?",
+      "back": "corner. It can also mean ‘local area’."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Où se loger ? Future and conditional with -er verbs (plural)",
+    "instructions": "Write your answers in French unless the question asks for English. Include the pronoun shown in the question, and check your accents.",
+    "questions": [
+      {
+        "prompt": "Write in French, using the 1-verb future of habiter: ‘we (plural) will live’.",
+        "answer": "nous habiterons",
+        "explanation": "habiter + -ons gives nous habiterons."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of décider: ‘they (mixed) will decide’.",
+        "answer": "ils décideront",
+        "explanation": "décider + -ont gives ils décideront."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of chercher: ‘you (plural) will look for’.",
+        "answer": "vous chercherez",
+        "explanation": "chercher + -ez gives vous chercherez."
+      },
+      {
+        "prompt": "Write in French, using the conditional of écouter: ‘he would listen’.",
+        "answer": "il écouterait",
+        "explanation": "écouter + the imperfect ending -ait gives il écouterait."
+      },
+      {
+        "prompt": "Write in French, using the conditional of danser: ‘we (plural) would dance’.",
+        "answer": "nous danserions",
+        "explanation": "danser + the imperfect ending -ions gives nous danserions."
+      },
+      {
+        "prompt": "Write in French, using the conditional of chercher: ‘you (plural) would look for’.",
+        "answer": "vous chercheriez",
+        "explanation": "chercher + the imperfect ending -iez gives vous chercheriez."
+      },
+      {
+        "prompt": "The conditional endings are the same as the endings of which tense? Answer with one word.",
+        "answer": "imperfect",
+        "explanation": "The conditional endings -ais, -ais, -ait, -ions, -iez, -aient are the imperfect endings."
+      },
+      {
+        "prompt": "Fill the gap with the same French word twice: J’habiterai ______ en ville, ______ à la campagne. (I will live either in town or in the countryside.)",
+        "answer": "soit",
+        "explanation": "‘Soit … soit’ means ‘either … or’."
+      },
+      {
+        "prompt": "What does ‘la côte’ mean in English?",
+        "answer": "coast",
+        "accepted": [
+          "the coast"
+        ],
+        "explanation": "‘La côte’ is the coast."
+      },
+      {
+        "prompt": "What does ‘le Royaume-Uni’ mean in English?",
+        "answer": "united kingdom",
+        "accepted": [
+          "the united kingdom"
+        ],
+        "explanation": "‘Le Royaume-Uni’ is the United Kingdom."
+      }
+    ]
+  }
+}

@@ -14,7 +14,7 @@ import { fetchCustomerArea, type CustomerArea } from "@/lib/use-customer-area";
 // (Setup → Customer area, or the module in Features). The API refuses the
 // data too (server/src/lib/customerArea.ts). Messages since 13 Sept (d7s7);
 // the other family areas still refuse by data only (backlog s13-acc7).
-const CUSTDASH_AREA: Record<string, keyof CustomerArea> = { messages: "messaging" };
+const CUSTDASH_AREA: Record<string, keyof CustomerArea> = { messages: "messaging", learninghub: "learninghub" };
 let customerAreaCache: CustomerArea | null = null;
 
 // The per-VIEW gate (PortalGuard gates the portal). Before 13 Sept any
@@ -47,9 +47,10 @@ export function ViewGate({ portal, view, children }: { portal: string; view: str
     }
     void apiGet<{ settings?: { features?: Record<string, boolean> } } | null>("/api/library")
       .then((lib) => { featuresCache = { ...(lib?.settings?.features ?? {}) }; setFeatures(featuresCache); })
-      // Unreadable → don't lock anyone out of the UI; the API still refuses.
-      .catch(() => setFeatures((f) => f ?? {}));
-  }, [gated, caKey]);
+      // Unreadable → don't lock anyone out of the UI; the API still refuses. (An empty map would read an
+      // OPT-IN module such as the Learning Hub as "turned off" — a misleading message on a slow API.)
+      .catch(() => setFeatures((f) => f ?? Object.fromEntries(featureKeysForView(portal, view).map((k) => [k, true]))));
+  }, [gated, caKey, portal, view]);
   useEffect(() => { load(); }, [load]);
   useRealtime(["library"], load);
   useEffect(() => { if (gated && !caKey) getMe().then(setMe).catch(() => {}); }, [gated, caKey]);
@@ -57,7 +58,9 @@ export function ViewGate({ portal, view, children }: { portal: string; view: str
   if (!gated || isDemoMode()) return <>{children}</>;
   if (caKey) {
     if (ca === null) return <div className="flex min-h-[40vh] items-center justify-center text-[13px] text-[var(--ink-3)]">Checking access…</div>;
-    if (!ca.simpleMode && ca[caKey] !== false) return <>{children}</>;
+    // A family opening a tutor's invite link has no enrolment yet, so the hub reads as "off" for them: let the claim screen through.
+    const inviting = view === "learninghub" && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("invite");
+    if ((!ca.simpleMode && ca[caKey] !== false) || inviting) return <>{children}</>;
     const caLabel = findNavItem(portal as PortalKey, view)?.label ?? "This area";
     return (
       <div className="mx-auto mt-6 max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-[var(--ink)]">

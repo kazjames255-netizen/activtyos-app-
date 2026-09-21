@@ -1,0 +1,552 @@
+{
+  "agent": "maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how increasing or decreasing the minuend affects the difference."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will meet Alex and Jun. They will help you describe changes accurately using maths words."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Adjusting the {minuend}"
+            },
+            {
+              "title": "Larger numbers"
+            },
+            {
+              "title": "Decimal fractions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "minuend",
+              "def": "The minuend is the number being subtracted from."
+            },
+            {
+              "term": "subtrahend",
+              "def": "A subtrahend is a number subtracted from another."
+            },
+            {
+              "term": "difference",
+              "def": "The difference is the result after subtracting one number from another."
+            },
+            {
+              "term": "constant",
+              "def": "A constant is a quantity that has a fixed value that does not change or vary, such as a number."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The minuend goes up",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at these equations. Picture each one on a ten frame with counters."
+        },
+        {
+          "t": "list",
+          "items": [
+            "6 − 3 = 3",
+            "16 − 3 = 13",
+            "26 − 3 = 23",
+            "36 − 3 = 33"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What’s the same? What’s different?",
+          "text": "The subtrahend is the same in each one: it is 3. The minuend and the difference both increase by 10 each time."
+        },
+        {
+          "t": "callout",
+          "text": "If you {increase} the minuend and the subtrahend stays the same, the difference must increase by the same amount."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The minuend goes down",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun makes a table. Read down the rows."
+        },
+        {
+          "t": "list",
+          "items": [
+            "106 − 3 = 103",
+            "96 − 3 = 93",
+            "86 − 3 = 83",
+            "76 − 3 = 73",
+            "66 − 3 = 63"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "This time the minuend and difference decrease equally. The subtrahend is still constant. Constant means it stays the same."
+        },
+        {
+          "t": "callout",
+          "text": "If you {decrease} the minuend and the subtrahend remains constant, the difference must decrease by the same amount."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Why must the difference change?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "If I adjust the minuend and the subtrahend stays the same, I have to adjust the difference by the same amount. Which is the best reason?",
+          "options": [
+            "Because the minuend and the subtrahend are never equal, so the difference needs changing.",
+            "Because the subtrahend is constant, the difference has to be adjusted to keep the equation balanced."
+          ],
+          "answer": 1,
+          "why": "The subtrahend does not change, so the difference has to change by the same amount as the minuend to keep the equation balanced."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding money: increase",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex has 36 p and Jun has 52 p before Jun finds 21 p down the back of his sofa. How many more pence does Jun have than Alex now?"
+        },
+        {
+          "t": "text",
+          "text": "Start with a bar model. Jun’s 52 p is the minuend and Alex’s 36 p is the subtrahend. The difference is 52 p − 36 p = **16 p**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "16 p",
+              "add": "+ 21 p",
+              "result": "37 p",
+              "note": "Jun now has 73 p. The minuend went up by 21 p, so the difference goes up by 21 p."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Describe the change",
+          "text": "I added 21 p to the minuend and kept the subtrahend the same. So I had to add 21 p to the difference."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Buying a cupcake: decrease",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun then buys a cupcake for 20 p. How many more pence does Jun have now?"
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "37 p",
+              "add": "− 20 p",
+              "result": "17 p",
+              "note": "Jun’s 73 p becomes 53 p. Alex still has 36 p. 53 p is 36 p and 17 p."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Describe the change",
+          "text": "I subtracted 20 p from the minuend and kept the subtrahend the same. So I had to subtract 20 p from the difference."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Adjust the difference",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "The subtrahend stays the same. Work out the new difference.",
+          "items": [
+            {
+              "q": "80 p − 55 p = 25 p. The minuend goes up by 12 p. What is the new difference?",
+              "options": [
+                "25 p",
+                "37 p",
+                "47 p"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Zoe has 90 p and Ali has 42 p. Zoe spends 30 p. How many more pence does Zoe have than Ali now?",
+              "options": [
+                "18 p",
+                "48 p",
+                "78 p"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "2.45 − 1.20 = 1.25. The minuend increases by 3. What is the new difference?",
+              "options": [
+                "1.28",
+                "3.25",
+                "4.25"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Larger numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex makes a table. The subtrahend stays at 43,287 each time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "61,876 − 43,287 = 18,589",
+            "62,876 − 43,287 = 19,589",
+            "63,876 − 43,287 = 20,589"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Going down the table, the minuend, and so the difference too, increase by 1,000. Going up the table, they decrease by 1,000 each time."
+        },
+        {
+          "t": "callout",
+          "text": "If you adjust the minuend and the subtrahend stays the same, the difference must adjust by the same amount."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Decimal fractions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun makes a table with decimal fractions. The subtrahend stays at 43.28."
+        },
+        {
+          "t": "list",
+          "items": [
+            "61.87 − 43.28 = 18.59",
+            "71.87 − 43.28 = 28.59",
+            "81.87 − 43.28 = 38.59"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is the change in each row?",
+          "text": "The minuend goes up by 10 each time. The subtrahend is constant, so the difference also goes up by 10. Going up the table, both decrease by 10."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "In context: the arcade game",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun scores 63,500 points and Alex scores 43,200 points. Jun gets a bonus of 15,000 points for using a special move. How much did Jun win by?"
+        },
+        {
+          "t": "text",
+          "text": "Bar model: Jun’s score is the minuend, Alex’s score is the subtrahend. The difference is 63,500 − 43,200 = **20,300**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "20,300",
+              "add": "+ 15,000",
+              "result": "35,300",
+              "note": "The bonus goes onto the minuend (Jun’s score becomes 78,500). Alex’s score stays the same, so the bonus goes onto the difference too."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Answer",
+          "text": "Jun won by **35,300** points."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "In context: the gift shop",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At the gift shop on a residential week, Alex has £12.50 and Jun has £7.35 left to spend. Alex spends £2.03 on penny sweets and chocolate. How much more does Alex have now?"
+        },
+        {
+          "t": "text",
+          "text": "The difference to begin with is £12.50 − £7.35 = **£5.15**. Alex’s £2.03 is taken away from the minuend, so it is taken away from the difference too."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "£5.15",
+              "add": "− £2.03",
+              "result": "£3.12",
+              "note": "Alex has £10.47 now and Jun still has £7.35."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Solve the problems",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use what happens to the difference when the minuend changes.",
+          "items": [
+            {
+              "q": "Kai scores 4,250 points and Lia scores 3,100. Kai gets a bonus of 500 points. How many more points does Kai have than Lia now?",
+              "options": [
+                "650",
+                "1,150",
+                "1,650"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "84.47 − 6.26 = 78.21. What is 184.47 − 6.26?",
+              "options": [
+                "88.21",
+                "178.21",
+                "184.21"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "1.22 − 0.54 = 0.68. The minuend decreases by 0.5. What is the new difference?",
+              "options": [
+                "0.18",
+                "0.63",
+                "1.18"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Up or down?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "In each case the subtrahend stays the same. What happens to the difference?",
+          "columns": [
+            "The difference increases",
+            "The difference decreases"
+          ],
+          "items": [
+            {
+              "text": "The minuend changes from 64 to 80",
+              "col": 0
+            },
+            {
+              "text": "The minuend changes from 64 to 44",
+              "col": 1
+            },
+            {
+              "text": "A £5 voucher is added to the minuend",
+              "col": 0
+            },
+            {
+              "text": "A penalty of 2,500 points is taken away from the minuend",
+              "col": 1
+            },
+            {
+              "text": "The minuend changes from 0.9 to 1.4",
+              "col": 0
+            },
+            {
+              "text": "The minuend changes from 12.5 to 10.1",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If the minuend is adjusted and the subtrahend stays constant, the difference has to be adjusted by the same amount to keep an equation balanced.",
+            "This can be useful to find missing numbers and solve worded problems that feature adjustments to the minuend."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Minuend up and subtrahend the same = difference {up} by the same amount. Minuend down = difference {down} by the same amount."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "If I increase the minuend and keep the subtrahend the same, what happens to the difference?",
+      "back": "It increases by the same amount.\n\n6 − 3 = 3, 16 − 3 = 13"
+    },
+    {
+      "front": "If I decrease the minuend and keep the subtrahend the same, what happens to the difference?",
+      "back": "It decreases by the same amount.\n\n106 − 3 = 103, 96 − 3 = 93"
+    },
+    {
+      "front": "Why does the difference change by the same amount as the minuend?",
+      "back": "Because the subtrahend is constant, the difference has to be adjusted to keep the equation balanced."
+    },
+    {
+      "front": "What does “constant” mean?",
+      "back": "A quantity that has a fixed value that does not change or vary."
+    },
+    {
+      "front": "Jun has 52 p and Alex has 36 p. Jun finds 21 p. How many more pence does Jun have than Alex now?",
+      "back": "37 p.\n\n52 p − 36 p = 16 p, then 16 p + 21 p = 37 p."
+    },
+    {
+      "front": "Jun has 73 p and Alex has 36 p. Jun buys a cupcake for 20 p. How many more pence does Jun have than Alex now?",
+      "back": "17 p.\n\n73 p − 36 p = 37 p, then 37 p − 20 p = 17 p."
+    },
+    {
+      "front": "Complete the sentence: “I added 21 p to the minuend and kept the subtrahend the same, so I had to ___ 21 p ___ the difference.”",
+      "back": "add 21 p to the difference."
+    },
+    {
+      "front": "What can be used to represent the change in the minuend?",
+      "back": "A number line (or a bar model)."
+    },
+    {
+      "front": "61,876 − 43,287 = 18,589. What is 62,876 − 43,287?",
+      "back": "19,589. The minuend increased by 1,000, so the difference increased by 1,000."
+    },
+    {
+      "front": "61.87 − 43.28 = 18.59. What is 71.87 − 43.28?",
+      "back": "28.59. The minuend increased by 10, so the difference increased by 10."
+    },
+    {
+      "front": "Jun scores 63,500 and Alex scores 43,200. Jun gets a 15,000 bonus. How much does Jun win by?",
+      "back": "35,300.\n\n63,500 − 43,200 = 20,300, then 20,300 + 15,000 = 35,300."
+    },
+    {
+      "front": "Alex has £12.50 and Jun has £7.35. Alex spends £2.03. How much more does Alex have than Jun now?",
+      "back": "£3.12.\n\n12.50 − 7.35 = 5.15, then 5.15 − 2.03 = 3.12."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how increasing or decreasing the minuend affects the difference",
+    "instructions": "In every question the subtrahend stays the same. If the minuend changes, the difference changes by the same amount. Write each answer as a number.",
+    "questions": [
+      {
+        "prompt": "Sam has 64 p and Tia has 40 p. Sam finds 15 p. How many more pence does Sam have than Tia now?",
+        "answer": "39",
+        "explanation": "64 p − 40 p = 24 p. Sam’s minuend went up by 15 p, so the difference goes up by 15 p: 24 + 15 = 39."
+      },
+      {
+        "prompt": "90 p − 42 p = 48 p. The minuend decreases by 30 p and the subtrahend stays the same. What is the new difference, in pence?",
+        "answer": "18",
+        "explanation": "The minuend decreases by 30, so the difference decreases by 30: 48 − 30 = 18."
+      },
+      {
+        "prompt": "Jun scores 24,710 points and Alex scores 18,206 points. Jun gets a penalty of 2,500 points. How many points does Jun win by?",
+        "answer": "4004",
+        "accepted": [
+          "4,004"
+        ],
+        "explanation": "24,710 − 18,206 = 6,504. The penalty is taken off the minuend, so it is taken off the difference: 6,504 − 2,500 = 4,004."
+      },
+      {
+        "prompt": "Alex has £10.47 and Jun has £7.35 left to spend. Alex wins a £5 shop voucher. How much more does Alex have than Jun now, in pounds?",
+        "answer": "8.12",
+        "accepted": [
+          "£8.12"
+        ],
+        "explanation": "£10.47 − £7.35 = £3.12. The £5 is added to the minuend, so it is added to the difference: 3.12 + 5 = 8.12."
+      },
+      {
+        "prompt": "59,922 − 43,287 = 16,635. What is 76,922 − 43,287?",
+        "answer": "33635",
+        "accepted": [
+          "33,635"
+        ],
+        "explanation": "The minuend went up by 17,000 (59,922 to 76,922), so the difference goes up by 17,000: 16,635 + 17,000 = 33,635."
+      },
+      {
+        "prompt": "61,876 − 43,287 = 18,589. What is 63,876 − 43,287?",
+        "answer": "20589",
+        "accepted": [
+          "20,589"
+        ],
+        "explanation": "The minuend went up by 2,000, so the difference goes up by 2,000: 18,589 + 2,000 = 20,589."
+      },
+      {
+        "prompt": "84.47 − 6.26 = 78.21. What is 105.97 − 6.26?",
+        "answer": "99.71",
+        "explanation": "The minuend went up by 21.5 (84.47 to 105.97), so the difference goes up by 21.5: 78.21 + 21.5 = 99.71."
+      },
+      {
+        "prompt": "1.22 − 0.54 = 0.68. The minuend decreases by 0.5 and the subtrahend stays the same. What is the new difference?",
+        "answer": "0.18",
+        "explanation": "The difference decreases by 0.5 too: 0.68 − 0.5 = 0.18."
+      },
+      {
+        "prompt": "345,986 − 200,000 = 145,986. The minuend decreases by 100,000 and the subtrahend stays the same. What is the new difference?",
+        "answer": "45986",
+        "accepted": [
+          "45,986"
+        ],
+        "explanation": "The difference decreases by 100,000 too: 145,986 − 100,000 = 45,986."
+      },
+      {
+        "prompt": "2.45 − 1.20 = 1.25. The minuend increases by 3 and the subtrahend stays the same. What is the new difference?",
+        "answer": "4.25",
+        "explanation": "The difference increases by 3 too: 1.25 + 3 = 4.25."
+      }
+    ]
+  }
+}

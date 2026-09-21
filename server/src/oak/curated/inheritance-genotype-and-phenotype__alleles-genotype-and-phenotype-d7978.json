@@ -1,0 +1,568 @@
+{
+  "agent": "science-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how the genotype affects the phenotype of an organism."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Alleles}",
+              "sub": "different versions of a gene"
+            },
+            {
+              "title": "{Genotype}",
+              "sub": "the combination of alleles"
+            },
+            {
+              "title": "{Phenotype}",
+              "sub": "the features that result"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "allele",
+              "def": "A genetic variant of a gene (a different version of the gene), which codes for a different phenotype."
+            },
+            {
+              "term": "dominant",
+              "def": "One or both dominant alleles in the genotype are enough for the characteristic to be expressed in the phenotype."
+            },
+            {
+              "term": "recessive",
+              "def": "Two recessive alleles must be in the genotype for the characteristic to be expressed in the phenotype."
+            },
+            {
+              "term": "genotype",
+              "def": "The combination of alleles an organism has for a characteristic."
+            },
+            {
+              "term": "phenotype",
+              "def": "Features that result, at least partly, from the genetic code of an organism's genes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Genes and chromosomes",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "DNA is organised into structures called chromosomes.",
+            "Sections of chromosomes are called {genes}.",
+            "A gene is a short section of DNA that codes for a protein. Proteins give organisms their physical features and control biological processes."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Humans have **46 chromosomes** in the nuclei of their cells: 23 from each parent. Each chromosome stores thousands of genes, and each gene is different."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two copies of every gene",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each gamete (sperm or egg) carries half of the chromosomes needed to make offspring."
+        },
+        {
+          "t": "text",
+          "text": "At fertilisation the nucleus of the sperm cell fuses with the nucleus of the egg cell. The zygote has **two copies of each chromosome**, so it has two copies of each gene, which form a pair."
+        },
+        {
+          "t": "text",
+          "text": "The two chromosomes of a pair carry the same genes, stored in the same location on the chromosome."
+        },
+        {
+          "t": "choice",
+          "q": "A human egg cell has 23 chromosomes and a sperm cell has 23 chromosomes. How many chromosomes are in the zygote?",
+          "options": [
+            "23",
+            "46",
+            "69"
+          ],
+          "answer": 1,
+          "why": "The gametes fuse, so the zygote gets 23 from each parent: 23 + 23 = 46."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is an allele?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The two copies of a gene can be different versions of the same gene. Different versions of a gene are called {alleles}."
+        },
+        {
+          "t": "text",
+          "text": "Example: both chromosomes carry an eye colour pigment gene, but one has allele **B** and the other has allele **b**."
+        },
+        {
+          "t": "callout",
+          "text": "Different alleles affect the same characteristic, but they have different base sequences."
+        },
+        {
+          "t": "text",
+          "text": "For each gene you can receive two copies of the same allele, or two different alleles."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out! Alleles and genes",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Alleles and genes are not the same thing. Alleles are versions of the same gene. They code for different versions of the same characteristic."
+        },
+        {
+          "t": "choice",
+          "q": "An eye colour gene has the alleles B and b. What are B and b?",
+          "options": [
+            "Two different genes",
+            "Two versions of the same gene",
+            "Two different chromosomes"
+          ],
+          "answer": 1,
+          "why": "Alleles are different versions of the same gene, so B and b are two versions of the eye colour gene."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Genotype",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The combination of alleles that an organism has is called its {genotype}. An individual has a genotype for each gene."
+        },
+        {
+          "t": "text",
+          "text": "Scientists show a genotype using a pair of the same letter. A capital letter shows a dominant allele and a lowercase letter shows a recessive allele."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{BB}",
+              "sub": "two dominant alleles"
+            },
+            {
+              "title": "{Bb}",
+              "sub": "one dominant and one recessive allele"
+            },
+            {
+              "title": "{bb}",
+              "sub": "two recessive alleles"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Dominant and recessive",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Earwax gene E/e: wet earwax is dominant. Only **one** E allele is needed in the genotype to have wet earwax."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "EE → wet earwax",
+            "Ee → wet earwax",
+            "ee → dry earwax"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Pea plants: purple flowers (P) are dominant to white flowers (p). If the dominant allele is present the flower is purple."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "PP → purple",
+            "Pp → purple",
+            "pp → white"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The recessive characteristic only shows when the genotype has **two** recessive alleles."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which phenotype shows?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Remember: E (wet earwax) and P (purple flowers) are dominant. Tap a genotype, then tap the column for the phenotype it gives."
+        },
+        {
+          "t": "sort",
+          "q": "Sort each genotype by the version of the characteristic it produces.",
+          "columns": [
+            "Dominant characteristic shown",
+            "Recessive characteristic shown"
+          ],
+          "items": [
+            {
+              "text": "PP",
+              "col": 0
+            },
+            {
+              "text": "Ee",
+              "col": 0
+            },
+            {
+              "text": "pp",
+              "col": 1
+            },
+            {
+              "text": "ee",
+              "col": 1
+            },
+            {
+              "text": "Pp",
+              "col": 0
+            },
+            {
+              "text": "EE",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the genotype",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each genotype to its description.",
+          "pairs": [
+            {
+              "a": "KK (two capital letters)",
+              "b": "two dominant alleles"
+            },
+            {
+              "a": "kk (two lowercase letters)",
+              "b": "two recessive alleles"
+            },
+            {
+              "a": "Kk (one of each)",
+              "b": "one dominant and one recessive allele"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out! Writing genotypes",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Use the same letter for the dominant and the recessive allele (usually the letter of the dominant one, so P and p). Purple flowers can be PP or Pp, because one dominant allele is enough. White flowers must be pp."
+        },
+        {
+          "t": "choice",
+          "q": "A pea plant with purple flowers (P) and a pea plant with white flowers (p) are compared. Which shows their possible genotypes correctly?",
+          "options": [
+            "White: WW. Purple: PP only.",
+            "White: pp. Purple: PP or Pp.",
+            "White: pp. Purple: PP only."
+          ],
+          "answer": 1,
+          "why": "White flowers need two recessive alleles (pp). Purple flowers need at least one dominant allele, so PP or Pp."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "From alleles to phenotype",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The genetic code in a gene decides the order in which amino acids are joined together to make a protein. The protein that is produced determines the phenotype."
+        },
+        {
+          "t": "text",
+          "text": "Alleles have differences in their code. This may lead to differences in the order of amino acids, and so to a different protein."
+        },
+        {
+          "t": "callout",
+          "text": "The phenotype is due to the alleles present on the chromosomes, that is, the genotype."
+        },
+        {
+          "t": "text",
+          "text": "Different alleles code for different proteins. Proteins that control colour pigments give different eye colour phenotypes, for example."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Genes and environment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Only features that result, at least partly, from the genetic code of an organism's genes are phenotypes. Some phenotypes are set by the genotype alone. Others are also affected by lifestyle and environment."
+        },
+        {
+          "t": "sort",
+          "q": "Sort each feature.",
+          "columns": [
+            "Determined only by the genotype",
+            "Genotype and environment both affect it"
+          ],
+          "items": [
+            {
+              "text": "Human blood type (A, B, AB or O)",
+              "col": 0
+            },
+            {
+              "text": "Inherited eye colour",
+              "col": 0
+            },
+            {
+              "text": "Muscle shape and size",
+              "col": 1
+            },
+            {
+              "text": "Germination of a plant seed",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is NOT part of an organism's phenotype, because it results only from the environment?",
+          "options": [
+            "Flower colour",
+            "A scar from an injury",
+            "Eye colour"
+          ],
+          "answer": 1,
+          "why": "Damage or scars are not phenotypic because they result only from the environment (or lifestyle)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When alleles affect health",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Changes in the code of a gene (alleles) can change the 3D structure of a protein. A protein's structure is adapted to its function, so a change might make it non-functional."
+        },
+        {
+          "t": "text",
+          "text": "If an enzyme's active site changes shape, the substrate will not fit. Non-functional proteins can lead to genetic conditions that affect people's health."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "PKU",
+              "sub": "an enzyme that digests a chemical in the diet is non-functional"
+            },
+            {
+              "title": "Albinism",
+              "sub": "changes in enzymes that produce the pigment melanin"
+            },
+            {
+              "title": "Cystic fibrosis",
+              "sub": "changes to proteins involved in mucus"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why does a child have PKU?",
+          "text": "PKU is a recessive phenotype. The child has the genotype pp: two recessive alleles for the gene that codes for the enzyme. The changed base sequence gives a changed protein structure, so the enzyme is non-functional and the PKU condition shows in the phenotype."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "An individual inherits two copies of each gene in a pair of chromosomes, one from each parent.",
+            "Versions of genes are called alleles. They can be dominant (capital letter) or recessive (lowercase letter).",
+            "The combination of alleles an organism has is its genotype.",
+            "Different alleles are linked to different versions of the same characteristic: the phenotype.",
+            "Dominant characteristics show if there is one dominant allele; recessive ones need two recessive alleles.",
+            "Some phenotypes are determined only by the genotype. Others are also affected by the environment."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are alleles?",
+      "back": "Different versions (genetic variants) of the same gene."
+    },
+    {
+      "front": "How many copies of each gene does an offspring inherit?",
+      "back": "Two: one from each parent."
+    },
+    {
+      "front": "What is a genotype?",
+      "back": "The combination of alleles an organism has for a characteristic."
+    },
+    {
+      "front": "What is a phenotype?",
+      "back": "The features that result, at least partly, from the genetic code of an organism's genes."
+    },
+    {
+      "front": "How are dominant and recessive alleles written?",
+      "back": "Dominant: a capital letter. Recessive: a lowercase letter. The same letter is used for both, e.g. E and e."
+    },
+    {
+      "front": "How many dominant alleles are needed for the dominant characteristic to show?",
+      "back": "One or two: one is enough."
+    },
+    {
+      "front": "How many recessive alleles are needed for the recessive characteristic to show?",
+      "back": "Two."
+    },
+    {
+      "front": "In pea plants purple (P) is dominant to white (p). Which genotypes give purple flowers?",
+      "back": "PP or Pp."
+    },
+    {
+      "front": "In pea plants purple (P) is dominant to white (p). Which genotype gives white flowers?",
+      "back": "pp."
+    },
+    {
+      "front": "Do alleles and genes mean the same thing?",
+      "back": "No. Alleles are versions of the same gene, and they code for different versions of the same characteristic."
+    },
+    {
+      "front": "How do different alleles lead to different phenotypes?",
+      "back": "Different alleles have different codes, so the amino acid order and the protein can differ. The protein produced determines the phenotype."
+    },
+    {
+      "front": "Is a scar part of the phenotype?",
+      "back": "No. Scars result only from the environment, and only features that result at least partly from genes are phenotypic."
+    },
+    {
+      "front": "Give an example of a phenotype set only by the genotype.",
+      "back": "Human blood type (A, B, AB or O), or inherited eye colour."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Alleles, genotype, and phenotype",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "What word describes the combination of alleles an organism has for a characteristic?",
+        "answer": "genotype",
+        "accepted": [
+          "the genotype"
+        ],
+        "explanation": "The genotype is the combination of alleles an organism has."
+      },
+      {
+        "prompt": "What word describes the features of an organism that result, at least partly, from its genes?",
+        "answer": "phenotype",
+        "accepted": [
+          "the phenotype"
+        ],
+        "explanation": "Phenotype means the features that result at least partly from the genetic code."
+      },
+      {
+        "prompt": "What is the name for a different version of the same gene?",
+        "answer": "allele",
+        "accepted": [
+          "an allele"
+        ],
+        "explanation": "Different versions of a gene are called alleles."
+      },
+      {
+        "prompt": "The zygote of a human has 46 chromosomes. Each gamete gives the zygote the same number of chromosomes. How many chromosomes does one human gamete carry?",
+        "answer": "23",
+        "accepted": [
+          "twenty three",
+          "twenty-three"
+        ],
+        "explanation": "The zygote has 23 chromosomes from each parent, so each gamete carries 23 (half of 46)."
+      },
+      {
+        "prompt": "A pea plant has the genotype pp. Purple flowers (P) are dominant to white flowers (p). What colour are its flowers?",
+        "answer": "white",
+        "accepted": [
+          "white flowers",
+          "they are white"
+        ],
+        "explanation": "pp has two recessive alleles, so the recessive characteristic (white flowers) shows."
+      },
+      {
+        "prompt": "Wet earwax (E) is dominant to dry earwax (e). A person has the genotype ee. Do they have wet earwax or dry earwax?",
+        "answer": "dry",
+        "accepted": [
+          "dry earwax"
+        ],
+        "explanation": "ee has two recessive alleles, so the recessive characteristic (dry earwax) shows."
+      },
+      {
+        "prompt": "What is the smallest number of E alleles a person needs in their genotype to have wet earwax?",
+        "answer": "1",
+        "accepted": [
+          "one",
+          "a single one"
+        ],
+        "explanation": "Wet earwax is dominant, so only one E allele is needed."
+      },
+      {
+        "prompt": "How many recessive alleles must be in a genotype for the recessive characteristic to show?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "The recessive characteristic needs two recessive alleles."
+      },
+      {
+        "prompt": "If an enzyme's active site changes shape, will its substrate still fit? Answer yes or no.",
+        "answer": "no",
+        "accepted": [],
+        "explanation": "If an enzyme's active site changes shape, the substrate will not fit, so the protein can be non-functional."
+      }
+    ]
+  }
+}

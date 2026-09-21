@@ -24,7 +24,7 @@ export const images = Router();
 
 const col = db.collection("images");
 
-const MAX_BYTES = 900_000; // stay under Firestore's 1MB doc limit
+const MAX_BYTES = 750_000; // base64 is 4/3 the size: 750KB → 1.0M chars, under Firestore's 1MiB doc limit (900KB overflowed it → a 500)
 // A PDF can't be canvas-compressed like a photo, so it's capped on the stored
 // base64 itself: 1,000,000 chars (~750KB of PDF) leaves headroom under the
 // 1MiB doc cap for the other fields. Plenty for an e-receipt or supplier bill.
@@ -53,6 +53,10 @@ const uploadSchema = z.object({
   // design — listing images, logos and campaign images are fetched by customer
   // pages and email clients that carry no credentials.
   purpose: z.enum(["public", "private"]).default("public"),
+  // What the file is FOR. "hub" = a Learning Hub worksheet/resource: only files
+  // tagged like this can be attached to a hub note, so a receipt or a child's
+  // photo (also private uploads) can never be published to families through it.
+  kind: z.enum(["hub"]).optional(),
 });
 
 // POST /api/uploads {dataUrl} → {id, url} (operators only)
@@ -108,6 +112,8 @@ uploads.post("/", json({ limit: "2mb" }), async (req, res) => {
     contentType,
     b64,
     ...(isPrivate ? { private: true } : {}),
+    ...(parsed.data.kind ? { kind: parsed.data.kind } : {}),
+    bytes,
     createdAt: new Date().toISOString(),
   });
   const url = `${req.protocol}://${req.get("host")}/api/images/${ref.id}`;

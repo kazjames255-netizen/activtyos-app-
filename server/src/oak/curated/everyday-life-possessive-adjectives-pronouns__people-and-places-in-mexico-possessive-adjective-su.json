@@ -1,0 +1,617 @@
+{
+  "agent": "spanish-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand the different uses of the possessive adjective ‘su’ in the context of learning about people and places in Mexico."
+        },
+        {
+          "t": "text",
+          "text": "Lucía and Daniel are researching the people and the culture of Mexico for a family trip."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "new {vocabulary}"
+            },
+            {
+              "title": "{su} and {sus}"
+            },
+            {
+              "title": "people and places in {Mexico}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "possessive adjective",
+              "def": "word that goes before a noun to show ownership or belonging"
+            },
+            {
+              "term": "su",
+              "def": "possessive adjective ‘his’, ‘her’, ‘its’ (singular)"
+            },
+            {
+              "term": "sus",
+              "def": "possessive adjective ‘his’, ‘her’, ‘its’ (plural)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is Mexico famous for?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mexico is famous for many things:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "its artists"
+            },
+            {
+              "title": "its archaeology"
+            },
+            {
+              "title": "its food"
+            },
+            {
+              "title": "its customs"
+            },
+            {
+              "title": "its unique history"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The capital is called la Ciudad de México, or ‘Mexico City’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New words about Mexico",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "la costumbre",
+              "sub": "custom"
+            },
+            {
+              "title": "la comunidad",
+              "sub": "community"
+            },
+            {
+              "title": "la Tierra",
+              "sub": "Earth"
+            },
+            {
+              "title": "la forma",
+              "sub": "way"
+            },
+            {
+              "title": "la muerte",
+              "sub": "death"
+            },
+            {
+              "title": "el nivel",
+              "sub": "level"
+            },
+            {
+              "title": "la luz",
+              "sub": "light"
+            },
+            {
+              "title": "la hora",
+              "sub": "hour, time"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When ‘Tierra’ is used for the planet, use a capital letter."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New describing words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These describing words change their ending for masculine and feminine, except one."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "especial",
+              "sub": "special (m, f)"
+            },
+            {
+              "title": "único / única",
+              "sub": "unique (m / f)"
+            },
+            {
+              "title": "mexicano / mexicana",
+              "sub": "Mexican (m / f)"
+            },
+            {
+              "title": "muerto / muerta",
+              "sub": "dead (m / f)"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Muerto/a’ can also be used as a noun. The meaning would be ‘dead person’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the words",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each Spanish word to its English meaning.",
+          "pairs": [
+            {
+              "a": "la costumbre",
+              "b": "custom"
+            },
+            {
+              "a": "la comunidad",
+              "b": "community"
+            },
+            {
+              "a": "la Tierra",
+              "b": "Earth"
+            },
+            {
+              "a": "la muerte",
+              "b": "death"
+            },
+            {
+              "a": "el nivel",
+              "b": "level"
+            },
+            {
+              "a": "la forma",
+              "b": "way"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The verb venir",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb **venir** means ‘to come, coming’. It is similar to **tener** (to have)."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "(yo) vengo — I come",
+            "(tú) vienes — you come",
+            "(él, ella) viene — she, he comes",
+            "(ellos, ellas) vienen — they come"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Like tener, venir has a stem change from e to ie in its ‘you’, ‘he, she’ and ‘they’ forms. The ‘I’ form vengo is irregular: we add {-g-}, like hago, pongo and salgo."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "His, her or its: su and sus",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Possessive adjectives go before nouns to show belonging and ownership."
+        },
+        {
+          "t": "list",
+          "items": [
+            "{su} = ‘his’, ‘her’ or ‘its’ before a singular noun: su país (his, her, its country)",
+            "{sus} = ‘his’, ‘her’ or ‘its’ before a plural noun: sus padres (his, her, its parents)",
+            "Su comunidad es especial. (His, her, its community is special.)",
+            "Sus costumbres son únicas. (His, her, its customs are unique.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can use {su(s)} with masculine and feminine nouns. Use **es** for a singular noun and **son** for a plural noun."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "su or sus?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose su or sus to complete each sentence.",
+          "items": [
+            {
+              "q": "___ playa es muy hermosa. (Its beach is very beautiful.)",
+              "options": [
+                "Su",
+                "Sus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ ciudades son interesantes. (Its cities are interesting.)",
+              "options": [
+                "Su",
+                "Sus"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ abuelos son simpáticos. (Her grandparents are kind.)",
+              "options": [
+                "Su",
+                "Sus"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ perro es simpático. (His dog is kind.)",
+              "options": [
+                "Su",
+                "Sus"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "es or son?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Su and sus agree with the noun that follows, and so does the verb. One thing: es. Many things: son."
+        },
+        {
+          "t": "choices",
+          "q": "Choose es or son to complete each sentence.",
+          "items": [
+            {
+              "q": "Sus playas ___ hermosas. (Its beaches are beautiful.)",
+              "options": [
+                "es",
+                "son"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Su ciudad ___ interesante. (Its city is interesting.)",
+              "options": [
+                "es",
+                "son"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Su canción ___ muy famosa. (Her song is very famous.)",
+              "options": [
+                "es",
+                "son"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Sus museos ___ geniales. (His museums are great.)",
+              "options": [
+                "es",
+                "son"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Use the context!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Su and sus have several meanings: his, her, its. To know which, we often need to use the context given in the surrounding text."
+        },
+        {
+          "t": "list",
+          "items": [
+            "México es un país fascinante. Sus costumbres son únicas. (Mexico is a fascinating country. Its customs are unique.)",
+            "Carlos Santana es un guitarrista mexicano. Su talento es único. (Carlos Santana is a Mexican guitarist. His talent is unique.)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How do we know su means ‘his’ here?",
+          "text": "The text is about Carlos Santana, and Carlos is a boy’s name. So su means ‘his’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "People and places in Mexico",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Natalia Lafourcade",
+              "sub": "a singer"
+            },
+            {
+              "title": "Frida Kahlo",
+              "sub": "an artist"
+            },
+            {
+              "title": "Octavio Paz",
+              "sub": "an author"
+            },
+            {
+              "title": "Gael García Bernal",
+              "sub": "an actor"
+            },
+            {
+              "title": "Chichén Itzá",
+              "sub": "a cultural landmark. It was an important Mayan city, with a pyramid called ‘el castillo’."
+            },
+            {
+              "title": "Día de Muertos",
+              "sub": "a cultural event"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "His, her or its?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "What does su mean in each description?",
+          "items": [
+            {
+              "q": "Es una cantante mexicana. Su canción es muy famosa.",
+              "options": [
+                "his",
+                "her",
+                "its"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Es un actor mexicano. Su película ganó muchos premios.",
+              "options": [
+                "his",
+                "her",
+                "its"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Es una pirámide muy antigua. Su altura es de 30 metros.",
+              "options": [
+                "his",
+                "her",
+                "its"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Es un autor mexicano. Su libro habla sobre la comunidad mexicana.",
+              "options": [
+                "his",
+                "her",
+                "its"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Say it in Spanish",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘Its museums are great’?",
+          "options": [
+            "Su museos son geniales.",
+            "Sus museos son geniales.",
+            "Sus museos es geniales."
+          ],
+          "answer": 1,
+          "why": "Museums is plural, so we use sus and the verb son."
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘Its people are very kind’? (Remember: ‘people’ in Spanish is singular.)",
+          "options": [
+            "Su gente es muy simpática.",
+            "Sus gente son muy simpática.",
+            "Su gente son muy simpática."
+          ],
+          "answer": 0,
+          "why": "Gente is singular in Spanish, so we use su and es."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Mexico is famous for many things including its artists, its archaeology, its food, its customs and its unique history.",
+            "Possessive adjectives go before nouns to show belonging and ownership.",
+            "Su is ‘his’, ‘her’ or ‘its’ before a singular noun, e.g. su país. Sus is ‘his’, ‘her’ or ‘its’ before a plural noun, e.g. sus padres.",
+            "Su and sus have different meanings, so you will often need context to translate them accurately."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “su” mean before a singular noun?",
+      "back": "his, her or its\n\nsu país (his, her, its country)"
+    },
+    {
+      "front": "What does “sus” mean before a plural noun?",
+      "back": "his, her or its\n\nsus padres (his, her, its parents)"
+    },
+    {
+      "front": "How can you tell whether “su” means his, her or its?",
+      "back": "You often need the context in the surrounding text."
+    },
+    {
+      "front": "Do “su” and “sus” change for masculine and feminine nouns?",
+      "back": "No. You can use su(s) with masculine and feminine nouns."
+    },
+    {
+      "front": "Which word do you use with a singular noun after “su”: es or son?",
+      "back": "es\n\nSu comunidad es especial."
+    },
+    {
+      "front": "What does “la costumbre” mean?",
+      "back": "custom\n\nSus costumbres son únicas."
+    },
+    {
+      "front": "What does “la Tierra” mean, and how do you write it?",
+      "back": "Earth (the planet), with a capital letter."
+    },
+    {
+      "front": "What does the verb “venir” mean?",
+      "back": "to come, coming"
+    },
+    {
+      "front": "What is the “I” form of “venir”?",
+      "back": "vengo\n\nIt is irregular: we add -g-, like hago, pongo and salgo."
+    },
+    {
+      "front": "What is Chichén Itzá?",
+      "back": "A cultural landmark. It was an important Mayan city, and its pyramid is called ‘el castillo’."
+    },
+    {
+      "front": "What is Día de Muertos?",
+      "back": "A cultural event."
+    },
+    {
+      "front": "Who is Frida Kahlo?",
+      "back": "An artist."
+    },
+    {
+      "front": "Who is Octavio Paz?",
+      "back": "An author."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: People and places in Mexico: possessive adjective ‘su’",
+    "instructions": "Answer each question with a short answer. Some answers are in Spanish and some are in English. Use su and sus for ‘his’, ‘her’ or ‘its’.",
+    "questions": [
+      {
+        "prompt": "Write in Spanish: “they come” (one word).",
+        "answer": "vienen",
+        "explanation": "The ‘they’ form of venir is vienen (stem change e to ie)."
+      },
+      {
+        "prompt": "Write in Spanish: “I come” (one word).",
+        "answer": "vengo",
+        "explanation": "The ‘I’ form of venir is irregular: vengo, with a -g-."
+      },
+      {
+        "prompt": "Write in Spanish: “Mexican” (feminine).",
+        "answer": "mexicana",
+        "explanation": "The feminine form of mexicano is mexicana."
+      },
+      {
+        "prompt": "Write in Spanish: “custom” (one word, no el or la).",
+        "answer": "costumbre",
+        "accepted": [
+          "la costumbre",
+          "una costumbre"
+        ],
+        "explanation": "La costumbre means custom."
+      },
+      {
+        "prompt": "Complete with su or sus: ___ playas son hermosas. (Its beaches are beautiful.)",
+        "answer": "sus",
+        "explanation": "Playas is plural, so we use sus."
+      },
+      {
+        "prompt": "Complete with su or sus: ___ ciudad es interesante. (Its city is interesting.)",
+        "answer": "su",
+        "explanation": "Ciudad is singular, so we use su."
+      },
+      {
+        "prompt": "Complete with es or son: Sus museos ___ geniales. (Its museums are great.)",
+        "answer": "son",
+        "explanation": "Museos is plural, so the verb is son."
+      },
+      {
+        "prompt": "Write in Spanish: “his grandparents”.",
+        "answer": "sus abuelos",
+        "explanation": "Grandparents is plural, so we use sus."
+      },
+      {
+        "prompt": "In “Es un autor mexicano. Su libro habla sobre la comunidad mexicana.”, does su mean his, her or its?",
+        "answer": "his",
+        "explanation": "The text is about an author (un autor), a man, so su means his."
+      },
+      {
+        "prompt": "In “Es una pirámide muy antigua. Su altura es de 30 metros.”, does su mean his, her or its?",
+        "answer": "its",
+        "explanation": "A pyramid is a thing, so su means its."
+      },
+      {
+        "prompt": "In “Es una cantante mexicana. Su canción es muy famosa.”, does su mean his, her or its?",
+        "answer": "her",
+        "explanation": "Una cantante is a woman, so su means her."
+      }
+    ]
+  }
+}

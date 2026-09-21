@@ -1,0 +1,569 @@
+{
+  "agent": "w4-science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe what micro-organisms are, and know that they are living things."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Micro-organisms}"
+            },
+            {
+              "title": "Finding {micro-organisms}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "living thing",
+              "def": "Something that is living is alive. It can grow, reproduce, move, feed and get rid of waste material."
+            },
+            {
+              "term": "organism",
+              "def": "An organism is a living thing."
+            },
+            {
+              "term": "micro-organism",
+              "def": "A micro-organism is a very tiny living thing."
+            },
+            {
+              "term": "microbe",
+              "def": "Microbe is another name for a micro-organism."
+            },
+            {
+              "term": "microscope",
+              "def": "A microscope is a piece of equipment that magnifies very tiny objects."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a living thing?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Moss, a spider and a fish are living things. We know this because all living things have these characteristics:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "they can move",
+            "they can sense the world around them",
+            "they can grow",
+            "they can reproduce",
+            "they need nutrition"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Living or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which of these are living things?",
+          "columns": [
+            "Living thing",
+            "Not a living thing"
+          ],
+          "items": [
+            {
+              "text": "ant",
+              "col": 0
+            },
+            {
+              "text": "grass",
+              "col": 0
+            },
+            {
+              "text": "moss",
+              "col": 0
+            },
+            {
+              "text": "bonfire",
+              "col": 1
+            },
+            {
+              "text": "tractor",
+              "col": 1
+            },
+            {
+              "text": "candle",
+              "col": 1
+            },
+            {
+              "text": "robot",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Micro-organisms",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Micro-organisms are the smallest living things on Earth."
+        },
+        {
+          "t": "text",
+          "text": "The prefix ‘micro’ means extremely small, so a micro-organism is an extremely small living thing. Micro-organisms can also be called **microbes**."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes they are called germs or bugs, usually when we are talking about them making us ill. But not all micro-organisms are harmful. Some can be very useful."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is another name for a micro-organism?",
+          "options": [
+            "dust",
+            "microbe",
+            "dirt"
+          ],
+          "answer": 1,
+          "why": "Microbe is another name for a micro-organism. Germs and bugs are also used, but dirt and dust are not micro-organisms."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Helpful micro-organisms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Micro-organisms can be used for these useful jobs."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Making food"
+            },
+            {
+              "title": "Making medicine"
+            },
+            {
+              "title": "Water treatment"
+            },
+            {
+              "title": "Maintaining soil health"
+            },
+            {
+              "title": "Decomposing waste"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Too small to see",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Micro-organisms are too small for us to see with the naked eye."
+        },
+        {
+          "t": "text",
+          "text": "They are classified separately from plants and animals because they do not share all of the characteristics of plants or animals. They have a much simpler structure than these other types of living things."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Micro-organisms are not very small plants and they are not tiny animals. They are a different type of living thing."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Always, sometimes or never?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Is each statement always, sometimes or never true?",
+          "items": [
+            {
+              "q": "Living things can move.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Living things can walk.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "We can see living things using just our eyes.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Micro-organisms are very small plants.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Types of micro-organism",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are lots of different types of micro-organism. Bacteria, fungi and viruses are all types of micro-organism."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "bacteria",
+            "fungi",
+            "viruses"
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Is each one a plant, an animal or a micro-organism?",
+          "columns": [
+            "Plant",
+            "Animal",
+            "Micro-organism"
+          ],
+          "items": [
+            {
+              "text": "pincushion moss",
+              "col": 0
+            },
+            {
+              "text": "castor bean tick",
+              "col": 1
+            },
+            {
+              "text": "ant",
+              "col": 1
+            },
+            {
+              "text": "influenza virus",
+              "col": 2
+            },
+            {
+              "text": "Staphylococcus bacteria",
+              "col": 2
+            },
+            {
+              "text": "measles virus",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Two ideas",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Two children talked about micro-organisms."
+        },
+        {
+          "t": "reveal",
+          "label": "Andeep: “They are not living things because they are too small and don’t have eyes or a brain.”",
+          "text": "Andeep is not correct. Micro-organisms are living things. Not all living things have eyes and a brain. For example, plants don’t."
+        },
+        {
+          "t": "reveal",
+          "label": "Izzy: “They are living things because they are very, very tiny animals.”",
+          "text": "Izzy is correct that micro-organisms are living things, but not that they are animals. They are part of a completely different group. They don’t have the same characteristics as animals and have a much simpler structure."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Seeing micro-organisms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Because we can’t see micro-organisms with just our eyes, we often don’t know what micro-organisms are around us. We can see them using a **microscope**. It magnifies very tiny objects so they look much bigger than they really are."
+        },
+        {
+          "t": "text",
+          "text": "The first person to see them was a Dutch scientist called Antonie van Leeuwenhoek. In 1674, he used a microscope he had built himself to observe microbes in a drop of water. He called them ‘animalcules’. Now we have stronger microscopes and a better understanding, and we know they are not animals but a different type of living thing."
+        },
+        {
+          "t": "choice",
+          "q": "Why weren’t micro-organisms discovered until the 17th century?",
+          "options": [
+            "Because they are so small",
+            "Because they only live in water"
+          ],
+          "answer": 0,
+          "why": "Micro-organisms are so small that we cannot see them with just our eyes. Leeuwenhoek needed a microscope."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where are micro-organisms?",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Micro-organisms can be found almost everywhere on Earth."
+        },
+        {
+          "t": "text",
+          "text": "They live in water, air, soil and sand. Different types of microbes can be found in different habitats. They also live in and on other living things, including humans."
+        },
+        {
+          "t": "text",
+          "text": "Billions of micro-organisms live on our skin and inside our bodies. These micro-organisms usually don’t make us unwell."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Micro-organisms in our bodies",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some of the micro-organisms living inside our bodies are very helpful. There are lots of different types of bacteria living in our intestines. They can be helpful in digesting food and killing harmful micro-organisms."
+        },
+        {
+          "t": "text",
+          "text": "Over 700 types of micro-organism live in our mouths. Some of these microbes are helpful and some aren’t."
+        },
+        {
+          "t": "match",
+          "q": "Match each one to what it does.",
+          "pairs": [
+            {
+              "a": "bacteria in our intestines",
+              "b": "help to digest food and kill harmful micro-organisms"
+            },
+            {
+              "a": "a type of bacteria in our mouths",
+              "b": "makes plaque as it breaks down sugar"
+            },
+            {
+              "a": "brushing our teeth regularly",
+              "b": "removes plaque"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Micro-organisms are tiny living things that we cannot see with just our eyes.",
+            "We can use a microscope to see them.",
+            "Sometimes, micro-organisms are called microbes or germs.",
+            "Micro-organisms are found everywhere, including in soil, air, water and in other living things, including humans."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an organism?",
+      "back": "A living thing."
+    },
+    {
+      "front": "What is a micro-organism?",
+      "back": "A very tiny living thing."
+    },
+    {
+      "front": "What is another name for a micro-organism?",
+      "back": "A microbe. Sometimes they are called germs or bugs, usually when we are talking about them making us ill."
+    },
+    {
+      "front": "What does the prefix ‘micro’ mean?",
+      "back": "Extremely small."
+    },
+    {
+      "front": "What is a microscope?",
+      "back": "A piece of equipment that magnifies very tiny objects so they look much bigger than they really are."
+    },
+    {
+      "front": "Why can’t we see micro-organisms with the naked eye?",
+      "back": "They are too small for us to see with just our eyes."
+    },
+    {
+      "front": "What characteristics do all living things have?",
+      "back": "They can move, sense the world around them, grow, reproduce and need nutrition."
+    },
+    {
+      "front": "Name three types of micro-organism.",
+      "back": "Bacteria, fungi and viruses."
+    },
+    {
+      "front": "Are micro-organisms animals?",
+      "back": "No. They are a different type of living thing with a much simpler structure than animals and plants."
+    },
+    {
+      "front": "Where can micro-organisms be found?",
+      "back": "Almost everywhere: in water, air, soil and sand, and in and on other living things, including humans."
+    },
+    {
+      "front": "Who first saw micro-organisms, and when?",
+      "back": "Antonie van Leeuwenhoek, a Dutch scientist, in 1674. He used a microscope he had built himself to look at a drop of water."
+    },
+    {
+      "front": "What did Leeuwenhoek first call micro-organisms?",
+      "back": "Animalcules."
+    },
+    {
+      "front": "Name two useful jobs that micro-organisms can do.",
+      "back": "For example, making food, making medicine, water treatment, maintaining soil health and decomposing waste."
+    },
+    {
+      "front": "What creates plaque on our teeth?",
+      "back": "A type of bacteria as it breaks down sugar in the foods we eat. This is why we brush our teeth regularly to remove plaque."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Micro-organisms are living things",
+    "instructions": "Answer each question with a word, a number or a short phrase, using what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "What is the word for a living thing?",
+        "answer": "organism",
+        "accepted": [
+          "an organism"
+        ],
+        "explanation": "An organism is a living thing."
+      },
+      {
+        "prompt": "A microbe is another name for a what? (Hint: it starts with “micro”.)",
+        "answer": "micro-organism",
+        "accepted": [
+          "micro-organisms",
+          "microorganism",
+          "microorganisms",
+          "micro organism",
+          "micro organisms",
+          "a micro-organism"
+        ],
+        "explanation": "Microbe is another name for a micro-organism."
+      },
+      {
+        "prompt": "What piece of equipment do we use to see micro-organisms?",
+        "answer": "microscope",
+        "accepted": [
+          "a microscope"
+        ],
+        "explanation": "A microscope magnifies very tiny objects so they look much bigger than they really are."
+      },
+      {
+        "prompt": "The prefix ‘micro’ means extremely what?",
+        "answer": "small",
+        "explanation": "The prefix ‘micro’ means extremely small.",
+        "accepted": [
+          "tiny"
+        ]
+      },
+      {
+        "prompt": "Which type of micro-organism completes this list: bacteria, fungi and ____?",
+        "answer": "viruses",
+        "accepted": [
+          "virus"
+        ],
+        "explanation": "Bacteria, fungi and viruses are all types of micro-organism."
+      },
+      {
+        "prompt": "Andeep said micro-organisms are not living things because they have no eyes or brain. But not all living things have eyes or a brain. Trees, grass and flowers are all living things that belong to which group?",
+        "answer": "plants",
+        "accepted": [
+          "plant",
+          "a plant"
+        ],
+        "explanation": "Not all living things have eyes and a brain. Plants, for example, do not."
+      },
+      {
+        "prompt": "When the Dutch scientist Antonie van Leeuwenhoek first saw micro-organisms, he called them by a different name. What was it? (One word, starting with “animal”.)",
+        "answer": "animalcules",
+        "accepted": [
+          "animalcule"
+        ],
+        "explanation": "He called them ‘animalcules’. We now know they are not animals but a different type of living thing."
+      },
+      {
+        "prompt": "In which year did Antonie van Leeuwenhoek use his microscope to observe microbes in a drop of water?",
+        "answer": "1674",
+        "explanation": "Leeuwenhoek observed microbes in a drop of water in 1674."
+      },
+      {
+        "prompt": "In which part of our bodies do bacteria help to digest food and kill harmful micro-organisms?",
+        "answer": "intestines",
+        "accepted": [
+          "the intestines",
+          "our intestines",
+          "intestine",
+          "the intestine",
+          "gut",
+          "the gut",
+          "our gut",
+          "large intestine",
+          "small intestine"
+        ],
+        "explanation": "There are lots of different types of bacteria living in our intestines that help with digesting food and killing harmful micro-organisms."
+      },
+      {
+        "prompt": "Plaque on our teeth is created by a type of what, as it breaks down sugar?",
+        "answer": "bacteria",
+        "accepted": [
+          "a type of bacteria",
+          "bacterium"
+        ],
+        "explanation": "Plaque is created by a type of bacteria as it breaks down sugar in the foods we eat."
+      }
+    ]
+  }
+}

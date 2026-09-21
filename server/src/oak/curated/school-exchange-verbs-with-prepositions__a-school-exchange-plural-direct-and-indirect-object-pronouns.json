@@ -1,0 +1,557 @@
+{
+  "agent": "german-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use correct word order when two objects are in a sentence, and can use plural indirect and direct object pronouns."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Revisiting vocabulary"
+            },
+            {
+              "title": "Plural pronouns: {uns}, {euch}, {sie}, {ihnen}"
+            },
+            {
+              "title": "Word order with pronouns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "pronoun",
+              "def": "A word that takes the place of a noun, like ‘it’, ‘you’, ‘she’."
+            },
+            {
+              "term": "direct object",
+              "def": "A noun in the accusative case, directly affected by the action of the verb."
+            },
+            {
+              "term": "indirect object",
+              "def": "A noun in the dative case, indirectly affected by the action of the verb."
+            },
+            {
+              "term": "euch",
+              "def": "A pronoun meaning ‘(to) you’ (plural)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why test yourself on vocabulary?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Testing yourself on vocabulary is like playing a game to train your brain."
+        },
+        {
+          "t": "list",
+          "items": [
+            "By making your brain find the answers, the words stick in your memory for longer.",
+            "Testing yourself gives your memory little boosts to keep it strong.",
+            "It shows you which words you know well and which ones you need to practise more."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Revisit the vocabulary",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the German to the English.",
+          "pairs": [
+            {
+              "a": "das Spiel",
+              "b": "game"
+            },
+            {
+              "a": "das Ding",
+              "b": "thing"
+            },
+            {
+              "a": "streng",
+              "b": "strict"
+            },
+            {
+              "a": "die Kunst",
+              "b": "art"
+            },
+            {
+              "a": "zum Beispiel",
+              "b": "for example"
+            },
+            {
+              "a": "gewinnen",
+              "b": "to win"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Direct and indirect object pronouns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use pronouns in place of a noun."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Direct object pronouns replace the direct object and are in the accusative case.",
+            "Indirect object pronouns replace the indirect object and are in the dative case."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Singular examples: direct mich = me, ihn = him / it; indirect mir = to me, ihm = to him / it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plural object pronouns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The plural pronouns are:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{uns}",
+              "sub": "direct: us | indirect: to us"
+            },
+            {
+              "title": "{euch}",
+              "sub": "direct: you (pl) | indirect: to you (pl)"
+            },
+            {
+              "title": "{sie}",
+              "sub": "direct: them"
+            },
+            {
+              "title": "{ihnen}",
+              "sub": "indirect: to them"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Uns and euch do both jobs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Euch and uns are used as both direct and indirect object pronouns."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Mutti sieht {euch}. (direct object: Mum sees you)",
+            "Opa gibt {euch} Kuchen. (indirect object: Grandpa gives cake to you)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Uns’ (‘us’, ‘to us’) and ‘euch’ (‘you’, ‘to you’, plural) look the same in the accusative and the dative."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the pronoun",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the pronoun that fits.",
+          "items": [
+            {
+              "q": "Mutti sieht ___. (Mum sees us.)",
+              "options": [
+                "uns",
+                "euch",
+                "ihnen"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Opa gibt ___ Kuchen. (Grandpa gives them cake.)",
+              "options": [
+                "sie",
+                "ihnen",
+                "euch"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Wir wollen ___ sehen. (We want to see them.)",
+              "options": [
+                "ihnen",
+                "uns",
+                "sie"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Wir wünschen ___ eine gute Reise. (We wish you (plural) a good journey.)",
+              "options": [
+                "uns",
+                "euch",
+                "sie"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two nouns: indirect object first",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When a sentence has both a direct object noun and an indirect object noun, the indirect object noun always comes first."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Ich",
+              "sub": "subject"
+            },
+            {
+              "title": "bringe",
+              "sub": "verb"
+            },
+            {
+              "title": "dem Lehrer",
+              "sub": "indirect object"
+            },
+            {
+              "title": "das Buch",
+              "sub": "direct object",
+              "emoji": "📖"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Another example: Ich kaufe dem Lehrer die Blumen. (I am buying the teacher the flowers.)"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A pronoun always comes first",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When one of the objects is a pronoun, the pronoun is always the first object in the sentence. It does not matter what case the pronoun is in."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich bringe {es} dem Lehrer. (direct object pronoun first)",
+            "Ich bringe {ihm} das Buch. (indirect object pronoun first)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The direct object does not always come before the indirect object. If one object is a pronoun, the pronoun comes first, whether it is direct or indirect. Only when both objects are nouns does the indirect object come first."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pronoun first, or two nouns?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort the sentences by their objects.",
+          "columns": [
+            "A pronoun is the first object",
+            "Both objects are nouns"
+          ],
+          "items": [
+            {
+              "text": "Ich zeige es meiner Mutter.",
+              "col": 0
+            },
+            {
+              "text": "Ich zeige ihr mein neues Kleid.",
+              "col": 0
+            },
+            {
+              "text": "Alastair gibt seinem Freund das Handy.",
+              "col": 1
+            },
+            {
+              "text": "Mia schenkt ihrer Mutter einen Kuchen.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Direct or indirect pronoun?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which kind of pronoun is the pronoun object in each sentence?",
+          "columns": [
+            "Direct object pronoun",
+            "Indirect object pronoun"
+          ],
+          "items": [
+            {
+              "text": "Ich zeige es meiner Mutter.",
+              "col": 0
+            },
+            {
+              "text": "Du schenkst sie deinen Freunden.",
+              "col": 0
+            },
+            {
+              "text": "Ich zeige ihr mein neues Kleid.",
+              "col": 1
+            },
+            {
+              "text": "Ich bringe ihm das Buch.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Correct word order",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which sentence uses the correct word order?",
+          "items": [
+            {
+              "options": [
+                "Ich schenke es meinem Bruder.",
+                "Ich schenke meinem Bruder es."
+              ],
+              "answer": 0
+            },
+            {
+              "options": [
+                "Wir geben die Konzerttickets euch.",
+                "Wir geben euch die Konzerttickets."
+              ],
+              "answer": 1
+            },
+            {
+              "options": [
+                "Ich kaufe meinem Vater das Heft.",
+                "Ich kaufe das Heft meinem Vater."
+              ],
+              "answer": 0
+            },
+            {
+              "options": [
+                "Ich zeige das Kleid ihr.",
+                "Ich zeige ihr das Kleid."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the pattern",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The head teacher writes an email to the students. Look at the word order."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich sage {euch} die Wahrheit.",
+            "Wir zeigen {euch} ein Beispiel.",
+            "Nächste Woche erzählt ihr {uns} die ganzen Details."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What do these sentences have in common?",
+          "options": [
+            "A pronoun (euch or uns) comes first, then the noun object",
+            "The noun object comes first, then the pronoun",
+            "Both objects are nouns"
+          ],
+          "answer": 0,
+          "why": "Euch and uns are pronouns, so they come before the noun objects (die Wahrheit, ein Beispiel, die ganzen Details)."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "In sentences with two objects, if one is a pronoun, the pronoun is first, whether it is a direct or indirect pronoun.",
+            "If both objects are nouns, the indirect object comes before the direct object: Ich kaufe dem Lehrer die Blumen.",
+            "Use ‘uns’ (‘to us’, ‘us’) as both an indirect and a direct object pronoun.",
+            "Use ‘euch’ (‘to you’, ‘you’ - plural) as both an indirect and a direct object pronoun."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "In a sentence with two objects, where does a pronoun object go?",
+      "back": "First, whether it is a direct or an indirect object pronoun.\n\nIch bringe es dem Lehrer."
+    },
+    {
+      "front": "In a sentence with two object nouns, which object comes first?",
+      "back": "The indirect object.\n\nIch kaufe dem Lehrer die Blumen."
+    },
+    {
+      "front": "What does ‘uns’ mean?",
+      "back": "us / to us. It is used as both a direct and an indirect object pronoun."
+    },
+    {
+      "front": "What does ‘euch’ mean?",
+      "back": "you / to you (plural). It is used as both a direct and an indirect object pronoun."
+    },
+    {
+      "front": "Which plural pronoun means ‘to them’?",
+      "back": "ihnen (indirect object, dative)."
+    },
+    {
+      "front": "Which plural pronoun means ‘them’ as a direct object?",
+      "back": "sie (direct object, accusative)."
+    },
+    {
+      "front": "Say in German: ‘We wish you (plural) a good journey.’",
+      "back": "Wir wünschen euch eine gute Reise."
+    },
+    {
+      "front": "Say in German: ‘I’m buying you (plural) the exercise books.’",
+      "back": "Ich kaufe euch die Hefte."
+    },
+    {
+      "front": "Does the case of a pronoun change which object comes first?",
+      "back": "No. It doesn’t matter what case the pronoun is in: the pronoun is always the first object."
+    },
+    {
+      "front": "What is an indirect object?",
+      "back": "A noun in the dative case, indirectly affected by the action of the verb."
+    },
+    {
+      "front": "What is a direct object?",
+      "back": "A noun in the accusative case, directly affected by the action of the verb."
+    },
+    {
+      "front": "Why is testing yourself on vocabulary a good idea?",
+      "back": "Making your brain find the answers helps the words stick in your memory for longer, and it shows you which words to practise more."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: A school exchange: plural direct and indirect object pronouns",
+    "instructions": "Answer each question in German unless it asks for English. Write the whole sentence where asked.",
+    "questions": [
+      {
+        "prompt": "Task A: Write in German: The teacher is strict.",
+        "answer": "Der Lehrer ist streng.",
+        "accepted": [
+          "Der Lehrer ist streng"
+        ],
+        "explanation": "Der Lehrer = the teacher, streng = strict."
+      },
+      {
+        "prompt": "Task A: Write in German: She likes his art.",
+        "answer": "Sie mag seine Kunst.",
+        "accepted": [
+          "Sie mag seine Kunst"
+        ],
+        "explanation": "Sie mag = she likes, seine Kunst = his art."
+      },
+      {
+        "prompt": "Task A: Write in German: I win your game.",
+        "answer": "Ich gewinne dein Spiel.",
+        "accepted": [
+          "Ich gewinne dein Spiel"
+        ],
+        "explanation": "gewinnen = to win, das Spiel = game."
+      },
+      {
+        "prompt": "Task A: Write in German: at 12 o’clock",
+        "answer": "um zwölf Uhr",
+        "accepted": [
+          "um 12 Uhr"
+        ],
+        "explanation": "um … Uhr = at … o’clock."
+      },
+      {
+        "prompt": "Task A: Write in German: for example",
+        "answer": "zum Beispiel",
+        "explanation": "zum Beispiel = for example."
+      },
+      {
+        "prompt": "Task B: Ich habe einen Kilt. Ich zeige ___ Wolfgang. (I show it to Wolfgang.) Which pronoun fills the gap: ihn or es?",
+        "answer": "ihn",
+        "explanation": "‘Kilt’ is masculine (einen Kilt), so the direct object pronoun is ‘ihn’. A pronoun comes before the noun ‘Wolfgang’."
+      },
+      {
+        "prompt": "Task B: Wir wünschen ___ eine gute Reise. (We wish you (plural) a good journey.) Which pronoun fills the gap?",
+        "answer": "euch",
+        "explanation": "‘Euch’ means ‘(to) you’ in the plural."
+      },
+      {
+        "prompt": "Task B: Ihr schreibt ___ viele E-Mails. (You write us lots of emails.) Which pronoun fills the gap?",
+        "answer": "uns",
+        "explanation": "‘Uns’ means ‘(to) us’; it is the same whether it is a direct or an indirect object pronoun."
+      },
+      {
+        "prompt": "Task B: Write in German: I’m buying you (plural) the exercise books.",
+        "answer": "Ich kaufe euch die Hefte.",
+        "accepted": [
+          "Ich kaufe euch die Hefte"
+        ],
+        "explanation": "The pronoun ‘euch’ comes first, then the noun ‘die Hefte’."
+      }
+    ]
+  }
+}

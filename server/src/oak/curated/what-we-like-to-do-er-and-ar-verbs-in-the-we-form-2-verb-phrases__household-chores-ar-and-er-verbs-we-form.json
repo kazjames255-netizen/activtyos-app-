@@ -1,0 +1,639 @@
+{
+  "agent": "spanish-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can say what household chores we do and they do, and what chores we love and hate."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Listen and {write} words"
+            },
+            {
+              "title": "Chores {we} and {they} do"
+            },
+            {
+              "title": "Chores we {love} and {hate}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "-ar verb",
+              "def": "A verb whose infinitive ends in -ar."
+            },
+            {
+              "term": "-er verb",
+              "def": "A verb whose infinitive ends in -er."
+            },
+            {
+              "term": "infinitive",
+              "def": "The form of the verb found in a dictionary. It gives the general meaning of the verb."
+            },
+            {
+              "term": "gerund",
+              "def": "The -ing form of the verb that works as a noun in a sentence."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Listening and reading sounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam y Jacob practican la pronunciación. Juegan a un juego: ‘Bingo’. Here are some of the words in their game."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "cocina",
+            "trece",
+            "equipo",
+            "hora",
+            "gente",
+            "armario",
+            "quince",
+            "durante"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Listening carefully to the sounds and writing the words you hear is called **transcribing**."
+        },
+        {
+          "t": "callout",
+          "text": "Reading and writing known and unknown words improves your pronunciation and your knowledge of {sound-spelling} correspondences."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Read these words aloud",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Read each word aloud, then check your pronunciation. Listen carefully to every sound."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "genial",
+            "llegar",
+            "novio",
+            "galleta",
+            "bolsa",
+            "guiso",
+            "leche",
+            "zapato"
+          ]
+        },
+        {
+          "t": "chips",
+          "items": [
+            "fuera",
+            "frío",
+            "diez",
+            "catorce",
+            "ella",
+            "viento",
+            "correr",
+            "niña"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New words: chores",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These words are useful for talking about las tareas del hogar (household chores)."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{lavar}",
+              "sub": "to wash, washing"
+            },
+            {
+              "title": "{ordenar}",
+              "sub": "to organise, to tidy up"
+            },
+            {
+              "title": "el {coche}",
+              "sub": "the car",
+              "emoji": "🚗"
+            },
+            {
+              "title": "el {juguete}",
+              "sub": "the toy"
+            },
+            {
+              "title": "la {ropa}",
+              "sub": "the clothes, clothing"
+            },
+            {
+              "title": "el {suelo}",
+              "sub": "the floor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘We’ with an -ar verb",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "To mean ‘we’ with an -ar verb, remove the **-ar** ending and add **-amos**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "tir",
+              "add": "amos",
+              "result": "tiramos",
+              "note": "tirar (to throw) → tiramos (we throw)"
+            },
+            {
+              "root": "ayud",
+              "add": "amos",
+              "result": "ayudamos",
+              "note": "Ayudamos en el jardín. = We help in the garden."
+            },
+            {
+              "root": "limpi",
+              "add": "amos",
+              "result": "limpiamos",
+              "note": "limpiar (to clean, cleaning) → limpiamos"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘They’ with an -ar verb",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "To mean ‘they’ with an -ar verb, remove the **-ar** ending and add **-an**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "tir",
+              "add": "an",
+              "result": "tiran",
+              "note": "tiran = they throw"
+            },
+            {
+              "root": "ayud",
+              "add": "an",
+              "result": "ayudan",
+              "note": "Ayudan en la cocina. = They help in the kitchen."
+            },
+            {
+              "root": "limpi",
+              "add": "an",
+              "result": "limpian",
+              "note": "limpian = they clean"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘We’ and ‘they’ with an -er verb",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "With an -er verb, remove the **-er** ending. For ‘we’ add **-emos**. For ‘they’ add **-en**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "com",
+              "add": "emos",
+              "result": "comemos",
+              "note": "comer → comemos = we eat"
+            },
+            {
+              "root": "com",
+              "add": "en",
+              "result": "comen",
+              "note": "comer → comen = they eat"
+            },
+            {
+              "root": "hac",
+              "add": "emos",
+              "result": "hacemos",
+              "note": "Hacemos la cama. = We make the bed."
+            },
+            {
+              "root": "hac",
+              "add": "en",
+              "result": "hacen",
+              "note": "Hacen ciclismo. = They go cycling."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Make the verb form",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form.",
+          "items": [
+            {
+              "q": "lavar → we",
+              "options": [
+                "lavamos",
+                "lavas",
+                "lavan"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "ordenar → they",
+              "options": [
+                "ordenamos",
+                "ordenan",
+                "ordenas"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "comer → we",
+              "options": [
+                "comen",
+                "comes",
+                "comemos"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "hacer → they",
+              "options": [
+                "hacen",
+                "hacemos",
+                "haces"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "We or they?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Listen to the verb ending. Is it ‘we’ or ‘they’?",
+          "columns": [
+            "we",
+            "they"
+          ],
+          "items": [
+            {
+              "text": "lavamos",
+              "col": 0
+            },
+            {
+              "text": "ordenan",
+              "col": 1
+            },
+            {
+              "text": "comemos",
+              "col": 0
+            },
+            {
+              "text": "tiran",
+              "col": 1
+            },
+            {
+              "text": "preparan",
+              "col": 1
+            },
+            {
+              "text": "hacemos",
+              "col": 0
+            },
+            {
+              "text": "ordenamos",
+              "col": 0
+            },
+            {
+              "text": "comen",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Love and hate: amar and odiar",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To say we or they **love** or **hate** doing something, use amar or odiar. After it, use the **infinitive**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Amamos {lavar} el suelo. = We love washing the floor.",
+            "Aman {lavar} el suelo. = They love washing the floor.",
+            "Odiamos {preparar} comida. = We hate preparing food.",
+            "Odian {preparar} comida. = They hate preparing food."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We change the ending of amar or odiar to say who loves or hates. The verb that follows stays in the {infinitive}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "English: to + verb or -ing",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In English we can translate amar + infinitive word for word, with ‘to + verb’ (the infinitive)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Odio correr. = I hate to run.",
+            "Amo cocinar. = I love to cook."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "But we usually use the gerund (the -ing form): I hate running. I love cooking."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "In Spanish, these verbs are always followed by the **infinitive**. Do not use an -ing form in Spanish."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which statement is TRUE?",
+          "options": [
+            "After amar or odiar we use the infinitive.",
+            "After amar or odiar we use the -ing form (gerund).",
+            "We never change the ending of amar or odiar."
+          ],
+          "answer": 0,
+          "why": "We change amar or odiar to say who loves or hates, but the verb that follows is in the infinitive."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say what we love and hate",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct Spanish.",
+          "items": [
+            {
+              "q": "We love washing the clothes: Amamos ___ la ropa.",
+              "options": [
+                "lavar",
+                "lavamos",
+                "lavan"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "They hate tidying up the toys: Odian ___ los juguetes.",
+              "options": [
+                "ordenan",
+                "ordenar",
+                "ordenamos"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "We hate throwing the toys.",
+              "options": [
+                "Odiamos tiramos los juguetes.",
+                "Odian tirar los juguetes.",
+                "Odiamos tirar los juguetes."
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Opinion or activity?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "An opinion says what people love or hate. An activity says what people do.",
+          "columns": [
+            "opinión",
+            "actividad"
+          ],
+          "items": [
+            {
+              "text": "Lavamos los juguetes.",
+              "col": 1
+            },
+            {
+              "text": "Amamos lavar el coche.",
+              "col": 0
+            },
+            {
+              "text": "Ordenan la ropa.",
+              "col": 1
+            },
+            {
+              "text": "Odian preparar comida.",
+              "col": 0
+            },
+            {
+              "text": "Ayudamos en el jardín.",
+              "col": 1
+            },
+            {
+              "text": "Odiamos ordenar el armario.",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Reading and writing known and unknown words improves pronunciation and knowledge of sound-spelling correspondences.",
+            "‘We’ with an -ar verb: remove -ar and add **-amos**. ‘They’: remove -ar and add **-an**.",
+            "‘We’ with an -er verb: remove -er and add **-emos**. ‘They’: remove -er and add **-en**.",
+            "To say we love or hate doing something, use the ‘we’ form of amar or odiar, then the **infinitive**. In English this is often the -ing form."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How do you say ‘we’ with an -ar verb?",
+      "back": "Remove the -ar ending and add -amos.\n\ntirar → tiramos (we throw)"
+    },
+    {
+      "front": "How do you say ‘they’ with an -ar verb?",
+      "back": "Remove the -ar ending and add -an.\n\ntirar → tiran (they throw)"
+    },
+    {
+      "front": "How do you say ‘we’ with an -er verb?",
+      "back": "Remove the -er ending and add -emos.\n\ncomer → comemos (we eat)"
+    },
+    {
+      "front": "How do you say ‘they’ with an -er verb?",
+      "back": "Remove the -er ending and add -en.\n\ncomer → comen (they eat)"
+    },
+    {
+      "front": "What is the infinitive of a verb?",
+      "back": "The form of the verb found in a dictionary. It gives the general meaning of the verb."
+    },
+    {
+      "front": "What is a gerund?",
+      "back": "The -ing form of the verb that works as a noun in a sentence."
+    },
+    {
+      "front": "Which verb form follows amar or odiar in Spanish?",
+      "back": "The infinitive.\n\nOdiamos limpiar."
+    },
+    {
+      "front": "What does ‘Amamos lavar el suelo’ mean?",
+      "back": "We love washing the floor."
+    },
+    {
+      "front": "What does ‘Odian preparar comida’ mean?",
+      "back": "They hate preparing food."
+    },
+    {
+      "front": "What do lavar and ordenar mean?",
+      "back": "lavar = to wash, washing\nordenar = to organise, to tidy up"
+    },
+    {
+      "front": "What do el juguete, la ropa and el suelo mean?",
+      "back": "el juguete = the toy\nla ropa = the clothes, clothing\nel suelo = the floor"
+    },
+    {
+      "front": "What does ‘Ayudamos en el jardín’ mean?",
+      "back": "We help in the garden."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Household chores: -ar and -er verbs ‘we’ form",
+    "instructions": "Answer each question with a short answer. Write the Spanish words in lower case.",
+    "questions": [
+      {
+        "prompt": "Write the ‘we’ form of the verb tirar (to throw).",
+        "answer": "tiramos",
+        "explanation": "Remove the -ar ending and add -amos: tir + amos."
+      },
+      {
+        "prompt": "Write the ‘they’ form of the verb comer (to eat).",
+        "answer": "comen",
+        "explanation": "Remove the -er ending and add -en: com + en."
+      },
+      {
+        "prompt": "Write the ‘we’ form of the verb limpiar (to clean).",
+        "answer": "limpiamos",
+        "explanation": "Remove the -ar ending and add -amos: limpi + amos."
+      },
+      {
+        "prompt": "Write the ‘they’ form of the verb ordenar (to tidy up).",
+        "answer": "ordenan",
+        "explanation": "Remove the -ar ending and add -an: orden + an."
+      },
+      {
+        "prompt": "Write the ‘we’ form of the verb hacer (to make, to do).",
+        "answer": "hacemos",
+        "explanation": "Remove the -er ending and add -emos: hac + emos."
+      },
+      {
+        "prompt": "Write in Spanish: ‘we love washing the car’.",
+        "answer": "amamos lavar el coche",
+        "accepted": [
+          "nosotros amamos lavar el coche",
+          "nosotras amamos lavar el coche"
+        ],
+        "explanation": "Use the ‘we’ form of amar (amamos), then the infinitive (lavar)."
+      },
+      {
+        "prompt": "Complete the sentence with the infinitive of lavar: ‘Odian ___ el suelo.’ (They hate washing the floor.)",
+        "answer": "lavar",
+        "explanation": "After odiar we always use the infinitive."
+      },
+      {
+        "prompt": "Write in English: ‘Ayudamos en el jardín’.",
+        "answer": "we help in the garden",
+        "accepted": [
+          "we are helping in the garden"
+        ],
+        "explanation": "Ayudamos is the ‘we’ form of ayudar (to help)."
+      },
+      {
+        "prompt": "Write in English: ‘Aman lavar el suelo’.",
+        "answer": "they love washing the floor",
+        "accepted": [
+          "they love to wash the floor"
+        ],
+        "explanation": "Aman is the ‘they’ form of amar. In English we can use -ing or ‘to + verb’."
+      }
+    ]
+  }
+}

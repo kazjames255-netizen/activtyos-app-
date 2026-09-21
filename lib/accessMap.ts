@@ -39,7 +39,19 @@ export const FEATURE_API: { prefix: string; keys: string[]; label: string }[] = 
   { prefix: "/api/inventory", keys: ["inventory"], label: "Inventory" },
   { prefix: "/api/documents", keys: ["documents"], label: "Documents" },
   { prefix: "/api/moments", keys: ["moments"], label: "Moments" },
+  { prefix: "/api/learning-hub", keys: ["learninghub"], label: "Teaching Hub" },
 ];
+
+/** Modules that start OFF: absent from Setup → Features means off, and only an
+ *  explicit `true` turns them on. Every other module is the reverse (on until
+ *  switched off) because it is core to running an activity provider; these are
+ *  vertical-specific (the Learning Hub is for tutoring providers) and would
+ *  just be noise on a sports camp's dashboard. */
+export const OPT_IN_FEATURES = new Set<string>(["learninghub"]);
+
+/** Is this Setup → Features key off? Opt-in modules are off unless `true`. */
+export const isFeatureOff = (features: Record<string, unknown> | undefined | null, key: string) =>
+  OPT_IN_FEATURES.has(key) ? features?.[key] !== true : features?.[key] === false;
 
 /** Modules whose READS other screens rely on (dashboard cards, the staff home,
  *  Finance): while switched off their reads still answer, but anything that
@@ -86,6 +98,7 @@ const STAFF_VIEW_FEATURES: Record<string, string[]> = {
   holiday: ["holiday"], tasks: ["tasks"], registers: ["registers", "admin-registers"],
   ratios: ["ratios"], timetable: ["timetable"], meals: ["meals"], trips: ["trips"],
   moments: ["moments"], documents: ["documents"], payslips: ["payroll"],
+  learninghub: ["learninghub"],
 };
 
 /** Which feature keys gate this portal view (empty = never gated). Operator
@@ -101,7 +114,7 @@ export function featureKeysForView(portal: string, view: string): string[] {
 }
 
 export const firstOff = (features: Record<string, unknown> | undefined | null, keys: string[]) =>
-  keys.find((k) => features?.[k] === false) ?? null;
+  keys.find((k) => isFeatureOff(features, k)) ?? null;
 
 /** Families: a customer-area section (settings.customerArea key) → the
  *  operator module(s) whose switch turns it off for families too. Read by the
@@ -110,7 +123,7 @@ export const firstOff = (features: Record<string, unknown> | undefined | null, k
 export const CA_FEATURES: Record<string, string[]> = {
   messaging: ["messages"], coupons: ["marketing"], codesBanner: ["marketing"], newsfeed: ["newsfeed"],
   moments: ["moments"], meals: ["meals"], trips: ["trips"], timetable: ["timetable"],
-  memberships: ["memberships"], refer: ["referrals"],
+  memberships: ["memberships"], refer: ["referrals"], learninghub: ["learninghub"],
 };
 
 // ── Setup → Roles & permissions (settings.roles[].caps, per area) ─────────────
@@ -140,6 +153,7 @@ export const CAP_API: { prefix: string; area: string }[] = [
   { prefix: "/api/incidents", area: "incidents" },
   { prefix: "/api/medications", area: "medication" },
   { prefix: "/api/moments", area: "moments" },
+  { prefix: "/api/learning-hub", area: "learninghub" },
   { prefix: "/api/documents", area: "documents" },
   { prefix: "/api/analytics", area: "finances" },
   { prefix: "/api/growth", area: "finances" },
@@ -210,6 +224,7 @@ const STAFF_VIEW_CAP: Record<string, string> = {
   customers: "customers", registers: "registers", ratios: "ratios", timetable: "timetable",
   meals: "meals", trips: "trips", tasks: "tasks", moments: "moments",
   medication: "medication", documents: "documents", messages: "messaging",
+  learninghub: "learninghub",
 };
 export function capAreaForView(portal: string, view: string): string | null {
   return portal === "staff" ? (STAFF_VIEW_CAP[view] ?? null) : null;
@@ -233,5 +248,10 @@ export function resolveCaps(settings: Record<string, unknown> | null | undefined
 }
 
 /** An area missing from the role's caps isn't restricted. */
+/** Areas that pre-date a role but hold children's learning records: once the
+ *  matrix is in force, a role that says nothing about them gets NO access (an
+ *  owner grants it in Setup → Roles & permissions) — every other area keeps the
+ *  legacy "silent = edit". With no matrix in force (caps null) nothing is restricted. */
+const DEFAULT_NONE_AREAS = new Set(["learninghub"]);
 export const capLevel = (caps: Record<string, CapLevel> | null | undefined, area: string): CapLevel =>
-  (caps?.[area] as CapLevel | undefined) ?? "edit";
+  !caps ? "edit" : ((caps[area] as CapLevel | undefined) ?? (DEFAULT_NONE_AREAS.has(area) ? "none" : "edit"));

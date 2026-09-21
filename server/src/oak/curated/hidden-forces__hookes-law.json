@@ -1,0 +1,851 @@
+{
+  "agent": "science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe and explain the relationship between the extension of a spring and the force stretching it."
+        },
+        {
+          "t": "text",
+          "text": "You will process data from a spring experiment, plot a graph and discover Hooke’s law."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Plotting force-extension graphs"
+            },
+            {
+              "title": "Line of best fit and anomalous results"
+            },
+            {
+              "title": "Hooke’s law"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "line of best fit",
+              "def": "A line of best fit passes between a set of data points on a graph to show the pattern."
+            },
+            {
+              "term": "directly proportional",
+              "def": "Variables are directly proportional when one is a constant multiple of the other."
+            },
+            {
+              "term": "elastic",
+              "def": "A spring is elastic when it returns to its original length after forces are removed from it."
+            },
+            {
+              "term": "Hooke’s law",
+              "def": "Hooke’s law describes the behaviour of a spring when it is stretched."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The experiment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Weights hung from a spring pull it down, so it gets longer. The increase in length is the {extension}. Force goes on the x-axis and extension on the y-axis of our graph."
+        },
+        {
+          "t": "text",
+          "text": "The masses were added one at a time (loading) and then taken off again (unloading). Having two sets of readings lets us check the accuracy. Then we take the **mean** of the two values."
+        },
+        {
+          "t": "callout",
+          "text": "To find the mean of two values: {add them, then divide by 2}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Calculating a mean extension",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Worked example.** At 3 N the extension was 12.4 cm when loading and 12.6 cm when unloading."
+        },
+        {
+          "t": "text",
+          "text": "Mean extension = (12.4 + 12.6) ÷ 2 = 25.0 ÷ 2 = 12.5 cm."
+        },
+        {
+          "t": "text",
+          "text": "At 4 N the readings were 16.8 cm and 16.4 cm: mean = (16.8 + 16.4) ÷ 2 = 33.2 ÷ 2 = 16.6 cm."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the mean",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Work out the mean extension.",
+          "items": [
+            {
+              "q": "Loading 5.2 cm and unloading 5.6 cm",
+              "options": [
+                "5.2 cm",
+                "5.4 cm",
+                "5.6 cm",
+                "10.8 cm"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Loading 9.7 cm and unloading 10.1 cm",
+              "options": [
+                "9.7 cm",
+                "9.9 cm",
+                "10.1 cm",
+                "19.8 cm"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Choosing the scales",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before drawing a graph, choose the scale on each axis."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Start each scale at 0, because there was no force and no extension at first.",
+            "Go slightly above the biggest value so the scale has nice even steps.",
+            "Example: forces up to 6 N, biggest extension 24 cm, so the extension scale can go up to 25 cm in steps of 5 cm."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "The forces go up to 5 N and the biggest extension is 17.8 cm. Which extension scale is best?",
+          "options": [
+            "0 to 5 cm",
+            "0 to 17 cm",
+            "0 to 20 cm",
+            "0 to 100 cm"
+          ],
+          "answer": 2,
+          "why": "It starts at 0 and goes just above the biggest value, so every point can be plotted and the graph fills the paper. 0 to 17 cm cannot fit 17.8."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plotting the graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The stages of plotting a graph:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Draw the axes on the graph paper.",
+            "2. Add the two scales and divisions.",
+            "3. Add the axis labels (force (N) and extension (cm)).",
+            "4. Plot each point one at a time using small crosses.",
+            "5. Add the title."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What should you use to mark each point on the graph?",
+          "options": [
+            "Big filled blobs",
+            "Small crosses",
+            "Thick crosses that hide the point",
+            "A line joining the points"
+          ],
+          "answer": 1,
+          "why": "Small crosses show exactly where the point is."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The line of best fit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A line of best fit shows the relationship between the two variables. It does **not** join the points together."
+        },
+        {
+          "t": "list",
+          "items": [
+            "It can be a single straight line or a smooth curve passing close to the points.",
+            "Draw straight lines with a ruler (a transparent ruler is best).",
+            "The line passes between the points, with some above and some below it."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The line does not have to go through every point. Real measurements usually have small mistakes in them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The origin and odd points",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With no force acting on a spring, the extension is exactly zero. So the point (0 N, 0 cm), the **origin**, is definitely correct and the line of best fit should pass through it."
+        },
+        {
+          "t": "text",
+          "text": "Some points do not fit the pattern. If they are too far from the line of best fit they are {anomalous}. Circle them, and do not use them when drawing the line."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the anomaly",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A pupil measures the extension for forces of 1 N, 2 N, 3 N, 4 N and 5 N."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "1 N: 5.0 cm",
+            "2 N: 10.1 cm",
+            "3 N: 15.0 cm",
+            "4 N: 14.0 cm",
+            "5 N: 25.0 cm"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which result is anomalous?",
+          "options": [
+            "1 N: 5.0 cm",
+            "2 N: 10.1 cm",
+            "3 N: 15.0 cm",
+            "4 N: 14.0 cm",
+            "5 N: 25.0 cm"
+          ],
+          "answer": 3,
+          "why": "The other points rise by about 5 cm for every newton (20 cm would fit at 4 N), but 14.0 cm is far from the pattern and even less than the extension at 3 N."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Elastic springs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When the force is removed, a spring goes back to its original length. Its behaviour is **elastic**."
+        },
+        {
+          "t": "callout",
+          "text": "But if the force is too large, a spring can become {overstretched} and permanently change shape."
+        },
+        {
+          "t": "choice",
+          "q": "A pupil hangs far too much weight on a spring and then removes it. What may happen?",
+          "options": [
+            "The spring always goes back to its original length",
+            "The spring becomes shorter than at the start",
+            "The spring may not go back to its original length",
+            "Nothing can happen"
+          ],
+          "answer": 2,
+          "why": "Too large a force can overstretch a spring so it permanently changes shape."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Directly proportional",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A graph of extension against force for a spring shows two facts:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The line of best fit is straight, so every extra 1 N gives the same increase in extension.",
+            "The line passes through the origin, so with no force there is no extension."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A straight line through the origin means the extension is {directly proportional} to the force."
+        },
+        {
+          "t": "text",
+          "text": "Doubling the force doubles the extension. Tripling the force triples the extension. Example: if 1 N gives 4 cm, then 2 N gives 8 cm and 3 N gives 12 cm."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hooke’s law",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "{Hooke’s law}: the extension of a spring is directly proportional to the force acting on it."
+        },
+        {
+          "t": "text",
+          "text": "All springs follow Hooke’s law, up to a certain limit. If the force becomes too large, the law is no longer followed. On a graph, the line stops being straight when the force is large."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which graphs show direct proportion?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a description, then the column it belongs in.",
+          "columns": [
+            "Directly proportional",
+            "Not directly proportional"
+          ],
+          "items": [
+            {
+              "text": "A straight line through the origin",
+              "col": 0
+            },
+            {
+              "text": "A steeper straight line through the origin",
+              "col": 0
+            },
+            {
+              "text": "A straight line that does not pass through the origin",
+              "col": 1
+            },
+            {
+              "text": "A curved line",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use Hooke’s law",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Assume the springs obey Hooke’s law."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A spring extends 6 cm when the force is 3 N. What is the extension when the force is 12 N?",
+              "options": [
+                "12 cm",
+                "18 cm",
+                "24 cm",
+                "72 cm"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Spring C extends 3 cm for each newton. What is its extension at 8 N?",
+              "options": [
+                "11 cm",
+                "16 cm",
+                "24 cm",
+                "38 cm"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Spring D extends 1.5 cm for each newton. What is its extension at 8 N?",
+              "options": [
+                "6.5 cm",
+                "9.5 cm",
+                "12 cm",
+                "15 cm"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "The force on a spring doubles. What happens to the extension?",
+              "options": [
+                "It halves",
+                "It stays the same",
+                "It quadruples",
+                "It doubles"
+              ],
+              "answer": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "All springs obey Hooke’s law, up to a limit: the extension of a spring is directly proportional to the force acting on it.",
+            "A graph shows direct proportion when the line of best fit is straight and passes through the origin.",
+            "Anomalous points are far from the line: circle them and do not use them.",
+            "Springs are elastic: they return to their original length when the force is removed."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is Hooke’s law?",
+      "back": "The extension of a spring is directly proportional to the force acting on it (up to a limit)."
+    },
+    {
+      "front": "What does directly proportional mean?",
+      "back": "One variable is a constant multiple of the other. When one doubles, so does the other."
+    },
+    {
+      "front": "What two features of a force-extension graph show direct proportion?",
+      "back": "The line of best fit is straight and it passes through the origin (0 N, 0 cm)."
+    },
+    {
+      "front": "What does elastic mean?",
+      "back": "A spring is elastic when it returns to its original length after the forces are removed."
+    },
+    {
+      "front": "What is a line of best fit?",
+      "back": "A line that passes between the data points on a graph to show the pattern. It does not join the points."
+    },
+    {
+      "front": "How do you find the mean of two values?",
+      "back": "Add them, then divide by 2.\n\n(12.4 + 12.6) ÷ 2 = 12.5"
+    },
+    {
+      "front": "What is an anomalous point?",
+      "back": "A point too far from where the line of best fit goes. Circle it and do not use it to draw the line."
+    },
+    {
+      "front": "Why must the line of best fit pass through the origin for a spring?",
+      "back": "With no force there is no extension, so (0 N, 0 cm) is definitely a correct point."
+    },
+    {
+      "front": "If 1 N gives an extension of 4 cm, what does 3 N give?",
+      "back": "12 cm (tripling the force triples the extension)."
+    },
+    {
+      "front": "How should you mark the points when plotting a graph?",
+      "back": "With small crosses, one at a time."
+    },
+    {
+      "front": "Where should each axis scale start?",
+      "back": "At 0 (no force and no extension at first), going slightly above the largest value."
+    },
+    {
+      "front": "Do all springs obey Hooke’s law for any force?",
+      "back": "No. They obey it up to a certain limit. If the force is too large, the law is no longer followed and the line stops being straight."
+    },
+    {
+      "front": "What can happen to a spring if the force on it is too large?",
+      "back": "It can be overstretched and permanently change shape."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Hooke’s law",
+    "instructions": "Answer each question with a number, a word or a short phrase. Give units where they are asked for.",
+    "questions": [
+      {
+        "prompt": "For a force of 3 N, a spring’s extension is 12.4 cm when loading and 12.6 cm when unloading. What is the mean extension? Give your answer in cm.",
+        "answer": "12.5 cm",
+        "accepted": [
+          "12.5",
+          "12.5cm"
+        ],
+        "explanation": "(12.4 + 12.6) ÷ 2 = 25.0 ÷ 2 = 12.5 cm."
+      },
+      {
+        "prompt": "For a force of 4 N, the extension is 16.8 cm when loading and 16.4 cm when unloading. What is the mean extension? Give your answer in cm.",
+        "answer": "16.6 cm",
+        "accepted": [
+          "16.6",
+          "16.6cm"
+        ],
+        "explanation": "(16.8 + 16.4) ÷ 2 = 33.2 ÷ 2 = 16.6 cm."
+      },
+      {
+        "prompt": "For a force of 2 N, the extension is 8.3 cm when loading and 7.7 cm when unloading. What is the mean extension? Give your answer in cm.",
+        "answer": "8.0 cm",
+        "accepted": [
+          "8",
+          "8.0",
+          "8cm",
+          "8.0cm",
+          "8 cm"
+        ],
+        "explanation": "(8.3 + 7.7) ÷ 2 = 16.0 ÷ 2 = 8.0 cm."
+      },
+      {
+        "prompt": "The largest extension in an experiment is 27.5 cm. Which extension scale is best: 0 to 25 cm, 0 to 30 cm or 0 to 100 cm?",
+        "answer": "0 to 30 cm",
+        "accepted": [
+          "30 cm",
+          "0-30 cm",
+          "0 to 30",
+          "0-30"
+        ],
+        "explanation": "It starts at 0 and goes just above 27.5 cm. 25 cm is too small to plot the largest value and 100 cm is far too big."
+      },
+      {
+        "prompt": "A pupil measures extensions of 4.5 cm, 9.0 cm, 15.0 cm, 18.0 cm and 22.5 cm for forces of 1 N, 2 N, 3 N, 4 N and 5 N. Which extension is anomalous? Give your answer in cm.",
+        "answer": "15.0 cm",
+        "accepted": [
+          "15",
+          "15.0",
+          "15cm",
+          "15 cm",
+          "the 3 N result"
+        ],
+        "explanation": "The other results rise by 4.5 cm per newton, so 3 N should give 13.5 cm. 15.0 cm does not fit the pattern."
+      },
+      {
+        "prompt": "A spring obeys Hooke’s law. If the force on it doubles, what happens to its extension?",
+        "answer": "It doubles",
+        "accepted": [
+          "doubles",
+          "it doubles",
+          "it is doubled",
+          "double",
+          "twice as big"
+        ],
+        "explanation": "Extension is directly proportional to force, so doubling the force doubles the extension."
+      },
+      {
+        "prompt": "Spring a extends 4 cm for each newton. What is its extension when the force is 12 N? Give your answer in cm.",
+        "answer": "48 cm",
+        "accepted": [
+          "48",
+          "48cm"
+        ],
+        "explanation": "12 × 4 = 48 cm."
+      },
+      {
+        "prompt": "Spring b extends 2 cm for each newton. What is its extension when the force is 12 N? Give your answer in cm.",
+        "answer": "24 cm",
+        "accepted": [
+          "24",
+          "24cm"
+        ],
+        "explanation": "12 × 2 = 24 cm."
+      },
+      {
+        "prompt": "A graph of extension against force is a straight line that does NOT pass through the origin. Is the extension directly proportional to the force? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "No",
+          "not directly proportional"
+        ],
+        "explanation": "Direct proportion needs a straight line through the origin, so that no force gives no extension."
+      },
+      {
+        "prompt": "What name is given to a spring returning to its original length when the force is removed?",
+        "answer": "elastic",
+        "accepted": [
+          "elastic behaviour",
+          "elastic behavior",
+          "it is elastic",
+          "Elastic"
+        ],
+        "explanation": "A spring is elastic when it returns to its original length after forces are removed."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 4,
+        "doThis": [
+          "Start with quick revision: the word for the force on an object due to a gravitational field is weight, and extension is how much longer a spring gets.",
+          "Read the goal together, then look at the four key words: line of best fit, directly proportional, elastic, Hooke's law.",
+          "Ask what each key word means before showing the meaning."
+        ],
+        "say": "I can describe and explain the relationship between the extension of a spring and the force stretching it.",
+        "keywords": [
+          {
+            "term": "line of best fit",
+            "meaning": "A line of best fit passes between a set of data points on a graph to show the pattern."
+          },
+          {
+            "term": "directly proportional",
+            "meaning": "Variables are directly proportional when one is a constant multiple of the other."
+          },
+          {
+            "term": "elastic",
+            "meaning": "A spring is elastic when it returns to its original length after forces are removed from it."
+          },
+          {
+            "term": "Hooke's law",
+            "meaning": "Hooke's law describes the behaviour of a spring when it is stretched."
+          }
+        ],
+        "checkFor": {
+          "ask": "What is the extension of a spring?",
+          "lookFor": "The increase in length when a force pulls on it."
+        },
+        "recap": [
+          "Our goal: I can describe and explain the relationship between the extension of a spring and the force stretching it.",
+          "The increase in length of a spring is called the extension."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The experiment and the mean",
+        "minutes": 6,
+        "doThis": [
+          "Explain the experiment: weights hung from a spring pull it down, so it gets longer. The increase in length is called the extension.",
+          "Explain that the weights were added and then taken off again, so that there are two sets of results to check the accuracy of the measurements.",
+          "Show how to find the mean of the two values: add them, then divide by 2."
+        ],
+        "keyIdeas": [
+          "When weights are hung from a spring, the downward force makes it get longer.",
+          "The increase in length is called the extension.",
+          "To calculate the mean of two values, add and then divide by two."
+        ],
+        "examples": [
+          "3 N: mean extension = (12.4 + 12.6) ÷ 2 = 12.5 cm.",
+          "4 N: mean extension = (16.8 + 16.4) ÷ 2 = 16.6 cm.",
+          "2 N with readings 8.3 cm and 7.7 cm: mean = (8.3 + 7.7) ÷ 2 = 8.0 cm."
+        ],
+        "checkFor": {
+          "ask": "How do you find the mean of two extension readings?",
+          "lookFor": "Add the two values, then divide by 2."
+        },
+        "recap": [
+          "The increase in length of a spring is the extension.",
+          "To find the mean of two values, add them and divide by 2."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Plotting a force-extension graph",
+        "minutes": 7,
+        "doThis": [
+          "Choose the scales first: start each scale at 0, and go slightly above the biggest value so the steps are even. Force goes on the horizontal axis and extension on the vertical axis.",
+          "Then follow the stages in order: draw the axes, add the scales and divisions, add the axis labels, plot each point one at a time using small crosses, and add the title."
+        ],
+        "keyIdeas": [
+          "Start each scale at 0, because there was no force and no extension at first.",
+          "Plot each point using small crosses, which mark the point precisely."
+        ],
+        "examples": [
+          "Forces up to 6 N and a biggest extension of 24 cm: the force scale goes from 0 to 6 N, and the extension scale goes from 0 to 25 cm in steps of 5 cm."
+        ],
+        "checkFor": {
+          "ask": "What should be used to mark each point on a graph, and where should each scale start?",
+          "lookFor": "Small crosses, and each scale starts at 0."
+        },
+        "recap": [
+          "Start each scale at 0 and go a little above the biggest value.",
+          "Plot each point carefully with a small cross, and add axis labels and a title."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Line of best fit and anomalous results",
+        "minutes": 7,
+        "doThis": [
+          "Explain that a line of best fit shows the relationship between the two variables. It does not join the points together. It is a single straight line drawn with a ruler, or a smooth curve, passing between the points with some above and some below it.",
+          "Explain that with no force the extension is exactly zero, so (0 N, 0 cm) is a point that is definitely correct and the line of best fit should pass through it.",
+          "Explain that a point too far from the line is anomalous. Circle it, and do not use it when drawing the line."
+        ],
+        "keyIdeas": [
+          "A line of best fit can show the relationship between variables clearly.",
+          "The line does not join the points together.",
+          "Anomalous points are circled and not used at all when drawing the line of best fit."
+        ],
+        "keywords": [
+          {
+            "term": "line of best fit",
+            "meaning": "A line of best fit passes between a set of data points on a graph to show the pattern."
+          }
+        ],
+        "checkFor": {
+          "ask": "Does a line of best fit have to go through every point? What do we do with an anomalous point?",
+          "lookFor": "No, it passes between the points. An anomalous point is circled and not used when drawing the line."
+        },
+        "recap": [
+          "A line of best fit passes between the points. It does not join them together.",
+          "It should pass through the origin (0 N, 0 cm).",
+          "Circle any anomalous point and do not use it to draw the line."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Elastic springs",
+        "minutes": 3,
+        "doThis": [
+          "Show that when the force is removed, the spring returns to its original length. This is elastic behaviour.",
+          "Explain that a spring can become overstretched if the force on it is too large, and then it permanently changes shape."
+        ],
+        "keyIdeas": [
+          "A spring is elastic because it returns to its original length when a force is removed.",
+          "A spring can become over stretched and permanently changes shape if the force on it is too large."
+        ],
+        "keywords": [
+          {
+            "term": "elastic",
+            "meaning": "A spring is elastic when it returns to its original length after forces are removed from it."
+          }
+        ],
+        "checkFor": {
+          "ask": "What may happen if too large a force is put on a spring and then removed?",
+          "lookFor": "The spring is overstretched and does not return to its original length."
+        },
+        "recap": [
+          "A spring is elastic: it returns to its original length when the force is removed.",
+          "Too large a force can overstretch a spring for good."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Directly proportional and Hooke's law",
+        "minutes": 7,
+        "doThis": [
+          "Show the two facts a force-extension graph gives: the line of best fit is straight, so every extra 1 N gives the same increase in extension; and it passes through the origin, so with no force there is no extension.",
+          "Explain that a straight line through the origin means the extension is directly proportional to the force. Doubling the force doubles the extension, and tripling the force triples it.",
+          "Name this relationship as Hooke's law, and explain that springs follow it up to a limit."
+        ],
+        "keyIdeas": [
+          "The extension of a spring increases the same amount for each equal sized increase in force.",
+          "The extension of a spring is directly proportional to the force applied.",
+          "Hooke's law describes the behaviour of springs.",
+          "All springs follow Hooke's law, up to a certain limit. If the force becomes too large, the law is no longer followed and the line stops being straight."
+        ],
+        "keywords": [
+          {
+            "term": "directly proportional",
+            "meaning": "Variables are directly proportional when one is a constant multiple of the other."
+          },
+          {
+            "term": "Hooke's law",
+            "meaning": "Hooke's law describes the behaviour of a spring when it is stretched."
+          }
+        ],
+        "examples": [
+          "If 1 N gives an extension of 4 cm, then 2 N gives 8 cm and 3 N gives 12 cm."
+        ],
+        "checkFor": {
+          "ask": "What two features of a line of best fit show that the extension is directly proportional to the force?",
+          "lookFor": "It is a straight line and it passes through the origin."
+        },
+        "recap": [
+          "Extension is directly proportional to force: it is a straight line through the origin.",
+          "Double the force and the extension doubles. Triple the force and it triples.",
+          "This is Hooke's law. It works up to a limit."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Use Hooke's law together",
+        "minutes": 7,
+        "doThis": [
+          "Show two straight lines through the origin, for two different springs. Ask why both springs obey Hooke's law.",
+          "Ask how far each spring stretches for each newton of force, and use that to predict the extension at 12 N."
+        ],
+        "examples": [
+          "Both lines are straight and pass through the origin, so the extension is directly proportional to the force, which is Hooke's law.",
+          "Spring a stretches 4 cm per N, so at 12 N its extension is 48 cm.",
+          "Spring b stretches 2 cm per N, so at 12 N its extension is 24 cm."
+        ],
+        "checkFor": {
+          "ask": "A spring stretches 4 cm for each newton of force. What is its extension at 12 N?",
+          "lookFor": "48 cm, because 4 × 12 = 48."
+        },
+        "recap": [
+          "A straight line through the origin means Hooke's law is obeyed.",
+          "Work out the extension for each newton, then multiply by the force."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to match the key words to their meanings, and about the extension when the force changes, the line of best fit for directly proportional variables, and an overstretched spring.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain what Hooke's law says and how a graph shows it.",
+          "Finish with the summary: all springs obey Hooke's law, up to a limit; a graph shows direct proportion when the line of best fit is straight and passes through the origin; anomalous points are circled and not used; springs are elastic."
+        ],
+        "checkFor": {
+          "ask": "What does Hooke's law say about the extension of a spring and the force on it?",
+          "lookFor": "The extension of a spring is directly proportional to the force acting on it, up to a limit."
+        },
+        "recap": [
+          "Can you do it now? I can describe and explain the relationship between the extension of a spring and the force stretching it.",
+          "Remember: extension is directly proportional to force, up to a limit."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils think that the line on a graph must go through all of the points.",
+        "fix": "Start with a graph that already shows a line of best fit, and ask the student to invent extra points to add to it that include small mistakes in the measurements. They will see that the line passes between the points and does not have to go through them all."
+      },
+      {
+        "mistake": "Pupils use an anomalous point to decide where to draw the line of best fit.",
+        "fix": "Circle the anomalous point so a reader can see it was left out, and do not use it when placing the line."
+      }
+    ],
+    "watchOut": [
+      "Take the readings when the weights are added and again when they are taken off, and use the mean, to help check the accuracy of the measurements.",
+      "Use a ruler, ideally a transparent one, so the points can be seen through it. Aim for some points above the line and some below.",
+      "Make sure the line of best fit passes through the origin, because with no force there is no extension."
+    ]
+  }
+}

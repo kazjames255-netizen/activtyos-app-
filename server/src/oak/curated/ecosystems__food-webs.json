@@ -1,0 +1,573 @@
+{
+  "agent": "science-ks3b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain what is shown by a food web diagram and explain the effects that a change in the size of a population could have on other populations in the same community."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Habitat and community"
+            },
+            {
+              "title": "Food web diagrams"
+            },
+            {
+              "title": "Population changes impact a food web"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "food-web"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "habitat",
+              "def": "A habitat is the place where an organism lives. It must provide food, shelter and a place to reproduce."
+            },
+            {
+              "term": "population",
+              "def": "A group of organisms of the same type in the same place is called a population."
+            },
+            {
+              "term": "community",
+              "def": "A community is made up of all the organisms that live in the same place."
+            },
+            {
+              "term": "food chain",
+              "def": "A food chain diagram shows how food is transferred from one population of organisms to another."
+            },
+            {
+              "term": "food web",
+              "def": "A food web diagram shows how all food chains interact with each other."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Habitats",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The place where an organism lives is called its habitat. A habitat has to provide three things:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Food"
+            },
+            {
+              "title": "Shelter"
+            },
+            {
+              "title": "A place to reproduce"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The largest habitat is the ocean. Habitats can be much smaller too, for example under logs or leaves in a woodland. Very small habitats are called **microhabitats**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Communities",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All of the different organisms that live in the same place form a **community**. A community is a group of populations."
+        },
+        {
+          "t": "text",
+          "text": "A coral reef habitat has a community of different populations of fish and different types of coral."
+        },
+        {
+          "t": "list",
+          "items": [
+            "In an Arctic habitat, organisms have to be adapted to keep warm.",
+            "In an ocean habitat, organisms have to be adapted to live in salty water."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Interactions in a community",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are lots of interactions in a community."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Helping each other survive",
+              "sub": "a bee pollinating a crocus"
+            },
+            {
+              "title": "Helping with jobs like cleaning",
+              "sub": "an oxpecker cleaning parasites from a buffalo"
+            },
+            {
+              "title": "Feeding relationships",
+              "sub": "a heron catching and eating a fish"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Habitat, population, community",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which of these is a population?",
+              "options": [
+                "All the daisies in a field",
+                "All the different organisms in a pond"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these is a community?",
+              "options": [
+                "One tree in a forest",
+                "All the different organisms that live in a pond"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A habitat has to provide food, shelter and…",
+              "options": [
+                "a place to reproduce",
+                "salty water"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why a food chain is too simple",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Communities are made up of lots of food chains, and most consumers eat more than one type of food. A food chain shows just one feeding relationship."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "oak leaf → aphid → ladybird → blue tit → wildcat"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Each organism in this chain could also be eaten by consumers that are not shown."
+        },
+        {
+          "t": "callout",
+          "text": "A {food web} diagram is a set of linked food chains. It is a better model, because feeding relationships are often complex."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Building a food web",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are four food chains from a woodland:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "oak leaves → snail → hedgehog → fox",
+            "oak leaves → earthworm → hedgehog → fox",
+            "oak leaves → vole → weasel → fox",
+            "oak leaves → vole → owl"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Link them together",
+          "text": "All four chains start with oak leaves, so they share a producer. The vole is in two chains, and the hedgehog and the fox appear in more than one chain. Joined together, they make a food web."
+        },
+        {
+          "t": "choice",
+          "q": "Why is a food web a better model than a food chain?",
+          "options": [
+            "It shows that producers and primary consumers are usually eaten by more than one organism in the habitat",
+            "It shows that there are more producers than consumers in a habitat"
+          ],
+          "answer": 0,
+          "why": "Many producers and primary consumers are eaten by more than one population, and a food web shows this. A food chain shows just one simple feeding relationship."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading a garden food web",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "This garden food web is made up of five food chains:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "cabbage → caterpillar → chaffinch → cat",
+            "cabbage → caterpillar → thrush → cat",
+            "lavender → caterpillar → chaffinch → cat",
+            "lavender → caterpillar → thrush → cat",
+            "lavender → bee → thrush → cat"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Caterpillars eat cabbage. Thrushes eat caterpillars and bees. The chaffinch and the thrush are both predators and prey."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use the garden food web",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use the five food chains on the last slide."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "How many of the food chains start with lavender?",
+              "options": [
+                "2",
+                "3",
+                "5"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which organism is eaten by the thrush but not by the chaffinch?",
+              "options": [
+                "caterpillar",
+                "bee",
+                "cabbage"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which two organisms are food for the cat?",
+              "options": [
+                "chaffinch and thrush",
+                "caterpillar and bee",
+                "cabbage and lavender"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which organism is the apex predator?",
+              "options": [
+                "thrush",
+                "cat",
+                "caterpillar"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Changes in a food chain",
+      "blocks": [
+        {
+          "t": "chips",
+          "items": [
+            "lettuce → snail → thrush → hawk"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A change to one population can have a large effect on the others. If the number of **thrushes decreases**:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the snail population increases, because there are fewer thrushes to eat them",
+            "the lettuce population decreases, because more snails eat them",
+            "the hawk population decreases, because there are fewer thrushes to eat"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Changes in a food web",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Food webs show more complex feeding relationships. In a woodland food web, imagine the population of **thrushes decreases**:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Foxes will eat more mice and rabbits.",
+            "Buzzards will eat more mice, rabbits and snails.",
+            "Fewer worms will be eaten, so the worm population will increase.",
+            "The rabbit and mouse populations will decrease, so the grass and wild flowers will not be eaten so much and their populations will increase."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Removing just one organism from a food web can have many effects, because the organism can be in several food chains."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Removing an apex predator",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Take one food chain from the garden: lavender → bee → thrush → cat. What if the cats are taken away?"
+        },
+        {
+          "t": "reveal",
+          "label": "Thrushes",
+          "text": "The thrush population will increase, because the thrushes are not being eaten by the cat."
+        },
+        {
+          "t": "reveal",
+          "label": "Bees",
+          "text": "The thrushes, now more in number, will eat more bees, so the bee population will decrease."
+        },
+        {
+          "t": "reveal",
+          "label": "Lavender",
+          "text": "Bees are important for lavender to pollinate. Without the bees, the lavender will find it harder to reproduce, so the number of lavender plants may decrease."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Introducing new organisms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Introducing organisms can be dangerous too."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ground nesting birds were common in New Zealand, because there were very few predators that ate their eggs.",
+            "Rats were introduced to New Zealand in the late 1700s. They ate the eggs as food, and their population increased quickly.",
+            "As more rats ate more eggs, the bird populations declined. Many ground nesting birds are now endangered because of the rats."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Predict the changes",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "In lavender → bee → thrush → cat, the number of thrushes falls. What happens to the bee population?",
+              "options": [
+                "It increases, because fewer bees are eaten",
+                "It decreases, because bees eat thrushes"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A change in the size of one population only affects organisms in the same food chain. True or false?",
+              "options": [
+                "True",
+                "False: it can affect other populations in the food web too"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why can removing one organism from a food web have many effects?",
+              "options": [
+                "It can be in several food chains",
+                "It is always the largest organism"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A community is made up of all the different organisms that live in a habitat.",
+            "Interactions take place between different organisms in a community, including feeding relationships.",
+            "Food web diagrams are models that give a more realistic picture of feeding relationships in a habitat.",
+            "Changes in the populations of organisms affect all the organisms in a food chain. They also affect other populations in the food web, because a food web is made up of connecting food chains."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a habitat?",
+      "back": "The place where an organism lives. It must provide food, shelter and a place to reproduce."
+    },
+    {
+      "front": "What three things must a habitat provide?",
+      "back": "Food, shelter and a place to reproduce."
+    },
+    {
+      "front": "What is the largest habitat?",
+      "back": "The ocean."
+    },
+    {
+      "front": "What is a microhabitat?",
+      "back": "A very small habitat, for example under logs or leaves in a woodland."
+    },
+    {
+      "front": "What is a community?",
+      "back": "All the organisms that live in the same place. It is a group of populations."
+    },
+    {
+      "front": "What is the difference between a population and a community?",
+      "back": "A population is organisms of one type in one place. A community is all the different populations that live in the same place."
+    },
+    {
+      "front": "Give an example of organisms helping each other in a community.",
+      "back": "A bee pollinating a crocus.\n\nOr an oxpecker cleaning parasites from a buffalo."
+    },
+    {
+      "front": "What is a food web?",
+      "back": "A set of linked food chains. It shows how all food chains interact with each other."
+    },
+    {
+      "front": "Why is a food chain too simple a model?",
+      "back": "It shows just one feeding relationship, but most consumers eat more than one type of food."
+    },
+    {
+      "front": "Why is a food web a better model than a food chain?",
+      "back": "It gives a more realistic picture of feeding relationships, showing that organisms can feed on more than one other organism."
+    },
+    {
+      "front": "Why can removing one organism from a food web have many effects?",
+      "back": "The organism can be in several food chains, so other populations can be affected."
+    },
+    {
+      "front": "If cats are removed from lavender → bee → thrush → cat, what happens to the thrush population?",
+      "back": "It increases, because the thrushes are no longer eaten by the cat."
+    },
+    {
+      "front": "What happened to ground nesting birds in New Zealand after rats were introduced?",
+      "back": "The rats ate their eggs, so the bird populations declined and many are now endangered."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Food webs",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Habitats provide organisms with food, shelter and a place to do what? (Answer in one word.)",
+        "answer": "reproduce",
+        "explanation": "A habitat must provide food, shelter and a place to reproduce."
+      },
+      {
+        "prompt": "What is the name for all the organisms that live in the same place?",
+        "answer": "community",
+        "explanation": "A community is made up of all the organisms that live in the same place."
+      },
+      {
+        "prompt": "What is the name for very small habitats, such as under a log?",
+        "answer": "microhabitats",
+        "accepted": [
+          "microhabitat"
+        ],
+        "explanation": "Very small habitats are called microhabitats."
+      },
+      {
+        "prompt": "What is the largest habitat?",
+        "answer": "ocean",
+        "accepted": [
+          "the ocean"
+        ],
+        "explanation": "The largest habitat is the ocean."
+      },
+      {
+        "prompt": "A food web is a set of linked what? (Answer in two words.)",
+        "answer": "food chains",
+        "explanation": "A food web diagram is a set of linked food chains."
+      },
+      {
+        "prompt": "In the food chain cabbage → caterpillar → chaffinch → cat, which organism is the apex predator?",
+        "answer": "cat",
+        "explanation": "The cat is at the end of the chain and is not prey for any other organism in it."
+      },
+      {
+        "prompt": "In lavender → bee → thrush → cat, the cats are removed. Does the thrush population increase or decrease? (Answer increase or decrease.)",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "The thrushes are no longer being eaten by the cat."
+      },
+      {
+        "prompt": "In lavender → bee → thrush → cat, the cats are removed and the thrush population grows. Does the bee population increase or decrease? (Answer increase or decrease.)",
+        "answer": "decrease",
+        "accepted": [
+          "decreases"
+        ],
+        "explanation": "The thrushes, now more in number, eat more bees."
+      },
+      {
+        "prompt": "In a woodland food web, the population of thrushes decreases, so fewer worms are eaten. Does the worm population increase or decrease? (Answer increase or decrease.)",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "Fewer worms are eaten, so their population increases."
+      }
+    ]
+  }
+}

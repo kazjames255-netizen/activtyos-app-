@@ -1,0 +1,553 @@
+{
+  "agent": "chem-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe reversible chemical reactions, represent them using chemical equations, and give examples."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Reaction {arrows} and reversibility",
+              "sub": "→ and ⇌"
+            },
+            {
+              "title": "{Investigating} reversible reactions",
+              "sub": "copper sulfate and ammonium chloride"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "reversible reaction",
+              "def": "A chemical reaction where the reactants form products that, in turn, react together to reform the reactants."
+            },
+            {
+              "term": "single-headed arrow (→)",
+              "def": "Used to show the direction of an (irreversible) chemical reaction, showing that reactants form products."
+            },
+            {
+              "term": "double-headed arrow (⇌)",
+              "def": "Used to show that a chemical reaction is reversible."
+            },
+            {
+              "term": "hydrated (salt)",
+              "def": "A salt that contains water molecules within its crystal structure, shown by a dot in its formula, e.g. hydrated copper(II) sulfate (CuSO₄·5H₂O)."
+            },
+            {
+              "term": "anhydrous (salt)",
+              "def": "A salt that does not contain any water molecules in the crystal structure, e.g. anhydrous copper(II) sulfate (CuSO₄)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Irreversible reactions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An {irreversible reaction} is one where reactants form products, and the reaction goes to completion."
+        },
+        {
+          "t": "callout",
+          "text": "carbon + oxygen → carbon dioxide, or C(s) + O₂(g) → CO₂(g)"
+        },
+        {
+          "t": "text",
+          "text": "A single-headed arrow (→) shows how the reactants turn into products. These reactions do not readily reverse. You can turn carbon dioxide back into carbon and oxygen, but it is difficult to do."
+        },
+        {
+          "t": "text",
+          "text": "Combustion reactions of fuels are generally considered to be irreversible."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reversible physical changes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Physical changes are easily reversible by changing the conditions. Heat ice and it becomes liquid water. Heat it more and it becomes steam. Cool the steam and it condenses, then freezes again."
+        },
+        {
+          "t": "callout",
+          "text": "H₂O(s) ⇌ H₂O(l) ⇌ H₂O(g)"
+        },
+        {
+          "t": "text",
+          "text": "The two-way process is simplified using double-headed arrows."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Ice, liquid water and steam is a reversible physical change, not a chemical reaction."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reversible reactions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a {reversible reaction}, both the forward and backward reactions can occur under the right conditions, such as the right temperature or pressure. We show this with the double-headed arrow ⇌."
+        },
+        {
+          "t": "callout",
+          "text": "N₂(g) + 3H₂(g) ⇌ 2NH₃(g)"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Forward} reaction",
+              "sub": "reactants form products: nitrogen and hydrogen make ammonia"
+            },
+            {
+              "title": "{Backward} reaction",
+              "sub": "products form reactants: ammonia breaks down into nitrogen and hydrogen"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The forward reaction does not have to finish before the backward reaction starts. If the conditions allow it, both can happen at the same time."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: arrows and directions",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "In N₂(g) + 3H₂(g) ⇌ 2NH₃(g), what is the backward reaction?",
+              "options": [
+                "nitrogen and hydrogen making ammonia",
+                "ammonia breaking down into nitrogen and hydrogen",
+                "nothing happens"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which is a reversible physical change?",
+              "options": [
+                "ice melting to liquid water and freezing again",
+                "burning a fuel",
+                "carbon reacting with oxygen"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Combustion of a fuel is generally …",
+              "options": [
+                "reversible",
+                "irreversible"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which arrow would you use for a reaction that goes to completion?",
+              "options": [
+                "→",
+                "⇌"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why are some reactions reversible?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Many reactions are irreversible, but some are reversible because:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the reactants and products have comparable stability (they may both be stable)",
+            "the conditions can be easily met, such as a particular temperature or pressure"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Take the ammonia reaction, N₂(g) + 3H₂(g) ⇌ 2NH₃(g). At room temperature, both the forward and backward reactions happen at a very slow rate. At higher temperatures and pressures, the rates of both reactions increase significantly."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Energy changes in both directions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a reversible reaction, the forward and reverse reactions have different energy changes. One direction is always exothermic and the other is endothermic. The same amount of energy is transferred in each case."
+        },
+        {
+          "t": "text",
+          "text": "For nitrogen + hydrogen ⇌ ammonia, the forward reaction is exothermic and the reverse reaction is endothermic."
+        },
+        {
+          "t": "callout",
+          "text": "Changing conditions such as temperature can influence the direction. By heating (supplying lots of energy) the endothermic reaction can be favoured. By cooling, the exothermic reaction can be favoured."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The forward reaction is not always exothermic, and not always endothermic. It depends on the specific reaction."
+        },
+        {
+          "t": "choice",
+          "q": "The forward reaction of a reversible reaction takes in 40 kJ of energy. How much energy is transferred in the reverse reaction?",
+          "options": [
+            "40 kJ, given out to the surroundings",
+            "80 kJ, given out to the surroundings",
+            "No energy is transferred"
+          ],
+          "answer": 0,
+          "why": "The same amount of energy is transferred in each direction. If the forward reaction takes it in (endothermic), the reverse reaction gives it out (exothermic)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Example 1: copper(II) sulfate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Blue copper(II) sulfate crystals are only one of two forms. The reaction is reversible (hydration and dehydration)."
+        },
+        {
+          "t": "callout",
+          "text": "hydrated copper sulfate (blue) ⇌ anhydrous copper sulfate (white) + water"
+        },
+        {
+          "t": "callout",
+          "text": "CuSO₄·5H₂O(s) ⇌ CuSO₄(s) + 5H₂O(g)"
+        },
+        {
+          "t": "text",
+          "text": "In the formula, the dot and 5H₂O show the water is combined with the copper sulfate in the hydrated form. In the anhydrous form the water is separate. The forward reaction is endothermic and the reverse reaction is exothermic."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Example 2: ammonium chloride",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Ammonium chloride decomposes on heating to form ammonia and hydrogen chloride. The reaction is reversible (decomposition and addition)."
+        },
+        {
+          "t": "callout",
+          "text": "ammonium chloride ⇌ ammonia + hydrogen chloride"
+        },
+        {
+          "t": "callout",
+          "text": "NH₄Cl(s) ⇌ NH₃(g) + HCl(g)"
+        },
+        {
+          "t": "text",
+          "text": "The forward reaction is endothermic and the reverse reaction is exothermic."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Investigation 1: heating copper sulfate",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Place 5 g of powdered hydrated copper sulfate in a test tube.",
+            "Heat it until the colour no longer changes.",
+            "Allow the anhydrous copper sulfate to cool back to room temperature.",
+            "Pour the collected water very slowly on to the cooled powder."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What you might see",
+          "text": "The blue powder turns white and steam is seen. When cooled it stays a white powder. When water is added the white powder turns blue and heat is released (an exothermic reaction)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Investigation 2: heating ammonium chloride",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Place 5 g of ammonium chloride in a test tube.",
+            "Plug the end of the test tube with mineral wool.",
+            "Gently heat the test tube and record what you see."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Caution: ammonia and hydrogen chloride are harmful gases! This may be a demonstration rather than a class practical."
+        },
+        {
+          "t": "reveal",
+          "label": "What you might see",
+          "text": "The white solid slowly disappears as it decomposes, producing colourless gases (NH₃ and HCl). White deposits form in the cooler regions of the apparatus as ammonium chloride reforms."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: which arrow?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which arrow would be used to write each change?",
+          "columns": [
+            "Single arrow →",
+            "Double arrow ⇌"
+          ],
+          "items": [
+            {
+              "text": "carbon + oxygen → carbon dioxide",
+              "col": 0
+            },
+            {
+              "text": "burning (combusting) a fuel",
+              "col": 0
+            },
+            {
+              "text": "ice melting to liquid water and freezing again",
+              "col": 1
+            },
+            {
+              "text": "nitrogen and hydrogen forming ammonia, and ammonia breaking down again",
+              "col": 1
+            },
+            {
+              "text": "hydrated copper sulfate becoming anhydrous copper sulfate and water, and back again",
+              "col": 1
+            },
+            {
+              "text": "ammonium chloride splitting into ammonia and hydrogen chloride, which then reform it",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the investigations",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Hydrated copper sulfate is heated until the colour stops changing. What colour is the solid at the end?",
+              "options": [
+                "blue",
+                "white",
+                "black"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Water is added to cooled white anhydrous copper sulfate. What happens?",
+              "options": [
+                "It turns blue and heat is released",
+                "It stays white and cools down",
+                "It turns blue and cools down"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "When ammonium chloride is heated, what forms?",
+              "options": [
+                "ammonia and hydrogen chloride",
+                "ammonia and oxygen",
+                "carbon dioxide and water"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many water molecules are there for each CuSO₄ in the hydrated formula CuSO₄·5H₂O?",
+              "options": [
+                "1",
+                "5",
+                "10"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Different types of arrows (→, ⇌) are used in chemical equations to indicate the nature of the reaction.",
+            "Reversible reactions are symbolised using the double-headed arrow (⇌) in chemical equations.",
+            "In a reversible reaction, both the forward and reverse reactions can occur under the right conditions.",
+            "hydrated copper sulfate (blue) ⇌ anhydrous copper sulfate (white) + water",
+            "ammonium chloride ⇌ ammonia + hydrogen chloride"
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a reversible reaction?",
+      "back": "A reaction where the reactants form products that, in turn, react together to reform the reactants."
+    },
+    {
+      "front": "Which arrow shows a reversible reaction?",
+      "back": "The double-headed arrow ⇌."
+    },
+    {
+      "front": "What does the single-headed arrow → show?",
+      "back": "An irreversible reaction: reactants form products and the reaction goes to completion."
+    },
+    {
+      "front": "Combustion of fuels: reversible or irreversible?",
+      "back": "Generally irreversible."
+    },
+    {
+      "front": "Why is ice melting and freezing not a reversible chemical reaction?",
+      "back": "It is a reversible physical change, not a chemical reaction."
+    },
+    {
+      "front": "What are the forward and backward reactions?",
+      "back": "Forward: reactants form products. Backward: products form reactants.\n\nN₂(g) + 3H₂(g) ⇌ 2NH₃(g)"
+    },
+    {
+      "front": "Why are some reactions reversible?",
+      "back": "The reactants and products have comparable stability, and the conditions can be easily met."
+    },
+    {
+      "front": "Energy changes in the two directions of a reversible reaction?",
+      "back": "One direction is exothermic and the other is endothermic. The same amount of energy is transferred in each."
+    },
+    {
+      "front": "How can heating or cooling change the direction of a reversible reaction?",
+      "back": "Heating favours the endothermic reaction. Cooling favours the exothermic reaction."
+    },
+    {
+      "front": "What is a hydrated salt?",
+      "back": "A salt with water molecules in its crystal structure, shown by a dot in the formula, e.g. CuSO₄·5H₂O."
+    },
+    {
+      "front": "What is an anhydrous salt?",
+      "back": "A salt with no water molecules in its crystal structure, e.g. CuSO₄."
+    },
+    {
+      "front": "Reversible reaction of copper(II) sulfate?",
+      "back": "hydrated copper sulfate (blue) ⇌ anhydrous copper sulfate (white) + water\n\nAdding water to the white solid turns it blue and releases heat."
+    },
+    {
+      "front": "Reversible reaction of ammonium chloride?",
+      "back": "NH₄Cl(s) ⇌ NH₃(g) + HCl(g)\n\nEndothermic forward, exothermic reverse."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Introduction to reversible chemical reactions",
+    "instructions": "Answer each question with a word, a colour or a number.",
+    "questions": [
+      {
+        "prompt": "Which type of arrow shows that a reaction is reversible: single-headed or double-headed?",
+        "answer": "double-headed",
+        "accepted": [
+          "double headed",
+          "double-headed arrow",
+          "double"
+        ],
+        "explanation": "A double-headed arrow (⇌) shows a reversible reaction."
+      },
+      {
+        "prompt": "Combustion reactions of fuels are generally reversible or irreversible?",
+        "answer": "irreversible",
+        "explanation": "Combustion reactions are generally considered irreversible, so they use a one-way arrow."
+      },
+      {
+        "prompt": "Water changing from ice to liquid to steam is a reversible change of which type: physical or chemical?",
+        "answer": "physical",
+        "accepted": [
+          "physical change"
+        ],
+        "explanation": "It is a reversible physical change, not a chemical reaction."
+      },
+      {
+        "prompt": "In N₂ + 3H₂ ⇌ 2NH₃, ammonia breaking down into nitrogen and hydrogen is which reaction: forward or backward?",
+        "answer": "backward",
+        "accepted": [
+          "backward reaction",
+          "reverse",
+          "reverse reaction"
+        ],
+        "explanation": "The backward reaction is the one where products form reactants."
+      },
+      {
+        "prompt": "How many water molecules are in the formula CuSO₄·5H₂O for each CuSO₄? Give a number.",
+        "answer": "5",
+        "accepted": [
+          "five"
+        ],
+        "explanation": "The 5H₂O part of the formula shows five water molecules."
+      },
+      {
+        "prompt": "Hydrated copper sulfate is heated until the colour stops changing. What colour does the solid turn?",
+        "answer": "white",
+        "explanation": "Hydrated copper sulfate is blue and anhydrous copper sulfate is white."
+      },
+      {
+        "prompt": "Water is added to white anhydrous copper sulfate and heat is released. Is this reaction endothermic or exothermic?",
+        "answer": "exothermic",
+        "explanation": "Heat is released to the surroundings, so it is exothermic."
+      },
+      {
+        "prompt": "When ammonium chloride is heated it forms hydrogen chloride and which other gas?",
+        "answer": "ammonia",
+        "explanation": "Ammonium chloride decomposes into ammonia and hydrogen chloride."
+      },
+      {
+        "prompt": "A reversible reaction is heated strongly. Is the endothermic or the exothermic direction favoured?",
+        "answer": "endothermic",
+        "explanation": "Supplying lots of energy by heating favours the endothermic reaction."
+      }
+    ]
+  }
+}

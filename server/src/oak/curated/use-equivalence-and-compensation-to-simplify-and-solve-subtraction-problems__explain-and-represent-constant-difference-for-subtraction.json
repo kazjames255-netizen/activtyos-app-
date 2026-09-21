@@ -1,0 +1,562 @@
+{
+  "agent": "maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain and represent constant difference for subtraction."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will meet two friends, Sam and Jacob. They will help you spot patterns and explain them."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Constant difference}"
+            },
+            {
+              "title": "Number lines and rods"
+            },
+            {
+              "title": "Constant difference in context"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "minuend",
+              "def": "The minuend is the number being subtracted from."
+            },
+            {
+              "term": "subtrahend",
+              "def": "A subtrahend is a number subtracted from another."
+            },
+            {
+              "term": "difference",
+              "def": "The difference is the result after subtracting one number from another."
+            },
+            {
+              "term": "constant",
+              "def": "A constant is a quantity that has a fixed value that does not change or vary, such as a number."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The parts of a subtraction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a subtraction: **7 − 3 = 4**. Each number has a name."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "7 is the {minuend}",
+              "sub": "the number being subtracted from"
+            },
+            {
+              "title": "3 is the {subtrahend}",
+              "sub": "the number subtracted"
+            },
+            {
+              "title": "4 is the {difference}",
+              "sub": "the result"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same size, different place",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Picture some number lines with a rod on each one. The rod is the same size every time. Only its position on the line changes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "2 − 0 = 2",
+            "4 − 2 = 2",
+            "6 − 4 = 2"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The blocks are the same in each number line: there are 2. Their position moves along 2 each time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "30 − 0 = 30",
+            "60 − 30 = 30",
+            "90 − 60 = 30"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Here the rod is worth 30. The rod does not change. It is a {constant}. Its starting position moves right by 30 each time."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same length, moved along",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now picture three rulers marked in millimetres. An arrow is drawn on each ruler and it is 25 mm long every time. It has been moved on by 10 mm each time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "25 mm − 0 mm = 25 mm",
+            "35 mm − 10 mm = 25 mm",
+            "45 mm − 20 mm = 25 mm"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What stays the same?",
+          "text": "The length of the arrow does not change. It is **25 mm** each time, so it is constant."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Both numbers go up",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob turns the pictures into equations. Watch what happens when the minuend and the subtrahend both go up by 5."
+        },
+        {
+          "t": "list",
+          "items": [
+            "40 − 15 = 25",
+            "45 − 20 = 25",
+            "50 − 25 = 25"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "The minuend and the subtrahend are increasing by 5 each time. The difference stays at 25."
+        },
+        {
+          "t": "callout",
+          "text": "If the minuend and subtrahend are both {increased} by the same amount, the difference stays the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Both numbers go down",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam turns the pictures into equations too. This time the rod is moving back towards zero."
+        },
+        {
+          "t": "list",
+          "items": [
+            "10 − 7 = 3",
+            "7 − 4 = 3",
+            "4 − 1 = 3"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "70 mm − 45 mm = 25 mm",
+            "60 mm − 35 mm = 25 mm",
+            "50 mm − 25 mm = 25 mm"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If the minuend and subtrahend are both {decreased} by the same amount, the difference stays the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One rule for both",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam puts the two rules together."
+        },
+        {
+          "t": "callout",
+          "text": "If the minuend and subtrahend are changed by the same amount, the difference stays the same."
+        },
+        {
+          "t": "text",
+          "text": "Another way to say “the difference stays the same” is “the difference stays {constant}”."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Increasing or decreasing the minuend and subtrahend by the **same** amount does not change the difference."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Why is it true?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "60 − 25 and 70 − 35 have the same difference. What is the best reason?",
+          "options": [
+            "The minuend and subtrahend are commutative so they can be changed.",
+            "The minuend and subtrahend were both increased by 10.",
+            "Both calculations have a minuend that is a multiple of 10."
+          ],
+          "answer": 1,
+          "why": "60 to 70 is 10 more and 25 to 35 is 10 more. Both changed by the same amount, so the difference stays the same (35 in each)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Same difference?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the answer.",
+          "items": [
+            {
+              "q": "45 − 20 = 25. Which expression has the same difference?",
+              "options": [
+                "55 − 30",
+                "55 − 20",
+                "50 − 30"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "84 − 50 = 94 − ?  What is the missing number?",
+              "options": [
+                "50",
+                "60",
+                "70"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which is the next equation in this sequence? 9 − 4 = 5, 11 − 6 = 5, 13 − 8 = 5, …",
+              "options": [
+                "14 − 10 = 5",
+                "15 − 10 = 5",
+                "15 − 8 = 7"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the expressions",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "50 − 30 = 20. Sort each expression by its difference.",
+          "columns": [
+            "Difference is 20",
+            "Difference is not 20"
+          ],
+          "items": [
+            {
+              "text": "60 − 40",
+              "col": 0
+            },
+            {
+              "text": "45 − 25",
+              "col": 0
+            },
+            {
+              "text": "52 − 32",
+              "col": 0
+            },
+            {
+              "text": "55 − 30",
+              "col": 1
+            },
+            {
+              "text": "70 − 40",
+              "col": 1
+            },
+            {
+              "text": "48 − 30",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "In context: football skills",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob and Sam are playing a football skills game. Jacob scores 83 points and Sam scores 92 points. They have a second go and both score another 56 points. How many more points does Sam have now?"
+        },
+        {
+          "t": "text",
+          "text": "Jacob writes: 92 points − 83 points = **9 points**. He says, “I don’t need to recalculate the new scores.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Why not?",
+          "text": "Both scores went up by 56, so the minuend and subtrahend were changed by the same amount. The difference stays constant. Sam still has **9 points** more."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "In context: battle robots",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam has 45 more flying robots than aqua robots. Sam gives away 17 flying robots and 17 aqua robots. How many more flying robots than aqua robots does Sam have now?"
+        },
+        {
+          "t": "text",
+          "text": "Sam writes: flying robots − aqua robots = 45. Jacob says, “But you don’t know the minuend and subtrahend!”"
+        },
+        {
+          "t": "reveal",
+          "label": "Why doesn’t Sam need to know them?",
+          "text": "Sam gave away the same number of each, so the minuend and subtrahend both decreased by the same amount. The difference is still **45**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding missing numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How can we use constant difference to fill in a sequence? Sam says, “Calculate the difference for the first equation.”"
+        },
+        {
+          "t": "list",
+          "items": [
+            "8 − 4 = 4",
+            "10 − 6 = 4",
+            "12 − 8 = 4",
+            "14 − 10 = 4"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "From one equation to the next, the minuend and subtrahend both increase by 2. The difference stays at 4."
+        },
+        {
+          "t": "text",
+          "text": "So in **12 − ? = 4** the missing number is **8**, because 10 − 6 became 12 − 8 when both went up by 2."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use constant difference",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use constant difference. You do not need to recalculate the whole thing.",
+          "items": [
+            {
+              "q": "Ben has 15 more marbles than Ana. They both lose 6 marbles. How many more marbles does Ben have now?",
+              "options": [
+                "9",
+                "15",
+                "21"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Zara scores 40 points and Ravi scores 55 points. They both score 30 more. How many more points does Ravi have?",
+              "options": [
+                "15",
+                "30",
+                "45"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "35 − 15 = 60 − ?  What is the missing number?",
+              "options": [
+                "35",
+                "40",
+                "45"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "? − 12 = 45 − 20  What is the missing number?",
+              "options": [
+                "33",
+                "37",
+                "57"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If the minuend and subtrahend are changed by the same amount, the difference stays the same or remains constant.",
+            "We can show this with number rods, rulers and number lines.",
+            "It helps us solve equations and find missing numbers efficiently."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Same change to both numbers = the difference stays {constant}."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the minuend?",
+      "back": "The number being subtracted from.\n\n7 − 3 = 4: the minuend is 7."
+    },
+    {
+      "front": "What is the subtrahend?",
+      "back": "A number subtracted from another.\n\n7 − 3 = 4: the subtrahend is 3."
+    },
+    {
+      "front": "What is the difference?",
+      "back": "The result after subtracting one number from another.\n\n7 − 3 = 4: the difference is 4."
+    },
+    {
+      "front": "What does “constant” mean?",
+      "back": "A quantity that has a fixed value that does not change or vary."
+    },
+    {
+      "front": "The minuend and subtrahend are both increased by the same amount. What happens to the difference?",
+      "back": "It stays the same.\n\n40 − 15 = 25, 45 − 20 = 25, 50 − 25 = 25"
+    },
+    {
+      "front": "The minuend and subtrahend are both decreased by the same amount. What happens to the difference?",
+      "back": "It stays the same.\n\n10 − 7 = 3, 7 − 4 = 3, 4 − 1 = 3"
+    },
+    {
+      "front": "Complete the rule: if the minuend and subtrahend are changed by the same amount, the difference …",
+      "back": "stays the same (remains constant)."
+    },
+    {
+      "front": "What can we use to show the “same difference” idea?",
+      "back": "A number line (with number rods, or a ruler)."
+    },
+    {
+      "front": "60 − 30 = 30 and 90 − 60 = 30. On the number lines, what stays the same and what moves?",
+      "back": "The rod (30) stays the same. Its position moves along."
+    },
+    {
+      "front": "92 − 83 = 9. Both scores go up by 56. What is the difference now?",
+      "back": "9. Both numbers changed by the same amount, so the difference is constant."
+    },
+    {
+      "front": "Sam has 45 more flying robots than aqua robots. Sam gives away 17 of each. How many more flying robots than aqua robots now?",
+      "back": "45. Both numbers went down by 17, so the difference is constant."
+    },
+    {
+      "front": "8 − 4 = 4, 10 − 6 = 4, 12 − ? = 4. What is the missing number?",
+      "back": "8. The minuend and subtrahend both go up by 2 each time."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain and represent constant difference for subtraction",
+    "instructions": "Use what you know about constant difference. If the minuend and subtrahend are changed by the same amount, the difference stays the same. Write each answer as a number.",
+    "questions": [
+      {
+        "prompt": "Jacob has 27 more slipper shells than turret shells. He uses 8 slipper shells and 8 turret shells to make a necklace and gives it away. How many more slipper shells than turret shells does he have now?",
+        "answer": "27",
+        "explanation": "Both numbers decreased by 8, so the difference stays constant at 27."
+      },
+      {
+        "prompt": "Jacob scores 32 points and Sam scores 25 points at archery. They have a second go and both score 20 more. By how many points is Jacob ahead now?",
+        "answer": "7",
+        "explanation": "32 − 25 = 7. Both scores increased by 20, so the difference stays 7."
+      },
+      {
+        "prompt": "10 − 3 = 7 and 20 − ? = 7 have the same difference. What is the missing number?",
+        "answer": "13",
+        "explanation": "20 − 13 = 7. The minuend and subtrahend both increased by 10 (3 to 13)."
+      },
+      {
+        "prompt": "10 − 3 = 7 and ? − 23 = 7 have the same difference. What is the missing number?",
+        "answer": "30",
+        "explanation": "30 − 23 = 7. The subtrahend went from 3 to 23 (up 20), so the minuend went from 10 to 30."
+      },
+      {
+        "prompt": "10,000 − 9,750 = 250. What is the missing number in 8,500 − ? = 250?",
+        "answer": "8250",
+        "accepted": [
+          "8,250"
+        ],
+        "explanation": "8,500 − 8,250 = 250."
+      },
+      {
+        "prompt": "10,000 − 9,750 = 250. What is the missing number in ? − 6,750 = 250?",
+        "answer": "7000",
+        "accepted": [
+          "7,000"
+        ],
+        "explanation": "7,000 − 6,750 = 250."
+      },
+      {
+        "prompt": "0.84 − 0.42 = 0.42. What is the missing number in 2.34 − ? = 0.42?",
+        "answer": "1.92",
+        "explanation": "2.34 − 1.92 = 0.42."
+      },
+      {
+        "prompt": "0.84 − 0.42 = 0.42. What is the missing number in ? − 3.42 = 0.42?",
+        "answer": "3.84",
+        "explanation": "3.84 − 3.42 = 0.42."
+      },
+      {
+        "prompt": "Use 0.84 − 0.42 = 0.42 and constant difference. What is the missing number in 6.84 − ? = 0.42?",
+        "answer": "6.42",
+        "explanation": "6.84 − 6.42 = 0.42."
+      }
+    ]
+  }
+}

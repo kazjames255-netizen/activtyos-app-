@@ -1,0 +1,689 @@
+{
+  "agent": "w4-english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the correct spelling of words that sound the same based on their context."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{homophones}",
+              "sub": "words that sound the same"
+            },
+            {
+              "title": "{naughty letters}",
+              "sub": "a way to remember tricky spellings"
+            },
+            {
+              "title": "according and individual",
+              "sub": "two curriculum words"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "homophone",
+              "def": "Words that sound the same, but have different spellings and meanings."
+            },
+            {
+              "term": "word class",
+              "def": "The different types of words that are used to form sentences, like verbs, adjectives and nouns."
+            },
+            {
+              "term": "context",
+              "def": "The surrounding words or sentences that help determine the meaning of a word or phrase."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same sound, different spelling",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Homophone comes from Greek: ‘homos’ means ‘one and the same’ and ‘phon’ means ‘sound’. Listen to these two sentences."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Next {week}, we are going on a school trip to the theatre.",
+            "Despite feeling {weak}, she pushed herself to finish the race."
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "w{ee}k",
+              "sub": "seven days"
+            },
+            {
+              "title": "w{ea}k",
+              "sub": "lacking strength"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Homophones sound the same, but have different spellings and different meanings. If we use the wrong one, the sentence does not make sense."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the partner",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each word to the homophone that sounds the same.",
+          "pairs": [
+            {
+              "a": "steal",
+              "b": "steel"
+            },
+            {
+              "a": "principle",
+              "b": "principal"
+            },
+            {
+              "a": "stationary",
+              "b": "stationery"
+            },
+            {
+              "a": "morning",
+              "b": "mourning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "principle or principal?",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "principle (ends -le)",
+              "def": "A basic law or belief, an idea. Our school’s guiding principle is kindness towards others."
+            },
+            {
+              "term": "principal (ends -al)",
+              "def": "The most important. It can be an adjective (the principal ballerina) or a noun (the principal, like the head teacher, greets us at the school gates)."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do homophones have the same word class?",
+          "text": "Not always. Homophones can belong to different word classes, so they could be nouns, adjectives or verbs. Knowing their meaning helps us to understand and spell them."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "principle or principal?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the context to choose the correct spelling.",
+          "items": [
+            {
+              "q": "Kindness is our guiding ___ .",
+              "options": [
+                "principle",
+                "principal"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The ___ greets the children at the school gates.",
+              "options": [
+                "principle",
+                "principal"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "She danced as the ___ ballerina.",
+              "options": [
+                "principle",
+                "principal"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Honesty is an important ___ to follow.",
+              "options": [
+                "principle",
+                "principal"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "led or lead?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Read these two sentences. The homophone is in bold."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "I **led** the way to the campsite.",
+              "sub": "led: a verb, the past tense of lead"
+            },
+            {
+              "title": "He replaced the corroded pipes with **lead** piping.",
+              "sub": "lead: a noun, the material pipes can be made of"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "‘Lead’ can also be a homonym. You can say it differently, ‘I lead you where you need to go’, which is the present tense of the verb. Homonyms are spelt the same but can be pronounced differently."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "stationary or stationery?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The endings -ary and -ery sound the same, so they are easy to confuse."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "station{ary}",
+              "sub": "an adjective: not moving, being still. The vehicle was stationary but nobody got out."
+            },
+            {
+              "title": "station{ery}",
+              "sub": "a noun: pens, pencils and paper for writing. Buying new stationery is always very exciting."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "A trick to remember it",
+          "text": "A station**er** sells you station**er**y. Both have ‘er’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More homophone pairs",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "bridal",
+              "def": "To do with a bride, someone getting married. The bridal party were running late for the wedding."
+            },
+            {
+              "term": "bridle",
+              "def": "A piece of equipment used to direct a horse."
+            },
+            {
+              "term": "steal",
+              "def": "To take something that does not belong to you."
+            },
+            {
+              "term": "steel",
+              "def": "A metal."
+            },
+            {
+              "term": "morning",
+              "def": "As in ‘good morning’, or ‘the sun rose in the morning’."
+            },
+            {
+              "term": "mourning",
+              "def": "Grieving the loss of someone who has died."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ways to remember",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are no spelling patterns for homophones, so we come up with our own ideas to help us remember. Look at the letters that are different."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "brid{le}",
+              "sub": "The ‘e’ can stand for equine, which means to do with horses: equine equipment."
+            },
+            {
+              "title": "mo{u}rning",
+              "sub": "The extra ‘u’ makes you think of ‘upset’. People feel upset when they are mourning."
+            },
+            {
+              "title": "station{er}y",
+              "sub": "The stationer sells stationery."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "The naughty letters strategy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Spelling rules help, but we also need to practise. Practising helps you remember words more easily, notice how they are spelt and feel more confident."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Look** carefully at the word. Pay attention to any tricky parts.",
+            "**Copy** the word. Write the tricky part larger. You could even draw a ‘naughty’ face on the letter."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What do you do first in the naughty letters strategy?",
+          "options": [
+            "Copy the word with a naughty letter",
+            "Look carefully at the word"
+          ],
+          "answer": 1,
+          "why": "We should always look carefully at spellings before we practise them."
+        },
+        {
+          "t": "lcwc",
+          "q": "Look, cover, write, check. Make the tricky part big and naughty when you look!",
+          "words": [
+            "bridle",
+            "mourning",
+            "stationery",
+            "principal"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "who’s or whose? you’re or your?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look out for homophones and contractions. A contraction joins two words and uses an apostrophe in place of the missing letters."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{who’s} = who is",
+              "sub": "Who’s happy to present their ideas?"
+            },
+            {
+              "title": "{whose}",
+              "sub": "Do you know whose coat this is?"
+            },
+            {
+              "title": "{you’re} = you are",
+              "sub": "When you’re ready, you can line up at the door."
+            },
+            {
+              "title": "{your}",
+              "sub": "You left your coat on the bench."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How can I check?",
+          "text": "Say the long form in the sentence. ‘Who is happy to present?’ makes sense, so it is who’s. ‘Do you know who is coat this is?’ does not, so it is whose. ‘You left you are coat’ does not make sense, so it is your."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Choose the spelling",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Say the long form if you are not sure.",
+          "items": [
+            {
+              "q": "___ going to help me carry these?",
+              "options": [
+                "Who’s",
+                "Whose"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ turn is it to choose?",
+              "options": [
+                "Who’s",
+                "Whose"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I think ___ ready to go.",
+              "options": [
+                "you’re",
+                "your"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Is this ___ bag?",
+              "options": [
+                "you’re",
+                "your"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Now use the meaning of the whole sentence.",
+          "items": [
+            {
+              "q": "The train was ___ at the platform.",
+              "options": [
+                "stationary",
+                "stationery"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "I need new ___: pens, pencils and paper.",
+              "options": [
+                "stationary",
+                "stationery"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The knight’s sword was made of ___.",
+              "options": [
+                "steal",
+                "steel"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The horse wore a ___.",
+              "options": [
+                "bridal",
+                "bridle"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The family was in ___ for their grandad.",
+              "options": [
+                "morning",
+                "mourning"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Yesterday, I ___ my little sister to school.",
+              "options": [
+                "led",
+                "lead"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Curriculum words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now for two words to learn by heart."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "a{cc}ording",
+              "sub": "According to him, that is correct."
+            },
+            {
+              "title": "individ{ual}",
+              "sub": "Individual liberty is a key principle."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "**according** has a double c, which can be hard to remember.",
+            "**individual** ends in -al, but it is not pronounced the way it is spelt. It can sound like /uel/ in ‘fuel’. Watch out for the ending!"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spell it!",
+      "blocks": [
+        {
+          "t": "spell",
+          "q": "Listen, then type the word.",
+          "words": [
+            "according",
+            "individual"
+          ],
+          "tips": [
+            "sound it out.",
+            "think about the tricky parts.",
+            "read the word and check."
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Which of these is spelt correctly?",
+          "items": [
+            {
+              "options": [
+                "acording",
+                "according",
+                "eccording",
+                "accoreding"
+              ],
+              "answer": 1
+            },
+            {
+              "options": [
+                "indivdual",
+                "individule",
+                "individual",
+                "individul"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What did you learn?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Two or more words that sound the same but have different meanings or spellings are called **homophones**.",
+            "‘Whose’ and ‘who’s’ are homophones. So are ‘stationary’ and ‘stationery’.",
+            "There are no spelling rules for homophones, so we use the context and learn them.",
+            "We can look for **naughty letters** to help us remember tricky spellings.",
+            "Curriculum words: according and individual."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a homophone?",
+      "back": "Words that sound the same, but have different spellings and meanings.\n\nExample: week / weak."
+    },
+    {
+      "front": "What does ‘week’ mean, and what does ‘weak’ mean?",
+      "back": "week: seven days.\nweak: lacking strength."
+    },
+    {
+      "front": "What is the difference between ‘principle’ and ‘principal’?",
+      "back": "principle (-le): a basic law or belief, an idea.\nprincipal (-al): the most important. It can be an adjective or a noun."
+    },
+    {
+      "front": "Is ‘led’ or ‘lead’ the past tense verb: ‘I ___ the way to the campsite’?",
+      "back": "led. ‘Lead’ (l-e-a-d) can be the material used for piping, a noun."
+    },
+    {
+      "front": "What is the difference between ‘stationary’ and ‘stationery’?",
+      "back": "stationary (-ary): an adjective meaning not moving.\nstationery (-ery): pens, pencils and paper. A stationer sells stationery."
+    },
+    {
+      "front": "What is the difference between ‘bridal’ and ‘bridle’?",
+      "back": "bridal: to do with a bride or a wedding.\nbridle: a piece of equipment used to direct a horse. The ‘e’ can stand for equine (to do with horses)."
+    },
+    {
+      "front": "What is the difference between ‘steal’ and ‘steel’?",
+      "back": "steal: to take something that does not belong to you.\nsteel: a metal."
+    },
+    {
+      "front": "What is the difference between ‘morning’ and ‘mourning’?",
+      "back": "morning: as in ‘good morning’.\nmourning: grieving the loss of someone. The extra ‘u’ can remind you of ‘upset’."
+    },
+    {
+      "front": "Write ‘who’s’ with two words. When should you use it?",
+      "back": "who is. Use who’s when ‘who is’ makes sense: Who’s happy to present?"
+    },
+    {
+      "front": "When do you use ‘whose’?",
+      "back": "For belonging, when ‘who is’ would not make sense.\n\nDo you know whose coat this is?"
+    },
+    {
+      "front": "What does ‘you’re’ stand for, and which spelling shows something belongs to you?",
+      "back": "you’re = you are.\nyour shows that something belongs to you: You left your coat on the bench."
+    },
+    {
+      "front": "What are the two steps of the naughty letters strategy?",
+      "back": "1. Look carefully at the word.\n2. Copy it, writing the tricky part larger (you could draw a naughty face)."
+    },
+    {
+      "front": "Which double letter is tricky in ‘according’?",
+      "back": "The double c: according."
+    },
+    {
+      "front": "What is odd about the ending of ‘individual’?",
+      "back": "The -al is not pronounced the way it is spelt. It can sound like /uel/ in ‘fuel’."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Spelling further homophones",
+    "instructions": "Use the context of each sentence to choose the correct homophone. Type your answer as a single word (or as instructed).",
+    "questions": [
+      {
+        "prompt": "They wore black because they were ___ a loved one. (Choose morning or mourning.)",
+        "answer": "mourning",
+        "explanation": "Mourning (with an extra ‘u’) means grieving the loss of someone."
+      },
+      {
+        "prompt": "The bus was ___ until the traffic lights went green. (Choose stationary or stationery.)",
+        "answer": "stationary",
+        "explanation": "Stationary (-ary) is an adjective meaning not moving."
+      },
+      {
+        "prompt": "Sustainability is the company’s key ___. (Choose principle or principal.)",
+        "answer": "principle",
+        "explanation": "Principle (-le) means a basic law or belief, an idea."
+      },
+      {
+        "prompt": "She decided to ___ a cookie from the jar. (Choose steal or steel.)",
+        "answer": "steal",
+        "explanation": "Steal means to take something that does not belong to you. Steel is a metal."
+      },
+      {
+        "prompt": "I know it’s ___ when I hear the birds singing. (Choose morning or mourning.)",
+        "answer": "morning",
+        "explanation": "It is the time of day, so it is morning (o-r), not mourning."
+      },
+      {
+        "prompt": "Which homophone of ‘bridal’ means a piece of equipment used to direct a horse?",
+        "answer": "bridle",
+        "explanation": "Bridle (ending -le) is horse equipment; bridal is to do with a bride."
+      },
+      {
+        "prompt": "Which homophone of ‘stationary’ means pens, pencils and paper?",
+        "answer": "stationery",
+        "explanation": "Stationery (-ery) is what a stationer sells."
+      },
+      {
+        "prompt": "Write ‘who’s’ as two words.",
+        "answer": "who is",
+        "explanation": "Who’s is the contraction of ‘who is’."
+      },
+      {
+        "prompt": "Which spelling of principal or principle means a basic law or belief?",
+        "answer": "principle",
+        "explanation": "Principle (-le) is the idea or belief; principal (-al) means the most important."
+      },
+      {
+        "prompt": "Complete the sentence: ___ to him, that is correct. (The word starts with ‘acc’.)",
+        "answer": "according",
+        "explanation": "According has a double c."
+      },
+      {
+        "prompt": "How many letter c’s are there in ‘according’? Write the number.",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "According has a double c: a-c-c-o-r-d-i-n-g."
+      }
+    ]
+  }
+}

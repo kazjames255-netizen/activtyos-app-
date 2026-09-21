@@ -1,0 +1,612 @@
+{
+  "agent": "w4-science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the difference between physical weathering and erosion of rock and give examples of each."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Weathering",
+              "sub": "Rock breaks down where it is"
+            },
+            {
+              "title": "Physical weathering",
+              "sub": "Freeze-thaw and other forces"
+            },
+            {
+              "title": "Erosion",
+              "sub": "Fragments of rock are moved"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "weathering",
+              "def": "The wearing down or breaking of rocks while they are in place. Weathering can be biological, chemical or physical."
+            },
+            {
+              "term": "expansion",
+              "def": "An increase in volume which happens when most solids get hotter, but also when water freezes to form ice."
+            },
+            {
+              "term": "freeze-thaw",
+              "def": "A physical weathering process whereby water seeps into cracks, freezes and expands. This gradually wedges open cracks until the rock breaks."
+            },
+            {
+              "term": "erosion",
+              "def": "The breakdown and removal of rock material by flowing water, wind, or moving ice."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is weathering?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Rocks can be broken into smaller fragments. This process is called {weathering}."
+        },
+        {
+          "t": "text",
+          "text": "Weathering weakens and breaks apart a rock. It happens while the rock is **in place**."
+        },
+        {
+          "t": "reveal",
+          "label": "Does weathering move the fragments somewhere else?",
+          "text": "No. Weathering does not move fragments of rock to another location. It only breaks the rock down where it is."
+        },
+        {
+          "t": "callout",
+          "text": "Weathering is the slow breakdown of rocks on Earth's surface."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three types of weathering",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Rock can be weathered biologically, chemically or physically."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Biological",
+              "sub": "The action of plants and animals, such as tree roots growing or animals burrowing"
+            },
+            {
+              "title": "Chemical",
+              "sub": "Acid rain reacting with minerals in the rock"
+            },
+            {
+              "title": "Physical",
+              "sub": "The application of forces, such as freezing water or temperature changes"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why is rainwater naturally acidic?",
+          "text": "Rainwater is naturally slightly acidic because water in the atmosphere reacts with carbon dioxide."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Weathering does not mean only 'the weather'. Plants, animals and chemicals can weather rock too."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Weathering takes time",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Weathering happens over a long period of time."
+        },
+        {
+          "t": "text",
+          "text": "Two statues stand at the western end of York Minster. One was installed in November 2022 and is clean, with every feature clear. The other was installed hundreds of years ago. It has lost pieces and its definition, and its colour has changed."
+        },
+        {
+          "t": "callout",
+          "text": "Small forces can have a large impact over time."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which type of weathering?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each example into the type of weathering it belongs to.",
+          "columns": [
+            "Biological",
+            "Chemical",
+            "Physical"
+          ],
+          "items": [
+            {
+              "text": "Tree roots growing in a crack",
+              "col": 0
+            },
+            {
+              "text": "An animal burrowing",
+              "col": 0
+            },
+            {
+              "text": "Acid rain reacting with minerals in a statue",
+              "col": 1
+            },
+            {
+              "text": "A statue losing its features because of acid rain",
+              "col": 1
+            },
+            {
+              "text": "Water freezing in a crack",
+              "col": 2
+            },
+            {
+              "text": "Extreme temperature changes in a desert",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When water freezes, it expands",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Liquid water flows to fill the shape of where it is found. Its molecules are randomly arranged and fairly close together."
+        },
+        {
+          "t": "text",
+          "text": "When liquid water freezes, its molecules have less kinetic energy. Attractive forces form and hold the molecules in fixed positions that are **further apart** than in the liquid."
+        },
+        {
+          "t": "reveal",
+          "label": "What happens to the volume?",
+          "text": "The volume increases. Solid water (ice) takes up more space than the same amount of liquid water. This is {expansion}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Freeze-thaw weathering",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Freeze-thaw is a physical weathering process. Follow the steps:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Rain water collects in the pores or cracks of a rock.",
+            "The temperature drops below 0°C and the water freezes.",
+            "The water expands as it changes to ice. This puts pressure on the rock and weakens it.",
+            "The temperature rises above 0°C and the ice melts. The water can sink deeper into the crack.",
+            "The cycle repeats until the rock breaks."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What freeze-thaw needs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Freeze-thaw weathering happens on a very large scale. All it needs is three things:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Rocks with pores or cracks"
+            },
+            {
+              "title": "Water"
+            },
+            {
+              "title": "Temperature changes",
+              "sub": "below and above 0°C"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out! One freeze is not enough",
+          "text": "Repeated freeze-thaw cycles are needed to break a rock. More water enters the pores and cracks at each thaw, and each freeze keeps pushing the rock apart."
+        },
+        {
+          "t": "reveal",
+          "label": "What about rocks in the Antarctic?",
+          "text": "Rock in the Antarctic that is permanently frozen does not undergo freeze-thaw damage, because the temperature does not rise above 0°C for the water to melt."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: freeze-thaw",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "What happens to the volume of water when it freezes?",
+              "options": [
+                "It increases",
+                "It decreases",
+                "It stays the same"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which condition does freeze-thaw weathering need?",
+              "options": [
+                "The temperature is always below 0°C",
+                "The temperature changes below and above 0°C",
+                "The temperature is always above 0°C"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How does a rock get broken by freeze-thaw?",
+              "options": [
+                "By one very cold night",
+                "By repeated cycles of freezing and thawing",
+                "By ice moving the rock to a new place"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is erosion?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Fragments of rock can be moved naturally. The movement of rock fragments is called {erosion}."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Weathering",
+              "sub": "Breaks down rock into fragments, in place"
+            },
+            {
+              "title": "Erosion",
+              "sub": "Moves the fragments by moving processes"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Erosion can break fragments apart even further, so weathering and erosion are often mistaken for each other. Remember: weathering stays in place, erosion moves."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Six main erosion processes",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Gravity",
+              "sub": "Fragments move from higher ground to lower ground, e.g. landslides"
+            },
+            {
+              "title": "Rain",
+              "sub": "Splashing rain dislodges fragments and carries them away",
+              "emoji": "🌧️"
+            },
+            {
+              "title": "Wind",
+              "sub": "Blows freed material, such as sand and dust, to another location"
+            },
+            {
+              "title": "Rivers and streams",
+              "sub": "Flowing water carries fragments various distances from their source"
+            },
+            {
+              "title": "Glaciers",
+              "sub": "Their enormous size and weight can erode entire valleys"
+            },
+            {
+              "title": "Oceans",
+              "sub": "Waves and tides move loose material"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Erosion changes the fragments and the land",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "While fragments are moved, they hit each other. Sharp edges break off, which makes the fragments more **rounded and smoother**."
+        },
+        {
+          "t": "text",
+          "text": "Erosion changes landforms. This can happen in seconds, for example in a landslide, or over millions of years."
+        },
+        {
+          "t": "reveal",
+          "label": "Why do small changes matter?",
+          "text": "Small changes caused by weathering and erosion can have large impacts over time."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Weathering or erosion?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Decide if each example is weathering (rock breaks down in place) or erosion (fragments are moved).",
+          "columns": [
+            "Weathering",
+            "Erosion"
+          ],
+          "items": [
+            {
+              "text": "Tree roots grow into a crack and weaken the rock",
+              "col": 0
+            },
+            {
+              "text": "Water freezes and expands in a crack",
+              "col": 0
+            },
+            {
+              "text": "Acid rain reacts with minerals in a statue",
+              "col": 0
+            },
+            {
+              "text": "A landslide carries rock from higher to lower ground",
+              "col": 1
+            },
+            {
+              "text": "A river carries fragments away from their source",
+              "col": 1
+            },
+            {
+              "text": "Waves and tides move loose material",
+              "col": 1
+            },
+            {
+              "text": "Wind blows sand and dust to a new location",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: weathering and erosion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which process breaks rock apart while the rock stays in place?",
+              "options": [
+                "Weathering",
+                "Erosion"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which process moves rock fragments to a new location?",
+              "options": [
+                "Weathering",
+                "Erosion"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which erosion process can erode entire valleys?",
+              "options": [
+                "Rain",
+                "Glaciers",
+                "Wind"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why do fragments become more rounded during erosion?",
+              "options": [
+                "They hit each other and sharp edges break off",
+                "They freeze and expand",
+                "They react with acid rain"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Physical weathering and erosion",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Weathering is the slow breakdown of rocks on Earth's surface. It happens while the rocks are 'in place'.",
+            "Rock can be weathered biologically, chemically or physically.",
+            "Freeze-thaw is a physical weathering process: water in cracks freezes, expands and gradually wedges the rock apart.",
+            "Erosion removes material from where bedrock has been broken down. It is done by wind, rain, flowing streams and rivers, oceans, ice flows or gravity.",
+            "Small changes caused by weathering and erosion can have large impacts over time."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is weathering?",
+      "back": "The slow breakdown of rocks on Earth's surface. It happens while the rocks are 'in place'."
+    },
+    {
+      "front": "Name the three types of weathering.",
+      "back": "Biological, chemical and physical."
+    },
+    {
+      "front": "What causes biological weathering?",
+      "back": "The action of plants and animals.\n\ne.g. tree roots growing, animals burrowing"
+    },
+    {
+      "front": "What causes chemical weathering?",
+      "back": "Acid rain reacting with minerals in the rock."
+    },
+    {
+      "front": "Why is rainwater naturally slightly acidic?",
+      "back": "Water in the atmosphere reacts with carbon dioxide."
+    },
+    {
+      "front": "What causes physical weathering?",
+      "back": "The application of forces.\n\ne.g. freezing water, temperature changes"
+    },
+    {
+      "front": "What happens to the volume of water when it freezes?",
+      "back": "It increases (expansion). The molecules are held in fixed positions further apart."
+    },
+    {
+      "front": "What is freeze-thaw?",
+      "back": "A physical weathering process: water seeps into cracks, freezes and expands. This gradually wedges open the cracks until the rock breaks."
+    },
+    {
+      "front": "What three things does freeze-thaw weathering need?",
+      "back": "Rocks with pores or cracks, water, and temperature changes below and above 0°C."
+    },
+    {
+      "front": "What is erosion?",
+      "back": "The breakdown and removal of rock material by flowing water, wind, or moving ice."
+    },
+    {
+      "front": "Name the six main erosion processes.",
+      "back": "Gravity, rain, wind, rivers and streams, glaciers and oceans."
+    },
+    {
+      "front": "What is the main difference between weathering and erosion?",
+      "back": "Weathering breaks rock down in place. Erosion moves the fragments to a new location."
+    },
+    {
+      "front": "Why do rock fragments become rounded during erosion?",
+      "back": "They hit each other and their sharp edges break off."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Physical weathering and erosion",
+    "instructions": "Answer each question with a word, a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What is the name of the slow breakdown of rocks while they are in place?",
+        "answer": "weathering",
+        "explanation": "Weathering breaks rock down while it stays in place."
+      },
+      {
+        "prompt": "What is the name of the process that moves fragments of rock to new locations?",
+        "answer": "erosion",
+        "explanation": "Erosion is the removal and movement of rock material by flowing water, wind, ice or gravity."
+      },
+      {
+        "prompt": "Which type of weathering is caused by the action of plants and animals?",
+        "answer": "biological",
+        "accepted": [
+          "biological weathering"
+        ],
+        "explanation": "Biological weathering is caused by plants and animals, such as tree roots growing or animals burrowing."
+      },
+      {
+        "prompt": "Which type of weathering is caused by acid rain reacting with minerals in rock?",
+        "answer": "chemical",
+        "accepted": [
+          "chemical weathering"
+        ],
+        "explanation": "Chemical weathering is due to acid rain reacting with minerals in the rock."
+      },
+      {
+        "prompt": "Does the volume of water increase or decrease when it freezes? Answer with one word.",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "When water freezes it expands, because its molecules are held in fixed positions further apart."
+      },
+      {
+        "prompt": "Freeze-thaw weathering needs the temperature to change below and above what temperature, in degrees Celsius? Give the number only.",
+        "answer": "0",
+        "accepted": [
+          "zero"
+        ],
+        "explanation": "Water freezes below 0°C and the ice melts above 0°C, so both are needed for repeated freeze-thaw cycles."
+      },
+      {
+        "prompt": "Which erosion process moves rock fragments from higher ground to lower ground, for example in a landslide?",
+        "answer": "gravity",
+        "explanation": "Gravity transports rock fragments from higher ground to lower ground."
+      },
+      {
+        "prompt": "Which erosion process, because of its enormous size and weight, can erode entire valleys?",
+        "answer": "glaciers",
+        "accepted": [
+          "glacier",
+          "a glacier"
+        ],
+        "explanation": "The enormous size and weight of glaciers can erode entire valleys."
+      },
+      {
+        "prompt": "Roots of plants grow into a crack in a cliff and weaken the rock. Is this weathering or erosion?",
+        "answer": "weathering",
+        "explanation": "The rock is weakened and broken in place, so it is (biological) weathering."
+      },
+      {
+        "prompt": "Weathering and erosion help to form which type of rock?",
+        "answer": "sedimentary",
+        "accepted": [
+          "sedimentary rock"
+        ],
+        "explanation": "Weathering and erosion help to form sedimentary rock."
+      }
+    ]
+  }
+}

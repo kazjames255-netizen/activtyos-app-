@@ -1,0 +1,640 @@
+{
+  "agent": "w4-english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify complete sentences and correct sentence fragments."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at how to write in complete sentences."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Complete {sentences}",
+              "sub": "Constructing and identifying"
+            },
+            {
+              "title": "Sentence {fragments}",
+              "sub": "Identifying and correcting"
+            },
+            {
+              "title": "{Subordinate} clauses",
+              "sub": "Adding extra information"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "subject",
+              "def": "In grammar, this is the person, place, or thing that is performing the action of the sentence."
+            },
+            {
+              "term": "verb",
+              "def": "A being, a doing or a having word."
+            },
+            {
+              "term": "fragment",
+              "def": "A small part broken off or separated from something."
+            },
+            {
+              "term": "subordinate",
+              "def": "Means being lower in rank or position."
+            },
+            {
+              "term": "complete",
+              "def": "When something has all the necessary or appropriate parts."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why write in complete sentences?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Writing in complete sentences lets us convey our exact meaning to the reader. It avoids confusion and makes our writing easy to understand."
+        },
+        {
+          "t": "callout",
+          "text": "We want our work to be as simple to understand as possible for our reader."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What makes a complete sentence?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A complete sentence is a group of words that contains a **subject** and a **verb**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "It has a {subject}.",
+            "It has a {verb}.",
+            "It expresses a complete idea (a complete thought).",
+            "It starts with a capital letter and ends with a full stop."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We will look at the subject and the verb one at a time."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The subject",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The **subject** is the person, place, or thing that is performing the action of the sentence."
+        },
+        {
+          "t": "text",
+          "text": "Which words are the subject of this sentence?"
+        },
+        {
+          "t": "text",
+          "text": "‘Alice’s shoes tapped their way along the paving.’"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see the subject",
+          "text": "**Alice’s shoes** are the ones tapping on the paving, so they are the subject. It is not just any noun, it is the noun that is doing the verb. Here it is the whole noun phrase ‘Alice’s shoes’, not ‘Alice’."
+        },
+        {
+          "t": "text",
+          "text": "Another sentence: ‘The rabbit glanced at its pocket watch.’ The rabbit is the one performing the action, so ‘the rabbit’ is the subject."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The verb",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **verb** is a being, a doing or a having word."
+        },
+        {
+          "t": "text",
+          "text": "Look at this sentence: ‘Alice drank from the small bottle.’ What is the action Alice is performing?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see the verb",
+          "text": "Alice is drinking, so **drank** is the verb."
+        },
+        {
+          "t": "text",
+          "text": "Another sentence: ‘The mouse wore a top hat.’ The mouse is the subject and the verb is ‘wore’, because the mouse is wearing the top hat."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the subject and the verb",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Remember: the subject is the person, place or thing performing the action, and the verb is the action word."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "The tall clock struck noon. What is the subject?",
+              "options": [
+                "The tall clock",
+                "struck",
+                "noon"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The children laughed loudly. What is the verb?",
+              "options": [
+                "The children",
+                "laughed",
+                "loudly"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Tom’s dog barked at the postman. What is the subject?",
+              "options": [
+                "Tom",
+                "Tom’s dog",
+                "the postman"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Is it a complete sentence?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To decide, check for a subject, a verb and a full stop. Look at three sentences."
+        },
+        {
+          "t": "reveal",
+          "label": "‘Alice paused as she passed through the tall grass.’",
+          "text": "Complete. **Alice** is the subject (she performs the action) and **paused** is the verb (what is being done)."
+        },
+        {
+          "t": "reveal",
+          "label": "‘The twisted tree branches.’",
+          "text": "Not complete. ‘Twisted’ is an adjective and ‘the tree branches’ could be the subject, but there is no verb."
+        },
+        {
+          "t": "reveal",
+          "label": "‘The blossoms swayed’",
+          "text": "Not quite complete. ‘Blossoms’ is the subject and ‘swayed’ is the verb, but there is no full stop at the end. All we need to do is add one."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the sentences",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each group of words a complete sentence, or is it missing a subject or a verb?",
+          "columns": [
+            "Complete sentence",
+            "Missing a subject",
+            "Missing a verb"
+          ],
+          "items": [
+            {
+              "text": "The wind howled.",
+              "col": 0
+            },
+            {
+              "text": "Ran across the garden.",
+              "col": 1
+            },
+            {
+              "text": "The old wooden door.",
+              "col": 2
+            },
+            {
+              "text": "Peered over the wall.",
+              "col": 1
+            },
+            {
+              "text": "A pair of tiny gloves.",
+              "col": 2
+            },
+            {
+              "text": "The clock struck midnight.",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sentence fragments",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **sentence fragment** is a sentence that is missing either its subject or its main verb."
+        },
+        {
+          "t": "text",
+          "text": "‘Peering through the minuscule window.’ There is no subject: we don’t know who or what is peering through the window."
+        },
+        {
+          "t": "callout",
+          "text": "To fix a fragment, add the missing part to make it complete."
+        },
+        {
+          "t": "text",
+          "text": "‘Wandered through the enchanting blooms.’ We have the verb ‘wandered’ but no subject. Add ‘Alice’ to show who wandered."
+        },
+        {
+          "t": "text",
+          "text": "‘Alice wandered through the enchanting blooms.’"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Is it a complete thought?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘My favourite pinafore dress.’ What is missing?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the first fix",
+          "text": "It is missing a verb. Add ‘was’ (the past tense of the verb ‘to be’): ‘My favourite pinafore dress was.’"
+        },
+        {
+          "t": "text",
+          "text": "Now we have a subject (the pinafore dress) and a verb (was). Is it complete now?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the answer",
+          "text": "Not yet! We don’t know what has happened to the dress, so it is not a complete thought. Add ‘ruined’: ‘My favourite pinafore dress was ruined.’"
+        },
+        {
+          "t": "callout",
+          "text": "A complete sentence needs a subject, a verb, and it needs to be a complete thought."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Fix the fragment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For each fragment, what needs to be added to make it a complete sentence?"
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "‘Alice’s black bow.’",
+              "options": [
+                "Add a verb, for example ‘winked’",
+                "Add a subject",
+                "Nothing is missing"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "‘Peered down into the rabbit hole.’",
+              "options": [
+                "Add a verb",
+                "Add a subject, for example ‘Alice’",
+                "Nothing is missing"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "‘Alice couldn’t wait to be.’ It has a subject and a verb. What makes it a fragment?",
+              "options": [
+                "It is not a complete thought: where did she want to be?",
+                "It has no subject",
+                "It has no verb"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Subordinate clauses",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **subordinate clause** is a group of words that is not a complete sentence. It adds extra information to the complete sentence."
+        },
+        {
+          "t": "text",
+          "text": "‘Because it was a beautiful day, Alice sat down by a tree to read.’"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to split the sentence",
+          "text": "‘Because it was a beautiful day’ is the **subordinate clause**. It doesn’t make sense by itself, but it adds extra information. ‘Alice sat down by a tree to read’ is the **main clause**: Alice is the subject, sat is the verb, and it is a complete thought."
+        },
+        {
+          "t": "callout",
+          "text": "Subordinate clauses often begin with subordinating conjunctions, which link them to main clauses."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "because",
+            "since",
+            "as",
+            "while",
+            "when",
+            "whenever",
+            "before",
+            "after",
+            "unless",
+            "once",
+            "though"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where can a subordinate clause go?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A subordinate clause can go at the beginning, in the middle or at the end of a sentence."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "At the beginning",
+              "sub": "Since it was raining, Alice ran under the tree for cover."
+            },
+            {
+              "title": "In the middle",
+              "sub": "Alice, who wore a black ribbon in her hair, fell down the rabbit hole."
+            },
+            {
+              "title": "At the end",
+              "sub": "Alice ran under the tree for cover since it was raining."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "At the beginning: you need a comma after the subordinate clause.",
+            "In the middle: you need commas, dashes or brackets around it to separate it from the main clause.",
+            "At the end: you don’t need a comma."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Subordinate clause check",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "On its own, a subordinate clause is…",
+              "options": [
+                "a complete sentence",
+                "not a complete sentence"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which sentence is correctly punctuated?",
+              "options": [
+                "When the bell rang the pupils lined up.",
+                "When the bell rang, the pupils lined up.",
+                "When the bell rang, the pupils, lined up."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which sentence is correctly punctuated?",
+              "options": [
+                "The pupils lined up when the bell rang.",
+                "The pupils lined up, when the bell rang,"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "match",
+          "q": "Match each sentence to its subordinate clause.",
+          "pairs": [
+            {
+              "a": "After the storm passed, the birds began to sing.",
+              "b": "After the storm passed"
+            },
+            {
+              "a": "The children cheered when the team scored.",
+              "b": "when the team scored"
+            },
+            {
+              "a": "Unless you hurry, the bus will leave without you.",
+              "b": "Unless you hurry"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A complete sentence has a subject, a verb and expresses a complete idea.",
+            "A sentence fragment is an incomplete sentence, lacking a subject, verb – or both.",
+            "To correct sentence fragments, identify whether the subject or verb is missing and add it to the sentence.",
+            "A complete sentence starts with a capital letter and ends with a full stop.",
+            "A subordinate clause is a group of words that is not a complete sentence but adds extra information."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What three things does a complete sentence need?",
+      "back": "A subject, a verb, and a complete thought."
+    },
+    {
+      "front": "What is the subject of a sentence?",
+      "back": "The person, place, or thing that is performing the action of the sentence.\n\nAlice’s shoes tapped along the paving."
+    },
+    {
+      "front": "What is a verb?",
+      "back": "A being, a doing or a having word.\n\nAlice drank from the small bottle."
+    },
+    {
+      "front": "What is the verb in “The mouse wore a top hat.”?",
+      "back": "wore"
+    },
+    {
+      "front": "How does a complete sentence start and end?",
+      "back": "It starts with a capital letter and ends with a full stop."
+    },
+    {
+      "front": "What is a sentence fragment?",
+      "back": "An incomplete sentence, lacking a subject, a verb – or both."
+    },
+    {
+      "front": "What is missing from “Peering through the minuscule window.”?",
+      "back": "A subject. We don’t know who or what is peering."
+    },
+    {
+      "front": "How do you correct a sentence fragment?",
+      "back": "Identify whether the subject or the verb is missing and add it to the sentence."
+    },
+    {
+      "front": "“My favourite pinafore dress was.” Why is it still not complete?",
+      "back": "It is not a complete thought. We don’t know what happened to the dress (…was ruined)."
+    },
+    {
+      "front": "What is a subordinate clause?",
+      "back": "A group of words that is not a complete sentence but adds extra information.\n\nBecause it was a beautiful day, Alice sat down by a tree to read."
+    },
+    {
+      "front": "Which part of “Because it was a beautiful day, Alice sat down by a tree to read.” is the main clause?",
+      "back": "Alice sat down by a tree to read.\n\nIt is a complete sentence."
+    },
+    {
+      "front": "Do you need a comma after a subordinate clause at the beginning of a sentence?",
+      "back": "Yes.\n\nSince it was raining, Alice ran under the tree for cover."
+    },
+    {
+      "front": "Do you need a comma before a subordinate clause at the end of a sentence?",
+      "back": "No.\n\nAlice ran under the tree for cover since it was raining."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Writing complete sentences and correcting sentence fragments",
+    "instructions": "Answer each question with a short answer, using what you have learned about complete sentences, fragments and subordinate clauses.",
+    "questions": [
+      {
+        "prompt": "What is the subject of this sentence? ‘Alice’s shoes tapped their way along the paving.’",
+        "answer": "Alice’s shoes",
+        "accepted": [
+          "alice’s shoes",
+          "alice's shoes"
+        ],
+        "explanation": "Alice’s shoes are the ones performing the action of tapping, so the whole noun phrase is the subject."
+      },
+      {
+        "prompt": "What is the verb in this sentence? ‘Alice drank from the small bottle.’",
+        "answer": "drank",
+        "accepted": [],
+        "explanation": "‘Drank’ is the action that Alice is performing."
+      },
+      {
+        "prompt": "What is the verb in this sentence? ‘The mouse wore a top hat.’",
+        "answer": "wore",
+        "accepted": [],
+        "explanation": "The mouse is the subject and ‘wore’ is what the mouse is doing."
+      },
+      {
+        "prompt": "Is ‘The twisted tree branches.’ a complete sentence? Answer yes or no.",
+        "answer": "no",
+        "accepted": [],
+        "explanation": "There is a subject (the tree branches) but no verb."
+      },
+      {
+        "prompt": "‘The twisted tree branches.’ Which is missing: the subject or the verb?",
+        "answer": "verb",
+        "accepted": [
+          "the verb",
+          "a verb"
+        ],
+        "explanation": "‘Twisted’ is an adjective and there is nothing that the tree branches are doing or being."
+      },
+      {
+        "prompt": "‘Peering through the minuscule window.’ Which is missing: the subject or the verb?",
+        "answer": "subject",
+        "accepted": [
+          "the subject",
+          "a subject"
+        ],
+        "explanation": "We don’t know who or what is peering through the window, so there is no subject."
+      },
+      {
+        "prompt": "What punctuation mark is missing at the end of ‘The blossoms swayed’?",
+        "answer": "full stop",
+        "accepted": [
+          "full-stop",
+          "a full stop",
+          "a full-stop",
+          "fullstop"
+        ],
+        "explanation": "The sentence has a subject and a verb, but with no full stop it is not quite complete."
+      },
+      {
+        "prompt": "In ‘Because it was a beautiful day, Alice sat down by a tree to read.’, what is the subject of the main clause?",
+        "answer": "Alice",
+        "accepted": [],
+        "explanation": "Alice is the one performing the verb ‘sat’ in the main clause."
+      },
+      {
+        "prompt": "Is a subordinate clause a complete sentence on its own? Answer yes or no.",
+        "answer": "no",
+        "accepted": [],
+        "explanation": "A subordinate clause adds extra information but is not a complete sentence."
+      },
+      {
+        "prompt": "Do you need a comma after a subordinate clause at the beginning of a sentence? Answer yes or no.",
+        "answer": "yes",
+        "accepted": [],
+        "explanation": "A subordinate clause at the beginning is followed by a comma, as in ‘Since it was raining, Alice ran under the tree for cover.’"
+      }
+    ]
+  }
+}

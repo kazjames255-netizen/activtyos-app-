@@ -1,0 +1,664 @@
+{
+  "agent": "w4-comb-bio",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify common structures of animal cells and describe how some specialised cells in animals are adapted for the jobs the cells do."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Sub-cellular} structures and their jobs"
+            },
+            {
+              "title": "What are {specialised} cells?"
+            },
+            {
+              "title": "How specialised animal cells are {adapted}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cytoplasm",
+              "def": "A jelly-like substance containing dissolved nutrients and salts where many chemical reactions happen."
+            },
+            {
+              "term": "cell membrane",
+              "def": "A partially permeable structure that surrounds the cell; it controls the movement of substances into and out of the cell."
+            },
+            {
+              "term": "nucleus",
+              "def": "A sub-cellular structure that contains genetic material, which controls cellular activities."
+            },
+            {
+              "term": "DNA",
+              "def": "A molecule found in the nucleus of cells that contains the genetic code for making proteins."
+            },
+            {
+              "term": "mitochondria",
+              "def": "Sub-cellular structures that contain the enzymes for respiration, and where most energy is released in respiration."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The animal cell model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We use models of cells to help simplify their complex structures. In reality all cells are three-dimensional and quite complicated."
+        },
+        {
+          "t": "text",
+          "text": "The parts that make up the model animal cell are called **sub-cellular structures**. There are five to know:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Nucleus"
+            },
+            {
+              "title": "Ribosomes"
+            },
+            {
+              "title": "Mitochondria"
+            },
+            {
+              "title": "Cytoplasm"
+            },
+            {
+              "title": "Cell membrane"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "One is a **mitochondrion** (singular). More than one are **mitochondria** (plural)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Jobs: membrane and cytoplasm",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each sub-cellular structure has a specific function. Tap to find out more."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell membrane",
+              "def": "Controls what enters and exits the cell. It is partially permeable, which means it allows some substances to diffuse through but not others."
+            },
+            {
+              "term": "cytoplasm",
+              "def": "It looks like empty space on the diagram, but it is a jelly-like substance that surrounds the sub-cellular structures. It contains nutrients and salts and is where many of the chemical reactions in a cell take place."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Jobs: nucleus, ribosomes, mitochondria",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "nucleus",
+              "def": "Controls the activities of the cell. It contains DNA, which contains the genetic code to make new proteins."
+            },
+            {
+              "term": "ribosomes",
+              "def": "Very small sub-cellular structures where protein synthesis takes place."
+            },
+            {
+              "term": "mitochondria",
+              "def": "Aerobic respiration takes place inside the mitochondria. They contain enzymes for respiration and it is where most of the energy is released in respiration."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What does synthesis mean?",
+          "text": "Synthesis means to make. So protein synthesis means proteins are made, and this happens in the ribosomes."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Structure or job?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Aerobic respiration takes place in the …",
+              "options": [
+                "ribosomes",
+                "mitochondria",
+                "cell membrane"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which structure decides what can enter the cell?",
+              "options": [
+                "cell membrane",
+                "cytoplasm",
+                "nucleus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Many chemical reactions take place in the …",
+              "options": [
+                "nucleus",
+                "cell membrane",
+                "cytoplasm"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "More than one mitochondrion are called …",
+              "options": [
+                "mitochondrions",
+                "mitochondria",
+                "mitochondri"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which structure contains the DNA?",
+              "options": [
+                "ribosomes",
+                "cell membrane",
+                "nucleus"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Specialised cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Specialised cells** are cells that have a specific structure and function."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Structure** is the shape of the cell and the structures it has, including the sub-cellular structures.",
+            "**Function** is the job of the cell."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Specialised cells are adapted to carry out their specific function. Here are six specialised animal cells:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Nerve cell"
+            },
+            {
+              "title": "Red blood cell"
+            },
+            {
+              "title": "Sperm cell"
+            },
+            {
+              "title": "Egg cell"
+            },
+            {
+              "title": "Ciliated cell"
+            },
+            {
+              "title": "Muscle cell"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Not all animal cells look like the model animal cell. Specialised cells look very different, because they have specific shapes and sub-cellular structures."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Nerve cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** nerve cells transmit electrical impulses throughout the body. They form part of the nervous system."
+        },
+        {
+          "t": "text",
+          "text": "Tap each adaptation to see why it helps."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "long, thin axon",
+              "def": "So that they can carry impulses over long distances quickly."
+            },
+            {
+              "term": "myelin sheath",
+              "def": "It surrounds the nerve cell so that the impulse can travel faster."
+            },
+            {
+              "term": "dendrites",
+              "def": "Branched connections at each end so that they can connect to other nerve cells and transmit impulses quickly."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Red blood cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** red blood cells carry oxygen around the body for aerobic respiration. In the lungs, oxygen diffuses through the alveoli into the red blood cells. It binds to haemoglobin and is delivered to most body cells for respiration."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "no nucleus",
+              "def": "So that there is more space inside the cell to carry oxygen."
+            },
+            {
+              "term": "biconcave shape",
+              "def": "A disc shape with a dip in the middle. It gives the cell a large surface area to absorb more oxygen in the lungs."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Did you know?",
+          "text": "Red blood cells are still eukaryotic cells even though they have no nucleus. It is one of the ways they are specialised."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sperm cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** sperm cells are the male sex cells. They have to swim to meet the egg cell before fertilisation can occur."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "tail",
+              "def": "So that they can swim towards the egg cell."
+            },
+            {
+              "term": "many mitochondria",
+              "def": "So that lots of energy is released for movement."
+            },
+            {
+              "term": "acrosome in the head",
+              "def": "It contains enzymes so that the egg cell membrane can be broken down."
+            },
+            {
+              "term": "half the number of chromosomes (haploid)",
+              "def": "The sperm and egg fuse to make a new cell, and that cell needs the full amount of genetic information. So each of them has half."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Egg cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** the egg cell is the female sex cell. It is fertilised by the sperm cell, forming a **zygote**: the first cell of a new individual, with the full set of genetic information."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cytoplasm with lots of nutrients",
+              "def": "To sustain the early growing embryo."
+            },
+            {
+              "term": "cell membrane changes after fertilisation",
+              "def": "After one sperm fertilises the egg, this usually means no more sperm can enter."
+            },
+            {
+              "term": "half the amount of DNA",
+              "def": "Like the sperm cell, the egg cell has half the genetic information, so that a full set is formed when they combine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ciliated cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** ciliated cells line the airways (the bronchi and trachea, which are part of the respiratory system). Their job is to move mucus up and out of the lungs."
+        },
+        {
+          "t": "callout",
+          "text": "Adaptation: their surfaces are covered in tiny hair-like structures called {cilia}. The cilia move together to sweep the mucus up and out of the lungs."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Muscle cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** muscle cells contract in order to allow the body to move."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "filaments of protein",
+              "def": "They can slide over each other to cause muscle contraction."
+            },
+            {
+              "term": "lots of mitochondria",
+              "def": "To release energy for muscle contraction."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the cell to its job",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each specialised cell to what it does.",
+          "pairs": [
+            {
+              "a": "nerve cell",
+              "b": "transmits electrical impulses around the body"
+            },
+            {
+              "a": "red blood cell",
+              "b": "carries oxygen around the body"
+            },
+            {
+              "a": "ciliated cell",
+              "b": "moves mucus up and out of the airways"
+            },
+            {
+              "a": "sperm cell",
+              "b": "swims to the egg cell"
+            },
+            {
+              "a": "muscle cell",
+              "b": "contracts so that the body can move"
+            },
+            {
+              "a": "egg cell",
+              "b": "is fertilised by the sperm cell, forming a zygote"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Why is it adapted like that?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Why do sperm cells have many mitochondria?",
+              "options": [
+                "To release lots of energy for movement",
+                "To break down the egg cell membrane",
+                "To carry oxygen"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A red blood cell has no nucleus. How does this help?",
+              "options": [
+                "It can make more DNA",
+                "There is more space inside the cell to carry oxygen",
+                "It can swim faster"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What does the myelin sheath of a nerve cell do?",
+              "options": [
+                "It makes the impulse travel faster",
+                "It stores nutrients for an embryo",
+                "It releases energy"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which is an adaptation of ciliated cells?",
+              "options": [
+                "a tail to swim",
+                "tiny hair-like cilia that sweep mucus",
+                "a biconcave shape"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The acrosome in the head of a sperm cell contains enzymes to …",
+              "options": [
+                "release energy for swimming",
+                "carry oxygen",
+                "break down the egg cell membrane"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Animal cells have common features called sub-cellular structures that each have a function.",
+            "The common sub-cellular structures are the cell membrane, cytoplasm, nucleus, mitochondria and ribosomes.",
+            "Specialised cells are adapted to carry out a specific function. They have different shapes and different sub-cellular structures.",
+            "Examples: nerve cell, sperm cell, egg cell, red blood cell, muscle cell and ciliated cell."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Name the five sub-cellular structures in the model animal cell.",
+      "back": "Nucleus, ribosomes, mitochondria, cytoplasm and cell membrane."
+    },
+    {
+      "front": "What is the difference between a mitochondrion and mitochondria?",
+      "back": "Mitochondrion is singular (one). Mitochondria is plural (more than one)."
+    },
+    {
+      "front": "What does the cell membrane do?",
+      "back": "It controls what enters and exits the cell.\n\nIt is partially permeable: it allows some substances to diffuse through but not others."
+    },
+    {
+      "front": "What is the cytoplasm?",
+      "back": "A jelly-like substance that surrounds the sub-cellular structures.\n\nIt contains nutrients and salts, and many chemical reactions take place here."
+    },
+    {
+      "front": "What does the nucleus do?",
+      "back": "It controls the activities of the cell.\n\nIt contains DNA, which contains the genetic code to make new proteins."
+    },
+    {
+      "front": "What do the ribosomes do?",
+      "back": "Protein synthesis takes place there (synthesis means to make)."
+    },
+    {
+      "front": "What happens in the mitochondria?",
+      "back": "Aerobic respiration takes place there. Most of the energy in respiration is released."
+    },
+    {
+      "front": "What is a specialised cell?",
+      "back": "A cell with a specific structure and function.\n\nIt is adapted to carry out its function, with a specific shape and sub-cellular structures."
+    },
+    {
+      "front": "How is a nerve cell adapted to transmit electrical impulses?",
+      "back": "Long, thin axon (long distances quickly); myelin sheath (impulse travels faster); dendrites (branched connections to other nerve cells)."
+    },
+    {
+      "front": "How is a red blood cell adapted to carry oxygen?",
+      "back": "No nucleus (more space to carry oxygen) and a biconcave shape (large surface area to absorb more oxygen in the lungs)."
+    },
+    {
+      "front": "How is a sperm cell adapted to swim to the egg cell?",
+      "back": "A tail to swim; many mitochondria to release energy for movement; an acrosome with enzymes to break down the egg cell membrane; half the number of chromosomes (haploid)."
+    },
+    {
+      "front": "How is an egg cell adapted for its job?",
+      "back": "Its cytoplasm contains lots of nutrients to sustain the early growing embryo, and its cell membrane changes after fertilisation with one sperm so that usually no more sperm can enter."
+    },
+    {
+      "front": "How are ciliated cells adapted to move mucus out of the airways?",
+      "back": "Their surfaces are covered in tiny hair-like structures called cilia that move together to sweep the mucus up and out of the lungs."
+    },
+    {
+      "front": "What do muscle cells contain to help them contract?",
+      "back": "Filaments of protein that slide over each other, and lots of mitochondria to release energy."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Animal cells: common structures and specialised cells",
+    "instructions": "Write a short answer to each question. Use the words from the lesson.",
+    "questions": [
+      {
+        "prompt": "Which sub-cellular structure controls the activities of the cell and contains DNA?",
+        "answer": "nucleus",
+        "explanation": "The nucleus contains DNA and controls the activities of the cell."
+      },
+      {
+        "prompt": "Which sub-cellular structures are where protein synthesis takes place?",
+        "answer": "ribosomes",
+        "accepted": [
+          "ribosome"
+        ],
+        "explanation": "Protein synthesis (making proteins) takes place in the ribosomes."
+      },
+      {
+        "prompt": "Which sub-cellular structure is where aerobic respiration takes place?",
+        "answer": "mitochondria",
+        "accepted": [
+          "mitochondrion"
+        ],
+        "explanation": "Aerobic respiration takes place inside the mitochondria."
+      },
+      {
+        "prompt": "What is the name of the jelly-like substance where many chemical reactions in a cell take place?",
+        "answer": "cytoplasm",
+        "explanation": "The cytoplasm contains nutrients and salts and is where many chemical reactions take place."
+      },
+      {
+        "prompt": "The cell membrane allows some substances through but not others. Complete the phrase: it is ___ permeable. (one word)",
+        "answer": "partially",
+        "accepted": [
+          "semi",
+          "selectively"
+        ],
+        "explanation": "The cell membrane is partially permeable: it lets some substances diffuse through but not others."
+      },
+      {
+        "prompt": "Which specialised cell transmits electrical impulses around the body? (two words)",
+        "answer": "nerve cell",
+        "accepted": [
+          "a nerve cell"
+        ],
+        "explanation": "Nerve cells transmit electrical impulses throughout the body."
+      },
+      {
+        "prompt": "Which specialised cell has a biconcave shape and no nucleus? (three words)",
+        "answer": "red blood cell",
+        "accepted": [
+          "a red blood cell"
+        ],
+        "explanation": "Red blood cells are biconcave and have no nucleus, so they carry more oxygen."
+      },
+      {
+        "prompt": "Which gas do red blood cells carry around the body?",
+        "answer": "oxygen",
+        "accepted": [
+          "o2"
+        ],
+        "explanation": "Red blood cells carry oxygen around the body for aerobic respiration."
+      },
+      {
+        "prompt": "What is the name of the structure in the head of a sperm cell that contains enzymes to break down the egg cell membrane?",
+        "answer": "acrosome",
+        "explanation": "The acrosome contains enzymes that break down the egg cell membrane."
+      },
+      {
+        "prompt": "What are the tiny hair-like structures on the surface of ciliated cells called?",
+        "answer": "cilia",
+        "explanation": "The cilia move together to sweep mucus up and out of the lungs."
+      },
+      {
+        "prompt": "What is the name of the sheath that surrounds a nerve cell so that impulses travel faster? (two words)",
+        "answer": "myelin sheath",
+        "explanation": "The myelin sheath surrounds the nerve cell so the impulse can travel faster."
+      },
+      {
+        "prompt": "Sperm and egg cells have half the number of chromosomes. What is the word for this?",
+        "answer": "haploid",
+        "explanation": "Haploid means having half the number of chromosomes."
+      }
+    ]
+  }
+}

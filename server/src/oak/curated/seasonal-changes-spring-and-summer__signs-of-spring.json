@@ -1,0 +1,576 @@
+{
+  "agent": "science-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe changes in spring."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The {seasons}"
+            },
+            {
+              "title": "Signs of {spring}"
+            },
+            {
+              "title": "How to {observe}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "season",
+              "def": "A year can be split into four seasons. Each season lasts about three months."
+            },
+            {
+              "term": "spring",
+              "def": "Spring is the season that comes after winter and before summer."
+            },
+            {
+              "term": "observe",
+              "def": "To observe is to look very closely and use other senses too."
+            },
+            {
+              "term": "describe",
+              "def": "To say or write what someone or something is like."
+            },
+            {
+              "term": "change",
+              "def": "If something changes it does not stay the same."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A year",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are twelve months in one year."
+        },
+        {
+          "t": "text",
+          "text": "A year can be split into four seasons."
+        },
+        {
+          "t": "text",
+          "text": "Each season lasts about three months."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "12 months"
+            },
+            {
+              "title": "4 seasons"
+            },
+            {
+              "title": "About 3 months each"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The four seasons",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The four seasons are winter, spring, summer and autumn."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "autumn",
+              "sub": "Leaves turn orange, red and yellow."
+            },
+            {
+              "title": "winter",
+              "sub": "Very cold and frosty."
+            },
+            {
+              "title": "spring",
+              "sub": "Blossom and new leaves."
+            },
+            {
+              "title": "summer",
+              "sub": "Flowers, sun and greenery."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Season or month?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is it a season or a month?",
+          "columns": [
+            "A season",
+            "A month"
+          ],
+          "items": [
+            {
+              "text": "winter",
+              "col": 0
+            },
+            {
+              "text": "April",
+              "col": 1
+            },
+            {
+              "text": "summer",
+              "col": 0
+            },
+            {
+              "text": "July",
+              "col": 1
+            },
+            {
+              "text": "autumn",
+              "col": 0
+            },
+            {
+              "text": "March",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When is spring?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Spring comes after winter."
+        },
+        {
+          "t": "text",
+          "text": "Spring comes before summer."
+        },
+        {
+          "t": "callout",
+          "text": "Spring is in {March}, {April} and {May}."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "March"
+            },
+            {
+              "title": "April"
+            },
+            {
+              "title": "May"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Is it spring?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which months are in spring?",
+          "columns": [
+            "Spring",
+            "Not spring"
+          ],
+          "items": [
+            {
+              "text": "March",
+              "col": 0
+            },
+            {
+              "text": "September",
+              "col": 1
+            },
+            {
+              "text": "April",
+              "col": 0
+            },
+            {
+              "text": "January",
+              "col": 1
+            },
+            {
+              "text": "May",
+              "col": 0
+            },
+            {
+              "text": "July",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 1: buds on trees",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex walks in the park in March."
+        },
+        {
+          "t": "text",
+          "text": "Some trees look different in spring."
+        },
+        {
+          "t": "text",
+          "text": "They have **buds** on them."
+        },
+        {
+          "t": "callout",
+          "text": "Buds have new leaves or flowers inside. They are ready to grow."
+        },
+        {
+          "t": "text",
+          "text": "Look for buds and blossom on trees near you."
+        }
+      ],
+      "art": [
+        "🌳"
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 2: birdsong",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex listens carefully."
+        },
+        {
+          "t": "text",
+          "text": "He hears a bird singing in a tree."
+        },
+        {
+          "t": "text",
+          "text": "This is **birdsong**."
+        },
+        {
+          "t": "callout",
+          "text": "Many birds return to the United Kingdom from warmer places as spring begins."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 3: early flowers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Flowers start to grow in the ground and in pots."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "tulips"
+            },
+            {
+              "title": "daffodils"
+            },
+            {
+              "title": "bluebells"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "These flowers appear each spring."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Look at flowers. Do not pick them all. Then other people can enjoy them too."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More signs of spring",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "blossom",
+              "sub": "Little pink flowers on a tree."
+            },
+            {
+              "title": "catkins",
+              "sub": "Lots of little flowers on a tree."
+            },
+            {
+              "title": "frogspawn",
+              "sub": "In a pond. Tadpoles come soon."
+            },
+            {
+              "title": "a nibbled leaf",
+              "sub": "A caterpillar has been eating it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the sign",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "Which is a sign of spring?",
+              "options": [
+                "daffodil flowers",
+                "orange leaves falling",
+                "snow on the ground"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is inside a bud?",
+              "options": [
+                "frogspawn",
+                "a bird",
+                "new leaves or flowers"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Where might you see frogspawn?",
+              "options": [
+                "in a flower pot",
+                "in a pond",
+                "on a tree"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Observe",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex and his friends look closely at things around them."
+        },
+        {
+          "t": "text",
+          "text": "They use their **observation skills**."
+        },
+        {
+          "t": "callout",
+          "text": "When we observe, we look very closely and use other senses too."
+        },
+        {
+          "t": "text",
+          "text": "We can look. We can touch. We can listen for signs of spring too."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Describe what you see",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we observe carefully, we can describe what we notice."
+        },
+        {
+          "t": "reveal",
+          "label": "Describe the buds",
+          "text": "The buds look brown and green. The buds are a pointy round shape."
+        },
+        {
+          "t": "text",
+          "text": "What could you say about a flower you see?"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which sense?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "You hear a bird singing in a tree. What do you use to observe it?",
+          "options": [
+            "our ears",
+            "a ruler",
+            "a spoon"
+          ],
+          "answer": 0,
+          "why": "We can listen for signs of spring as well as see them."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A year can be divided into four seasons.",
+            "Spring is in March, April and May.",
+            "The first signs of spring are birdsong, buds on trees and early flowers.",
+            "We can describe changes in spring using observation skills."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How many months are there in one year?",
+      "back": "12 months."
+    },
+    {
+      "front": "Name the four seasons.",
+      "back": "Winter, spring, summer and autumn."
+    },
+    {
+      "front": "How long does each season last?",
+      "back": "About three months."
+    },
+    {
+      "front": "Which months are in spring?",
+      "back": "March, April and May."
+    },
+    {
+      "front": "Spring comes after which season, and before which season?",
+      "back": "After winter and before summer."
+    },
+    {
+      "front": "What is a bud?",
+      "back": "Part of a tree with new leaves or flowers inside, ready to grow."
+    },
+    {
+      "front": "Why do we hear more birdsong in spring?",
+      "back": "Many birds return to the United Kingdom from warmer places as spring begins."
+    },
+    {
+      "front": "Name two early flowers of spring.",
+      "back": "Tulips and daffodils.\n\nBluebells appear each spring too."
+    },
+    {
+      "front": "What are catkins?",
+      "back": "Lots of little flowers on a tree. They are a sign of spring."
+    },
+    {
+      "front": "What might you see in a pond in spring?",
+      "back": "Frogspawn. Tadpoles come soon."
+    },
+    {
+      "front": "What does observe mean?",
+      "back": "To look very closely and use other senses too."
+    },
+    {
+      "front": "What skills do we use to describe changes in spring?",
+      "back": "Observation skills."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Signs of spring",
+    "instructions": "Answer each question with one word, one number or a short answer.",
+    "questions": [
+      {
+        "prompt": "How many seasons are there in one year?",
+        "answer": "four",
+        "accepted": [
+          "4"
+        ],
+        "explanation": "A year can be split into four seasons."
+      },
+      {
+        "prompt": "How many months are there in one year?",
+        "answer": "12",
+        "accepted": [
+          "twelve"
+        ],
+        "explanation": "There are twelve months in one year."
+      },
+      {
+        "prompt": "Each season lasts for around how many months?",
+        "answer": "three",
+        "accepted": [
+          "3",
+          "three months",
+          "3 months"
+        ],
+        "explanation": "Each season lasts for around three months."
+      },
+      {
+        "prompt": "Which season comes after winter and before summer?",
+        "answer": "spring",
+        "explanation": "Spring is the season that comes after winter and before summer."
+      },
+      {
+        "prompt": "Which season is April in?",
+        "answer": "spring",
+        "explanation": "Spring is in March, April and May."
+      },
+      {
+        "prompt": "Which season is September in?",
+        "answer": "autumn",
+        "explanation": "Alex knew September is in the season of autumn."
+      },
+      {
+        "prompt": "What do we call the sound of birds singing in the trees?",
+        "answer": "birdsong",
+        "accepted": [
+          "bird song"
+        ],
+        "explanation": "Birdsong is a sign of spring."
+      },
+      {
+        "prompt": "You hear birdsong. Which do you use to observe it: our ears or a ruler?",
+        "answer": "our ears",
+        "accepted": [
+          "ears",
+          "my ears"
+        ],
+        "explanation": "We can listen out for signs of spring as well as see them."
+      }
+    ]
+  }
+}

@@ -1,0 +1,570 @@
+{
+  "agent": "maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can state when outcomes will not be equally likely."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes one outcome has a better chance of happening than another. In this lesson you will spot when that happens and say which outcome is more likely."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "which outcome is {more likely}",
+              "sub": "spinners, dice and bags"
+            },
+            {
+              "title": "non-equally likely outcomes in {context}",
+              "sub": "sport, weather and more"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means. A new word today is **event**."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "trial",
+              "def": "A trial is a single predefined test."
+            },
+            {
+              "term": "outcome",
+              "def": "An outcome is a result of a trial."
+            },
+            {
+              "term": "sample space",
+              "def": "A sample space is all the possible outcomes of a trial. A sample space diagram is a systematic way of producing a sample space."
+            },
+            {
+              "term": "likelihood",
+              "def": "Likelihood describes the chance that a particular event will occur."
+            },
+            {
+              "term": "event",
+              "def": "An event is a subset of a sample space. It could be a particular outcome or be a set of outcomes that may occur from a trial."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "An unfair spinner?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex and Izzy are playing a game. They spin a spinner with two sectors, one for Alex and one for Izzy, to decide who moves forward."
+        },
+        {
+          "t": "text",
+          "text": "Alex is not happy: the spinner is more likely to land on Izzy’s name than on his. Izzy adjusts the spinner, but the outcomes are still not equally likely, because it is still more likely to land on Izzy’s name. Alex adjusts it, but then it is more likely to land on his own name, so it is still unfair."
+        },
+        {
+          "t": "reveal",
+          "label": "When is the spinner fair?",
+          "text": "They settle on a spinner where the two sectors are the same size. Now the two outcomes are equally likely to happen."
+        },
+        {
+          "t": "callout",
+          "text": "If one sector is bigger than the other, the outcome for the bigger sector is {more likely}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Events with many outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob spins a spinner with eight equal sectors labelled A, B, C, D, E, F, G and H. Every letter has its own sector of the same size, so each outcome is equally likely."
+        },
+        {
+          "t": "text",
+          "text": "Is the spinner more likely to stop on a vowel or a consonant?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The event “a vowel” contains 2 outcomes: A and E.",
+            "The event “a consonant” contains 6 outcomes: B, C, D, F, G and H."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which is more likely?",
+          "text": "A consonant. Each single outcome is equally likely, but the consonant event has more outcomes in it (6 compared with 2)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: counting outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A regular six-sided dice is rolled once. Which is more likely: rolling an odd number or rolling a multiple of 3?"
+        },
+        {
+          "t": "text",
+          "text": "Step 1: The numbers on the dice are 1, 2, 3, 4, 5 and 6, and each one is equally likely."
+        },
+        {
+          "t": "text",
+          "text": "Step 2: Odd numbers: 1, 3, 5. That is 3 outcomes."
+        },
+        {
+          "t": "text",
+          "text": "Step 3: Multiples of 3: 3, 6. That is 2 outcomes."
+        },
+        {
+          "t": "callout",
+          "text": "Rolling an odd number has more outcomes, so it is {more likely} than rolling a multiple of 3."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counters in a bag",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A counter is chosen at random from a bag. All the counters are the same size, so each counter is equally likely to be chosen."
+        },
+        {
+          "t": "text",
+          "text": "Imagine a bag with 5 red counters and 2 blue counters."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "5 red counters"
+            },
+            {
+              "title": "2 blue counters"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which colour is more likely?",
+          "text": "Red. There are more red counters than blue counters, so it is more likely that a red one is picked."
+        },
+        {
+          "t": "text",
+          "text": "Even though all the counters are equally likely to be picked, the two colours are not equally likely."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: which is more likely?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Count the outcomes for each event, then pick the more likely one.",
+          "items": [
+            {
+              "q": "A regular six-sided dice is rolled once. Which is more likely?",
+              "options": [
+                "rolling less than 5",
+                "rolling a multiple of 3"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A regular six-sided dice is rolled once. Which is more likely?",
+              "options": [
+                "rolling a factor of 10",
+                "rolling a prime number",
+                "They are equally likely"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A bag has 3 blue and 6 green counters, all the same size. One is picked at random. Which is more likely?",
+              "options": [
+                "picking blue",
+                "picking green",
+                "They are equally likely"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A letter is chosen at random from the word STATISTICS. Which is more likely?",
+              "options": [
+                "choosing a vowel",
+                "choosing a consonant"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: equally likely or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Are the two outcomes equally likely? Tap a card, then tap its column.",
+          "columns": [
+            "Equally likely",
+            "One is more likely"
+          ],
+          "items": [
+            {
+              "text": "Spinner: the win and lose sectors are the same size",
+              "col": 0
+            },
+            {
+              "text": "Spinner: the win sector is much bigger than the lose sector",
+              "col": 1
+            },
+            {
+              "text": "Bag of same-size counters: 4 red and 4 blue",
+              "col": 0
+            },
+            {
+              "text": "Bag of same-size counters: 5 red and 2 blue",
+              "col": 1
+            },
+            {
+              "text": "Dice rolled: less than 4, or 4 or more",
+              "col": 0
+            },
+            {
+              "text": "Dice rolled: a factor of 6, or not a factor of 6",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Real life: a tennis match",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura and Aisha are going to play a tennis match. The sample space is ξ = ❴Aisha wins, Laura wins❵."
+        },
+        {
+          "t": "text",
+          "text": "Jacob says the two outcomes are equally likely, because either Aisha or Laura will win. Sam says one of them could be more likely than the other. Who do you agree with?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "Sam. Having two outcomes does not make them equally likely. Suppose one player has never played tennis before, and the other plays every weekend and has won lots of competitions. The outcomes are then not equally likely: the experienced player is more likely to win."
+        },
+        {
+          "t": "callout",
+          "text": "Outcomes are not always equally likely. Factors such as skill or {experience} can make one outcome more likely."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Real life: will it rain?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep says rain and not rain are equally likely, because it either rains or it doesn’t. Jun says one could be more likely, depending on other factors. Jun is right."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Location}",
+              "sub": "In Spain it might be more likely that it does not rain on a particular day; in the UK it might be more likely that it does."
+            },
+            {
+              "title": "{Time}",
+              "sub": "Met Office data (1941 to 2022) shows the average rainfall in Bradford is lowest in April and highest in December."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "So the time of year is a factor in deciding whether rain or no rain is more likely."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Comparing two outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can compare two outcomes even when other outcomes are possible."
+        },
+        {
+          "t": "text",
+          "text": "In the UK in December, which is more likely: snow or a heatwave? Other weather could happen too (rain, or a moderate temperature), but snow is still more likely than a heatwave."
+        },
+        {
+          "t": "text",
+          "text": "A novice swimmer races a professional swimmer. Either the novice wins or the professional wins, but the professional swimmer is more likely to win."
+        },
+        {
+          "t": "callout",
+          "text": "Two possible outcomes do not have to be {equally likely}."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: factors that matter",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each scenario to a contextual factor that might affect how likely its outcomes are.",
+          "pairs": [
+            {
+              "a": "A chess match: ξ = ❴Sam wins, Alex wins❵",
+              "b": "The experience of each player at playing chess"
+            },
+            {
+              "a": "Predicting snow on a particular day: ξ = ❴snow, no snow❵",
+              "b": "Time of the year, location, the weather on the days before"
+            },
+            {
+              "a": "Choosing an ice cream flavour: ξ = ❴vanilla, strawberry, mint, chocolate❵",
+              "b": "Which flavours Jun prefers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: real-life likelihood",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A novice swimmer races a professional swimmer. Who is more likely to win?",
+              "options": [
+                "the novice",
+                "the professional",
+                "They are equally likely"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which is more likely on a day in December in the UK?",
+              "options": [
+                "a heatwave",
+                "snow"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Mia plays tennis every weekend and has won lots of competitions. Noah has never played. In a match between them, which is true?",
+              "options": [
+                "Mia is more likely to win",
+                "Noah is more likely to win",
+                "They are equally likely, because there are only two outcomes"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Not all outcomes of a trial are equally likely to happen.",
+            "Outcomes that are not equally likely can be compared to decide which is more likely.",
+            "Contextual factors, such as experience, location and time, can affect how likely an outcome is."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "To compare, count the outcomes for each event, or look at the size of the sectors. Then think about any factors in the story."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an event?",
+      "back": "A subset of a sample space. It could be one outcome or a set of outcomes that may occur from a trial."
+    },
+    {
+      "front": "On a spinner with two sectors, what makes one outcome more likely than the other?",
+      "back": "Its sector is bigger.\n\nWhen the two sectors are the same size, the outcomes are equally likely."
+    },
+    {
+      "front": "Eight equal sectors are labelled A to H. Is a vowel or a consonant more likely?",
+      "back": "A consonant.\n\nThe event “vowel” has 2 outcomes (A, E) and the event “consonant” has 6 outcomes."
+    },
+    {
+      "front": "Which is more likely on a regular dice: rolling an odd number or a multiple of 3?",
+      "back": "An odd number.\n\nOdd: 1, 3, 5 (3 outcomes). Multiples of 3: 3, 6 (2 outcomes)."
+    },
+    {
+      "front": "A bag holds 5 red and 2 blue same-size counters. Which colour is more likely to be picked?",
+      "back": "Red.\n\nThere are more red counters than blue."
+    },
+    {
+      "front": "A dice is rolled. Is the event “a factor of 6” or “not a factor of 6” more likely?",
+      "back": "A factor of 6.\n\nFactors of 6: 1, 2, 3, 6 (4 outcomes). Not factors: 4, 5 (2 outcomes)."
+    },
+    {
+      "front": "Two tennis players: one has never played, the other plays every weekend and wins lots of competitions. Are the outcomes equally likely?",
+      "back": "No.\n\nThe experienced player is more likely to win."
+    },
+    {
+      "front": "Rain and not rain: are the two outcomes always equally likely?",
+      "back": "No.\n\nThey can depend on factors such as location and the time of year."
+    },
+    {
+      "front": "Which is more likely in the UK in December: snow or a heatwave?",
+      "back": "Snow.\n\nOther weather is possible too, but these two outcomes can still be compared."
+    },
+    {
+      "front": "Who is more likely to win a race: a novice swimmer or a professional swimmer?",
+      "back": "The professional swimmer."
+    },
+    {
+      "front": "Name two contextual factors that can make outcomes not equally likely.",
+      "back": "For example: the experience of a player, the location and the time of year."
+    },
+    {
+      "front": "Does having only two possible outcomes mean they are equally likely?",
+      "back": "No.\n\nEither player may win, but one outcome can still be more likely than the other."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Non-equally likely outcomes",
+    "instructions": "Answer each question with a word, a number or a short phrase. Count the outcomes for each event and think about the real-life factors.",
+    "questions": [
+      {
+        "prompt": "A regular six-sided dice is rolled once. Which is more likely: rolling a multiple of 2 or rolling a multiple of 3?",
+        "answer": "a multiple of 2",
+        "accepted": [
+          "a multiple of 2",
+          "multiple of 2",
+          "rolling a multiple of 2",
+          "2"
+        ],
+        "explanation": "Multiples of 2 are 2, 4 and 6 (3 outcomes); multiples of 3 are 3 and 6 (2 outcomes)."
+      },
+      {
+        "prompt": "A spinner has 8 equal sectors numbered 1 to 8. Which is more likely: landing on a factor of 8 or landing on a factor of 12?",
+        "answer": "a factor of 12",
+        "accepted": [
+          "a factor of 12",
+          "factor of 12",
+          "landing on a factor of 12",
+          "12"
+        ],
+        "explanation": "Factors of 8 on the spinner: 1, 2, 4, 8 (4 outcomes); factors of 12: 1, 2, 3, 4, 6 (5 outcomes)."
+      },
+      {
+        "prompt": "A bag holds 5 red and 2 blue counters, all the same size. One is picked at random. Which colour is more likely to be picked?",
+        "answer": "red",
+        "accepted": [
+          "red",
+          "Red",
+          "a red counter"
+        ],
+        "explanation": "There are more red counters than blue counters."
+      },
+      {
+        "prompt": "A letter is chosen at random from the word MATHEMATICS. Which is more likely: a vowel or a consonant?",
+        "answer": "a consonant",
+        "accepted": [
+          "a consonant",
+          "consonant",
+          "choosing a consonant"
+        ],
+        "explanation": "The word has 4 vowels (A, E, A, I) and 7 consonants."
+      },
+      {
+        "prompt": "How many outcomes are in the event “rolling a factor of 6” when a regular six-sided dice is rolled?",
+        "answer": "4",
+        "accepted": [
+          "4",
+          "four",
+          "4 outcomes",
+          "four outcomes"
+        ],
+        "explanation": "The factors of 6 on the dice are 1, 2, 3 and 6."
+      },
+      {
+        "prompt": "Fill in the gap: an ______ is a subset of a sample space.",
+        "answer": "event",
+        "accepted": [
+          "event",
+          "an event"
+        ],
+        "explanation": "An event is a subset of a sample space; it could be one outcome or a set of outcomes."
+      },
+      {
+        "prompt": "Mia plays tennis every weekend and has won lots of competitions. Noah has never played. Who is more likely to win a match between them?",
+        "answer": "Mia",
+        "accepted": [
+          "Mia",
+          "mia"
+        ],
+        "explanation": "The experience of each player is a factor that makes the outcomes not equally likely."
+      },
+      {
+        "prompt": "Which is more likely in the UK on a day in December: snow or a heatwave?",
+        "answer": "snow",
+        "accepted": [
+          "snow",
+          "Snow"
+        ],
+        "explanation": "Other weather is possible too, but snow is more likely than a heatwave in December."
+      },
+      {
+        "prompt": "A novice swimmer races a professional swimmer. Who is more likely to win?",
+        "answer": "the professional swimmer",
+        "accepted": [
+          "the professional swimmer",
+          "professional",
+          "the professional",
+          "professional swimmer"
+        ],
+        "explanation": "Either could win, but the professional swimmer is more likely to win than the novice."
+      },
+      {
+        "prompt": "Rain and not rain are the two outcomes for tomorrow. Are they always equally likely? (yes or no)",
+        "answer": "no",
+        "accepted": [
+          "no",
+          "No",
+          "not always"
+        ],
+        "explanation": "Factors such as location and the time of year can make one outcome more likely than the other."
+      }
+    ]
+  }
+}

@@ -1,0 +1,620 @@
+{
+  "agent": "w4-science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the formation of fossils and how the rock cycle affects our fossil record."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Forming fossils",
+              "sub": "How a living thing becomes a fossil"
+            },
+            {
+              "title": "The rock cycle and fossil record",
+              "sub": "Which rocks hold fossils, and why fossils get broken"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "fossil",
+              "def": "The mineralised remains or impression of once-living organisms, or of traces left behind by organisms (e.g. skeletons, shells or impressions)."
+            },
+            {
+              "term": "mineral",
+              "def": "An element or compound with a crystal-like structure. They are the 'building blocks' of rocks."
+            },
+            {
+              "term": "sediment",
+              "def": "A material deposited by water, wind or ice, such as pebbles or sand."
+            },
+            {
+              "term": "sedimentary rock",
+              "def": "A type of rock formed from the compression of sediments (rock fragments, minerals and remains of dead plants and animals)."
+            },
+            {
+              "term": "rock cycle",
+              "def": "The gradual recycling of rocks over millions of years."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a fossil?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some rocks contain physical evidence of ancient life. These are called {fossils}. The word fossil comes from the Latin 'fossilis', which means 'unearthed'."
+        },
+        {
+          "t": "text",
+          "text": "Fossils are typically more than 10 000 years old. A fossil can be:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Remains or impressions",
+              "sub": "of an organism itself, such as a leaf impression"
+            },
+            {
+              "title": "Traces of behaviour",
+              "sub": "such as footprints or animal dung (coprolite)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three main types of fossil",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Whole organism",
+              "sub": "The entire organism is preserved, including its soft parts. This is the rarest type, e.g. insects trapped in amber."
+            },
+            {
+              "title": "Hard parts, original form",
+              "sub": "Hard parts such as bones, shells or exoskeletons are preserved in their original chemical form. Common in young sediments, e.g. tar pits."
+            },
+            {
+              "title": "Hard parts, altered form",
+              "sub": "Hard parts are preserved in an altered chemical form, because they have been mineralised. These are the most common fossils."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is amber?",
+          "text": "Amber is fossilised tree resin."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How a fossil forms (part 1)",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Most fossils form in a similar way to sedimentary rocks."
+        },
+        {
+          "t": "list",
+          "items": [
+            "An organism dies and is quickly buried in sediment.",
+            "Decomposers break down the soft parts, leaving the hard parts.",
+            "More layers of sediment build up. This increases the pressure and makes the strata compact.",
+            "Compaction creates the conditions for mineral crystals to form."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How a fossil forms (part 2)",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The remaining hard parts of the organism are **mineralised** (altered). This can happen in two ways:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Pores fill up",
+              "sub": "The pores in the hard parts fill with mineral-rich water, and mineral crystals grow in the pores."
+            },
+            {
+              "title": "Replaced by minerals",
+              "sub": "The hard parts dissolve in the mineral-rich water and are replaced with mineral crystals from that water."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is a 'stone photocopy'?",
+          "text": "Mineralisation creates a 'stone photocopy' of the organism. After many thousands to millions of years, a fossil is formed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: forming fossils",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "What happens to an organism at the start of fossil formation?",
+              "options": [
+                "It is quickly buried in sediment",
+                "It is heated to a high temperature underground",
+                "It is melted"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What do decomposers do?",
+              "options": [
+                "They break down the soft parts, leaving the hard parts",
+                "They break down the hard parts, leaving the soft parts",
+                "They turn the soft parts into minerals"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which type of fossil is the rarest?",
+              "options": [
+                "Hard parts in an altered chemical form",
+                "An entire organism, including its soft parts",
+                "Hard parts in their original chemical form"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A footprint left by an animal is a fossil that shows...",
+              "options": [
+                "the organism's behaviour",
+                "the organism's soft parts",
+                "the organism's original chemical form"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The fossil record",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A collection of fossils documenting the history of life on Earth is called the {fossil record}."
+        },
+        {
+          "t": "text",
+          "text": "By studying the fossil record, scientists can learn about past environments and how life has changed over time."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Youngest fossils",
+              "sub": "about 10 000 years old"
+            },
+            {
+              "title": "Oldest fossils",
+              "sub": "about 3.4 billion years old"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Less than 1% of organisms become a fossil. Special conditions are needed."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Conditions for a fossil to form",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Body type",
+              "sub": "Organisms with hard parts are more likely to form fossils than those with soft parts."
+            },
+            {
+              "title": "Exposure",
+              "sub": "The organism must be buried quickly after death. This is more likely near flowing water or wind, which erode and deposit sediment. Smaller organisms need less sediment to be buried."
+            },
+            {
+              "title": "Sediment type",
+              "sub": "Acidic sediments react with calcium phosphate, the chemical that makes hard parts hard, and destroy them. Alkaline sediments do not."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: will it fossilise?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the more likely to become a fossil.",
+          "items": [
+            {
+              "q": "A trilobite (many hard parts) or a jellyfish (no hard parts)?",
+              "options": [
+                "Trilobite",
+                "Jellyfish"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Buried in acidic sediment or in alkaline sediment?",
+              "options": [
+                "Acidic sediment",
+                "Alkaline sediment"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Buried quickly after death or left uncovered?",
+              "options": [
+                "Buried quickly",
+                "Left uncovered"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three types of rock",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Earth is dynamic, which means it is constantly changing. The crust is broken into pieces called tectonic plates. As they move, conditions in the crust and upper mantle change, and this affects the type of rock that might form."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Sedimentary",
+              "sub": "Sediments are deposited, compacted and cemented together"
+            },
+            {
+              "title": "Igneous",
+              "sub": "Magma (melted rock) cools and crystallises"
+            },
+            {
+              "title": "Metamorphic",
+              "sub": "Other rocks are put under intense heat and pressure"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "All types of rock undergo weathering and erosion."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The rock cycle",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists use a {rock cycle} to keep track of the conditions that form each rock and the changes between them. Here are some of the processes:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Weathering and erosion turn any rock into sediment.",
+            "Compaction and cementation turn sediment into sedimentary rock.",
+            "Heat and pressure can turn sedimentary or igneous rock into metamorphic rock.",
+            "Melting turns metamorphic or igneous rock into magma.",
+            "Crystallisation turns magma into igneous rock."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A simple circle can be misleading. It wrongly suggests that one type of rock will always change into another, specific type. For example, not all sedimentary rocks form metamorphic rocks."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the rock cycle process",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each process to what it produces.",
+          "pairs": [
+            {
+              "a": "weathering and erosion",
+              "b": "sediment"
+            },
+            {
+              "a": "compaction and cementation",
+              "b": "sedimentary rock"
+            },
+            {
+              "a": "heat and pressure",
+              "b": "metamorphic rock"
+            },
+            {
+              "a": "crystallisation of magma",
+              "b": "igneous rock"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Fossils and the rock cycle",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A fossil takes many thousands of years to form, similar to a sedimentary rock. Fossils are usually found in sedimentary rocks because they are formed by a similar process."
+        },
+        {
+          "t": "callout",
+          "text": "Geological processes involving intense heat and pressure distort fossils, and melting destroys them entirely. So fossils are not found in metamorphic or igneous rocks."
+        },
+        {
+          "t": "text",
+          "text": "Fossils can also be found incomplete or broken, for example because of weathering and erosion, extreme compaction, or sudden shifts such as earthquakes and landslides. Larger fossils are more likely to be broken."
+        },
+        {
+          "t": "reveal",
+          "label": "Are broken fossils still useful?",
+          "text": "Yes. Most fossils in the fossil record are broken or incomplete, but they still give a lot of evidence about how organisms might have died and lived, and about the conditions that scattered their remains."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: rocks and fossils",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which type of rock could contain fossils?",
+          "columns": [
+            "Could contain fossils",
+            "Not found with fossils"
+          ],
+          "items": [
+            {
+              "text": "shale (sedimentary rock)",
+              "col": 0
+            },
+            {
+              "text": "limestone (sedimentary rock)",
+              "col": 0
+            },
+            {
+              "text": "granite (igneous rock)",
+              "col": 1
+            },
+            {
+              "text": "marble (metamorphic rock)",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Why are fossils not found in metamorphic rock?",
+              "options": [
+                "Intense heat and pressure distort them",
+                "Metamorphic rock forms from sediment",
+                "Fossils only form in water"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these may mean a fossil is found broken?",
+              "options": [
+                "An earthquake",
+                "Alkaline sediment",
+                "A very small organism"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Fossils and the rock cycle",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Fossils are found in sedimentary rock, but not in other types of rock.",
+            "Fossils are often the remains or imprints of living plants or animals.",
+            "Bones buried in sedimentary rock can be very, very slowly dissolved by water and replaced by minerals in the water.",
+            "Geological activities can break (earthquakes), distort (intense heat and pressure) or destroy (melting) fossils."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a fossil?",
+      "back": "The mineralised remains or impression of once-living organisms, or of traces left behind by organisms."
+    },
+    {
+      "front": "How old are fossils typically?",
+      "back": "More than 10 000 years old."
+    },
+    {
+      "front": "What does the Latin word 'fossilis' mean?",
+      "back": "'Unearthed'. The word fossil comes from it."
+    },
+    {
+      "front": "What is the rarest type of fossil?",
+      "back": "A whole organism preserved, including its soft parts.\n\ne.g. an insect trapped in amber"
+    },
+    {
+      "front": "What is the most common type of fossil?",
+      "back": "Hard parts of an organism preserved in an altered chemical form (they have been mineralised)."
+    },
+    {
+      "front": "What do decomposers do when a fossil is forming?",
+      "back": "They break down the soft parts, leaving the hard parts."
+    },
+    {
+      "front": "Describe the two ways hard parts can be mineralised.",
+      "back": "Mineral crystals grow in the pores of the hard parts, or the hard parts dissolve and are replaced by mineral crystals from the water."
+    },
+    {
+      "front": "What percentage of organisms become a fossil?",
+      "back": "Less than 1%."
+    },
+    {
+      "front": "Why are acidic sediments bad for making fossils?",
+      "back": "They react with calcium phosphate, which makes hard parts hard. This destroys the hard parts."
+    },
+    {
+      "front": "Which type of rock forms when magma cools and crystallises?",
+      "back": "Igneous rock.\n\ne.g. granite"
+    },
+    {
+      "front": "Which type of rock forms when other rocks are put under intense heat and pressure?",
+      "back": "Metamorphic rock.\n\ne.g. marble"
+    },
+    {
+      "front": "Why is a circular rock cycle diagram misleading?",
+      "back": "It wrongly suggests that one type of rock will always change into another, specific type."
+    },
+    {
+      "front": "Why are fossils not found in igneous or metamorphic rocks?",
+      "back": "Intense heat and pressure distort fossils, and melting destroys them entirely."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Fossils and the rock cycle",
+    "instructions": "Answer each question with a word, a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What do we call the mineralised remains or impression of once-living organisms?",
+        "answer": "fossil",
+        "accepted": [
+          "fossils",
+          "a fossil"
+        ],
+        "explanation": "Fossils are the mineralised remains or impressions of once-living organisms."
+      },
+      {
+        "prompt": "Fossils are usually found in which type of rock?",
+        "answer": "sedimentary",
+        "accepted": [
+          "sedimentary rock"
+        ],
+        "explanation": "Fossils are formed by a similar process to sedimentary rocks and are usually found in them."
+      },
+      {
+        "prompt": "A footprint shows an organism's behaviour. What kind of fossil is it?",
+        "answer": "trace fossil",
+        "accepted": [
+          "a trace fossil"
+        ],
+        "explanation": "A trace fossil shows an organism's behaviour, such as footprints."
+      },
+      {
+        "prompt": "Amber traps insects. Amber is fossilised what?",
+        "answer": "tree resin",
+        "accepted": [
+          "resin"
+        ],
+        "explanation": "Amber is fossilised tree resin."
+      },
+      {
+        "prompt": "Which living things break down an organism's soft parts, leaving the hard parts?",
+        "answer": "decomposers",
+        "accepted": [
+          "decomposer"
+        ],
+        "explanation": "Decomposers break down the soft parts of a dead organism."
+      },
+      {
+        "prompt": "Which chemical, found in bones, makes hard parts hard and reacts with acidic sediments?",
+        "answer": "calcium phosphate",
+        "explanation": "Calcium phosphate makes hard parts hard, and acidic sediments react with it."
+      },
+      {
+        "prompt": "What is a collection of fossils documenting the history of life on Earth called?",
+        "answer": "fossil record",
+        "accepted": [
+          "the fossil record"
+        ],
+        "explanation": "The fossil record documents the history of life on Earth."
+      },
+      {
+        "prompt": "Less than what percentage of organisms become a fossil? Give the number only.",
+        "answer": "1",
+        "accepted": [
+          "1%",
+          "one"
+        ],
+        "explanation": "Less than 1% of organisms become a fossil."
+      },
+      {
+        "prompt": "Which type of rock forms when magma cools and crystallises?",
+        "answer": "igneous",
+        "accepted": [
+          "igneous rock"
+        ],
+        "explanation": "Igneous rocks form when magma cools and crystallises."
+      },
+      {
+        "prompt": "Which type of rock forms when other rocks are put under intense heat and pressure?",
+        "answer": "metamorphic",
+        "accepted": [
+          "metamorphic rock"
+        ],
+        "explanation": "Metamorphic rocks form under intense heat and pressure."
+      }
+    ]
+  }
+}

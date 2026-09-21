@@ -1,0 +1,634 @@
+{
+  "agent": "maths-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can {compare and order} decimal numbers with hundredths."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will decide which decimal number is larger, and put a list of decimals in order."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "compare numbers with the {same whole number}"
+            },
+            {
+              "title": "compare numbers that look {similar}"
+            },
+            {
+              "title": "{order} a range of decimals"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "compare",
+              "def": "When you compare, you look for similarities and differences in an object or value."
+            },
+            {
+              "term": "place value",
+              "def": "The value of a digit in a number based on where it is placed."
+            },
+            {
+              "term": "order",
+              "def": "Putting numbers or objects in position based on a set rule."
+            },
+            {
+              "term": "ascending",
+              "def": "When items are arranged from smallest to largest."
+            },
+            {
+              "term": "descending",
+              "def": "When items are arranged from largest to smallest."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which number is larger?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One big block is one whole. One flat block is one tenth. One little block is one hundredth."
+        },
+        {
+          "t": "text",
+          "text": "Izzy has 1 whole, 4 tenths and 3 hundredths. That is **1.43**."
+        },
+        {
+          "t": "text",
+          "text": "Alex has 2 wholes, 3 tenths and 4 hundredths. That is **2.34**."
+        },
+        {
+          "t": "reveal",
+          "label": "Who has the larger number?",
+          "text": "**Alex.** Not because of the number of blocks, but because he has more ones: 2 wholes is more than 1 whole."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Symbols and the number line",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We use symbols to compare numbers. The symbol opens towards the larger number."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{<}",
+              "sub": "less than"
+            },
+            {
+              "title": "{>}",
+              "sub": "greater than"
+            },
+            {
+              "title": "{=}",
+              "sub": "equal to"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "So **1.43 < 2.34** (1.43 is less than 2.34)."
+        },
+        {
+          "t": "callout",
+          "text": "On a number line, larger numbers are further to the {right}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Start with the largest place value",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Put both numbers in a place value chart. Then follow this rule:"
+        },
+        {
+          "t": "callout",
+          "text": "To compare two numbers, compare the digits with the {same place value}, starting with the {largest} place value."
+        },
+        {
+          "t": "text",
+          "text": "1.43 and 2.34: the largest place value here is the **ones**. 2 ones is more than 1 one, so 2.34 is larger."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ordering numbers of different sizes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Order 23.47, 7.68 and 2.3 from smallest to largest (ascending)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Largest place value: 23.47 has 2 **tens**. The others have none, so 23.47 is the largest.",
+            "Next look at the ones: 7.68 has 7 ones and 2.3 has 2 ones, so 7.68 is bigger than 2.3.",
+            "Ascending order: **2.3, 7.68, 23.47**."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "2.3 has fewer digits than 7.68 or 23.47, but that does not decide anything. What matters is the place value of each digit, starting with the largest."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: the largest place value",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which number is greater than 4.58?",
+          "options": [
+            "3.99",
+            "5.01",
+            "4.5"
+          ],
+          "answer": 1,
+          "why": "5.01 has 5 ones and 4.58 only has 4 ones. Compare the ones first."
+        },
+        {
+          "t": "choice",
+          "q": "Which number is the largest?",
+          "options": [
+            "9.85",
+            "10.2",
+            "9.99"
+          ],
+          "answer": 1,
+          "why": "10.2 has a 1 in the tens column. The other two numbers have no tens."
+        },
+        {
+          "t": "choice",
+          "q": "Which number is the smallest?",
+          "options": [
+            "3.09",
+            "3.9",
+            "3.19"
+          ],
+          "answer": 0,
+          "why": "All three have 3 ones. Then compare tenths: 3.09 has 0 tenths, the smallest."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same ones? Compare the tenths",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now compare 3.41 and 3.14. What do you notice?"
+        },
+        {
+          "t": "text",
+          "text": "They have the same number of ones (3). When the ones are the same, we compare the next largest place value: the **tenths**."
+        },
+        {
+          "t": "text",
+          "text": "4 tenths is greater than 1 tenth, so **3.41 > 3.14**."
+        },
+        {
+          "t": "text",
+          "text": "Similarly, 0.1 and 0.01 have the same number of ones (0). 0.1 has 1 tenth and 0.01 has none, so 0.1 is larger."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same tenths? Compare the hundredths",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now compare 3.41 and 3.43. Same ones, and the same tenths (4)."
+        },
+        {
+          "t": "text",
+          "text": "When the tenths are the same, we compare the next largest place value: the **hundredths**."
+        },
+        {
+          "t": "text",
+          "text": "1 hundredth is less than 3 hundredths, so **3.41 < 3.43**."
+        },
+        {
+          "t": "reveal",
+          "label": "Another way with 7.67 and 7.68",
+          "text": "When the whole numbers are the same you can read the tenths and hundredths together as hundredths: 7 and 67 hundredths, 7 and 68 hundredths. 68 hundredths is larger, so 7.68 is the larger number."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Turn tenths into hundredths",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Which is larger, 1.5 or 1.45?"
+        },
+        {
+          "t": "text",
+          "text": "You can convert the tenths into hundredths to compare."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "1.5",
+              "add": "write with hundredths",
+              "result": "1.50",
+              "note": "5 tenths can also be written as 50 hundredths."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "50 hundredths is greater than 45 hundredths, so **1.5 > 1.45**."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Having more digits does not make a number larger. 1.5 has fewer digits than 1.45 but it is the larger number. In the same way, 2 is larger than 1.45 because 2 ones is more than 1 one."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which symbol?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose <, > or = to complete each comparison.",
+          "items": [
+            {
+              "q": "5.62 ___ 5.26",
+              "options": [
+                "<",
+                ">",
+                "="
+              ],
+              "answer": 1
+            },
+            {
+              "q": "8 ___ 8.00",
+              "options": [
+                "<",
+                ">",
+                "="
+              ],
+              "answer": 2
+            },
+            {
+              "q": "0.3 ___ 0.25",
+              "options": [
+                "<",
+                ">",
+                "="
+              ],
+              "answer": 1
+            },
+            {
+              "q": "2.02 ___ 2.22",
+              "options": [
+                "<",
+                ">",
+                "="
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Smaller or larger than 5.62?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a number, then tap the column it belongs in.",
+          "columns": [
+            "Smaller than 5.62",
+            "Larger than 5.62"
+          ],
+          "items": [
+            {
+              "text": "5.26",
+              "col": 0
+            },
+            {
+              "text": "6.13",
+              "col": 1
+            },
+            {
+              "text": "5.69",
+              "col": 1
+            },
+            {
+              "text": "5.60",
+              "col": 0
+            },
+            {
+              "text": "4.99",
+              "col": 0
+            },
+            {
+              "text": "5.7",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ordering a range of decimals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These numbers look very similar: 1.40, 4.1, 4.01, 1.04. Order them from largest to smallest (descending)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ones: 4.1 and 4.01 have 4 ones. 1.40 and 1.04 have 1 one. So the 4s come first.",
+            "4.1 and 4.01: tenths 1 and 0, so 4.1 is larger.",
+            "1.40 and 1.04: tenths 4 and 0, so 1.40 is larger.",
+            "Descending order: **4.1, 4.01, 1.40, 1.04**."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Ascending or descending?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Put 0.5, 0.05, 0.55 and 0.15 in ascending order (smallest to largest). Which list is correct?",
+          "options": [
+            "0.05, 0.15, 0.5, 0.55",
+            "0.05, 0.5, 0.15, 0.55",
+            "0.55, 0.5, 0.15, 0.05"
+          ],
+          "answer": 0,
+          "why": "Compare tenths first: 0.05 has 0 tenths, 0.15 has 1, 0.5 has 5 and 0.55 has 5. The last two are equal in tenths, so compare hundredths: 0.5 < 0.55."
+        },
+        {
+          "t": "choice",
+          "q": "Put 6.08, 6.8, 0.68 and 8.06 in descending order (largest to smallest). Which list is correct?",
+          "options": [
+            "8.06, 6.8, 6.08, 0.68",
+            "0.68, 6.08, 6.8, 8.06",
+            "8.06, 6.08, 6.8, 0.68"
+          ],
+          "answer": 0,
+          "why": "Ones first: 8, 6, 6, 0. Then 6.8 has 8 tenths and 6.08 has 0 tenths, so 6.8 > 6.08."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "To compare two numbers, compare the digits with the same place value, starting with the largest place value.",
+            "If the digits are the same, look at the next largest place value.",
+            "You can compare tenths and hundredths by converting the tenths into hundredths.",
+            "If you can compare numbers, you can order them: ascending (smallest to largest) or descending (largest to smallest)."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "More digits does not mean a larger number. Always start with the {largest place value}."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is ascending order?",
+      "back": "Arranged from smallest to largest."
+    },
+    {
+      "front": "What is descending order?",
+      "back": "Arranged from largest to smallest."
+    },
+    {
+      "front": "What does place value mean?",
+      "back": "The value of a digit in a number based on where it is placed."
+    },
+    {
+      "front": "Where do you start when you compare two numbers?",
+      "back": "With the digits of the largest place value."
+    },
+    {
+      "front": "Two numbers have the same ones. What do you compare next?",
+      "back": "The tenths."
+    },
+    {
+      "front": "Two numbers have the same ones and the same tenths. What do you compare next?",
+      "back": "The hundredths."
+    },
+    {
+      "front": "Which symbol means “less than”?",
+      "back": "<\n\n1.43 < 2.34"
+    },
+    {
+      "front": "Which symbol means “greater than”?",
+      "back": ">\n\n3.41 > 3.14"
+    },
+    {
+      "front": "Where are larger numbers on a number line?",
+      "back": "Further to the right."
+    },
+    {
+      "front": "Is 3.41 or 3.14 larger? Why?",
+      "back": "3.41. The ones are the same, and 4 tenths is more than 1 tenth."
+    },
+    {
+      "front": "Is 1.5 or 1.45 larger? How can you tell?",
+      "back": "1.5. Write 1.5 as 1.50: 50 hundredths is more than 45 hundredths."
+    },
+    {
+      "front": "Does a number with more digits always have a greater value?",
+      "back": "No. 1.5 is larger than 1.45, and 2 is larger than 1.45."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Compare and order decimal numbers with hundredths",
+    "instructions": "For the comparison questions, write <, > or = in the gap. Start by comparing the largest place value each time. For the ordering questions, write the numbers in a row, separated by commas.",
+    "questions": [
+      {
+        "prompt": "Write <, > or = :  0.81 ___ 1.32",
+        "answer": "<",
+        "accepted": [
+          "less than",
+          "is less than"
+        ],
+        "explanation": "0.81 has 0 ones and 1.32 has 1 one, so 0.81 is less than 1.32."
+      },
+      {
+        "prompt": "Write <, > or = :  1.26 ___ 2.06",
+        "answer": "<",
+        "accepted": [
+          "less than",
+          "is less than"
+        ],
+        "explanation": "1 one is less than 2 ones, so 1.26 < 2.06."
+      },
+      {
+        "prompt": "Write <, > or = :  23.10 ___ 22.10",
+        "answer": ">",
+        "accepted": [
+          "greater than",
+          "is greater than",
+          "more than"
+        ],
+        "explanation": "Both have 2 tens, but 3 ones is more than 2 ones, so 23.10 > 22.10."
+      },
+      {
+        "prompt": "Write <, > or = :  10.84 ___ 10.86",
+        "answer": "<",
+        "accepted": [
+          "less than",
+          "is less than"
+        ],
+        "explanation": "The tens, ones and tenths are the same. 4 hundredths is less than 6 hundredths."
+      },
+      {
+        "prompt": "Write <, > or = :  0.4 ___ 0.06",
+        "answer": ">",
+        "accepted": [
+          "greater than",
+          "is greater than",
+          "more than"
+        ],
+        "explanation": "0.4 has 4 tenths and 0.06 has 0 tenths, so 0.4 > 0.06."
+      },
+      {
+        "prompt": "Write <, > or = :  8 ___ 8.00",
+        "answer": "=",
+        "accepted": [
+          "equal to",
+          "equals",
+          "is equal to",
+          "the same"
+        ],
+        "explanation": "8.00 has 8 ones, 0 tenths and 0 hundredths, so it is equal to 8."
+      },
+      {
+        "prompt": "Write <, > or = :  0.3 ___ 0.25",
+        "answer": ">",
+        "accepted": [
+          "greater than",
+          "is greater than",
+          "more than"
+        ],
+        "explanation": "0.3 is 30 hundredths, and 30 hundredths is more than 25 hundredths."
+      },
+      {
+        "prompt": "Write <, > or = :  5 ___ 4.99",
+        "answer": ">",
+        "accepted": [
+          "greater than",
+          "is greater than",
+          "more than"
+        ],
+        "explanation": "5 has 5 ones and 4.99 has only 4 ones, so 5 > 4.99."
+      },
+      {
+        "prompt": "Put these in ascending order (smallest first): 0.3, 0.03, 0.31, 0.1, 0.13",
+        "answer": "0.03, 0.1, 0.13, 0.3, 0.31",
+        "accepted": [
+          "0.03,0.1,0.13,0.3,0.31",
+          "0.03 0.1 0.13 0.3 0.31",
+          "0.03, 0.10, 0.13, 0.30, 0.31",
+          "0.03,0.10,0.13,0.30,0.31",
+          "0.03 0.10 0.13 0.30 0.31"
+        ],
+        "explanation": "As hundredths: 3, 10, 13, 30, 31. In ascending order that is 0.03, 0.1, 0.13, 0.3, 0.31."
+      },
+      {
+        "prompt": "Put these in descending order (largest first): 2.5, 2.05, 5.2, 0.25",
+        "answer": "5.2, 2.5, 2.05, 0.25",
+        "accepted": [
+          "5.2,2.5,2.05,0.25",
+          "5.2 2.5 2.05 0.25",
+          "5.20, 2.50, 2.05, 0.25",
+          "5.20,2.50,2.05,0.25",
+          "5.20 2.50 2.05 0.25"
+        ],
+        "explanation": "5.2 has 5 ones and 0.25 has 0 ones. 2.5 and 2.05 both have 2 ones, and 5 tenths is more than 0 tenths, so 2.5 > 2.05."
+      },
+      {
+        "prompt": "Which is larger, 3.41 or 3.14?",
+        "answer": "3.41",
+        "accepted": [
+          "3.41 is larger",
+          "3.41 is larger than 3.14"
+        ],
+        "explanation": "The ones are the same. Then 4 tenths is more than 1 tenth."
+      },
+      {
+        "prompt": "Write 1.5 with two digits after the decimal point, to help compare it with 1.45.",
+        "answer": "1.50",
+        "accepted": [
+          "one point five zero"
+        ],
+        "explanation": "5 tenths is the same as 50 hundredths, so 1.5 = 1.50."
+      }
+    ]
+  }
+}

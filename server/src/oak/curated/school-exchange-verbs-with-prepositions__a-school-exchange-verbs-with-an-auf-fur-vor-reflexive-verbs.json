@@ -1,0 +1,676 @@
+{
+  "agent": "german-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use reflexive pronouns with reflexive verbs, and understand that some verbs need prepositions to link them to a noun."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to pronounce [g] correctly."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Pronouncing {[g]}"
+            },
+            {
+              "title": "Reflexive pronouns"
+            },
+            {
+              "title": "Verbs with prepositions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[g]",
+              "def": "Pronounced as in ‘gehen’ or ‘Zeug’."
+            },
+            {
+              "term": "reflexive pronoun",
+              "def": "Replaces the object in a sentence using a reflexive verb, e.g. ‘myself’."
+            },
+            {
+              "term": "preposition",
+              "def": "A word that is used before a noun, a noun phrase, or a pronoun, connecting it to another word."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "[g] at the start and in the middle",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The sound [g] usually makes a hard sound at the start and in the middle of words, like the ‘g’ in English ‘go’."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "gewinnen",
+              "def": "to win"
+            },
+            {
+              "term": "ausgehen",
+              "def": "to go out"
+            },
+            {
+              "term": "der Beginn",
+              "def": "beginning"
+            },
+            {
+              "term": "gerade",
+              "def": "straight, just"
+            },
+            {
+              "term": "die Region",
+              "def": "region"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Be careful with cognates like ‘Region’. In English, ‘g’ is a soft ‘j’ sound after ‘i’ or ‘e’. The [g] in German is hard!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "[g] at the end of a syllable",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If [g] is the final sound in a syllable, it sounds more like ‘k’, as in ‘Flugzeug’. The vocal cords don’t vibrate."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Ber{g}",
+            "Zu{g}",
+            "We{g} (way, path)",
+            "Erfol{g} (success)",
+            "Flu{g}zeu{g}"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Compare: in ‘Frage’ (question) and ‘Geschichte’ (history) the [g] is at the start or in the middle of a syllable, so it is hard like in ‘go’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which [g]?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer the questions about [g].",
+          "items": [
+            {
+              "q": "In which word does the g sound more like ‘k’?",
+              "options": [
+                "Erfolg",
+                "Region",
+                "gerade"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which word starts with a hard [g], like in English ‘go’?",
+              "options": [
+                "Weg",
+                "gewinnen",
+                "Berg"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How is the g in ‘Region’ pronounced in German?",
+              "options": [
+                "Hard, like ‘go’",
+                "Soft, like ‘j’"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New vocabulary",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "warnen (vor)",
+              "def": "to warn (about)"
+            },
+            {
+              "term": "die Rede",
+              "def": "speech, talk"
+            },
+            {
+              "term": "morgen",
+              "def": "tomorrow"
+            },
+            {
+              "term": "sich freuen (auf)",
+              "def": "to look forward (to)"
+            },
+            {
+              "term": "interessieren",
+              "def": "to interest"
+            },
+            {
+              "term": "sich interessieren (für)",
+              "def": "to be, get interested (in)"
+            },
+            {
+              "term": "der Erfolg",
+              "def": "success"
+            },
+            {
+              "term": "der Druck",
+              "def": "pressure"
+            },
+            {
+              "term": "hoffen (auf)",
+              "def": "to hope (for)"
+            },
+            {
+              "term": "der Autor",
+              "def": "author"
+            },
+            {
+              "term": "das Interview",
+              "def": "interview"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reflexive verbs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use verbs reflexively when the subject and object of an action are the same. A reflexive pronoun is used in place of an object."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich ziehe die Jacke an. (I put on the jacket.)",
+            "Ich ziehe {mich} an. (I dress myself.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When we use verbs reflexively, sometimes the meaning changes slightly. Often English uses a different verb for the reflexive and non-reflexive meanings."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Singular reflexive pronouns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A reflexive pronoun is used instead of an object when the subject is also affected by the action of the verb. The singular reflexive pronouns are:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{mich}",
+              "sub": "myself"
+            },
+            {
+              "title": "{dich}",
+              "sub": "yourself"
+            },
+            {
+              "title": "{sich}",
+              "sub": "himself, herself, itself"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich fühle mich wohl. (I feel well.)",
+            "Er fühlt sich müde.",
+            "Ich setze mich auf den Boden. (I sit on the ground.)"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out: mich and dich",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mich and dich can be reflexive pronouns or direct object pronouns. Context tells us which!"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich frage {dich}! (I am asking you: ‘dich’ is a direct object pronoun.)",
+            "Du setzt {dich} auf den Stuhl! (you are sitting yourself on the chair: reflexive, because the subject and the pronoun both refer to ‘you’.)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How can I tell?",
+          "text": "Ask: does the pronoun refer to the same person as the subject? In ‘Ich wasche mich’ (I wash myself) it does, so it is reflexive."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Reflexive or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is the sentence reflexive or not?",
+          "columns": [
+            "reflexiv",
+            "nicht reflexiv"
+          ],
+          "items": [
+            {
+              "text": "Du setzt dich auf den Stuhl!",
+              "col": 0
+            },
+            {
+              "text": "Ich fühle mich wohl.",
+              "col": 0
+            },
+            {
+              "text": "Ich freue mich auf den Austausch!",
+              "col": 0
+            },
+            {
+              "text": "Ich wasche meine Tasche.",
+              "col": 1
+            },
+            {
+              "text": "Ich frage dich!",
+              "col": 1
+            },
+            {
+              "text": "Ich ziehe meine Jacke an.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Mich, dich, sich or nothing?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose what fills the gap.",
+          "items": [
+            {
+              "q": "Ich freue ___ auf den Austausch!",
+              "options": [
+                "mich",
+                "dich",
+                "sich"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Fühlst du ___ glücklich?",
+              "options": [
+                "mich",
+                "dich",
+                "sich"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Er fühlt ___ müde.",
+              "options": [
+                "mich",
+                "dich",
+                "sich"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Ich wasche ___ meine Tasche.",
+              "options": [
+                "mich",
+                "dich",
+                "no pronoun needed"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Ich interessiere ___ für die Schule in Schottland.",
+              "options": [
+                "mich",
+                "dich",
+                "sich"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sich fühlen or spüren?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some verbs that are used reflexively in German are not used the same way in English."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Use the reflexive verb ‘sich fühlen’ for internal emotions: Ich fühle mich wohl.",
+            "Use ‘spüren’ rather than ‘fühlen’ when describing external sensations: Sie spürt den Druck. (She feels the pressure.)"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which is the best way to say ‘She feels the pressure’?",
+          "options": [
+            "Sie fühlt sich den Druck.",
+            "Sie spürt den Druck."
+          ],
+          "answer": 1,
+          "why": "The pressure is an external sensation, so German uses ‘spüren’ rather than ‘fühlen’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Verbs that need a preposition",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some verbs need a preposition to link them to a noun."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich warte auf das Buch. (I’m waiting for the book.)",
+            "Ich hoffe auf die Ferien. (I’m hoping for the holidays.)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Many verbs in German and English are followed directly by a noun: Ich halte das Buch. (I hold the book.)"
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "German verbs often use different prepositions from those used in English. For example, ‘ich hoffe auf’ means ‘I’m hoping for’ (not ‘hoping on’)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Movement or location?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In, auf, an and vor take the accusative case when describing movement, and the dative case when describing location."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich bin in der Stadt. (location: dative)",
+            "Ich gehe in die Stadt. (movement: accusative)"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "How do you say ‘I’m going into town’?",
+          "options": [
+            "Ich bin in der Stadt.",
+            "Ich gehe in die Stadt.",
+            "Ich gehe aus die Stadt."
+          ],
+          "answer": 1,
+          "why": "Going into town is movement, so ‘in’ takes the accusative: in die Stadt. ‘In der Stadt’ describes a location: ‘I’m in town’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Prepositions in context",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the preposition that goes with the verb.",
+          "items": [
+            {
+              "q": "In English we say ‘to take part in’. In German: Ich nehme ___ dem Austausch teil.",
+              "options": [
+                "in",
+                "an",
+                "auf"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ich warte ___ das Buch.",
+              "options": [
+                "für",
+                "auf",
+                "vor"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Alastair hat ___ schlechtem Wetter gewarnt.",
+              "options": [
+                "vor",
+                "für",
+                "an"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Wolfgang hofft trotzdem ___ gutes Wetter.",
+              "options": [
+                "für",
+                "auf",
+                "vor"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "At the start or in the middle of words, [g] is usually pronounced like the ‘g’ in English ‘go’. When [g] is the final sound in a syllable, it sounds like ‘k’, as in ‘Flugzeug’.",
+            "A reflexive pronoun is used instead of an object when the subject is also affected by the action of the verb, e.g. ‘ich wasche mich’.",
+            "Reflexive verbs need reflexive pronouns, which replace the object in the sentence.",
+            "Some verbs need prepositions to link them to a noun, for example ‘sich freuen auf’. German often uses different prepositions from English."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [g] usually pronounced at the start or in the middle of a word?",
+      "back": "Like the ‘g’ in English ‘go’.\n\ngehen"
+    },
+    {
+      "front": "How does [g] sound when it is the final sound in a syllable?",
+      "back": "More like ‘k’.\n\nFlugzeug"
+    },
+    {
+      "front": "Is the g in ‘Region’ hard or soft in German?",
+      "back": "Hard, like in ‘go’ (not a soft ‘j’ as in English)."
+    },
+    {
+      "front": "When do we use a verb reflexively?",
+      "back": "When the subject and object of the action are the same."
+    },
+    {
+      "front": "What does a reflexive pronoun do?",
+      "back": "It replaces the object in a sentence with a reflexive verb, e.g. ‘myself’."
+    },
+    {
+      "front": "What are the singular reflexive pronouns?",
+      "back": "mich (myself), dich (yourself), sich (himself, herself, itself)"
+    },
+    {
+      "front": "What is the difference between ‘Ich ziehe die Jacke an’ and ‘Ich ziehe mich an’?",
+      "back": "‘I put on the jacket’ and ‘I dress myself’. The reflexive pronoun replaces the object and the meaning changes slightly."
+    },
+    {
+      "front": "Can ‘mich’ and ‘dich’ be something other than reflexive pronouns?",
+      "back": "Yes, they can also be direct object pronouns. Context tells us which.\n\nIch frage dich! = I am asking you."
+    },
+    {
+      "front": "Which verb is used for internal emotions: ‘spüren’ or ‘sich fühlen’?",
+      "back": "sich fühlen.\n\nIch fühle mich wohl."
+    },
+    {
+      "front": "Which verb is used for external sensations: ‘spüren’ or ‘fühlen’?",
+      "back": "spüren.\n\nSie spürt den Druck."
+    },
+    {
+      "front": "Say in German: ‘to hope for’ and ‘to wait for’ (verb + preposition)",
+      "back": "hoffen auf, warten auf"
+    },
+    {
+      "front": "Do German verbs always use the same prepositions as English verbs?",
+      "back": "No. They often use different ones, e.g. ‘ich hoffe auf’ = I’m hoping for (not ‘hoping on’)."
+    },
+    {
+      "front": "Which cases do in, auf, an and vor take for movement and for location?",
+      "back": "Movement: accusative. Location: dative.\n\nIch gehe in die Stadt. / Ich bin in der Stadt."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: A school exchange: verbs with ‘an’, ‘auf’, ‘für’, ‘vor’, reflexive verbs",
+    "instructions": "Write the missing word, or answer the question. Use what you learnt about [g], reflexive pronouns and verbs with prepositions.",
+    "questions": [
+      {
+        "prompt": "Task A: Give the plural of ‘das Werkzeug’ (tool).",
+        "answer": "Werkzeuge",
+        "accepted": [
+          "die Werkzeuge"
+        ],
+        "explanation": "The plural adds -e: Werkzeug → Werkzeuge."
+      },
+      {
+        "prompt": "Task A: Give the plural of ‘das Spielzeug’ (toy).",
+        "answer": "Spielzeuge",
+        "accepted": [
+          "die Spielzeuge"
+        ],
+        "explanation": "The plural adds -e: Spielzeug → Spielzeuge."
+      },
+      {
+        "prompt": "Task A: Give the plural of ‘das Flugzeug’ (aeroplane).",
+        "answer": "Flugzeuge",
+        "accepted": [
+          "die Flugzeuge"
+        ],
+        "explanation": "The plural adds -e: Flugzeug → Flugzeuge."
+      },
+      {
+        "prompt": "Task A: In ‘Erfolg’ (success), the [g] is the final sound in the word. Which sound does it make: [g] as in ‘go’ or [k]?",
+        "answer": "k",
+        "accepted": [
+          "[k]",
+          "like k"
+        ],
+        "explanation": "When [g] is the final sound in a syllable, it sounds more like ‘k’."
+      },
+      {
+        "prompt": "Task B: Fühlst du ___ glücklich? Write mich or dich.",
+        "answer": "dich",
+        "explanation": "The subject is ‘du’, so the reflexive pronoun is ‘dich’."
+      },
+      {
+        "prompt": "Task B: Ich ziehe ___ schon um 6 Uhr an. Write mich or dich.",
+        "answer": "mich",
+        "explanation": "The subject is ‘ich’, so the reflexive pronoun is ‘mich’."
+      },
+      {
+        "prompt": "Task B: Du nennst ___ Wolf statt Wolfgang, nicht wahr? Write mich or dich.",
+        "answer": "dich",
+        "explanation": "The subject is ‘du’, so the reflexive pronoun is ‘dich’."
+      },
+      {
+        "prompt": "Task B: Er fühlt ___ müde. Write mich, dich or sich.",
+        "answer": "sich",
+        "explanation": "The subject is ‘er’, so the reflexive pronoun is ‘sich’."
+      },
+      {
+        "prompt": "Task B: Ich wasche ___ meine Tasche. Write mich, dich or nothing.",
+        "answer": "nothing",
+        "accepted": [
+          "no pronoun",
+          "-"
+        ],
+        "explanation": "The object is ‘meine Tasche’, so no reflexive pronoun is needed."
+      },
+      {
+        "prompt": "Task C: Wolfgang hofft trotzdem ___ gutes Wetter. Write the missing preposition.",
+        "answer": "auf",
+        "explanation": "‘Hoffen auf’ means ‘to hope for’."
+      },
+      {
+        "prompt": "Task C: Alastair hat ___ schlechtem Wetter gewarnt. Write the missing preposition.",
+        "answer": "vor",
+        "explanation": "‘Warnen vor’ means ‘to warn about’."
+      },
+      {
+        "prompt": "Task C: Wolfgang interessiert sich ___ die Landschaft. Write the missing preposition.",
+        "answer": "für",
+        "explanation": "‘Sich interessieren für’ means ‘to be interested in’."
+      }
+    ]
+  }
+}

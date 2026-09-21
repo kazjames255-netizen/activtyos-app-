@@ -1,0 +1,735 @@
+{
+  "agent": "w4-maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can state the difference between interpolation and extrapolation and the limitations of each."
+        },
+        {
+          "t": "text",
+          "text": "You will use a line of best fit to make predictions, and think about when those predictions might not be reliable."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Interpolation}"
+            },
+            {
+              "title": "{Extrapolation}"
+            },
+            {
+              "title": "Their limitations"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "interpolation",
+              "def": "Interpolation is the process of estimating unknown values that are inside the range of existing data."
+            },
+            {
+              "term": "extrapolation",
+              "def": "Extrapolation is the process of estimating unknown values that are outside the range of existing data."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predicting with a line of best fit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A scatter graph shows Met Office data about the weather in Heathrow for each month from 1941 to 2022. It appears to show positive correlation between total sunshine duration and the mean daily maximum temperature."
+        },
+        {
+          "t": "text",
+          "text": "When bivariate data has correlation, a line of best fit can be used to make predictions about one variable based on the other."
+        },
+        {
+          "t": "callout",
+          "text": "Part of the line of best fit goes through the range of values that have been recorded. Another part of the line goes {beyond} any recorded values."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Interpolation: inside the range",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When predictions are between values that are inside the range of existing data, the process is called {interpolation}. The prefix “inter” usually refers to things being inside something."
+        },
+        {
+          "t": "text",
+          "text": "For a month with 200 hours of sunshine, we could predict the mean maximum daily temperature to be approximately 21℃. 200 is inside the range of existing data, so this is interpolation."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Extrapolation: outside the range",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When predictions are based on values outside the range of existing data, the process is called {extrapolation}. The prefix “extra” usually refers to something being outside."
+        },
+        {
+          "t": "text",
+          "text": "For a month with 360 hours of sunshine, we could predict the mean maximum daily temperature to be approximately 36℃. 360 hours is outside the range of existing data, so this is extrapolation."
+        },
+        {
+          "t": "reveal",
+          "label": "Any problems with that prediction?",
+          "text": "Yes, there are some. We look at the problems with extrapolation later in the lesson."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Typical or unusual?",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Interpolation}",
+              "sub": "situations similar to what has been observed (a typical case)"
+            },
+            {
+              "title": "{Extrapolation}",
+              "sub": "situations beyond or unlike what has been observed (an extreme or unusual event)"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Extrapolation happens when a prediction is based on a value that is either less than the lowest recorded value or greater than the highest recorded value for the independent variable."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Life expectancy and income",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A scatter graph from the ONS has median disposable income (£ 1000s) on the horizontal axis and mean life expectancy (years) on the vertical axis. Each point is a region in the UK. Three pupils make predictions from it:"
+        },
+        {
+          "t": "reveal",
+          "label": "Aisha: a region with median disposable income £12 000 → life expectancy 77 years. Interpolation or extrapolation?",
+          "text": "Extrapolation. £12 000 is lower than the median disposable income of any region plotted."
+        },
+        {
+          "t": "reveal",
+          "label": "Sam: a region with median disposable income £21 000 → life expectancy 81 years. Interpolation or extrapolation?",
+          "text": "Interpolation. There are regions with lower and higher incomes than £21 000."
+        },
+        {
+          "t": "reveal",
+          "label": "Jun: a region with median disposable income £27 000 → life expectancy 84 years. Interpolation or extrapolation?",
+          "text": "Extrapolation. No region plotted has a median disposable income as high as £27 000."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the values",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "The independent variable in a set of data runs from a lowest recorded value of 20 to a highest recorded value of 60. For each value you want to predict from, is it interpolation or extrapolation?",
+          "columns": [
+            "Interpolation",
+            "Extrapolation"
+          ],
+          "items": [
+            {
+              "text": "45",
+              "col": 0
+            },
+            {
+              "text": "30",
+              "col": 0
+            },
+            {
+              "text": "55",
+              "col": 0
+            },
+            {
+              "text": "15",
+              "col": 1
+            },
+            {
+              "text": "75",
+              "col": 1
+            },
+            {
+              "text": "100",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Interpolation or extrapolation?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "A graph has recorded values of the independent variable from 100 to 250. Choose the correct word for each prediction.",
+          "items": [
+            {
+              "q": "A prediction for the value 180",
+              "options": [
+                "Interpolation",
+                "Extrapolation"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A prediction for the value 300",
+              "options": [
+                "Interpolation",
+                "Extrapolation"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A prediction for the value 60",
+              "options": [
+                "Interpolation",
+                "Extrapolation"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A prediction for the value 240",
+              "options": [
+                "Interpolation",
+                "Extrapolation"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Problems with extrapolation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It can be difficult to predict how a trend might continue beyond the range of available data. So we should be cautious when using extrapolation."
+        },
+        {
+          "t": "text",
+          "text": "Beyond the data, the dependent variable might:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "continue to increase at a constant rate",
+            "continue to increase, but at a slower rate",
+            "reach a maximum level"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "The life expectancy example",
+          "text": "Lucas says mean life expectancy is unlikely to keep increasing at a constant rate, otherwise millionaires would live for thousands of years. With more data, he could see that mean life expectancy stops increasing once median disposable income reaches around £25 000. Correlation was not a good model for the whole dataset."
+        },
+        {
+          "t": "callout",
+          "text": "Context can help you think about whether a trend is likely to continue in the same way."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Problems with interpolation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex says: “There is a region in the USA where the median annual income is equivalent to £30 000. By using interpolation, I predict the median house price there is equivalent to £300 000.”"
+        },
+        {
+          "t": "text",
+          "text": "What could be wrong? The data in the graph is for regions in the UK, so it might not transfer directly to house prices in the USA. House prices can vary between countries."
+        },
+        {
+          "t": "text",
+          "text": "Even within the UK, house prices differ depending on where a region is. For a region with a median annual income of £30 000: about £250 000 if it is in the north of England, and about £375 000 if it is in the south."
+        },
+        {
+          "t": "callout",
+          "text": "Interpolation might only give valid predictions for situations where the context or conditions are similar to the data that was collected. The more {contextual information} you have, the more confident you can be."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two more examples",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob wants to use UK transport emission data to predict emissions for a region in Denmark. What problem could there be? Transport emissions may not be the same in other countries."
+        },
+        {
+          "t": "text",
+          "text": "Sofia wants to use temperature data for Armagh, Northern Ireland to predict the temperature in Spain for a month with 150 hours of sunshine."
+        },
+        {
+          "t": "reveal",
+          "label": "What could go wrong?",
+          "text": "Spain is closer to the Equator than Northern Ireland and tends to be hotter. So the data for Armagh may not transfer to a region in Spain."
+        },
+        {
+          "t": "text",
+          "text": "Andeep wants to predict the Armagh temperature for a month with 300 hours of sunshine, but the data only has values up to 255 hours of sunshine."
+        },
+        {
+          "t": "reveal",
+          "label": "What could go wrong?",
+          "text": "Andeep cannot be certain that the data would continue to follow the same trend beyond 255 hours. The temperature may not continue to increase at the same rate."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which process estimates values that are inside the range of existing data?",
+              "options": [
+                "Interpolation",
+                "Extrapolation"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why might extrapolation give an invalid prediction?",
+              "options": [
+                "The trend might not continue beyond the observed data",
+                "Extrapolation always gives the same answer as interpolation",
+                "The line of best fit only works outside the data"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A pupil says: “Extrapolation always gives a valid prediction when my data has correlation.” Is the pupil correct?",
+              "options": [
+                "Yes, always",
+                "No, it needs caution as the trend might not continue"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Data comes from regions in the UK. Which prediction is more likely to be valid?",
+              "options": [
+                "A prediction for another region in the UK, inside the range of the data",
+                "A prediction for a region in a different country"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Interpolation can be used to estimate a value within the data set.",
+            "Extrapolation can be used to estimate a value outside the data set.",
+            "Extrapolation may not be valid as this is outside the observed set of data values.",
+            "Interpolation may not be valid due to the limitations of the data set.",
+            "Contextual information may help you judge how valid predictions are."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is interpolation?",
+      "back": "Estimating unknown values that are inside the range of existing data."
+    },
+    {
+      "front": "What is extrapolation?",
+      "back": "Estimating unknown values that are outside the range of existing data."
+    },
+    {
+      "front": "Which prefix usually means “inside”: inter or extra?",
+      "back": "inter, as in interpolation (extra usually means outside)."
+    },
+    {
+      "front": "When does extrapolation occur, in terms of the independent variable?",
+      "back": "When the prediction is based on a value lower than the lowest recorded value or higher than the highest recorded value."
+    },
+    {
+      "front": "Interpolation is used for which kind of situation?",
+      "back": "Situations similar to what has been observed before (a typical case)."
+    },
+    {
+      "front": "Extrapolation is used for which kind of situation?",
+      "back": "Situations beyond or unlike what has been observed before (an extreme or unusual event)."
+    },
+    {
+      "front": "Heathrow: 200 hours of sunshine gives about 21℃ from the line of best fit. Interpolation or extrapolation?",
+      "back": "Interpolation, because 200 hours is inside the range of existing data."
+    },
+    {
+      "front": "Heathrow: 360 hours of sunshine gives about 36℃ from the line of best fit. Interpolation or extrapolation?",
+      "back": "Extrapolation, because 360 hours is outside the range of existing data."
+    },
+    {
+      "front": "Why is extrapolation risky?",
+      "back": "It is outside the observed data, so the trend might not continue. It might slow down or reach a maximum level."
+    },
+    {
+      "front": "Why might interpolation not be valid?",
+      "back": "Because of the limitations of the data set. It only gives valid predictions where the context is similar to the data collected (for example, UK data may not transfer to the USA)."
+    },
+    {
+      "front": "What can help you judge whether a trend might continue?",
+      "back": "Context, such as thinking about what the variables mean in real life."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Interpolation versus extrapolation",
+    "instructions": "Answer each question with one word, a short phrase or a number.",
+    "questions": [
+      {
+        "prompt": "What is the process of estimating unknown values that are inside the range of existing data called?",
+        "answer": "interpolation",
+        "explanation": "Interpolation estimates values inside the range of the existing data."
+      },
+      {
+        "prompt": "What is the process of estimating unknown values that are outside the range of existing data called?",
+        "answer": "extrapolation",
+        "explanation": "Extrapolation estimates values outside the range of the existing data."
+      },
+      {
+        "prompt": "The independent variable in a data set has recorded values from 20 to 60. You predict using the value 45. Is this interpolation or extrapolation?",
+        "answer": "interpolation",
+        "explanation": "45 is between the lowest value, 20, and the highest value, 60."
+      },
+      {
+        "prompt": "The independent variable in a data set has recorded values from 20 to 60. You predict using the value 75. Is this interpolation or extrapolation?",
+        "answer": "extrapolation",
+        "explanation": "75 is greater than the highest recorded value, 60."
+      },
+      {
+        "prompt": "The Armagh data only has values up to 255 hours of sunshine. Andeep predicts the temperature for a month with 300 hours of sunshine. Is this interpolation or extrapolation?",
+        "answer": "extrapolation",
+        "explanation": "300 hours is beyond the highest recorded value, 255 hours."
+      },
+      {
+        "prompt": "Using the Heathrow line of best fit, 200 hours of sunshine gives a prediction of about 21℃. Is this interpolation or extrapolation?",
+        "answer": "interpolation",
+        "explanation": "200 hours is inside the range of the existing data."
+      },
+      {
+        "prompt": "Using the Heathrow line of best fit, 360 hours of sunshine gives a prediction of about 36℃. Is this interpolation or extrapolation?",
+        "answer": "extrapolation",
+        "explanation": "360 hours is outside the range of the existing data."
+      },
+      {
+        "prompt": "Sofia wants to use temperature data from Armagh, Northern Ireland to predict temperatures in Spain. Spain is closer to which imaginary line around the middle of the Earth than Northern Ireland, and tends to be hotter?",
+        "answer": "equator",
+        "accepted": [
+          "the equator"
+        ],
+        "explanation": "Spain is closer to the Equator than Northern Ireland and tends to be hotter, so Armagh data may not transfer to Spain."
+      },
+      {
+        "prompt": "In the life expectancy example, mean life expectancy stops increasing once median disposable income reaches around how many pounds? Write the number only.",
+        "answer": "25000",
+        "accepted": [
+          "25 000",
+          "25,000",
+          "£25000",
+          "£25 000",
+          "£25,000"
+        ],
+        "explanation": "With more data, Lucas could see life expectancy stopped increasing at around £25 000."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 4,
+        "doThis": [
+          "Read the goal together, then look at the two key words: interpolation and extrapolation.",
+          "Recall that a line of best fit is a line where the distance between each data point and the line is minimised.",
+          "Ask the student to guess which word means estimating inside the range of the data and which means outside it."
+        ],
+        "say": "I can state the difference between interpolation and extrapolation and the limitations of each.",
+        "keywords": [
+          {
+            "term": "interpolation",
+            "meaning": "Interpolation is the process of estimating unknown values that are inside the range of existing data."
+          },
+          {
+            "term": "extrapolation",
+            "meaning": "Extrapolation is the process of estimating unknown values that are outside the range of existing data."
+          }
+        ],
+        "checkFor": {
+          "ask": "Which word means estimating values inside the range of existing data, and which means outside it?",
+          "lookFor": "Interpolation is inside the range; extrapolation is outside the range."
+        },
+        "recap": [
+          "Our goal: I can state the difference between interpolation and extrapolation and the limitations of each.",
+          "Interpolation estimates values inside the range of the data. Extrapolation estimates values outside the range of the data."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Interpolation: estimating inside the range",
+        "minutes": 5,
+        "doThis": [
+          "Describe a scatter graph of Met Office data for Heathrow, one point for each month from 1941 to 2022: total sunshine duration (hours) across and the mean of the daily maximum temperature (°C) up, with positive correlation.",
+          "Explain that when bivariate data has correlation, a line of best fit can be used to make predictions about one variable based on the other.",
+          "Explain that predicting between values inside the range of existing data is interpolation: for a month with 200 hours of sunshine, the mean daily maximum temperature is predicted to be approximately 21°C."
+        ],
+        "keyIdeas": [
+          "Interpolation can be used to estimate a value within the data set.",
+          "The prefix 'inter' usually refers to things being inside something.",
+          "Interpolation may be used for situations which are similar to what has previously been observed (a typical case)."
+        ],
+        "keywords": [
+          {
+            "term": "interpolation",
+            "meaning": "Interpolation is the process of estimating unknown values that are inside the range of existing data."
+          }
+        ],
+        "examples": [
+          "200 hours of sunshine is inside the range of existing data, so predicting about 21°C is interpolation."
+        ],
+        "checkFor": {
+          "ask": "For a month with 200 hours of sunshine, is predicting the temperature interpolation or extrapolation, and why?",
+          "lookFor": "Interpolation, because 200 is inside the range of existing data."
+        },
+        "recap": [
+          "Interpolation means estimating a value inside the range of the data.",
+          "The 'inter' in interpolation is a clue: it means inside."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Extrapolation: estimating outside the range",
+        "minutes": 5,
+        "doThis": [
+          "Explain that predicting from values outside the range of existing data is extrapolation, and the prefix 'extra' usually refers to something being outside.",
+          "Show the example: for a month with 360 hours of sunshine, the mean daily maximum temperature is predicted to be approximately 36°C, and 360 hours is outside the range of existing data.",
+          "Explain that extrapolation happens when a value is less than the lowest recorded value, or greater than the highest recorded value, for the independent variable."
+        ],
+        "keyIdeas": [
+          "Extrapolation can be used to estimate a value outside the data set.",
+          "Extrapolation may be used for situations which are beyond or unlike what has previously been observed (an extreme or unusual event)."
+        ],
+        "keywords": [
+          {
+            "term": "extrapolation",
+            "meaning": "Extrapolation is the process of estimating unknown values that are outside the range of existing data."
+          }
+        ],
+        "examples": [
+          "360 hours of sunshine is outside the range of existing data, so predicting about 36°C is extrapolation."
+        ],
+        "checkFor": {
+          "ask": "What is the process of estimating unknown values outside the range of existing data called?",
+          "lookFor": "Extrapolation."
+        },
+        "recap": [
+          "Extrapolation means estimating a value outside the range of the data.",
+          "It is extrapolation when the value is lower than the lowest recorded value or higher than the highest recorded value."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Problems with extrapolation",
+        "minutes": 7,
+        "doThis": [
+          "Explain that it can be difficult to predict how a trend might continue beyond the range of available data, so extrapolation needs caution.",
+          "Beyond the data, the dependent variable might continue to increase at a constant rate, continue to increase but at a slower rate, or reach a maximum level.",
+          "Use context to judge: mean life expectancy is unlikely to keep increasing at a constant rate, otherwise millionaires would live for thousands of years. With more data, it stops increasing once median disposable income reaches around £25 000."
+        ],
+        "keyIdeas": [
+          "Extrapolation may not be valid as this is outside the observed set of data values.",
+          "Context could be helpful when considering whether a trend is likely to continue in the same way beyond the range of available data."
+        ],
+        "examples": [
+          "Predicting a house price for a region with a median income of £18 000 from a line of best fit that only starts at £19 000: extending the line would give a negative value, and house prices cannot be negative."
+        ],
+        "checkFor": {
+          "ask": "Why might a prediction made by extrapolation not be valid?",
+          "lookFor": "It is outside the observed data, so the trend might not continue: it might slow down or reach a maximum."
+        },
+        "recap": [
+          "Beyond the data we cannot be sure a trend carries on: it might slow down or reach a maximum.",
+          "So we should be cautious when we use extrapolation."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Problems with interpolation",
+        "minutes": 6,
+        "doThis": [
+          "Explain that interpolation might only give valid predictions for situations where the context or conditions are similar to the data that was collected: data from regions in the UK might not transfer to house prices in the USA, because house prices can vary between countries.",
+          "Explain that even within the UK, house prices differ depending on where a region is: for a median annual income of £30 000, the median house price is likely to be approximately £250 000 in the north of England and £375 000 in the south.",
+          "Explain that one line of best fit for the whole UK can give imprecise estimates, and that the more contextual information we have, the more confident we can be."
+        ],
+        "keyIdeas": [
+          "Interpolation may not be valid due to the limitations of the data set.",
+          "The more contextual information you have about your data, the more confident you can be about the validity of any predictions you make from it."
+        ],
+        "examples": [
+          "Median annual income £30 000: about £250 000 in the north of England and about £375 000 in the south.",
+          "The difference between those two house prices is £125 000."
+        ],
+        "checkFor": {
+          "ask": "Data comes only from regions in the UK. Why might interpolation still not give a valid prediction for a region in the USA?",
+          "lookFor": "House prices can vary between countries, so data from the UK might not transfer directly to the USA."
+        },
+        "recap": [
+          "Even inside the data, a prediction can be wrong if the situation is not like the data that was collected.",
+          "Knowing more about the context makes a prediction more trustworthy."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Interpolation or extrapolation?",
+        "minutes": 7,
+        "doThis": [
+          "Give the student each situation and ask whether it is interpolation or extrapolation, and why.",
+          "For each one, ask the student to compare the value with the lowest and highest recorded values of the independent variable.",
+          "Talk about whether each prediction is likely to be reliable."
+        ],
+        "examples": [
+          "Median disposable income £12 000, lower than any region plotted: predicting a life expectancy of 77 years is extrapolation.",
+          "Median disposable income £21 000, with regions above and below it: predicting 81 years is interpolation.",
+          "Median disposable income £27 000, higher than any region plotted: predicting 84 years is extrapolation.",
+          "Median annual income £33 000, inside the range of the data: predicting a house price of £400 000 is interpolation."
+        ],
+        "checkFor": {
+          "ask": "A prediction is made for a value lower than the lowest recorded value of the independent variable. Is it interpolation or extrapolation?",
+          "lookFor": "Extrapolation."
+        },
+        "recap": [
+          "Check whether the value is inside the recorded range or outside it.",
+          "Inside is interpolation. Lower than the lowest or higher than the highest is extrapolation."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "What could go wrong?",
+        "minutes": 7,
+        "doThis": [
+          "Read each plan and ask the student to write one sentence about the problem with it.",
+          "Ask whether the problem is about going beyond the data or about the data not fitting the situation.",
+          "Check the answers together."
+        ],
+        "examples": [
+          "Predicting the temperature in Armagh for a month with 300 hours of sunshine when the data only has values up to 255 hours: the trend may not continue beyond that point, and the temperature may not keep increasing at the same rate.",
+          "Using the Armagh data to predict the temperature in Spain for a month with 150 hours of sunshine: Spain is closer to the Equator than Northern Ireland and tends to be hotter, so the data may not transfer.",
+          "Using UK data to predict transport emission for a region in Denmark with a population of 200 000: transport emission may not be the same in other countries.",
+          "Extending a line of best fit to predict life expectancy where median disposable income is over £25 000: it is hard to say how a trend will continue."
+        ],
+        "checkFor": {
+          "ask": "Which of these plans has a problem because it goes beyond the data, and which because the data does not fit the situation?",
+          "lookFor": "Armagh at 300 hours goes beyond the data, which only has values up to 255 hours. Spain and Denmark use data from a different place."
+        },
+        "recap": [
+          "Ask two questions: is the value outside the data, and is the situation different from the data collected?",
+          "If the answer to either is yes, be cautious with the prediction."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to complete a definition of interpolation, to spot which values on a scatter graph come from interpolation or extrapolation, to judge whether predictions are valid, and to estimate a difference in house prices.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain the difference between interpolation and extrapolation, and one limitation of each.",
+          "Finish with the summary: interpolation estimates a value within the data set and extrapolation estimates a value outside it. Extrapolation may not be valid as it is outside the observed data, and interpolation may not be valid due to the limitations of the data set."
+        ],
+        "checkFor": {
+          "ask": "Can extrapolation always be used to make a valid prediction when the data has correlation?",
+          "lookFor": "No. It can be used with caution, as the trend might not continue."
+        },
+        "recap": [
+          "Can you do it now? I can state the difference between interpolation and extrapolation and the limitations of each.",
+          "Inside the data is interpolation and outside the data is extrapolation, and both need care."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils may think interpolation and extrapolation always produce accurate predictions.",
+        "fix": "Extrapolation may not be valid as it is outside the observed set of data values (for example, a linear trend might not continue indefinitely). Interpolation may not be valid due to the limitations of the data set."
+      },
+      {
+        "mistake": "Pupils may think extrapolation always gives a valid prediction when the data has correlation.",
+        "fix": "It can be used with caution, as the trend might not continue."
+      }
+    ],
+    "watchOut": [
+      "Before deciding, ask which variable is the independent variable and what its lowest and highest recorded values are: inside that range is interpolation, outside it is extrapolation.",
+      "Encourage the student to use context to judge whether a trend is likely to continue, for example life expectancy cannot keep rising at a constant rate.",
+      "Ask whether the situation is similar to the data that was collected: the more contextual information the student has, the more confident they can be.",
+      "A line of best fit does not have to go through the point (0, 0): it depends on the distribution of the points."
+    ]
+  }
+}

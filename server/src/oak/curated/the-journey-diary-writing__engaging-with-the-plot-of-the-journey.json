@@ -1,0 +1,535 @@
+{
+  "agent": "english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can read ‘The Journey’ and summarise the key events."
+        },
+        {
+          "t": "text",
+          "text": "‘The Journey’ is a picture book by Francesca Sanna. Today you will explore the story and then tell it again in a short summary."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Reading ‘The Journey’"
+            },
+            {
+              "title": "Summarising ‘The Journey’"
+            },
+            {
+              "title": "Key events"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "refugee",
+              "def": "A person who has been forced to leave their country in order to escape war, violence or natural disaster."
+            },
+            {
+              "term": "flee",
+              "def": "To run away from a place or situation of danger."
+            },
+            {
+              "term": "border",
+              "def": "A geographical line separating two countries."
+            },
+            {
+              "term": "summarise",
+              "def": "To pull out the key events and ideas from a text."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Meet the book",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘The Journey’ is a children’s **picture book**. It tells the story of two young girls who are fleeing their war-torn country to find a safe place to live."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Author",
+              "sub": "Francesca Sanna wrote the words"
+            },
+            {
+              "title": "Illustrator",
+              "sub": "Francesca Sanna drew the pictures too"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The book is inspired by true stories of {refugees} that the author met. She wanted to share the personal stories of the refugees we hear about on the news."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Who is in the story?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The story is told by a young girl. We never find out her name, so she is **unnamed**. She tells us about her family’s escape from their country."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The girl",
+              "sub": "tells the story"
+            },
+            {
+              "title": "Her sister",
+              "sub": "a main character"
+            },
+            {
+              "title": "Their mother",
+              "sub": "goes on the journey and keeps the girls safe"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The two girls and their mother are all {refugees}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Refugee or migrant?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A refugee and a migrant are not the same thing."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Refugee",
+              "sub": "has to leave because it is no longer safe to stay"
+            },
+            {
+              "title": "Migrant",
+              "sub": "moves to another place, usually to find work or better living conditions"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Why did the girls and their mother leave their country?",
+          "options": [
+            "They chose to go for a new job",
+            "They had to leave to escape war and find a safe place",
+            "They wanted a holiday by the sea"
+          ],
+          "answer": 1,
+          "why": "They are refugees: they were forced to leave to escape war and find somewhere safe to live."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What do we know?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Francesca Sanna does not say which countries the family are fleeing from or going to. We only know they are refugees looking for safety."
+        },
+        {
+          "t": "choice",
+          "q": "Does ‘The Journey’ tell us which country the family are going to?",
+          "options": [
+            "Yes, it says they are going to England",
+            "No, the author does not say which country",
+            "Yes, it names the country in the last page"
+          ],
+          "answer": 1,
+          "why": "The author does not say which countries the characters flee from or go to. We only know they are looking for a safe place to live."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The story: at home",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At the start, the girl lives happily with her family in a city close to the sea."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Then a war begins in her country.",
+            "The war changes the family’s lives forever.",
+            "Their mother decides to flee to take the girls to a safer place."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why does the mother want to leave?",
+          "text": "She wants to take her daughters to a **safer** place, away from the war."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The story: the border",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The family travel for a long time. When they arrive at the {border}, they are banned from crossing."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They have to hide in the forest overnight.",
+            "They stay hidden until they pay someone to help them."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What happens when the family reach the border?",
+          "options": [
+            "The border police let them cross straight away",
+            "They are banned from crossing and hide in the forest overnight",
+            "They turn around and go back home"
+          ],
+          "answer": 1,
+          "why": "They are banned from crossing the border, so they hide in the forest overnight until they pay someone to help them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The story: towards safety",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The last part of the journey is not easy either."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They have a challenging ferry crossing over rough seas with fellow refugees.",
+            "Then they take a train through many countries.",
+            "They travel closer and closer to a new, safe home. Birds follow the train, and they are moving to a new place too."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do they arrive?",
+          "text": "Not yet! The story ends with the family getting closer to a safe home where they hope to arrive soon."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Key events: before, during, after",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each key event in the right part of the story.",
+          "columns": [
+            "Before the border",
+            "At the border",
+            "After the border"
+          ],
+          "items": [
+            {
+              "text": "A war begins and lives change forever",
+              "col": 0
+            },
+            {
+              "text": "Mother decides to flee to a safer place",
+              "col": 0
+            },
+            {
+              "text": "Banned from crossing",
+              "col": 1
+            },
+            {
+              "text": "Hide in the forest overnight",
+              "col": 1
+            },
+            {
+              "text": "Ferry crossing over rough seas",
+              "col": 2
+            },
+            {
+              "text": "Train through many countries",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What does summarising mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To {summarise} means to pull out the **key events and ideas** from a text. Summarising helps us build our understanding of the story and the meaning behind it."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Summarising does **not** mean describing every event in detail. Pick the important parts and keep it short."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which is a summary?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which sentence best summarises ‘The Journey’?",
+              "options": [
+                "It tells the story of a family’s holiday by the sea.",
+                "It tells the story of two young girls who are fleeing their war-torn country to find a safe place to live.",
+                "It lists everything that happens on every single page."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these is a key event in the story?",
+              "options": [
+                "The family are banned from crossing the border and hide in the forest.",
+                "The girl eats her breakfast.",
+                "The family visit a theme park."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the key words",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each key word to its meaning.",
+          "pairs": [
+            {
+              "a": "refugee",
+              "b": "a person forced to leave their country to escape war, violence or natural disaster"
+            },
+            {
+              "a": "flee",
+              "b": "to run away from a place or situation of danger"
+            },
+            {
+              "a": "border",
+              "b": "a geographical line separating two countries"
+            },
+            {
+              "a": "summarise",
+              "b": "to pull out the key events and ideas from a text"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Engaging with the plot of ‘The Journey’",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "‘The Journey’ is a children’s picture book by Francesca Sanna, who is both the author and the illustrator.",
+            "It is about two girls and their mother, who are {refugees} fleeing their war-torn country to find a safe place to live.",
+            "The family face many obstacles and challenges, including a border they are banned from crossing.",
+            "The story ends with them getting closer to a safe home where they hope to arrive soon.",
+            "Summarising the key events helps us build our understanding of the text and its meaning."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Who is the author of ‘The Journey’?",
+      "back": "Francesca Sanna."
+    },
+    {
+      "front": "Who is the illustrator of ‘The Journey’?",
+      "back": "Francesca Sanna. She wrote the book and drew the pictures."
+    },
+    {
+      "front": "What is ‘The Journey’ inspired by?",
+      "back": "True stories of refugees that the author met."
+    },
+    {
+      "front": "Who are the main characters in ‘The Journey’?",
+      "back": "The girl, her sister and their mother."
+    },
+    {
+      "front": "What is a refugee?",
+      "back": "A person who has been forced to leave their country in order to escape war, violence or natural disaster."
+    },
+    {
+      "front": "What does flee mean?",
+      "back": "To run away from a place or situation of danger."
+    },
+    {
+      "front": "What is a border?",
+      "back": "A geographical line separating two countries."
+    },
+    {
+      "front": "What does summarise mean?",
+      "back": "To pull out the key events and ideas from a text."
+    },
+    {
+      "front": "Does the author say which countries the family flee from or go to?",
+      "back": "No. We only know they are looking for a safe place to live."
+    },
+    {
+      "front": "What happens when the family arrive at the border?",
+      "back": "They are banned from crossing and hide in the forest overnight until they pay someone to help them."
+    },
+    {
+      "front": "How does the story end?",
+      "back": "The family are on a train, getting closer to a safe home where they hope to arrive soon."
+    },
+    {
+      "front": "Why is summarising a helpful tool?",
+      "back": "It helps us build our understanding of the text and the meaning behind it."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Engaging with the plot of ‘The Journey’",
+    "instructions": "Answer each question with a word or a short phrase. Use what you learned about ‘The Journey’ by Francesca Sanna.",
+    "questions": [
+      {
+        "prompt": "Which word means to run away from a place or situation of danger?",
+        "answer": "flee",
+        "accepted": [
+          "to flee",
+          "fleeing"
+        ],
+        "explanation": "To flee means to run away from a place or situation of danger."
+      },
+      {
+        "prompt": "What is the word for a geographical line separating two countries?",
+        "answer": "border",
+        "accepted": [
+          "a border",
+          "borders"
+        ],
+        "explanation": "A border is a geographical line separating two countries."
+      },
+      {
+        "prompt": "Which word means to pull out the key events and ideas from a text?",
+        "answer": "summarise",
+        "accepted": [
+          "summarize",
+          "to summarise",
+          "to summarize"
+        ],
+        "explanation": "To summarise is to pull out the key events and ideas from a text."
+      },
+      {
+        "prompt": "What do we call a person who has been forced to leave their country to escape war, violence or natural disaster?",
+        "answer": "refugee",
+        "accepted": [
+          "a refugee",
+          "refugees"
+        ],
+        "explanation": "That is the meaning of a refugee."
+      },
+      {
+        "prompt": "Who wrote and illustrated ‘The Journey’?",
+        "answer": "Francesca Sanna",
+        "accepted": [
+          "francesca sanna",
+          "Sanna"
+        ],
+        "explanation": "Francesca Sanna is both the author and the illustrator."
+      },
+      {
+        "prompt": "Who tells the story of ‘The Journey’: the girl, her sister or her mother?",
+        "answer": "the girl",
+        "accepted": [
+          "girl",
+          "the young girl",
+          "the unnamed girl",
+          "an unnamed young girl"
+        ],
+        "explanation": "The story is told from the perspective of an unnamed young girl."
+      },
+      {
+        "prompt": "Who goes on the journey with the two girls and keeps them safe?",
+        "answer": "their mother",
+        "accepted": [
+          "mother",
+          "the mother",
+          "mum",
+          "mama",
+          "their mum",
+          "mummy"
+        ],
+        "explanation": "The mother goes on the journey with the girls and keeps them safe."
+      },
+      {
+        "prompt": "Where do the family hide overnight after they are banned from crossing the border?",
+        "answer": "in the forest",
+        "accepted": [
+          "forest",
+          "the forest",
+          "a forest"
+        ],
+        "explanation": "They hide in the forest overnight until they pay someone to help them."
+      },
+      {
+        "prompt": "Which vehicle do the family take through many countries at the end of the story?",
+        "answer": "a train",
+        "accepted": [
+          "train",
+          "the train"
+        ],
+        "explanation": "They take a train through many countries and travel closer to a safe home."
+      },
+      {
+        "prompt": "True or false? The family tried to stay in their country and did not leave.",
+        "answer": "false",
+        "accepted": [
+          "False",
+          "no"
+        ],
+        "explanation": "Their mother decided to flee their country to take them to a safer place."
+      }
+    ]
+  }
+}

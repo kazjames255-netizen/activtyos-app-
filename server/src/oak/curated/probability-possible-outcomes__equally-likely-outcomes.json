@@ -1,0 +1,680 @@
+{
+  "agent": "maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can state when outcomes will be equally likely."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at things that can happen in a trial, list them, and decide when they have the same chance of happening."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "listing possible {outcomes}"
+            },
+            {
+              "title": "when two outcomes are {equally likely}"
+            },
+            {
+              "title": "more than two {equally likely} outcomes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "trial",
+              "def": "A trial is a single predefined test."
+            },
+            {
+              "term": "outcome",
+              "def": "An outcome is a result of a trial."
+            },
+            {
+              "term": "sample space",
+              "def": "A sample space is all the possible outcomes of a trial. A sample space diagram is a systematic way of producing a sample space."
+            },
+            {
+              "term": "likelihood",
+              "def": "Likelihood describes the chance that a particular event will occur."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Trials and outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **trial** is a single predefined test. Here are some examples of trials:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "spin a spinner {once}"
+            },
+            {
+              "title": "flip a coin {three times}"
+            },
+            {
+              "title": "a race between {several runners}"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "An **outcome** is just ONE result of a trial. It is not all the results."
+        },
+        {
+          "t": "callout",
+          "text": "The set of ALL the possible outcomes of a trial is called the {sample space}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing a sample space",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We write a sample space using set notation: curly brackets around a list of the outcomes."
+        },
+        {
+          "t": "callout",
+          "text": "ξ = ❴outcome 1, outcome 2, outcome 3, …❵"
+        },
+        {
+          "t": "reveal",
+          "label": "What is ξ?",
+          "text": "ξ is the Greek letter **xi**. It is used for the universal set. In probability, it stands for the set of all the possible outcomes of a trial."
+        },
+        {
+          "t": "text",
+          "text": "It does not matter what order you list the outcomes in."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: win or lose",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob is going to spin a spinner once. Its sectors say **win** and **lose**. What are the possible outcomes?"
+        },
+        {
+          "t": "text",
+          "text": "Step 1: The trial is one spin of the spinner."
+        },
+        {
+          "t": "text",
+          "text": "Step 2: The spinner could land on either win or lose."
+        },
+        {
+          "t": "callout",
+          "text": "ξ = ❴win, lose❵"
+        },
+        {
+          "t": "reveal",
+          "label": "Could Jacob draw?",
+          "text": "No. A draw is not one of the possible outcomes, so it is not in the sample space. You either win or you lose."
+        },
+        {
+          "t": "text",
+          "text": "Only outcomes in the sample space are possible. A spinner with ξ = ❴A, B, C❵ cannot land on J, and one with ξ = ❴1, 2, 3, 4❵ cannot give a negative number, but it can give a cube number because 1 is a cube number."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Sectors are not outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A spinner has four sectors: two say **win** and two say **lose**. Alex says there are four possible outcomes. Sofia says there are two. Who is right?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "Sofia is right. The only possible outcomes are win and lose. Several sectors can show the same outcome, but the sample space only lists each different outcome once: ξ = ❴win, lose❵."
+        },
+        {
+          "t": "callout",
+          "text": "Count the {different outcomes}, not the number of sectors."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "It depends on the trial",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sample spaces are not only for spinners. A coin flipped once has the sample space ξ = ❴heads, tails❵. A regular six-sided dice rolled once has ξ = ❴1, 2, 3, 4, 5, 6❵."
+        },
+        {
+          "t": "text",
+          "text": "The sample space depends on how the trial is defined. Aisha, Lucas and Sam are playing a board game."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "trial = a roll of the dice",
+              "sub": "ξ = ❴1, 2, 3, 4, 5, 6❵"
+            },
+            {
+              "title": "trial = the whole game",
+              "sub": "ξ = ❴Aisha, Lucas, Sam❵"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "If the trial is the game, the outcomes are the possible winners."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: sample spaces",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Pick the correct sample space for each trial.",
+          "items": [
+            {
+              "q": "Trial: flip a coin once.",
+              "options": [
+                "ξ = ❴heads❵",
+                "ξ = ❴heads, tails❵",
+                "ξ = ❴heads, tails, draw❵"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Trial: a spinner with sectors red, blue, blue, green is spun once.",
+              "options": [
+                "ξ = ❴red, blue, green❵",
+                "ξ = ❴red, blue, blue, green❵",
+                "ξ = ❴red, blue❵"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Trial: Ana, Ben and Cal play a board game. The trial is the whole game.",
+              "options": [
+                "ξ = ❴1, 2, 3, 4, 5, 6❵",
+                "ξ = ❴Ana, Ben, Cal❵",
+                "ξ = ❴Ana, Ben❵"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How many outcomes are in the sample space for rolling a regular six-sided dice once?",
+              "options": [
+                "3",
+                "6",
+                "12"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Equally likely outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jacob spins a spinner. If it lands on win he gets a prize. Look at the size of the sectors."
+        },
+        {
+          "t": "text",
+          "text": "When the win sector and the lose sector are the same size, the spinner is as likely to land on win as on lose. So the outcomes are {equally likely}."
+        },
+        {
+          "t": "text",
+          "text": "If one sector is bigger than the other, the outcomes are not equally likely, so the spinner does not seem fair."
+        },
+        {
+          "t": "callout",
+          "text": "{Equally likely} outcomes have the same chance, or likelihood, of happening."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: who gets the cookie?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex and Sofia roll a regular six-sided dice for the last cookie. Sofia gets it if the dice shows a multiple of 3. Otherwise Alex gets it. So ξ = ❴Alex, Sofia❵. Is this fair?"
+        },
+        {
+          "t": "text",
+          "text": "Step 1: Multiples of 3 on the dice: 3 and 6. That is 2 numbers for Sofia."
+        },
+        {
+          "t": "text",
+          "text": "Step 2: The other numbers: 1, 2, 4 and 5. That is 4 numbers for Alex."
+        },
+        {
+          "t": "text",
+          "text": "Step 3: Alex has more numbers, so the outcomes are not equally likely. Alex is more likely to get the cookie."
+        },
+        {
+          "t": "reveal",
+          "label": "A fairer rule",
+          "text": "Lucas and Jun use even or odd instead. The even numbers are 2, 4, 6 and the odd numbers are 1, 3, 5. Each of them has 3 numbers, so ξ = ❴Lucas, Jun❵ has equally likely outcomes."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: equally likely?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A regular six-sided dice is rolled once. Count the numbers for each outcome, then decide."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "ξ = ❴4 or more, 3 or less❵",
+              "options": [
+                "Equally likely",
+                "Not equally likely"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "ξ = ❴rolling a 1, rolling something else❵",
+              "options": [
+                "Equally likely",
+                "Not equally likely"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "ξ = ❴rolling a prime number, not a prime number❵",
+              "options": [
+                "Equally likely",
+                "Not equally likely"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "ξ = ❴rolling more than 2, rolling 2 or less❵",
+              "options": [
+                "Equally likely",
+                "Not equally likely"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Common mistakes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha flips a fair coin. Tails has not come up for a while, so she thinks the next flip will probably be tails. Is she right?"
+        },
+        {
+          "t": "reveal",
+          "label": "What is wrong with Aisha’s reasoning?",
+          "text": "The two outcomes, heads and tails, are always equally likely. They are not affected by previous results."
+        },
+        {
+          "t": "text",
+          "text": "A charity raffle gives each person a number from 1 to 100. One number is picked randomly from a box. Laura has number 1 and thinks she will never win, because Jun’s number is in the middle."
+        },
+        {
+          "t": "reveal",
+          "label": "Why is Laura wrong?",
+          "text": "Each number is equally likely to be picked, regardless of its size."
+        },
+        {
+          "t": "reveal",
+          "label": "What about rolling a 6?",
+          "text": "Rolling a 6 is not harder than rolling any other number. The random nature of rolling a dice means all the outcomes are equally likely."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More than two equally likely outcomes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep spins a spinner once. Are all the outcomes equally likely? Look at how much of the spinner each letter takes up."
+        },
+        {
+          "t": "list",
+          "items": [
+            "All sectors are the same size and each letter has its own sector: equally likely.",
+            "All sectors are the same size and there are two sectors for each letter: still equally likely.",
+            "All sectors are the same size but there are fewer sectors for C than for A or B: NOT equally likely.",
+            "B has more sectors but they are smaller. Each large sector is the same size as two small sectors, so each letter still has the same amount of space: equally likely."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It is the {amount of space} each outcome takes up that matters, not the number of sectors."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: sort the trials",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Are the outcomes of each trial equally likely? Tap a trial, then tap its column.",
+          "columns": [
+            "Equally likely",
+            "Not equally likely"
+          ],
+          "items": [
+            {
+              "text": "Spinner: 5 equal sectors labelled A, B, C, D, E",
+              "col": 0
+            },
+            {
+              "text": "Spinner: 6 equal sectors, two each of A, B and C",
+              "col": 0
+            },
+            {
+              "text": "Spinner: 6 equal sectors, three A, two B and one C",
+              "col": 1
+            },
+            {
+              "text": "Dice rolled: odd or even",
+              "col": 0
+            },
+            {
+              "text": "Dice rolled: multiple of 3 or not a multiple of 3",
+              "col": 1
+            },
+            {
+              "text": "Raffle numbers 1 to 100: number 1 or number 50 picked",
+              "col": 0
+            },
+            {
+              "text": "Spinner: red takes up half; blue is two small sectors that together take up the other half",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: games with a dice",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "A regular six-sided dice is rolled once.",
+          "items": [
+            {
+              "q": "Kim moves on a 1 or 2, Lee on a 3 or 4, Max on a 5 or 6. Are Kim, Lee and Max equally likely to move?",
+              "options": [
+                "Yes, equally likely",
+                "No, not equally likely"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Kim moves on a 1, Lee on a 2 or 3, Max on a 4, 5 or 6. Are they equally likely to move?",
+              "options": [
+                "Yes, equally likely",
+                "No, not equally likely"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Zoe says 6 is the most difficult number to roll. Is she right?",
+              "options": [
+                "Yes, 6 is less likely than the others",
+                "No, every number is equally likely"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In a raffle with numbers 1 to 100, how likely is number 1 to be picked compared with number 53?",
+              "options": [
+                "Less likely",
+                "Equally likely",
+                "More likely"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A set of possible outcomes for a trial can be stated by writing a sample space.",
+            "Outcomes can be evaluated to decide how likely they are to happen.",
+            "By considering the likelihood of outcomes, we can identify when outcomes are equally likely to happen."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Equally likely means the same chance. Check the amount of space, or the number of dice faces, for each outcome."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a trial?",
+      "back": "A single predefined test.\n\nExample: spinning a spinner once."
+    },
+    {
+      "front": "What is an outcome?",
+      "back": "A result of a trial."
+    },
+    {
+      "front": "What is a sample space?",
+      "back": "All the possible outcomes of a trial.\n\nExample: ξ = ❴win, lose❵"
+    },
+    {
+      "front": "What does likelihood describe?",
+      "back": "The chance that a particular event will occur."
+    },
+    {
+      "front": "What is the name of the Greek letter ξ, used for a sample space?",
+      "back": "xi.\n\nIt stands for the set of all possible outcomes of a trial."
+    },
+    {
+      "front": "A spinner has four equal sectors: two win and two lose. How many outcomes are in its sample space?",
+      "back": "2.\n\nξ = ❴win, lose❵. The sample space lists each different outcome once."
+    },
+    {
+      "front": "What is the sample space for rolling a regular six-sided dice once?",
+      "back": "ξ = ❴1, 2, 3, 4, 5, 6❵"
+    },
+    {
+      "front": "Ana, Ben and Cal play a board game and the trial is the whole game. What is the sample space?",
+      "back": "ξ = ❴Ana, Ben, Cal❵\n\nWhen the trial is a game, the outcomes are the possible winners."
+    },
+    {
+      "front": "Two outcomes are equally likely when...",
+      "back": "They have the same chance (likelihood) of happening.\n\nExample: two equal-sized sectors, win and lose."
+    },
+    {
+      "front": "A regular dice is rolled. Is ❴odd, even❵ equally likely?",
+      "back": "Yes.\n\nThere are 3 odd numbers (1, 3, 5) and 3 even numbers (2, 4, 6)."
+    },
+    {
+      "front": "A regular dice is rolled. Is ❴multiple of 3, not a multiple of 3❵ equally likely?",
+      "back": "No.\n\nMultiples of 3: 3 and 6 (2 numbers). Not multiples of 3: 1, 2, 4 and 5 (4 numbers)."
+    },
+    {
+      "front": "A fair coin has not landed on tails for a while. Is tails now more likely?",
+      "back": "No.\n\nHeads and tails are always equally likely and are not affected by previous results."
+    },
+    {
+      "front": "In a raffle with numbers 1 to 100, is number 1 less likely to be picked than number 53?",
+      "back": "No.\n\nEach number is equally likely to be picked, regardless of its size."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Equally likely outcomes",
+    "instructions": "Answer each question with a number, a word or a short phrase. Think about the sample space and count the outcomes carefully.",
+    "questions": [
+      {
+        "prompt": "A trial is one spin of a spinner with four sectors labelled win, lose, win, lose. How many different outcomes are in the sample space?",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "two",
+          "2 outcomes",
+          "two outcomes"
+        ],
+        "explanation": "The only possible outcomes are win and lose; the sample space lists each different outcome once."
+      },
+      {
+        "prompt": "How many outcomes are in the sample space for rolling a regular six-sided dice once?",
+        "answer": "6",
+        "accepted": [
+          "6",
+          "six",
+          "6 outcomes",
+          "six outcomes"
+        ],
+        "explanation": "The possible outcomes are the numbers 1, 2, 3, 4, 5 and 6."
+      },
+      {
+        "prompt": "Fill in the gap: a ______ is a single predefined test.",
+        "answer": "trial",
+        "accepted": [
+          "trial",
+          "a trial"
+        ],
+        "explanation": "A trial is a single predefined test, such as spinning a spinner once."
+      },
+      {
+        "prompt": "What name is given to the set of all the possible outcomes of a trial?",
+        "answer": "sample space",
+        "accepted": [
+          "sample space",
+          "the sample space",
+          "a sample space"
+        ],
+        "explanation": "A sample space is all the possible outcomes of a trial."
+      },
+      {
+        "prompt": "A spinner has the sample space ξ = ❴A, B, C, D❵. What is the smallest number of sectors it could have?",
+        "answer": "4",
+        "accepted": [
+          "4",
+          "four",
+          "4 sectors",
+          "four sectors"
+        ],
+        "explanation": "Each of the four letters must appear on at least one sector."
+      },
+      {
+        "prompt": "Alex and Sofia roll a regular six-sided dice. Sofia gets the cookie if the dice shows a multiple of 3. How many numbers on the dice give Sofia the cookie?",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "two",
+          "2 numbers",
+          "two numbers"
+        ],
+        "explanation": "The multiples of 3 on a regular dice are 3 and 6."
+      },
+      {
+        "prompt": "Lucas gets the cookie if a regular dice shows an even number and Jun gets it if it shows an odd number. Are the outcomes equally likely? (yes or no)",
+        "answer": "yes",
+        "accepted": [
+          "yes",
+          "Yes",
+          "yes, they are equally likely",
+          "equally likely"
+        ],
+        "explanation": "There are 3 even numbers and 3 odd numbers, so each has the same chance."
+      },
+      {
+        "prompt": "In a raffle the tickets are numbered 1 to 100 and one is picked randomly. Is ticket 1 more likely, less likely or equally likely to be picked than ticket 53?",
+        "answer": "equally likely",
+        "accepted": [
+          "equally likely",
+          "equally",
+          "the same",
+          "equal",
+          "as likely"
+        ],
+        "explanation": "Each number is equally likely to be picked, regardless of its size."
+      },
+      {
+        "prompt": "Ana, Ben and Cal play a board game. The trial is the whole game and the outcomes are the possible winners. How many outcomes are in the sample space?",
+        "answer": "3",
+        "accepted": [
+          "3",
+          "three",
+          "3 outcomes",
+          "three outcomes"
+        ],
+        "explanation": "The outcomes are Ana wins, Ben wins and Cal wins."
+      },
+      {
+        "prompt": "A regular dice is rolled. Team A wins on a 1 or 2, Team B wins on a 3, and Team C wins on a 4, 5 or 6. Which team is most likely to win?",
+        "answer": "Team C",
+        "accepted": [
+          "Team C",
+          "C",
+          "team c"
+        ],
+        "explanation": "Team C has 3 winning numbers, more than Team A (2) or Team B (1)."
+      },
+      {
+        "prompt": "What is the name of the Greek letter ξ that is used to represent a sample space?",
+        "answer": "xi",
+        "accepted": [
+          "xi",
+          "ξ",
+          "Xi"
+        ],
+        "explanation": "ξ (xi) represents the set of all possible outcomes of a trial."
+      }
+    ]
+  }
+}

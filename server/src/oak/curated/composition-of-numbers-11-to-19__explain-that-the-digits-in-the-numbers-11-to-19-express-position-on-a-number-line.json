@@ -1,0 +1,645 @@
+{
+  "agent": "maths-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain that the digits in the numbers 11 to 19 express position on a number line."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Finding numbers on a number line"
+            },
+            {
+              "title": "Estimating numbers on a number line"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "number-line"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "one more",
+              "def": "One more than is when there is a greater amount by one or another item in the set."
+            },
+            {
+              "term": "one less",
+              "def": "One less than is when there is a smaller value by one."
+            },
+            {
+              "term": "estimate",
+              "def": "To find a value that is close enough to the right answer, usually with some careful thought involved."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Teen numbers on a number line",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Let’s count from 10 to 20."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The teen numbers are between 10 and 20. They start with the digit 1, which represents 1 ten."
+        },
+        {
+          "t": "text",
+          "text": "On the number line there is one big jump of 10. The teen numbers are an extra jump on from 10 up to 20."
+        }
+      ],
+      "pics": [
+        {
+          "id": "number-line"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ten and a bit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Teen numbers are made of ten and a bit. We can say:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "11 is made of one ten and one one",
+            "12 is made of one ten and two ones",
+            "13 is made of one ten and three ones",
+            "14 is made of one ten and four ones",
+            "15 is made of one ten and five ones",
+            "16 is made of one ten and six ones",
+            "17 is made of one ten and seven ones",
+            "18 is made of one ten and eight ones",
+            "19 is made of one ten and nine ones"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Saying a teen number as one ten and some ones helps you to find it on a number line."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do you notice?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the one-digit numbers and the teen numbers."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "1 → 11",
+            "4 → 14",
+            "7 → 17",
+            "9 → 19"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see",
+          "text": "The teen numbers all start with the digit 1. They end in the same digit as the one-digit numbers."
+        },
+        {
+          "t": "text",
+          "text": "So we can use the numbers 1 to 9 to help us find the teen numbers on a number line."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One more",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What number comes next? How do you know?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "One more than 1 is 2, so one more than 11 is 12.",
+            "One more than 4 is 5, so one more than 14 is 15.",
+            "One more than 7 is 8, so one more than 17 is 18."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If one more than 7 is 8, then 18 must be one more than 17."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One more and one less",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use one more and one less to put numbers in order."
+        },
+        {
+          "t": "list",
+          "items": [
+            "15 is one more than 14.",
+            "13 is one less than 14.",
+            "17 is one more than 16.",
+            "15 is one less than 16."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We can say it in two ways: 12 is one more than 11, or 11 is one less than 12."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "One more, one less",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the right number.",
+          "items": [
+            {
+              "q": "What is one more than 12?",
+              "options": [
+                "11",
+                "13",
+                "14"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is one less than 16?",
+              "options": [
+                "17",
+                "15",
+                "14"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is one more than 18?",
+              "options": [
+                "19",
+                "17",
+                "20"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is one less than 12?",
+              "options": [
+                "13",
+                "10",
+                "11"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "One more than 3 is 4. So what is one more than 13?",
+              "options": [
+                "15",
+                "14",
+                "13"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Between",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Where is 15 on the number line?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "14",
+            "15",
+            "16"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "15 comes between 14 and 16.",
+            "14 is one less than 15.",
+            "16 is one more than 15."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We can use one more, one less or in between to find where a number goes."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which numbers is it between?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each number to the two numbers it comes between.",
+          "pairs": [
+            {
+              "a": "13",
+              "b": "12 and 14"
+            },
+            {
+              "a": "16",
+              "b": "15 and 17"
+            },
+            {
+              "a": "19",
+              "b": "18 and 20"
+            },
+            {
+              "a": "11",
+              "b": "10 and 12"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Ten and ones, and between",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the right answer.",
+          "items": [
+            {
+              "q": "17 is made of one ten and how many ones?",
+              "options": [
+                "1",
+                "7",
+                "10"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "19 is made of one ten and how many ones?",
+              "options": [
+                "9",
+                "1",
+                "10"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "17 is between which two numbers?",
+              "options": [
+                "15 and 17",
+                "16 and 18",
+                "18 and 19"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "15 is between which two numbers?",
+              "options": [
+                "13 and 15",
+                "14 and 16",
+                "15 and 17"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The midpoint",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "15 is halfway between 10 and 20. It is the **midpoint**."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "10",
+            "…",
+            "15",
+            "…",
+            "20"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The midpoint can help us to mark the other teen numbers."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Estimating",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we estimate, we ask: is the number before or after the midpoint?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "A number before the midpoint could be 14.",
+            "A number after the midpoint could be 16."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We can also ask which number it is nearer to."
+        },
+        {
+          "t": "list",
+          "items": [
+            "11 is nearer to 10. It is one more than 10.",
+            "19 is nearer to 20. It is one less than 20."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Before or after the midpoint?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The midpoint is 15."
+        },
+        {
+          "t": "sort",
+          "q": "Where does each number go?",
+          "columns": [
+            "Before the midpoint (less than 15)",
+            "After the midpoint (more than 15)"
+          ],
+          "items": [
+            {
+              "text": "12",
+              "col": 0
+            },
+            {
+              "text": "18",
+              "col": 1
+            },
+            {
+              "text": "14",
+              "col": 0
+            },
+            {
+              "text": "16",
+              "col": 1
+            },
+            {
+              "text": "11",
+              "col": 0
+            },
+            {
+              "text": "19",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Estimate it",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A number is more than 15 but less than 20. Which number could it be?",
+          "options": [
+            "12",
+            "17",
+            "10"
+          ],
+          "answer": 1,
+          "why": "17 is more than 15 and less than 20. 12 and 10 are less than 15."
+        },
+        {
+          "t": "choice",
+          "q": "Is 19 nearer to 10 or to 20?",
+          "options": [
+            "10",
+            "20"
+          ],
+          "answer": 1,
+          "why": "19 is one less than 20, so it is nearer to 20."
+        },
+        {
+          "t": "choice",
+          "q": "Is 11 before or after the midpoint?",
+          "options": [
+            "Before the midpoint",
+            "After the midpoint"
+          ],
+          "answer": 0,
+          "why": "11 is less than 15, and it is nearer to 10."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The numbers 11 to 19 can be positioned on a number line.",
+            "Saying the teen numbers as one ten and some ones helps you to position them.",
+            "There is a link between the position of the numbers 1 to 9 and the numbers 11 to 19.",
+            "Knowing one more and one less than a number to 20 can help to estimate the position of the teen numbers."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Which digit do all the teen numbers start with?",
+      "back": "1. It represents 1 ten."
+    },
+    {
+      "front": "13 is made of one ten and how many ones?",
+      "back": "3 ones."
+    },
+    {
+      "front": "What is one more than 17?",
+      "back": "18.\n\nOne more than 7 is 8, so one more than 17 is 18."
+    },
+    {
+      "front": "What is one less than 15?",
+      "back": "14."
+    },
+    {
+      "front": "Which two numbers does 15 come between?",
+      "back": "14 and 16."
+    },
+    {
+      "front": "Which teen number is halfway between 10 and 20?",
+      "back": "15. It is the midpoint."
+    },
+    {
+      "front": "What does “one more” mean?",
+      "back": "A greater amount by one."
+    },
+    {
+      "front": "What does “one less” mean?",
+      "back": "A smaller value by one."
+    },
+    {
+      "front": "What does “estimate” mean?",
+      "back": "To find a value that is close enough to the right answer, usually with some careful thought."
+    },
+    {
+      "front": "The teen numbers end in the same digit as which other numbers?",
+      "back": "The one-digit numbers.\n\n4 and 14, 7 and 17, 9 and 19."
+    },
+    {
+      "front": "Is 19 nearer to 10 or to 20?",
+      "back": "20. It is one less than 20."
+    },
+    {
+      "front": "Is 11 nearer to 10 or to 20?",
+      "back": "10. It is one more than 10."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain that the digits in the numbers 11 to 19 express position on a number line",
+    "instructions": "Answer each question. Think about ten and a bit, one more, one less and the midpoint.",
+    "questions": [
+      {
+        "prompt": "15 is made of one ten and how many ones?",
+        "answer": "5",
+        "accepted": [
+          "5 ones",
+          "five",
+          "five ones"
+        ],
+        "explanation": "15 is made of one ten and five ones."
+      },
+      {
+        "prompt": "17 comes between which two numbers?",
+        "answer": "16 and 18",
+        "accepted": [
+          "18 and 16",
+          "16, 18",
+          "18, 16"
+        ],
+        "explanation": "17 is one more than 16 and one less than 18."
+      },
+      {
+        "prompt": "What is one more than 13?",
+        "answer": "14",
+        "accepted": [
+          "fourteen"
+        ],
+        "explanation": "One more than 3 is 4, so one more than 13 is 14."
+      },
+      {
+        "prompt": "What is one less than 19?",
+        "answer": "18",
+        "accepted": [
+          "eighteen"
+        ],
+        "explanation": "19 is one more than 18, so one less than 19 is 18."
+      },
+      {
+        "prompt": "What number is the midpoint (halfway) between 10 and 20?",
+        "answer": "15",
+        "accepted": [
+          "fifteen"
+        ],
+        "explanation": "15 is halfway between 10 and 20."
+      },
+      {
+        "prompt": "Fill in the missing number: 16, 17, ___, 19",
+        "answer": "18",
+        "accepted": [
+          "eighteen"
+        ],
+        "explanation": "One more than 17 is 18."
+      },
+      {
+        "prompt": "Is 18 nearer to 10 or to 20? Write 10 or 20.",
+        "answer": "20",
+        "accepted": [
+          "twenty"
+        ],
+        "explanation": "18 is 2 away from 20 but 8 away from 10."
+      },
+      {
+        "prompt": "19 is made of one ten and how many ones?",
+        "answer": "9",
+        "accepted": [
+          "9 ones",
+          "nine",
+          "nine ones"
+        ],
+        "explanation": "19 is made of one ten and nine ones."
+      },
+      {
+        "prompt": "13 comes between which two numbers?",
+        "answer": "12 and 14",
+        "accepted": [
+          "14 and 12",
+          "12, 14",
+          "14, 12"
+        ],
+        "explanation": "13 is one more than 12 and one less than 14."
+      }
+    ]
+  }
+}

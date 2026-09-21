@@ -1,0 +1,668 @@
+{
+  "agent": "french-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use -er verbs in the simple present tense, including two-verb structures, to say what I do and like doing."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to recognise and pronounce [oi]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "the {[oi]} sound"
+            },
+            {
+              "title": "the simple {present tense}"
+            },
+            {
+              "title": "two verbs with {aimer}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "oi",
+              "def": "pronounced as in ‘voir’"
+            },
+            {
+              "term": "infinitive",
+              "def": "the dictionary form of the verb giving its general meaning"
+            },
+            {
+              "term": "two-verb structure",
+              "def": "phrase with two verbs, where the second verb is an infinitive"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The [oi] sound",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "[oi] is pronounced as in ‘voir’. Read these words and say them aloud."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "v{oi}r",
+            "dr{oi}te",
+            "tr{oi}s",
+            "av{oi}r",
+            "au rev{oi}r",
+            "b{oi}s",
+            "ét{oi}le",
+            "v{oi}sin",
+            "vict{oi}re",
+            "p{oi}re",
+            "dev{oi}rs",
+            "qu{oi}"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Avoir means to have, having. Au revoir means goodbye. Trois is 3."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the [oi] sound",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the right word.",
+          "items": [
+            {
+              "q": "Which word has the [oi] sound?",
+              "options": [
+                "quoi",
+                "faire",
+                "merci"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which word has the [oi] sound?",
+              "options": [
+                "maison",
+                "poire",
+                "cinéma"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which word does NOT have the [oi] sound?",
+              "options": [
+                "voisin",
+                "victoire",
+                "semaine"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Revisit: the present tense",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Change the infinitive to the singular form that matches the pronoun. For regular -er verbs the endings are je → -e, tu → -es and il/elle → -e."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Je trouve une solution. = I find a solution.",
+            "Tu trouves une solution. = You find a solution.",
+            "Elle trouve une solution. = She finds a solution."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The infinitive is trouver, which means to find, finding."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which form of the verb?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form.",
+          "items": [
+            {
+              "q": "Elle ____ (cocher) le numéro.",
+              "options": [
+                "coche",
+                "coches",
+                "cocher"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu ____ (rester) à la maison.",
+              "options": [
+                "reste",
+                "restes",
+                "rester"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Je ____ (passer) un moment à la maison.",
+              "options": [
+                "passe",
+                "passes",
+                "passer"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Il ____ (trouver) la phrase.",
+              "options": [
+                "trouves",
+                "trouver",
+                "trouve"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One verb or two?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "J’aime le professeur. = I like the teacher.",
+            "J’aime écouter le professeur. = I like listening to the teacher. (or: I like to listen to the teacher.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In a two-verb structure, the second verb is an {infinitive} verb."
+        },
+        {
+          "t": "text",
+          "text": "Use the correct ending on the first verb (je → aime). The second verb stays in its long form: écouter."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘to’ or ‘-ing’?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In English we can translate the infinitive as ‘to’ + verb or as ‘-ing’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Il aime trouver la réponse. = He likes to find the answer.",
+            "Il aime trouver la réponse. = He likes finding the answer."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which one do we usually say?",
+          "text": "Both are right, but after ‘like’ it is more common to use -ing: He likes finding the answer."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "One verb or two?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "How many verbs does each sentence have?",
+          "columns": [
+            "One verb",
+            "Two verbs"
+          ],
+          "items": [
+            {
+              "text": "J’aime parler en français.",
+              "col": 1
+            },
+            {
+              "text": "Il aime l’idée.",
+              "col": 0
+            },
+            {
+              "text": "Elle aime écouter la chanteuse.",
+              "col": 1
+            },
+            {
+              "text": "Tu portes un uniforme.",
+              "col": 0
+            },
+            {
+              "text": "Tu aimes trouver la solution.",
+              "col": 1
+            },
+            {
+              "text": "Je trouve un vélo jaune.",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "I do, I like doing",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Compare what a person does with what they like doing. Only the first verb changes."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Je fais → j’aime faire",
+              "sub": "I do → I like doing"
+            },
+            {
+              "title": "Tu restes → tu aimes rester",
+              "sub": "You stay → you like staying"
+            },
+            {
+              "title": "Il passe → il aime passer",
+              "sub": "He spends → he likes spending"
+            },
+            {
+              "title": "Elle porte → elle aime porter",
+              "sub": "She wears → she likes wearing",
+              "emoji": "🚪"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the second verb",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form.",
+          "items": [
+            {
+              "q": "Elle aime ____ à l’école.",
+              "options": [
+                "parler",
+                "parle",
+                "parles"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "J’aime ____ la réponse.",
+              "options": [
+                "trouve",
+                "trouver",
+                "trouves"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Tu aimes ____ un uniforme.",
+              "options": [
+                "portes",
+                "porte",
+                "porter"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Il ____ rester à la maison.",
+              "options": [
+                "aime",
+                "aimer",
+                "aimes"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Does it or likes doing it?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does the sentence say what someone does, or what they like doing?",
+          "columns": [
+            "does it",
+            "likes doing it"
+          ],
+          "items": [
+            {
+              "text": "Elle porte un uniforme.",
+              "col": 0
+            },
+            {
+              "text": "Il aime porter un uniforme.",
+              "col": 1
+            },
+            {
+              "text": "Tu restes à la maison.",
+              "col": 0
+            },
+            {
+              "text": "Tu aimes rester à la maison.",
+              "col": 1
+            },
+            {
+              "text": "Je trouve les solutions.",
+              "col": 0
+            },
+            {
+              "text": "J’aime trouver les solutions.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Translate: ‘She likes listening to the singer.’"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. She → elle.",
+            "2. Likes → aime (elle takes -e).",
+            "3. Listening → the second verb stays in the infinitive: écouter.",
+            "4. The singer → la chanteuse."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Put it together",
+          "text": "Elle aime écouter la chanteuse."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the questions",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each French question to its English meaning.",
+          "pairs": [
+            {
+              "a": "Tu aimes avoir un chien ?",
+              "b": "Do you like having a dog?"
+            },
+            {
+              "a": "Tu aimes porter un uniforme ?",
+              "b": "Do you like wearing a uniform?"
+            },
+            {
+              "a": "Tu aimes écrire en français ?",
+              "b": "Do you like writing in French?"
+            },
+            {
+              "a": "Tu restes à l’école ?",
+              "b": "Do you stay at school?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check it",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "In a two-verb structure with aimer, what form is the second verb?",
+          "options": [
+            "The infinitive (the long form)",
+            "The je form",
+            "The tu form"
+          ],
+          "answer": 0,
+          "why": "If a sentence has two verbs, the second verb needs to be in the long form, the infinitive."
+        },
+        {
+          "t": "choice",
+          "q": "How do you say ‘He likes staying at home’?",
+          "options": [
+            "Il aime reste à la maison.",
+            "Il aimes rester à la maison.",
+            "Il aime rester à la maison."
+          ],
+          "answer": 2,
+          "why": "Il aime uses the -e ending, and the second verb stays as the infinitive: rester."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A French infinitive isn’t only translated with ‘to’. It can be ‘to’ + verb or ‘-ing’, like ‘to do’ or ‘doing’."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Remember",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[oi] is pronounced as in ‘voir’.",
+            "If a sentence has one present tense verb, the verb ending matches the pronoun. With -er verbs the endings are: je → -e, tu → -es and il/elle → -e.",
+            "In a two-verb structure, the second verb needs to be in the infinitive, the long form."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [oi] pronounced?",
+      "back": "As in ‘voir’."
+    },
+    {
+      "front": "What is an infinitive?",
+      "back": "The dictionary form of the verb, giving its general meaning."
+    },
+    {
+      "front": "What is a two-verb structure?",
+      "back": "A phrase with two verbs, where the second verb is an infinitive.\n\nJ’aime parler en français."
+    },
+    {
+      "front": "In a two-verb structure, what form is the second verb?",
+      "back": "The infinitive (the long form)."
+    },
+    {
+      "front": "How can we translate a French infinitive into English?",
+      "back": "As ‘to’ + verb or as ‘-ing’.\n\nto do, doing"
+    },
+    {
+      "front": "After ‘like’, which English translation of the infinitive is more common?",
+      "back": "-ing.\n\nIl aime trouver la réponse. = He likes finding the answer."
+    },
+    {
+      "front": "What are the regular -er endings for je, tu and il/elle?",
+      "back": "je → -e, tu → -es, il/elle → -e."
+    },
+    {
+      "front": "What does “J’aime écouter le professeur” mean?",
+      "back": "I like listening to the teacher.\n\n(or: I like to listen to the teacher.)"
+    },
+    {
+      "front": "How do you say “I like doing”?",
+      "back": "J’aime faire."
+    },
+    {
+      "front": "What does “Elle aime écouter la chanteuse” mean?",
+      "back": "She likes listening to the singer."
+    },
+    {
+      "front": "What does “avoir” mean?",
+      "back": "To have, having."
+    },
+    {
+      "front": "What does “au revoir” mean?",
+      "back": "Goodbye."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What people like doing: 2-verb phrases with ‘aimer’",
+    "instructions": "Translate the sentences into French, or fill in the gaps. Remember the endings je → -e, tu → -es, il/elle → -e, and keep the second verb in the infinitive.",
+    "questions": [
+      {
+        "prompt": "Translate into French: ‘I spend a week in France.’",
+        "answer": "Je passe une semaine en France.",
+        "accepted": [
+          "Je passe une semaine en France",
+          "je passe une semaine en France"
+        ],
+        "explanation": "Je takes passe, and a week in France is une semaine en France."
+      },
+      {
+        "prompt": "Translate into French: ‘Do you like the cooking at school?’",
+        "answer": "Tu aimes la cuisine à l’école ?",
+        "accepted": [
+          "Tu aimes la cuisine à l'école ?",
+          "Tu aimes la cuisine à l’école",
+          "Tu aimes la cuisine à l'école",
+          "Tu aimes la cuisine à l’école?",
+          "Tu aimes la cuisine à l'école?"
+        ],
+        "explanation": "Tu takes aimes, and the cooking at school is la cuisine à l’école."
+      },
+      {
+        "prompt": "Translate into French: ‘He stays a week with a friend (m).’",
+        "answer": "Il reste une semaine avec un ami.",
+        "accepted": [
+          "Il reste une semaine avec un ami",
+          "il reste une semaine avec un ami"
+        ],
+        "explanation": "Il takes reste, and with a (male) friend is avec un ami."
+      },
+      {
+        "prompt": "Translate into French: ‘I tick the homework in class.’",
+        "answer": "Je coche les devoirs en classe.",
+        "accepted": [
+          "Je coche les devoirs en classe",
+          "je coche les devoirs en classe"
+        ],
+        "explanation": "Je takes coche, homework is les devoirs, and in class is en classe."
+      },
+      {
+        "prompt": "Translate into French: ‘She likes shopping in France.’ (food shopping)",
+        "answer": "Elle aime les courses en France.",
+        "accepted": [
+          "Elle aime faire les courses en France",
+          "Elle aime faire les courses en France.",
+          "Elle aime les courses en France",
+          "elle aime les courses en France"
+        ],
+        "explanation": "Elle takes aime, and shopping is les courses."
+      },
+      {
+        "prompt": "Translate into French: ‘You find the answer with a friend (f).’",
+        "answer": "Tu trouves la réponse avec une amie.",
+        "accepted": [
+          "Tu trouves la réponse avec une amie",
+          "tu trouves la réponse avec une amie"
+        ],
+        "explanation": "Tu takes trouves, and with a (female) friend is avec une amie."
+      },
+      {
+        "prompt": "Translate into French: ‘She finds the sentence in class.’",
+        "answer": "Elle trouve la phrase en classe.",
+        "accepted": [
+          "Elle trouve la phrase en classe",
+          "elle trouve la phrase en classe"
+        ],
+        "explanation": "Elle takes trouve, the sentence is la phrase, and in class is en classe."
+      },
+      {
+        "prompt": "Translate into French: ‘Do you wear a uniform at school?’",
+        "answer": "Tu portes un uniforme à l’école ?",
+        "accepted": [
+          "Tu portes un uniforme à l'école ?",
+          "Tu portes un uniforme à l’école",
+          "Tu portes un uniforme à l'école",
+          "Tu portes un uniforme à l’école?",
+          "Tu portes un uniforme à l'école?"
+        ],
+        "explanation": "Tu takes portes, and at school is à l’école."
+      },
+      {
+        "prompt": "Translate into English: Elle aime écouter la chanteuse.",
+        "answer": "She likes listening to the singer.",
+        "accepted": [
+          "She likes listening to the singer",
+          "She likes to listen to the singer",
+          "she likes listening to the singer",
+          "She likes to listen to the singer."
+        ],
+        "explanation": "Aime is the elle form of aimer, and the second verb écouter is an infinitive: listening or to listen."
+      },
+      {
+        "prompt": "Translate into English: Tu aimes avoir un chien ?",
+        "answer": "Do you like having a dog?",
+        "accepted": [
+          "Do you like having a dog",
+          "Do you like to have a dog?",
+          "Do you like to have a dog",
+          "do you like having a dog?"
+        ],
+        "explanation": "Tu aimes is ‘you like’, and the infinitive avoir means having or to have."
+      },
+      {
+        "prompt": "Fill in the gap with the correct verb form: J’aime ____ les solutions. (to find)",
+        "answer": "trouver",
+        "accepted": [
+          "Trouver"
+        ],
+        "explanation": "The second verb in a two-verb structure stays in the infinitive: trouver."
+      }
+    ]
+  }
+}

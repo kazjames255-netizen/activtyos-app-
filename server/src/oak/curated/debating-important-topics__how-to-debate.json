@@ -1,0 +1,718 @@
+{
+  "agent": "english-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand what a {debate} is and deliver a speech."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "How to debate"
+            },
+            {
+              "title": "Delivering a successful speech"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "opinion",
+              "def": "A view or belief that a person has: what a person thinks or believes."
+            },
+            {
+              "term": "debate",
+              "def": "A structured argument between two teams."
+            },
+            {
+              "term": "reasoning",
+              "def": "Explaining why a person has a certain opinion."
+            },
+            {
+              "term": "motion",
+              "def": "The name for the belief or proposal that is being debated."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Opinions and debate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Opinions** are what people think or believe. We all have different opinions about different things, and that is part of what makes a society interesting."
+        },
+        {
+          "t": "text",
+          "text": "A **society** is a community, nation or group of people."
+        },
+        {
+          "t": "callout",
+          "text": "When people have different opinions, it provokes opportunities for discussion and {debate}."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: the word ‘debate’ has two uses",
+          "text": "In this unit, a debate is a structured argument between two teams. But ‘to debate’ can also be a verb: to argue or discuss a subject where people express differing opinions. Saying ‘Let’s have a debate about it’ does not mean getting lots of people together to make two teams."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How a debate works",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "A debate is a structured argument between two teams."
+        },
+        {
+          "t": "text",
+          "text": "Both teams debate a **motion**: the name for the belief or proposal that is being debated."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{proposition}",
+              "sub": "agrees with the motion"
+            },
+            {
+              "title": "{opposition}",
+              "sub": "disagrees with the motion"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Each team has the same number of speakers, who give persuasive and convincing speeches about why they agree or disagree with the motion."
+        },
+        {
+          "t": "choice",
+          "q": "Zara’s team disagrees with the motion. Which team is she on?",
+          "options": [
+            "the proposition",
+            "the opposition",
+            "the audience"
+          ],
+          "answer": 1,
+          "why": "The opposition is the team that disagrees with the motion. The proposition agrees with it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Roles in a debate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each role to see what it does."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "chairperson",
+              "def": "Leads the debate: directs the speakers and explains to the audience what is happening."
+            },
+            {
+              "term": "speakers",
+              "def": "The speakers from each team take turns to deliver their own speech."
+            },
+            {
+              "term": "summary speakers",
+              "def": "They summarise what their teammates have said."
+            },
+            {
+              "term": "timekeeper",
+              "def": "Signals all the timings in the debate."
+            },
+            {
+              "term": "audience",
+              "def": "The group of people watching the debate."
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Read what each person does. Which role are they?",
+          "items": [
+            {
+              "q": "Kai directs the speakers and explains to the audience what is happening.",
+              "options": [
+                "chairperson",
+                "timekeeper",
+                "summary speaker"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Mia summarises what her teammates have said.",
+              "options": [
+                "chairperson",
+                "summary speaker",
+                "timekeeper"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Leo signals all the timings during the debate.",
+              "options": [
+                "summary speaker",
+                "audience",
+                "timekeeper"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Points of information",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Speakers can be challenged by members of the opposing team through **points of information**."
+        },
+        {
+          "t": "callout",
+          "text": "A point of information can only happen out of {protected time}."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: Can a speaker be interrupted during their speech?",
+          "text": "Yes! Speakers can be challenged by any member of the opposing team through points of information, which can only happen out of protected time."
+        },
+        {
+          "t": "choice",
+          "q": "Who can challenge a speaker with a point of information?",
+          "options": [
+            "members of the opposing team",
+            "the speaker’s own teammates",
+            "the timekeeper"
+          ],
+          "answer": 0,
+          "why": "Speakers can be challenged by members of the opposing team."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Who wins?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A debate is usually judged so that there is a winning team. It can be judged in these ways."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The audience",
+              "sub": "vote on the winning team with a show of hands"
+            },
+            {
+              "title": "A judge or panel of judges",
+              "sub": "may use criteria to score each speaker"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Speakers may be scored on criteria such as:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "style",
+            "content",
+            "delivery",
+            "points of information"
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Who does this? Tap a sentence, then tap the column.",
+          "columns": [
+            "The audience",
+            "Judges"
+          ],
+          "items": [
+            {
+              "text": "vote by a show of hands",
+              "col": 0
+            },
+            {
+              "text": "score each speaker using criteria",
+              "col": 1
+            },
+            {
+              "text": "may be a panel of people who score the speakers",
+              "col": 1
+            },
+            {
+              "text": "raise their hands to vote for the winning team",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why use a structure?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In debating, a team’s success is determined by how well each speaker delivers their speech (also called their ‘argument’)."
+        },
+        {
+          "t": "lead",
+          "text": "A successful speech follows a set structure, which helps a speaker organise their argument."
+        },
+        {
+          "t": "text",
+          "text": "Following a structure will:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "help an argument flow",
+            "make it easier for an audience to follow",
+            "make sure key parts aren’t missed",
+            "help the speaker manage their time",
+            "help the speaker appear prepared and professional",
+            "reduce nervousness when delivering the speech"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: Watch out!",
+          "text": "A speech in a debate should not just be made up on the spot. Following a structure helps your speech flow and makes it easier for your audience to follow."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The PEPS structure",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are four parts to the structure to follow when making a speech in a debate. The acronym **PEPS** helps us remember the structure and its order."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{P}oint"
+            },
+            {
+              "title": "{E}xplanation"
+            },
+            {
+              "title": "{P}roof"
+            },
+            {
+              "title": "{S}ummary"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "point → explanation → proof → summary"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "P is for Point",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The first part of PEPS is the main **point** of your argument."
+        },
+        {
+          "t": "text",
+          "text": "It clearly says whether you agree or disagree with the motion and gives one reason to justify your opinion, using the word **because**."
+        },
+        {
+          "t": "callout",
+          "text": "Motion: This house would ban homework."
+        },
+        {
+          "t": "text",
+          "text": "Point: “I believe that homework should not be banned {because} it helps pupils revise the things they’ve learned at school so they can remember it.”"
+        },
+        {
+          "t": "text",
+          "text": "The opinion is ‘I believe that homework should not be banned’. The word because introduces the one reason that justifies it."
+        },
+        {
+          "t": "choice",
+          "q": "What does a good point include?",
+          "options": [
+            "whether you agree or disagree with the motion, and one reason using because",
+            "lots of brand new points, one after another",
+            "a closing sentence that repeats everything"
+          ],
+          "answer": 0,
+          "why": "A point says whether you agree or disagree with the motion and gives one reason to justify your opinion using the word because."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "E is for Explanation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "After making a point, the speaker explains that point by adding **reasoning** to convince the audience."
+        },
+        {
+          "t": "callout",
+          "text": "This is not a new point. The reasoning should support the point you have already made."
+        },
+        {
+          "t": "text",
+          "text": "To convince the audience, a speaker may use persuasive techniques. Tap each one."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "flattery",
+              "def": "Complimenting the audience."
+            },
+            {
+              "term": "emotion",
+              "def": "Bringing different emotions to the surface for the audience and using them to convince."
+            },
+            {
+              "term": "presumption",
+              "def": "Presuming that the audience are going to do the right thing and agree with you."
+            },
+            {
+              "term": "rhetorical question",
+              "def": "A question asked to make the audience think, not to get an answer. It hooks the audience in and engages them."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "An explanation in action",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Point: “I believe that homework should not be banned because it helps pupils revise the things they’ve learned at school so they can remember it.”"
+        },
+        {
+          "t": "text",
+          "text": "Explanation: “I am sure that you’ve all struggled to remember the things you learned in school when you get home in the afternoon. I know I have. Have you ever wished you could go over something tricky from a lesson just one more time to help you remember it? Homework gives us that chance! Homework gives us a chance to revise things. Homework even gives us a chance to make mistakes and learn from them too.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: can you find presumption and repetition?",
+          "text": "Presumption: ‘I am sure that you’ve all struggled to remember the things you learned in school when you get home in the afternoon.’ The speaker presumes that everyone in the audience has struggled. Repetition: ‘Homework gives us…’ is used three times."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "P is for Proof",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Proof is something real, factual and cannot be disputed."
+        },
+        {
+          "t": "text",
+          "text": "Adding proof reinforces your key messages with facts, adds credibility and makes you appear well prepared."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Facts and statistics",
+              "sub": "researched to make sure they are accurate"
+            },
+            {
+              "title": "An {anecdote}",
+              "sub": "a personal story about a real thing that has happened to you"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: “I asked my class and 80% of them felt the same.” is a statistic. “Recently, we learned about the Romans in history and I struggled to remember the content from the lesson.” is an anecdote about the speaker’s own experience."
+        },
+        {
+          "t": "choices",
+          "q": "What kind of proof is this?",
+          "items": [
+            {
+              "q": "“When I missed a week of school, I struggled with my assessments.”",
+              "options": [
+                "a statistic",
+                "an anecdote",
+                "a closing sentence"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "“I asked my class and 80% of them felt the same.”",
+              "options": [
+                "an anecdote",
+                "a rhetorical question",
+                "a statistic"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "S is for Summary",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To **summarise** means to briefly and concisely convey the main points or important information from a longer piece of content, like a summary of a football match or a news report."
+        },
+        {
+          "t": "text",
+          "text": "A speaker summarises their speech to briefly remind the audience of the most important things they have said. A summary includes:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the point, which can be repeated in full",
+            "brief highlights of the explanation",
+            "brief highlights of the proof",
+            "a closing sentence"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example closing sentence: “Therefore, I disagree strongly with the motion and believe that homework should not be banned.”"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practise PEPS",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which part of PEPS is this?",
+          "items": [
+            {
+              "q": "You say whether you agree or disagree with the motion and give one reason with because.",
+              "options": [
+                "point",
+                "proof",
+                "summary"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "You add reasoning to support your point and convince the audience, using persuasive techniques.",
+              "options": [
+                "point",
+                "explanation",
+                "proof"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "You add facts, statistics or an anecdote.",
+              "options": [
+                "proof",
+                "explanation",
+                "summary"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "You briefly remind the audience of your most important points and end with a closing sentence.",
+              "options": [
+                "point",
+                "proof",
+                "summary"
+              ],
+              "answer": 2
+            }
+          ]
+        },
+        {
+          "t": "match",
+          "q": "Match each persuasive technique to what it does.",
+          "pairs": [
+            {
+              "a": "flattery",
+              "b": "complimenting the audience"
+            },
+            {
+              "a": "presumption",
+              "b": "presuming that the audience will agree with you"
+            },
+            {
+              "a": "rhetorical question",
+              "b": "hooks the audience in and engages them"
+            },
+            {
+              "a": "emotion",
+              "b": "brings feelings to the surface to convince the audience"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A {debate} is a structured argument between two teams who either agree or disagree with a motion.",
+            "The {motion} is the name for the belief or proposal that is being debated.",
+            "An {opinion} is a view or belief that a person has, and robust reasoning supports an opinion.",
+            "The {PEPS} structure stands for: point, explanation, proof, summary."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a debate?",
+      "back": "A structured argument between two teams who either agree or disagree with a motion."
+    },
+    {
+      "front": "What is a motion?",
+      "back": "The name for the belief or proposal that is being debated."
+    },
+    {
+      "front": "What is an opinion?",
+      "back": "A view or belief that a person has (what a person thinks or believes). Robust reasoning supports an opinion."
+    },
+    {
+      "front": "What is reasoning?",
+      "back": "Explaining why a person has a certain opinion."
+    },
+    {
+      "front": "Which team agrees with the motion, and which team disagrees?",
+      "back": "The proposition agrees with the motion. The opposition disagrees with it."
+    },
+    {
+      "front": "What does the chairperson do in a debate?",
+      "back": "Leads the debate: directs the speakers and explains to the audience what is happening."
+    },
+    {
+      "front": "What do the summary speakers do?",
+      "back": "They summarise what their teammates have said."
+    },
+    {
+      "front": "Who signals the timings in a debate?",
+      "back": "The timekeeper."
+    },
+    {
+      "front": "How can a speaker be challenged by the opposing team?",
+      "back": "Through points of information, which can only happen out of protected time."
+    },
+    {
+      "front": "Name two ways a winning team can be decided.",
+      "back": "The audience votes with a show of hands, or a judge or panel of judges scores each speaker using criteria."
+    },
+    {
+      "front": "Speakers may be scored on which criteria?",
+      "back": "Style, content, delivery and points of information."
+    },
+    {
+      "front": "What does PEPS stand for?",
+      "back": "Point, explanation, proof, summary."
+    },
+    {
+      "front": "Which word do you use in your point to justify your opinion?",
+      "back": "because\n\n“I believe that homework should not be banned because it helps pupils revise…”"
+    },
+    {
+      "front": "What is an anecdote?",
+      "back": "A personal story about a real thing that has happened to you. It can be used as proof."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: How to debate",
+    "instructions": "Answer each question with one word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "The team that disagrees with the motion is called the ___ (one word).",
+        "answer": "opposition",
+        "explanation": "The proposition agrees with the motion and the opposition disagrees with it."
+      },
+      {
+        "prompt": "In the point of a PEPS speech, which word do you use to justify your opinion?",
+        "answer": "because",
+        "explanation": "A point gives one reason to justify your opinion, using the word because."
+      },
+      {
+        "prompt": "What is the third part of the PEPS structure?",
+        "answer": "proof",
+        "explanation": "PEPS stands for point, explanation, proof, summary, so proof comes third."
+      },
+      {
+        "prompt": "Which part of PEPS adds reasoning to convince the audience?",
+        "answer": "explanation",
+        "explanation": "The explanation adds reasoning to support the point and convince the audience."
+      },
+      {
+        "prompt": "A personal story about a real thing that has happened to you, used as proof, is called an ___ (one word).",
+        "answer": "anecdote",
+        "explanation": "An anecdote is a personal story about something real that has happened to you."
+      },
+      {
+        "prompt": "Complimenting the audience to persuade them is a technique called ___ (one word).",
+        "answer": "flattery",
+        "explanation": "Flattery means complimenting the audience."
+      },
+      {
+        "prompt": "Which part of PEPS finishes with a closing sentence?",
+        "answer": "summary",
+        "explanation": "The summary repeats the point, gives brief highlights of the explanation and proof, then ends with a closing sentence."
+      },
+      {
+        "prompt": "Speakers may be scored on style, content, delivery and points of ___ (one word).",
+        "answer": "information",
+        "explanation": "Points of information are one of the criteria a speaker may be scored on."
+      },
+      {
+        "prompt": "Points of information can only happen out of ___ time (one word).",
+        "answer": "protected",
+        "explanation": "Speakers can be challenged by points of information only out of protected time."
+      }
+    ]
+  }
+}

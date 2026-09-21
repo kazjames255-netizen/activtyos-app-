@@ -1,0 +1,525 @@
+{
+  "agent": "science-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe changes in summer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The {summer} months"
+            },
+            {
+              "title": "Bright {flowers}"
+            },
+            {
+              "title": "{Fruit} on plants"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "season",
+              "def": "Seasons are periods of similar weather. In the UK there are four seasons (spring, summer, autumn and winter)."
+            },
+            {
+              "term": "summer",
+              "def": "Summer is the warmest season. It comes after spring and before autumn."
+            },
+            {
+              "term": "change",
+              "def": "If something changes it does not stay the same."
+            },
+            {
+              "term": "flowers",
+              "def": "A flower is the part of a plant that makes it able to make more flowers."
+            },
+            {
+              "term": "observe",
+              "def": "To observe is to look very closely and use other senses too."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "plant-parts"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A year",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy has to wait a whole year for the next sports day."
+        },
+        {
+          "t": "text",
+          "text": "There are twelve months in one year."
+        },
+        {
+          "t": "text",
+          "text": "A year can be split into four seasons."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "12 months"
+            },
+            {
+              "title": "4 seasons"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The four seasons",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The four seasons are autumn, winter, spring and summer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "autumn"
+            },
+            {
+              "title": "winter"
+            },
+            {
+              "title": "spring",
+              "sub": "Birdsong, buds and early flowers."
+            },
+            {
+              "title": "summer",
+              "sub": "Today’s season!"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When is summer?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sports day is in July."
+        },
+        {
+          "t": "text",
+          "text": "July is in summer."
+        },
+        {
+          "t": "callout",
+          "text": "Summer is in {June}, {July} and {August}."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "June"
+            },
+            {
+              "title": "July"
+            },
+            {
+              "title": "August"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Is it summer?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which months are in summer?",
+          "columns": [
+            "Summer",
+            "Not summer"
+          ],
+          "items": [
+            {
+              "text": "June",
+              "col": 0
+            },
+            {
+              "text": "September",
+              "col": 1
+            },
+            {
+              "text": "July",
+              "col": 0
+            },
+            {
+              "text": "December",
+              "col": 1
+            },
+            {
+              "text": "August",
+              "col": 0
+            },
+            {
+              "text": "March",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Year 1 events",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Summer is June, July and August."
+        },
+        {
+          "t": "choices",
+          "q": "Which event is in the season of summer?",
+          "items": [
+            {
+              "q": "Which is in summer?",
+              "options": [
+                "school concert, 19th June",
+                "egg hunt, 11th April",
+                "pantomime trip, 14th December"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which is in summer?",
+              "options": [
+                "class assembly, 21st February",
+                "book fair, 30th September",
+                "sports day, 7th July"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 1: bright colours",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun helps at the gardening club."
+        },
+        {
+          "t": "text",
+          "text": "Weeks ago the raised bed was just green."
+        },
+        {
+          "t": "text",
+          "text": "Now it is full of colours!"
+        },
+        {
+          "t": "callout",
+          "text": "Summer is often full of bright colours as many flowers bloom."
+        },
+        {
+          "t": "reveal",
+          "label": "What is bloom?",
+          "text": "When flowers bloom, they open up. Different flowers are different colours."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 2: fruit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In summer some plants and trees have fruit on them."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "strawberries"
+            },
+            {
+              "title": "tomatoes",
+              "emoji": "🍅"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Green fruit has just started to grow. It is not ripe yet."
+        },
+        {
+          "t": "text",
+          "text": "A strawberry is ripe when it goes red."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sign 3: insects",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun and his friends look around the school garden."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "caterpillars"
+            },
+            {
+              "title": "butterflies"
+            },
+            {
+              "title": "a bee",
+              "sub": "You can hear it buzzing.",
+              "emoji": "🐝"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "There are lots of insects on the plants."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the sign",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "Which is a sign of summer?",
+              "options": [
+                "fruit on plants and trees",
+                "frost on the ground",
+                "snow"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "When flowers bloom, they …",
+              "options": [
+                "fall off",
+                "turn green",
+                "open up"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A strawberry is ripe when it goes …",
+              "options": [
+                "red",
+                "green"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Observe in summer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun and his friends look closely at changes."
+        },
+        {
+          "t": "text",
+          "text": "They use their **observation skills**."
+        },
+        {
+          "t": "callout",
+          "text": "When we observe, we look very closely and use other senses too."
+        },
+        {
+          "t": "list",
+          "items": [
+            "“I see lots of different coloured flowers.”",
+            "“I can hear a bee buzzing around a flower.”",
+            "“I observe a tree with fruit on it.”"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Observe",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "You look closely at a flower. What are you doing?",
+          "options": [
+            "observing",
+            "forecasting",
+            "measuring rain"
+          ],
+          "answer": 0,
+          "why": "When we observe something, we look very closely."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The year can be divided into four seasons: winter, spring, summer and autumn.",
+            "Summer is in June, July and August.",
+            "In summer we can observe bright colours, fruit on plants and trees, and flowers blooming.",
+            "We can describe changes in summer using observation skills."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How many months are there in one year?",
+      "back": "Twelve."
+    },
+    {
+      "front": "Name the four seasons.",
+      "back": "Winter, spring, summer and autumn."
+    },
+    {
+      "front": "Which months are in summer?",
+      "back": "June, July and August."
+    },
+    {
+      "front": "Summer comes after which season, and before which season?",
+      "back": "After spring and before autumn."
+    },
+    {
+      "front": "Sports day is in July. Which season is that?",
+      "back": "Summer."
+    },
+    {
+      "front": "Why is summer often full of bright colours?",
+      "back": "Many flowers bloom."
+    },
+    {
+      "front": "What does bloom mean?",
+      "back": "When flowers bloom, they open up."
+    },
+    {
+      "front": "What might you see growing on plants and trees in summer?",
+      "back": "Fruit.\n\nFor example, strawberries and tomatoes."
+    },
+    {
+      "front": "When is a strawberry ripe?",
+      "back": "When it goes red. Green ones are not ripe yet."
+    },
+    {
+      "front": "Name two insects you might see in a summer garden.",
+      "back": "Caterpillars and butterflies."
+    },
+    {
+      "front": "What is a flower?",
+      "back": "The part of a plant that makes it able to make more flowers."
+    },
+    {
+      "front": "What does observe mean?",
+      "back": "To look very closely and use other senses too."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Signs of summer",
+    "instructions": "Answer each question with a word, a number or a short answer.",
+    "questions": [
+      {
+        "prompt": "How many months are there in one year?",
+        "answer": "12",
+        "accepted": [
+          "twelve"
+        ],
+        "explanation": "There are twelve months in one year."
+      },
+      {
+        "prompt": "How many seasons are there in one year?",
+        "answer": "four",
+        "accepted": [
+          "4"
+        ],
+        "explanation": "A year can be split into four seasons."
+      },
+      {
+        "prompt": "Which of these months is in summer: April, July or October?",
+        "answer": "July",
+        "explanation": "Summer is in June, July and August."
+      },
+      {
+        "prompt": "Which season comes after spring and before autumn?",
+        "answer": "summer",
+        "explanation": "Summer is the season after spring and before autumn."
+      },
+      {
+        "prompt": "Which season comes after summer?",
+        "answer": "autumn",
+        "explanation": "Summer is the season after spring and before autumn."
+      },
+      {
+        "prompt": "What do flowers do when they bloom?",
+        "answer": "open up",
+        "accepted": [
+          "they open up",
+          "open"
+        ],
+        "explanation": "When flowers bloom, they open up."
+      },
+      {
+        "prompt": "A strawberry is ripe when it goes which colour?",
+        "answer": "red",
+        "explanation": "You can tell a strawberry is ripe when it goes red."
+      },
+      {
+        "prompt": "What is the word for looking very closely and using your other senses too?",
+        "answer": "observe",
+        "accepted": [
+          "to observe"
+        ],
+        "explanation": "To observe is to look very closely and use other senses too."
+      }
+    ]
+  }
+}

@@ -1,0 +1,609 @@
+{
+  "agent": "english-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can design my own {motion} to debate an important topic."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "What makes a good debate motion?"
+            },
+            {
+              "title": "Designing a motion that matters"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "motion",
+              "def": "The name for the belief or proposal that is being debated."
+            },
+            {
+              "term": "proposal",
+              "def": "The action of proposing a plan or suggestion."
+            },
+            {
+              "term": "belief",
+              "def": "A firmly held opinion about something."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Every debate needs a motion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A debate is a structured argument between two teams."
+        },
+        {
+          "t": "text",
+          "text": "The two teams need a topic to debate. The topic that is being debated is called the {motion}, and you can’t have a debate without one."
+        },
+        {
+          "t": "callout",
+          "text": "A debate motion is often written as a belief or a proposal."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘This house…’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A debate motion always starts with the words {This house …}. This is because it has origins in the British Parliamentary system."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: what is ‘the house’?",
+          "text": "When a motion says ‘this house’, the house means a parliament."
+        },
+        {
+          "t": "text",
+          "text": "Put simply, a debate motion will be either:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "A {proposal}",
+              "sub": "something the house is proposing to do or change: ‘This house would …’"
+            },
+            {
+              "title": "A {belief}",
+              "sub": "something the house thinks or believes: ‘This house believes that …’"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Belief or proposal?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each motion a proposal or a belief? Tap a motion, then tap the column.",
+          "columns": [
+            "Proposal",
+            "Belief"
+          ],
+          "items": [
+            {
+              "text": "This house would give children in Year 6 less playtime.",
+              "col": 0
+            },
+            {
+              "text": "This house believes that longer playtime benefits children’s education.",
+              "col": 1
+            },
+            {
+              "text": "This house would make after-school activities compulsory for all children.",
+              "col": 0
+            },
+            {
+              "text": "This house believes that shorter playtimes may help to improve the behaviour of children at school.",
+              "col": 1
+            },
+            {
+              "text": "This house would ban children over the age of 9 from using public playgrounds.",
+              "col": 0
+            },
+            {
+              "text": "This house believes that public time outs at playtime are detrimental to children’s mental health.",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The word ‘would’ tells you it is a proposal. ‘Believes’ tells you it is a belief."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What makes a great motion?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An effective debate motion is essential for a debate to be successful. A great debate motion should be:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "clear and easy to understand",
+            "fair for both sides",
+            "relatable, interesting and important",
+            "thought provoking",
+            "appropriate and respectful"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A great motion is never difficult to understand. We want the audience and the speakers to understand it easily."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Great motions",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "This house would ban school uniform.",
+              "def": "A great motion: it is very clear, can be argued easily for both sides and is relatable, as most children wear uniform. It is appropriate and respectful, and it is thought provoking because it is not easy to decide either way."
+            },
+            {
+              "term": "This house believes everyone should have a pet.",
+              "def": "A great motion: it is thought provoking and would provoke interesting arguments from both sides."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Tap a motion to see why it works."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Motions that are not good",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each motion to see what is wrong with it."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "This house believes junk food is good for you.",
+              "def": "Not fair for both sides: it cannot be argued from both sides, as everyone knows junk food isn’t good for you."
+            },
+            {
+              "term": "This house believes that sweets are healthier than vegetables.",
+              "def": "Not fair for both sides: everybody knows that sweets are not healthier than vegetables, so it is not a fair motion to debate."
+            },
+            {
+              "term": "This house believes adults should have more breaks at work.",
+              "def": "Not relatable for children: it is about adults’ working conditions."
+            },
+            {
+              "term": "This house proposes an enquiry into the efficacy of implementing novel measures to enhance the bibliophilic nurturing of young minds.",
+              "def": "Very complicated for anybody to understand."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A motion must also be appropriate and respectful. It is not appropriate to debate something that may cause discrimination."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Good or not good?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each motion a good debate motion? Tap a motion, then tap the column.",
+          "columns": [
+            "Good motion",
+            "Not a good motion"
+          ],
+          "items": [
+            {
+              "text": "This house would ban school uniform.",
+              "col": 0
+            },
+            {
+              "text": "This house believes junk food is good for you.",
+              "col": 1
+            },
+            {
+              "text": "This house believes everyone should have a pet.",
+              "col": 0
+            },
+            {
+              "text": "This house believes that sweets are healthier than vegetables.",
+              "col": 1
+            },
+            {
+              "text": "This house would make after-school activities compulsory for all children.",
+              "col": 0
+            },
+            {
+              "text": "This house believes adults should have more breaks at work.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What is missing?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Each motion is missing one feature of a great motion. Which one?",
+          "items": [
+            {
+              "q": "The motion is full of long, complicated words that nobody in the class understands.",
+              "options": [
+                "clear and easy to understand",
+                "fair for both sides",
+                "appropriate and respectful"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Everybody knows the answer, so nobody could argue for the other side.",
+              "options": [
+                "clear and easy to understand",
+                "fair for both sides",
+                "relatable, interesting and important"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The motion is about adults’ working conditions, so children in the debate can’t relate to it.",
+              "options": [
+                "relatable, interesting and important",
+                "clear and easy to understand",
+                "appropriate and respectful"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The motion may cause discrimination, so it is not right to debate it.",
+              "options": [
+                "fair for both sides",
+                "appropriate and respectful",
+                "relatable, interesting and important"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Motions that matter",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Debating can be an important and useful way to discuss things that might be difficult to talk about in our everyday life."
+        },
+        {
+          "t": "text",
+          "text": "One way debates are used in real life to discuss important issues is during elections, to decide which political party will govern the country. The speeches made can have a huge impact on people’s lives, so they are extremely important."
+        },
+        {
+          "t": "callout",
+          "text": "In schools, debates can be used to discuss topics that really matter and will have a genuine impact on the lives of the children at that school."
+        },
+        {
+          "t": "text",
+          "text": "Areas of school life that could be debated, discussed and potentially changed:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "timings of the school day",
+            "uniform",
+            "after-school activities",
+            "playtimes",
+            "lesson timetables",
+            "trips"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Aspects of your local area:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "parks and playgrounds",
+            "road safety and traffic",
+            "leisure facilities",
+            "policing and anti-social behaviour",
+            "public transport"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "From an issue to a motion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Once you have some important issues you want to debate, you need to think about a single aspect that you might want to discuss or change."
+        },
+        {
+          "t": "text",
+          "text": "Let’s use playtimes. What could we discuss or change about playtimes at school?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "length of playtime",
+            "how the different classes mix",
+            "what equipment should be available",
+            "what snacks should be allowed",
+            "how behavioural issues are handled",
+            "what games/sports should be played"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Then turn the aspect into a debate motion by phrasing it as something we believe to be true (a belief) or something we propose to happen (a proposal)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Belief or proposal: an example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Let’s use ‘length of playtimes’ as an example."
+        },
+        {
+          "t": "text",
+          "text": "**As a belief:**"
+        },
+        {
+          "t": "list",
+          "items": [
+            "This house believes that longer playtime benefits children’s education.",
+            "This house believes that shorter playtimes may help to improve the behaviour of children at school."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**As a proposal:**"
+        },
+        {
+          "t": "list",
+          "items": [
+            "This house would increase/decrease the length of school playtimes.",
+            "This house would give children in Year 6 less playtime."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: how can you tell?",
+          "text": "A proposal says what this house would do or change, so it uses the word ‘would’. A belief says what this house thinks is true, so it uses ‘believes’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Write it as a motion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which of these is written as a belief motion?",
+              "options": [
+                "This house would give children longer playtimes.",
+                "This house believes that playtimes should be longer.",
+                "Longer playtimes are good!"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these is written as a proposal motion?",
+              "options": [
+                "This house believes that shorter playtimes may help to improve behaviour.",
+                "Should playtimes be shorter?",
+                "This house would decrease the length of school playtimes."
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Motions pupils designed",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are some motions that matter, designed by pupils:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "This house would make after-school activities compulsory for all children.",
+            "This house believes that school trips are a waste of learning time.",
+            "This house would ban children over the age of 9 from using public playgrounds.",
+            "This house believes that leisure facilities such as swimming pools should be free to use for everyone under 16."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Which are proposals and which are beliefs? Look for the word after ‘This house’."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: why is the first one a good motion?",
+          "text": "Every child would have to go to an after-school activity. There could be benefits, but there could also be complications and difficulties. That means there are arguments for both sides, so it makes a good debate motion."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The {motion} is the name for the belief or proposal that is being debated.",
+            "The motion in a debate always starts with the words ‘This house …’.",
+            "There are different types of motion: beliefs (‘This house believes that …’) and proposals (‘This house would …’).",
+            "A debate motion is most effective when it is relevant to the lives of the people in the debate and the audience.",
+            "An effective debate motion will encourage critical thinking and mature discussion."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a motion?",
+      "back": "The name for the belief or proposal that is being debated."
+    },
+    {
+      "front": "What is a belief?",
+      "back": "A firmly held opinion about something."
+    },
+    {
+      "front": "What is a proposal?",
+      "back": "The action of proposing a plan or suggestion."
+    },
+    {
+      "front": "Which words does a debate motion always start with?",
+      "back": "‘This house …’"
+    },
+    {
+      "front": "Why does a motion start with ‘This house …’?",
+      "back": "It has origins in the British Parliamentary system."
+    },
+    {
+      "front": "What are the two types of motion, and how does each one start?",
+      "back": "A belief: ‘This house believes that …’\nA proposal: ‘This house would …’"
+    },
+    {
+      "front": "What is the difference between a proposal and a belief?",
+      "back": "A proposal is something the house is proposing to do or change. A belief is something the house thinks or believes."
+    },
+    {
+      "front": "List the five features of a great debate motion.",
+      "back": "Clear and easy to understand; fair for both sides; relatable, interesting and important; thought provoking; appropriate and respectful."
+    },
+    {
+      "front": "Why is ‘This house believes junk food is good for you’ not a good motion?",
+      "back": "It cannot be argued from both sides, as everyone knows junk food isn’t good for you."
+    },
+    {
+      "front": "Why is ‘This house believes adults should have more breaks at work’ not a good motion for children?",
+      "back": "It is not something children can relate to, as it is about adults’ working conditions."
+    },
+    {
+      "front": "In schools, what can debates be used to discuss?",
+      "back": "Topics that really matter and will have a genuine impact on the lives of the children at that school."
+    },
+    {
+      "front": "After choosing an important issue, what do you think about next?",
+      "back": "A single aspect that you might want to discuss or change.\n\nExample: for playtimes, the length of playtime."
+    },
+    {
+      "front": "What effect should an effective debate motion have?",
+      "back": "It should encourage critical thinking and mature discussion."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Motions that matter",
+    "instructions": "Answer each question with one word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "A debate motion always starts with which two words?",
+        "answer": "this house",
+        "explanation": "A debate motion always starts with the words ‘This house …’."
+      },
+      {
+        "prompt": "Is ‘This house would give children in Year 6 less playtime.’ a belief or a proposal?",
+        "answer": "proposal",
+        "explanation": "It uses ‘would’: it says what the house would do or change, so it is a proposal."
+      },
+      {
+        "prompt": "Is ‘This house believes that longer playtime benefits children’s education.’ a belief or a proposal?",
+        "answer": "belief",
+        "explanation": "It uses ‘believes that’: it says what the house thinks, so it is a belief."
+      },
+      {
+        "prompt": "The words ‘This house’ have origins in the British ___ system (one word).",
+        "answer": "parliamentary",
+        "explanation": "A debate motion starts with ‘This house’ because it has origins in the British Parliamentary system."
+      },
+      {
+        "prompt": "What is the word for a firmly held opinion about something?",
+        "answer": "belief",
+        "explanation": "A belief is a firmly held opinion about something."
+      },
+      {
+        "prompt": "What is the word for the action of proposing a plan or suggestion?",
+        "answer": "proposal",
+        "explanation": "A proposal is the action of proposing a plan or suggestion."
+      },
+      {
+        "prompt": "A great debate motion should be clear and easy to ___ (one word).",
+        "answer": "understand",
+        "explanation": "A great motion is clear and easy to understand, so both the audience and the speakers can follow it."
+      },
+      {
+        "prompt": "Which word in a motion tells you it is a proposal: ‘would’ or ‘believes’?",
+        "answer": "would",
+        "explanation": "Proposals start ‘This house would …’, and beliefs start ‘This house believes that …’."
+      },
+      {
+        "prompt": "A great debate motion should be ___ for both sides (one word).",
+        "answer": "fair",
+        "explanation": "A motion that cannot be argued from both sides, such as ‘junk food is good for you’, is not fair for both sides."
+      }
+    ]
+  }
+}

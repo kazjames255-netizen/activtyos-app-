@@ -1,0 +1,787 @@
+{
+  "agent": "science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can observe that some materials change state from {liquid} to {solid} when they are cooled."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will find out what happens when a liquid is cooled."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "changing {water} from liquid to solid state"
+            },
+            {
+              "title": "changing {materials} from liquid to solid state"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "state",
+              "def": "Materials can exist in three common states of matter: solid, liquid and gas."
+            },
+            {
+              "term": "solid",
+              "def": "A solid has a fixed shape and volume but some solids can change shape when a force is applied."
+            },
+            {
+              "term": "liquid",
+              "def": "A liquid can flow, has a fixed volume and takes the shape of the bottom of its container."
+            },
+            {
+              "term": "freeze",
+              "def": "To freeze is to change from a liquid state to a solid state."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Changing state",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Water can change state. Water in the solid state is called ice. Ice can melt and change into water in the liquid state."
+        },
+        {
+          "t": "text",
+          "text": "You can change the state of water in the solid state by changing its temperature. When solid ice cubes are moved from the cold freezer to the warmer room, they melt, changing into liquid water."
+        },
+        {
+          "t": "text",
+          "text": "Can we change liquid water back to the solid state by changing its temperature again?"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Cooling water",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "We can change the state of a material from liquid to solid by {changing its temperature}."
+        },
+        {
+          "t": "text",
+          "text": "Water is in the liquid state at room temperature, but it becomes solid (ice) when it is cooled down."
+        },
+        {
+          "t": "text",
+          "text": "We put liquid water into the freezer, where it is cold, and it will change state."
+        },
+        {
+          "t": "reveal",
+          "label": "Do we need to keep heating liquid water for it to become solid again?",
+          "text": "No. Liquid water becomes solid ice when it is **cooled** down, not heated."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: cooling",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which of these will change liquid water into ice?",
+              "options": [
+                "heating it on a cooker",
+                "putting it in a freezer",
+                "stirring it"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Liquid water is at room temperature. What happens when we cool it down enough?",
+              "options": [
+                "It becomes a solid (ice)",
+                "It stays liquid for ever",
+                "It becomes hotter"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The temperature is 0°C",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Lucas measures the temperature at which solid water becomes liquid water: 0°C.",
+            "Sam measures the temperature at which liquid water becomes solid water: 0°C.",
+            "They realise they have recorded the same temperature."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The change from liquid state to solid state happens at {0°C}. This is the same temperature that solid ice becomes liquid water."
+        },
+        {
+          "t": "text",
+          "text": "At temperatures below 0°C, water is in its solid state. At temperatures above 0°C, water is in its liquid state. 0°C is the temperature at which it changes between the two."
+        },
+        {
+          "t": "reveal",
+          "label": "Lucas says 0°C is where water changes from solid to liquid. Sam says 0°C is where it changes from liquid to solid. Who is right?",
+          "text": "Both children are correct."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Solid or liquid water?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Water is at each temperature. Is it solid ice or liquid water?",
+          "columns": [
+            "Solid (ice)",
+            "Liquid water"
+          ],
+          "items": [
+            {
+              "text": "-10°C",
+              "col": 0
+            },
+            {
+              "text": "-3°C",
+              "col": 0
+            },
+            {
+              "text": "4°C",
+              "col": 1
+            },
+            {
+              "text": "12°C",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Freezing",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When solid water changes to liquid water, it is called melting. What is it called the other way round?"
+        },
+        {
+          "t": "callout",
+          "text": "The process in which water in liquid state changes to water in solid state is called {freezing}."
+        },
+        {
+          "t": "text",
+          "text": "Freezers are used to freeze water. Or water may freeze to become ice or snow when it is very cold."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{melting}",
+              "sub": "solid to liquid"
+            },
+            {
+              "title": "{freezing}",
+              "sub": "liquid to solid"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "changes-of-state"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: melting or freezing?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose melting or freezing.",
+          "items": [
+            {
+              "q": "Liquid water in a tray is put in the freezer and becomes ice cubes. This is …",
+              "options": [
+                "melting",
+                "freezing",
+                "cooking"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A snowman in the sun turns into liquid water. This is …",
+              "options": [
+                "freezing",
+                "cooling",
+                "melting"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Other materials",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Different materials can be observed changing from liquid to solid when cooled. For example, when liquid butter is cooled, it becomes solid butter."
+        },
+        {
+          "t": "text",
+          "text": "Do all liquids change to solids at 0°C?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "No. Different materials change from their liquid state to their solid state at different temperatures."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "butter",
+              "sub": "liquid at higher temperatures, solid when it cools to room temperature"
+            },
+            {
+              "title": "ice cream",
+              "sub": "melts to liquid at room temperature, solid at colder temperatures",
+              "emoji": "🍦"
+            },
+            {
+              "title": "metals",
+              "sub": "many change state at temperatures much higher than room temperature"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Chocolatiers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Chocolatiers are people who make treats from chocolate. These chocolates often come in elaborate shapes."
+        },
+        {
+          "t": "text",
+          "text": "Do you think they make the shapes by carving blocks of solid chocolate with a sharp knife?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "No! Chocolatiers rely on the fact that chocolate can easily be changed between solid and liquid states."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They heat solid chocolate so it melts and changes to its liquid state.",
+            "They pour liquid chocolate into moulds of exciting shapes.",
+            "Finally, they let the liquid chocolate cool and become solid state again."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Chocolate button investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam and Lucas only have chocolate in solid square chunks, but they want round chocolate buttons for their gingerbread people. In the investigation, warm water was used to melt the chocolate (an adult must always help with hot water)."
+        },
+        {
+          "t": "reveal",
+          "label": "Solid chocolate to liquid chocolate",
+          "text": "After a few minutes, the square of chocolate melted at the edges, turning into a liquid. After 10 minutes, it had completely melted."
+        },
+        {
+          "t": "reveal",
+          "label": "Liquid chocolate to solid chocolate buttons",
+          "text": "The chocolate buttons were liquid to start with. Gradually they got harder. After 10 minutes, they were nearly solid chocolate."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the change",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each action to what happens.",
+          "pairs": [
+            {
+              "a": "heat solid chocolate",
+              "b": "it melts to liquid chocolate"
+            },
+            {
+              "a": "let liquid chocolate cool",
+              "b": "it becomes solid chocolate again"
+            },
+            {
+              "a": "put liquid water in the freezer",
+              "b": "it freezes to become ice"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: liquid to solid",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Liquid butter is cooled. What does it become?",
+              "options": [
+                "solid butter",
+                "ice",
+                "gas"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "To turn square chunks of chocolate into round buttons, Sam and Lucas could …",
+              "options": [
+                "carve the chocolate into a circle with a knife",
+                "melt the chocolate, shape it, then let it cool and turn solid again",
+                "put the chunks in a freezer until they become round"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Different materials change from liquid state to solid state when …",
+              "options": [
+                "heated",
+                "cooled",
+                "stirred"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "We can change the state of a liquid to a solid by changing its temperature.",
+            "Water is liquid at room temperature but becomes a solid (ice) when it is cooled down.",
+            "The process in which liquid water changes to solid ice is called freezing.",
+            "Different materials can be observed changing from liquid to solid when cooled."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does it mean to freeze?",
+      "back": "To change from a liquid state to a solid state."
+    },
+    {
+      "front": "How can we change a liquid into a solid?",
+      "back": "By changing its temperature: we cool it down."
+    },
+    {
+      "front": "What state is water in at room temperature?",
+      "back": "The liquid state."
+    },
+    {
+      "front": "What does liquid water become when it is cooled down?",
+      "back": "A solid: ice."
+    },
+    {
+      "front": "At what temperature does liquid water change to solid water (ice)?",
+      "back": "0°C. This is the same temperature that ice changes to liquid water."
+    },
+    {
+      "front": "What state is water in below 0°C, and what state is it in above 0°C?",
+      "back": "Below 0°C water is solid (ice). Above 0°C it is liquid."
+    },
+    {
+      "front": "What is the process in which liquid water changes to solid ice called?",
+      "back": "Freezing."
+    },
+    {
+      "front": "What is the process in which a solid changes to a liquid called?",
+      "back": "Melting."
+    },
+    {
+      "front": "Do all liquids change to solids at 0°C?",
+      "back": "No. Different materials change from liquid to solid at different temperatures."
+    },
+    {
+      "front": "Why do we not often see liquid metals?",
+      "back": "Many metals change state at temperatures much higher than room temperature, so they must be heated to a very high temperature."
+    },
+    {
+      "front": "How do chocolatiers make chocolates in exciting shapes?",
+      "back": "They heat solid chocolate so it melts, pour the liquid chocolate into moulds, then let it cool and become solid again."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Changing state: liquid to solid",
+    "instructions": "Answer each question with a short answer, using what you learned about liquids changing to solids when they are cooled.",
+    "questions": [
+      {
+        "prompt": "What is the name of the process in which liquid water changes to solid ice?",
+        "answer": "freezing",
+        "accepted": [
+          "freezing",
+          "freeze"
+        ],
+        "explanation": "The process in which liquid water changes to solid ice is called freezing."
+      },
+      {
+        "prompt": "To change a liquid into a solid, do we need to heat it or cool it?",
+        "answer": "cool it",
+        "accepted": [
+          "cool it",
+          "cool",
+          "cooling",
+          "cool it down",
+          "cooled"
+        ],
+        "explanation": "Different materials change from liquid to solid when they are cooled."
+      },
+      {
+        "prompt": "At what temperature, in °C, does liquid water change to solid ice?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "0°C",
+          "0 °C",
+          "0 degrees",
+          "0 degrees Celsius",
+          "zero",
+          "zero degrees",
+          "zero degrees Celsius"
+        ],
+        "explanation": "The change from liquid to solid state happens at 0°C, the same temperature at which ice melts."
+      },
+      {
+        "prompt": "Water is at -4°C. Is it a solid or a liquid?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "a solid",
+          "solid state",
+          "ice",
+          "solid (ice)"
+        ],
+        "explanation": "At temperatures below 0°C, water is in its solid state (ice)."
+      },
+      {
+        "prompt": "What state is water in at room temperature?",
+        "answer": "liquid",
+        "accepted": [
+          "liquid",
+          "a liquid",
+          "liquid state"
+        ],
+        "explanation": "Water is in the liquid state at room temperature and becomes solid (ice) when it is cooled down."
+      },
+      {
+        "prompt": "What is the process in which a solid changes to a liquid called?",
+        "answer": "melting",
+        "accepted": [
+          "melting",
+          "melt"
+        ],
+        "explanation": "Melting is the change from a solid to a liquid; freezing is the change back from a liquid to a solid."
+      },
+      {
+        "prompt": "Do all liquids change to solids at 0°C? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "no"
+        ],
+        "explanation": "Different materials change from their liquid state to their solid state at different temperatures."
+      },
+      {
+        "prompt": "What do we call people who make treats from chocolate?",
+        "answer": "chocolatiers",
+        "accepted": [
+          "chocolatiers",
+          "chocolatier",
+          "a chocolatier"
+        ],
+        "explanation": "Chocolatiers are people who make treats from chocolate."
+      },
+      {
+        "prompt": "Chocolatiers pour liquid chocolate into what to make exciting shapes?",
+        "answer": "moulds",
+        "accepted": [
+          "moulds",
+          "mould",
+          "a mould",
+          "molds",
+          "mold"
+        ],
+        "explanation": "They pour liquid chocolate into moulds, then let it cool and become solid again."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 5,
+        "doThis": [
+          "Read the goal together, then look at the four key words: state, solid, liquid and freeze.",
+          "Ask the student what each word means before showing the meaning.",
+          "Recall that ice is water in the solid state, and that ice melts when its temperature changes."
+        ],
+        "say": "I can observe that some materials change state from liquid to solid when they are cooled.",
+        "keywords": [
+          {
+            "term": "state",
+            "meaning": "Materials can exist in three common states of matter: solid, liquid and gas."
+          },
+          {
+            "term": "solid",
+            "meaning": "A solid has a fixed shape and volume but some solids can change shape when a force is applied."
+          },
+          {
+            "term": "liquid",
+            "meaning": "A liquid can flow, has a fixed volume and takes the shape of the bottom of its container."
+          },
+          {
+            "term": "freeze",
+            "meaning": "To freeze is to change from a liquid state to a solid state."
+          }
+        ],
+        "checkFor": {
+          "ask": "What are the three common states of matter?",
+          "lookFor": "Solid, liquid and gas."
+        },
+        "recap": [
+          "Our goal: I can observe that some materials change state from liquid to solid when they are cooled.",
+          "The three common states of matter are solid, liquid and gas. To freeze is to change from a liquid state to a solid state."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Cooling a liquid makes it a solid",
+        "minutes": 7,
+        "doThis": [
+          "Remind the student that ice is water in the solid state, and that ice cubes melt into liquid water when they are moved from the cold freezer to the warmer room.",
+          "Ask whether liquid water can change back to a solid by changing its temperature again, and whether it needs to be heated or cooled.",
+          "Explain that water is a liquid at room temperature but becomes a solid (ice) when it is cooled down, for example in a freezer."
+        ],
+        "keyIdeas": [
+          "We can change the state of a liquid to a solid by changing its temperature.",
+          "Water is a liquid at room temperature but becomes a solid (ice) when it is cooled down."
+        ],
+        "checkFor": {
+          "ask": "How can you change the state of a material from a liquid to a solid?",
+          "lookFor": "By changing its temperature: cooling it. Not by shaping it or cutting it."
+        },
+        "recap": [
+          "Liquid water becomes a solid, ice, when it is cooled down.",
+          "We can change a liquid to a solid by changing its temperature."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Water changes state at 0°C",
+        "minutes": 6,
+        "doThis": [
+          "Explain that solid water becomes liquid water at 0°C, and liquid water becomes solid water at 0°C: it is the same temperature both ways.",
+          "Explain that below 0°C water is a solid and above 0°C it is a liquid, and that 0°C is the temperature at which it changes between the two.",
+          "Ask which of two statements is right: 0°C is where water changes from solid to liquid, or 0°C is where water changes from liquid to solid."
+        ],
+        "keyIdeas": [
+          "For water, the change from liquid state to solid state happens at 0°C.",
+          "0°C is the same temperature at which solid ice becomes liquid water."
+        ],
+        "examples": [
+          "Below 0°C: water is a solid (ice).",
+          "At 0°C: water changes between solid and liquid.",
+          "Above 0°C: water is a liquid."
+        ],
+        "checkFor": {
+          "ask": "One child says 0°C is where water changes from solid to liquid. Another says 0°C is where water changes from liquid to solid. Who is right?",
+          "lookFor": "Both. Below 0°C water is a solid, above 0°C it is a liquid, and 0°C is the temperature at which it changes between the two."
+        },
+        "recap": [
+          "Water changes between a liquid and a solid at 0°C.",
+          "Below 0°C water is a solid, and above 0°C it is a liquid."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Melting and freezing",
+        "minutes": 4,
+        "doThis": [
+          "Ask what it is called when solid water changes to liquid water (melting), then what it is called the other way round.",
+          "Explain that the process in which a liquid changes to a solid is called freezing.",
+          "Give examples: freezers are used to freeze water, and water may freeze to become ice or snow when it is very cold."
+        ],
+        "keyIdeas": [
+          "The process in which a liquid changes to a solid is called freezing."
+        ],
+        "keywords": [
+          {
+            "term": "freeze",
+            "meaning": "To freeze is to change from a liquid state to a solid state."
+          }
+        ],
+        "checkFor": {
+          "ask": "What is a liquid changing to a solid called, and what is a solid changing to a liquid called?",
+          "lookFor": "Freezing for a liquid changing to a solid, and melting for a solid changing to a liquid."
+        },
+        "recap": [
+          "Melting is a solid changing to a liquid.",
+          "Freezing is a liquid changing to a solid."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Other materials change state too",
+        "minutes": 8,
+        "doThis": [
+          "Explain that different materials can be observed changing from liquid to solid when cooled: for example, when liquid butter is cooled, it becomes solid butter.",
+          "Ask whether all liquids change to solids at 0°C, then explain that different materials change from their liquid state to their solid state at different temperatures.",
+          "Explain how chocolatiers, who are people who make treats from chocolate, make chocolates in shapes: they melt chocolate, pour it into moulds and let it cool."
+        ],
+        "keyIdeas": [
+          "Different materials can be observed changing from liquid to solid when cooled.",
+          "Different materials change from their liquid state to their solid state at different temperatures."
+        ],
+        "examples": [
+          "Butter is a liquid at higher temperatures and a solid at room temperature.",
+          "Ice cream melts to a liquid at room temperature and is a solid at colder temperatures.",
+          "Metals change state at temperatures much higher than room temperature.",
+          "Chocolate: heat solid chocolate so it melts, pour the liquid chocolate into moulds, then let it cool and become solid again."
+        ],
+        "checkFor": {
+          "ask": "Do all liquids change to solids at 0°C?",
+          "lookFor": "No. Different materials change from their liquid state to their solid state at different temperatures."
+        },
+        "recap": [
+          "Different materials change from a liquid to a solid when they are cooled, but at different temperatures.",
+          "Chocolatiers melt chocolate, pour it into moulds and let it cool until it is solid."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Make chocolate buttons",
+        "minutes": 10,
+        "doThis": [
+          "Ask how square chunks of chocolate could be changed into round buttons, then try it with an adult helping with the warm water.",
+          "Melt the chocolate: an adult adds 150 ml of warm water, no hotter than 50°C, to a cup or beaker and wraps kitchen foil over the top; the student places two chunks of chocolate on the foil and notes what happens over the next 5-10 minutes.",
+          "Make the buttons: place greaseproof paper on the desk, scoop up the liquid chocolate with a teaspoon, drizzle it in a circle shape and note what happens over the next 10-15 minutes."
+        ],
+        "examples": [
+          "Solid to liquid: after a few minutes the square of chocolate melted at the edges, turning into a liquid; after 10 minutes it had completely melted.",
+          "Liquid to solid: the chocolate buttons were liquid to start with, gradually got harder, and after 10 minutes were nearly solid chocolate."
+        ],
+        "checkFor": {
+          "ask": "What changed the chocolate from a solid to a liquid, and what changed it back to a solid?",
+          "lookFor": "Heating melted the solid chocolate into a liquid, and letting the liquid chocolate cool made it solid again."
+        },
+        "recap": [
+          "Warm chocolate melts into a liquid, and when the liquid chocolate cools it becomes a solid again.",
+          "The change between solid and liquid can go both ways."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 7,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to complete sentences about temperature and cooling, to say what state water is in at room temperature, what water becomes when it is cooled, and what the change from liquid water to ice is called.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain what happens when a liquid is cooled, using water and chocolate as examples.",
+          "Finish with the summary: we change a liquid to a solid by changing its temperature; water becomes a solid (ice) when it is cooled down; this is called freezing; and different materials can be observed changing from liquid to solid when cooled."
+        ],
+        "checkFor": {
+          "ask": "What happens to a liquid when it is cooled enough, and what is the change called for water?",
+          "lookFor": "It becomes a solid. For water, the change to ice is called freezing."
+        },
+        "recap": [
+          "Can you do it now? I can observe that some materials change state from liquid to solid when they are cooled.",
+          "Remember: cool a liquid and it can become a solid. For water, this is freezing."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Children may think materials can only change from liquid to solid at temperatures below 0°C.",
+        "fix": "Show examples of materials that change state at other temperatures: butter is a solid at room temperature, ice cream melts at room temperature, and metals change state at temperatures much higher than room temperature."
+      },
+      {
+        "mistake": "Children may think the change from liquid to solid cannot be undone.",
+        "fix": "Let them observe that the change between solid and liquid can go both ways: chocolate melts when it is heated and becomes solid again when it cools."
+      },
+      {
+        "mistake": "Children may think a liquid changes to a solid when it is heated.",
+        "fix": "Different materials change from liquid state to solid state when they are cooled, not when they are heated."
+      }
+    ],
+    "watchOut": [
+      "An adult must help with the warm water in the chocolate investigation, and the water must be no hotter than 50°C.",
+      "The times in the investigation are only a guide: each student's chocolate may take a little shorter or longer, so ask them to note what they observe.",
+      "Use the words melting and freezing carefully: melting is a solid changing to a liquid, and freezing is a liquid changing to a solid.",
+      "Ask the student to explain in their own words why both children were right about 0°C."
+    ]
+  }
+}

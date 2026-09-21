@@ -103,6 +103,8 @@ const TeamApp = dynamic(() => import("@/features/team/TeamApp").then((m) => m.Te
 const TimetableApp = dynamic(() => import("@/features/timetable/TimetableApp").then((m) => m.TimetableApp));
 const StaffTimetableApp = dynamic(() => import("@/features/timetable/PublishedTimetable").then((m) => m.StaffTimetableApp));
 const ParentTimetableApp = dynamic(() => import("@/features/timetable/ParentTimetable").then((m) => m.ParentTimetableApp));
+const TutorLearningHubApp = dynamic(() => import("@/features/learninghub/LearningHubApp").then((m) => m.TutorLearningHubApp));
+const StudentLearningHubApp = dynamic(() => import("@/features/learninghub/LearningHubApp").then((m) => m.StudentLearningHubApp));
 const AiAssistant = dynamic(() => import("@/features/ai/AiApp").then((m) => m.AiAssistant));
 
 // Roadmap areas — honest "Planned" pages until the real feature lands
@@ -124,6 +126,7 @@ const AiAssistant = dynamic(() => import("@/features/ai/AiApp").then((m) => m.Ai
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType<any>>>> = {
   company: {
+    learninghub: TutorLearningHubApp,
     dashboard: CompanyDashboardSwitch,
     setup: SetupApp,
     bookings: BookingsApp,
@@ -188,6 +191,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp,
   },
   franchise: {
+    learninghub: TutorLearningHubApp,
     dash: DashboardApp,
     royalties: FranchiseRoyaltiesApp,
     setup: SetupApp,
@@ -238,6 +242,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp,
   },
   freelancer: {
+    learninghub: TutorLearningHubApp,
     dash: DashboardApp,
     setup: SetupApp,
     bookings: BookingsApp,
@@ -282,6 +287,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp,
   },
   staff: {
+    learninghub: TutorLearningHubApp,
     dash: StaffDashApp,
     certificates: StaffCertsApp,
     documents: StaffDocsApp,
@@ -316,6 +322,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     moments2: MomentsApp, // routable alias of Moments
   },
   custdash: {
+    learninghub: StudentLearningHubApp,
     browse: BrowseApp,
     timetable: ParentTimetableApp,
     payments: ParentPaymentsApp,

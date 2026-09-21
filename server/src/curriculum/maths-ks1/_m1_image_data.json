@@ -1,0 +1,14 @@
+{
+  "clocks": { "meas-clock-3": [3, 0], "meas-clock-730": [7, 30], "meas-clock-415": [4, 15], "meas-clock-845": [8, 45], "meas-clock-520": [5, 20] },
+  "line20": { "arrow": 14 },
+  "line4050": { "from": 40, "to": 50, "arrow": 47 },
+  "blocks": { "tens": 3, "ones": 8 },
+  "bar": { "total": 45, "known": 28 },
+  "array": { "rows": 3, "cols": 5 },
+  "ruler": { "start": 0, "end": 8 },
+  "thermo": { "value": 26 },
+  "tally": [["Apple", 6], ["Banana", 3], ["Grape", 8], ["Pear", 5]],
+  "pictogram": { "per": 2, "rows": [["Dog", 4], ["Cat", 3], ["Fish", 1], ["Rabbit", 2]] },
+  "block": [["Red", 5], ["Blue", 3], ["Green", 6], ["Yellow", 2]],
+  "grid": { "start": [1, 1], "letters": { "A": [3, 4], "B": [4, 3], "C": [4, 4], "D": [2, 3] } }
+}

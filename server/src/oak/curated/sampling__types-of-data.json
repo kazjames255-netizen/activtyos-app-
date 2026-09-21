@@ -1,0 +1,653 @@
+{
+  "agent": "maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the different types of data."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Qualitative and quantitative"
+            },
+            {
+              "title": "Discrete and continuous"
+            },
+            {
+              "title": "Primary and secondary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Primary data",
+              "def": "Primary data refers to data that are directly collected for specific use in an investigation."
+            },
+            {
+              "term": "Secondary data",
+              "def": "Secondary data refers to data that were previously collected for a different or unknown purpose."
+            },
+            {
+              "term": "Qualitative",
+              "def": "Qualitative data are data that are non-numerical, and usually describe a quality of something."
+            },
+            {
+              "term": "Quantitative",
+              "def": "Quantitative data are numerical data that can be counted or measured."
+            },
+            {
+              "term": "Discrete",
+              "def": "Discrete data can only take specific numerical values."
+            },
+            {
+              "term": "Continuous",
+              "def": "Continuous data can take any value on a scale to as much precision as we can measure it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Qualitative and quantitative data",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An investigation finds an answer to a question by collecting data. One investigation might collect numerical data, for example the mass of many wild squirrels. Another might collect descriptive data, for example people’s opinions of a TV show. So data sets can look really different."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Qualitative}",
+              "sub": "each data point is a word, image or sound that describes a quality. “Quali” means quality."
+            },
+            {
+              "title": "{Quantitative}",
+              "sub": "each data point is a number (or numbers) from counting or measuring. “Quanti” means quantity."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Qualitative examples: favourite drink (water, milkshake, orange juice), the months of the year (January, February, March).",
+            "Quantitative examples: the mass of a textbook (150 g, 0.09 kg), the age of a pet cat (4 months, 7 years)."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Qualitative or quantitative?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each piece of data.",
+          "columns": [
+            "Qualitative",
+            "Quantitative"
+          ],
+          "items": [
+            {
+              "text": "The flavour of a crisp packet",
+              "col": 0
+            },
+            {
+              "text": "The mass of a bag of crisps in grams",
+              "col": 1
+            },
+            {
+              "text": "The time taken to run 100 m",
+              "col": 1
+            },
+            {
+              "text": "The shape of a trophy",
+              "col": 0
+            },
+            {
+              "text": "A photo of a beach",
+              "col": 0
+            },
+            {
+              "text": "The number of pupils in a class",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Images, sounds and locations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Less common data can still be sorted into qualitative and quantitative."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Images",
+              "sub": "qualitative. An image can show many variables, such as colour, size and environment."
+            },
+            {
+              "title": "Sounds",
+              "sub": "qualitative. Useful where things cannot easily be described in words, such as the way animals communicate."
+            },
+            {
+              "title": "Coordinates and rates of change",
+              "sub": "quantitative, for example the rate at which a business’s profit increases."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Is location qualitative or quantitative?",
+          "text": "It can be either. If the location is given as a town or city name, it is qualitative. If it is given as coordinates, it is quantitative."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which summary statistics can we use?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the processing stage of the Statistical Enquiry Cycle we may calculate the mean, median, mode and range."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Quantitative data are numerical, so all four can be applied. For 3, 7, 10, 10, 14, 28 the mean is 72 ÷ 6 = 12 and the mode is 10.",
+            "Qualitative data are always non-numerical, so the only one that can be used is the mode. For TV, car, phone, TV, phone, TV, car the mode is TV."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It makes no sense to add up qualitative data to find a mean."
+        },
+        {
+          "t": "choices",
+          "q": "Which summary statistic can be found?",
+          "items": [
+            {
+              "q": "A shop records the colour of every t-shirt it sells. Which of these makes sense to find?",
+              "options": [
+                "The mean",
+                "The median",
+                "The mode",
+                "The range"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A pupil records how many minutes each of 4 friends took to get to school: 4, 9, 9, 12.",
+              "options": [
+                "Only the mode",
+                "The mean, median, mode and range"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Types of quantitative data",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "As there are different types of number in maths, there are different types of quantitative data. Two common types are discrete and continuous."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Discrete}",
+              "sub": "numerical data that can only take specific numerical values. These values do not need to be integers."
+            },
+            {
+              "title": "{Continuous}",
+              "sub": "numerical data that can take any value on a scale. It has as much precision as we can measure it with."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Discrete or continuous? Examples",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Discrete: the number of people on a bus. You cannot have half a person, so only whole numbers are possible.",
+            "Discrete: a price in pounds. It can only take values up to 2 decimal places, such as £1.52.",
+            "Discrete: UK shoe sizes. They are either whole numbers or end in .5 (size 6 or 6.5), never 6.221.",
+            "Continuous: the mass of a rabbit. One scale might say 2400 g and a more precise scale 2439.15 g.",
+            "Continuous: the temperature in a room. It can be measured as precisely as someone can read the equipment."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Discrete data do not have to be whole numbers. They just can only take specific values."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Discrete or continuous?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each piece of quantitative data.",
+          "columns": [
+            "Quantitative discrete",
+            "Quantitative continuous"
+          ],
+          "items": [
+            {
+              "text": "The number of seats on a bus",
+              "col": 0
+            },
+            {
+              "text": "The price of a sandwich in £",
+              "col": 0
+            },
+            {
+              "text": "A UK shoe size",
+              "col": 0
+            },
+            {
+              "text": "The mass of a rabbit",
+              "col": 1
+            },
+            {
+              "text": "The temperature in a room",
+              "col": 1
+            },
+            {
+              "text": "The length of someone’s foot",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out: percentages",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An exam has a maximum score of 200. The percentage score of every pupil is collected. Are the percentages discrete or continuous?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the answer",
+          "text": "They are discrete. The percentages are based on scores, which are discrete, so they can only take specific values: whole numbers or numbers ending in .5. A score of 77 gives 38.5%, but no score gives 38.41%."
+        },
+        {
+          "t": "choice",
+          "q": "The exam has a maximum score of 200. Which of these percentages is NOT possible?",
+          "options": [
+            "45%",
+            "62.5%",
+            "71.3%",
+            "100%"
+          ],
+          "answer": 2,
+          "why": "Each mark is worth 0.5%, so possible percentages are whole numbers or end in .5. 71.3% is not possible."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Primary and secondary data",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Do you always have to collect new data? No. There are two ways to obtain data for an investigation."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Primary}",
+              "sub": "collected for the primary purpose of being used in this investigation"
+            },
+            {
+              "title": "{Secondary}",
+              "sub": "collected for a different investigation, or for any other unknown purpose"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If someone else collects data specifically for your investigation, it is still primary data. Data that you collected for an earlier project is secondary data for a new investigation."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Primary or secondary?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each source of data for your current investigation.",
+          "columns": [
+            "Primary",
+            "Secondary"
+          ],
+          "items": [
+            {
+              "text": "Designing a survey to collect data for your investigation",
+              "col": 0
+            },
+            {
+              "text": "Asking marine biologists to collect new data on a coast for your investigation",
+              "col": 0
+            },
+            {
+              "text": "Using rainfall you measured near your house today for your investigation",
+              "col": 0
+            },
+            {
+              "text": "Using temperatures you asked a friend to collect for your investigation",
+              "col": 0
+            },
+            {
+              "text": "Using survey answers you collected earlier for a different investigation",
+              "col": 1
+            },
+            {
+              "text": "Using marine animal counts collected in an annual data collection that was not part of any investigation",
+              "col": 1
+            },
+            {
+              "text": "Using weather data the Met Office collected three months ago",
+              "col": 1
+            },
+            {
+              "text": "Using rainfall you measured last year for a science project",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Primary data: strengths and weaknesses",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If data are collected specifically for your investigation, you are more likely to have control over:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The collection method. You can try to minimise unwanted bias, make the sample size big enough and collect exactly the type of data you need.",
+            "How relevant the data are, for example collecting from a relevant location or targeting a specific population.",
+            "How up to date the data are."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Most of the advantages of primary data are the disadvantages of secondary data, and vice versa. Collecting primary data can be expensive and time consuming, and you may not have the resources or expertise to plan or collect the data yourself."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Secondary data: strengths and weaknesses",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Quick and cheap: the data already exist. A lot of data, including Met Office weather data and UK census data, can be accessed for free.",
+            "It can be collected by experts in a way you could not with your own resources or skills, for example data on volcanic activity.",
+            "It can guide future data collection, by showing whether it is worth collecting primary data in a new place."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Possible disadvantages: you do not know if there was poor planning or data collection methodology, the data may be from a non-relevant location or outdated, and there is an unknown risk of conscious bias in favour of the person who collected it."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which data should we use?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Sam collected some data yesterday for a different school project. Aisha uses it in her investigation. For Aisha, is it primary or secondary data?",
+              "options": [
+                "Primary",
+                "Secondary"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Sam collected some data yesterday because Aisha asked Sam to collect data for the investigation she was planning. Is it primary or secondary data?",
+              "options": [
+                "Primary",
+                "Secondary"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Sam must finish an investigation by tomorrow on how the temperature in their hometown changes over a week. Which is more sensible, and why?",
+              "options": [
+                "Primary data, because Sam can collect a week of data in a day",
+                "Secondary data, because the data are already collected and free from the Met Office"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Brian wants to open a restaurant in Oakfield, England. He finds research from 10 years ago about popular food in a small town in the USA. What is the problem?",
+              "options": [
+                "It is outdated, from a different location, and he cannot tell how well it was collected",
+                "It is primary data so it cannot be trusted",
+                "It is qualitative data so it cannot be used"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Primary data is collected for your investigation. Secondary data was collected for a different or unknown purpose.",
+            "Qualitative data is non-numeric information. Quantitative data is numeric information.",
+            "Quantitative data can be either discrete or continuous."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is primary data?",
+      "back": "Data collected directly for specific use in an investigation.\n\nIt is still primary if someone else collects it specifically for your investigation."
+    },
+    {
+      "front": "What is secondary data?",
+      "back": "Data that were previously collected for a different or unknown purpose."
+    },
+    {
+      "front": "What is qualitative data?",
+      "back": "Non-numerical data that usually describe a quality of something.\n\nExample: favourite drink."
+    },
+    {
+      "front": "What is quantitative data?",
+      "back": "Numerical data that can be counted or measured.\n\nExample: the mass of a textbook."
+    },
+    {
+      "front": "What are the two common types of quantitative data?",
+      "back": "Discrete and continuous."
+    },
+    {
+      "front": "What is discrete data?",
+      "back": "Numerical data that can only take specific numerical values (not always integers).\n\nExample: UK shoe sizes."
+    },
+    {
+      "front": "What is continuous data?",
+      "back": "Numerical data that can take any value on a scale, to as much precision as we can measure it.\n\nExample: the mass of a rabbit."
+    },
+    {
+      "front": "Which of mean, median, mode and range can be used with qualitative data?",
+      "back": "Only the mode."
+    },
+    {
+      "front": "Which summary statistics can be used with quantitative data?",
+      "back": "All four: mean, median, mode and range."
+    },
+    {
+      "front": "Is location qualitative or quantitative?",
+      "back": "Either. A town or city name is qualitative. Coordinates are quantitative."
+    },
+    {
+      "front": "Is a price in pounds discrete or continuous?",
+      "back": "Discrete. It can only take values up to 2 decimal places, such as £1.52."
+    },
+    {
+      "front": "Name one advantage of secondary data.",
+      "back": "It is quick and cheap because it already exists (for example free Met Office weather data or UK census data)."
+    },
+    {
+      "front": "Name one disadvantage of secondary data.",
+      "back": "It may be outdated, from a non-relevant location, or carry an unknown risk of conscious bias."
+    },
+    {
+      "front": "Name one advantage of primary data.",
+      "back": "You are in control of how it is collected, how relevant it is and how up to date it is."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Types of data",
+    "instructions": "Answer each question with a number or a short word. Use the words qualitative, quantitative, discrete, continuous, primary and secondary where asked.",
+    "questions": [
+      {
+        "prompt": "Is the favourite drink of each pupil qualitative or quantitative data?",
+        "answer": "qualitative",
+        "accepted": [
+          "qualitative data"
+        ],
+        "explanation": "Drinks such as water or milkshake are words that describe a quality."
+      },
+      {
+        "prompt": "Is the mass of a textbook qualitative or quantitative data?",
+        "answer": "quantitative",
+        "accepted": [
+          "quantitative data"
+        ],
+        "explanation": "A mass is a number measured with units, so it is quantitative."
+      },
+      {
+        "prompt": "Find the mean of the data 3, 7, 10, 10, 14, 28.",
+        "answer": "12",
+        "explanation": "The values add up to 72 and 72 ÷ 6 = 12."
+      },
+      {
+        "prompt": "Find the mode of the data 3, 7, 10, 10, 14, 28.",
+        "answer": "10",
+        "explanation": "10 appears twice and every other value appears once."
+      },
+      {
+        "prompt": "Here is a data set: TV, car, phone, TV, phone, TV, car. Which of the mean, median, mode and range can be found? Answer with one word.",
+        "answer": "mode",
+        "accepted": [
+          "the mode"
+        ],
+        "explanation": "The data are qualitative, so only the mode can be found."
+      },
+      {
+        "prompt": "What is the modal value of TV, car, phone, TV, phone, TV, car?",
+        "answer": "tv",
+        "explanation": "TV appears three times, more than any other value."
+      },
+      {
+        "prompt": "Is the number of steps someone walks in a day discrete or continuous data?",
+        "answer": "discrete",
+        "accepted": [
+          "quantitative discrete",
+          "discrete data"
+        ],
+        "explanation": "Steps are counted in whole numbers, so only specific values are possible."
+      },
+      {
+        "prompt": "Is the distance someone walks in a day discrete or continuous data?",
+        "answer": "continuous",
+        "accepted": [
+          "quantitative continuous",
+          "continuous data"
+        ],
+        "explanation": "A distance can take any value on a scale, as precisely as we can measure it."
+      },
+      {
+        "prompt": "Is a UK shoe size discrete or continuous data?",
+        "answer": "discrete",
+        "accepted": [
+          "quantitative discrete",
+          "discrete data"
+        ],
+        "explanation": "Shoe sizes are either whole numbers or end in .5, so only specific values are possible."
+      },
+      {
+        "prompt": "An exam has a maximum score of 200. A pupil scores 77. What is this as a percentage?",
+        "answer": "38.5",
+        "accepted": [
+          "38.5%"
+        ],
+        "explanation": "77 ÷ 200 = 0.385, which is 38.5%."
+      },
+      {
+        "prompt": "Data collected for a different investigation, or for an unknown purpose, are called what type of data?",
+        "answer": "secondary",
+        "accepted": [
+          "secondary data"
+        ],
+        "explanation": "Data previously collected for a different or unknown purpose are secondary data."
+      },
+      {
+        "prompt": "Aisha asks Sam to collect data for the investigation Aisha is planning. Is the data primary or secondary?",
+        "answer": "primary",
+        "accepted": [
+          "primary data"
+        ],
+        "explanation": "The data was collected specifically for her investigation, even though Sam collected it."
+      }
+    ]
+  }
+}

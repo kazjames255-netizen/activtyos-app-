@@ -76,6 +76,18 @@ platformLeads.get("/", async (req, res) => {
   res.json(list);
 });
 
+// GET /:id — one lead, full record — the dedicated call-room page
+// (app/[portal]/call/[leadId]) needs just this one, not the whole board.
+platformLeads.get("/:id", async (req, res) => {
+  if (req.auth!.role !== "platform") {
+    res.status(403).json({ error: "Requires the platform role" });
+    return;
+  }
+  const snap = await col.doc(req.params.id).get();
+  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  res.json({ id: snap.id, ...snap.data() });
+});
+
 // POST / — create a lead. Timestamps and creator come from the server.
 platformLeads.post("/", async (req, res) => {
   if (req.auth!.role !== "platform") {

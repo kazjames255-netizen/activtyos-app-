@@ -1,0 +1,506 @@
+{
+  "agent": "english-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explore the societal expectations around adolescent behaviour and parental control in ‘Romeo and Juliet’."
+        },
+        {
+          "t": "text",
+          "text": "Romeo and Juliet are teenagers. You will look at stereotypes of youth in the play, and at how Shakespeare shows a conflict between parents’ wish for control and young people’s wish for independence."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Societal expectations of {youth}"
+            },
+            {
+              "title": "Parents and children"
+            },
+            {
+              "title": "Control and {autonomy}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "stereotype",
+              "def": "a set idea that people have about what someone or something is like"
+            },
+            {
+              "term": "societal expectations",
+              "def": "the beliefs and norms that a society holds about how individuals should behave and act"
+            },
+            {
+              "term": "adolescent",
+              "def": "(of a young person) in the process of developing from a child into an adult"
+            },
+            {
+              "term": "impulsive",
+              "def": "showing behaviour in which you do things suddenly without any planning"
+            },
+            {
+              "term": "autonomy",
+              "def": "the ability to make your own decisions about what to do"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stereotypes of adolescents",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, society has stereotypical ideas of how adolescents behave. Society has a set idea of how young people will act. Adolescent behaviour is stereotyped as:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "rash",
+            "selfish",
+            "irresponsible",
+            "impulsive"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "rash: acting and saying things without thinking",
+            "selfish: thinking about yourself before thinking about others",
+            "irresponsible: not showing care or control",
+            "impulsive: doing things suddenly, without any planning"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which stereotype of adolescents means thinking about yourself before thinking about others?",
+          "options": [
+            "rash",
+            "selfish",
+            "irresponsible"
+          ],
+          "answer": 1,
+          "why": "Selfish means thinking about yourself before thinking about others."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Friar Lawrence and Romeo",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Through Romeo and Juliet, we arguably see Shakespeare exploring societal expectations of youth. When Friar Lawrence first hears of Romeo’s love for Juliet in Act 2, Scene 3, he proclaims:"
+        },
+        {
+          "t": "callout",
+          "text": "“Holy Saint Francis, what a change is here! / Is Rosaline, that thou didst love so dear, / So soon forsaken?” (lines 69-71)"
+        },
+        {
+          "t": "reveal",
+          "label": "How does this imply Romeo conforms to societal expectations of youth?",
+          "text": "Romeo’s very sudden shift of affections from Rosaline to Juliet suggests that he is acting impulsively. It could also imply that he is very changeable."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Juliet on youth and age",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Act 2, Scene 5, Juliet is waiting for the Nurse to return with news from Romeo. She declares:"
+        },
+        {
+          "t": "callout",
+          "text": "“Had she affections and warm youthful blood, / She would be as swift in motion as a ball” (lines 11-13)"
+        },
+        {
+          "t": "callout",
+          "text": "“But old folks, many feign as they were dead, / Unwieldy, slow, heavy, and pale as lead.” (lines 16-7)"
+        },
+        {
+          "t": "reveal",
+          "label": "What do these lines suggest?",
+          "text": "Juliet specifically associates swiftness with youth and slowness with age. It suggests that speed and impatience are associated with the youth."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Romeo and Juliet’s actions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Consider Romeo and Juliet’s actions in the play:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "they fall in love and marry in secret within a day of meeting one another",
+            "they marry despite the feud between their families",
+            "Romeo kills Tybalt in a duel after Tybalt killed Mercutio"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Do Romeo and Juliet arguably conform to societal expectations of youth and adolescence?",
+          "options": [
+            "Yes, they make rash, impulsive decisions throughout the play",
+            "No, they think carefully about every consequence"
+          ],
+          "answer": 0,
+          "why": "Throughout the play, Romeo and Juliet make impulsive decisions and show their impatient natures."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Youth and the tragedy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Romeo’s downfall is often attributed to his impulsiveness. However, we might interpret Romeo’s impulsiveness as being part of the societal expectations of youth. We might see the implications of this in two ways:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Shakespeare is criticising societal expectations of youth: we expect Romeo to act impulsively and therefore he does.",
+            "Shakespeare is creating a cautionary tale of what happens when adolescents act impulsively."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "An idea to think about",
+          "text": "If we expect adolescents to act irresponsibly and impulsively, we might be creating a self-fulfilling prophecy that they will act this way. There is no single right interpretation: what matters is that you explain your view using evidence from the text."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Parents and children apart",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, Shakespeare presents a separation between children and parents from the start of the play. In Act 1, Scene 1, Lord Montague declares that “I neither know it nor can learn of him” about why Romeo is melancholic."
+        },
+        {
+          "t": "text",
+          "text": "However, Romeo tells Benvolio, Mercutio, and Friar Lawrence what troubles him."
+        },
+        {
+          "t": "reveal",
+          "label": "How does this create a separation?",
+          "text": "It suggests that Romeo does not have a close relationship with his parents: he confides in others rather than in them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Juliet and her mother",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We see a similar separation between Juliet and her mother at the start of the play. In Act 1, Scene 3, Lady Capulet asks the Nurse to remain while she discusses Juliet’s potential marriage."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "suggests a lack of closeness",
+            "implies that Juliet and Lady Capulet do not spend time together"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Shakespeare presents parental relationships as distant and separate from their children."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Control and obedience",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, this separation leads to a conflict between the parental desire for {control} and the adolescent desire for {autonomy}. In Elizabethan England:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "children were expected to obey their parents",
+            "children were expected to act in a way that benefited their parents, from marriage to job opportunities"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Lord Montague states that “myself and many other friends” (Act 1, Scene 1, line 149) have tried to find out the reason for Romeo’s melancholia, but he will not speak to them about it."
+        },
+        {
+          "t": "reveal",
+          "label": "Concern or control?",
+          "text": "As well as parental concern, we might see a desire for parental control: Lord Montague is trying to find out information about Romeo’s emotions even though Romeo is unwilling to speak to him about them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Capulet’s “decree”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Parental control is seen most explicitly between Lord Capulet and Juliet. When talking about his desire for Juliet to marry Count Paris, Lord Capulet refers to it as his “decree”."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "decree",
+              "def": "an official order that has the force of law"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What does it suggest that Lord Capulet calls his wish a “decree”?",
+          "options": [
+            "That he sees his desires as something separate from himself",
+            "That he sees his desires as akin to the law"
+          ],
+          "answer": 1,
+          "why": "A decree is an official order that has the force of law, so his words and desires are akin to an official order."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Wanting autonomy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Romeo and Juliet also arguably show a desire for {autonomy}. In Act 2, Scene 2, they say:"
+        },
+        {
+          "t": "callout",
+          "text": "Juliet: “Or, if thou wilt not, be but sworn my love, / And I’ll no longer be a Capulet.” (lines 38-9)"
+        },
+        {
+          "t": "callout",
+          "text": "Romeo: “Neither, [a Montague or Romeo] fair maid, if either thee dislike.” (line 66)"
+        },
+        {
+          "t": "reveal",
+          "label": "What might this suggest?",
+          "text": "Both Romeo and Juliet express a desire to be free from their family name. It suggests that they want to be free from the obligations that their name carries and free to live their own lives away from their parents’ desires."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What was Shakespeare saying?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We might interpret Shakespeare’s intentions about parental control and adolescent autonomy in two different ways:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "‘Romeo and Juliet’ can be read as a cautionary tale of what happens when adolescents seek autonomy and disobey their parents.",
+            "Or, we might read it as a criticism of a society that tries to exert control over adolescent autonomy."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Evidence for a criticism of society",
+          "text": "We see from the prologue that Romeo and Juliet’s fate is bound up with their “parents’ strife”. This suggests that societal expectations of parental control could be to blame for the tragedy."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does it suggest?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each piece of evidence to what it might suggest.",
+          "pairs": [
+            {
+              "a": "Friar Lawrence: “So soon forsaken?”",
+              "b": "Romeo is impulsive and changeable"
+            },
+            {
+              "a": "Juliet: “warm youthful blood”",
+              "b": "Speed and impatience are associated with youth"
+            },
+            {
+              "a": "Lord Capulet calls his wish a “decree”",
+              "b": "Parents’ desires are seen as akin to the law"
+            },
+            {
+              "a": "“I’ll no longer be a Capulet”",
+              "b": "A desire for autonomy from the family"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Arguably, Shakespeare suggests that adolescence was associated with impulsiveness in Elizabethan England.",
+            "Therefore, we might suggest that the tragedy of ‘Romeo and Juliet’ was in part due to societal expectations of youth.",
+            "Shakespeare presents parental relationships as distant and separate from their children.",
+            "Potentially, we might see Shakespeare as questioning ideas of parental control and children’s obedience."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a stereotype?",
+      "back": "A set idea that people have about what someone or something is like."
+    },
+    {
+      "front": "What does adolescent mean?",
+      "back": "(Of a young person) in the process of developing from a child into an adult."
+    },
+    {
+      "front": "What does impulsive mean?",
+      "back": "Showing behaviour in which you do things suddenly without any planning."
+    },
+    {
+      "front": "What does autonomy mean?",
+      "back": "The ability to make your own decisions about what to do."
+    },
+    {
+      "front": "Name three stereotypes of adolescent behaviour from this lesson.",
+      "back": "Rash, selfish and irresponsible (and impulsive)."
+    },
+    {
+      "front": "What does Friar Lawrence’s “So soon forsaken?” suggest about Romeo?",
+      "back": "That Romeo is acting impulsively and is very changeable (Act 2, Scene 3)."
+    },
+    {
+      "front": "What does Juliet associate with youth and with age in Act 2, Scene 5?",
+      "back": "Swiftness with youth (“swift in motion as a ball”) and slowness with age (“Unwieldy, slow, heavy, and pale as lead”)."
+    },
+    {
+      "front": "What are the two ways we might read Romeo’s impulsiveness as part of societal expectations of youth?",
+      "back": "Shakespeare is criticising societal expectations of youth, or he is creating a cautionary tale of what happens when adolescents act impulsively."
+    },
+    {
+      "front": "Why is Lord Montague’s “I neither know it nor can learn of him” important?",
+      "back": "It suggests a separation between Romeo and his parents: Romeo tells Benvolio, Mercutio and Friar Lawrence what troubles him instead (Act 1, Scene 1)."
+    },
+    {
+      "front": "What were children expected to do in Elizabethan England?",
+      "back": "Obey their parents, and act in a way that benefited them, from marriage to job opportunities."
+    },
+    {
+      "front": "What is a “decree”, and why does Lord Capulet’s word matter?",
+      "back": "An official order that has the force of law. It suggests his desires are akin to the law."
+    },
+    {
+      "front": "Which lines suggest Romeo and Juliet want autonomy from their families?",
+      "back": "Juliet: “I’ll no longer be a Capulet.” Romeo: “Neither, [a Montague or Romeo] fair maid, if either thee dislike.” (Act 2, Scene 2)"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘Romeo and Juliet’: exploring the relationship between adults and adolescents",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Which stereotype of adolescents means acting and saying things without thinking? (one word, beginning with ‘r’)",
+        "answer": "rash",
+        "accepted": [],
+        "explanation": "Rash means acting and saying things without thinking."
+      },
+      {
+        "prompt": "Which character says “Holy Saint Francis, what a change is here!” when he hears of Romeo’s love for Juliet?",
+        "answer": "friar lawrence",
+        "accepted": [
+          "lawrence",
+          "the friar lawrence"
+        ],
+        "explanation": "Friar Lawrence says it in Act 2, Scene 3, surprised that Romeo’s love for Rosaline was “so soon forsaken”."
+      },
+      {
+        "prompt": "Complete Juliet’s line: “She would be as swift in motion as a ______”.",
+        "answer": "ball",
+        "accepted": [
+          "a ball"
+        ],
+        "explanation": "Juliet associates swiftness with youth."
+      },
+      {
+        "prompt": "In Elizabethan England, children were expected to ______ their parents. Which one-word verb, beginning with ‘o’, is missing?",
+        "answer": "obey",
+        "accepted": [],
+        "explanation": "Children were expected to obey their parents."
+      },
+      {
+        "prompt": "Whose words are “I neither know it nor can learn of him” (Act 1, Scene 1), said about why Romeo is melancholic? (Give the character’s title and surname.)",
+        "answer": "lord montague",
+        "accepted": [
+          "montague"
+        ],
+        "explanation": "Lord Montague does not know why Romeo is sad, but Romeo tells his friends and Friar Lawrence."
+      },
+      {
+        "prompt": "In Act 1, Scene 3, which character does Lady Capulet ask to remain while she discusses Juliet’s potential marriage?",
+        "answer": "the nurse",
+        "accepted": [
+          "nurse"
+        ],
+        "explanation": "Lady Capulet asks the Nurse to stay, which suggests a lack of closeness with Juliet."
+      },
+      {
+        "prompt": "What word does Lord Capulet use for his desire that Juliet marry Count Paris?",
+        "answer": "decree",
+        "accepted": [
+          "a decree",
+          "his decree"
+        ],
+        "explanation": "A decree is an official order that has the force of law."
+      },
+      {
+        "prompt": "Juliet says: “And I’ll no longer be a ______.” Which family name is missing?",
+        "answer": "capulet",
+        "accepted": [
+          "a capulet"
+        ],
+        "explanation": "Wanting to give up her family name suggests a desire for autonomy."
+      },
+      {
+        "prompt": "Which keyword means the ability to make your own decisions about what to do?",
+        "answer": "autonomy",
+        "accepted": [],
+        "explanation": "Romeo and Juliet arguably desire autonomy from their families."
+      }
+    ]
+  }
+}

@@ -25,6 +25,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** The parsed JSON error body when there was one — e.g. `{ code, nextAvailableAt }`. */
+    public body?: unknown,
   ) {
     super(message);
   }
@@ -132,13 +134,15 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
 
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`;
+    let parsed: unknown;
     try {
       const body = await res.json();
+      parsed = body;
       if (body?.error) message = typeof body.error === "string" ? body.error : JSON.stringify(body.error);
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, message);
+    throw new ApiError(res.status, message, parsed);
   }
   return res.json() as Promise<T>;
 }

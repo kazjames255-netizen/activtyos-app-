@@ -1,0 +1,590 @@
+{
+  "agent": "french-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use ‘j’ai’ and ‘il, elle a’ with nouns to say what I have or he, she has."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "days of the week"
+            },
+            {
+              "title": "{j’ai} = I have"
+            },
+            {
+              "title": "{il a} / {elle a}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "avoir",
+              "def": "French verb meaning ‘to have’."
+            },
+            {
+              "term": "j’ai",
+              "def": "French verb meaning ‘I have’."
+            },
+            {
+              "term": "il a",
+              "def": "French verb meaning ‘he has’."
+            },
+            {
+              "term": "elle a",
+              "def": "French verb meaning ‘she has’."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Days of the week",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Listen, repeat and read the days of the week. Don’t forget: there are no capital letters for days in French!"
+        },
+        {
+          "t": "list",
+          "items": [
+            "lundi = Monday",
+            "mardi = Tuesday",
+            "mercredi = Wednesday",
+            "jeudi = Thursday",
+            "vendredi = Friday",
+            "samedi = Saturday",
+            "dimanche = Sunday"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The week",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "il y a sept jours dans la semaine = There are seven days in the week",
+            "lundi, mardi, mercredi, jeudi, vendredi = Monday, Tuesday, Wednesday, Thursday, Friday",
+            "samedi et dimanche, c’est le week-end = Saturday and Sunday, it’s the weekend"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can revisit the days of the week regularly by listening to a song."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What comes next?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the order lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche.",
+          "items": [
+            {
+              "q": "Which day comes after mardi?",
+              "options": [
+                "lundi",
+                "mercredi",
+                "jeudi"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which day comes after jeudi?",
+              "options": [
+                "vendredi",
+                "samedi",
+                "mercredi"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which day comes before dimanche?",
+              "options": [
+                "lundi",
+                "vendredi",
+                "samedi"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which day comes before mercredi?",
+              "options": [
+                "mardi",
+                "jeudi",
+                "lundi"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What day is it?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To ask ‘what day is it?’, we can use intonation."
+        },
+        {
+          "t": "text",
+          "text": "C’est mardi ?"
+        },
+        {
+          "t": "text",
+          "text": "To answer, we could say {aujourd’hui c’est} followed by the day of the week. It means ‘today it’s …’."
+        },
+        {
+          "t": "text",
+          "text": "Non, aujourd’hui c’est lundi."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Aujourd’hui just means ‘today’. To say ‘today it is’ you need aujourd’hui c’est."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Today it’s…",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which is the correct way to say ‘Today it’s Friday’?",
+          "options": [
+            "Aujourd’hui vendredi.",
+            "Aujourd’hui c’est vendredi.",
+            "C’est aujourd’hui."
+          ],
+          "answer": 1,
+          "why": "To say ‘today it’s …’ you need aujourd’hui c’est, then the day of the week."
+        },
+        {
+          "t": "choice",
+          "q": "Today is samedi. Someone asks: ‘C’est vendredi ?’ What is the right answer?",
+          "options": [
+            "Non, aujourd’hui c’est samedi.",
+            "Oui, aujourd’hui c’est vendredi.",
+            "Non, aujourd’hui c’est dimanche."
+          ],
+          "answer": 0,
+          "why": "Today is samedi, so the answer is no, and we say aujourd’hui c’est samedi."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "J’ai = I have",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb {avoir} means ‘to have’. {J’ai} means ‘I have’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{J’ai} une table.",
+              "sub": "I have a table."
+            },
+            {
+              "title": "{J’ai} une banane.",
+              "sub": "I have a banana.",
+              "emoji": "🍌"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Je becomes j’ before a vowel."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Il a and elle a",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Il a} means ‘he has’. {Elle a} means ‘she has’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Il a} un stylo.",
+              "sub": "He has a pen."
+            },
+            {
+              "title": "{Elle a} un sac.",
+              "sub": "She has a bag."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "For a boy you use the pronoun ‘il’ and for a girl you use ‘elle’, but the verb ‘a’ stays the same for both."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Who has what?",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{j’ai}",
+              "sub": "I have"
+            },
+            {
+              "title": "{il a}",
+              "sub": "he has"
+            },
+            {
+              "title": "{elle a}",
+              "sub": "she has"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We use these verbs with nouns and their indefinite articles (un or une) to say what I and someone else have."
+        },
+        {
+          "t": "list",
+          "items": [
+            "J’ai un chien. = I have a dog.",
+            "Il a une orange. = He has an orange.",
+            "Elle a un chat. = She has a cat."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "You can’t use ‘avoir’ as it is. You must change the verb depending on who you are talking about: j’ai, il a or elle a."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which one means ‘she has’?",
+          "options": [
+            "j’ai",
+            "il a",
+            "elle a"
+          ],
+          "answer": 2,
+          "why": "Elle a means ‘she has’."
+        },
+        {
+          "t": "choice",
+          "q": "Which is correct?",
+          "options": [
+            "Je ai une orange.",
+            "J’ai une orange."
+          ],
+          "answer": 1,
+          "why": "Je becomes j’ before a vowel: j’ai."
+        },
+        {
+          "t": "choice",
+          "q": "Which one means ‘he has’?",
+          "options": [
+            "il a",
+            "elle a",
+            "j’ai"
+          ],
+          "answer": 0,
+          "why": "Il a means ‘he has’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say it in English",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French to the English.",
+          "pairs": [
+            {
+              "a": "J’ai un sac.",
+              "b": "I have a bag."
+            },
+            {
+              "a": "Il a un chien.",
+              "b": "He has a dog."
+            },
+            {
+              "a": "Elle a une banane.",
+              "b": "She has a banana."
+            },
+            {
+              "a": "Elle a un chat.",
+              "b": "She has a cat."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say it in French",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct French.",
+          "items": [
+            {
+              "q": "She has a cuddly toy.",
+              "options": [
+                "Elle a une peluche.",
+                "Elle a un peluche.",
+                "Il a une peluche."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "He has an exercise book.",
+              "options": [
+                "Il a une cahier.",
+                "Elle a un cahier.",
+                "Il a un cahier."
+              ],
+              "answer": 2
+            },
+            {
+              "q": "I have a bottle.",
+              "options": [
+                "J’ai une bouteille.",
+                "J’ai un bouteille.",
+                "Il a une bouteille."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Who has it?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort the sentences by who has the thing.",
+          "columns": [
+            "I have (j’ai)",
+            "He has (il a)",
+            "She has (elle a)"
+          ],
+          "items": [
+            {
+              "text": "J’ai un sac.",
+              "col": 0
+            },
+            {
+              "text": "Il a une orange.",
+              "col": 1
+            },
+            {
+              "text": "Elle a un chat.",
+              "col": 2
+            },
+            {
+              "text": "J’ai une banane.",
+              "col": 0
+            },
+            {
+              "text": "Il a un cahier.",
+              "col": 1
+            },
+            {
+              "text": "Elle a une peluche.",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "You can revisit the days of the week regularly by listening to a song.",
+            "To ask what day it is, use intonation: c’est lundi ? To answer, use aujourd’hui c’est and the day: non, aujourd’hui c’est mardi.",
+            "The verb avoir means ‘to have’. J’ai means ‘I have’, il a means ‘he has’ and elle a means ‘she has’.",
+            "We use these verbs with nouns and their indefinite articles to say what I and someone else have."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does the verb ‘avoir’ mean?",
+      "back": "to have"
+    },
+    {
+      "front": "What does ‘j’ai’ mean?",
+      "back": "I have\n\nJ’ai une table. = I have a table."
+    },
+    {
+      "front": "What does ‘il a’ mean?",
+      "back": "he has\n\nIl a un stylo. = He has a pen."
+    },
+    {
+      "front": "What does ‘elle a’ mean?",
+      "back": "she has\n\nElle a un sac. = She has a bag."
+    },
+    {
+      "front": "Does the verb change between ‘il a’ and ‘elle a’?",
+      "back": "No. Il is for a boy and elle is for a girl, but the verb ‘a’ stays the same."
+    },
+    {
+      "front": "What happens to ‘je’ before a vowel?",
+      "back": "It becomes j’.\n\nJ’ai"
+    },
+    {
+      "front": "How many days are there in the week in French?",
+      "back": "Seven: il y a sept jours dans la semaine."
+    },
+    {
+      "front": "Which two days are the weekend (le week-end)?",
+      "back": "samedi et dimanche (Saturday and Sunday)"
+    },
+    {
+      "front": "Write the French days of the week in order.",
+      "back": "lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche"
+    },
+    {
+      "front": "Do days of the week start with a capital letter in French?",
+      "back": "No. In French there are no capital letters for days."
+    },
+    {
+      "front": "How do you ask ‘what day is it?’ with intonation?",
+      "back": "Say a day and raise your voice at the end.\n\nC’est mardi ?"
+    },
+    {
+      "front": "What does ‘aujourd’hui c’est’ mean?",
+      "back": "today it’s …\n\nNon, aujourd’hui c’est lundi."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What I and others have: ‘j’ai’ and ‘il, elle a’",
+    "instructions": "Answer with a word or short phrase. Days of the week in French do not start with a capital letter.",
+    "questions": [
+      {
+        "prompt": "What does the French verb ‘avoir’ mean in English?",
+        "answer": "to have",
+        "accepted": [
+          "have"
+        ],
+        "explanation": "Avoir means ‘to have’."
+      },
+      {
+        "prompt": "What does ‘j’ai’ mean in English? (two words)",
+        "answer": "i have",
+        "explanation": "J’ai means ‘I have’."
+      },
+      {
+        "prompt": "What does ‘il a’ mean in English? (two words)",
+        "answer": "he has",
+        "explanation": "Il a means ‘he has’."
+      },
+      {
+        "prompt": "What does ‘elle a’ mean in English? (two words)",
+        "answer": "she has",
+        "explanation": "Elle a means ‘she has’."
+      },
+      {
+        "prompt": "Write the French for ‘I have a pen.’",
+        "answer": "j’ai un stylo",
+        "accepted": [
+          "j'ai un stylo",
+          "j’ai un stylo.",
+          "j'ai un stylo."
+        ],
+        "explanation": "J’ai means ‘I have’ and stylo is masculine, so we use un."
+      },
+      {
+        "prompt": "Write the French for ‘He has a bottle.’",
+        "answer": "il a une bouteille",
+        "accepted": [
+          "il a une bouteille."
+        ],
+        "explanation": "Il a means ‘he has’ and bouteille is feminine, so we use une."
+      },
+      {
+        "prompt": "Write the French for ‘She has a game.’",
+        "answer": "elle a un jeu",
+        "accepted": [
+          "elle a un jeu."
+        ],
+        "explanation": "Elle a means ‘she has’ and jeu is masculine, so we use un."
+      },
+      {
+        "prompt": "Which French day of the week comes after mardi?",
+        "answer": "mercredi",
+        "explanation": "The order is lundi, mardi, mercredi, jeudi, vendredi, samedi, dimanche."
+      },
+      {
+        "prompt": "Which French day of the week comes between jeudi and samedi?",
+        "answer": "vendredi",
+        "explanation": "The order is jeudi, vendredi, samedi."
+      },
+      {
+        "prompt": "In French, which day of the week comes after samedi?",
+        "answer": "dimanche",
+        "explanation": "Samedi and dimanche are the weekend, in that order."
+      },
+      {
+        "prompt": "Write the French for ‘today it’s’ (two words).",
+        "answer": "aujourd’hui c’est",
+        "accepted": [
+          "aujourd'hui c'est",
+          "aujourd’hui c'est",
+          "aujourd'hui c’est"
+        ],
+        "explanation": "Aujourd’hui means ‘today’, and you need c’est to say ‘today it’s …’."
+      }
+    ]
+  }
+}

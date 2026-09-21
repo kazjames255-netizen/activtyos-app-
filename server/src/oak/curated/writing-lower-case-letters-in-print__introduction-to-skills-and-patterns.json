@@ -1,0 +1,451 @@
+{
+  "agent": "english-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can sit comfortably and hold a pencil ready for handwriting."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Get comfortable",
+              "sub": "How to sit and place your paper"
+            },
+            {
+              "title": "Warm up and pencil grip",
+              "sub": "Get your hands ready"
+            },
+            {
+              "title": "Handwriting patterns",
+              "sub": "Up and down lines and loops"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sitting position",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "sitting position",
+              "def": "The way we sit when writing, with our feet on the ground, back straight, and our body balanced and comfortable in a chair."
+            }
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Feet",
+              "sub": "Place your feet flat on the floor."
+            },
+            {
+              "title": "Back",
+              "sub": "Rest your back against the back of the chair."
+            },
+            {
+              "title": "Stomach",
+              "sub": "Gently touch the edge of the table."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "If your feet do not reach the floor, you could put them on an upside-down tray or a box. Or you could ask for a smaller chair."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the sitting positions",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which are comfortable for handwriting? Tap a position, then tap its column.",
+          "columns": [
+            "Comfortable for handwriting",
+            "Not comfortable"
+          ],
+          "items": [
+            {
+              "text": "Feet flat on the floor",
+              "col": 0
+            },
+            {
+              "text": "Back against the back of the chair",
+              "col": 0
+            },
+            {
+              "text": "Stomach touching the edge of the table",
+              "col": 0
+            },
+            {
+              "text": "Legs crossed",
+              "col": 1
+            },
+            {
+              "text": "Slouched in the chair",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where to put your paper",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "The position of the paper is important. We want to see where our pencil is going."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Put the paper in line with your writing arm.",
+            "If you write with your **right** hand, turn the paper a little to the left.",
+            "If you write with your **left** hand, turn the paper a little to the right.",
+            "Hold the paper still with your other hand, so it does not slip and slide."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: paper position",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "You write with your left hand. How do you turn your paper?",
+          "options": [
+            "A little to the right",
+            "A little to the left",
+            "Straight, not turned"
+          ],
+          "answer": 0,
+          "why": "If you write with your left hand, turn the paper a bit to the right so it is in line with your writing arm."
+        },
+        {
+          "t": "choice",
+          "q": "Which hand holds the paper still?",
+          "options": [
+            "The hand that is not writing",
+            "The hand that is writing",
+            "Neither hand"
+          ],
+          "answer": 0,
+          "why": "We use the other hand, the one that is not writing, to keep the paper still."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Warm up your hands",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Strong hands help us with pencil grip and letter formation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Strong hands help us to write for longer.",
+            "In PE you warm up before your main activity. Writing is the same: warm up your hands first."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three hand warm-ups",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Finger touch",
+              "sub": "Touch each finger to your thumb, one at a time."
+            },
+            {
+              "title": "Finger tap",
+              "sub": "Tap each finger against your head in turn."
+            },
+            {
+              "title": "Finger pull",
+              "sub": "Gently pull each finger in turn."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "You can go forwards and backwards with the finger touch. Try it with both hands at once!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The tripod grip",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "pencil grip",
+              "def": "How we hold the pencil with our fingers, so it feels comfortable and steady in our hand."
+            },
+            {
+              "term": "tripod grip",
+              "def": "A special way of holding the pencil with three fingers (thumb, index and middle fingers) that helps us write smoothly and with control."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Pointing finger and tall finger go on the top.",
+            "Your thumb goes underneath.",
+            "Keep your fingers slightly bent.",
+            "Rest your hand on the table."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Rhyme: Pointing finger, tall finger, on the top, thumb goes underneath, yeah!"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: tripod grip",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which three fingers make the tripod grip?",
+          "options": [
+            "Thumb, pointing finger and tall finger",
+            "Thumb, little finger and next finger",
+            "All five fingers"
+          ],
+          "answer": 0,
+          "why": "The tripod grip uses three fingers: the thumb, the index (pointing) finger and the middle (tall) finger."
+        },
+        {
+          "t": "choice",
+          "q": "Where does your thumb go in the tripod grip?",
+          "options": [
+            "Underneath the pencil",
+            "On the top of the pencil",
+            "Up in the air"
+          ],
+          "answer": 0,
+          "why": "Pointing finger and tall finger go on the top, and the thumb goes underneath."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Handwriting patterns",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Handwriting patterns help us to prepare for writing letters."
+        },
+        {
+          "t": "match",
+          "q": "Match each pattern to the letters it helps with.",
+          "pairs": [
+            {
+              "a": "Up and down lines",
+              "b": "Letters with straight lines"
+            },
+            {
+              "a": "Loops",
+              "b": "Rounded letters, with curves"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Make your patterns",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Keep your pencil on the paper the whole time.",
+            "Make strong, straight lines for your up and down lines.",
+            "Make continuous loops all the way across the page."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "For a loop, go **up, loop, and down**. You can make big ones and tiny ones."
+        },
+        {
+          "t": "choice",
+          "q": "What should your pencil do while you make a pattern?",
+          "options": [
+            "Stay on the paper",
+            "Jump off the paper each time",
+            "Stay in the air"
+          ],
+          "answer": 0,
+          "why": "Keep your pencil on the paper the whole time you make your lines and loops."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Letter formation",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "letter formation",
+              "def": "The way we make each letter, starting at the top and following the correct path to create the shape of the letter."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It takes practice to form a letter correctly, just like it takes practice to hold a pencil well."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Some letters need you to lift your pencil to add a dot or a cross."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tramlines",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "tramlines",
+              "def": "Straight, parallel lines that we can use as a guide to help us write neatly and keep our letters the same size."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Tramlines help you to write neatly and keep your letters the same size."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: patterns and tramlines",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "What do tramlines help us to do?",
+          "options": [
+            "Write neatly and keep our letters the same size",
+            "Warm up our hands",
+            "Hold the paper still"
+          ],
+          "answer": 0,
+          "why": "Tramlines are a guide to help us write neatly and keep our letters the same size."
+        },
+        {
+          "t": "choice",
+          "q": "Which pattern helps us prepare to write rounded letters?",
+          "options": [
+            "Loops",
+            "Up and down lines"
+          ],
+          "answer": 0,
+          "why": "Practising loops helps us form rounded letters. Up and down lines help with letters that have straight lines."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Sit with your feet flat on the floor, your back against the chair and your stomach touching the edge of the table.",
+            "Turn your paper in line with your writing arm, and hold it still with your other hand.",
+            "Warm up your hands, then hold your pencil in the tripod grip.",
+            "Handwriting patterns (up and down lines and loops) get us ready to write letters."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Where should your feet be when you write?",
+      "back": "Flat on the floor."
+    },
+    {
+      "front": "Where should your back be when you write?",
+      "back": "Resting against the back of the chair."
+    },
+    {
+      "front": "Where should your stomach be when you write?",
+      "back": "Gently touching the edge of the table."
+    },
+    {
+      "front": "You write with your right hand. How do you turn your paper?",
+      "back": "A little to the left, in line with your writing arm."
+    },
+    {
+      "front": "You write with your left hand. How do you turn your paper?",
+      "back": "A little to the right, in line with your writing arm."
+    },
+    {
+      "front": "What does your other hand (the one not writing) do?",
+      "back": "It holds the paper still, so it does not slip and slide."
+    },
+    {
+      "front": "Why do we warm up our hands before writing?",
+      "back": "Strong hands help with pencil grip and letter formation, and help us write for longer."
+    },
+    {
+      "front": "Name three hand warm-ups from the lesson.",
+      "back": "Finger touch, finger tap and finger pull."
+    },
+    {
+      "front": "What is the tripod grip?",
+      "back": "Holding the pencil with three fingers: thumb, pointing finger and tall finger."
+    },
+    {
+      "front": "Say the tripod grip rhyme.",
+      "back": "Pointing finger, tall finger, on the top, thumb goes underneath, yeah!"
+    },
+    {
+      "front": "What do up and down lines help us to write?",
+      "back": "Letters with straight lines."
+    },
+    {
+      "front": "What do loops help us to write?",
+      "back": "Rounded letters, with curves."
+    },
+    {
+      "front": "What are tramlines?",
+      "back": "Straight, parallel lines that help us write neatly and keep our letters the same size."
+    },
+    {
+      "front": "Why do some letters need you to lift your pencil?",
+      "back": "To add a dot or a cross."
+    }
+  ]
+}

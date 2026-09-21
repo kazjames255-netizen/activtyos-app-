@@ -1,0 +1,603 @@
+{
+  "agent": "english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand the key themes and the characters’ emotions in ‘The Journey’."
+        },
+        {
+          "t": "text",
+          "text": "You will find the big ideas in the story, then think about how the girl feels at different moments. This helps us get ready to write a diary entry as her."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Understanding and identifying themes"
+            },
+            {
+              "title": "Understanding the characters’ emotions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "theme",
+              "def": "A big idea, topic or message that appears in a story."
+            },
+            {
+              "term": "character",
+              "def": "A person, being, thing or animal in a story."
+            },
+            {
+              "term": "emotions",
+              "def": "Strong feelings that result from a person’s circumstances, mood, or relationship with others."
+            },
+            {
+              "term": "perspective",
+              "def": "A person’s point of view."
+            },
+            {
+              "term": "empathy",
+              "def": "The ability to understand other people’s feelings and points of view."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a theme?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stories often have {themes} that communicate a deeper message to the reader. Here are some themes you might notice in different stories:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "friendship",
+            "pride",
+            "good vs evil",
+            "family",
+            "resilience",
+            "celebration",
+            "suffering",
+            "grief",
+            "greed",
+            "hope"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do readers always agree?",
+          "text": "No! Readers can interpret themes, and how important they are, differently."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The themes in ‘The Journey’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘The Journey’ conveys important messages through exploring four themes. Tap each one to see its meaning."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "war and conflict",
+              "def": "A violent dispute between states or nations."
+            },
+            {
+              "term": "resilience",
+              "def": "Adapting to and withstanding difficulties."
+            },
+            {
+              "term": "hope",
+              "def": "Holding on to the belief that there will be a positive outcome."
+            },
+            {
+              "term": "displacement",
+              "def": "The forced removal of a person from their home or country, often due to armed conflicts or natural disaster."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the theme",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each theme to its meaning.",
+          "pairs": [
+            {
+              "a": "war and conflict",
+              "b": "a violent dispute between states or nations"
+            },
+            {
+              "a": "resilience",
+              "b": "adapting to and withstanding difficulties"
+            },
+            {
+              "a": "hope",
+              "b": "holding on to the belief that there will be a positive outcome"
+            },
+            {
+              "a": "displacement",
+              "b": "the forced removal of a person from their home or country"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Theme: war and conflict",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Think about the start of the story. How do the characters experience war and conflict?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Everything changed for the girl and her family as soon as the war began in her country.",
+            "Her mother now worries about her family more than ever.",
+            "They are feeling less positive and hopeful."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "War and conflict had a very negative effect on the family. It made them worried and scared."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Theme: displacement",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If you are {displaced}, you do not choose to leave your home. You are **forced** to leave."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The sisters didn’t want to leave, but they knew they had no choice.",
+            "It was horrible to say goodbye to their home.",
+            "A new place seems strange and scary, but feeling safe matters more than anything."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence about the family is true?",
+          "options": [
+            "They were happy to be displaced",
+            "They were forced to leave, and did not want to go, but knew they had to stay safe",
+            "They chose to leave because they wanted an adventure"
+          ],
+          "answer": 1,
+          "why": "Displacement is being forced to leave your home. The girls did not want to go, but they knew their safety came first."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Theme: resilience",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The journey was very challenging, but the family never gave up, even when they were really scared and tired."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Even when they are faced with a huge sea to cross, they don’t give up.",
+            "Their mother acts bravely, even though she is scared, to protect her daughters.",
+            "They stay strong and determined to reach safety."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "{Resilience} means adapting to and withstanding difficulties. The family faced extreme hardship, but they remained strong."
+        },
+        {
+          "t": "choice",
+          "q": "What is the main way the family show resilience?",
+          "options": [
+            "They keep travelling even when it is incredibly challenging",
+            "They stay at home and wait",
+            "They turn back at the first problem"
+          ],
+          "answer": 0,
+          "why": "Resilience is withstanding difficulties. The family carry on travelling even when it is very hard."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Theme: hope",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The theme of {hope} runs through the whole story. The characters try to overcome challenges and hold on to the belief that they can find a place of safety and build a new life."
+        },
+        {
+          "t": "reveal",
+          "label": "Think about it",
+          "text": "What would have happened if the family had given up hope? They might have gone back to their house, or maybe never have left at all."
+        },
+        {
+          "t": "reveal",
+          "label": "Look closely at the birds",
+          "text": "On the train, birds follow the family. They are also migrating to another country, but they do not have any difficulty crossing borders."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which theme?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the theme that fits each sentence.",
+          "items": [
+            {
+              "q": "The family were forced to pack up and leave home. This shows …",
+              "options": [
+                "displacement",
+                "celebration",
+                "greed"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "They keep going even when the sea crossing is scary and hard. This shows …",
+              "options": [
+                "friendship",
+                "resilience",
+                "pride"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "They believe they will find a place of safety in the end. This shows …",
+              "options": [
+                "hope",
+                "war and conflict",
+                "greed"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Their country is devastated by a violent dispute. This is …",
+              "options": [
+                "hope",
+                "resilience",
+                "war and conflict"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Perspective and empathy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we write a diary entry as the girl, we need to understand her {perspective}, which is her point of view."
+        },
+        {
+          "t": "text",
+          "text": "We do this with **empathy**: understanding and sharing the feelings of another. Empathy helps us think of the thoughts she would share in her diary."
+        },
+        {
+          "t": "callout",
+          "text": "Expressing thoughts and emotions is a key part of writing a diary entry."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The girl’s changing emotions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The girl’s emotions change throughout the story. Here are the key events in order:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. A war begins in the country where the girls had been living happily with their mother and father.",
+            "2. After their father dies, their mother decides to flee their country to take them to a safer place.",
+            "3. At the border, they are banned from crossing and hide in the forest overnight.",
+            "4. They have a challenging ferry crossing over rough seas with fellow refugees.",
+            "5. They take a train through many countries and travel closer to a new, safe home."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "At each key moment, we ask: what did she feel, and why?"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Start and end: how she might feel",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At the beginning, she could write:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "I don’t feel safe anymore.",
+            "Every day, I feel more and more scared.",
+            "How can everything change so suddenly?"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "By the end, she could write:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "I am so relieved to be close to safety.",
+            "I am happy we are safe, but I still miss my home.",
+            "I hope there is a place we can go to play outside in peace."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Her emotions change from **scared and worried** at the start to **relieved and hopeful** at the end, though she still misses home."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the moment to the thought",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each moment to a thought the girl might have had.",
+          "pairs": [
+            {
+              "a": "Saying goodbye to home",
+              "b": "It breaks my heart to say goodbye to everybody."
+            },
+            {
+              "a": "Hiding in the forest",
+              "b": "I couldn’t sleep because I was so terrified."
+            },
+            {
+              "a": "On the rough ferry crossing",
+              "b": "I was desperate to get off the boat, my stomach was churning!"
+            },
+            {
+              "a": "On the train, closer to safety",
+              "b": "I hope we find a safe place soon."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which word means understanding and sharing the feelings of another?",
+              "options": [
+                "perspective",
+                "empathy",
+                "theme"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which word means a person’s point of view?",
+              "options": [
+                "perspective",
+                "emotions",
+                "character"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The girl’s emotions in the story …",
+              "options": [
+                "stay exactly the same",
+                "change throughout the story",
+                "are never shown"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Exploring the characters and key themes",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A {theme} is a big idea, topic or message that appears in a story.",
+            "Themes are used to convey deeper meaning and messages to the reader.",
+            "‘The Journey’ explores war and conflict, resilience, hope and displacement.",
+            "The girl’s emotions change throughout the story.",
+            "Expressing thoughts and emotions is a key part of writing a diary entry."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a theme?",
+      "back": "A big idea, topic or message that appears in a story."
+    },
+    {
+      "front": "Why do stories have themes?",
+      "back": "Themes are used to convey deeper meaning and messages to the reader."
+    },
+    {
+      "front": "Name the four themes explored in ‘The Journey’.",
+      "back": "War and conflict, resilience, hope and displacement."
+    },
+    {
+      "front": "What does war and conflict mean?",
+      "back": "A violent dispute between states or nations."
+    },
+    {
+      "front": "What does resilience mean?",
+      "back": "Adapting to and withstanding difficulties."
+    },
+    {
+      "front": "What does hope mean?",
+      "back": "Holding on to the belief that there will be a positive outcome."
+    },
+    {
+      "front": "What does displacement mean?",
+      "back": "The forced removal of a person from their home or country, often due to armed conflicts or natural disaster."
+    },
+    {
+      "front": "What are emotions?",
+      "back": "Strong feelings that result from a person’s circumstances, mood, or relationship with others."
+    },
+    {
+      "front": "What is perspective?",
+      "back": "A person’s point of view."
+    },
+    {
+      "front": "What is empathy?",
+      "back": "The ability to understand other people’s feelings and points of view."
+    },
+    {
+      "front": "What is a character?",
+      "back": "A person, being, thing or animal in a story."
+    },
+    {
+      "front": "How do the girl’s emotions change in ‘The Journey’?",
+      "back": "They change throughout the story: scared and worried near the start, relieved and hopeful near the end."
+    },
+    {
+      "front": "Why is expressing thoughts and emotions important in a diary entry?",
+      "back": "It is a key part of writing a diary entry."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Exploring the characters and key themes in ‘The Journey’",
+    "instructions": "Answer each question with a word or a short phrase. Think about the themes and the girl’s feelings in ‘The Journey’.",
+    "questions": [
+      {
+        "prompt": "What word means a big idea, topic or message that appears in a story?",
+        "answer": "theme",
+        "accepted": [
+          "a theme",
+          "themes"
+        ],
+        "explanation": "A theme is a big idea, topic or message that appears in a story."
+      },
+      {
+        "prompt": "Which theme means adapting to and withstanding difficulties?",
+        "answer": "resilience",
+        "accepted": [
+          "resilient"
+        ],
+        "explanation": "Resilience is adapting to and withstanding difficulties."
+      },
+      {
+        "prompt": "Which theme means holding on to the belief that there will be a positive outcome?",
+        "answer": "hope",
+        "accepted": [
+          "Hope"
+        ],
+        "explanation": "Hope is holding on to the belief that there will be a positive outcome."
+      },
+      {
+        "prompt": "Which theme means the forced removal of a person from their home or country?",
+        "answer": "displacement",
+        "accepted": [
+          "displaced"
+        ],
+        "explanation": "Displacement is being forced to leave your home or country."
+      },
+      {
+        "prompt": "Which theme means a violent dispute between states or nations?",
+        "answer": "war and conflict",
+        "accepted": [
+          "war",
+          "war & conflict",
+          "conflict"
+        ],
+        "explanation": "War and conflict is a violent dispute between states or nations."
+      },
+      {
+        "prompt": "Which word means the ability to understand and share the feelings of another?",
+        "answer": "empathy",
+        "accepted": [
+          "empathise",
+          "empathize"
+        ],
+        "explanation": "Empathy is understanding and sharing another person’s feelings."
+      },
+      {
+        "prompt": "Which word means a person’s point of view?",
+        "answer": "perspective",
+        "accepted": [
+          "point of view",
+          "a perspective"
+        ],
+        "explanation": "Perspective refers to a person’s point of view."
+      },
+      {
+        "prompt": "Which word means strong feelings that result from a person’s circumstances, mood, or relationships?",
+        "answer": "emotions",
+        "accepted": [
+          "emotion"
+        ],
+        "explanation": "Emotions are strong feelings that result from someone’s circumstances, mood, or relationship with others."
+      },
+      {
+        "prompt": "Which theme runs through the whole narrative of ‘The Journey’, as the family believe they will find a place of safety?",
+        "answer": "hope",
+        "accepted": [
+          "Hope"
+        ],
+        "explanation": "The theme of hope runs through the whole story."
+      }
+    ]
+  }
+}

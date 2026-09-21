@@ -1,0 +1,618 @@
+{
+  "agent": "english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can write a plan for the first paragraph of a diary entry."
+        },
+        {
+          "t": "text",
+          "text": "You will pretend to be the girl in ‘The Journey’. First you will retell her journey out loud, then you will write your plan in notes."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Oral recount"
+            },
+            {
+              "title": "Writing the plan"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "oral recount",
+              "def": "Speaking aloud to retell events that have already happened."
+            },
+            {
+              "term": "first person perspective",
+              "def": "The point of view where the speaker or writer is the ‘I’ character, giving a personal account of events or experiences."
+            },
+            {
+              "term": "plan",
+              "def": "A framework that writers create before they write a section or a whole text."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The shape of our diary entry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Our diary entry will be built like this:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the date",
+            "the greeting: ‘Dear Diary,’",
+            "paragraph 1: a recount of the journey",
+            "paragraph 2: expressing current feelings",
+            "the sign-off"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Today we are planning {paragraph 1}, the recount of the journey."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First person perspective",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Perspective** is the way someone thinks, feels or sees something. It is their point of view. These people are speaking from the first person perspective, as ‘I’:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "I love to play with my friends!",
+            "My favourite subject is geography.",
+            "I can see a park on the map."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "When you write your diary entry, you pretend to be the girl. You write ‘I did this’ or ‘I felt this’, not ‘she felt this’. Writing from a character’s perspective means expressing their thoughts and feelings."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which is first person?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which sentence is written in first person perspective?",
+              "options": [
+                "I felt terrified in the forest.",
+                "She felt terrified in the forest.",
+                "The girl felt terrified in the forest."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "When you write from a character’s perspective, you are …",
+              "options": [
+                "writing lots of facts",
+                "expressing the character’s thoughts and feelings",
+                "describing the pictures"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Oral recount: the five key moments",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An {oral recount} helps us understand the **chronology**, the order of events. Here is what happened, in order:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Their mother told them to pack their bags and say goodbye to their home.",
+            "2. They travelled for many days until they arrived at the border, where they were turned away by the security guard.",
+            "3. They ran away from the border police and hid overnight in the forest.",
+            "4. They crossed a vast sea on a ferry packed with other refugees.",
+            "5. They took a train through many countries and travelled closer to their new, safe home."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Try it aloud, speaking as the girl: ‘My mother told us to pack our bags and say goodbye to our home …’"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How did she feel?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At each moment, think about her emotions. Tap the ideas below to see the words you could use."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Leaving home",
+              "sub": "devastated, heartbroken, confused"
+            },
+            {
+              "title": "Turned away at the border",
+              "sub": "exhausted, shattered, full of adrenaline"
+            },
+            {
+              "title": "Hiding in the forest",
+              "sub": "scared, brave, proud"
+            },
+            {
+              "title": "The ferry",
+              "sub": "seasick, nauseous, uncomfortable, worried"
+            },
+            {
+              "title": "The train",
+              "sub": "hopeful, relieved, safe"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which moment?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each feeling word with the moment when the girl might feel it.",
+          "columns": [
+            "Leaving home",
+            "Turned away at the border",
+            "On the ferry"
+          ],
+          "items": [
+            {
+              "text": "devastated",
+              "col": 0
+            },
+            {
+              "text": "confused",
+              "col": 0
+            },
+            {
+              "text": "exhausted",
+              "col": 1
+            },
+            {
+              "text": "shattered",
+              "col": 1
+            },
+            {
+              "text": "seasick",
+              "col": 2
+            },
+            {
+              "text": "uncomfortable",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which thought fits?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the thought that fits each moment.",
+          "items": [
+            {
+              "q": "The moment they cross the sea on the crowded ferry.",
+              "options": [
+                "My stomach was churning violently!",
+                "I don’t want to leave! What about my toys?",
+                "I am so relieved to be closer to our new home."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The moment they are turned away at the border after many days of travel.",
+              "options": [
+                "I am so relieved to be sitting on the train.",
+                "It was so exciting!",
+                "My legs were aching and I was desperate for a break."
+              ],
+              "answer": 2
+            },
+            {
+              "q": "The moment they are on the train, closer to safety.",
+              "options": [
+                "I didn’t want to say goodbye to my toys!",
+                "I am so relieved to be sitting down and closer to our new home.",
+                "I couldn’t sleep because I was so terrified."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a plan?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A {plan} helps the writer summarise and organise key information. It uses **notes**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Notes are short. They capture the most important information.",
+            "For a diary entry, that means the key events in chronological order, plus thoughts and feelings.",
+            "We do not write in full sentences.",
+            "We use bullet points."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "From sentence to notes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Take a full sentence and pull out the key words and phrases."
+        },
+        {
+          "t": "text",
+          "text": "Full sentence: ‘We ran away from the border police and hid in the forest all night.’"
+        },
+        {
+          "t": "list",
+          "items": [
+            "ran away from border police",
+            "hid in forest overnight"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What did we do?",
+          "text": "We kept the key events and left out the extra words. Each note is short, and there are no capital letters or full stops needed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which one belongs in a plan?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which is the best note for: ‘We crossed the sea on a ferry that was packed with other refugees.’",
+              "options": [
+                "We crossed the sea on a ferry that was packed with other refugees.",
+                "crossed sea on ferry",
+                "sea"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which does NOT belong in a plan?",
+              "options": [
+                "key events in time order",
+                "thoughts and feelings",
+                "long full sentences with capital letters and full stops"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "How should notes for a diary plan be organised?",
+              "options": [
+                "in any order",
+                "as bullet points in time order",
+                "in one long sentence"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plan: leaving to the boat",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Notes for paragraph 1, from leaving their country until they arrive at the boat. Here is a model:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "packed all our belongings",
+            "said goodbye to everyone",
+            "travelled for many days and nights",
+            "turned away at border",
+            "ran away from the border police",
+            "spent the night in the forest"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "And some thoughts and feelings to add:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "my heart was pounding",
+            "hugged Mumma tightly all night",
+            "my legs were aching",
+            "shattered / exhausted",
+            "I was heartbroken",
+            "Why must everything change?"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plan: the boat to the train",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Notes for the second part of paragraph 1, from the boat journey until they were on the train. Here is a model:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "crossed the sea on a ferry",
+            "spoke to other passengers",
+            "took a train across many countries",
+            "arrived closer to a safe place"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "And some thoughts and feelings to add:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "seasick / nauseous",
+            "legs like jelly",
+            "relieved and hopeful",
+            "miss my friends and toys"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Event or feeling?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each note into a key event or a thought or feeling.",
+          "columns": [
+            "Key event",
+            "Thought or feeling"
+          ],
+          "items": [
+            {
+              "text": "packed all our belongings",
+              "col": 0
+            },
+            {
+              "text": "ran away from the border police",
+              "col": 0
+            },
+            {
+              "text": "crossed the sea on a ferry",
+              "col": 0
+            },
+            {
+              "text": "my heart was pounding",
+              "col": 1
+            },
+            {
+              "text": "I was heartbroken",
+              "col": 1
+            },
+            {
+              "text": "relieved and hopeful",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Planning the first paragraph",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "An oral recount, saying the events out loud in order, helps us understand the chronology.",
+            "We plan and rehearse in the first person, from the girl’s perspective.",
+            "A good plan has key events in chronological order and thoughts and feelings.",
+            "The plan is written as notes, using bullet points for the most important information.",
+            "Paragraph 1 recounts the events of the journey in order, starting from when the family left home."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an oral recount?",
+      "back": "Speaking aloud to retell events that have already happened."
+    },
+    {
+      "front": "What is first person perspective?",
+      "back": "The point of view where the speaker or writer is the ‘I’ character, giving a personal account.\n\nExample: I love to play with my friends!"
+    },
+    {
+      "front": "What is a plan?",
+      "back": "A framework that writers create before they write a section or a whole text."
+    },
+    {
+      "front": "Why do we do an oral recount before we plan?",
+      "back": "It makes sure we have a clear understanding of the chronology (order) of events."
+    },
+    {
+      "front": "Which perspective do we use when planning our diary entry?",
+      "back": "First person, as the girl in ‘The Journey’."
+    },
+    {
+      "front": "What does a good plan for a diary entry include?",
+      "back": "Key events in chronological order, and thoughts and feelings."
+    },
+    {
+      "front": "How is a plan written?",
+      "back": "As notes, using bullet points to capture the most important information. We do not use full sentences."
+    },
+    {
+      "front": "What does paragraph 1 of the diary entry do?",
+      "back": "It recounts the events from the journey in chronological order, starting from when the family left home."
+    },
+    {
+      "front": "What does paragraph 2 of the diary entry do?",
+      "back": "It expresses the writer’s current feelings."
+    },
+    {
+      "front": "How might the girl feel while she says goodbye to her home?",
+      "back": "Devastated, heartbroken and confused."
+    },
+    {
+      "front": "How might the girl feel while hiding in the forest overnight?",
+      "back": "Scared, but also brave and proud."
+    },
+    {
+      "front": "How might the girl feel on the train, closer to safety?",
+      "back": "Hopeful and relieved."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Planning the first paragraph of a diary entry",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What is the word for speaking aloud to retell events that have already happened?",
+        "answer": "oral recount",
+        "accepted": [
+          "an oral recount"
+        ],
+        "explanation": "An oral recount is speaking aloud to retell events that have already happened."
+      },
+      {
+        "prompt": "What is the word for a framework that writers create before they write a section or a whole text?",
+        "answer": "plan",
+        "accepted": [
+          "a plan"
+        ],
+        "explanation": "A plan is a framework that writers create before they write."
+      },
+      {
+        "prompt": "Which point of view uses ‘I’: first person, second person or third person?",
+        "answer": "first person",
+        "accepted": [
+          "first",
+          "1st person",
+          "first-person",
+          "first person perspective"
+        ],
+        "explanation": "First person perspective is where the writer is the ‘I’ character."
+      },
+      {
+        "prompt": "Is a plan written in full sentences or in notes?",
+        "answer": "notes",
+        "accepted": [
+          "in notes",
+          "note form",
+          "note format"
+        ],
+        "explanation": "A plan is written in note format to capture the most important information."
+      },
+      {
+        "prompt": "What do we use to list each note in our plan?",
+        "answer": "bullet points",
+        "accepted": [
+          "bullet point",
+          "bullets",
+          "bullet"
+        ],
+        "explanation": "A plan uses bullet points to capture the most important information."
+      },
+      {
+        "prompt": "In what order should the events in your plan be written?",
+        "answer": "chronological order",
+        "accepted": [
+          "chronological",
+          "time order",
+          "in time order",
+          "order of time",
+          "in chronological order"
+        ],
+        "explanation": "Key events go in chronological order, the order they happened."
+      },
+      {
+        "prompt": "Which paragraph of the diary entry expresses the writer’s current feelings: paragraph 1 or paragraph 2?",
+        "answer": "paragraph 2",
+        "accepted": [
+          "2",
+          "two",
+          "paragraph two",
+          "the second paragraph"
+        ],
+        "explanation": "Paragraph 1 is the recount of the journey and paragraph 2 expresses current feelings."
+      },
+      {
+        "prompt": "A good diary plan includes key events in chronological order and what else?",
+        "answer": "thoughts and feelings",
+        "accepted": [
+          "thoughts/feelings",
+          "thoughts",
+          "feelings",
+          "thoughts and emotions",
+          "feelings and thoughts"
+        ],
+        "explanation": "An effective plan contains key events in chronological order and thoughts and feelings."
+      }
+    ]
+  }
+}

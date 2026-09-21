@@ -1,0 +1,540 @@
+{
+  "agent": "science-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the weather in summer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Weather} in summer"
+            },
+            {
+              "title": "{Temperature}"
+            },
+            {
+              "title": "Staying {cool}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "weather",
+              "def": "Weather is what the conditions are like in a particular place at a particular time. For example, rain, wind or sun."
+            },
+            {
+              "term": "season",
+              "def": "Seasons are periods of similar weather. In the UK there are four seasons (spring, summer, autumn and winter)."
+            },
+            {
+              "term": "summer",
+              "def": "Summer is the season after spring and before autumn."
+            },
+            {
+              "term": "temperature",
+              "def": "Temperature is how hot or cold something is."
+            },
+            {
+              "term": "thermometer",
+              "def": "A thermometer is a piece of equipment for measuring temperature."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Weather changes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura says each month has different weather."
+        },
+        {
+          "t": "text",
+          "text": "Lucas says the weather is different in each season."
+        },
+        {
+          "t": "callout",
+          "text": "The weather is often different in each season, not in every month."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "spring",
+              "sub": "Mixed. Cold, windy, rainy and sometimes sunny and warm."
+            },
+            {
+              "title": "winter",
+              "sub": "Cold, windy and rainy. Fog, frost or snow too."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Summer is warm",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It is the last day of term in July."
+        },
+        {
+          "t": "text",
+          "text": "July is in summer."
+        },
+        {
+          "t": "text",
+          "text": "Lucas says it is really hot. The sky looks blue."
+        },
+        {
+          "t": "callout",
+          "text": "Summer comes after spring and the weather turns warmer. Summer is usually the warmest season."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Not always sunny",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Summer is usually the warmest season."
+        },
+        {
+          "t": "text",
+          "text": "But the weather is not always warm and sunny."
+        },
+        {
+          "t": "text",
+          "text": "It can be cloudy, cool and rainy."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "It is summer, but it is cool today. One child wears a jumper."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A heatwave",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes there are lots of very hot days in a row."
+        },
+        {
+          "t": "callout",
+          "text": "This is called a {heatwave}."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Summer weather",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which weather can happen in summer?",
+          "columns": [
+            "Can happen in summer",
+            "Not usual in summer"
+          ],
+          "items": [
+            {
+              "text": "sunny",
+              "col": 0
+            },
+            {
+              "text": "hot",
+              "col": 0
+            },
+            {
+              "text": "cloudy",
+              "col": 0
+            },
+            {
+              "text": "rainy",
+              "col": 0
+            },
+            {
+              "text": "windy",
+              "col": 0
+            },
+            {
+              "text": "frosty",
+              "col": 1
+            },
+            {
+              "text": "snowy",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Think about it",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "Which season is usually the warmest in the UK?",
+              "options": [
+                "winter",
+                "spring",
+                "summer"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "It is July and the weather is cool and rainy. Is that possible?",
+              "options": [
+                "No. It is always hot in summer.",
+                "Yes. Summer can be cloudy, cool and rainy."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How hot weather feels",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "shorts",
+              "sub": "Izzy wears shorts instead of trousers."
+            },
+            {
+              "title": "sweaty",
+              "sub": "The heat makes her sweat."
+            },
+            {
+              "title": "water",
+              "sub": "She needs a drink to cool down."
+            },
+            {
+              "title": "shade",
+              "sub": "Laura stays in the shade. Her face looks red."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How hot weather looks",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It has been hot. There has not been much rain."
+        },
+        {
+          "t": "text",
+          "text": "The ground is very dry."
+        },
+        {
+          "t": "text",
+          "text": "Some of the grass has died."
+        },
+        {
+          "t": "text",
+          "text": "The soil is cracked because it is so dry."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Keep cool",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "a fan",
+              "sub": "It is cooler inside with a fan on."
+            },
+            {
+              "title": "t-shirt and shorts",
+              "sub": "Clothes that help you stay cool.",
+              "emoji": "👕"
+            },
+            {
+              "title": "a cap",
+              "sub": "It helps to protect your face from the sun."
+            },
+            {
+              "title": "flip flops",
+              "sub": "You can wear them when not at school."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Temperature",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How can Izzy check how hot it is?"
+        },
+        {
+          "t": "callout",
+          "text": "**Temperature** is how hot or cold something is."
+        },
+        {
+          "t": "callout",
+          "text": "A **thermometer** is a piece of equipment for measuring temperature."
+        },
+        {
+          "t": "text",
+          "text": "We can use it to measure the temperature of the weather in different seasons."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Read a thermometer",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A thermometer has numbers on it.",
+            "Read the number next to the top of the coloured line.",
+            "The higher the number, the hotter it is.",
+            "Some thermometers show a number, like a digital clock."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "An example",
+          "text": "Three thermometers show 24, 18 and 30 degrees. The one that shows 30 is the hottest."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Thermometer check",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "Three thermometers show 12, 27 and 21 degrees. Which is the hottest?",
+              "options": [
+                "12 degrees",
+                "27 degrees",
+                "21 degrees"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Monday was 26 degrees. Tuesday was 19 degrees. Which day was warmer?",
+              "options": [
+                "Tuesday",
+                "Monday"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Where do you read the temperature on a thermometer with a coloured line?",
+              "options": [
+                "next to the top of the coloured line",
+                "at the bottom of the thermometer"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A week in summer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One week in summer, the temperature was:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Monday: 24 degrees",
+            "Tuesday: 20 degrees",
+            "Wednesday: 14 degrees",
+            "Thursday: 22 degrees",
+            "Friday: 26 degrees"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which day was the warmest?",
+          "text": "Friday, at 26 degrees. Wednesday was the coolest, at 14 degrees."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The weather is often different in each season.",
+            "Summer is the warmest season in the UK, but it can still be windy and rainy.",
+            "Temperature is how hot or cold something is.",
+            "A thermometer can be used to measure the temperature of different seasons."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Is the weather the same in every season?",
+      "back": "No. The weather is often different in each season."
+    },
+    {
+      "front": "Which season is usually the warmest in the UK?",
+      "back": "Summer."
+    },
+    {
+      "front": "Summer comes after which season, and before which season?",
+      "back": "After spring and before autumn."
+    },
+    {
+      "front": "Can it be windy and rainy in summer?",
+      "back": "Yes. Summer is usually warm, but it can be cloudy, cool and rainy too."
+    },
+    {
+      "front": "What is it called when there are lots of very hot days in a row?",
+      "back": "A heatwave."
+    },
+    {
+      "front": "What is a forecast?",
+      "back": "A guess or prediction about the weather."
+    },
+    {
+      "front": "What is temperature?",
+      "back": "How hot or cold something is."
+    },
+    {
+      "front": "What is a thermometer?",
+      "back": "A piece of equipment for measuring temperature."
+    },
+    {
+      "front": "How do you read a thermometer with a coloured line?",
+      "back": "Read the number next to the top of the coloured line."
+    },
+    {
+      "front": "On a thermometer, what does a higher number mean?",
+      "back": "It is hotter."
+    },
+    {
+      "front": "Name two things that can happen to a person in very hot weather.",
+      "back": "They feel very warm and sweat. They need to drink water."
+    },
+    {
+      "front": "What does the ground look like after hot weather with not much rain?",
+      "back": "Very dry. Some grass dies and the soil is cracked."
+    },
+    {
+      "front": "Name clothes that help you stay cool in hot, sunny weather.",
+      "back": "A t-shirt and shorts. A cap protects your face from the sun."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Weather in summer",
+    "instructions": "Answer each question with a word, a number or a short answer.",
+    "questions": [
+      {
+        "prompt": "Which season is usually the warmest in the UK?",
+        "answer": "summer",
+        "explanation": "Summer is the warmest season in the UK."
+      },
+      {
+        "prompt": "What do we call how hot or cold something is?",
+        "answer": "temperature",
+        "explanation": "Temperature is how hot or cold something is."
+      },
+      {
+        "prompt": "What do we use to measure temperature?",
+        "answer": "thermometer",
+        "accepted": [
+          "a thermometer"
+        ],
+        "explanation": "A thermometer is a piece of equipment for measuring temperature."
+      },
+      {
+        "prompt": "What is it called when there are lots of very hot days in a row?",
+        "answer": "heatwave",
+        "accepted": [
+          "a heatwave",
+          "heat wave",
+          "a heat wave"
+        ],
+        "explanation": "Lots of very hot days in a row is called a heatwave."
+      },
+      {
+        "prompt": "Three thermometers show 12, 27 and 21 degrees. Which is the hottest? Write the number.",
+        "answer": "27",
+        "accepted": [
+          "27 degrees"
+        ],
+        "explanation": "The higher the number, the hotter it is, and 27 is the highest."
+      },
+      {
+        "prompt": "Monday was 26 degrees and Tuesday was 19 degrees. Which day was warmer?",
+        "answer": "Monday",
+        "explanation": "26 is higher than 19, so Monday was warmer."
+      },
+      {
+        "prompt": "True or false? The weather in summer is always sunny.",
+        "answer": "false",
+        "accepted": [
+          "False"
+        ],
+        "explanation": "Summer is usually the warmest season, but it can still be cloudy, cool, windy and rainy."
+      },
+      {
+        "prompt": "What do we call a guess about tomorrow’s weather?",
+        "answer": "forecast",
+        "accepted": [
+          "a forecast"
+        ],
+        "explanation": "When we try to guess or predict the weather, it is called a forecast."
+      }
+    ]
+  }
+}

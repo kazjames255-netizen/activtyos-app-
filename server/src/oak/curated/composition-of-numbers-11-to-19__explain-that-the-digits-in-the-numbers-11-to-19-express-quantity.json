@@ -1,0 +1,751 @@
+{
+  "agent": "maths-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain that the digits in the numbers 11 to 19 express quantity."
+        },
+        {
+          "t": "text",
+          "text": "The digits in a teen number tell us how many."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Teen numbers"
+            },
+            {
+              "title": "Ten and a bit"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "teen numbers",
+              "def": "A number made of a ten (a group of 10 ones) and some additional ones."
+            },
+            {
+              "term": "tens",
+              "def": "A ten is a group of 10 ones."
+            },
+            {
+              "term": "ones",
+              "def": "Individual objects, grouped in ones."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Teen numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Count with me from 10 to 20."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The teen numbers come between 10 and 20."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "11 is the first teen number. It is one more than 10."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do you notice?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Say the teen numbers: 11, 12, 13, 14, 15, 16, 17, 18, 19. What do you notice?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see",
+          "text": "The numerals all have two digits. They all start with a 1. Lots of them end with a teen sound."
+        },
+        {
+          "t": "text",
+          "text": "You can hear the teen sound from 13 onwards. 11 and 12 do not end with a teen sound."
+        },
+        {
+          "t": "text",
+          "text": "1 to 9 are 1-digit numbers. 10 to 99 are 2-digit numbers."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ten and a bit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each box holds 10 pencils. There are some extra pencils in ones."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 ten",
+              "sub": "a box of 10 pencils"
+            },
+            {
+              "title": "4 ones",
+              "sub": "4 more pencils"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "There are 10 pencils and 4 more.",
+            "Count on: 11, 12, 13, 14.",
+            "There are 14 pencils."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The teen numbers can be represented as **ten and a bit**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ten and ones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There is **1 ten** and **4 ones**. We can see this on a place value chart."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "10s → 1",
+            "1s → 4"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "The 1 means 1 ten.",
+            "The 4 means 4 ones."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is the number?",
+          "text": "The number is **14**. It is 1 ten and 4 ones."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Saying the number",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is the number in words: **fourteen**."
+        },
+        {
+          "t": "text",
+          "text": "Part of the word says four and part of it says teen (ten)."
+        },
+        {
+          "t": "reveal",
+          "label": "Which comes first?",
+          "text": "We say the 4 ones first, then the ten: four-teen. The ten comes afterwards."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 10 oranges and 8 more."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 ten",
+              "sub": "10 oranges"
+            },
+            {
+              "title": "8 ones",
+              "sub": "8 more oranges"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "The 1 means 1 ten.",
+            "The 8 means 8 ones."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How many oranges?",
+          "text": "There is 1 ten and 8 ones. There are **18** oranges."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Your turn: how many?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the right number.",
+          "items": [
+            {
+              "q": "There are 10 pencils and 5 more. How many pencils?",
+              "options": [
+                "15",
+                "51",
+                "10"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "There is 1 ten and 2 ones. Which number is it?",
+              "options": [
+                "21",
+                "12",
+                "2"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "There are 10 counters and 9 more. How many counters?",
+              "options": [
+                "19",
+                "9",
+                "90"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "There is 1 ten and 6 ones. Which number is it?",
+              "options": [
+                "16",
+                "61",
+                "6"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the ones",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each teen number to how many ones it has.",
+          "pairs": [
+            {
+              "a": "13",
+              "b": "1 ten and 3 ones"
+            },
+            {
+              "a": "17",
+              "b": "1 ten and 7 ones"
+            },
+            {
+              "a": "12",
+              "b": "1 ten and 2 ones"
+            },
+            {
+              "a": "19",
+              "b": "1 ten and 9 ones"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Is it a teen number?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Remember: the teen numbers come between 10 and 20."
+        },
+        {
+          "t": "sort",
+          "q": "Sort each number.",
+          "columns": [
+            "A teen number",
+            "Not a teen number"
+          ],
+          "items": [
+            {
+              "text": "15",
+              "col": 0
+            },
+            {
+              "text": "6",
+              "col": 1
+            },
+            {
+              "text": "18",
+              "col": 0
+            },
+            {
+              "text": "20",
+              "col": 1
+            },
+            {
+              "text": "12",
+              "col": 0
+            },
+            {
+              "text": "10",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Tap to see",
+          "text": "18 and 80 sound alike, but they are not the same. 18 is a teen number: it is between 10 and 20. 80 is not."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is a teen number?",
+          "options": [
+            "80",
+            "18",
+            "81"
+          ],
+          "answer": 1,
+          "why": "18 is between 10 and 20. It is 1 ten and 8 ones."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about teen numbers is right?",
+          "options": [
+            "They come between 10 and 20.",
+            "They come between 20 and 30.",
+            "They all start with a 2."
+          ],
+          "answer": 0,
+          "why": "The teen numbers come between 10 and 20, and they all start with a 1."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The digits in the numbers 11 to 19 tell us about their value.",
+            "The teen numbers come between 10 and 20.",
+            "The teen numbers can be represented as ten and a bit.",
+            "We can say there is one ten and some ones."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In 14, the 1 means 1 ten and the 4 means 4 ones."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the teen numbers?",
+      "back": "The numbers between 10 and 20: 11, 12, 13, 14, 15, 16, 17, 18, 19."
+    },
+    {
+      "front": "What is the first teen number?",
+      "back": "11. It is one more than 10."
+    },
+    {
+      "front": "Which digit do all the teen numbers start with?",
+      "back": "1. It means 1 ten."
+    },
+    {
+      "front": "How many digits do the teen numbers have?",
+      "back": "Two digits."
+    },
+    {
+      "front": "What is a ten?",
+      "back": "A group of 10 ones."
+    },
+    {
+      "front": "What are ones?",
+      "back": "Individual objects, grouped in ones."
+    },
+    {
+      "front": "How can we think of a teen number?",
+      "back": "As ten and a bit: 1 ten and some ones."
+    },
+    {
+      "front": "There are 10 pencils and 4 more. How many pencils are there?",
+      "back": "14.\n\nThere is 1 ten and 4 ones."
+    },
+    {
+      "front": "In the number 14, what does the 1 mean?",
+      "back": "1 ten."
+    },
+    {
+      "front": "In the number 14, what does the 4 mean?",
+      "back": "4 ones."
+    },
+    {
+      "front": "Which two teen numbers do not end with a teen sound?",
+      "back": "11 and 12. From 13 onwards you can hear the teen."
+    },
+    {
+      "front": "There is 1 ten and 7 ones. What number is it?",
+      "back": "17."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain that the digits in the numbers 11 to 19 express quantity",
+    "instructions": "Answer each question. Remember: a teen number is ten and a bit, so it is 1 ten and some ones.",
+    "questions": [
+      {
+        "prompt": "There are 10 pencils and 6 more. How many pencils are there?",
+        "answer": "16",
+        "accepted": [
+          "sixteen"
+        ],
+        "explanation": "10 and 6 more is 1 ten and 6 ones, which is 16."
+      },
+      {
+        "prompt": "There is 1 ten and 2 ones. What number is this?",
+        "answer": "12",
+        "accepted": [
+          "twelve"
+        ],
+        "explanation": "1 ten and 2 ones makes 12."
+      },
+      {
+        "prompt": "In the number 17, the 1 means 1 ten. How many ones does the 7 mean?",
+        "answer": "7",
+        "accepted": [
+          "7 ones",
+          "seven",
+          "seven ones"
+        ],
+        "explanation": "The 7 means 7 ones."
+      },
+      {
+        "prompt": "There are 10 oranges and 8 more. There is 1 ten and how many ones?",
+        "answer": "8",
+        "accepted": [
+          "8 ones",
+          "eight",
+          "eight ones"
+        ],
+        "explanation": "The 8 more oranges are the 8 ones."
+      },
+      {
+        "prompt": "What is the first teen number?",
+        "answer": "11",
+        "accepted": [
+          "eleven"
+        ],
+        "explanation": "11 is the first teen number. It is one more than 10."
+      },
+      {
+        "prompt": "How many digits does each teen number have?",
+        "answer": "2",
+        "accepted": [
+          "two",
+          "2 digits",
+          "two digits"
+        ],
+        "explanation": "The numerals of the teen numbers all have two digits."
+      },
+      {
+        "prompt": "There is 1 ten and 9 ones. How many counters are there?",
+        "answer": "19",
+        "accepted": [
+          "nineteen"
+        ],
+        "explanation": "1 ten and 9 ones makes 19."
+      },
+      {
+        "prompt": "Write the number word for 14.",
+        "answer": "fourteen",
+        "explanation": "14 is 1 ten and 4 ones, and its word is fourteen."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 5,
+        "doThis": [
+          "Count aloud together from 1 to 30.",
+          "Read the goal together, then say each key word: teen numbers, tens, ones.",
+          "Ask what a ten is before showing the meaning."
+        ],
+        "say": "I can explain that the digits in the numbers 11 to 19 express quantity.",
+        "keywords": [
+          {
+            "term": "teen numbers",
+            "meaning": "A number made of a ten (a group of 10 ones) and some additional ones."
+          },
+          {
+            "term": "tens",
+            "meaning": "A ten is a group of 10 ones."
+          },
+          {
+            "term": "ones",
+            "meaning": "Individual objects, grouped in ones."
+          }
+        ],
+        "checkFor": {
+          "ask": "What is a ten?",
+          "lookFor": "A group of 10 ones."
+        },
+        "recap": [
+          "Our goal: I can explain that the digits in the numbers 11 to 19 express quantity.",
+          "A ten is a group of 10 ones."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "One-digit and two-digit numbers",
+        "minutes": 5,
+        "doThis": [
+          "Ask the student what they notice when they count from 1 to 30.",
+          "Point out that some numbers use one digit and some use two digits, for example on a 100 square."
+        ],
+        "keyIdeas": [
+          "1 to 9 are 1-digit numbers.",
+          "10 to 99 are 2-digit numbers."
+        ],
+        "checkFor": {
+          "ask": "Is 10 a 1-digit number or a 2-digit number?",
+          "lookFor": "A 2-digit number: 10 to 99 are 2-digit numbers."
+        },
+        "recap": [
+          "1 to 9 are 1-digit numbers.",
+          "10 to 99 are 2-digit numbers."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Teen numbers",
+        "minutes": 8,
+        "doThis": [
+          "Explain that the teen numbers come between the tens numbers 10 and 20. Count on from 10: after 10 is 11, and 11 is the first teen number.",
+          "Say all the teen numbers together, 11 to 19, then find them on a number line.",
+          "Ask what the student notices about the way the teen numbers are written and said."
+        ],
+        "keyIdeas": [
+          "The teen numbers are between 10 and 20.",
+          "The numerals all have two digits.",
+          "They all start with a 1.",
+          "Lots of them end with a teen sound."
+        ],
+        "keywords": [
+          {
+            "term": "teen numbers",
+            "meaning": "A number made of a ten (a group of 10 ones) and some additional ones."
+          }
+        ],
+        "checkFor": {
+          "ask": "Which teen number comes after 15 and before 17?",
+          "lookFor": "16. It has a 1 and a 6."
+        },
+        "recap": [
+          "The teen numbers come between 10 and 20.",
+          "11 is the first teen number.",
+          "Every teen number has two digits and starts with a 1."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Ten and a bit",
+        "minutes": 9,
+        "doThis": [
+          "Show 10 objects in one group and some extra ones, for example 10 pencils and 4 more. Count on from 10 to find the total.",
+          "Say that there is 1 ten and some ones, and record it on a place value chart with a 10s column and a 1s column.",
+          "Explain what each digit means: the 1 means 1 ten and the other digit means that many ones."
+        ],
+        "keyIdeas": [
+          "The digits in the numbers 11-19 tell us about their value.",
+          "The teen numbers can be represented as ten and a bit.",
+          "We can say there is one ten and some ones."
+        ],
+        "examples": [
+          "10 pencils and 4 more: count on 11, 12, 13, 14. There are 14 pencils: 1 ten and 4 ones. The 1 means 1 ten and the 4 means 4 ones.",
+          "10 oranges and 8 more: count on to 18. There is 1 ten and 8 ones, so there are 18 oranges. The 1 means 1 ten and the 8 means 8 ones.",
+          "10 pencils and 7 more: count on to 17. There is 1 ten and 7 ones, so there are 17 pencils."
+        ],
+        "checkFor": {
+          "ask": "In 14, what does the 1 mean and what does the 4 mean?",
+          "lookFor": "The 1 means 1 ten and the 4 means 4 ones."
+        },
+        "recap": [
+          "A teen number is a ten and a bit: 1 ten and some ones.",
+          "In 14, the 1 means 1 ten and the 4 means 4 ones.",
+          "10 oranges and 8 more is 18."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Circle the ten and complete the sentences",
+        "minutes": 8,
+        "doThis": [
+          "Show a picture of objects and ask the student to circle the ten. Then complete the sentences together: There is ___ ten and ___ ones. There are ___ objects.",
+          "Put the number on a place value chart, with the tens digit in the 10s column and the ones digit in the 1s column.",
+          "Then reverse it: give a place value chart and ask the student to draw a picture to match."
+        ],
+        "examples": [
+          "1 ten and 4 ones: there are 14 apples.",
+          "1 ten and 2 ones: there are 12 pencils.",
+          "1 ten and 7 ones: there are 17 oranges.",
+          "1 ten and 9 ones: there are 19 counters."
+        ],
+        "checkFor": {
+          "ask": "There are 10 pencils and 5 more. What does the 1 mean and what does the 5 mean?",
+          "lookFor": "The 1 means 1 ten and the 5 means 5 ones. There are 15 pencils."
+        },
+        "recap": [
+          "Circle the ten, then count the extra ones.",
+          "Say it: There is 1 ten and some ones.",
+          "A place value chart shows the ten in the 10s column and the ones in the 1s column."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Spot the mistake",
+        "minutes": 6,
+        "doThis": [
+          "Show 10 oranges and 6 more. One child says 'one ten and six ones makes seven oranges' and another says it makes 16. Ask the student who is right and what the mistake is.",
+          "Together, count the ten and the six extra ones on a place value chart to check."
+        ],
+        "examples": [
+          "1 ten and 6 ones makes 16 oranges, not 7: the 1 stands for 10 oranges and the 6 stands for 6 more."
+        ],
+        "checkFor": {
+          "ask": "Why is 1 ten and 6 ones not 7?",
+          "lookFor": "The 1 stands for a ten, which is 10 oranges. 10 and 6 more is 16."
+        },
+        "recap": [
+          "The 1 in a teen number means 1 ten, not 1 one.",
+          "1 ten and 6 ones is 16."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 7,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks which statement about teen numbers is correct, how many objects are shown, which numerals are teen numbers, and which place value chart matches a picture.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain how the digits in a teen number tell us its value.",
+          "Finish with the summary: the teen numbers come between 10 and 20 and can be represented as ten and a bit; we can say there is one ten and some ones."
+        ],
+        "checkFor": {
+          "ask": "In 16, what does the 1 mean and what does the 6 mean?",
+          "lookFor": "The 1 means 1 ten and the 6 means 6 ones."
+        },
+        "recap": [
+          "Can you do it now? I can explain that the digits in the numbers 11 to 19 express quantity.",
+          "Remember: a teen number is ten and a bit. There is one ten and some ones."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils confuse numbers like 18 and 80 because they sound similar.",
+        "fix": "Take time to emphasise the pronunciation of the teen numbers and give lots of chances to say and repeat them. Practise the teen numbers and the tens numbers side by side so the pupil can hear the difference."
+      },
+      {
+        "mistake": "Pupils add the digits, for example saying that 1 ten and 6 ones makes 7.",
+        "fix": "Remind them that the 1 stands for a whole ten. Show the ten as one circled group and count on from 10 to reach 16."
+      }
+    ],
+    "watchOut": [
+      "Show the ten as one circled group and the extra objects separately, so the student can see 1 ten and the ones.",
+      "Point out that the teen numbers 11 and 12 do not end with a teen sound; from 13 onwards the teen can be heard.",
+      "Let the student count on from 10 (11, 12, 13...) rather than starting again from 1."
+    ]
+  }
+}

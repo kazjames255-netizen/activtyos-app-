@@ -1,0 +1,646 @@
+{
+  "agent": "w4-maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how to use representations to calculate unknown values."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will use bar models to solve ratio problems, and find out how many things can change, or vary, in a problem."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Bar models for ratio problems"
+            },
+            {
+              "title": "{variables}"
+            },
+            {
+              "title": "Calculate unknown values"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "variable",
+              "def": "A variable is a value which can be represented by more than one number within a situation or equation."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In ratio problems, the ratio stays true but the values can change. Think about what stays the same and what can change."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The school quiz",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each team in a school quiz is made up of 2 adults and 3 children."
+        },
+        {
+          "t": "callout",
+          "text": "For every 2 adults there are 3 children. For every 3 children there are 2 adults."
+        },
+        {
+          "t": "text",
+          "text": "How many people are in each quiz team? 2 + 3 = 5 people."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Bar models for the quiz team",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One way: a single bar with 2 parts for the adults and 3 parts for the children."
+        },
+        {
+          "t": "text",
+          "text": "Adults [1][1]  Children [1][1][1]"
+        },
+        {
+          "t": "text",
+          "text": "Another way: two bars, one for the adults and one for the children, with the whole team shown along the top."
+        },
+        {
+          "t": "reveal",
+          "label": "Where is the whole team?",
+          "text": "The whole team is the whole length of the bar: 2 adults and 3 children make 5 people in one quiz team."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "3 teams take part",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If there are 3 teams, there are 3 times as many people, 3 times as many adults and 3 times as many children."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "5",
+              "add": "× 3",
+              "result": "15",
+              "note": "People: 5 in one team × 3 teams = 15 people."
+            },
+            {
+              "root": "2",
+              "add": "× 3",
+              "result": "6",
+              "note": "Adults: 2 in one team × 3 teams = 6 adults."
+            },
+            {
+              "root": "3",
+              "add": "× 3",
+              "result": "9",
+              "note": "Children: 3 in one team × 3 teams = 9 children."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We multiply everything by 3."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "6 children take part",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "This time we change the number of children. There were 3 children in one team and now there are 6, so there are 2 times as many."
+        },
+        {
+          "t": "text",
+          "text": "To keep the ratio the same we need 2 times as many adults: 2 × 2 = 4 adults."
+        },
+        {
+          "t": "text",
+          "text": "There are 2 teams, so 5 × 2 = 10 people in all."
+        },
+        {
+          "t": "callout",
+          "text": "Whichever value we change, we multiply all the others by the same amount."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Try it: quiz teams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each team has 2 adults and 3 children."
+        },
+        {
+          "t": "choices",
+          "q": "Work out the missing number.",
+          "items": [
+            {
+              "q": "There are 4 teams. How many children?",
+              "options": [
+                "12",
+                "7",
+                "8"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "There are 9 children. How many teams?",
+              "options": [
+                "6",
+                "3",
+                "9"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "There are 9 children. How many adults?",
+              "options": [
+                "3",
+                "6",
+                "9"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "There are 20 people in total. How many adults?",
+              "options": [
+                "4",
+                "8",
+                "10"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do the numbers mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Take 3 × 5 = 15 for the quiz teams."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**3** is the number of children in one team (3 parts of the bar).",
+            "**5** is the number of teams.",
+            "**15** is the number of children when there are 5 teams."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "So if there are 5 teams there will be 15 children. Every value in the bar is multiplied by 5."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each team has 2 adults and 3 children. Decide if each statement is true or false."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "If there are 8 teams, there will be 24 children.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "If there are 12 adults, there will be 15 children.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "If there are 21 children, there will be 7 teams.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Check the working",
+          "text": "8 teams: 3 × 8 = 24 children, so the first is true. 12 adults is 6 teams (2 × 6 = 12), so there are 3 × 6 = 18 children, not 15, so the second is false. 21 children is 7 teams (3 × 7 = 21), so the third is true."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Whole teams only",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If a team has 3 children, then however many complete teams you have, the number of children is a multiple of 3."
+        },
+        {
+          "t": "callout",
+          "text": "14 is not a multiple of 3. So 14 children cannot make a whole number of teams."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How many variables?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A variable is a value that can be represented by more than one number within a ratio problem."
+        },
+        {
+          "t": "text",
+          "text": "In the quiz problem we can vary 3 things:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "the number of teams",
+            "the number of adults",
+            "the number of children"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When we change one of them, that tells us how to change the others."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sandwiches: 4 variables",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every cheese and tomato sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato."
+        },
+        {
+          "t": "text",
+          "text": "There are 4 variables, because you can vary the number of:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            {
+              "text": "sandwiches"
+            },
+            {
+              "text": "slices of bread"
+            },
+            {
+              "text": "slices of cheese"
+            },
+            {
+              "text": "slices of tomato"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The whole bar is 1 sandwich, and each part of the bar is one ingredient: bread [1][1], cheese [1][1][1], tomato [1][1][1][1]."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sandwich problems",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How many sandwiches can you make with 26 slices of bread? 2 slices for each sandwich, so 26 ÷ 2 = 13 sandwiches. You need 13 times as much cheese and tomato as for 1 sandwich: 13 × 3 = 39 slices of cheese and 13 × 4 = 52 slices of tomato."
+        },
+        {
+          "t": "text",
+          "text": "How many slices of cheese for 100 sandwiches? 100 times as much cheese: 100 × 3 = 300 slices."
+        },
+        {
+          "t": "text",
+          "text": "You use 28 slices of tomato. 28 ÷ 4 = 7 sandwiches, so you need 7 times as much cheese: 7 × 3 = 21 slices."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Leftovers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A pack of cheese has 25 slices. How many sandwiches can you make?"
+        },
+        {
+          "t": "text",
+          "text": "Each sandwich uses 3 slices of cheese. 25 is not a multiple of 3, but 24 is a multiple of 3 (3 × 8 = 24)."
+        },
+        {
+          "t": "callout",
+          "text": "24 slices make 8 sandwiches, with 1 slice of cheese left over."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sandwich practice",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each sandwich uses 2 slices of bread, 3 slices of cheese and 4 slices of tomato."
+        },
+        {
+          "t": "choices",
+          "q": "Work out the missing number.",
+          "items": [
+            {
+              "q": "30 slices of bread make how many sandwiches?",
+              "options": [
+                "15",
+                "60",
+                "10"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "10 sandwiches need how many slices of tomato?",
+              "options": [
+                "30",
+                "40",
+                "20"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "36 slices of cheese make how many sandwiches?",
+              "options": [
+                "12",
+                "9",
+                "18"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "20 slices of tomato need how many slices of cheese?",
+              "options": [
+                "10",
+                "12",
+                "15"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pancakes: same multiple",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha is making pancakes. For every 2 eggs, she uses 3 spoons of sugar and 6 spoons of flour."
+        },
+        {
+          "t": "text",
+          "text": "All values are the same multiple of the original values. If she uses 4 times as many eggs, she needs 4 times as much sugar and flour: 8 eggs, 12 spoons of sugar and 24 spoons of flour."
+        },
+        {
+          "t": "choices",
+          "q": "Now you try. Same recipe.",
+          "items": [
+            {
+              "q": "Aisha uses 18 spoons of flour. How many eggs?",
+              "options": [
+                "6",
+                "3",
+                "9"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Aisha uses 15 spoons of sugar. How many eggs?",
+              "options": [
+                "5",
+                "10",
+                "15"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Aisha uses 6 eggs. How many spoons of sugar?",
+              "options": [
+                "9",
+                "12",
+                "18"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Explain how to represent ratio and to calculate unknown values",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "You can use a bar model to represent a ratio problem.",
+            "A variable is a value that can change within a ratio problem, such as the number of teams, adults and children.",
+            "You can use multiplication and division to calculate unknown values.",
+            "The bar model helps you see the relationship between the variables in the ratio problem."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a variable?",
+      "back": "A value which can be represented by more than one number within a situation or equation."
+    },
+    {
+      "front": "A quiz team has 2 adults and 3 children. How many people are in one team?",
+      "back": "5 people (2 + 3)."
+    },
+    {
+      "front": "Where is the whole team on a bar model?",
+      "back": "The whole length of the bar."
+    },
+    {
+      "front": "Quiz teams have 2 adults and 3 children. There are 3 teams. How many people?",
+      "back": "15 people.\n\n5 × 3 = 15"
+    },
+    {
+      "front": "Quiz teams have 2 adults and 3 children. There are 5 teams. How many children?",
+      "back": "15 children.\n\nEvery value is multiplied by 5, so 3 × 5 = 15."
+    },
+    {
+      "front": "Why can’t there be 14 children in the quiz teams (3 children per team)?",
+      "back": "14 is not a multiple of 3, so it does not make a whole number of teams."
+    },
+    {
+      "front": "How many variables are there in the cheese and tomato sandwich problem?",
+      "back": "4: sandwiches, slices of bread, slices of cheese and slices of tomato."
+    },
+    {
+      "front": "Sandwich: 2 bread, 3 cheese, 4 tomato. How many sandwiches from 26 slices of bread?",
+      "back": "13 sandwiches (26 ÷ 2 = 13)."
+    },
+    {
+      "front": "Sandwich: 2 bread, 3 cheese, 4 tomato. How much cheese for 100 sandwiches?",
+      "back": "300 slices (100 × 3)."
+    },
+    {
+      "front": "Sandwich: 2 bread, 3 cheese, 4 tomato. You have 25 slices of cheese. How many sandwiches, and what is left?",
+      "back": "8 sandwiches, with 1 slice of cheese left over.\n\n25 is not a multiple of 3 but 24 is."
+    },
+    {
+      "front": "Pancakes: 2 eggs, 3 spoons of sugar, 6 spoons of flour. What do 8 eggs need?",
+      "back": "12 spoons of sugar and 24 spoons of flour.\n\nAll values are multiplied by 4."
+    },
+    {
+      "front": "In a ratio problem, if you multiply one value by 2, what do you do to the others?",
+      "back": "Multiply them all by 2 as well, to keep the ratio the same."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how to represent ratio and to calculate unknown values",
+    "instructions": "Answer each question with a number. Drawing a bar model first can help you.",
+    "questions": [
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. There are 6 teams. How many children are there?",
+        "answer": "18",
+        "accepted": [
+          "18 children",
+          "eighteen"
+        ],
+        "explanation": "There are 6 times as many children as in one team: 3 × 6 = 18."
+      },
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. There are 12 adults. How many children are there?",
+        "answer": "18",
+        "accepted": [
+          "18 children",
+          "eighteen"
+        ],
+        "explanation": "12 adults is 6 teams (2 × 6 = 12), so there are 3 × 6 = 18 children."
+      },
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. How many people are there in 4 teams?",
+        "answer": "20",
+        "accepted": [
+          "20 people",
+          "twenty"
+        ],
+        "explanation": "One team has 5 people and 5 × 4 = 20."
+      },
+      {
+        "prompt": "For every cheese and tomato sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. How many variables are there in this problem?",
+        "answer": "4",
+        "accepted": [
+          "four",
+          "4 variables"
+        ],
+        "explanation": "You can vary the number of sandwiches, slices of bread, slices of cheese and slices of tomato."
+      },
+      {
+        "prompt": "For every sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. How many sandwiches can you make from a loaf with 26 slices of bread?",
+        "answer": "13",
+        "accepted": [
+          "13 sandwiches",
+          "thirteen"
+        ],
+        "explanation": "Each sandwich uses 2 slices of bread and 26 ÷ 2 = 13."
+      },
+      {
+        "prompt": "For every sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. How many slices of cheese do you need to make 100 sandwiches?",
+        "answer": "300",
+        "accepted": [
+          "300 slices",
+          "three hundred"
+        ],
+        "explanation": "You need 100 times as much cheese: 100 × 3 = 300."
+      },
+      {
+        "prompt": "For every sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. You use 28 slices of tomato. How many slices of cheese will you need?",
+        "answer": "21",
+        "accepted": [
+          "21 slices",
+          "twenty-one",
+          "twenty one"
+        ],
+        "explanation": "28 slices of tomato make 28 ÷ 4 = 7 sandwiches, and 7 × 3 = 21 slices of cheese."
+      },
+      {
+        "prompt": "For every sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. A pack of cheese has 25 slices. How many whole sandwiches can you make?",
+        "answer": "8",
+        "accepted": [
+          "8 sandwiches",
+          "eight"
+        ],
+        "explanation": "25 is not a multiple of 3 but 24 is, and 24 ÷ 3 = 8 sandwiches (1 slice left over)."
+      },
+      {
+        "prompt": "For every 2 eggs, Aisha uses 3 spoons of sugar and 6 spoons of flour. She uses 6 eggs. How many spoons of flour does she need?",
+        "answer": "18",
+        "accepted": [
+          "18 spoons",
+          "eighteen"
+        ],
+        "explanation": "6 eggs is 3 times 2 eggs, so she needs 6 × 3 = 18 spoons of flour."
+      },
+      {
+        "prompt": "For every 2 eggs, Aisha uses 3 spoons of sugar and 6 spoons of flour. She uses 15 spoons of sugar. How many eggs does she need?",
+        "answer": "10",
+        "accepted": [
+          "10 eggs",
+          "ten"
+        ],
+        "explanation": "15 spoons of sugar is 3 × 5, so she needs 2 × 5 = 10 eggs."
+      }
+    ]
+  }
+}

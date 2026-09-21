@@ -1,0 +1,806 @@
+{
+  "agent": "w4-comb-chem",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the properties of diamond and graphite and explain how they result from their giant covalent structures, as well as relate them to their uses."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Giant covalent} structures"
+            },
+            {
+              "title": "Diamond and graphite",
+              "sub": "properties and uses"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "allotrope",
+              "def": "A different structural form of an element, e.g. graphite and diamond are allotropes of carbon."
+            },
+            {
+              "term": "giant covalent structure",
+              "def": "A large regular arrangement of atoms all joined together by covalent bonds."
+            },
+            {
+              "term": "forces of attraction",
+              "def": "Any force that causes two or more substances to come together."
+            },
+            {
+              "term": "delocalised",
+              "def": "Particles are said to be delocalised when they are free to move through a structure. Delocalised electrons can carry an electrical current."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Simple molecules and giant structures",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Carbon does not only form simple molecules. It also forms giant covalent structures."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Simple molecules",
+              "sub": "held together with covalent bonds, a small defined number of atoms, individual molecules"
+            },
+            {
+              "title": "Giant covalent structures",
+              "sub": "a large undefined number of atoms in a regular repeated structure"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Giant structures: three kinds of bonding",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Not all giant structures are held together by covalent bonds. There are giant covalent, giant ionic and giant metallic structures."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Giant covalent",
+              "sub": "diamond, graphite, silicon dioxide"
+            },
+            {
+              "title": "Giant ionic",
+              "sub": "sodium chloride (salt)"
+            },
+            {
+              "title": "Giant metallic",
+              "sub": "copper"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How are the others held together?",
+          "text": "Sodium chloride is held together by the electrostatic force of attraction between ions. Copper is held together by metallic bonds, where electrons are shared among a lattice of positively charged metal ions."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the giant structures",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which kind of giant structure is each substance?",
+          "columns": [
+            "Giant covalent",
+            "Giant ionic",
+            "Giant metallic"
+          ],
+          "items": [
+            {
+              "text": "diamond",
+              "col": 0
+            },
+            {
+              "text": "silicon dioxide",
+              "col": 0
+            },
+            {
+              "text": "sodium chloride",
+              "col": 1
+            },
+            {
+              "text": "copper",
+              "col": 2
+            },
+            {
+              "text": "graphite",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Allotropes of carbon",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Carbon can form different substances using only carbon atoms. Each structure has its own properties and uses. We call different structures of the same element **allotropes**."
+        },
+        {
+          "t": "text",
+          "text": "The allotropes of carbon we look at today are two giant covalent structures: diamond and graphite."
+        },
+        {
+          "t": "callout",
+          "text": "Both are made of a very large number of carbon atoms, and the number depends on the size of the sample. So both have the chemical formula {C}."
+        },
+        {
+          "t": "reveal",
+          "label": "Is coal an allotrope?",
+          "text": "Coal does not have the same highly ordered regular structure as diamond and graphite. Coal is a complex mixture of molecules containing carbon."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Diamond’s structure",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In diamond, each carbon atom is covalently bonded to {four} other carbon atoms. This gives each carbon a tetrahedral shape."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The atoms are arranged in a rigid three-dimensional network.",
+            "Every carbon atom has four covalent bonds to other carbon atoms.",
+            "It is a giant covalent structure."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphite’s structure",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In graphite, each carbon atom is covalently bonded to only {three} other carbon atoms. This forms layers of hexagonal rings."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The atoms are bonded in flat, two-dimensional layers.",
+            "There are weak forces of attraction holding the layers together.",
+            "It is also a giant covalent structure with a regular repeating pattern."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Diamond or graphite?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which structure does each description fit?",
+          "columns": [
+            "Diamond",
+            "Graphite"
+          ],
+          "items": [
+            {
+              "text": "each carbon atom is bonded to four others",
+              "col": 0
+            },
+            {
+              "text": "layers of hexagonal rings",
+              "col": 1
+            },
+            {
+              "text": "a rigid three-dimensional network",
+              "col": 0
+            },
+            {
+              "text": "each carbon atom is bonded to three others",
+              "col": 1
+            },
+            {
+              "text": "weak forces of attraction between layers",
+              "col": 1
+            },
+            {
+              "text": "tetrahedral arrangement",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphite: melting point and softness",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Like all giant covalent structures, graphite has a high melting point (about 3600°C). A large number of strong covalent bonds hold all the atoms together, and lots of energy is needed to break them."
+        },
+        {
+          "t": "text",
+          "text": "But the layers of graphite are held together by only weak forces of attraction. These are easy to overcome, so the layers slide over each other easily."
+        },
+        {
+          "t": "callout",
+          "text": "So graphite is quite soft and a great {lubricant}."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Graphite does not have a low melting point just because there are weak forces between its layers. Every atom is still held by strong covalent bonds, so the melting point is high."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphite conducts electricity",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each carbon atom starts with 4 electrons in its outer shell. In graphite it forms three strong covalent bonds, which use up three of those electrons."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "4 outer electrons",
+              "add": "3 used in bonds",
+              "result": "1 spare electron",
+              "note": "4 − 3 = 1"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The spare electron can move through the layers of graphite. It is a **delocalised electron**. Each carbon atom contributes one."
+        },
+        {
+          "t": "callout",
+          "text": "When graphite is connected to a power supply, the delocalised electrons move through the layers carrying charge. So graphite conducts electricity."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Diamond’s properties",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Diamond has a rigid network of carbon atoms held together by strong covalent bonds. The atoms are fixed in place, so large amounts of energy are needed to break the bonds."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "High melting point",
+              "sub": "about 3600°C"
+            },
+            {
+              "title": "Very hard"
+            },
+            {
+              "title": "Does not conduct electricity",
+              "sub": "all four outer electrons are used in bonds, so there are no delocalised electrons"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "From property to use",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Graphite is also used in pencils because its layers slide off onto the paper. Match each property to its use."
+        },
+        {
+          "t": "match",
+          "q": "Match each property to a use.",
+          "pairs": [
+            {
+              "a": "graphite: high melting point",
+              "b": "lining kilns and furnaces"
+            },
+            {
+              "a": "graphite: layers slide over each other",
+              "b": "a lubricant"
+            },
+            {
+              "a": "graphite: conducts electricity",
+              "b": "electrodes for electrolysis"
+            },
+            {
+              "a": "diamond: very hard",
+              "b": "tool tips for cutting"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Explain it",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Why can diamond not conduct electricity?",
+          "options": [
+            "It has no delocalised electrons because all its outer electrons are used in covalent bonds.",
+            "It has weak forces between its layers.",
+            "It is made of simple molecules."
+          ],
+          "answer": 0,
+          "why": "In diamond each carbon uses all four outer electrons in bonds, so there are no free-moving charged particles."
+        },
+        {
+          "t": "choice",
+          "q": "What must be overcome for the layers of graphite to slide over each other?",
+          "options": [
+            "Strong covalent bonds",
+            "Weak forces of attraction between the layers",
+            "Ionic bonds"
+          ],
+          "answer": 1,
+          "why": "The layers are held together by weak forces of attraction, which are easy to overcome."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about diamond and graphite is correct?",
+          "options": [
+            "Both conduct electricity.",
+            "Both are allotropes of carbon.",
+            "Both have hexagonal rings of carbon atoms."
+          ],
+          "answer": 1,
+          "why": "Both are pure carbon in different structures, so both are allotropes. Only graphite conducts and only graphite has hexagonal rings."
+        },
+        {
+          "t": "choice",
+          "q": "Which is a correct statement?",
+          "options": [
+            "Graphite conducts electricity, diamond does not.",
+            "Diamond is soft, graphite is hard.",
+            "Graphite has a low melting point."
+          ],
+          "answer": 0,
+          "why": "Graphite has delocalised electrons; diamond has none. Diamond is very hard and graphite is soft, and both have very high melting points."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Diamond and graphite",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "In diamond each carbon atom is bonded to four others with strong covalent bonds to form a giant covalent structure.",
+            "Diamond is very hard, has a very high melting point and does not conduct electricity, which makes it good for cutting tools.",
+            "In graphite each carbon atom is covalently bonded to three others to form layers of hexagonal rings.",
+            "There are only weak forces between the layers in graphite, which can easily be rubbed apart, which makes it a good lubricant.",
+            "Graphite conducts electricity because it has delocalised electrons which can move and carry charge."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an allotrope?",
+      "back": "A different structural form of an element. Graphite and diamond are allotropes of carbon."
+    },
+    {
+      "front": "What is a giant covalent structure?",
+      "back": "A large regular arrangement of atoms all joined together by covalent bonds."
+    },
+    {
+      "front": "What is the chemical formula of diamond and graphite?",
+      "back": "Just C, because the number of carbon atoms is not fixed. They are both made only of carbon atoms."
+    },
+    {
+      "front": "How many other carbon atoms is each carbon atom bonded to in diamond?",
+      "back": "Four, with strong covalent bonds. This gives a rigid three-dimensional network."
+    },
+    {
+      "front": "How many other carbon atoms is each carbon atom bonded to in graphite?",
+      "back": "Three. This forms layers of hexagonal rings."
+    },
+    {
+      "front": "Why can the layers of graphite slide over each other?",
+      "back": "Only weak forces of attraction hold the layers together, and they are easy to overcome. This makes graphite a good lubricant."
+    },
+    {
+      "front": "Why does graphite conduct electricity?",
+      "back": "Each carbon atom contributes one delocalised electron. These electrons can move through the layers and carry charge."
+    },
+    {
+      "front": "What is a delocalised electron?",
+      "back": "An electron that is free to move through a structure. Delocalised electrons can carry an electrical current."
+    },
+    {
+      "front": "Name three properties of diamond.",
+      "back": "Very hard, a very high melting point, and does not conduct electricity."
+    },
+    {
+      "front": "Why does diamond not conduct electricity?",
+      "back": "All of carbon’s outer shell electrons are used up in covalent bonds, so there are no delocalised electrons."
+    },
+    {
+      "front": "Give two uses of diamond.",
+      "back": "Jewellery, and tool tips (it is very hard, so it is good at cutting materials)."
+    },
+    {
+      "front": "Give uses of graphite that come from its melting point, softness and conductivity.",
+      "back": "Lining kilns and furnaces (high melting point). Lubricants and pencils (soft). Electrodes and batteries (conducts electricity)."
+    },
+    {
+      "front": "What is coal, compared with diamond and graphite?",
+      "back": "A complex mixture of molecules containing carbon. It does not have their highly ordered regular structure."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Diamond and graphite",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "Fill in the gap with the word carbon, diamond or graphite. The atoms in ___ are arranged in a rigid, three-dimensional network.",
+        "answer": "diamond",
+        "explanation": "Diamond is the rigid three-dimensional network; graphite is made of flat layers."
+      },
+      {
+        "prompt": "Fill in the gap with the word carbon, diamond or graphite. In diamond, each ___ atom is covalently bonded to four other atoms of the same kind.",
+        "answer": "carbon",
+        "explanation": "Diamond is made only of carbon atoms."
+      },
+      {
+        "prompt": "Fill in the gap with the word carbon, diamond or graphite. The atoms in ___ are bonded in flat, two-dimensional layers, forming hexagonal rings.",
+        "answer": "graphite",
+        "explanation": "Graphite has flat layers of hexagonal rings."
+      },
+      {
+        "prompt": "How many other carbon atoms is each carbon atom covalently bonded to in graphite? Write a number.",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "In graphite each carbon atom is bonded to three others, in hexagonal rings."
+      },
+      {
+        "prompt": "What word means a different structural form of the same element, such as diamond and graphite?",
+        "answer": "allotrope",
+        "accepted": [
+          "allotropes"
+        ],
+        "explanation": "Diamond and graphite are different structural forms of carbon, so they are allotropes."
+      },
+      {
+        "prompt": "Graphite conducts electricity because it has ___ electrons which can move and carry charge.",
+        "answer": "delocalised",
+        "accepted": [
+          "delocalized"
+        ],
+        "explanation": "Each carbon atom in graphite contributes one delocalised electron."
+      },
+      {
+        "prompt": "Which one, diamond or graphite, conducts electricity?",
+        "answer": "graphite",
+        "explanation": "Graphite has delocalised electrons; diamond has none."
+      },
+      {
+        "prompt": "Which one, diamond or graphite, is used for tool tips for cutting because it is very hard?",
+        "answer": "diamond",
+        "explanation": "Diamond’s rigid network of strong covalent bonds makes it very hard."
+      },
+      {
+        "prompt": "Graphite is used as a lubricant because its layers slide over each other. What holds the layers together: strong covalent bonds or weak forces of attraction? Answer with the word strong or weak.",
+        "answer": "weak",
+        "explanation": "Only weak forces of attraction hold the layers together, so they slide easily."
+      },
+      {
+        "prompt": "Does diamond conduct electricity? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "it does not",
+          "does not"
+        ],
+        "explanation": "All of carbon’s outer electrons are used in covalent bonds in diamond, so there are no delocalised electrons to carry charge."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 5,
+        "doThis": [
+          "Start with quick revision: the key feature of a giant covalent structure is covalent bonds, and its atoms form a large regular arrangement. Substances with giant covalent structures typically have high melting and boiling points.",
+          "Read the goal together, then look at the four key words: allotrope, giant covalent, forces of attraction, delocalised.",
+          "Ask what each key word means before showing the meaning."
+        ],
+        "say": "I can describe the properties of diamond and graphite and explain how they result from their giant covalent structures, as well as relate them to their uses.",
+        "keywords": [
+          {
+            "term": "allotrope",
+            "meaning": "A different structural form of an element, e.g. graphite and diamond are allotropes of carbon."
+          },
+          {
+            "term": "giant covalent",
+            "meaning": "A large regular arrangement of atoms all joined together by covalent bonds."
+          },
+          {
+            "term": "forces of attraction",
+            "meaning": "Forces of attraction refer to any force that causes two or more substances to come together."
+          },
+          {
+            "term": "delocalised",
+            "meaning": "Particles are said to be delocalised when they are free to move through a structure (delocalised electrons can carry an electrical current)."
+          }
+        ],
+        "checkFor": {
+          "ask": "What is an allotrope?",
+          "lookFor": "A different structural form of an element, e.g. graphite and diamond are allotropes of carbon."
+        },
+        "recap": [
+          "Our goal: I can describe the properties of diamond and graphite and explain how they come from their structures.",
+          "An allotrope is a different structural form of an element."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Simple molecules and giant structures",
+        "minutes": 5,
+        "doThis": [
+          "Explain that carbon forms simple molecules and also giant covalent structures.",
+          "Compare them: simple molecules are individual molecules held together with covalent bonds and contain a small, defined number of atoms. Giant covalent structures contain a large, undefined number of atoms in a regular, repeated structure.",
+          "Explain that not all giant structures are held together by covalent bonds: giant ionic and giant metallic structures exist as well."
+        ],
+        "keyIdeas": [
+          "A giant covalent structure is a large regular arrangement of atoms all joined together by covalent bonds."
+        ],
+        "keywords": [
+          {
+            "term": "giant covalent",
+            "meaning": "A large regular arrangement of atoms all joined together by covalent bonds."
+          }
+        ],
+        "examples": [
+          "Silicon dioxide (SiO₂) is a giant covalent structure."
+        ],
+        "checkFor": {
+          "ask": "What is the difference between a simple molecule and a giant covalent structure?",
+          "lookFor": "A simple molecule has a small, defined number of atoms. A giant covalent structure has a large, undefined number of atoms in a regular, repeated structure."
+        },
+        "recap": [
+          "Giant covalent structures have a very large number of atoms in a regular pattern, all joined by covalent bonds.",
+          "Simple molecules have a small number of atoms."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Allotropes of carbon and the structure of diamond",
+        "minutes": 6,
+        "doThis": [
+          "Explain that carbon can form different substances using just carbon atoms. Each structure has its own properties and uses, and different structures of the same element are called allotropes.",
+          "Explain that diamond and graphite are two allotropes of carbon and are both giant covalent structures. They are made of very large numbers of carbon atoms, so their formula is just C.",
+          "Then look at diamond: each carbon atom is covalently bonded to four other carbon atoms, in a rigid three-dimensional network."
+        ],
+        "keyIdeas": [
+          "In diamond each carbon atom is bonded to four others with strong covalent bonds to form a giant covalent structure."
+        ],
+        "keywords": [
+          {
+            "term": "allotrope",
+            "meaning": "A different structural form of an element, e.g. graphite and diamond are allotropes of carbon."
+          }
+        ],
+        "checkFor": {
+          "ask": "How many other carbon atoms is each carbon atom in diamond bonded to?",
+          "lookFor": "Four, with strong covalent bonds."
+        },
+        "recap": [
+          "Diamond and graphite are both allotropes of carbon, and both have the formula C.",
+          "In diamond, each carbon atom is bonded to four others with strong covalent bonds."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The structure of graphite",
+        "minutes": 5,
+        "doThis": [
+          "Explain that in graphite each carbon atom is covalently bonded to only three other carbon atoms, forming layers of hexagonal rings. The atoms are bonded in flat, two-dimensional layers.",
+          "Explain that there are weak forces of attraction between the layers. Graphite is also a giant covalent structure with a regular repeating pattern."
+        ],
+        "keyIdeas": [
+          "In graphite, each carbon atom is covalently bonded to three others to form layers of hexagonal rings.",
+          "There are only weak forces between the layers in graphite."
+        ],
+        "checkFor": {
+          "ask": "How many other carbon atoms is each carbon atom in graphite bonded to, and what shape do they form?",
+          "lookFor": "Three, forming layers of hexagonal rings."
+        },
+        "recap": [
+          "In graphite, each carbon atom is bonded to three others.",
+          "This makes layers of hexagonal rings, with only weak forces between the layers."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Properties and uses of graphite",
+        "minutes": 8,
+        "doThis": [
+          "Explain the melting point: like all giant covalent structures, graphite has a high melting point, because a large number of strong covalent bonds hold all the atoms together.",
+          "Explain the softness: the layers are held together by only weak forces of attraction, which are easy to overcome, so the layers move over each other. This makes graphite quite soft and a great lubricant.",
+          "Explain the conductivity: each carbon atom starts with 4 electrons in its outer shell and uses three of them in three covalent bonds. The spare fourth electron is delocalised, so it can move through the layers and carry charge. Then link each property to a use."
+        ],
+        "keyIdeas": [
+          "There are only weak forces between the layers in graphite which can easily be rubbed apart (makes it a good lubricant).",
+          "Graphite conducts electricity because it has delocalised electrons which can move and carry charge/current."
+        ],
+        "keywords": [
+          {
+            "term": "forces of attraction",
+            "meaning": "Forces of attraction refer to any force that causes two or more substances to come together."
+          },
+          {
+            "term": "delocalised",
+            "meaning": "Particles are said to be delocalised when they are free to move through a structure (delocalised electrons can carry an electrical current)."
+          }
+        ],
+        "examples": [
+          "High melting point: used to line kilns and furnaces.",
+          "Soft, with layers that move over each other: used as a lubricant, and in pencils.",
+          "Conducts electricity: used for electrodes (in electrolysis) and in batteries.",
+          "4 outer electrons, 3 used in bonds, so 4 − 3 = 1 spare electron."
+        ],
+        "checkFor": {
+          "ask": "Why can graphite conduct electricity?",
+          "lookFor": "It has delocalised electrons, which can move through the layers and carry charge."
+        },
+        "recap": [
+          "Graphite has a high melting point because of its many strong covalent bonds.",
+          "Its layers move over each other easily because only weak forces hold them together, so it is soft and a good lubricant.",
+          "It conducts electricity because each carbon atom has one delocalised electron that can move and carry charge."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Properties and uses of diamond",
+        "minutes": 5,
+        "doThis": [
+          "Explain that diamond has a rigid network of carbon atoms held together by strong covalent bonds. The atoms are fixed in place, so large amounts of energy are needed to break the bonds.",
+          "Explain that this makes diamond very hard, with a very high melting point.",
+          "Explain that all of the outer electrons of each carbon are used in covalent bonds, so there are no delocalised electrons and diamond does not conduct electricity. Then link the properties to uses."
+        ],
+        "keyIdeas": [
+          "Diamond is very hard, has a very high melting point and does not conduct electricity (makes it good for cutting tools)."
+        ],
+        "examples": [
+          "Very hard: used for tool tips, which cut other materials.",
+          "Looks appealing when cut into shape: used in jewellery."
+        ],
+        "checkFor": {
+          "ask": "Why does diamond not conduct electricity?",
+          "lookFor": "All of the outer electrons of each carbon atom are used in covalent bonds, so there are no delocalised electrons."
+        },
+        "recap": [
+          "Diamond is very hard and has a very high melting point, because its rigid network of strong covalent bonds is hard to break.",
+          "It does not conduct electricity, because it has no delocalised electrons."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Compare diamond and graphite together",
+        "minutes": 7,
+        "doThis": [
+          "Give the student some statements about diamond and graphite and ask which are correct. Ask them to correct the wrong ones and say why.",
+          "Then fill in a table together for conductivity, hardness, melting point and example use, and explain each property using bonding and structure."
+        ],
+        "examples": [
+          "Graphite is made of layers of carbon atoms that can move over each other: correct.",
+          "Graphite and diamond can both conduct electricity: wrong. Only graphite conducts, because it has delocalised electrons; diamond has no free moving charged particles.",
+          "Graphite has a low melting point because of weak forces of attraction: wrong. It has a high melting point, because the carbon atoms are bonded together with strong covalent bonds that need large amounts of energy to break.",
+          "Diamond is a hard substance and is used to cut other materials: correct."
+        ],
+        "checkFor": {
+          "ask": "Why is graphite soft, but diamond very hard?",
+          "lookFor": "Graphite has layers held together by only weak forces, so they move over each other. In diamond all the carbon atoms are bonded together and fixed in place."
+        },
+        "recap": [
+          "Only graphite conducts electricity, because only graphite has delocalised electrons.",
+          "Both have a very high melting point because of strong covalent bonds.",
+          "Graphite is soft because its layers move over each other. Diamond is very hard because its atoms are fixed in place."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 5,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks what an allotrope is, what makes diamond so hard, why graphite is a lubricant, how many bonds each carbon atom makes in diamond and in graphite, and why graphite conducts electricity.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain how the structures of diamond and graphite give them different properties and uses.",
+          "Finish with the summary: in diamond each carbon atom is bonded to four others with strong covalent bonds; in graphite each carbon atom is bonded to three others, forming layers of hexagonal rings; only graphite conducts electricity, because of its delocalised electrons."
+        ],
+        "checkFor": {
+          "ask": "How many bonds does each carbon atom make in diamond, and how many in graphite?",
+          "lookFor": "Four in diamond, and three in graphite."
+        },
+        "recap": [
+          "Can you do it now? I can describe the properties of diamond and graphite and explain how they result from their structures.",
+          "Remember: diamond is very hard and does not conduct. Graphite is a soft lubricant that does conduct."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils think all carbon forms are alike, and ignore the effect of structure on properties.",
+        "fix": "Emphasise the link between structure and properties. Use models to show how the different bonding in diamond and graphite affects their properties."
+      },
+      {
+        "mistake": "Pupils think graphite has a low melting point because of the weak forces between its layers.",
+        "fix": "The weak forces are only between the layers. Every carbon atom is still held by strong covalent bonds, so graphite has a high melting point."
+      },
+      {
+        "mistake": "Pupils think graphite conducts because carbon ions can move.",
+        "fix": "Graphite conducts because it has delocalised electrons. Each carbon atom uses three of its four outer electrons in bonds, and the spare electron can move and carry charge."
+      }
+    ],
+    "watchOut": [
+      "Coal does not have the highly ordered regular structure of diamond and graphite. Coal is a complex mixture of molecules containing carbon.",
+      "Ask the student to explain each property by using the bonding and structure, not just to name it.",
+      "Use models of the two structures so the student can see the four bonds around each carbon in diamond and the layers in graphite."
+    ]
+  }
+}

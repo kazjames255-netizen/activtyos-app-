@@ -1,0 +1,557 @@
+{
+  "agent": "w4-maths-ks4a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can define function notation."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "f(x)",
+              "sub": "a shorthand for a function"
+            },
+            {
+              "title": "Beyond f(x)",
+              "sub": "f(4x), 2f(x), f(x + 5) and more"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "function",
+              "def": "A function is a mathematical relationship that uniquely maps values of one set to the values of another set."
+            },
+            {
+              "term": "domain",
+              "def": "The domain of a function is the set of values that the mapping is performed on."
+            },
+            {
+              "term": "range",
+              "def": "The range of a function is the set of values mapped to by the function and the stated domain."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A shorthand for a function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A function like ×3 + 5 uniquely maps an input to an output. All of the inputs make up the domain, and all of the possible outputs make up the range."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "0 → 5",
+            "1 → 8",
+            "2 → 11",
+            "3 → 14"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "If we perform this function on x, we get 3x + 5. This is called “the function 3x + 5”, but we write it using shorthand notation."
+        },
+        {
+          "t": "callout",
+          "text": "{f(x) = 3x + 5}"
+        },
+        {
+          "t": "text",
+          "text": "The notation means the whole function does not need to be written out each time. It should always be defined at the start."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the description to the notation",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each description to the correct function notation.",
+          "pairs": [
+            {
+              "a": "x is multiplied by 6 and then 2 is added",
+              "b": "f(x) = 6x + 2"
+            },
+            {
+              "a": "x is multiplied by 2 and then 6 is added",
+              "b": "f(x) = 2x + 6"
+            },
+            {
+              "a": "x is squared and then 6 is added",
+              "b": "f(x) = x² + 6"
+            },
+            {
+              "a": "x is multiplied by 6 and then 2 is subtracted",
+              "b": "f(x) = 6x − 2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What does f(x) mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep asks: “In algebra, ab means a × b. Doesn’t that mean f(x) is the same as f × x?”"
+        },
+        {
+          "t": "reveal",
+          "label": "Sam’s answer",
+          "text": "In algebra ab is a × b, but f(x) is function notation. f(x) means “a function of x”. In f(x), x is still a variable, but the f is not a variable."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement is true?",
+          "options": [
+            "f(x) means f multiplied by x",
+            "f(x) means f equals x",
+            "f(x) means a function of x"
+          ],
+          "answer": 2,
+          "why": "f(x) means “a function of x”. It does not mean f × x."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphs, labels and other functions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Graphing f(x) = 3x + 5 uses the same skills as graphing the equation y = 3x + 5. The x values go into the function and the outputs are plotted."
+        },
+        {
+          "t": "text",
+          "text": "You might see the vertical axis labelled f(x), or you might see it labelled y. When that happens you will see y = f(x)."
+        },
+        {
+          "t": "text",
+          "text": "We can name other functions too: g(x), h(x) and so on. This is useful when several functions are graphed on the same axes, such as f(x) = 3x + 5 and g(x) = 7 − 2x. We write y = g(x) for the second graph."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Functions that need a restriction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A valid function uniquely maps all inputs onto a value in the range. The relationship f(x) = 1/x is not a valid function, because 0 is not a valid input."
+        },
+        {
+          "t": "text",
+          "text": "We make it valid by restricting the domain: f(x) = 1/x, x ≠ 0. Now every value in the domain can be uniquely mapped onto a value in the range."
+        },
+        {
+          "t": "choice",
+          "q": "Which domain restriction is needed for f(x) = 3/(x − 4)?",
+          "options": [
+            "x ≠ −4",
+            "x ≠ 4",
+            "No restriction is needed"
+          ],
+          "answer": 1,
+          "why": "When x = 4 the denominator is 0, and we cannot divide by 0."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Substituting into a function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When substituting into a function, use this notation. For f(x) = 9 − 3x:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(−2) = 9 − 3(−2) = 15",
+            "f(−1) = 9 − 3(−1) = 12",
+            "f(0) = 9 − 3(0) = 9",
+            "f(1) = 9 − 3(1) = 6",
+            "f(2) = 9 − 3(2) = 3",
+            "f(3) = 9 − 3(3) = 0"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We can plot these coordinate pairs and draw a line through them."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Evaluate the function",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct value.",
+          "items": [
+            {
+              "q": "g(x) = 5x − 3. What is g(4)?",
+              "options": [
+                "17",
+                "23",
+                "−7"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "g(x) = 5x − 3. What is g(−2)?",
+              "options": [
+                "−7",
+                "7",
+                "−13"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "h(x) = x² − 3x. What is h(5)?",
+              "options": [
+                "10",
+                "40",
+                "−5"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "h(x) = x² − 3x. What is h(−2)?",
+              "options": [
+                "−2",
+                "10",
+                "−10"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Test your thinking",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam is mapping the function f(x) = 10 − 4x. Sam says: “I know that f(2) = 2, so I think f(−2) = −2. It must be the opposite.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Show Sam why this is wrong",
+          "text": "Evaluate it: f(−2) = 10 − 4(−2) = 10 + 8 = 18. It is always a good idea to test your thinking."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Beyond f(x)",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Function notation can be useful when we wish to manipulate a function. We can evaluate these for any valid value of x:"
+        },
+        {
+          "t": "match",
+          "q": "Match the notation to what it means.",
+          "pairs": [
+            {
+              "a": "2f(x)",
+              "b": "Evaluate the function for the given value of x, then multiply the result by 2"
+            },
+            {
+              "a": "f(4x)",
+              "b": "Multiply the given value of x by 4, then substitute this value into the function"
+            },
+            {
+              "a": "f(x + 5)",
+              "b": "Add 5 to the given value of x, then substitute this value into the function"
+            },
+            {
+              "a": "f(x − 5)",
+              "b": "Subtract 5 from the given value of x, then substitute this value into the function"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "f(x) = 3x − 10. Evaluate each of these when x = 8."
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(8) = 3(8) − 10 = 14",
+            "2f(8) = 2 × f(8) = 2 × 14 = 28",
+            "f(4x) = f(4 × 8) = f(32) = 3(32) − 10 = 86",
+            "f(x + 5) = f(8 + 5) = f(13) = 3(13) − 10 = 29"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It is important to multiply x by 4 {before} performing the function on it."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Your turn",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "g(x) = 5x + 2. Evaluate each of these when x = 4.",
+          "items": [
+            {
+              "q": "g(x)",
+              "options": [
+                "22",
+                "18",
+                "14"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "3g(x)",
+              "options": [
+                "22",
+                "66",
+                "30"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "g(2x)",
+              "options": [
+                "42",
+                "24",
+                "44"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "g(x − 1)",
+              "options": [
+                "17",
+                "12",
+                "22"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two functions, two inputs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "f(x) = 2x + 7 and g(x) = 3x + 2. Evaluate f(4) + g(5)."
+        },
+        {
+          "t": "text",
+          "text": "Andeep wants to simplify first: f(x) + g(x) = 5x + 9. Sam spots a problem: what x value would we substitute in, 4 or 5?"
+        },
+        {
+          "t": "callout",
+          "text": "We cannot combine the functions here, because there are two different x values. Evaluate f(4) and g(5) {separately}, then add."
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(4) = 2(4) + 7 = 15",
+            "g(5) = 3(5) + 2 = 17",
+            "f(4) + g(5) = 15 + 17 = 32"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "f(x) = 3x + 1 and g(x) = 10 − 2x. What is f(2) + g(4)?",
+          "options": [
+            "9",
+            "19",
+            "11"
+          ],
+          "answer": 0,
+          "why": "f(2) = 3(2) + 1 = 7 and g(4) = 10 − 2(4) = 2, so f(2) + g(4) = 7 + 2 = 9."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Defining function notation",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "f(x) means “a function of x” and not f × x.",
+            "An efficient way to write “x is multiplied by 7 then add 3” is f(x) = 7x + 3.",
+            "Multiple functions can be written like this: f(x), g(x), h(x) and so on.",
+            "Functions can be manipulated and evaluated, for example f(2), g(5), h(−1) and 6f(2)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does f(x) mean?",
+      "back": "“A function of x”. It does not mean f × x.\n\nIn f(x), x is still a variable, but the f is not a variable."
+    },
+    {
+      "front": "Write “the function 3x + 5” using function notation.",
+      "back": "f(x) = 3x + 5"
+    },
+    {
+      "front": "Why do we use function notation?",
+      "back": "It is a shorthand: the whole function does not need to be written out each time. It should always be defined at the start."
+    },
+    {
+      "front": "How can the vertical axis be labelled when we graph a function?",
+      "back": "f(x), or y. When it is y you will see y = f(x)."
+    },
+    {
+      "front": "How can we name more than one function?",
+      "back": "f(x), g(x), h(x) and so on."
+    },
+    {
+      "front": "Why is f(x) = 1/x not a valid function, and how do we fix it?",
+      "back": "0 is not a valid input.\n\nRestrict the domain: f(x) = 1/x, x ≠ 0."
+    },
+    {
+      "front": "f(x) = 9 − 3x. Find f(−2).",
+      "back": "f(−2) = 9 − 3(−2) = 15"
+    },
+    {
+      "front": "What does 2f(x) mean?",
+      "back": "Evaluate the function for the given value of x, then multiply the result by 2."
+    },
+    {
+      "front": "What does f(4x) mean?",
+      "back": "Multiply the given value of x by 4, then substitute this value into the function."
+    },
+    {
+      "front": "What does f(x + 5) mean?",
+      "back": "Add 5 to the given value of x, then substitute this value into the function."
+    },
+    {
+      "front": "f(x) = 3x − 10. Find f(4x) when x = 8.",
+      "back": "f(4 × 8) = f(32) = 3(32) − 10 = 86"
+    },
+    {
+      "front": "f(x) = 2x + 7 and g(x) = 3x + 2. How do you evaluate f(4) + g(5)?",
+      "back": "Evaluate f(4) and g(5) separately, then add: 15 + 17 = 32.\n\nWe cannot combine the functions first, because the x values are different."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Defining function notation",
+    "instructions": "Work out each value. Answer with a number.",
+    "questions": [
+      {
+        "prompt": "f(x) = 6x − 13. What is f(4)?",
+        "answer": "11",
+        "accepted": [
+          "11"
+        ],
+        "explanation": "f(4) = 6(4) − 13 = 24 − 13 = 11."
+      },
+      {
+        "prompt": "g(x) = x² + 3x. What is g(−4)?",
+        "answer": "4",
+        "accepted": [
+          "4"
+        ],
+        "explanation": "g(−4) = (−4)² + 3(−4) = 16 − 12 = 4."
+      },
+      {
+        "prompt": "h(x) = x³ − x². What is h(−2)?",
+        "answer": "-12",
+        "accepted": [
+          "-12",
+          "−12",
+          "minus 12",
+          "negative 12"
+        ],
+        "explanation": "h(−2) = (−2)³ − (−2)² = −8 − 4 = −12."
+      },
+      {
+        "prompt": "Sam is mapping f(x) = 15 − 7x. Sam knows f(2) = 1 and thinks f(−2) = −1. What is the true value of f(−2)?",
+        "answer": "29",
+        "accepted": [
+          "29"
+        ],
+        "explanation": "f(−2) = 15 − 7(−2) = 15 + 14 = 29, so it is not the opposite."
+      },
+      {
+        "prompt": "f(x) = 7x + 12. Evaluate f(4x) when x = 6.",
+        "answer": "180",
+        "accepted": [
+          "180"
+        ],
+        "explanation": "f(4 × 6) = f(24) = 7(24) + 12 = 180."
+      },
+      {
+        "prompt": "f(x) = 7x + 12. Evaluate 2f(x − 1) when x = 6.",
+        "answer": "94",
+        "accepted": [
+          "94"
+        ],
+        "explanation": "2f(6 − 1) = 2f(5) = 2(7(5) + 12) = 2 × 47 = 94."
+      },
+      {
+        "prompt": "f(x) = 7x + 12 and g(x) = 8 − 7x. Evaluate f(1) + g(2).",
+        "answer": "13",
+        "accepted": [
+          "13"
+        ],
+        "explanation": "f(1) = 19 and g(2) = 8 − 14 = −6, so f(1) + g(2) = 19 + (−6) = 13."
+      },
+      {
+        "prompt": "f(x) = 7x + 12 and h(x) = x² − 2x. Evaluate f(5) + h(6).",
+        "answer": "71",
+        "accepted": [
+          "71"
+        ],
+        "explanation": "f(5) = 47 and h(6) = 36 − 12 = 24, so f(5) + h(6) = 71."
+      },
+      {
+        "prompt": "f(x) = 3x + 9 and g(x) = 8 − x. Evaluate f(3) + g(4).",
+        "answer": "22",
+        "accepted": [
+          "22"
+        ],
+        "explanation": "f(3) = 18 and g(4) = 4. The x values are different, so evaluate separately: 18 + 4 = 22."
+      }
+    ]
+  }
+}

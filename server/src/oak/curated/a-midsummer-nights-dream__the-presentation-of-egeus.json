@@ -1,0 +1,499 @@
+{
+  "agent": "english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how Shakespeare presents the character of Egeus in ‘A Midsummer Night’s Dream’, including considering relevant context."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Elizabethan attitudes",
+              "sub": "women and the supernatural"
+            },
+            {
+              "title": "Writing about Egeus’s language",
+              "sub": "using context"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "context",
+              "def": "information about when and why a text was written that helps us understand a text more deeply"
+            },
+            {
+              "term": "supernatural",
+              "def": "something that can’t be explained by the laws of nature"
+            },
+            {
+              "term": "patriarchy",
+              "def": "a society in which men hold the power; the laws and structure of that society prevent women from having power"
+            },
+            {
+              "term": "bewitch",
+              "def": "to put a magical spell on someone"
+            },
+            {
+              "term": "Elizabethan",
+              "def": "a person alive when Elizabeth I was on the throne (1558-1603); the first audiences of ‘A Midsummer Night’s Dream’ were Elizabethan"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Egeus’s angry speech",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Act 1, Egeus complains about his daughter Hermia to Duke Theseus:"
+        },
+        {
+          "t": "text",
+          "text": "“Stand forth Demetrius. - My noble lord, / This man hath my consent to marry her. - Stand forth Lysander. - And my gracious Duke, / This hath bewitched the bosom of my child. [...] With cunning hast thou filched [stolen] my daughter’s heart, / Turned her obedience, which is due to me, / To stubborn harshness.” (1.1.21-39)"
+        },
+        {
+          "t": "text",
+          "text": "Egeus is angry with Hermia, but he is also angry with Lysander."
+        },
+        {
+          "t": "reveal",
+          "label": "What does he accuse Lysander of?",
+          "text": "Of bewitching Hermia, putting a spell on her, and of using cunning to steal her heart. He says Lysander has turned her obedience into stubborn harshness."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another angry father",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Shakespeare explores angry fathers in lots of his plays. In his tragedy ‘Othello’, a daughter called Desdemona disobeys her father, Brabantio, by marrying a man called Othello. Brabantio says to Othello:"
+        },
+        {
+          "t": "text",
+          "text": "“O thou foul thief, where hast thou stow’d my daughter? [...] thou hast enchanted her;” (1.2.80-81)"
+        },
+        {
+          "t": "reveal",
+          "label": "What is similar?",
+          "text": "Both fathers accuse the man of stealing their daughter (“thief”, “filched”) and of using magic (“enchanted”, “bewitched”). Both fathers see their daughters as stolen from them through supernatural methods."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Who were the Elizabethans?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘A Midsummer Night’s Dream’ was first performed to an **Elizabethan** audience. Elizabethans were alive when Elizabeth I was on the throne (1558-1603)."
+        },
+        {
+          "t": "text",
+          "text": "Shakespeare was an Elizabethan, and so were the play’s first audiences. So we need to think about how he might be entertaining, challenging or connecting to his audience."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about ‘A Midsummer Night’s Dream’ is correct?",
+          "options": [
+            "The characters in the play are Elizabethans",
+            "The play is set in Elizabethan England",
+            "The play was first watched by an Elizabethan audience"
+          ],
+          "answer": 2,
+          "why": "The play is set in Athens, many centuries before the Elizabethan period, so its characters are not Elizabethans. But Shakespeare and the first audiences were Elizabethan."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The play is set in Athens, long before the Elizabethan period. Shakespeare brings Elizabethan attitudes and ideas into the play to connect with his audience."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Elizabethan attitudes to women",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Even though the monarch was a woman, Elizabethan women were considered inferior to men. It was a patriarchal society."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Elizabethan women were expected to obey men, particularly their father or husband.",
+            "Fathers would often control who their daughters married, passing control of their daughters to their husband on marriage."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "This information is called **context**. It helps us understand characters and ideas in a play."
+        },
+        {
+          "t": "reveal",
+          "label": "Why might an Elizabethan audience think Egeus’s anger is justified?",
+          "text": "Elizabethan fathers were expected to have a strong say in who their daughters married. Egeus has chosen Demetrius and Hermia fights against it, so an audience might see her as a disobedient daughter."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Elizabethan attitudes to the supernatural",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Egeus does not just say Lysander has stolen Hermia. He says Lysander has **bewitched** her, using the **supernatural**."
+        },
+        {
+          "t": "text",
+          "text": "Elizabethans had some important beliefs about the supernatural. The Church and the legal profession claimed the supernatural was evil and connected to the devil."
+        },
+        {
+          "t": "reveal",
+          "label": "How might an Elizabethan audience react to “bewitched”?",
+          "text": "It would sound very serious. The word conveys how harmful and dangerous Egeus believes Lysander is."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the attitudes",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Was this an Elizabethan attitude to women or to the supernatural?",
+          "columns": [
+            "Attitude to women",
+            "Attitude to the supernatural"
+          ],
+          "items": [
+            {
+              "text": "Women should obey their fathers and husbands",
+              "col": 0
+            },
+            {
+              "text": "Women were considered inferior to men",
+              "col": 0
+            },
+            {
+              "text": "Fathers often chose who their daughters married",
+              "col": 0
+            },
+            {
+              "text": "It was evil and connected to the devil",
+              "col": 1
+            },
+            {
+              "text": "The Church and the legal profession claimed it was evil",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why did Shakespeare include these ideas?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Shakespeare included ideas about the patriarchy and the supernatural in his plays as a way to connect to his audiences."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "disobedient daughters",
+            "angry fathers",
+            "the supernatural"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When writing about ‘A Midsummer Night’s Dream’, include context to help develop your ideas."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing with context: Egeus as a patriarch",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lucas writes:"
+        },
+        {
+          "t": "text",
+          "text": "“Shakespeare presents Egeus as a patriarch in Act 1. He says that Hermia’s ‘obedience’ is ‘due to’ him because he is her father. This idea that Hermia should do what her father wishes reflects typical Elizabethan attitudes towards the status of women in society.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Where is the context?",
+          "text": "The last sentence is the context: it links Egeus’s idea that Hermia should obey to typical Elizabethan attitudes towards women. The context helps to develop his quotations."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing with context: Egeus as furious",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lucas writes another answer: “Shakespeare presents Egeus as furious in Act 1. He believes that Lysander has ‘bewitched’ his daughter.” What contextual idea could develop this?"
+        },
+        {
+          "t": "reveal",
+          "label": "Add the context",
+          "text": "Elizabethans had strong beliefs about the supernatural, connecting it to evil and the devil. The word “bewitched” would convey how harmful and dangerous Egeus believes Lysander is."
+        },
+        {
+          "t": "callout",
+          "text": "You can refer to Elizabethan England because Shakespeare was an Elizabethan, writing for an Elizabethan audience. You can also refer to ‘Othello’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the context",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which sentence adds context?",
+              "options": [
+                "Egeus says Lysander has “bewitched” his child.",
+                "Elizabethans linked the supernatural with evil, so “bewitched” sounds very harmful."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which sentence uses context correctly?",
+              "options": [
+                "Egeus is Elizabethan, so he chooses a husband for Hermia.",
+                "Elizabethan fathers often controlled who their daughters married, so Egeus’s “consent” matters."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which key word describes a society in which men hold the power?",
+              "options": [
+                "patriarchal",
+                "supernatural",
+                "bewitched"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Egeus’s language",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each quotation to what it shows.",
+          "pairs": [
+            {
+              "a": "“bewitched”",
+              "b": "Egeus accuses Lysander of putting a magical spell on Hermia"
+            },
+            {
+              "a": "“filched”",
+              "b": "Egeus says Lysander has stolen Hermia’s heart with cunning"
+            },
+            {
+              "a": "“thou hast enchanted her”",
+              "b": "Brabantio accuses Othello of using magic on his daughter"
+            },
+            {
+              "a": "“obedience, which is due to me”",
+              "b": "Egeus believes that his daughter owes him obedience"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "The presentation of Egeus",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "‘A Midsummer Night’s Dream’ was first performed to an Elizabethan audience.",
+            "Elizabethans believed women should obey their fathers and husbands.",
+            "Elizabethans believed the supernatural was evil.",
+            "Shakespeare included ideas about the patriarchy and the supernatural in his plays as a way to connect to his audiences.",
+            "When writing about ‘A Midsummer Night’s Dream’, you should include context to help develop your ideas."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is context?",
+      "back": "Information about when and why a text was written that helps us understand a text more deeply."
+    },
+    {
+      "front": "Who is an Elizabethan?",
+      "back": "A person alive when Elizabeth I was on the throne (1558-1603)."
+    },
+    {
+      "front": "Who watched ‘A Midsummer Night’s Dream’ when it was first performed?",
+      "back": "An Elizabethan audience."
+    },
+    {
+      "front": "Are the characters in the play Elizabethans?",
+      "back": "No. The play is set in Athens, long before the Elizabethan period. But Shakespeare and his first audiences were Elizabethan."
+    },
+    {
+      "front": "What did Elizabethans believe women should do?",
+      "back": "Obey their fathers and husbands."
+    },
+    {
+      "front": "Who often controlled who a daughter married in Elizabethan society?",
+      "back": "Her father, who then passed control of her to her husband on marriage."
+    },
+    {
+      "front": "What did Elizabethans believe about the supernatural?",
+      "back": "That it was evil. The Church and the legal profession connected it to the devil."
+    },
+    {
+      "front": "What does ‘bewitch’ mean?",
+      "back": "To put a magical spell on someone.\n\nEgeus says Lysander “hath bewitched the bosom of my child”."
+    },
+    {
+      "front": "What does Egeus accuse Lysander of?",
+      "back": "Bewitching Hermia and using cunning to steal (“filched”) her heart."
+    },
+    {
+      "front": "Which other Shakespeare play has an angry father called Brabantio?",
+      "back": "‘Othello’. Brabantio says to Othello, “thou hast enchanted her”."
+    },
+    {
+      "front": "Why did Shakespeare include disobedient daughters and the supernatural?",
+      "back": "As a way to connect to his audiences."
+    },
+    {
+      "front": "Why should you include context when you write about the play?",
+      "back": "To help develop your ideas."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The presentation of Egeus in Shakespeare’s ‘A Midsummer Night’s Dream’",
+    "instructions": "Answer each question with a word or a short phrase, using the key words and context from the lesson.",
+    "questions": [
+      {
+        "prompt": "What word means information about when and why a text was written that helps us understand it more deeply?",
+        "answer": "context",
+        "accepted": [
+          "Context"
+        ],
+        "explanation": "Context is information about when and why a text was written."
+      },
+      {
+        "prompt": "What word describes a person alive when Elizabeth I was on the throne?",
+        "answer": "Elizabethan",
+        "accepted": [
+          "elizabethan",
+          "an Elizabethan"
+        ],
+        "explanation": "Elizabethans were alive between 1558 and 1603, when Elizabeth I was on the throne."
+      },
+      {
+        "prompt": "Which queen was on the throne when Shakespeare wrote the play?",
+        "answer": "Elizabeth I",
+        "accepted": [
+          "Queen Elizabeth I",
+          "Elizabeth",
+          "Queen Elizabeth",
+          "Elizabeth 1",
+          "Elizabeth the first"
+        ],
+        "explanation": "Elizabeth I was on the throne from 1558 to 1603."
+      },
+      {
+        "prompt": "What word means to put a magical spell on someone?",
+        "answer": "bewitch",
+        "accepted": [
+          "Bewitch",
+          "bewitched",
+          "bewitching"
+        ],
+        "explanation": "Egeus says Lysander “hath bewitched the bosom of my child”."
+      },
+      {
+        "prompt": "What word means something that can’t be explained by the laws of nature?",
+        "answer": "supernatural",
+        "accepted": [
+          "Supernatural",
+          "the supernatural"
+        ],
+        "explanation": "The supernatural cannot be explained by the laws of nature."
+      },
+      {
+        "prompt": "In which city is ‘A Midsummer Night’s Dream’ set at the start?",
+        "answer": "Athens",
+        "accepted": [
+          "athens"
+        ],
+        "explanation": "The play is set in Athens, long before the Elizabethan period."
+      },
+      {
+        "prompt": "Which word in Egeus’s speech means ‘stolen’? (“With cunning hast thou ... my daughter’s heart”)",
+        "answer": "filched",
+        "accepted": [
+          "Filched"
+        ],
+        "explanation": "In the text, “filched” is explained as “stolen”."
+      },
+      {
+        "prompt": "In which Shakespeare play does a father called Brabantio accuse Othello of enchanting his daughter?",
+        "answer": "Othello",
+        "accepted": [
+          "othello",
+          "‘Othello’",
+          "'Othello'"
+        ],
+        "explanation": "In ‘Othello’, Desdemona disobeys her father Brabantio by marrying Othello."
+      },
+      {
+        "prompt": "Elizabethan women were expected to obey their husbands and which other man?",
+        "answer": "father",
+        "accepted": [
+          "their father",
+          "Father",
+          "fathers",
+          "their fathers",
+          "a father"
+        ],
+        "explanation": "Elizabethan women were expected to obey men, particularly their father or husband."
+      }
+    ]
+  }
+}

@@ -1,0 +1,609 @@
+{
+  "agent": "maths-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can interpret graphs that model real-life situations graphically."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Distance-time graphs",
+              "sub": "what the lines tell you"
+            },
+            {
+              "title": "Distance from home",
+              "sub": "going out and coming back"
+            },
+            {
+              "title": "Impossible lines",
+              "sub": "spot the mistakes"
+            },
+            {
+              "title": "Other real-life graphs",
+              "sub": "depth-time graphs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Rate of change",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the key word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "rate of change",
+              "def": "The rate of change is how one variable changes with respect to another. If the change is constant, there is a linear relationship between the variables."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If distance increases at a constant rate over time, that means a {constant speed}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Setting up a distance-time graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Distance-time graphs are a type of graph which model the distance an object travels with respect to time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Because we are modelling the distance moved as time progresses, we plot **time on the x-axis**.",
+            "**Distance** is then plotted on the **y-axis**.",
+            "Always look at the units: time might be seconds, minutes or hours, and distance might be metres or kilometres."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A model might not be perfect, but it gives us a general idea of what is happening in a real-life situation."
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading a point on the graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha recorded a jog. She modelled it as a straight line that starts at the origin (0, 0) and passes through the point (10, 2000). Time is in minutes and distance is in metres."
+        },
+        {
+          "t": "reveal",
+          "label": "What does the point (10, 2000) mean?",
+          "text": "She ran a total of 2000 metres (2 km) in 10 minutes."
+        },
+        {
+          "t": "reveal",
+          "label": "How far after 5 minutes?",
+          "text": "After 5 minutes she had run 1000 metres (1 km). In double the time (10 minutes) she went double the distance (2000 metres)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Diagonal, steeper and horizontal lines",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Diagonal line",
+              "sub": "a constant speed"
+            },
+            {
+              "title": "Steeper line",
+              "sub": "faster movement"
+            },
+            {
+              "title": "Horizontal line",
+              "sub": "no movement"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "On a distance-time graph, a diagonal line represents moving at a constant speed. The steeper the line, the faster the movement."
+        },
+        {
+          "t": "text",
+          "text": "Aisha’s longer route: after 8 minutes she had run 1600 metres, then the graph had a line segment that was less steep (a smaller gradient). She started to run at a slower speed, but it was still a straight line, so still a consistent speed."
+        },
+        {
+          "t": "reveal",
+          "label": "What does a horizontal line mean?",
+          "text": "There is no increase in distance in that time. If time passes 6 minutes along the x-axis and the line is flat, she was stationary for 6 minutes."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which sketch?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Read each story and choose the pattern of line segments that fits it. Assume each moving part is at a constant speed."
+        },
+        {
+          "t": "choice",
+          "q": "A cyclist rides quickly, stops for a rest, then rides on more slowly. Which pattern of lines fits?",
+          "options": [
+            "Steep line, horizontal line, less steep line",
+            "Steep line, less steep line, horizontal line",
+            "Steep line, horizontal line, steeper line"
+          ],
+          "answer": 0,
+          "why": "Fast means a steep line, stopping means a horizontal line, and slower means a less steep line."
+        },
+        {
+          "t": "choice",
+          "q": "A walker sets off slowly, walks faster, then stops. Which pattern of lines fits?",
+          "options": [
+            "Steep line, less steep line, horizontal line",
+            "Less steep line, steeper line, horizontal line",
+            "Horizontal line, less steep line, steep line"
+          ],
+          "answer": 1,
+          "why": "Slow first is a less steep line, faster next is a steeper line, and stopping at the end is a horizontal line."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Distance or distance from home?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When you interpret a graph, it is important to understand what is meant by distance. Check the label on the y-axis."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Distance",
+              "sub": "total distance travelled"
+            },
+            {
+              "title": "Distance from home",
+              "sub": "distance from a fixed start point"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "If we are measuring total distance travelled, the line segments will always have a positive (or zero) gradient, because distance travelled cannot decrease as time increases."
+        },
+        {
+          "t": "text",
+          "text": "If we are measuring distance from a fixed start point (home), then a line segment with a **negative gradient** represents the **return journey**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which graph is it?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which type of graph does each statement describe?",
+          "columns": [
+            "Total distance travelled",
+            "Distance from home"
+          ],
+          "items": [
+            {
+              "text": "The line can slope downwards to show the return journey",
+              "col": 1
+            },
+            {
+              "text": "The gradient is never negative",
+              "col": 0
+            },
+            {
+              "text": "The y-axis shows how far you are from a fixed start point",
+              "col": 1
+            },
+            {
+              "text": "The distance can only stay the same or increase",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Impossible lines",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Time is always moving forwards. That rules out two kinds of line on distance-time graphs."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Vertical line",
+              "sub": "distance travelled in zero time"
+            },
+            {
+              "title": "Line going backwards in time",
+              "sub": "time cannot decrease"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Distance-time graphs cannot have vertical lines, and they cannot have lines going backwards in time. This is also true for a distance from home graph."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Going down in a lift does not make a total-distance line slope downwards. The y-axis is total distance, so the distance travelled always increases, no matter which direction you are travelling in."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Possible or impossible?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "On a distance from home graph, is each line segment possible or impossible?",
+          "columns": [
+            "Possible",
+            "Impossible"
+          ],
+          "items": [
+            {
+              "text": "A horizontal line",
+              "col": 0
+            },
+            {
+              "text": "A line with a negative gradient that moves forwards in time",
+              "col": 0
+            },
+            {
+              "text": "A vertical line",
+              "col": 1
+            },
+            {
+              "text": "A line that goes backwards in time",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "On a graph of TOTAL distance travelled, is a line segment with a negative gradient possible?",
+          "options": [
+            "Yes, it shows the return journey",
+            "No, total distance cannot decrease"
+          ],
+          "answer": 1,
+          "why": "Total distance travelled cannot decrease, so its line segments have a positive or zero gradient."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading the journey clock",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A car’s distance-time graph shows the journey took 6 hours 30 minutes. The car stopped for 30 minutes at two separate points. The car’s journey clock said 5 hours 30 minutes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Time missing: 6 h 30 min − 5 h 30 min = 1 hour.",
+            "Two stops of 30 minutes = 1 hour.",
+            "So the journey clock may have been turned off while the car was stationary."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "To find the overall distance, look at the furthest distance reached at the end of the graph. To find when the speed was highest, look for the **steepest** line segment."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Other real-life graphs: filling a bath",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use graphs to model all sorts of scenarios. In a depth-time graph, time is on the x-axis and the depth of water is on the y-axis. Water runs into the bath at a constant rate."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A bath modelled as a cuboid has the same cross section at all depths, so the depth changes at a constant rate. That gives a **linear graph**.",
+            "A shorter bath of the same width fills quicker. It is still linear, but steeper.",
+            "A bath with a ledge for a seat: the depth rises at a constant rate until the water reaches the ledge, then still at a constant rate but slower (less steep).",
+            "A bath with angled ends keeps getting wider, so the rate the depth increases is continually slowing. At no point is it a constant rate."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Depth-time thinking",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Water is poured at a constant rate into a container with vertical sides. What is the depth-time graph like?",
+          "options": [
+            "A straight line",
+            "A curve that keeps flattening"
+          ],
+          "answer": 0,
+          "why": "The cross section is the same at all depths, so the depth changes at a constant rate, which gives a linear graph."
+        },
+        {
+          "t": "choice",
+          "q": "In a bath with a ledge for a seat, what happens to the rate the depth increases once the water passes the ledge?",
+          "options": [
+            "It speeds up",
+            "It slows down but is still constant",
+            "It stops"
+          ],
+          "answer": 1,
+          "why": "The seat adds extra space, so the depth still rises at a constant rate but slower, giving a less steep line segment."
+        },
+        {
+          "t": "choice",
+          "q": "Why is a vertical line impossible on a depth-time graph?",
+          "options": [
+            "Time always has to be increasing",
+            "Water cannot get deeper"
+          ],
+          "answer": 0,
+          "why": "Like distance-time graphs, time is on the x-axis and time always has to be increasing."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading a depth-time graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is what each type of line could show on a depth-time graph."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Line sloping up",
+              "sub": "depth increasing at a constant rate, like a container with vertical sides being filled at a constant rate"
+            },
+            {
+              "title": "Horizontal line",
+              "sub": "depth constant, maybe the water is turned off for a length of time"
+            },
+            {
+              "title": "Line sloping down",
+              "sub": "depth decreasing at a constant rate, maybe water being drained"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Distance-time graphs can tell us about a journey. Time is plotted on the x-axis and distance on the y-axis.",
+            "Diagonal lines represent constant speed, and horizontal lines represent no movement.",
+            "If the y-axis represents distance from a fixed point, a downwards sloping line represents the journey back towards the start point.",
+            "Vertical lines and lines going backwards in time are impossible.",
+            "If the rate of change is constant, the graph will be linear."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the rate of change?",
+      "back": "How one variable changes with respect to another. If the change is constant, there is a linear relationship between the variables."
+    },
+    {
+      "front": "What is plotted on the x-axis of a distance-time graph?",
+      "back": "Time."
+    },
+    {
+      "front": "What does a diagonal line mean on a distance-time graph?",
+      "back": "Moving at a constant speed."
+    },
+    {
+      "front": "On a distance-time graph, what does a steeper line mean?",
+      "back": "Faster movement."
+    },
+    {
+      "front": "What does a horizontal line mean on a distance-time graph?",
+      "back": "No movement: time passes but the distance does not increase (the object is stationary)."
+    },
+    {
+      "front": "Why can a total distance-time graph never slope downwards?",
+      "back": "Total distance travelled cannot decrease as time increases, so gradients are positive or zero."
+    },
+    {
+      "front": "On a distance from home graph, what does a negative gradient show?",
+      "back": "The return journey (getting closer to the start point as time progresses)."
+    },
+    {
+      "front": "Why is a vertical line impossible on a distance-time graph?",
+      "back": "It would mean travelling a distance in zero time. Time has to move forward."
+    },
+    {
+      "front": "Why are lines going backwards in time impossible?",
+      "back": "The horizontal axis is time, and time always has to move forward (increase)."
+    },
+    {
+      "front": "How do you find the overall distance of a journey on a distance-time graph?",
+      "back": "Read the y-coordinate at the end of the final line segment."
+    },
+    {
+      "front": "How do you spot the fastest part of a distance-time graph?",
+      "back": "Look for the steepest line segment."
+    },
+    {
+      "front": "Water is poured at a constant rate into a container with vertical sides. What is the depth-time graph like?",
+      "back": "A straight (linear) line, because the depth changes at a constant rate."
+    },
+    {
+      "front": "In a bath with angled ends, how does the depth increase as it fills?",
+      "back": "The rate the depth increases is continually slowing, because the bath keeps getting wider."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking and securing understanding of reading from context-based graphs",
+    "instructions": "Answer each question in a few words or a number. Include units where the question asks for them.",
+    "questions": [
+      {
+        "prompt": "On a distance-time graph, which axis is time plotted on? Answer x or y.",
+        "answer": "x",
+        "accepted": [
+          "x",
+          "x-axis",
+          "the x-axis",
+          "x axis",
+          "the x axis"
+        ],
+        "explanation": "We plot time on the x-axis because we are modelling the distance moved as time progresses."
+      },
+      {
+        "prompt": "A straight line on a distance-time graph starts at (0, 0) and passes through (10, 2000). Time is in minutes and distance in metres. How many metres had been travelled after 5 minutes?",
+        "answer": "1000",
+        "accepted": [
+          "1000",
+          "1000 m",
+          "1000m",
+          "1000 metres",
+          "1 km",
+          "1 kilometre"
+        ],
+        "explanation": "In half the time (5 minutes) the constant-speed line has covered half of 2000 m, which is 1000 m."
+      },
+      {
+        "prompt": "On Aisha’s graph, a horizontal line segment runs from 14 minutes to 20 minutes. For how many minutes was she stationary?",
+        "answer": "6",
+        "accepted": [
+          "6",
+          "6 minutes",
+          "6 mins",
+          "6 min",
+          "six",
+          "six minutes"
+        ],
+        "explanation": "Between 14 and 20 minutes time passes but the distance does not increase: 20 − 14 = 6 minutes."
+      },
+      {
+        "prompt": "A car journey takes 6 hours 30 minutes. The car stops twice for 30 minutes each time. The journey clock is turned off whenever the car is stationary. What time does the journey clock show?",
+        "answer": "5 hours 30 minutes",
+        "accepted": [
+          "5 hours 30 minutes",
+          "5 hours 30 mins",
+          "5 h 30 min",
+          "5hrs 30mins",
+          "5 hrs 30 mins",
+          "5.5 hours",
+          "5.5 hrs",
+          "5.5 h",
+          "5.5"
+        ],
+        "explanation": "The two stops add up to 1 hour, and 6 h 30 min − 1 h = 5 h 30 min."
+      },
+      {
+        "prompt": "A car’s distance-time graph ends at the point (5.5, 310), where time is in hours and distance is in kilometres. How many kilometres was the overall journey?",
+        "answer": "310",
+        "accepted": [
+          "310",
+          "310 km",
+          "310km",
+          "310 kilometres"
+        ],
+        "explanation": "On a distance-time graph the overall distance is the y-coordinate of the end of the final line segment."
+      },
+      {
+        "prompt": "On a graph of TOTAL distance travelled, can a line segment ever slope downwards? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "no",
+          "No"
+        ],
+        "explanation": "Total distance travelled cannot decrease as time increases."
+      },
+      {
+        "prompt": "On a distance from home graph, a line segment slopes downwards as time moves forwards. Is the object moving towards or away from home?",
+        "answer": "towards",
+        "accepted": [
+          "towards",
+          "toward",
+          "towards home",
+          "toward home"
+        ],
+        "explanation": "A negative gradient on a distance from home graph represents the return journey, getting closer to home."
+      },
+      {
+        "prompt": "A vertical line on a distance-time graph would mean distance travelled in how much time?",
+        "answer": "zero",
+        "accepted": [
+          "zero",
+          "0",
+          "zero time",
+          "no time",
+          "0 seconds"
+        ],
+        "explanation": "A vertical line is a change in distance without a change in time, which is impossible."
+      },
+      {
+        "prompt": "Water runs at a constant rate into a bath with vertical sides (a cuboid). Is the depth-time graph linear or curved?",
+        "answer": "linear",
+        "accepted": [
+          "linear",
+          "a straight line",
+          "straight line",
+          "straight"
+        ],
+        "explanation": "The cross section is the same at all depths, so the depth changes at a constant rate, giving a linear graph."
+      },
+      {
+        "prompt": "A bath has a ledge for a seat. Once the water reaches the ledge, does the depth rise faster or slower than before?",
+        "answer": "slower",
+        "accepted": [
+          "slower",
+          "it is slower"
+        ],
+        "explanation": "The seat adds extra space, so the depth still increases at a constant rate but more slowly, a less steep line segment."
+      }
+    ]
+  }
+}

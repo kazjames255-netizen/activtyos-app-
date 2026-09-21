@@ -1,0 +1,545 @@
+{
+  "agent": "english-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can recognise Gothic conventions in ‘A Christmas Carol’ and explain how Dickens uses them."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at two big questions."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The {Gothic} in ‘A Christmas Carol’"
+            },
+            {
+              "title": "{Writing} about the Gothic in ‘A Christmas Carol’"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "egotistical",
+              "def": "Being self-centred and believing that the world revolves around you."
+            },
+            {
+              "term": "liminality",
+              "def": "At a boundary or transitional point between two contrasting elements."
+            },
+            {
+              "term": "metamorphosis",
+              "def": "The process of transformation from an immature form to a more responsible form in distinct stages."
+            },
+            {
+              "term": "convention",
+              "def": "The way in which something is done: the common features of something."
+            },
+            {
+              "term": "transgressive",
+              "def": "Involving the violation of moral or social boundaries."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Common Gothic conventions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The following are common Gothic conventions:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "multiple narrators and a rational protagonist",
+            "a dark, mysterious and remote setting",
+            "an atmosphere of mystery, secrecy or suspense",
+            "duality and/or an alter ego",
+            "violence and excessive emotional states",
+            "an isolated and egotistical protagonist",
+            "a battle between good and evil",
+            "the power of the unconscious mind",
+            "liminal or altered states",
+            "transgression (e.g. violating social or moral laws)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Many of these conventions can be found in ‘A Christmas Carol’. Let’s focus on some of them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Scrooge: a typical Gothic protagonist",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "In many ways, Scrooge is a typical Gothic protagonist: isolated and {egotistical}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "He isolates himself from society: he “edge[d] his way along the crowded paths of life”.",
+            "He rejects human company: he warned “all human sympathy to keep its distance”.",
+            "He wilfully ignores others’ suffering and discomfort: “You’re poor enough”, “Are there no prisons?”",
+            "His pursuit of wealth is relentless and selfish: “solitary as an oyster”.",
+            "He lacks compassion: “Are there no prisons?”",
+            "His world view is selfish and egotistical: “it’s not my business”."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the evidence",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each quotation to the point it supports about Scrooge.",
+          "pairs": [
+            {
+              "a": "“edge[d] his way along the crowded paths of life”",
+              "b": "He isolates himself from society"
+            },
+            {
+              "a": "“it’s not my business”",
+              "b": "His world view is selfish and egotistical"
+            },
+            {
+              "a": "“Are there no prisons?”",
+              "b": "He lacks compassion"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Scrooge in a liminal state",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Liminality refers to something on the **boundary** between two things. There are moments when Scrooge can be described as in a {liminal} state."
+        },
+        {
+          "t": "callout",
+          "text": "Particularly in Staves 3 and 4, Scrooge has realised the error of his ways but hasn’t yet had the chance to put his new perspectives into practice. He is in the liminal state between moral and immoral. He is also in the liminal state of his **metamorphosis**: he has not quite transformed yet, but has begun to evolve."
+        },
+        {
+          "t": "reveal",
+          "label": "Evidence from the text",
+          "text": "Stave 2: “There was a boy singing a Christmas Carol at my door last night. I should like to have given him something: that’s all.” Stave 3: “Have they no refuge or resource?” and “Spirit… tell me if Tiny Tim will live.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Structure clue",
+          "text": "Stave 3 is the middle of the novella’s five staves, so even Dickens’ structure suggests this idea of liminality in Scrooge."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which keyword?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the keyword that fits.",
+          "items": [
+            {
+              "q": "In Stave 3, Scrooge has seen his mistakes but has not yet had the chance to put his new views into practice. He is in a … state.",
+              "options": [
+                "liminal",
+                "egotistical",
+                "transgressive"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Scrooge’s change from an immoral man to a moral man happens in distinct stages. This process is called …",
+              "options": [
+                "convention",
+                "metamorphosis",
+                "liminality"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In Stave 1, Scrooge’s rudeness, selfishness and miserliness cross moral and social boundaries. This behaviour is …",
+              "options": [
+                "transgressive",
+                "rational",
+                "liminal"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Scrooge believes that the world revolves around him. He is …",
+              "options": [
+                "egotistical",
+                "liminal",
+                "transgressive"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Good versus evil",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A common Gothic convention is the battle between good and evil. In ‘A Christmas Carol’ we can take the terms loosely, as the battle between moral and immoral. Examples:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "society (immoral) versus Dickens (moral)",
+            "Scrooge (immoral) versus the ghosts (good)",
+            "Malthusian ideology (immoral) versus human empathy (good)",
+            "greed (evil) versus charity (good)",
+            "the individual (immoral) versus community (good)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Scrooge is not evil: he is **immoral**. He doesn’t do anything illegal, he doesn’t kill people and he doesn’t hurt people physically. What he does is deeply immoral because he hurts people emotionally."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort: immoral or moral?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each idea on the correct side of the battle.",
+          "columns": [
+            "Immoral (‘evil’ if we take the term loosely)",
+            "Moral (‘good’)"
+          ],
+          "items": [
+            {
+              "text": "greed",
+              "col": 0
+            },
+            {
+              "text": "charity",
+              "col": 1
+            },
+            {
+              "text": "human empathy",
+              "col": 1
+            },
+            {
+              "text": "Malthusian ideology",
+              "col": 0
+            },
+            {
+              "text": "community",
+              "col": 1
+            },
+            {
+              "text": "the individual",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why Dickens uses the Gothic",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Dickens uses Gothic conventions as a way to explore {transgressive} behaviour and immoral perspectives in society."
+        },
+        {
+          "t": "text",
+          "text": "The story dramatises Scrooge’s struggles with his own fears and the societal struggle between morality and immorality that was responsible for the injustice that pervaded Victorian society."
+        },
+        {
+          "t": "callout",
+          "text": "The Gothic genre, with its focus on good versus evil, the dual nature of mankind, the conflict between the conscious and unconscious minds, and themes of secrecy and mystery, gives Dickens a great backdrop within which to frame his message of social responsibility."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gothic conventions across the novella",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "**Dark or isolated settings:** for example Scrooge’s counting house and lodgings, and the graveyard at the end of Stave 4.",
+            "**Transgression:** Scrooge’s behaviour in Stave 1 (his rudeness, selfishness and miserliness) violates moral and social boundaries.",
+            "**Liminal or altered states:** Scrooge is in a liminal state for most of the novella as he transforms into a more moral and empathetic character.",
+            "**Excessive emotional states:** by the end, Scrooge is overwhelmed with positive emotion in the same way he was overwhelmed with negative emotion in Stave 1.",
+            "**Good versus evil:** the whole novella is about the societal struggle between good and evil (selfishness versus kindness)."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the convention",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each Gothic convention to an example from the novella.",
+          "pairs": [
+            {
+              "a": "A dark or isolated setting",
+              "b": "The graveyard at the end of Stave 4"
+            },
+            {
+              "a": "Transgression",
+              "b": "Scrooge’s rude, selfish and miserly behaviour in Stave 1"
+            },
+            {
+              "a": "Excessive emotional states",
+              "b": "Scrooge is overwhelmed with positive emotion by the end, as he was with negative emotion in Stave 1"
+            },
+            {
+              "a": "Good versus evil",
+              "b": "The whole novella’s struggle between selfishness and kindness"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading an extract: the graveyard",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scrooge has been shown his own gravestone and realises that the anonymous dead man with no mourners is himself. Look for Gothic conventions:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“Walled in by houses; overrun by grass and weeds, the growth of vegetation’s death, not life” (the setting)",
+            "“he dreaded that he saw new meaning in its solemn shape” (an atmosphere of mystery or suspense)",
+            "“Are these the shadows of the things that Will be, or are they shadows of things that May be, only?” (an atmosphere of mystery or suspense)",
+            "“read upon the stone of the neglected grave his own name, Ebenezer Scrooge” (an isolated protagonist)"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: a neglected setting",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "What does Dickens show us by creating a neglected and “overrun” setting for Scrooge’s grave?",
+          "options": [
+            "How frightening graveyards are",
+            "The consequence of selfishness, which is loneliness",
+            "That the dead were not respected in the Victorian era"
+          ],
+          "answer": 1,
+          "why": "The neglected grave with no mourners is a warning that a lonely and insignificant death is the consequence of extreme greed and selfishness."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing about the Gothic",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Try to answer: “In this extract, how does Dickens use elements of the Gothic to his advantage?” Include the words **protagonist**, **Gothic conventions** and **atmosphere**. Use these sentence starters:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Dickens uses …",
+            "In this extract, the reader observes …",
+            "The Gothic genre provides Dickens with …",
+            "His intention might be to …"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Part of a model answer",
+          "text": "Dickens leans into Gothic conventions by creating a mysterious atmosphere to reflect Scrooge’s terror and to create tension in the lead up to his discovery that the grave is his own. He describes the “overrun” gravestone in an eerie and ominous fashion to warn the reader that a lonely and insignificant death is the consequence of extreme greed."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Dickens uses Gothic conventions as a way to explore transgressive behaviour and immoral perspectives in society.",
+            "In many ways, Scrooge is a typical Gothic protagonist: isolated and egotistical.",
+            "There are several moments where Scrooge is in a liminal state, particularly in Staves 3 and 4, in the middle of his metamorphosis.",
+            "There are many examples of battles between good and evil (or moral and immoral) in the text.",
+            "The Gothic genre gives Dickens a great backdrop within which to frame his message of social responsibility."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “egotistical” mean?",
+      "back": "Being self-centred and believing that the world revolves around you."
+    },
+    {
+      "front": "What does “liminality” mean?",
+      "back": "Being at a boundary or transitional point between two contrasting elements."
+    },
+    {
+      "front": "What is metamorphosis?",
+      "back": "The process of transformation from an immature form to a more responsible form in distinct stages."
+    },
+    {
+      "front": "What is a convention?",
+      "back": "The way in which something is done: the common features of something."
+    },
+    {
+      "front": "What does “transgressive” mean?",
+      "back": "Involving the violation of moral or social boundaries."
+    },
+    {
+      "front": "Why can Scrooge be viewed as a typical Gothic protagonist?",
+      "back": "He is isolated and egotistical."
+    },
+    {
+      "front": "Give one quotation showing Scrooge isolates himself from society.",
+      "back": "He “edge[d] his way along the crowded paths of life”."
+    },
+    {
+      "front": "In which staves is Scrooge in a liminal state particularly?",
+      "back": "Staves 3 and 4: he has realised the error of his ways but hasn’t yet put his new perspectives into practice."
+    },
+    {
+      "front": "Is Scrooge evil?",
+      "back": "No. He is immoral, not evil: he doesn’t do anything illegal or hurt people physically, but he hurts people emotionally."
+    },
+    {
+      "front": "Give two examples of battles between good and evil (moral and immoral) in the novella.",
+      "back": "For example: greed versus charity; the individual versus community; Malthusian ideology versus human empathy."
+    },
+    {
+      "front": "Why does Dickens use Gothic conventions?",
+      "back": "To explore transgressive behaviour and immoral perspectives in society, and to frame his message of social responsibility."
+    },
+    {
+      "front": "What does the neglected, overrun graveyard setting show?",
+      "back": "The consequence of selfishness, which is loneliness."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘A Christmas Carol’: the novella as a Gothic text",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "Which keyword means “being self-centred and believing that the world revolves around you”?",
+        "answer": "egotistical",
+        "accepted": [
+          "egotistical"
+        ],
+        "explanation": "Egotistical means self-centred; Scrooge is an isolated and egotistical protagonist."
+      },
+      {
+        "prompt": "Which keyword means “being at a boundary or transitional point between two contrasting elements”?",
+        "answer": "liminality",
+        "accepted": [
+          "liminality"
+        ],
+        "explanation": "Liminality refers to something on the boundary between two things."
+      },
+      {
+        "prompt": "Which keyword means “the process of transformation from an immature form to a more responsible form in distinct stages”?",
+        "answer": "metamorphosis",
+        "accepted": [
+          "metamorphosis"
+        ],
+        "explanation": "Scrooge is in the middle of his metamorphosis for much of the novella."
+      },
+      {
+        "prompt": "Which keyword means “involving the violation of moral or social boundaries”?",
+        "answer": "transgressive",
+        "accepted": [
+          "transgressive"
+        ],
+        "explanation": "Scrooge’s behaviour in Stave 1 is transgressive because it violates moral and social boundaries."
+      },
+      {
+        "prompt": "Which keyword means “the way in which something is done: the common features of something”?",
+        "answer": "convention",
+        "accepted": [
+          "convention",
+          "a convention"
+        ],
+        "explanation": "Gothic conventions are the common features of Gothic literature."
+      },
+      {
+        "prompt": "Scrooge lives a life as “solitary as an ___”. Fill in the missing word.",
+        "answer": "oyster",
+        "accepted": [
+          "oyster",
+          "an oyster"
+        ],
+        "explanation": "The quotation “solitary as an oyster” shows Scrooge’s isolation and selfish pursuit of wealth."
+      },
+      {
+        "prompt": "Scrooge is not evil, because he doesn’t do things that are illegal or hurt people physically. Which word describes him instead?",
+        "answer": "immoral",
+        "accepted": [
+          "immoral"
+        ],
+        "explanation": "Scrooge is immoral because he hurts people emotionally."
+      },
+      {
+        "prompt": "How many staves does ‘A Christmas Carol’ have? Give the number.",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "five"
+        ],
+        "explanation": "The novella has five staves, and Stave 3 is right in the middle."
+      },
+      {
+        "prompt": "The Gothic genre gives Dickens a backdrop within which to frame his message of social ___. Fill in the missing word.",
+        "answer": "responsibility",
+        "accepted": [
+          "responsibility"
+        ],
+        "explanation": "The Gothic genre suits Dickens’ message of social responsibility."
+      }
+    ]
+  }
+}

@@ -1,0 +1,430 @@
+{
+  "agent": "english-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can form the letters u, y and j."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Handwriting warm-up",
+              "sub": "Get your hands ready"
+            },
+            {
+              "title": "The letter u"
+            },
+            {
+              "title": "The letter y"
+            },
+            {
+              "title": "The letter j"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Warm up your hands",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Your hands and wrists get stronger when you exercise them, just like any other muscle in your body."
+        },
+        {
+          "t": "text",
+          "text": "Stronger hands and wrists help you to hold your pencil using your tripod grip."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Hand squeeze",
+              "sub": "Squeeze your hand tight, then open it."
+            },
+            {
+              "title": "Wiper wrists",
+              "sub": "Put your hands up like window wipers and wipe from one side to the other."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A handwriting pattern",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Practising writing patterns helps us to prepare for writing letters."
+        },
+        {
+          "t": "text",
+          "text": "Today’s pattern goes **down and up, down and up, down and up**. Try it in the air with your finger and then with your fist."
+        },
+        {
+          "t": "callout",
+          "text": "Copy and continue the pattern using your tripod grip. Do not lift your pencil while you make the pattern."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter u",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letter u is an x-height letter.",
+            "The letter u is a small letter.",
+            "It does not have an ascender.",
+            "The letter u finishes with a flick."
+          ]
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "x-height letter",
+              "def": "Letters that reach the middle height on the line."
+            },
+            {
+              "term": "ascenders",
+              "def": "The part of a letter that extends above the level of the top of an x."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "handwriting-lines"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to write u",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "1. Start on the x-height line.",
+            "2. Go down to the baseline.",
+            "3. Go across, and back up to the x-height line.",
+            "4. Go down, and finish with a flick."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Do not lift your pencil when you form the letter u."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter u",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which is true about the letter u?",
+          "options": [
+            "It is an x-height letter and finishes with a flick",
+            "It is a tall letter",
+            "It has an ascender"
+          ],
+          "answer": 0,
+          "why": "The letter u is an x-height letter and finishes with a flick. It is a small letter with no ascender."
+        },
+        {
+          "t": "choice",
+          "q": "Which line does the letter u start on?",
+          "options": [
+            "The x-height line",
+            "The baseline",
+            "The descender line"
+          ],
+          "answer": 0,
+          "why": "The letter u starts on the x-height line."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter y",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "The letter y is formed in a similar way to the letter u. However, part of the letter y goes below the baseline."
+        },
+        {
+          "t": "text",
+          "text": "The letter y falls below the baseline and curls up at the descender line. That is the line right at the bottom."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "descenders",
+              "def": "The part of a letter that descends below the level of the bottom of an x. It goes below the baseline."
+            },
+            {
+              "term": "baseline",
+              "def": "The line that most letters sit on."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The letter y is an example of a letter with a descender."
+        }
+      ],
+      "pics": [
+        {
+          "id": "handwriting-lines"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to write y",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "1. Start on the x-height line.",
+            "2. Go down to the baseline, go across, and back up to the x-height line.",
+            "3. Go all the way down to the descender line.",
+            "4. Finish with a curl up."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Do not lift your pencil when you form the letter y."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter y",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which line does the letter y curl up at?",
+          "options": [
+            "The descender line",
+            "The x-height line",
+            "The ascender line"
+          ],
+          "answer": 0,
+          "why": "The letter y goes below the baseline and curls up at the descender line."
+        },
+        {
+          "t": "choice",
+          "q": "What do we call the part of a letter that goes below the baseline?",
+          "options": [
+            "A descender",
+            "An ascender",
+            "A flick"
+          ],
+          "answer": 0,
+          "why": "A descender is the part of a letter that goes below the baseline."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter j",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letter j starts on the x-height line.",
+            "The letter j has a descender.",
+            "It has a curl up at the descender line.",
+            "It has a dot at the top."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to write j",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "1. Start on the x-height line.",
+            "2. Go down to the descender line and curl up.",
+            "3. Take your pencil off the page.",
+            "4. Put it back on to add a dot at the top."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter j",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which is true about the letter j?",
+          "options": [
+            "It has a dot at the top and a descender",
+            "It has an ascender",
+            "It starts on the baseline"
+          ],
+          "answer": 0,
+          "why": "The letter j starts on the x-height line, has a descender and has a dot at the top."
+        },
+        {
+          "t": "choice",
+          "q": "What do you do after the curl up on the letter j?",
+          "options": [
+            "Take your pencil off and add a dot at the top",
+            "Add a cross on the x-height line",
+            "Go back to the baseline"
+          ],
+          "answer": 0,
+          "why": "After the curl up, take your pencil off the page and add a dot at the top."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Flick or curl up?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "How does the main line of each letter finish (before any dot)? Tap a letter, then tap its column.",
+          "columns": [
+            "Finishes with a flick",
+            "Finishes with a curl up"
+          ],
+          "items": [
+            {
+              "text": "u",
+              "col": 0
+            },
+            {
+              "text": "y",
+              "col": 1
+            },
+            {
+              "text": "j",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is the same?",
+          "text": "Letters u, y and j all start on the x-height line."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Keyword match",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each keyword to its meaning.",
+          "pairs": [
+            {
+              "a": "baseline",
+              "b": "The line that most letters sit on"
+            },
+            {
+              "a": "descender",
+              "b": "The part of a letter that goes below the baseline"
+            },
+            {
+              "a": "x-height letter",
+              "b": "A letter that reaches the middle height on the line"
+            },
+            {
+              "a": "tripod grip",
+              "b": "Holding the pencil with three fingers: thumb, index and middle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letter u is an x-height letter. It goes down, around, back up, down and finishes with a flick.",
+            "The letter y is like a u but goes below the baseline to the descender line and curls up.",
+            "The letter j goes down, curls up and has a dot at the top.",
+            "The letters j and y have descenders.",
+            "The letters u, y and j all start on the x-height line."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What kind of letter is u?",
+      "back": "An x-height letter. It is a small letter with no ascender."
+    },
+    {
+      "front": "How does the letter u finish?",
+      "back": "With a flick."
+    },
+    {
+      "front": "Which line do the letters u, y and j all start on?",
+      "back": "The x-height line."
+    },
+    {
+      "front": "How is the letter u formed?",
+      "back": "Down, around, back up, down and finish with a flick."
+    },
+    {
+      "front": "How is the letter y like the letter u?",
+      "back": "It is formed in a similar way, but part of the y goes below the baseline."
+    },
+    {
+      "front": "Where does the letter y curl up?",
+      "back": "At the descender line."
+    },
+    {
+      "front": "What is a descender?",
+      "back": "The part of a letter that goes below the baseline.\n\nThe letters y and j have descenders."
+    },
+    {
+      "front": "What is the baseline?",
+      "back": "The line that most letters sit on."
+    },
+    {
+      "front": "How is the letter j formed?",
+      "back": "Go down to the descender line, curl up, then take the pencil off and add a dot at the top."
+    },
+    {
+      "front": "What do you add to the top of the letter j?",
+      "back": "A dot."
+    },
+    {
+      "front": "Which of u, y and j have descenders?",
+      "back": "y and j."
+    },
+    {
+      "front": "What is the tripod grip?",
+      "back": "Holding the pencil with three fingers: thumb, index and middle finger."
+    },
+    {
+      "front": "Why do we warm up our hands before writing?",
+      "back": "Our hands and wrists get stronger when we exercise them. Strong hands help us hold the pencil in the tripod grip."
+    }
+  ]
+}

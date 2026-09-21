@@ -1,0 +1,528 @@
+{
+  "agent": "w4-maths-ks2a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how to use long multiplication to multiply a 3-digit by a 2-digit number."
+        },
+        {
+          "t": "text",
+          "text": "We will use long multiplication with bigger numbers, and solve problems."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Regrouping} in long multiplication"
+            },
+            {
+              "title": "{Solving} problems"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "partial product",
+              "def": "Any of the multiplication results we get leading up to an overall multiplication result is a partial product."
+            },
+            {
+              "term": "regroup",
+              "def": "The process of unitising and exchanging between place values is known as regrouping. For example, 10 ones can be regrouped for one ten; one ten can be regrouped for 10 ones."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is known? What is unknown?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "153 tickets are bought for an Olympic event. Each ticket costs £22. How much was spent in total?"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Known",
+              "sub": "153 tickets and £22 each. These are the factors."
+            },
+            {
+              "title": "Unknown",
+              "sub": "The total spent. The product is missing."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "153 × 22 = ?"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 1: multiply by the ones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Long multiplication can be used with a 3-digit number. The 3-digit number goes first, at the top, as the largest factor. First multiply 153 by the ones digit, 2."
+        },
+        {
+          "t": "list",
+          "items": [
+            "3 ones × 2 = 6 ones. Write 6 in the ones column.",
+            "5 tens × 2 = 10 tens, or 100. Regroup 10 tens for 100. Write 0 in the tens column and record the regrouped 100 at the top.",
+            "1 hundred × 2 = 2 hundreds. Plus the regrouped 1 hundred: 3 hundreds."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "First partial product",
+          "text": "The first partial product is **306**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 2: placeholder, then the tens",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now multiply by the tens digit, 153 × 20. A placeholder 0 is used because we are multiplying by a multiple of 10."
+        },
+        {
+          "t": "list",
+          "items": [
+            "3 ones × 20 = 60 ones, or 6 tens. Write 6 in the tens column.",
+            "5 tens × 20 = 100 tens, or 1,000. Write 0 in the hundreds column and regroup the 1,000 (a 1 at the top).",
+            "1 hundred × 20 = 20 hundreds, or 2,000. Plus the regrouped 1,000: 3,000."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Second partial product",
+          "text": "The second partial product is **3,060**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 3: sum the partial products",
+      "blocks": [
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "306",
+              "add": "3,060",
+              "result": "3,366"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "153 × 22 = 3,366. £3,366 was spent in total."
+        },
+        {
+          "t": "reveal",
+          "label": "What did you notice?",
+          "text": "One of the partial products had 4 digits. We are multiplying a 3-digit number, so we had to regroup from the hundreds to the thousands."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "During the Olympics, 42 boxes are used. Each box contains 165 table tennis balls. This is 165 × 42. Remember to put the larger number at the top."
+        },
+        {
+          "t": "list",
+          "items": [
+            "165 × 2: 5 × 2 = 10 ones, so write 0 and regroup 1 ten. 6 tens × 2 = 12 tens, plus 1 ten is 13 tens. Write 3 and regroup 1 hundred. 1 hundred × 2 = 2 hundreds, plus 1 hundred is 3 hundreds. The first partial product is 330.",
+            "Put a placeholder 0 and multiply by the tens. 165 × 40 = 6,600. This is the second partial product.",
+            "Sum: 330 + 6,600 = 6,930."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are 6,930 table tennis balls altogether. We had to regroup from the hundreds to the thousands."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the mistake",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam used long multiplication to calculate 321 × 24."
+        },
+        {
+          "t": "reveal",
+          "label": "Is Sam correct?",
+          "text": "No. Sam regrouped incorrectly. In the first partial product he reversed the digits when doing 3 hundreds × 4 ones. It should be 1,200. Sam wrote 2,100."
+        },
+        {
+          "q": "What is 3 hundreds × 4 ones?",
+          "options": [
+            "1,200",
+            "2,100",
+            "120"
+          ],
+          "answer": 0,
+          "why": "3 × 4 = 12, and 3 hundreds × 4 ones is 12 hundreds, or 1,200.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which equation?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A shop has 218 boxes. Each box holds 35 pens. How many pens are there in total?"
+        },
+        {
+          "q": "Which multiplication finds the total number of pens?",
+          "options": [
+            "218 × 35",
+            "218 + 35",
+            "35 − 218"
+          ],
+          "answer": 0,
+          "why": "218 boxes is one factor and 35 pens in each box is the other factor. The product is missing.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The card game",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam and Andeep are playing a game. Andeep picks cards to make 123 × 44. His score is the product."
+        },
+        {
+          "t": "list",
+          "items": [
+            "123 × 4 = 492 (first partial product).",
+            "Placeholder 0. 123 × 40 = 4,920 (second partial product).",
+            "Sum: 492 + 4,920 = 5,412."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Now Sam has a go. 421 × 23."
+        },
+        {
+          "t": "list",
+          "items": [
+            "421 × 3 = 1,263.",
+            "421 × 20 = 8,420.",
+            "Recombine: 1,263 + 8,420 = 9,683."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Who scored higher?",
+          "text": "Andeep’s score is 5,412. Sam’s score is 9,683. Sam scored higher."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Don’t forget the placeholder",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It is a very common mistake to forget the 0 placeholder. We are switching from using ones to using tens."
+        },
+        {
+          "q": "For 314 × 25, what is the second partial product (314 × 20)?",
+          "options": [
+            "6,280",
+            "628",
+            "1,570"
+          ],
+          "answer": 0,
+          "why": "314 × 2 = 628, and 20 is 10 times the size, so 314 × 20 = 6,280. Then 1,570 + 6,280 = 7,850.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Making the highest score",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The rules change: players can rearrange their digits to get the highest score."
+        },
+        {
+          "t": "text",
+          "text": "Andeep says: I think I need the largest value digits in the 100s and 10s positions."
+        },
+        {
+          "t": "callout",
+          "text": "400 × 30 = 12,000, so a product using 432 × 32 will be greater than 12,000."
+        },
+        {
+          "t": "text",
+          "text": "Sam’s cards are 4, 1, 4, 3 and 2. Two good arrangements are 431 × 42 and 432 × 41. Both products are greater than 16,000."
+        },
+        {
+          "t": "reveal",
+          "label": "Making the smallest score",
+          "text": "To make a smaller product, keep the hundreds and tens digits small. Also think about the size of the second factor: having 23 groups will give a smaller product than having 34 groups."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Highest score",
+      "blocks": [
+        {
+          "q": "You have the digit cards 3, 1, 5, 2 and 4. Which arrangement gives the greatest product?",
+          "options": [
+            "431 × 52",
+            "135 × 24",
+            "245 × 31"
+          ],
+          "answer": 0,
+          "why": "The large digits are in the hundreds and tens places: 431 × 52 = 22,412. 245 × 31 = 7,595 and 135 × 24 = 3,240.",
+          "t": "choice"
+        },
+        {
+          "q": "Which is greater?",
+          "options": [
+            "30 groups of 52",
+            "20 groups of 53"
+          ],
+          "answer": 0,
+          "why": "30 × 52 = 1,560 and 20 × 53 = 1,060. Think about how many groups there are, not just how big the numbers look.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work it out",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use long multiplication to answer each question.",
+          "items": [
+            {
+              "q": "What is 251 × 36?",
+              "options": [
+                "2,259",
+                "9,036",
+                "8,946"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is 418 × 27?",
+              "options": [
+                "3,762",
+                "11,386",
+                "11,286"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is 362 × 15?",
+              "options": [
+                "5,430",
+                "2,172",
+                "5,420"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Long multiplication is a written strategy that can be used to multiply a 3-digit number by a 2-digit number."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Partial products are combined to make the product.",
+            "We can regroup in long multiplication, including from hundreds to thousands."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Remember the 0 placeholder when you move to the tens digit."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "When multiplying a 3-digit number by a 2-digit number, which number goes at the top?",
+      "back": "The 3-digit number, as the larger factor."
+    },
+    {
+      "front": "What is a partial product?",
+      "back": "Any of the multiplication results we get leading up to an overall multiplication result."
+    },
+    {
+      "front": "What does regroup mean?",
+      "back": "The process of unitising and exchanging between place values.\n\n10 ones can be regrouped for one ten; one ten can be regrouped for 10 ones."
+    },
+    {
+      "front": "When can we regroup in long multiplication?",
+      "back": "When numbers bridge 10, 100 or 1,000."
+    },
+    {
+      "front": "153 × 2: what is the first partial product?",
+      "back": "306\n\n5 tens × 2 = 10 tens, regrouped as 100. 1 hundred × 2 + the regrouped 1 hundred = 3 hundreds."
+    },
+    {
+      "front": "153 × 20: what is the second partial product?",
+      "back": "3,060\n\nDon’t forget the 0 placeholder."
+    },
+    {
+      "front": "What is 153 × 22?",
+      "back": "3,366\n\n306 + 3,060 = 3,366"
+    },
+    {
+      "front": "Why can one partial product have 4 digits when we multiply a 3-digit number?",
+      "back": "We regroup from the hundreds to the thousands."
+    },
+    {
+      "front": "What is 165 × 42?",
+      "back": "6,930\n\n330 + 6,600 = 6,930"
+    },
+    {
+      "front": "What is 421 × 23?",
+      "back": "9,683\n\n1,263 + 8,420 = 9,683"
+    },
+    {
+      "front": "What common mistake makes the second partial product too small?",
+      "back": "Forgetting the 0 placeholder. We are switching from using ones to using tens."
+    },
+    {
+      "front": "To make the highest product with digit cards, where do the largest digits go?",
+      "back": "In the 100s and 10s positions.\n\n400 × 30 = 12,000, so 432 × 32 is greater than 12,000."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how to use long multiplication to multiply a 3-digit by a 2-digit number",
+    "instructions": "Use long multiplication with the 3-digit number at the top. Regroup carefully and remember the 0 placeholder. Write each answer as a number.",
+    "questions": [
+      {
+        "prompt": "Task A: Use long multiplication to calculate 343 × 23.",
+        "answer": "7889",
+        "accepted": [
+          "7,889"
+        ],
+        "explanation": "343 × 3 = 1,029 and 343 × 20 = 6,860. 1,029 + 6,860 = 7,889."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 427 × 18.",
+        "answer": "7686",
+        "accepted": [
+          "7,686"
+        ],
+        "explanation": "427 × 8 = 3,416 and 427 × 10 = 4,270. 3,416 + 4,270 = 7,686."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 489 × 16.",
+        "answer": "7824",
+        "accepted": [
+          "7,824"
+        ],
+        "explanation": "489 × 6 = 2,934 and 489 × 10 = 4,890. 2,934 + 4,890 = 7,824."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 328 × 47.",
+        "answer": "15416",
+        "accepted": [
+          "15,416"
+        ],
+        "explanation": "328 × 7 = 2,296 and 328 × 40 = 13,120. 2,296 + 13,120 = 15,416."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 246 × 25.",
+        "answer": "6150",
+        "accepted": [
+          "6,150"
+        ],
+        "explanation": "246 × 5 = 1,230 and 246 × 20 = 4,920. 1,230 + 4,920 = 6,150."
+      },
+      {
+        "prompt": "Task B: 153 tickets are bought for an Olympic event. Each ticket costs £22. How many pounds was spent in total?",
+        "answer": "3366",
+        "accepted": [
+          "3,366",
+          "£3366",
+          "£3,366"
+        ],
+        "explanation": "The partial products are 306 and 3,060. 306 + 3,060 = 3,366."
+      },
+      {
+        "prompt": "Task B: Each box has 165 table tennis balls and 42 boxes are used. How many balls are used?",
+        "answer": "6930",
+        "accepted": [
+          "6,930"
+        ],
+        "explanation": "165 × 2 = 330 and 165 × 40 = 6,600. 330 + 6,600 = 6,930."
+      },
+      {
+        "prompt": "Task B: Sam has the equation 421 × 23. What is Sam’s score (the product)?",
+        "answer": "9683",
+        "accepted": [
+          "9,683"
+        ],
+        "explanation": "421 × 3 = 1,263 and 421 × 20 = 8,420. 1,263 + 8,420 = 9,683."
+      },
+      {
+        "prompt": "Task B: In 123 × 44, what is the second partial product (123 × 40)?",
+        "answer": "4920",
+        "accepted": [
+          "4,920"
+        ],
+        "explanation": "123 × 4 = 492, and 40 is 10 times the size, so 123 × 40 = 4,920."
+      },
+      {
+        "prompt": "Task B: There are 340 apartments in the Olympic village. Each apartment hosts 78 athletes. How many athletes can the village accommodate?",
+        "answer": "26520",
+        "accepted": [
+          "26,520"
+        ],
+        "explanation": "340 × 78: 340 × 8 = 2,720 and 340 × 70 = 23,800. 2,720 + 23,800 = 26,520."
+      }
+    ]
+  }
+}

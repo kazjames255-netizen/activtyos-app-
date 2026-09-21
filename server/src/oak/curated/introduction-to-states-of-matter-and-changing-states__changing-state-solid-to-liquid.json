@@ -1,0 +1,507 @@
+{
+  "agent": "science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can observe that some materials change state from {solid} to {liquid} when they are heated."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will find out what happens when a solid is heated."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "water in {solid} and {liquid} states"
+            },
+            {
+              "title": "other changes from {solid} to {liquid}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "state",
+              "def": "Materials can exist in three common states of matter: solid, liquid and gas."
+            },
+            {
+              "term": "solid",
+              "def": "A solid has a fixed shape and volume but some solids can change shape when a force is applied."
+            },
+            {
+              "term": "liquid",
+              "def": "A liquid can flow, has a fixed volume and takes the shape of the bottom of the container."
+            },
+            {
+              "term": "heat",
+              "def": "To heat something is to increase its temperature."
+            },
+            {
+              "term": "melt",
+              "def": "To melt is to change from a solid state to a liquid state."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Izzy’s ice cubes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "After finishing her juice, Izzy had some ice cubes left in the bottom of her glass. After a while, she noticed that they were no longer there. What had happened?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see what happened",
+          "text": "There is a pool of water in the bottom of the glass now. The ice cubes were water in the solid state, and they changed into water in the liquid state."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What does state mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The **state** of a substance or material is the form in which it can exist."
+        },
+        {
+          "t": "text",
+          "text": "There are three common states, known as states of matter."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{solid}",
+              "sub": "wood"
+            },
+            {
+              "title": "{liquid}",
+              "sub": "soap"
+            },
+            {
+              "title": "{gas}",
+              "sub": "oxygen in the air"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Water in different states",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We see water in all three states in our daily lives."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Water in the solid state is known as **ice**.",
+            "Water in the liquid state is known as **water**.",
+            "Snow is also water in the solid state!"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Are ice and water different materials?",
+          "text": "No. Water and ice are the same material in different states. It can be confusing that we only call it “water” when it is a liquid, even though it is still water, just in a different state."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Changing the temperature",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "We can change the state of a solid to a liquid by {increasing its temperature}."
+        },
+        {
+          "t": "text",
+          "text": "The ice cube from Izzy’s drink was in the solid state in the freezer. The temperature in the freezer was below 0°C."
+        },
+        {
+          "t": "text",
+          "text": "Water is in the solid state (ice) below 0°C, but it changes state to be a liquid when it is heated to 0°C or above."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: changing state",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which of these would make an ice cube change into liquid water?",
+              "options": [
+                "putting it in a colder freezer",
+                "leaving it in a warm room",
+                "painting it a different colour"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Snow is …",
+              "options": [
+                "water in the liquid state",
+                "not water at all",
+                "water in the solid state"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How was the ice heated?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy did not put her ice cubes on a stove or over a flame. So how were they heated?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "The air in the room heated the ice cubes, causing them to melt and change from the solid state to the liquid state. The temperature in Izzy’s room was much higher than the temperature in a freezer."
+        },
+        {
+          "t": "text",
+          "text": "We call the level of heat in a room the **room temperature**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch the ice melt",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Imagine you put some ice cubes on a saucer and observe them as they heat up and change from the solid state to the liquid state."
+        },
+        {
+          "t": "reveal",
+          "label": "What might you see?",
+          "text": "As the ice melted, the cubes got smaller and looked more rounded. As they got smaller, a pool of liquid water formed under them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Melting",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "The process in which a solid changes to a liquid is called {melting}."
+        },
+        {
+          "t": "text",
+          "text": "Ice (solid water) melts and changes to liquid water when it is heated to 0°C or above."
+        },
+        {
+          "t": "text",
+          "text": "Ice is not the only material that can melt. Ice cream can melt too."
+        },
+        {
+          "t": "text",
+          "text": "Different materials can be observed melting and changing state from a solid to a liquid when heated."
+        }
+      ],
+      "pics": [
+        {
+          "id": "changes-of-state"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Butter and copper",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Not all materials melt at room temperature. Some materials change from a solid state to a liquid state at other temperatures."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "butter",
+              "sub": "solid in the kitchen, melts to a liquid when heated in a frying pan on a cooker"
+            },
+            {
+              "title": "copper",
+              "sub": "solid at room temperature, melts when heated to a very high temperature"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Melted copper can be poured into a mould to take its shape. Copper can be a solid or a liquid."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Defrosting frozen peas",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we take frozen peas out of the freezer and place them in a room, do they melt?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "In the freezer, peas contain water in the solid state (ice). When the peas are taken out and heated, the water inside them melts into the liquid state, but the peas themselves remain solid. This process is called **defrosting**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the word",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each key word to its meaning.",
+          "pairs": [
+            {
+              "a": "heat",
+              "b": "to increase the temperature of something"
+            },
+            {
+              "a": "melt",
+              "b": "to change from a solid state to a liquid state"
+            },
+            {
+              "a": "state",
+              "b": "the form in which a substance or material can exist"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: examples",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Frozen peas are taken out of the freezer and heated. What happens to the ice inside them?",
+              "options": [
+                "The whole pea melts into a liquid",
+                "It stays as ice",
+                "It melts into liquid water and the pea stays solid"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which is true about copper?",
+              "options": [
+                "It is always a solid",
+                "It can melt if it is heated to a very high temperature",
+                "It is not a solid because it can change into a liquid"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What happens to solid butter in a hot frying pan?",
+              "options": [
+                "It turns into ice",
+                "It melts to a liquid",
+                "It stays a hard solid"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "We can change the state of a solid to a liquid by changing its temperature.",
+            "Water is a solid (ice) at 0°C but becomes a liquid when it is heated.",
+            "The process in which a solid changes to a liquid is called melting.",
+            "Different materials can be observed changing from solid to liquid when heated."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does state mean?",
+      "back": "The state of a substance or material is the form in which it can exist."
+    },
+    {
+      "front": "What do we call water in the solid state?",
+      "back": "Ice."
+    },
+    {
+      "front": "What is snow?",
+      "back": "Water in the solid state."
+    },
+    {
+      "front": "What does it mean to heat something?",
+      "back": "To increase its temperature."
+    },
+    {
+      "front": "What does it mean to melt?",
+      "back": "To change from a solid state to a liquid state."
+    },
+    {
+      "front": "How can we change the state of a solid to a liquid?",
+      "back": "By changing (increasing) its temperature, that is, by heating it."
+    },
+    {
+      "front": "At what temperature does ice change to liquid water?",
+      "back": "0°C. Below 0°C water is a solid (ice); heated to 0°C or above it becomes a liquid."
+    },
+    {
+      "front": "Are ice and water different materials?",
+      "back": "No. They are the same material in different states."
+    },
+    {
+      "front": "How were Izzy’s ice cubes heated without a stove or a flame?",
+      "back": "The air in the room heated them. The room was much warmer than the freezer."
+    },
+    {
+      "front": "What is the process in which a solid changes to a liquid called?",
+      "back": "Melting."
+    },
+    {
+      "front": "What happens to butter in a hot frying pan?",
+      "back": "It melts from the solid state to the liquid state."
+    },
+    {
+      "front": "What is it called when the ice inside frozen peas melts?",
+      "back": "Defrosting.\n\nThe water inside melts, but the peas themselves stay solid."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Changing state: solid to liquid",
+    "instructions": "Answer each question with a short answer, using what you learned about solids changing to liquids when they are heated.",
+    "questions": [
+      {
+        "prompt": "What is water called when it is in the solid state?",
+        "answer": "ice",
+        "accepted": [
+          "ice"
+        ],
+        "explanation": "Water in the solid state is known as ice."
+      },
+      {
+        "prompt": "What is the process in which a solid changes to a liquid called?",
+        "answer": "melting",
+        "accepted": [
+          "melting",
+          "melt"
+        ],
+        "explanation": "The process in which a solid changes to a liquid is called melting."
+      },
+      {
+        "prompt": "At what temperature, in °C, does solid water (ice) melt to become a liquid?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "0°C",
+          "0 °C",
+          "0 degrees",
+          "0 degrees Celsius",
+          "zero",
+          "zero degrees",
+          "zero degrees Celsius"
+        ],
+        "explanation": "Ice melts and changes to liquid water when it is heated to 0°C or above."
+      },
+      {
+        "prompt": "To heat something is to ... its temperature. Which word is missing?",
+        "answer": "increase",
+        "accepted": [
+          "increase",
+          "raise"
+        ],
+        "explanation": "Heating something increases its temperature."
+      },
+      {
+        "prompt": "Ice cubes are placed on a saucer and slowly melt. A pool of what forms under them?",
+        "answer": "liquid water",
+        "accepted": [
+          "liquid water",
+          "water"
+        ],
+        "explanation": "As the ice melts, a pool of liquid water forms."
+      },
+      {
+        "prompt": "In which state is butter when it is kept at room temperature in the kitchen?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solid state",
+          "a solid"
+        ],
+        "explanation": "Butter is solid at room temperature and melts when heated in a frying pan."
+      },
+      {
+        "prompt": "What name is given to the process when the ice inside frozen peas melts after they are taken out of the freezer?",
+        "answer": "defrosting",
+        "accepted": [
+          "defrosting",
+          "defrost"
+        ],
+        "explanation": "The water inside the peas melts into a liquid, while the peas themselves remain solid. This is called defrosting."
+      },
+      {
+        "prompt": "When copper is heated to a very high temperature and melts, what can it be poured into to take its shape?",
+        "answer": "a mould",
+        "accepted": [
+          "a mould",
+          "mould",
+          "a mold",
+          "mold"
+        ],
+        "explanation": "Melted copper can be poured into a mould to take its shape."
+      },
+      {
+        "prompt": "Ice and water are the same material in different states. True or false?",
+        "answer": "true",
+        "accepted": [
+          "true"
+        ],
+        "explanation": "Water and ice are the same material; it is called ice in the solid state and water in the liquid state."
+      }
+    ]
+  }
+}

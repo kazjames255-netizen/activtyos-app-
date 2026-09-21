@@ -1,0 +1,526 @@
+{
+  "agent": "english-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand the significance of Dickens’ use of allusion in the ghosts’ appearances."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at two big ideas."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The {cultural context} of the ghosts"
+            },
+            {
+              "title": "The {objects} the ghosts carry"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "allusion",
+              "def": "An allusion is a passing or indirect reference to something else."
+            },
+            {
+              "term": "cornucopia",
+              "def": "A large horn-shaped container overflowing with produce, typically symbolic of abundance or plenty."
+            },
+            {
+              "term": "to depict",
+              "def": "To represent or show something in a certain way."
+            },
+            {
+              "term": "draw parallels",
+              "def": "To draw parallels means to make links between two things based on their similarities."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three symbols, one ghost",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Think about these three symbols: the colour white, holly, and flames or candles. Which ghost are they all linked to?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            {
+              "text": "the colour white"
+            },
+            {
+              "text": "holly"
+            },
+            {
+              "text": "flames / candles"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the answer",
+          "text": "The **Ghost of Christmas Past**: it wears a white tunic, carries a sprig of holly, and has a clear, bright jet of light coming from its head."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Dickens’ Ghost of Christmas Past",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Parts of Dickens’ description of the Ghost of Christmas Past:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“like a child: yet not so like a child as like an old man”",
+            "hair “white, as if with age”",
+            "a “tunic of the purest white”, with a lustrous belt",
+            "“a branch of fresh green holly in its hand”, and a dress trimmed with summer flowers",
+            "“from the crown of its head there sprung a bright clear jet of light”"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The German Christkindl",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The German Christkindl is often **depicted** as:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "a beautiful youth, usually with blonde hair",
+            "wearing a bright, white robe",
+            "wearing a wreath of candles on its head",
+            "carrying a sprig of holly in its hand"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are noticeable similarities with the Ghost of Christmas Past: the white clothing, the light or candles on the head, the holly, and very fair hair. Dickens has used the ghost’s appearance to {allude} to the Christkindl."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the similarity",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "The Christkindl wears a wreath of candles on its head. What does the Ghost of Christmas Past have that is similar?",
+          "options": [
+            "A crown made of holly leaves",
+            "A bright, clear jet of light from the crown of its head",
+            "A hood that hides its face"
+          ],
+          "answer": 1,
+          "why": "Dickens describes “from the crown of its head there sprung a bright clear jet of light”, which echoes the candles worn by the Christkindl."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why the Christkindl?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Queen Victoria married Prince Albert, who was from Germany, in 1840.",
+            "‘A Christmas Carol’ was published in 1843, so Dickens was likely to know the Christkindl because of the influence of German culture on British culture. Prince Albert is often credited with introducing the Christmas tree to England.",
+            "The Christkindl was presented as the child who announced the birth of Christ and who delivers gifts to children on Christmas Eve."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The spirit’s gifts",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Dickens uses the spirit’s appearance to position it as the bearer of gifts to Scrooge on Christmas Eve. The main gift is **hope**: hope for Scrooge’s transformation and redemption."
+        },
+        {
+          "t": "text",
+          "text": "The ghost also brings Scrooge:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "enlightenment, by showing him his past and the error of his ways",
+            "rebirth: the chance for spiritual rebirth",
+            "empathy: Scrooge learns to empathise with himself in this stave"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "By drawing parallels with the Christkindl, Dickens suggests the ghosts themselves are a gift to Scrooge, and that the values he is being taught are Christian values. He is effectively being given a second chance to find God."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ghost of Christmas Yet to Come: the Grim Reaper",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The Ghost of Christmas Yet to Come is reminiscent of the Grim Reaper, often considered a personification of death."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Early depictions of death personified appeared in the 14th century, when Europe was battling against the plague and the Black Death.",
+            "The Grim Reaper allegedly appears at the point of death to ‘reap’ the earth of those close to death."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Whose death is this?",
+          "text": "The ghost appears at the point of Scrooge’s **spiritual death** and rebirth. It is not a literal death. It could also be the death of Scrooge’s wickedness and immorality."
+        },
+        {
+          "t": "reveal",
+          "label": "How is Scrooge like someone ‘sick’?",
+          "text": "Scrooge could be said to be sick with immorality and cruelty. Through Mrs. Dilber, Dickens suggests that society is sick from injustice as well."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: spiritual death",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "What is the “death” that the Ghost of Christmas Yet to Come appears at?",
+          "options": [
+            "Scrooge’s literal death in Stave 4",
+            "Scrooge’s spiritual death and rebirth",
+            "The death of Tiny Tim"
+          ],
+          "answer": 1,
+          "why": "Scrooge has not literally died. The ghost appears at the point of his spiritual death and rebirth, as his wickedness and immorality die."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Ghost of Christmas Present’s torch",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The Ghost of Christmas Present “bore a glowing torch, in shape not unlike Plenty’s horn”. It is an uncommon kind of torch:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "When there were angry words between dinner-carriers who jostled each other, he shed a few drops of water on them from it, and “their good humour was restored directly”.",
+            "He sprinkles incense on poor people’s dinners from his torch. The spirit says the flavour works best on the poorest dinners, showing that generosity makes the biggest difference to the poorest members of society."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The torch is not actually Plenty’s horn. Dickens says it is “in shape not unlike Plenty’s horn”."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plenty’s horn: the cornucopia",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The torch is in the shape of a {cornucopia}: a hollow horn that produced plentiful gifts. The word comes from Latin words meaning ‘horn’ and ‘plenty’ (hence the word ‘copious’)."
+        },
+        {
+          "t": "text",
+          "text": "The cornucopia has been associated with harvest, prosperity and abundance, and with Gods and Goddesses of Wealth and Grain, who hold cornucopias."
+        },
+        {
+          "t": "callout",
+          "text": "The spirit represents **abundance and generosity**, so the object he carries reflects this. Dickens also uses the image to contradict Malthusian concerns about food shortages, showing there is plenty of food to go around if people are generous and charitable with it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Ghost of Christmas Past’s holly",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Culturally, holly is a symbol of winter festivities and Christmas, and its green leaves and red berries are associated with renewal and the hope of spring. In folklore it is linked to protection and good fortune. As an evergreen, it also represents resilience and enduring life in the midst of winter."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The holly could represent the blessing of the ghost’s visit: the good fortune of the intervention for Scrooge.",
+            "It could represent the resilience Scrooge will need to look back at his past and be introspective.",
+            "It represents the hope of transformation and redemption the ghost brings."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the symbol",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each ghost’s feature to what it symbolises or does.",
+          "pairs": [
+            {
+              "a": "The Ghost of Christmas Present’s torch, shaped like Plenty’s horn",
+              "b": "Abundance and generosity"
+            },
+            {
+              "a": "The Ghost of Christmas Past’s sprig of holly",
+              "b": "Hope, new life and resilience"
+            },
+            {
+              "a": "The Ghost of Christmas Yet to Come’s Grim Reaper-like appearance",
+              "b": "Scrooge’s spiritual death"
+            },
+            {
+              "a": "The Ghost of Christmas Past’s Christkindl-like appearance",
+              "b": "The ghost’s visit as a blessing, bringing the gift of hope or redemption"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which ghost?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the ghost.",
+          "items": [
+            {
+              "q": "Which ghost is reminiscent of the Grim Reaper?",
+              "options": [
+                "The Ghost of Christmas Past",
+                "The Ghost of Christmas Present",
+                "The Ghost of Christmas Yet to Come"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which ghost carries a glowing torch shaped like Plenty’s horn?",
+              "options": [
+                "The Ghost of Christmas Past",
+                "The Ghost of Christmas Present",
+                "The Ghost of Christmas Yet to Come"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which ghost carries a branch of fresh green holly?",
+              "options": [
+                "The Ghost of Christmas Past",
+                "The Ghost of Christmas Present",
+                "The Ghost of Christmas Yet to Come"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Dickens uses the ghosts’ appearances to allude to other figures in popular Victorian culture.",
+            "He alludes to the German Christkindl through the Ghost of Christmas Past’s appearance, to present the visit as a blessing to Scrooge.",
+            "He alludes to the Grim Reaper through the Ghost of Christmas Yet to Come to symbolise Scrooge’s spiritual death.",
+            "Many of the ghosts carry symbolic objects that indicate their purpose or message.",
+            "The Ghost of Christmas Present carries a bountiful torch, which symbolises abundance and generosity.",
+            "The Ghost of Christmas Past carries a sprig of holly to symbolise hope, new life and resilience."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an allusion?",
+      "back": "A passing or indirect reference to something else."
+    },
+    {
+      "front": "What does “to depict” mean?",
+      "back": "To represent or show something in a certain way."
+    },
+    {
+      "front": "What does “to draw parallels” mean?",
+      "back": "To make links between two things based on their similarities."
+    },
+    {
+      "front": "What is a cornucopia?",
+      "back": "A large horn-shaped container overflowing with produce, typically symbolic of abundance or plenty."
+    },
+    {
+      "front": "Which German figure does the Ghost of Christmas Past allude to?",
+      "back": "The Christkindl: the child who announced the birth of Christ and delivers gifts to children on Christmas Eve."
+    },
+    {
+      "front": "Name two features the Ghost of Christmas Past shares with the Christkindl.",
+      "back": "For example: a white tunic or robe, a light or candles on the head, a sprig of holly, fair hair."
+    },
+    {
+      "front": "What gifts could the Ghost of Christmas Past bring Scrooge?",
+      "back": "Hope for his transformation and redemption, enlightenment, rebirth and empathy."
+    },
+    {
+      "front": "Which figure is the Ghost of Christmas Yet to Come reminiscent of?",
+      "back": "The Grim Reaper, often considered a personification of death."
+    },
+    {
+      "front": "What does the Grim Reaper allusion symbolise?",
+      "back": "Scrooge’s spiritual death: the ghost appears at the point of his spiritual death and rebirth."
+    },
+    {
+      "front": "What does the Ghost of Christmas Present’s torch look like and what does it symbolise?",
+      "back": "It is in the shape of Plenty’s horn (a cornucopia). It symbolises abundance and generosity."
+    },
+    {
+      "front": "What does the Ghost of Christmas Present sprinkle from his torch?",
+      "back": "Water on quarrelling people, restoring their good humour, and incense on poor people’s dinners."
+    },
+    {
+      "front": "What does the Ghost of Christmas Past’s sprig of holly symbolise?",
+      "back": "Hope, new life and resilience."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘A Christmas Carol’: the ghosts and Dickens’ use of allusion",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "Which ghost is reminiscent of the Grim Reaper?",
+        "answer": "The Ghost of Christmas Yet to Come",
+        "accepted": [
+          "The Ghost of Christmas Yet to Come",
+          "Ghost of Christmas Yet to Come",
+          "Christmas Yet to Come",
+          "Yet to Come"
+        ],
+        "explanation": "The Ghost of Christmas Yet to Come alludes to the Grim Reaper, a personification of death."
+      },
+      {
+        "prompt": "In which century did early depictions of death personified (like the Grim Reaper) first appear? Give the number and “th”, for example “10th”.",
+        "answer": "14th",
+        "accepted": [
+          "14th",
+          "14th century",
+          "the 14th century",
+          "fourteenth",
+          "fourteenth century"
+        ],
+        "explanation": "They appeared in the 14th century, when Europe was battling the plague and the Black Death."
+      },
+      {
+        "prompt": "The Ghost of Christmas Yet to Come appears at the point of Scrooge’s ___ death, not a literal one. Fill in the missing word.",
+        "answer": "spiritual",
+        "accepted": [
+          "spiritual"
+        ],
+        "explanation": "The ghost appears at the point of Scrooge’s spiritual death and rebirth."
+      },
+      {
+        "prompt": "In which year did Queen Victoria marry Prince Albert, who was from Germany?",
+        "answer": "1840",
+        "accepted": [
+          "1840"
+        ],
+        "explanation": "Queen Victoria married Prince Albert in 1840."
+      },
+      {
+        "prompt": "In which year was ‘A Christmas Carol’ published?",
+        "answer": "1843",
+        "accepted": [
+          "1843"
+        ],
+        "explanation": "The novella was published in 1843."
+      },
+      {
+        "prompt": "The German Christkindl delivers ___ to children on Christmas Eve. Fill in the missing word.",
+        "answer": "gifts",
+        "accepted": [
+          "gifts",
+          "presents"
+        ],
+        "explanation": "The Christkindl was presented as someone who delivers gifts to children on Christmas Eve."
+      },
+      {
+        "prompt": "Which plant does the Ghost of Christmas Past carry a branch of?",
+        "answer": "holly",
+        "accepted": [
+          "holly",
+          "a holly branch"
+        ],
+        "explanation": "It “held a branch of fresh green holly in its hand”."
+      },
+      {
+        "prompt": "The Ghost of Christmas Present’s torch is “in shape not unlike ___ horn”. Whose horn?",
+        "answer": "Plenty’s",
+        "accepted": [
+          "Plenty’s",
+          "Plenty's",
+          "Plenty",
+          "Plentys"
+        ],
+        "explanation": "Dickens says the torch is in shape not unlike Plenty’s horn, a cornucopia."
+      },
+      {
+        "prompt": "What is the word for a large horn-shaped container overflowing with produce, symbolic of abundance?",
+        "answer": "cornucopia",
+        "accepted": [
+          "cornucopia",
+          "a cornucopia"
+        ],
+        "explanation": "A cornucopia is a large horn-shaped container overflowing with produce."
+      },
+      {
+        "prompt": "What does the Ghost of Christmas Present’s torch symbolise? Give two words joined by “and”.",
+        "answer": "abundance and generosity",
+        "accepted": [
+          "abundance and generosity",
+          "generosity and abundance"
+        ],
+        "explanation": "The torch symbolises abundance and generosity."
+      }
+    ]
+  }
+}

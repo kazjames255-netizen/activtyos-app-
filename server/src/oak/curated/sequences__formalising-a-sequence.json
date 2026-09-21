@@ -1,0 +1,524 @@
+{
+  "agent": "w4-maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can appreciate that a sequence is a succession of terms usually formed according to a rule."
+        },
+        {
+          "t": "text",
+          "text": "A sequence does not have to be made of numbers. It can be made of patterns of objects, and we can describe how the pattern grows."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Pictorial} sequences"
+            },
+            {
+              "title": "Describing {patterns} in words"
+            },
+            {
+              "title": "Finding {terms} using a rule"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Sequence",
+              "def": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+            },
+            {
+              "term": "Term",
+              "def": "Each value or pattern in a sequence is called a term."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Pictorial sequences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A sequence can be made from a pattern of objects. To draw the next pattern, we first have to understand how the pattern develops."
+        },
+        {
+          "t": "text",
+          "text": "Imagine a pattern made of white squares in the middle with black squares around the edge. Three pupils each say “each pattern increases by…”."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Increases by 1",
+              "sub": "the white squares in the middle, or the width"
+            },
+            {
+              "title": "Increases by 2",
+              "sub": "the black squares around the edge, or the perimeter"
+            },
+            {
+              "title": "Increases by 3",
+              "sub": "all the squares together, or the area"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "They can all be right! It depends which part of the pattern each person is talking about."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Be precise",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can look at individual parts of a pattern to describe how it develops. It is important to be precise about which object we mean."
+        },
+        {
+          "t": "text",
+          "text": "House pattern: the first pattern is one house made of 3 solid red lines and 2 dashed blue lines. Each new house adds 2 red lines and 2 blue lines, because one red line is already there from the last house. The height stays the same."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Red lines: 2 for each house, plus 1 extra at the start.",
+            "Blue lines: 2 for each house.",
+            "The 4th pattern has 9 red lines and 8 blue lines."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Total lines for 4 houses?",
+          "text": "9 red + 8 blue = 17 lines. It is not 20: only the first house needs 3 red lines."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "House pattern practice",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Same house pattern: 3 red and 2 blue lines for one house, then 2 more red and 2 more blue for each new house."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "options": [
+                "12",
+                "13",
+                "14",
+                "15"
+              ],
+              "answer": 1,
+              "q": "How many red lines for 6 houses?"
+            },
+            {
+              "options": [
+                "11",
+                "12",
+                "13",
+                "14"
+              ],
+              "answer": 1,
+              "q": "How many blue dashed lines for 6 houses?"
+            },
+            {
+              "options": [
+                "24",
+                "25",
+                "26",
+                "27"
+              ],
+              "answer": 1,
+              "q": "How many lines altogether for 6 houses?"
+            },
+            {
+              "options": [
+                "38",
+                "39",
+                "40",
+                "41"
+              ],
+              "answer": 2,
+              "q": "A pattern has 41 red lines. How many blue dashed lines does it have?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Terms of a sequence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each value or pattern in a sequence is called a {term}. In a pictorial sequence each pattern is a term: term 1, term 2, term 3, …"
+        },
+        {
+          "t": "text",
+          "text": "Here is a pattern with white squares in the middle and black squares around them. Term 1 has 8 black squares. Every new term adds 1 white square and 2 black squares."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Compare with the previous term: the black squares increase by 2 from one term to the next.",
+            "Compare the objects: the number of white squares is the term number. Term 10 has 10 white squares.",
+            "2 black squares for each white square, plus 3 at each end (6 in all): black = white × 2 + 6."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Black squares",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use the pattern from the last slide: black squares = 2 × (white squares) + 6, and term 1 has 8 black squares."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "options": [
+                "20",
+                "26",
+                "28",
+                "16"
+              ],
+              "answer": 1,
+              "q": "How many black squares are in term 10?"
+            },
+            {
+              "options": [
+                "30",
+                "36",
+                "38",
+                "21"
+              ],
+              "answer": 1,
+              "q": "How many black squares are in term 15?"
+            },
+            {
+              "options": [
+                "26",
+                "40",
+                "46",
+                "120"
+              ],
+              "answer": 2,
+              "q": "A term has 20 white squares. How many black squares does it have?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Write the numbers down",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "It can help to write the number of a certain object in each pattern. Then you can see the rule more easily."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Count the lines in each pattern: 3, 9, 15, … Each term adds 6 lines, so term 4 has 21 lines.",
+            "Count the perimeter of each pattern: 3, 6, 9, 12, … The perimeter increases by 3 each term. The term number × 3 gives the perimeter."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Counting the same object in every term turns a pattern of pictures into a number sequence."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Use the number sequence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A pictorial sequence has 3, 9, 15 lines in terms 1, 2, 3, with a constant additive pattern. Its perimeters are 3, 6, 9, 12, … for terms 1, 2, 3, 4, …"
+        },
+        {
+          "t": "choice",
+          "q": "How many lines are there in term 5?",
+          "options": [
+            "24",
+            "27",
+            "30",
+            "33"
+          ],
+          "answer": 1,
+          "why": "Each term adds 6: 15 + 6 = 21, 21 + 6 = 27."
+        },
+        {
+          "t": "choice",
+          "q": "What is the perimeter of term 8?",
+          "options": [
+            "24",
+            "21",
+            "27",
+            "11"
+          ],
+          "answer": 0,
+          "why": "The perimeter is the term number × 3, so term 8 has 8 × 3 = 24."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tables and chairs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a school dining hall, 6 chairs fit around one rectangular table. Now the tables are put end to end in a row."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Each table has 4 chairs, plus 2 chairs for the ends of the row.",
+            "4 tables: 4 × 4 + 2 = 18 chairs.",
+            "10 tables: 4 × 10 + 2 = 42 chairs.",
+            "26 chairs are needed for 26 pupils: 4 × 6 + 2 = 26, so 6 tables."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Each extra table adds 4 more chairs. The number of chairs is the number of tables × 4, plus 2."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Chairs practice",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tables are in a row, end to end. Each table has 4 chairs, plus 2 for the ends."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "options": [
+                "32",
+                "34",
+                "36",
+                "48"
+              ],
+              "answer": 1,
+              "q": "How many chairs fit round 8 tables?"
+            },
+            {
+              "options": [
+                "48",
+                "50",
+                "52",
+                "72"
+              ],
+              "answer": 1,
+              "q": "How many chairs fit round 12 tables?"
+            },
+            {
+              "options": [
+                "10",
+                "11",
+                "12",
+                "44"
+              ],
+              "answer": 1,
+              "q": "How many tables are needed for 46 chairs?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Parts add up",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The whole pattern is made of parts, and each part can grow by a different amount."
+        },
+        {
+          "t": "text",
+          "text": "In the black and white squares pattern, the white squares go up by 1 and the black squares go up by 2. So all the squares together go up by 1 + 2 = 3 each term."
+        },
+        {
+          "t": "callout",
+          "text": "To describe a sequence well, say which part of the pattern you are counting and how it grows from one term to the next."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which part?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the house pattern, the red lines increase by 2 each term and the blue dashed lines increase by 2 each term."
+        },
+        {
+          "t": "choice",
+          "q": "By how much do all the lines together increase each term?",
+          "options": [
+            "2",
+            "3",
+            "4",
+            "6"
+          ],
+          "answer": 2,
+          "why": "The red lines go up by 2 and the blue lines go up by 2, so all the lines go up by 2 + 2 = 4."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Formalising a sequence",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A sequence is a succession of objects, diagrams or values usually formed according to a rule. Each value or pattern in a sequence is called a term.",
+            "A pattern of objects can be made by following a rule, and the rule can be described in words.",
+            "Be precise about which object you are describing: white squares, black squares, all the squares, lines, perimeter…",
+            "Writing the number of objects in each term as a number sequence helps you spot the rule and find missing terms."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a term in a sequence?",
+      "back": "Each value or pattern in a sequence is called a term."
+    },
+    {
+      "front": "What is a sequence?",
+      "back": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+    },
+    {
+      "front": "In a pictorial sequence, what is each pattern called?",
+      "back": "A term: term 1, term 2, term 3, …"
+    },
+    {
+      "front": "Why must we be precise when we describe how a pattern grows?",
+      "back": "Different parts of a pattern can grow by different amounts, so we must say which object we mean (for example white squares, black squares or the perimeter)."
+    },
+    {
+      "front": "The white squares in a pattern go up by 1 each term and the black squares by 2. By how much do all the squares go up?",
+      "back": "3 each term (1 + 2)."
+    },
+    {
+      "front": "In the house pattern, how many red lines are there for 10 houses?",
+      "back": "21\n\nTwo red lines for each house, plus 1 extra at the start."
+    },
+    {
+      "front": "In the house pattern (2 blue lines per house), how many blue lines are there for 10 houses?",
+      "back": "20\n\nTwo for each house."
+    },
+    {
+      "front": "A pattern has terms with 3, 9, 15 lines. What is the rule and what is term 4?",
+      "back": "Add 6 lines each term, so term 4 has 21 lines."
+    },
+    {
+      "front": "A pattern has a perimeter of 3, 6, 9, 12 in terms 1 to 4. How could you find the perimeter of any term?",
+      "back": "Multiply the term number by 3."
+    },
+    {
+      "front": "In a pattern the number of black squares is white squares × 2 + 6. How many black squares are there in term 10?",
+      "back": "26\n\n10 × 2 + 6 = 26"
+    },
+    {
+      "front": "Tables in a row, end to end, each with 4 chairs plus 2 for the ends. How many chairs for 4 tables?",
+      "back": "18\n\n4 × 4 + 2 = 18"
+    },
+    {
+      "front": "Why does it help to write the number of objects in each term as numbers?",
+      "back": "It makes it easier to see the rule for the sequence, and to find missing terms."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Formalising a sequence",
+    "instructions": "Each question describes a pattern that grows by a rule. Work out the numbers in the pattern, then answer with a number.",
+    "questions": [
+      {
+        "prompt": "House pattern: the first pattern is one house made of 3 red lines and 2 dashed blue lines. Each new house adds 2 red lines and 2 blue lines. How many red lines are there for 12 houses?",
+        "answer": "25",
+        "explanation": "Red lines: 2 for each house plus 1 extra at the start: 2 × 12 + 1 = 25."
+      },
+      {
+        "prompt": "Same house pattern (each house has 2 blue dashed lines). How many blue dashed lines are there for 12 houses?",
+        "answer": "24",
+        "explanation": "Blue lines: 2 for each house: 2 × 12 = 24."
+      },
+      {
+        "prompt": "Same house pattern. How many lines are there altogether for 12 houses?",
+        "answer": "49",
+        "explanation": "25 red lines + 24 blue lines = 49."
+      },
+      {
+        "prompt": "Same house pattern. A pattern has 41 red lines. How many blue dashed lines does it have?",
+        "answer": "40",
+        "explanation": "There is always one more red line than blue lines, so 41 − 1 = 40."
+      },
+      {
+        "prompt": "A pattern has white squares in the middle and black squares around them. Term 1 has 1 white square and 8 black squares, and every new term adds 1 white square and 2 black squares. How many black squares are in term 15?",
+        "answer": "36",
+        "explanation": "Black squares = 2 × white squares + 6, and term 15 has 15 white squares: 2 × 15 + 6 = 36."
+      },
+      {
+        "prompt": "Same black and white pattern (black squares = 2 × white squares + 6, and term n has n white squares). Which term number has 40 black squares?",
+        "answer": "17",
+        "explanation": "2 × 17 + 6 = 40, so it is term 17."
+      },
+      {
+        "prompt": "A pictorial sequence has 3, 9, 15 lines in terms 1, 2, 3 and carries on with a constant additive pattern. How many lines are there in term 8?",
+        "answer": "45",
+        "explanation": "Each term adds 6: 3 + 7 × 6 = 45."
+      },
+      {
+        "prompt": "The perimeters of terms 1, 2, 3, 4 of a pattern are 3, 6, 9, 12, and it carries on the same way. What is the perimeter of term 20?",
+        "answer": "60",
+        "explanation": "The perimeter is the term number × 3: 20 × 3 = 60."
+      },
+      {
+        "prompt": "Tables are put end to end in a row. Each table has 4 chairs plus 2 chairs for the ends. How many chairs fit round 8 tables?",
+        "answer": "34",
+        "explanation": "4 × 8 + 2 = 34."
+      },
+      {
+        "prompt": "Tables are put end to end in a row. Each table has 4 chairs plus 2 chairs for the ends. How many tables are needed for 46 chairs?",
+        "answer": "11",
+        "explanation": "4 × 11 + 2 = 46."
+      }
+    ]
+  }
+}

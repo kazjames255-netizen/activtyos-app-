@@ -14,16 +14,23 @@ interface FbSession {
 }
 
 async function identityCall(endpoint: string, body: unknown): Promise<FbSession> {
-  const res = await fetch(`${IDENTITY}/${endpoint}?key=${FIREBASE_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as { idToken?: string; localId?: string; error?: { message?: string } };
-  if (!res.ok || !json.idToken) {
-    throw new Error(`${endpoint} failed: ${json.error?.message || res.status}`);
+  // Firebase rate-limits password verification per project (QUOTA_EXCEEDED / TOO_MANY_ATTEMPTS_TRY_LATER) — several
+  // suites sharing the dev project can trip it, so back off and retry instead of failing the test on a transient limit.
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${IDENTITY}/${endpoint}?key=${FIREBASE_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = (await res.json()) as { idToken?: string; localId?: string; error?: { message?: string } };
+    if (res.ok && json.idToken) return { idToken: json.idToken, uid: json.localId! };
+    const msg = json.error?.message || String(res.status);
+    if (attempt < 8 && /QUOTA_EXCEEDED|TOO_MANY_ATTEMPTS/.test(msg)) {
+      await new Promise((r) => setTimeout(r, 5_000 * (attempt + 1)));
+      continue;
+    }
+    throw new Error(`${endpoint} failed: ${msg}`);
   }
-  return { idToken: json.idToken, uid: json.localId! };
 }
 
 export const fbSignUp = (email: string, password = TEST_PASSWORD) =>

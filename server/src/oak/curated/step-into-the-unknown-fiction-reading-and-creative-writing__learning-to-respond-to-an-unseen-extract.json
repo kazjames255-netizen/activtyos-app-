@@ -1,0 +1,585 @@
+{
+  "agent": "w4-english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can read and understand an unseen extract from Carroll’s ‘Alice’s Adventures in Wonderland’ and analyse evidence to support my understanding."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Reading} the extract",
+              "sub": "Plot, character and setting"
+            },
+            {
+              "title": "{Understanding} the extract",
+              "sub": "Words, phrases and effects"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "extract",
+              "def": "A short passage taken from a text."
+            },
+            {
+              "term": "character",
+              "def": "A person in a novel, play, or film."
+            },
+            {
+              "term": "tone",
+              "def": "The general mood or feeling of a text."
+            },
+            {
+              "term": "contrast",
+              "def": "To compare two people or things in order to show the differences between them."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do you already know?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We are going to read an extract from Lewis Carroll’s ‘Alice’s Adventures in Wonderland’. Here is a mind-map of what we know about the story."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The white rabbit",
+              "sub": "Alice follows it down the rabbit hole to Wonderland."
+            },
+            {
+              "title": "Characters",
+              "sub": "In Wonderland she meets characters such as the Mad Hatter and the Cheshire Cat."
+            },
+            {
+              "title": "The Queen of Hearts",
+              "sub": "She tries to have Alice beheaded, but Alice then realises it’s all a dream."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Alice, just like us in this unit, is stepping into the unknown: a world where she hasn’t been before."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to read an unseen extract",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**First read:** use it to establish key information about the plot, the characters and the setting."
+        },
+        {
+          "t": "text",
+          "text": "**Second read:** read the text more closely to consider the meaning of specific words and phrases."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Don’t start trying to spot language devices straight away. It is better to take the time to understand what is happening before you think about how the writer creates meaning."
+        },
+        {
+          "t": "callout",
+          "text": "While you read, you can circle key characters when they appear and underline any words you don’t know, then come back to check them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First read: the hall of doors",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alice was feeling bored on a hot summer’s day. She has just followed a rabbit down a rabbit hole into a mysterious hallway full of doors."
+        },
+        {
+          "t": "list",
+          "items": [
+            "There were doors all round the hall, but they were all locked.",
+            "Alice ‘walked sadly down the middle, wondering how she was ever to get out again’.",
+            "She found a little three-legged table, all made of solid glass, with nothing on it but a tiny golden key.",
+            "The key would not open any of the doors in the hall.",
+            "On the second time round she found a low curtain, and behind it was a little door about fifteen inches high.",
+            "The little golden key fitted: ‘to her great delight, it fitted!’"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the hall of doors",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "What was the little three-legged table made of?",
+              "options": [
+                "Solid glass",
+                "Wood",
+                "Gold"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Where was the little door hidden?",
+              "options": [
+                "Behind a low curtain",
+                "Under the table",
+                "At the end of the hall"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these does the tiny golden key open?",
+              "options": [
+                "One of the big doors in the hall",
+                "The little door about fifteen inches high"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First read: the garden and the telescope",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The little door led into a small passage, not much larger than a rat-hole.",
+            "Alice knelt down and looked along it into ‘the loveliest garden you ever saw’, with beds of bright flowers and cool fountains.",
+            "How she longed to get out of that ‘dark hall’ and wander in the garden!",
+            "But she could not even get her head through the doorway.",
+            "She thought: ‘Oh, how I wish I could shut up like a telescope!’"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Where is Alice trying to get to?",
+          "text": "She is trying to get to the lovely garden that she can see through the tiny door."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First read: the bottle",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Back at the table, Alice found a little bottle that certainly was not there before.",
+            "A paper label tied round its neck said ‘DRINK ME’ in large letters.",
+            "The wise little Alice did not drink it in a hurry. She wanted to look first and see whether it was marked ‘poison’.",
+            "This bottle was not marked ‘poison’, so she tasted it. She found it very nice.",
+            "‘What a curious feeling!’ said Alice. She was now only ten inches high, the right size for the little door."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why check for ‘poison’?",
+          "text": "Alice had read several stories about children who came to harm because they would not remember the simple rules their friends had taught them. She had never forgotten that drinking much from a bottle marked ‘poison’ is most certain to disagree with you."
+        },
+        {
+          "t": "text",
+          "text": "Her transformation seems to be a positive experience: she describes the taste as very nice and the feeling as ‘curious’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First read: the ending",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Alice waited a few minutes to see if she was going to shrink any further. She felt a little nervous: it might end ‘in my going out altogether, like a candle’.",
+            "She decided to go into the garden, but she had forgotten the little golden key.",
+            "She could see the key plainly through the glass table but could not reach it.",
+            "She tried to climb a table leg, but it was too slippery.",
+            "When she had tired herself out with trying, ‘the poor little thing sat down and cried’."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is Alice worried about?",
+          "text": "She is worried about shrinking so much that she doesn’t exist any more."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Check your reading",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Why did Alice want to go through the little door?",
+              "options": [
+                "To reach the lovely garden",
+                "To find the way home",
+                "To find the white rabbit"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why did Alice check whether the bottle was marked ‘poison’?",
+              "options": [
+                "She had read stories about children who came to harm when they forgot simple rules",
+                "The label told her to",
+                "She had been told to drink it by the rabbit"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What stopped Alice getting the golden key at the end?",
+              "options": [
+                "It was on the glass table and she could not reach it",
+                "The key was too large",
+                "The door was locked again"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What did Alice do at the very end of the extract?",
+              "options": [
+                "She sat down and cried",
+                "She went into the garden",
+                "She drank from another bottle"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tone: how does Alice feel?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When reading a text for the first time, think about the **tone**: the general mood or feeling of the text. Ask how Alice feels at the start and at the end, and use quotations as evidence."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "At the start",
+              "sub": "Worried about being in the hall and not knowing how to get out. Carroll describes her ‘walking sadly down the middle’, so she is unhappy with her situation. The tone is worry and sadness."
+            },
+            {
+              "title": "At the end",
+              "sub": "The final word of the extract is ‘cried’, so Alice is still unhappy and frustrated at her situation."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A strong answer says where in the text you are looking, uses a key quotation, and focuses on the language."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the evidence",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which quotation shows that Alice is happy?",
+              "options": [
+                "‘she walked sadly down the middle’",
+                "‘to her great delight, it fitted!’",
+                "‘sat down and cried’"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which quotation shows that Alice is unhappy?",
+              "options": [
+                "‘her face brightened up’",
+                "‘to her great delight, it fitted!’",
+                "‘sat down and cried’"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which quotation helps to show the tone at the start of the extract?",
+              "options": [
+                "‘walked sadly down the middle’",
+                "‘the loveliest garden you ever saw’",
+                "‘her face brightened up’"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Second read: the writer’s techniques",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To understand a text, think about how the writer uses language to create an effect on the reader. After the first read, go back and look at certain words or phrases in more detail. Ask why the writer is using them."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "contrast",
+              "def": "A writer might use contrast to highlight the difference between two things."
+            },
+            {
+              "term": "emotive language",
+              "def": "Emotive language can be used to make the reader feel a certain way towards a character."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Second read: worked answers",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "What does Alice mean by wishing she could shut up ‘like a telescope’?",
+          "text": "She wants to be able to fold herself away to make herself smaller."
+        },
+        {
+          "t": "reveal",
+          "label": "What is the effect of contrasting the ‘loveliest garden’ and the ‘dark hall’?",
+          "text": "It emphasises just how much Alice desires to be in the garden. It creates a really positive association with the garden, whereas it suggests that the hall is somewhere negative that Alice doesn’t want to be."
+        },
+        {
+          "t": "reveal",
+          "label": "Who is the ‘poor little thing’ at the end? How is the reader made to feel?",
+          "text": "The ‘poor little thing’ is Alice. Carroll has used emotive language to make the reader feel sympathy for her."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Techniques check",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each technique to what a writer might use it for.",
+          "pairs": [
+            {
+              "a": "contrast",
+              "b": "to highlight the difference between two things"
+            },
+            {
+              "a": "emotive language",
+              "b": "to make the reader feel a certain way towards a character"
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which pair from the extract is a contrast?",
+              "options": [
+                "The loveliest garden and the dark hall",
+                "The little bottle and the paper label",
+                "The golden key and the little door"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "When you meet an unseen extract, what should you do first?",
+              "options": [
+                "Read to understand the plot, characters and setting",
+                "Hunt for language devices straight away"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Use the first reading of an unseen extract to establish key information about plot, character and setting.",
+            "Next, read the text more closely to consider the meaning of specific words and phrases.",
+            "Writers use specific words and phrases to create specific effects on the reader."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an extract?",
+      "back": "A short passage taken from a text."
+    },
+    {
+      "front": "What is a character?",
+      "back": "A person in a novel, play, or film."
+    },
+    {
+      "front": "What is the tone of a text?",
+      "back": "The general mood or feeling of the text."
+    },
+    {
+      "front": "What does contrast mean?",
+      "back": "To compare two people or things in order to show the differences between them."
+    },
+    {
+      "front": "What should you use your first read of an unseen extract for?",
+      "back": "To establish key information about the plot, characters and setting."
+    },
+    {
+      "front": "What should you do on your second read of an unseen extract?",
+      "back": "Read more closely to consider the meaning of specific words and phrases."
+    },
+    {
+      "front": "Why shouldn’t you start spotting language devices straight away?",
+      "back": "It is better to take the time to understand what is happening before you think about how the writer creates meaning."
+    },
+    {
+      "front": "Who wrote ‘Alice’s Adventures in Wonderland’?",
+      "back": "Lewis Carroll."
+    },
+    {
+      "front": "What is Alice trying to get to through the tiny door?",
+      "back": "The lovely garden she can see through it."
+    },
+    {
+      "front": "How does Alice feel at the start of the extract? What quotation shows it?",
+      "back": "Worried and sad.\n\nShe ‘walked sadly down the middle’."
+    },
+    {
+      "front": "What is the final word of the extract, and what does it show?",
+      "back": "‘Cried’.\n\nAlice is still unhappy and frustrated at her situation."
+    },
+    {
+      "front": "What does Alice mean by wishing she could shut up ‘like a telescope’?",
+      "back": "She wants to be able to fold herself away to make herself smaller."
+    },
+    {
+      "front": "What is the effect of contrasting the ‘loveliest garden’ with the ‘dark hall’?",
+      "back": "It emphasises how much Alice desires to be in the garden. The garden feels positive and the hall negative."
+    },
+    {
+      "front": "What is emotive language used for?",
+      "back": "To make the reader feel a certain way towards a character.\n\nCarroll’s ‘poor little thing’ makes us feel sympathy for Alice."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Responding to an unseen extract from ‘Alice’s Adventures in Wonderland’",
+    "instructions": "Answer each question with a short answer, using the extract and what you have learned about tone, contrast and emotive language.",
+    "questions": [
+      {
+        "prompt": "What material is the little three-legged table made of? Answer with one word.",
+        "answer": "glass",
+        "accepted": [],
+        "explanation": "The extract says the table was ‘all made of solid glass’."
+      },
+      {
+        "prompt": "About how many inches high is the little door that Alice finds behind the curtain? Answer with a number.",
+        "answer": "15",
+        "accepted": [
+          "fifteen"
+        ],
+        "explanation": "The extract says the door was ‘about fifteen inches high’."
+      },
+      {
+        "prompt": "What two words are printed on the paper label tied round the bottle?",
+        "answer": "drink me",
+        "accepted": [],
+        "explanation": "The label had the words ‘DRINK ME’ beautifully printed on it in large letters."
+      },
+      {
+        "prompt": "After drinking from the bottle, how many inches high is Alice? Answer with a number.",
+        "answer": "10",
+        "accepted": [
+          "ten"
+        ],
+        "explanation": "The extract says she was ‘now only ten inches high’."
+      },
+      {
+        "prompt": "Alice wishes she could shut up like what object?",
+        "answer": "telescope",
+        "accepted": [
+          "a telescope"
+        ],
+        "explanation": "Alice thinks: ‘Oh, how I wish I could shut up like a telescope!’"
+      },
+      {
+        "prompt": "What is the final word of the extract?",
+        "answer": "cried",
+        "accepted": [],
+        "explanation": "The extract ends with ‘the poor little thing sat down and cried’, which shows Alice is unhappy at the end."
+      },
+      {
+        "prompt": "Which word means the general mood or feeling of a text?",
+        "answer": "tone",
+        "accepted": [
+          "the tone"
+        ],
+        "explanation": "Tone is the general mood or feeling of a text."
+      },
+      {
+        "prompt": "Which word means comparing two people or things in order to show the differences between them?",
+        "answer": "contrast",
+        "accepted": [
+          "to contrast",
+          "a contrast"
+        ],
+        "explanation": "Contrast highlights the difference between two things, such as the ‘loveliest garden’ and the ‘dark hall’."
+      },
+      {
+        "prompt": "Complete the sentence with one word: ‘_____ language can be used to make the reader feel a certain way towards a character.’",
+        "answer": "emotive",
+        "accepted": [],
+        "explanation": "Emotive language makes the reader feel a certain way, for example sympathy for Alice."
+      },
+      {
+        "prompt": "Who is the ‘poor little thing’ described at the end of the extract?",
+        "answer": "Alice",
+        "accepted": [],
+        "explanation": "The ‘poor little thing’ who sat down and cried is Alice."
+      }
+    ]
+  }
+}

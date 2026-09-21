@@ -1,0 +1,695 @@
+{
+  "agent": "w4-comb-bio",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use a light microscope to observe and produce scientific drawings of cells."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Using a {light microscope}",
+              "emoji": "🔬"
+            },
+            {
+              "title": "Observing and {drawing} cells"
+            },
+            {
+              "title": "{Magnification} and the size of cells"
+            }
+          ]
+        }
+      ],
+      "art": [
+        "🔬"
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "light microscope",
+              "def": "A type of microscope that uses visible light and a system of lenses to generate magnified images of small objects."
+            },
+            {
+              "term": "lens",
+              "def": "A piece of glass or other transparent material with curved sides, used in a microscope to magnify objects."
+            },
+            {
+              "term": "magnification",
+              "def": "Making small objects appear larger in order to see more detail."
+            },
+            {
+              "term": "focus",
+              "def": "A point where light rays converge to form an image."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Use the word {magnification}, not “zoom in”. And say “{focus} the image” rather than “make the image clearer”."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Parts of a light microscope",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each part to see its job."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "eyepiece lens",
+              "def": "The part you look down when you view your specimen."
+            },
+            {
+              "term": "objective lens",
+              "def": "There are usually three objective lenses. You change them to change the magnification of the image."
+            },
+            {
+              "term": "stage",
+              "def": "The slide with the specimen goes on the stage, under the clips. The stage can move up and down to get closer to or further from the objective lenses."
+            },
+            {
+              "term": "light source",
+              "def": "At the bottom of the microscope. The light must shine directly through the specimen so that you can view it."
+            },
+            {
+              "term": "coarse focus wheel",
+              "def": "The initial focusing wheel. It moves the stage towards or further away from the objective lens."
+            },
+            {
+              "term": "fine focus wheel",
+              "def": "Gives a much more precise image, so you can focus much more clearly."
+            }
+          ]
+        }
+      ],
+      "art": [
+        "🔬"
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Method: getting ready",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are the first three steps of the method for using a light microscope."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Turn the objective lens to the lowest magnification.**",
+            "**Place the slide on the stage under the clips.**",
+            "**Turn on the light source.**"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Make sure the specimen is over the little hole in the stage, so that the light can shine through it."
+        },
+        {
+          "t": "text",
+          "text": "Careful! Lamps can get very hot."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Method: focusing",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "**Looking from the side**, turn the coarse focus wheel to move the stage up so it is close to the objective lens.",
+            "**Looking into the eyepiece lens**, turn the coarse focus wheel to bring your specimen into focus.",
+            "Turn the **fine focus wheel** to sharpen the focus of the image.",
+            "To increase the magnification, change to a **higher power objective lens**."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why look from the side when moving the stage up?",
+          "text": "So you can see when to stop moving the stage upwards, so that it does not smash into the objective lens."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Parts of the microscope",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each part of the microscope to its job.",
+          "pairs": [
+            {
+              "a": "eyepiece lens",
+              "b": "the part you look down"
+            },
+            {
+              "a": "objective lens",
+              "b": "changed to change the magnification"
+            },
+            {
+              "a": "stage",
+              "b": "holds the slide under clips"
+            },
+            {
+              "a": "light source",
+              "b": "shines light through the specimen"
+            },
+            {
+              "a": "coarse focus wheel",
+              "b": "brings the specimen roughly into focus"
+            },
+            {
+              "a": "fine focus wheel",
+              "b": "sharpens the focus"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "The method",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "What is the very first step?",
+              "options": [
+                "Turn the fine focus wheel",
+                "Turn the objective lens to the lowest magnification",
+                "Change to the highest power objective lens"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Where does the slide go?",
+              "options": [
+                "On the stage, under the clips",
+                "Inside the eyepiece lens",
+                "Under the light source"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which wheel do you turn first to bring the specimen into focus?",
+              "options": [
+                "fine focus wheel",
+                "coarse focus wheel",
+                "the light source"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How do you increase the magnification?",
+              "options": [
+                "Turn the stage clips",
+                "Move the light source",
+                "Change to a higher power objective lens"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Why do you look from the side while moving the stage up?",
+              "options": [
+                "To make the image clearer",
+                "To see when to stop so the stage does not smash into the objective lens",
+                "To turn the light on"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What will you see?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A light microscope can be used to observe animal and plant cells. Images like these may be similar to what you see:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Muscle tissue"
+            },
+            {
+              "title": "Onion tissue"
+            },
+            {
+              "title": "Skin tissue"
+            },
+            {
+              "title": "Root tissue"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In each image you can see lots of cells of the same type. That is a {tissue}. Look carefully and try to spot one **single cell**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Scientific line drawings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can record what you see in a **labelled scientific line drawing** of cells. It does not look exactly the same as the original image. It is a clear and simple representation."
+        },
+        {
+          "t": "text",
+          "text": "The rules for a scientific line drawing of cells:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "select a **few** cells",
+            "use **continuous** lines (no sketching)",
+            "make the lines **smooth and joined up**",
+            "**no shading** apart from stippling",
+            "draw it a **large size**",
+            "add **clear labels**, including the magnification (for example x400)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is stippling?",
+          "text": "Stippling means using dots with your pencil."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Good drawing or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Should a scientific line drawing of cells have this?",
+          "columns": [
+            "Yes",
+            "No"
+          ],
+          "items": [
+            {
+              "text": "smooth, continuous lines",
+              "col": 0
+            },
+            {
+              "text": "sketchy lines",
+              "col": 1
+            },
+            {
+              "text": "shading",
+              "col": 1
+            },
+            {
+              "text": "stippling (dots)",
+              "col": 0
+            },
+            {
+              "text": "clear labels",
+              "col": 0
+            },
+            {
+              "text": "lots and lots of cells",
+              "col": 1
+            },
+            {
+              "text": "the magnification written on it",
+              "col": 0
+            },
+            {
+              "text": "no labels",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Magnification",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Magnification is a measure of how many times an object has been enlarged. The **image size** is the size of the picture or drawing. The **real size** is the actual size of the cell."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "size of image",
+              "add": "÷ size of real object",
+              "result": "magnification"
+            },
+            {
+              "root": "size of image",
+              "add": "÷ magnification",
+              "result": "real size"
+            },
+            {
+              "root": "real size",
+              "add": "× magnification",
+              "result": "image size"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The real size is much smaller than the image size, so always check that your image size is the bigger one."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Converting units",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The image size and the real size must be in the **same unit** before you divide. How many are there in one metre?"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "metre (m)",
+              "sub": "1"
+            },
+            {
+              "title": "millimetre (mm)",
+              "sub": "1000"
+            },
+            {
+              "title": "micrometre (µm)",
+              "sub": "1 000 000"
+            },
+            {
+              "title": "nanometre (nm)",
+              "sub": "1 000 000 000"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "To go to the next smaller unit (m to mm, mm to µm, µm to nm), **multiply by 1000**.",
+            "To go back to the next bigger unit, **divide by 1000**.",
+            "Centimetres to millimetres: multiply by 10."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: magnification",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A red blood cell has a diameter of 8 µm. In an image it measures 5.6 mm. Calculate the magnification."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Same units first: 5.6 mm × 1000 = 5600 µm.",
+            "magnification = image ÷ real = 5600 ÷ 8.",
+            "5600 ÷ 8 = 700, so the magnification is x700."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Check it",
+          "text": "The image size (5600 µm) is bigger than the real size (8 µm), as it should be."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: real size",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The image of a mitochondrion measures 3.0 mm and is magnified x5000. Calculate its real size, in micrometres."
+        },
+        {
+          "t": "list",
+          "items": [
+            "real size = image ÷ magnification.",
+            "3 ÷ 5000 = 0.0006 mm.",
+            "Convert to micrometres: 0.0006 × 1000 = 0.6 µm."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Now you calculate",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A cell is 20 µm long. In an image it measures 4 mm. What is the magnification?",
+              "options": [
+                "x200",
+                "x80 000",
+                "x0.2"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A plant cell is 50 µm across. In an image it measures 12 mm. What is the magnification?",
+              "options": [
+                "x600",
+                "x240",
+                "x0.24"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In an image a structure measures 6 mm and the magnification is x300. What is its real size?",
+              "options": [
+                "1800 µm",
+                "20 µm",
+                "0.02 µm"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A structure is 25 µm long. The magnification is x400. How long is it in the image?",
+              "options": [
+                "10 mm",
+                "10 000 mm",
+                "0.0625 mm"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "See the working",
+          "text": "1) 4 mm = 4000 µm; 4000 ÷ 20 = 200. 2) 12 mm = 12 000 µm; 12 000 ÷ 50 = 240. 3) 6 ÷ 300 = 0.02 mm; 0.02 × 1000 = 20 µm. 4) 25 × 400 = 10 000 µm; 10 000 ÷ 1000 = 10 mm."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A light microscope can be used to observe animal and plant cells.",
+            "Follow the method: lowest magnification first, slide on the stage, light on, coarse focus wheel, then fine focus wheel; change to a higher power objective lens to increase the magnification.",
+            "Observations can be recorded in a labelled scientific line drawing.",
+            "The magnification and real size of structures can be calculated: magnification = size of image ÷ size of real object."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a light microscope?",
+      "back": "A type of microscope that uses visible light and a system of lenses to generate magnified images of small objects."
+    },
+    {
+      "front": "What is a lens?",
+      "back": "A piece of glass or other transparent material with curved sides, used in a microscope to magnify objects."
+    },
+    {
+      "front": "What is magnification?",
+      "back": "Making small objects appear larger in order to see more detail.\n\nSay “magnification”, not “zoom in”."
+    },
+    {
+      "front": "What does focus mean?",
+      "back": "A point where light rays converge to form an image.\n\nSay “focus the image” rather than “make it clearer”."
+    },
+    {
+      "front": "Which part of a light microscope do you look down?",
+      "back": "The eyepiece lens."
+    },
+    {
+      "front": "Which part do you change to change the magnification?",
+      "back": "The objective lens (there are usually three of them)."
+    },
+    {
+      "front": "What is the job of the stage?",
+      "back": "The slide goes on the stage, under the clips. The stage moves up and down."
+    },
+    {
+      "front": "What does the coarse focus wheel do?",
+      "back": "It is the initial focusing wheel. It moves the stage towards or away from the objective lens to bring the specimen roughly into focus."
+    },
+    {
+      "front": "What does the fine focus wheel do?",
+      "back": "It gives a much more precise image, so you can focus much more clearly."
+    },
+    {
+      "front": "What is the first step when using a light microscope?",
+      "back": "Turn the objective lens to the lowest magnification."
+    },
+    {
+      "front": "Why do you look from the side when you turn the coarse focus wheel to move the stage up?",
+      "back": "So you can see when to stop moving the stage upwards, so that it does not smash into the objective lens."
+    },
+    {
+      "front": "Name the rules for a scientific line drawing of cells.",
+      "back": "Select a few cells; continuous lines (no sketching); smooth, joined-up lines; no shading apart from stippling; large size; clear labels including the magnification."
+    },
+    {
+      "front": "What is the equation for magnification?",
+      "back": "magnification = size of image ÷ size of real object"
+    },
+    {
+      "front": "How many micrometres (µm) are there in 1 millimetre (mm)?",
+      "back": "1000\n\nmm to µm: multiply by 1000."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Light microscopy: observing and drawing cells",
+    "instructions": "Answer each question with a word or a number. For the calculations, convert to the same units first and give the answer in the unit asked for.",
+    "questions": [
+      {
+        "prompt": "Which part of a light microscope do you look down to view the specimen?",
+        "answer": "eyepiece lens",
+        "accepted": [
+          "eyepiece",
+          "eye piece lens"
+        ],
+        "explanation": "The eyepiece lens is the part you look down."
+      },
+      {
+        "prompt": "You change this part of the microscope to change the magnification. Name it (two words).",
+        "answer": "objective lens",
+        "explanation": "Changing to a higher power objective lens increases the magnification."
+      },
+      {
+        "prompt": "Which wheel do you turn first to bring the specimen into focus?",
+        "answer": "coarse focus wheel",
+        "accepted": [
+          "coarse focus",
+          "coarse focusing wheel"
+        ],
+        "explanation": "The coarse focus wheel is the initial focusing wheel; the fine focus wheel is used afterwards to sharpen the focus."
+      },
+      {
+        "prompt": "Which word should you use instead of “zoom in”?",
+        "answer": "magnification",
+        "explanation": "Magnification means making small objects appear larger in order to see more detail."
+      },
+      {
+        "prompt": "How many micrometres (µm) are there in 1 millimetre (mm)? Write a number.",
+        "answer": "1000",
+        "accepted": [
+          "1,000",
+          "1 000",
+          "one thousand"
+        ],
+        "explanation": "1 m = 1000 mm = 1 000 000 µm, so 1 mm = 1000 µm."
+      },
+      {
+        "prompt": "Convert 3 mm to micrometres (µm). Write a number.",
+        "answer": "3000",
+        "accepted": [
+          "3,000",
+          "3 000"
+        ],
+        "explanation": "mm to µm: multiply by 1000, so 3 × 1000 = 3000."
+      },
+      {
+        "prompt": "Calculate the magnification of a mitochondrion with a length of 0.8 µm in an image measuring 14 mm. Give the number only.",
+        "answer": "17500",
+        "accepted": [
+          "17,500",
+          "17 500",
+          "17500x",
+          "x17500"
+        ],
+        "explanation": "14 mm = 14 000 µm, and 14 000 ÷ 0.8 = 17 500."
+      },
+      {
+        "prompt": "Calculate the magnification of a flea’s leg with a length of 1.2 mm in an image measuring 15 cm. Give the number only.",
+        "answer": "125",
+        "accepted": [
+          "125x",
+          "x125"
+        ],
+        "explanation": "15 cm = 150 mm, and 150 ÷ 1.2 = 125."
+      },
+      {
+        "prompt": "Calculate the real size of a pollen grain given an image size of 30 mm and a magnification of 400x. Give your answer in mm.",
+        "answer": "0.075",
+        "accepted": [
+          "0.075 mm"
+        ],
+        "explanation": "real size = image ÷ magnification = 30 ÷ 400 = 0.075 mm."
+      },
+      {
+        "prompt": "Calculate the real size of a bacterium with an image size of 0.25 mm and a magnification of 2000x. Give your answer in µm.",
+        "answer": "0.125",
+        "accepted": [
+          "0.125 µm"
+        ],
+        "explanation": "0.25 ÷ 2000 = 0.000125 mm, and 0.000125 × 1000 = 0.125 µm."
+      },
+      {
+        "prompt": "Calculate the image size of a human hair strand with a real size of 20 µm and a magnification of 500x. Give your answer in mm.",
+        "answer": "10",
+        "accepted": [
+          "10 mm"
+        ],
+        "explanation": "image size = 20 × 500 = 10 000 µm, which is 10 mm."
+      }
+    ]
+  }
+}

@@ -1,0 +1,678 @@
+{
+  "agent": "english-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can take part in a full {debate}."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson, you will be taking part in a full debate."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Setting up a full debate"
+            },
+            {
+              "title": "Holding a full debate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "chairperson",
+              "def": "A person in charge of a meeting, event, discussion or debate."
+            },
+            {
+              "term": "timekeeper",
+              "def": "A person who measures or records the amount of time taken during an event."
+            },
+            {
+              "term": "point of information",
+              "def": "A brief attempted interruption of someone’s speech."
+            },
+            {
+              "term": "rebuttal",
+              "def": "A counter-argument made against something specific that the opposing team has said."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Roles in a debate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a debate there are these roles: speakers, summary speakers, floor speakers, a chairperson, a timekeeper and judge(s). Don’t forget the audience: they play an important role too! Tap each role."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "speakers",
+              "def": "Make the speeches for their team."
+            },
+            {
+              "term": "summary speakers",
+              "def": "Summarise all the speakers’ speeches."
+            },
+            {
+              "term": "floor speakers",
+              "def": "Help the speakers to prepare for the debate, and can speak during the floor debate section."
+            },
+            {
+              "term": "chairperson",
+              "def": "Directs and keeps order in the debate. They introduce each speaker and explain to the audience what is happening."
+            },
+            {
+              "term": "timekeeper",
+              "def": "Monitors the time of each speech."
+            },
+            {
+              "term": "judges",
+              "def": "Score the debate and decide the winning team."
+            },
+            {
+              "term": "audience",
+              "def": "Watch the debate, ask questions in the floor debate section and may vote for a winning team."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which role?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Read what each person does. Which role are they?",
+          "items": [
+            {
+              "q": "Maya keeps track of how long each speaker has spoken and signals when they are in or out of protected time.",
+              "options": [
+                "chairperson",
+                "timekeeper",
+                "judge"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Sam scores the debate using criteria and decides the winning team.",
+              "options": [
+                "floor speaker",
+                "judge",
+                "audience"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Lee helps a speaker prepare their speech and can speak during the floor debate.",
+              "options": [
+                "summary speaker",
+                "chairperson",
+                "floor speaker"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Priya introduces each speaker and keeps order in the debate.",
+              "options": [
+                "timekeeper",
+                "chairperson",
+                "speaker"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The teams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The number of speakers in a debate can vary depending on how large the total group of people is. Usually, a debate team consists of:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "3 speakers"
+            },
+            {
+              "title": "1 summary speaker"
+            },
+            {
+              "title": "4 floor speakers"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When each speaker is preparing their speech, a floor speaker can support them: discussing ideas and practising saying parts of the speech aloud."
+        },
+        {
+          "t": "text",
+          "text": "Anyone who is not in one of the roles will be part of the audience."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The order of a debate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The order of a debate is set and always remains the same. The chairperson introduces each speaker and explains to the audience what is happening."
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Speaker 1 for the proposition",
+            "2. Speaker 1 for the opposition",
+            "3. Speaker 2 for the proposition",
+            "4. Speaker 2 for the opposition",
+            "5. Speaker 3 for the proposition",
+            "6. Speaker 3 for the opposition",
+            "7. Floor debate",
+            "8. Summary speaker for the opposition",
+            "9. Summary speaker for the proposition"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The order alternates throughout, with the proposition going first each time. After the floor debate, the order switches and the opposition summary speaker goes first."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: what happens in the floor debate?",
+          "text": "The floor speakers make their suggestions. They can make very small speeches if they have a point prepared that they want to raise. The audience can also ask questions to the speakers in this section."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Who speaks next?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the order of a full debate.",
+          "items": [
+            {
+              "q": "Who speaks straight after Speaker 2 for the proposition?",
+              "options": [
+                "Speaker 3 for the proposition",
+                "Speaker 2 for the opposition",
+                "the opposition summary speaker"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Who makes the very last speech of the whole debate?",
+              "options": [
+                "the proposition summary speaker",
+                "the opposition summary speaker",
+                "Speaker 3 for the opposition"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Who speaks first: Speaker 1 for the proposition or Speaker 1 for the opposition?",
+              "options": [
+                "Speaker 1 for the opposition",
+                "Speaker 1 for the proposition"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Judging the debate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A debate is usually judged so that there is a winning team. It can be judged in several ways:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "by the audience voting on which team they felt was the most convincing (a show of hands)",
+            "by a single judge using their own opinion or a scoring criteria",
+            "by a panel of judges using a scoring criteria"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Speakers may be scored on criteria such as:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "style",
+            "content",
+            "delivery",
+            "points of information"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Next lesson, you will review your own performance. It helps to record the whole debate so you can watch yourselves and reflect on, review and score your own performance."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Point of information",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "While a speaker is making their speech, the opposing team’s speakers can interrupt them by challenging them with a **point of information**."
+        },
+        {
+          "t": "lead",
+          "text": "A point of information is a brief attempted interruption by the opposing team during a team’s speech."
+        },
+        {
+          "t": "text",
+          "text": "It can be phrased as a question. This works well because it puts pressure on the speaker to answer."
+        },
+        {
+          "t": "text",
+          "text": "To make a point of information, a member of the opposing team needs to:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "stand up",
+            "put one hand on their head",
+            "extend one hand out towards the speaker"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Protected time",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Points of information can only be made during unprotected time, and they should be 10 to 15 seconds long."
+        },
+        {
+          "t": "callout",
+          "text": "During a speaker’s speech, the first thirty seconds and the last thirty seconds are {protected time}. Points of information cannot be made then."
+        },
+        {
+          "t": "text",
+          "text": "The timekeeper signals when a speaker is in or out of protected time."
+        },
+        {
+          "t": "choices",
+          "q": "In a debate where each speech is three minutes long, can the opposing team make a point of information at this moment?",
+          "items": [
+            {
+              "q": "The speaker has been speaking for 20 seconds.",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The speaker has been speaking for 1 minute 15 seconds.",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The speaker has been speaking for 2 minutes 45 seconds.",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see how to work it out",
+          "text": "Protected time is the first 30 seconds (0:00 to 0:30) and the last 30 seconds (2:30 to 3:00) of a three-minute speech. 20 seconds and 2 minutes 45 seconds are both protected. 1 minute 15 seconds is in unprotected time, so a point of information is allowed."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Rebuttal",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "A rebuttal is a counter-argument made against something specific that the opposing team has said."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A speaker can make a rebuttal at the very beginning of their speech, before they say their own point.",
+            "A rebuttal should be around 15 to 20 seconds long, so the speaker does not use up too much of their speaking time.",
+            "A rebuttal works well when it is phrased as a question: the opposing team cannot answer because it is not their turn to speak, and not answering will make them appear weak."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Speakers should always listen carefully to the opposing team, to listen out for opportunities to make a rebuttal against them."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Point of information or rebuttal?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A point of information is similar to a rebuttal: both are short, and both work well phrased as a question. The difference is when they are made."
+        },
+        {
+          "t": "sort",
+          "q": "Tap a sentence, then tap the column it belongs in.",
+          "columns": [
+            "Point of information",
+            "Rebuttal"
+          ],
+          "items": [
+            {
+              "text": "Made by a member of the opposing team while you are speaking",
+              "col": 0
+            },
+            {
+              "text": "Made at the very beginning of your own speech, before your own point",
+              "col": 1
+            },
+            {
+              "text": "Can only be made out of protected time",
+              "col": 0
+            },
+            {
+              "text": "Should be around 15 to 20 seconds long",
+              "col": 1
+            },
+            {
+              "text": "Should be 10 to 15 seconds long",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The audience and nerves",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The audience is involved in the debate by:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "watching the speeches and reacting appropriately",
+            "asking questions to the speakers during the floor debate section",
+            "voting by a show of hands to decide the winning team (if judges are not being used)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Being a member of the audience can also be a great way to be introduced to debating, if you are not ready for one of the more prominent roles."
+        },
+        {
+          "t": "text",
+          "text": "It is very normal to feel nervous when public speaking. To overcome nervousness, you may wish to:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "take deep breaths before you start speaking to calm yourself",
+            "keep positive and visualise how well your speech is going to go",
+            "find a friendly face in the audience and start by delivering your speech to them"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "More top tips: use facial expressions and gestures, stand up straight, speak in a loud, clear voice, make eye contact, keep your feet grounded and flat on the floor, and introduce yourself when you start speaking and thank the audience when you’re finished."
+        },
+        {
+          "t": "choice",
+          "q": "Just before your speech, your nerves start to rise. Which is a good thing to try?",
+          "options": [
+            "take deep breaths to calm yourself",
+            "imagine your speech going badly",
+            "speak as quietly as you can"
+          ],
+          "answer": 0,
+          "why": "Taking deep breaths calms you. Visualise your speech going well, not badly, and speak in a loud, clear voice."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ready to debate?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before you start, make sure you know:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "How many speakers will each team have?",
+            "How long will each speaker have to speak?",
+            "Does everyone know what role they are fulfilling?",
+            "How is the debate being judged?"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Then check you have:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "decided a motion",
+            "split into two teams: proposition and opposition",
+            "appointed speakers, summary speakers and floor speakers",
+            "appointed people to the roles of chairperson and timekeeper",
+            "decided how the debate will be judged"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "After your debate, ask yourself: Did you enjoy debating? Is there anything you could have done better? Listen to feedback from the audience."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A debate can be led by a {chairperson} who introduces the speakers and keeps order.",
+            "A debate is timed by a {timekeeper} so that each speaker has the same amount of time to speak.",
+            "A {point of information} is a brief attempted interruption of someone’s speech and is similar to {rebuttal}."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does the chairperson do in a debate?",
+      "back": "Directs and keeps order in the debate, introduces each speaker and explains to the audience what is happening."
+    },
+    {
+      "front": "What does the timekeeper do?",
+      "back": "Monitors the time of each speech, so that each speaker has the same amount of time to speak. They signal when a speaker is in or out of protected time."
+    },
+    {
+      "front": "What is a point of information?",
+      "back": "A brief attempted interruption of someone’s speech by the opposing team."
+    },
+    {
+      "front": "What is a rebuttal?",
+      "back": "A counter-argument made against something specific that the opposing team has said."
+    },
+    {
+      "front": "What does a floor speaker do?",
+      "back": "Helps the speakers prepare for the debate, and can speak during the floor debate section."
+    },
+    {
+      "front": "What do judges do?",
+      "back": "Score the debate and decide the winning team."
+    },
+    {
+      "front": "How is the audience involved in a debate?",
+      "back": "They watch the speeches, ask questions during the floor debate section, and may vote by a show of hands if judges are not being used."
+    },
+    {
+      "front": "Usually, what does a debate team consist of?",
+      "back": "3 speakers, 1 summary speaker and 4 floor speakers. The number can vary depending on how large the group is."
+    },
+    {
+      "front": "In the order of a debate, which team speaks first each time, and what changes after the floor debate?",
+      "back": "The proposition goes first each time. After the floor debate, the order switches: the opposition summary speaker goes first."
+    },
+    {
+      "front": "What three things must you do to make a point of information?",
+      "back": "Stand up, put one hand on your head and extend one hand out towards the speaker."
+    },
+    {
+      "front": "How long should a point of information be, and when can it be made?",
+      "back": "10 to 15 seconds, during unprotected time only."
+    },
+    {
+      "front": "What is protected time?",
+      "back": "The first thirty seconds and the last thirty seconds of a speaker’s speech. Points of information cannot be made then."
+    },
+    {
+      "front": "When can a speaker make a rebuttal, and how long should it be?",
+      "back": "At the very beginning of their speech, before their own point. It should be around 15 to 20 seconds."
+    },
+    {
+      "front": "Why does it work well to phrase a rebuttal as a question?",
+      "back": "The opposing team cannot answer because it is not their turn to speak, and not answering makes them appear weak."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Holding a full debate",
+    "instructions": "Answer each question with a word, a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What is the name for a brief attempted interruption of someone’s speech by the opposing team?",
+        "answer": "point of information",
+        "accepted": [
+          "a point of information"
+        ],
+        "explanation": "A point of information is a brief attempted interruption of someone’s speech."
+      },
+      {
+        "prompt": "What is the name for a counter-argument made against something specific that the opposing team has said?",
+        "answer": "rebuttal",
+        "accepted": [
+          "a rebuttal"
+        ],
+        "explanation": "A rebuttal is a counter-argument against something specific that the opposing team has said."
+      },
+      {
+        "prompt": "Which role measures the time each speaker takes and signals when they are in or out of protected time?",
+        "answer": "timekeeper",
+        "accepted": [
+          "the timekeeper"
+        ],
+        "explanation": "The timekeeper monitors the time of each speech."
+      },
+      {
+        "prompt": "How many seconds at the start of a speech, and the same number at the end, are protected time?",
+        "answer": "30",
+        "accepted": [
+          "thirty",
+          "30 seconds",
+          "thirty seconds"
+        ],
+        "explanation": "The first thirty seconds and the last thirty seconds of a speech are protected time."
+      },
+      {
+        "prompt": "After the floor debate, which team’s summary speaker speaks first: the proposition or the opposition?",
+        "answer": "opposition",
+        "accepted": [
+          "the opposition"
+        ],
+        "explanation": "The order switches after the floor debate, so the opposition summary speaker goes first."
+      },
+      {
+        "prompt": "Usually, how many floor speakers does a debate team have? (a number)",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "A debate team usually has 3 speakers, 1 summary speaker and 4 floor speakers."
+      },
+      {
+        "prompt": "Which section of a debate takes place after the speeches, where floor speakers can raise points and the audience can ask questions?",
+        "answer": "floor debate",
+        "accepted": [
+          "the floor debate"
+        ],
+        "explanation": "The floor debate takes place after the speakers’ speeches, and before the summary speakers."
+      },
+      {
+        "prompt": "Which role scores each speaker using criteria to decide the winning team? (one word)",
+        "answer": "judges",
+        "accepted": [
+          "judge",
+          "the judges",
+          "the judge",
+          "a judge"
+        ],
+        "explanation": "Judges score the debate and decide the winning team."
+      },
+      {
+        "prompt": "A rebuttal should be around 15 to 20 seconds long. What is the longest it should be, in seconds?",
+        "answer": "20",
+        "accepted": [
+          "twenty",
+          "20 seconds",
+          "twenty seconds"
+        ],
+        "explanation": "A rebuttal should be short so that the speaker does not use up too much of their own speaking time: 20 seconds is the maximum."
+      }
+    ]
+  }
+}

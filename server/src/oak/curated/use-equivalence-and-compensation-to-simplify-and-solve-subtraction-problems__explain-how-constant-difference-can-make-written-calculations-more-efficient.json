@@ -1,0 +1,562 @@
+{
+  "agent": "maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how using the same difference rule can make written calculations easier."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will meet Izzy and Sofia. They will show you how to change a subtraction into an easier one with the same answer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Transforming the calculation"
+            },
+            {
+              "title": "Larger numbers"
+            },
+            {
+              "title": "Decimal fractions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "minuend",
+              "def": "The minuend is the number being subtracted from."
+            },
+            {
+              "term": "subtrahend",
+              "def": "A subtrahend is a number subtracted from another."
+            },
+            {
+              "term": "difference",
+              "def": "The difference is the result after subtracting one number from another."
+            },
+            {
+              "term": "constant",
+              "def": "A constant is a quantity that has a fixed value that does not change or vary, such as a number."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The rule we know",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy writes a sequence of expressions. Each one comes from a ruler showing millimetres."
+        },
+        {
+          "t": "list",
+          "items": [
+            "50 mm − 25 mm",
+            "49 mm − 24 mm",
+            "48 mm − 23 mm",
+            "47 mm − 22 mm"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The minuend and subtrahend are decreasing by 1 mm each time. The difference is constant."
+        },
+        {
+          "t": "callout",
+          "text": "If the minuend and subtrahend are changed by the same amount, the difference remains {constant}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which is easiest?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These expressions all have the same difference. Which would you find easiest to solve mentally?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "70 − 28",
+            "69 − 27",
+            "68 − 26"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see",
+          "text": "All three have a difference of 42. The minuend in **70 − 28** is a multiple of 10, which makes it easier to calculate using partitioning."
+        },
+        {
+          "t": "text",
+          "text": "70 − 28 = 70 − 20 − 8 = 50 − 8 = **42**"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Change both numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy’s idea: turn the minuend or the subtrahend into a multiple of 10. Change both numbers by the same amount so the difference stays the same."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "53 − 39",
+              "add": "add 1 to both",
+              "result": "54 − 40 = 14",
+              "note": "The subtrahend is now a multiple of 10, so it is easy to do in your head. 53 − 39 = 14 too."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Look for a way to make the minuend or subtrahend a {multiple of 10}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adding or subtracting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can increase or decrease both numbers. Tap each row to build the new calculation."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "79 − 26",
+              "add": "add 1 to both",
+              "result": "80 − 27 = 53",
+              "note": "The minuend is now a multiple of 10. 80 − 20 = 60, then 60 − 7 = 53."
+            },
+            {
+              "root": "68 − 21",
+              "add": "subtract 1 from both",
+              "result": "67 − 20 = 47",
+              "note": "The subtrahend is now a multiple of 10."
+            },
+            {
+              "root": "71 − 46",
+              "add": "subtract 1 from both",
+              "result": "70 − 45 = 25",
+              "note": "The minuend is now a multiple of 10. 70 − 40 = 30, then 30 − 5 = 25."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the adjustment",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Which change to both numbers makes one of them a multiple of 10? Match each expression to its adjustment.",
+          "pairs": [
+            {
+              "a": "49 − 23",
+              "b": "add 1 to both"
+            },
+            {
+              "a": "47 − 25",
+              "b": "add 3 to both"
+            },
+            {
+              "a": "62 − 38",
+              "b": "subtract 2 from both"
+            },
+            {
+              "a": "84 − 56",
+              "b": "subtract 4 from both"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Bigger numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How could we transform **438 − 389**? Adding 1 to both gives 439 − 390. Sofia says, “I don’t think that has made it easier.”"
+        },
+        {
+          "t": "text",
+          "text": "Izzy sees that 389 is near the next multiple of 100. This is a three-digit number, so using multiples of 100 will be more efficient."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "438 − 389",
+              "add": "add 11 to both",
+              "result": "449 − 400 = 49",
+              "note": "389 + 11 = 400. Use place value to do 449 − 400."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "True or false? You can only adjust the subtrahend and minuend by 1 for the difference to remain constant.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "You can adjust by any amount, as long as the amount is the same for both numbers. Adjusting by different amounts would change the difference."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adjust to a multiple of 100",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Try **35,229 − 15,204**. Subtract 4 from both numbers to create a multiple of 100."
+        },
+        {
+          "t": "list",
+          "items": [
+            "35,229 − 15,204 = 35,225 − 15,200",
+            "35,225 − 15,000 = 20,225",
+            "20,225 − 200 = 20,025"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "So 35,229 − 15,204 = **20,025**. Partitioning lets us subtract the thousands and hundreds separately."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Decimal fractions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With **19.67 − 3.95**, a multiple of 100 will not help. These are decimal fractions, so let’s adjust to the nearest one."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "19.67 − 3.95",
+              "add": "add 0.05 to both",
+              "result": "19.72 − 4.00 = 15.72",
+              "note": "3.95 is nearest to the next whole number, 4."
+            },
+            {
+              "root": "16.45 − 5.03",
+              "add": "subtract 0.03 from both",
+              "result": "16.42 − 5.00 = 11.42",
+              "note": "5.03 is close to the whole number 5, so go down."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Written methods",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy uses column subtraction for **30,000 − 3,765**. There is a lot of regrouping (exchanging). Sofia says, “I would use constant difference to transform the calculation first.”"
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "30,000 − 3,765",
+              "add": "subtract 1 from both",
+              "result": "29,999 − 3,764 = 26,235",
+              "note": "The minuend is now full of nines, so there is no regrouping."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It is easier to use a written strategy when no {exchanging} is needed."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More than one way",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy and Sofia both use constant difference on **5.1 − 2.98**, but in different ways."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Izzy: subtract 0.1 from both",
+              "sub": "5.0 − 2.88 = 2.12"
+            },
+            {
+              "title": "Sofia: add 0.02 to both",
+              "sub": "5.12 − 3.00 = 2.12"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Same answer?",
+          "text": "Yes! Both methods give **2.12**, because the difference stays constant when both numbers change by the same amount."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the adjustment",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Pick the new expression that has the same difference AND is easier to solve.",
+          "items": [
+            {
+              "q": "72 − 48: make the subtrahend a multiple of 10.",
+              "options": [
+                "74 − 50",
+                "72 − 50",
+                "74 − 48"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "6.96 − 2.03: make the subtrahend a whole number.",
+              "options": [
+                "6.96 − 2.00",
+                "6.93 − 2.00",
+                "7.00 − 2.03"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "60,000 − 4,318 = 59,999 − ?",
+              "options": [
+                "4,317",
+                "4,318",
+                "4,319"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "517 − 398: which change to both numbers makes 398 a multiple of 100?",
+              "options": [
+                "add 2",
+                "subtract 2",
+                "add 20"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Transform and solve",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Transform the calculation, then choose the answer.",
+          "items": [
+            {
+              "q": "43.07 − 5.98 (add 0.02 to both, then 43.09 − 6.00)",
+              "options": [
+                "37.09",
+                "37.11",
+                "36.09"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "80,000 − 5,236 (subtract 1 from both, then 79,999 − 5,235)",
+              "options": [
+                "74,764",
+                "74,774",
+                "75,764"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If the minuend and subtrahend are changed by the same amount, the difference stays the same or remains constant.",
+            "Constant difference is a useful strategy to transform calculations into something more efficient to solve.",
+            "By adjusting the minuend and subtrahend carefully, you can make one of them a multiple of 10, 100, 1,000 or one whole, which is easier to calculate with."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Same change to both numbers = same {difference}."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "If the minuend and subtrahend are changed by the same amount, what happens to the difference?",
+      "back": "It stays the same (it remains constant)."
+    },
+    {
+      "front": "Why do we transform a subtraction using constant difference?",
+      "back": "To make a calculation that is more efficient to solve, for example by making the minuend or subtrahend a multiple of 10."
+    },
+    {
+      "front": "Transform 53 − 39 by adding 1 to both numbers. What is the answer?",
+      "back": "54 − 40 = 14, so 53 − 39 = 14."
+    },
+    {
+      "front": "Transform 68 − 21 by subtracting 1 from both numbers. What is the answer?",
+      "back": "67 − 20 = 47, so 68 − 21 = 47."
+    },
+    {
+      "front": "Why is 70 − 28 easier to solve mentally than 69 − 27, even though they have the same difference?",
+      "back": "The minuend is a multiple of 10, so partitioning is easier.\n\n70 − 20 − 8 = 50 − 8 = 42"
+    },
+    {
+      "front": "True or false? You can only adjust the minuend and subtrahend by 1.",
+      "back": "False. You can adjust by any amount, as long as it is the same amount for both."
+    },
+    {
+      "front": "When you transform a three-digit subtraction such as 438 − 389, what should you aim for?",
+      "back": "A multiple of 100.\n\n438 − 389 = 449 − 400 = 49 (add 11 to both)"
+    },
+    {
+      "front": "Transform 35,229 − 15,204 by subtracting 4 from both. What is the answer?",
+      "back": "35,225 − 15,200 = 20,025."
+    },
+    {
+      "front": "When the numbers are decimal fractions, what do we adjust to?",
+      "back": "The nearest whole number (one).\n\n19.67 − 3.95 = 19.72 − 4.00 = 15.72"
+    },
+    {
+      "front": "Which tip removes the regrouping from 30,000 − 3,765?",
+      "back": "Subtract 1 from both numbers: 29,999 − 3,764. Then there is no regrouping. The answer is 26,235."
+    },
+    {
+      "front": "Complete: it is easier to use a written strategy for subtraction when no ___ is required.",
+      "back": "exchanging (regrouping)."
+    },
+    {
+      "front": "5.1 − 2.98 can be transformed in two ways. What are they?",
+      "back": "Subtract 0.1 from both: 5.0 − 2.88 = 2.12.\nOr add 0.02 to both: 5.12 − 3.00 = 2.12."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how constant difference can make written calculations more efficient",
+    "instructions": "Use constant difference: change the minuend and subtrahend by the same amount. Write each answer as a number.",
+    "questions": [
+      {
+        "prompt": "Four of these expressions have the same difference and one does not: 50 − 45, 46 − 41, 52 − 43, 60 − 55, 27 − 22. What is the difference of the odd one out?",
+        "answer": "9",
+        "explanation": "52 − 43 = 9. The other four all have a difference of 5."
+      },
+      {
+        "prompt": "Four of these expressions have the same difference and one does not: 99 − 81, 98 − 80, 97 − 77, 96 − 78, 95 − 77. What is the difference of the odd one out?",
+        "answer": "20",
+        "explanation": "97 − 77 = 20. The other four all have a difference of 18."
+      },
+      {
+        "prompt": "Add 3 to both numbers in 45 − 17 to make the subtrahend a multiple of 10. What is the answer to 45 − 17?",
+        "answer": "28",
+        "explanation": "48 − 20 = 28, and constant difference means 45 − 17 = 28."
+      },
+      {
+        "prompt": "Add 2 to both numbers in 68 − 42 to make the minuend a multiple of 10. What is the answer to 68 − 42?",
+        "answer": "26",
+        "explanation": "70 − 44 = 26, and constant difference means 68 − 42 = 26."
+      },
+      {
+        "prompt": "Use constant difference to solve 40,225 − 3,004. (Hint: subtract 4 from both numbers.)",
+        "answer": "37221",
+        "accepted": [
+          "37,221"
+        ],
+        "explanation": "40,221 − 3,000 = 37,221."
+      },
+      {
+        "prompt": "Use constant difference to solve 57.03 − 2.56.",
+        "answer": "54.47",
+        "explanation": "Subtract 0.03 from both: 57.00 − 2.53 = 54.47."
+      },
+      {
+        "prompt": "20,230 − 4,095 = 16,135. Add 5 to both numbers to get 20,235 − ? = 16,135. What is the missing number?",
+        "answer": "4100",
+        "accepted": [
+          "4,100"
+        ],
+        "explanation": "4,095 + 5 = 4,100."
+      },
+      {
+        "prompt": "20,230 − 4,095 = 16,135. Subtract 30 from both numbers to get 20,200 − ? = 16,135. What is the missing number?",
+        "answer": "4065",
+        "accepted": [
+          "4,065"
+        ],
+        "explanation": "4,095 − 30 = 4,065."
+      },
+      {
+        "prompt": "16.3 − 4.96 = 11.34. Add 0.04 to both numbers to get 16.34 − ? = 11.34. What is the missing number?",
+        "answer": "5",
+        "accepted": [
+          "5.0",
+          "5.00"
+        ],
+        "explanation": "4.96 + 0.04 = 5.00."
+      },
+      {
+        "prompt": "16.3 − 4.96 = 11.34. Subtract 0.3 from both numbers to get 16.0 − ? = 11.34. What is the missing number?",
+        "answer": "4.66",
+        "explanation": "4.96 − 0.3 = 4.66."
+      }
+    ]
+  }
+}

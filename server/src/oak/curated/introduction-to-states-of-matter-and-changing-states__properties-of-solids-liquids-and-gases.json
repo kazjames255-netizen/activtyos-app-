@@ -1,0 +1,588 @@
+{
+  "agent": "science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe simple properties of {solids}, {liquids} and {gases}."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will find out about the states of matter and what makes each one different."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Solids}"
+            },
+            {
+              "title": "{Liquids}"
+            },
+            {
+              "title": "{Gases}"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "states of matter",
+              "def": "The three common states of matter are solid, liquid and gas."
+            },
+            {
+              "term": "solid",
+              "def": "A solid has a fixed shape and volume but some solids can change shape when a force is applied."
+            },
+            {
+              "term": "liquid",
+              "def": "A liquid can flow, has a fixed volume and takes the shape of the bottom of its container."
+            },
+            {
+              "term": "gas",
+              "def": "A gas can flow, has no fixed volume and takes the shape of the whole of its container."
+            },
+            {
+              "term": "properties",
+              "def": "The properties of a material or substance are its qualities or things it can do."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Materials and matter",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **material** is the substance that objects are made from, such as wood, metal or plastic."
+        },
+        {
+          "t": "text",
+          "text": "Materials are used to make objects such as tables, cars and books."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "table"
+            },
+            {
+              "title": "car",
+              "emoji": "🚗"
+            },
+            {
+              "title": "book"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The word ‘material’ comes from the word ‘matter’. Both words refer to what objects are made from."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three states of matter",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The substances that materials are made from can exist as different **states of matter**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{solid}",
+              "sub": "plastic"
+            },
+            {
+              "title": "{liquid}",
+              "sub": "oil"
+            },
+            {
+              "title": "{gas}",
+              "sub": "oxygen in the air"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Water can exist in the solid, liquid or gas state."
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What are properties?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The **properties** of a material or substance are its qualities or things it can do."
+        },
+        {
+          "t": "callout",
+          "text": "Solids, liquids and gases have different {properties}."
+        },
+        {
+          "t": "text",
+          "text": "This means that one substance can behave in different ways depending on what state it is in."
+        },
+        {
+          "t": "text",
+          "text": "Once we know these properties, we can spot solids, liquids and gases."
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The balloon investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Imagine three balloons. One contains solid water (ice), one contains liquid water and one contains gas (air)."
+        },
+        {
+          "t": "text",
+          "text": "Press each balloon, then cut the knot off and try to empty the contents into a bowl. What happens?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see one class’s results",
+          "text": "When they pressed the balloons, they could change the shape of the gas balloon and the liquid balloon, but not the solid one."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see what happened in the bowl",
+          "text": "The **solid** did not flow into the bowl and the ice stayed the same shape. The **liquid** flowed into the bowl and took the shape of the bottom of the bowl. They couldn’t see the **gas**, but it escaped out into the room because the balloon was no longer inflated."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of liquids",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A liquid can be poured easily and takes the shape of the bottom of its container."
+        },
+        {
+          "t": "text",
+          "text": "Even when liquids change their shape, they always take up the same amount of space. This is called **volume**."
+        },
+        {
+          "t": "callout",
+          "text": "This means that liquids have a {fixed volume}."
+        },
+        {
+          "t": "text",
+          "text": "Imagine four containers of different shapes, each holding the same volume of coloured water. The containers are different shapes, but there is the same amount of liquid in each one."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: liquids",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Water is poured from a tall, thin jug into a wide bowl. Which property of the water stays the same?",
+          "options": [
+            "its shape",
+            "how much space it takes up (its volume)",
+            "the shape of its container"
+          ],
+          "answer": 1,
+          "why": "Liquids have a fixed volume. The shape changes to fit the container, but the amount of space the liquid takes up stays the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of solids",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Solids have many different appearances and properties."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "ice"
+            },
+            {
+              "title": "wood"
+            },
+            {
+              "title": "plastic toys"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Solids have a fixed shape, but some solids can change shape when a force is applied.",
+            "Solids have a fixed volume. They always take up the same amount of space.",
+            "Solids do not flow like liquids."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of gases",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Gases can be tricky to understand because they are often invisible to the human eye, but we can feel them."
+        },
+        {
+          "t": "text",
+          "text": "Move your hand from side to side quickly. You can feel the air, but you cannot see it."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Gases can flow, even though we can usually not see them.",
+            "They spread out to fill the container they are in and take the shape of the whole container.",
+            "If their container is not sealed, gases can escape and spread out, so they do not have a fixed shape or volume."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Some gases",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Air is a mixture of gases, including nitrogen, oxygen and carbon dioxide. All of them are in the gas state."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "oxygen",
+              "sub": "animals, including humans, need it to survive"
+            },
+            {
+              "title": "carbon dioxide",
+              "sub": "plants need it to survive"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Just because we usually cannot see a gas does not mean it is not there. Gases are materials in the gas state and they have properties too."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: gases and solids",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "A container of gas is left open (not sealed). What happens to the gas?",
+              "options": [
+                "It stays exactly where it is",
+                "It escapes and spreads out",
+                "It turns into a solid"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which state of matter has no fixed volume?",
+              "options": [
+                "solid",
+                "liquid",
+                "gas"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A wooden block keeps its shape. That is because wood is in the ... state.",
+              "options": [
+                "solid",
+                "liquid",
+                "gas"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the properties",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each property of a solid, a liquid or a gas?",
+          "columns": [
+            "Solid",
+            "Liquid",
+            "Gas"
+          ],
+          "items": [
+            {
+              "text": "keeps its shape unless a force changes it",
+              "col": 0
+            },
+            {
+              "text": "does not flow",
+              "col": 0
+            },
+            {
+              "text": "takes the shape of the bottom of its container",
+              "col": 1
+            },
+            {
+              "text": "can be poured easily",
+              "col": 1
+            },
+            {
+              "text": "escapes from an unsealed container",
+              "col": 2
+            },
+            {
+              "text": "takes the shape of the whole container",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the material",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each material to its state of matter.",
+          "pairs": [
+            {
+              "a": "wood",
+              "b": "solid"
+            },
+            {
+              "a": "oil",
+              "b": "liquid"
+            },
+            {
+              "a": "oxygen in the air",
+              "b": "gas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Substances can exist as different states of matter: solid, liquid and gas.",
+            "Solids, liquids and gases have different properties.",
+            "Liquids can be poured easily and take the shape of the bottom of the container that they are in.",
+            "A solid has a fixed shape and volume, but some solids can change shape when a force is applied.",
+            "Gases are often invisible to the human eye. They escape from an unsealed container and have no fixed shape or volume."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are the three common states of matter?",
+      "back": "Solid, liquid and gas."
+    },
+    {
+      "front": "What are the properties of a material?",
+      "back": "Its qualities or things it can do."
+    },
+    {
+      "front": "Where does the word ‘material’ come from?",
+      "back": "The word ‘matter’. Both words refer to what objects are made from."
+    },
+    {
+      "front": "What does a solid have that stays the same?",
+      "back": "A fixed shape and a fixed volume.\n\nSome solids can change shape when a force is applied."
+    },
+    {
+      "front": "Which two states of matter have a fixed volume?",
+      "back": "Solids and liquids."
+    },
+    {
+      "front": "What does a liquid do when it is poured into a container?",
+      "back": "It takes the shape of the bottom of the container."
+    },
+    {
+      "front": "What is volume?",
+      "back": "The amount of space something takes up.\n\nA liquid always takes up the same amount of space, even in a different shaped container."
+    },
+    {
+      "front": "Why are gases tricky to understand?",
+      "back": "They are often invisible to the human eye, but we can feel them.\n\nExample: you can feel the air when you move your hand quickly."
+    },
+    {
+      "front": "What happens to a gas in a container that is not sealed?",
+      "back": "It escapes and spreads out."
+    },
+    {
+      "front": "Which state of matter has no fixed shape or volume?",
+      "back": "Gas."
+    },
+    {
+      "front": "Name three gases that are in the air.",
+      "back": "Nitrogen, oxygen and carbon dioxide (air is a mixture of gases)."
+    },
+    {
+      "front": "Which gas do animals, including humans, need to survive?",
+      "back": "Oxygen."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Properties of solids, liquids and gases",
+    "instructions": "Answer each question with a short answer. Use what you learned about the properties of solids, liquids and gases.",
+    "questions": [
+      {
+        "prompt": "Which state of matter has no fixed shape or volume?",
+        "answer": "gas",
+        "accepted": [
+          "gas",
+          "gases",
+          "a gas"
+        ],
+        "explanation": "A gas spreads out to fill its container, so it has no fixed shape or volume."
+      },
+      {
+        "prompt": "Which state of matter can be poured easily and takes the shape of the bottom of its container?",
+        "answer": "liquid",
+        "accepted": [
+          "liquid",
+          "liquids",
+          "a liquid"
+        ],
+        "explanation": "Liquids can be poured easily and take the shape of the bottom of their container."
+      },
+      {
+        "prompt": "Which state of matter keeps its shape unless a force changes it?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solids",
+          "a solid"
+        ],
+        "explanation": "A solid has a fixed shape, although some solids can change shape when a force is applied."
+      },
+      {
+        "prompt": "Which state of matter fills any sealed container that it is in?",
+        "answer": "gas",
+        "accepted": [
+          "gas",
+          "gases",
+          "a gas"
+        ],
+        "explanation": "Gases spread out to fill the container they are in and take the shape of the whole container."
+      },
+      {
+        "prompt": "Which two states of matter have a fixed volume?",
+        "answer": "solid and liquid",
+        "accepted": [
+          "solid and liquid",
+          "liquid and solid",
+          "solids and liquids",
+          "liquids and solids"
+        ],
+        "explanation": "Solids and liquids always take up the same amount of space. Gases do not have a fixed volume."
+      },
+      {
+        "prompt": "How many common states of matter are there?",
+        "answer": "3",
+        "accepted": [
+          "3",
+          "three"
+        ],
+        "explanation": "The three common states of matter are solid, liquid and gas."
+      },
+      {
+        "prompt": "Solids, liquids and gases have different what? (The qualities of a material or things it can do.)",
+        "answer": "properties",
+        "accepted": [
+          "properties",
+          "their properties"
+        ],
+        "explanation": "The properties of a material are its qualities or things it can do, and they are different in each state."
+      },
+      {
+        "prompt": "What is solid water called?",
+        "answer": "ice",
+        "accepted": [
+          "ice"
+        ],
+        "explanation": "Water in the solid state is ice."
+      },
+      {
+        "prompt": "Oxygen in the air is in which state of matter?",
+        "answer": "gas",
+        "accepted": [
+          "gas",
+          "gases",
+          "a gas",
+          "the gas state"
+        ],
+        "explanation": "Oxygen is a gas, and air is a mixture of gases."
+      }
+    ]
+  }
+}

@@ -46,7 +46,9 @@ export type NotifyCategory =
   | "billing"
   | "task"
   /** Leave requests / decisions — manager-facing (never on a colleague's bell). */
-  | "leave";
+  | "leave"
+  /** Learning Hub (tutoring): new notes, homework set / marked, lessons scheduled — parent-facing. */
+  | "learning";
 
 export interface NotificationDoc {
   tenantId: string;

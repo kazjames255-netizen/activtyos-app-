@@ -1,0 +1,619 @@
+{
+  "agent": "science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe and apply the relationship between mass and gravitational force."
+        },
+        {
+          "t": "text",
+          "text": "By the end you will be able to say what weight is, how it is linked to mass, and calculate it."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Gravitational forces"
+            },
+            {
+              "title": "Mass"
+            },
+            {
+              "title": "Calculating weight"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "gravitational force",
+              "def": "The force that acts on an object inside a gravitational field."
+            },
+            {
+              "term": "mass",
+              "def": "The amount of matter (material) in an object."
+            },
+            {
+              "term": "gravitational field strength",
+              "def": "The force per kilogram caused by a gravitational field."
+            },
+            {
+              "term": "newton (N)",
+              "def": "The unit for force."
+            },
+            {
+              "term": "newtons per kilogram (N/kg)",
+              "def": "The unit for gravitational field strength."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gravitational forces",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The Earth has a **gravitational field** all around it. It is an invisible zone: any object inside it feels a {gravitational force}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The force pulls the object towards the centre of the Earth.",
+            "You do not have to be touching the Earth. Even in a plane, gravity still pulls you downwards."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Near the Earth, gravitational forces always act {towards the centre of the Earth}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How strong is the field?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The field is **stronger close to the Earth** and **weaker further away**. But it reaches out a huge distance into space, all the way to the Moon and even the Sun. It gets weaker but never completely disappears."
+        },
+        {
+          "t": "text",
+          "text": "Close to the Earth’s surface the field is fairly the same strength everywhere. We say it is {constant}. You would have to go up tens of kilometres before you noticed any difference."
+        },
+        {
+          "t": "reveal",
+          "label": "What does this mean for a kicked ball?",
+          "text": "A ball has a gravitational force of 5 N on it when resting on the ground. Kick it into the air and the force is still 5 N. You would have to kick it hundreds of kilometres up to measure a change!"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: constant field",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A bag has a gravitational force of 40 N on it at the bottom of a hill. What is the gravitational force on the bag at the top of the hill, a few hundred metres higher?",
+          "options": [
+            "Much less than 40 N",
+            "About 40 N",
+            "Much more than 40 N",
+            "0 N"
+          ],
+          "answer": 1,
+          "why": "Near the Earth’s surface the gravitational field is constant, so a small change in height makes no noticeable difference."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is weight?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a gravitational field, a force is needed to stop an object falling: to hold it still or to lift it. That force could be a support force from your hand or a spring."
+        },
+        {
+          "t": "callout",
+          "text": "The {weight} of an object is the gravitational force acting on it. It is the force needed to hold it still or lift it."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Weight is the same size as the force the object pushes down on a surface with.",
+            "Weight is measured in newtons (N).",
+            "Weight depends on the strength of gravity."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Feathers and metal",
+          "text": "A big bag of feathers and a set of metal balls hang on two newton meters, and both read the same. So the same force is needed to lift both, and they weigh the same. The metal is not harder to lift, and gravity is not pulling more on the feathers."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which ideas about weight are true?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap an idea, then the column it belongs in.",
+          "columns": [
+            "True about weight",
+            "Not true about weight"
+          ],
+          "items": [
+            {
+              "text": "It is the force needed to lift the object up",
+              "col": 0
+            },
+            {
+              "text": "It is the force the object pushes down on a surface with",
+              "col": 0
+            },
+            {
+              "text": "It is measured in newtons",
+              "col": 0
+            },
+            {
+              "text": "It depends on the strength of gravity",
+              "col": 0
+            },
+            {
+              "text": "It is measured in kilograms",
+              "col": 1
+            },
+            {
+              "text": "It is the amount of stuff the object is made from",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is mass?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Objects are made of tiny particles called **atoms**. A larger object contains more atoms."
+        },
+        {
+          "t": "text",
+          "text": "Every atom has a tiny bit of {mass}, and mass is the property that gravitational fields pull on. Each atom feels a tiny downward force, and all these tiny forces add up."
+        },
+        {
+          "t": "callout",
+          "text": "More mass means more atoms, so a {larger gravitational force}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mass stays the same, weight can change",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The **mass** of an object does not change when you move it: on Earth, on the Moon or in deep space, it is still the same amount of matter."
+        },
+        {
+          "t": "text",
+          "text": "The **weight** changes if you move to a place with a stronger or weaker gravitational field."
+        },
+        {
+          "t": "reveal",
+          "label": "What about deep space?",
+          "text": "Far from any gravitational field there is no gravitational force, so an object has no weight there. It still has exactly the same mass."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Everyday speech mixes up mass and weight. In science, mass is the amount of matter (in kilograms) and weight is a force (in newtons)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Mass or weight?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each word to its description.",
+          "pairs": [
+            {
+              "a": "mass",
+              "b": "The amount of matter in an object; measured in kilograms; stays the same anywhere"
+            },
+            {
+              "a": "weight",
+              "b": "The gravitational force on an object; measured in newtons; changes with the strength of gravity"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "An astronaut takes a rock from Earth to a planet with a weaker gravitational field. Which statement is true?",
+          "options": [
+            "Its mass decreases and its weight stays the same",
+            "Both its mass and its weight stay the same",
+            "Its mass stays the same and its weight decreases",
+            "Both its mass and its weight increase"
+          ],
+          "answer": 2,
+          "why": "Mass is the amount of matter, so it does not change. Weight depends on the gravitational field strength, which is weaker, so the weight decreases."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Measuring mass: kilograms and grams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The standard unit of mass in physics is the **kilogram (kg)**. Smaller masses are measured in **grams (g)**."
+        },
+        {
+          "t": "callout",
+          "text": "{1 kg = 1000 g}"
+        },
+        {
+          "t": "list",
+          "items": [
+            "kg to g: multiply by 1000. Example: 2.5 kg = 2.5 × 1000 = 2500 g",
+            "g to kg: divide by 1000. Example: 600 g = 600 ÷ 1000 = 0.6 kg"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Try: 5400 g in kg",
+          "text": "5400 g ÷ 1000 = 5.4 kg"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Convert the masses",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct conversion.",
+          "items": [
+            {
+              "q": "3.2 kg in grams",
+              "options": [
+                "32 g",
+                "320 g",
+                "3200 g",
+                "32 000 g"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "450 g in kilograms",
+              "options": [
+                "0.045 kg",
+                "0.45 kg",
+                "4.5 kg",
+                "450 000 kg"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.05 kg in grams",
+              "options": [
+                "5 g",
+                "50 g",
+                "500 g",
+                "0.5 g"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "7500 g in kilograms",
+              "options": [
+                "0.75 kg",
+                "7.5 kg",
+                "75 kg",
+                "7 500 000 kg"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gravitational field strength",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The strength of gravity is different on different planets and moons. Gravitational field strength tells you the **force on each kilogram**."
+        },
+        {
+          "t": "callout",
+          "text": "Near the surface of the Earth, each 1 kg is pulled down with a force of about {10 N}. So the gravitational field strength is g = 10 N/kg."
+        },
+        {
+          "t": "text",
+          "text": "This also means a force of about 10 N is needed to lift 1 kg on Earth. A smaller g means a smaller force is needed to lift the same object, for example on the Moon."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The weight equation",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "{weight = mass × gravitational field strength}, or in symbols {W = m × g}"
+        },
+        {
+          "t": "list",
+          "items": [
+            "W is the weight in newtons (N)",
+            "m is the mass in kilograms (kg)",
+            "g is the gravitational field strength in newtons per kilogram (N/kg)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Worked example.** A table has a mass of 6.0 kg. Use g = 10 N/kg: W = m × g = 6.0 × 10 = 60 N."
+        },
+        {
+          "t": "text",
+          "text": "**Mass from weight.** A bucket of water weighs 54 N. Use g = 10 N/kg: 54 = m × 10, so m = 54 ÷ 10 = 5.4 kg."
+        },
+        {
+          "t": "text",
+          "text": "**Field strength from weight.** A 500 kg space probe weighs 800 N on the Moon: 800 = 500 × g, so g = 800 ÷ 500 = 1.6 N/kg."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Calculate it!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "On Earth, use g = 10 N/kg."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "What is the weight of a 4 kg object on Earth?",
+              "options": [
+                "2.5 N",
+                "14 N",
+                "40 N",
+                "400 N"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is the weight of a 12.5 kg object on Earth?",
+              "options": [
+                "1.25 N",
+                "12.5 N",
+                "125 N",
+                "1250 N"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "An object weighs 250 N on Earth. What is its mass?",
+              "options": [
+                "2.5 kg",
+                "25 kg",
+                "240 kg",
+                "2500 kg"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A 20 kg object weighs 74 N on another planet. What is the gravitational field strength there?",
+              "options": [
+                "0.27 N/kg",
+                "3.7 N/kg",
+                "54 N/kg",
+                "1480 N/kg"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Planets like Earth have gravitational fields. Objects inside the field feel a gravitational force.",
+            "Mass is the amount of material in an object (kg). It is constant.",
+            "Weight is the gravitational force on an object, the force needed to hold it up (N).",
+            "W = m × g, with g in N/kg. On Earth g is about 10 N/kg."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is weight?",
+      "back": "The gravitational force acting on an object. It is the force needed to hold the object still or lift it."
+    },
+    {
+      "front": "What is mass?",
+      "back": "The amount of matter (material) in an object."
+    },
+    {
+      "front": "What unit is mass measured in?",
+      "back": "Kilograms (kg), or grams (g) for smaller masses."
+    },
+    {
+      "front": "What unit is weight measured in?",
+      "back": "Newtons (N), because weight is a force."
+    },
+    {
+      "front": "How many grams are in 1 kg?",
+      "back": "1000 g.\n\nkg to g: × 1000. g to kg: ÷ 1000."
+    },
+    {
+      "front": "What is gravitational field strength?",
+      "back": "The force per kilogram caused by a gravitational field. Its unit is N/kg."
+    },
+    {
+      "front": "What is the gravitational field strength near the Earth’s surface?",
+      "back": "About 10 N/kg (each 1 kg is pulled down with about 10 N)."
+    },
+    {
+      "front": "Write the equation linking weight, mass and gravitational field strength.",
+      "back": "W = m × g\n\nweight (N) = mass (kg) × gravitational field strength (N/kg)"
+    },
+    {
+      "front": "A 6.0 kg table on Earth (g = 10 N/kg). What is its weight?",
+      "back": "60 N\n\nW = 6.0 × 10"
+    },
+    {
+      "front": "Which direction does the gravitational force act near the Earth?",
+      "back": "Towards the centre of the Earth."
+    },
+    {
+      "front": "Does the mass of an object change when it goes to the Moon? What about its weight?",
+      "back": "The mass stays the same. The weight decreases, because the Moon’s gravitational field is weaker."
+    },
+    {
+      "front": "Is the gravitational field weaker or stronger further from the Earth?",
+      "back": "Weaker. It gets weaker with distance but never completely disappears."
+    },
+    {
+      "front": "Near the Earth’s surface, why does the gravitational force on a ball stay the same when it is kicked into the air?",
+      "back": "The gravitational field is constant near the surface. You would have to go tens of kilometres up to notice a change."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Gravitational force and weight",
+    "instructions": "Answer each question in a word, a number or a short phrase. Use g = 10 N/kg for Earth. Give units where they are asked for.",
+    "questions": [
+      {
+        "prompt": "John stands on bathroom scales and pushes down with a force of 430 N. Is 430 N his mass or his weight?",
+        "answer": "weight",
+        "accepted": [
+          "his weight",
+          "Weight"
+        ],
+        "explanation": "A force pushing down on a surface, measured in newtons, is a weight."
+      },
+      {
+        "prompt": "The scales tell John he is 43 kg. Is 43 kg his mass or his weight?",
+        "answer": "mass",
+        "accepted": [
+          "his mass",
+          "Mass"
+        ],
+        "explanation": "Kilograms measure mass, the amount of matter."
+      },
+      {
+        "prompt": "John floats inside his spaceship on the way to the Moon. Which one does he have no (mass or weight)?",
+        "answer": "weight",
+        "accepted": [
+          "his weight",
+          "Weight"
+        ],
+        "explanation": "Far from any gravitational field there is no gravitational force, so no weight, but his mass has not changed."
+      },
+      {
+        "prompt": "Convert 5400 g into kilograms. Give your answer in kg.",
+        "answer": "5.4 kg",
+        "accepted": [
+          "5.4",
+          "5.4kg"
+        ],
+        "explanation": "Divide grams by 1000: 5400 ÷ 1000 = 5.4 kg."
+      },
+      {
+        "prompt": "Convert 0.76 kg into grams. Give your answer in g.",
+        "answer": "760 g",
+        "accepted": [
+          "760",
+          "760g"
+        ],
+        "explanation": "Multiply kilograms by 1000: 0.76 × 1000 = 760 g."
+      },
+      {
+        "prompt": "An alien space probe has a mass of 6000 kg. What is its weight on Earth (g = 10 N/kg)? Give your answer in newtons.",
+        "answer": "60000 N",
+        "accepted": [
+          "60000",
+          "60 000 N",
+          "60 000",
+          "60000N",
+          "60 kN",
+          "60kN"
+        ],
+        "explanation": "W = m × g = 6000 × 10 = 60 000 N."
+      },
+      {
+        "prompt": "On the alien’s homeworld the same 6000 kg probe weighs 96 000 N. What is the gravitational field strength there? Give your answer in N/kg.",
+        "answer": "16 N/kg",
+        "accepted": [
+          "16",
+          "16N/kg"
+        ],
+        "explanation": "g = W ÷ m = 96 000 ÷ 6000 = 16 N/kg."
+      },
+      {
+        "prompt": "What is the mass of the 6000 kg probe while it is in deep space? Give your answer in kg.",
+        "answer": "6000 kg",
+        "accepted": [
+          "6000",
+          "6000kg",
+          "6 000 kg",
+          "6 000"
+        ],
+        "explanation": "Mass is the amount of matter, so it stays constant wherever the probe is."
+      },
+      {
+        "prompt": "What is the weight of a 25 kg object on Earth (g = 10 N/kg)? Give your answer in newtons.",
+        "answer": "250 N",
+        "accepted": [
+          "250",
+          "250N"
+        ],
+        "explanation": "W = m × g = 25 × 10 = 250 N."
+      },
+      {
+        "prompt": "A bucket of water weighs 54 N on Earth (g = 10 N/kg). What is its mass? Give your answer in kg.",
+        "answer": "5.4 kg",
+        "accepted": [
+          "5.4",
+          "5.4kg"
+        ],
+        "explanation": "m = W ÷ g = 54 ÷ 10 = 5.4 kg."
+      }
+    ]
+  }
+}

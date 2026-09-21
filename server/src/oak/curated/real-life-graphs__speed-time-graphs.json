@@ -1,0 +1,631 @@
+{
+  "agent": "maths-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can calculate time intervals and acceleration of sections of a speed-time graph."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Drawing and interpreting",
+              "sub": "speed-time graphs"
+            },
+            {
+              "title": "Calculating acceleration",
+              "sub": "using the gradient"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "speed",
+              "def": "Speed is the rate at which something is moving. It is measured as the distance travelled per unit of time."
+            },
+            {
+              "term": "acceleration",
+              "def": "Acceleration is the rate of change of speed with respect to time."
+            },
+            {
+              "term": "deceleration",
+              "def": "Deceleration is the rate at which the speed of an object is decreasing."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What a speed-time graph shows",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Speed-time graphs model the speed an object travels with respect to time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "We plot **time on the x-axis**, exactly like distance-time graphs.",
+            "**Speed** is plotted on the y-axis.",
+            "Metres per second is a common unit for speed. It can be written m/s or ms⁻¹.",
+            "The initial speed is the speed when time is zero."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A horizontal line on a speed-time graph represents {constant speed}. Drawn in a different place, it would be a different constant speed."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A horizontal line does not mean the object has stopped. It shows the speed is not changing, which could be any speed. You have to check the axes so you do not muddle distance-time graphs and speed-time graphs. Only a constant speed of 0 m/s means stationary."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Acceleration and deceleration",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia runs a race. The graph starts at the origin because she is stationary when the race starts (speed 0 when time is 0). After 3 seconds she runs at 4 m/s, and after 6 seconds at 8 m/s."
+        },
+        {
+          "t": "text",
+          "text": "Her speed is increasing. We call this **acceleration**. Because it is a straight line, the rate of acceleration is constant."
+        },
+        {
+          "t": "text",
+          "text": "A car travels between two sets of traffic lights:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "0 to 20 seconds",
+              "sub": "accelerating from 0 m/s to 10 m/s at a constant rate"
+            },
+            {
+              "title": "Next 15 seconds",
+              "sub": "constant speed of 10 m/s"
+            },
+            {
+              "title": "Final 15 seconds",
+              "sub": "decelerating from 10 m/s to 0 m/s"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Line segments with a {negative gradient} represent the object slowing down, or decelerating."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the line to the meaning",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each line on a speed-time graph to what it means.",
+          "pairs": [
+            {
+              "a": "A diagonal line with a positive gradient",
+              "b": "The object is accelerating"
+            },
+            {
+              "a": "A horizontal line",
+              "b": "The speed is not changing (constant speed)"
+            },
+            {
+              "a": "A line with a negative gradient",
+              "b": "The object is decelerating"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "On a speed-time graph, a horizontal line lies along the x-axis. What is the object doing?",
+          "options": [
+            "Travelling at a constant speed of 0 m/s (stationary)",
+            "Accelerating",
+            "Travelling backwards"
+          ],
+          "answer": 0,
+          "why": "The line along the x-axis means a constant speed of zero, so the object is stationary."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Drawing speed-time graphs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A sprinter accelerates from 0 m/s to 10 m/s in 6 seconds, then keeps a constant speed for another 6 seconds."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Diagonal line from (0, 0) to (6, 10).",
+            "Horizontal line from (6, 10) to (12, 10)."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "After the finish line the runner will stop. But a vertical line from 10 m/s down to 0 would suggest the runner went from 10 m/s to 0 m/s in no time. It is impossible for a runner to stop instantaneously, so the line must slope down over some time."
+        },
+        {
+          "t": "text",
+          "text": "Choosing scales: if the highest speed is 12 m/s, steps of 2 make sense on the y-axis. If the total time is 55 seconds, steps of 10 make sense on the x-axis."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which pattern of lines?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A car speeds up, drives at a steady speed, then slows down to a stop. Which pattern of lines on a speed-time graph fits?",
+          "options": [
+            "Slanting up, horizontal, slanting down",
+            "Slanting up, slanting down, horizontal",
+            "Horizontal, slanting up, horizontal"
+          ],
+          "answer": 0,
+          "why": "Speeding up is a positive gradient, a steady speed is a horizontal line, and slowing down to a stop is a negative gradient."
+        },
+        {
+          "t": "choice",
+          "q": "A speed-time graph shows a horizontal line at 15 m/s for 8 seconds. What is happening?",
+          "options": [
+            "The object is stationary",
+            "The object is moving at a constant 15 m/s",
+            "The object is accelerating at 15 m/s²"
+          ],
+          "answer": 1,
+          "why": "On a speed-time graph a horizontal line is a constant speed, and the height of the line is that speed."
+        },
+        {
+          "t": "choice",
+          "q": "A rider accelerates to 4.5 m/s, keeps that speed, then accelerates again and finally slows to a stop. How many line segments have a positive gradient?",
+          "options": [
+            "1",
+            "2",
+            "3"
+          ],
+          "answer": 1,
+          "why": "The two acceleration stages are diagonal lines with a positive gradient. The constant-speed stage is horizontal and the stop is a negative gradient."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Units of acceleration",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Acceleration is the change in speed over time, so it is measured in metres per second **per second**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "m/s per second is (m/s) ÷ s, which is the same as m/s².",
+            "It can be written m/s², m/s2 or ms⁻²."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Speed units like m/s or km/h are not units of acceleration. Acceleration has {time squared} in it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Calculating acceleration",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The speed changes from 0 to 8 m/s in the first 10 seconds. That is an increase of 8 m/s in 10 seconds."
+        },
+        {
+          "t": "text",
+          "text": "We want a unit ratio: divide both by 10. 8 ÷ 10 = 0.8, so the acceleration is 0.8 m/s². This is the gradient of the line."
+        },
+        {
+          "t": "callout",
+          "text": "On a speed-time graph, the {gradient} of the line is the acceleration. (On a distance-time graph, the gradient is speed.)"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Speed rises by 10 m/s in 20 seconds: 10 ÷ 20 = 0.5 m/s².",
+            "Constant speed (a horizontal line): the acceleration is 0 m/s².",
+            "Speed falls by 10 m/s in 15 seconds: −10 ÷ 15 ≈ −0.67 m/s², so the object is decelerating at about 0.67 m/s²."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Negative acceleration",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun says: “The object is decelerating at a rate of −2 m/s².” His rate is correct, but he does not need the negative sign because he has already said “decelerating”."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Decelerating at 2 m/s²",
+              "sub": "uses the positive value"
+            },
+            {
+              "title": "Accelerating at −2 m/s²",
+              "sub": "uses the negative value"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Both mean the same thing: a negative acceleration means the object is {decelerating}."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work out the acceleration",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Speed goes from 0 to 12 m/s in 4 seconds. The acceleration is",
+              "options": [
+                "3 m/s²",
+                "48 m/s²",
+                "0.33 m/s²"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Speed goes from 2 m/s to 14 m/s in 6 seconds. The acceleration is",
+              "options": [
+                "2 m/s²",
+                "12 m/s²",
+                "8 m/s²"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Speed goes from 20 m/s to 5 m/s in 5 seconds. The acceleration is",
+              "options": [
+                "−3 m/s²",
+                "3 m/s² (increasing)",
+                "−15 m/s²"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The speed stays at 9 m/s for 6 seconds. The acceleration is",
+              "options": [
+                "1.5 m/s²",
+                "0 m/s²",
+                "9 m/s²"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "Acceleration = change in speed ÷ change in time. 12 ÷ 4 = 3. (14 − 2) ÷ 6 = 12 ÷ 6 = 2. (5 − 20) ÷ 5 = −15 ÷ 5 = −3, so the object is decelerating at 3 m/s². A constant speed does not change, so the acceleration is 0."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Drawing from acceleration",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With enough information we can draw a speed-time graph from rates of acceleration. The rate of acceleration is the gradient. Example: a car starts stationary and accelerates at 2 m/s² for 4 seconds."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Each second the speed goes up by 2 m/s, so after 4 seconds: 2 × 4 = 8 m/s. Plot (0, 0) to (4, 8).",
+            "It then decelerates at 3 m/s² until it is travelling at 2 m/s. The speed must fall by 8 − 2 = 6 m/s, which takes 6 ÷ 3 = 2 seconds. Plot (4, 8) to (6, 2). The gradient is negative.",
+            "It then keeps 2 m/s for a further 2 seconds. Plot a horizontal line from (6, 2) to (8, 2)."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding the time and the speed",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A car accelerates from rest at 3.5 m/s² until it reaches 14 m/s."
+        },
+        {
+          "t": "list",
+          "items": [
+            "After 1 second: 3.5. After 2 seconds: 7. After 3 seconds: 10.5. After 4 seconds: 14.",
+            "Or use acceleration = change in speed ÷ time: 3.5 = (14 − 0) ÷ t, so t = 14 ÷ 3.5 = 4 seconds."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The car keeps that speed for 8 seconds, then decelerates for 8 seconds at 1.5 m/s². Every second the speed falls by 1.5, so in 8 seconds it falls by 1.5 × 8 = 12. Then 14 − 12 = 2, so the car ends at 2 m/s."
+        },
+        {
+          "t": "callout",
+          "text": "Be careful with the scales on the axes. They are not always in the ratio 1:1."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Speed after a time",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A car accelerates from rest at 2 m/s². What is its speed after 5 seconds?",
+              "options": [
+                "10 m/s",
+                "2.5 m/s",
+                "7 m/s"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A car accelerates from rest at 3 m/s². How long does it take to reach 18 m/s?",
+              "options": [
+                "6 seconds",
+                "54 seconds",
+                "15 seconds"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A car travelling at 20 m/s decelerates at 4 m/s² for 3 seconds. What is its speed then?",
+              "options": [
+                "8 m/s",
+                "32 m/s",
+                "16 m/s"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A cyclist at 3 m/s accelerates at 1.5 m/s² for 4 seconds. What is the speed then?",
+              "options": [
+                "9 m/s",
+                "6 m/s",
+                "4.5 m/s"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "2 × 5 = 10. 18 ÷ 3 = 6. 4 × 3 = 12, and 20 − 12 = 8. 1.5 × 4 = 6, and 3 + 6 = 9."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "In a speed-time graph, a horizontal line means a constant speed.",
+            "A diagonal line segment represents the object accelerating.",
+            "A line segment with a negative gradient represents the object decelerating.",
+            "The rate of acceleration is the gradient of the line segment: change in speed ÷ change in time.",
+            "Acceleration is measured in m/s² (metres per second squared)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is plotted on the x-axis and y-axis of a speed-time graph?",
+      "back": "Time on the x-axis, speed on the y-axis."
+    },
+    {
+      "front": "What does a horizontal line on a speed-time graph mean?",
+      "back": "The speed is not changing: constant speed (at any speed, not necessarily stopped)."
+    },
+    {
+      "front": "What does a diagonal line with a positive gradient on a speed-time graph mean?",
+      "back": "The object is accelerating."
+    },
+    {
+      "front": "What does a negative gradient on a speed-time graph mean?",
+      "back": "The object is decelerating."
+    },
+    {
+      "front": "What is acceleration?",
+      "back": "The rate of change of speed with respect to time."
+    },
+    {
+      "front": "What is deceleration?",
+      "back": "The rate at which the speed of an object is decreasing."
+    },
+    {
+      "front": "How do you find acceleration from a speed-time graph?",
+      "back": "Find the gradient of the line: change in speed ÷ change in time."
+    },
+    {
+      "front": "What is the acceleration when the speed changes from 0 to 8 m/s in 10 seconds?",
+      "back": "8 ÷ 10 = 0.8 m/s²."
+    },
+    {
+      "front": "What is the acceleration on a horizontal line segment of a speed-time graph?",
+      "back": "0 m/s², because the speed is not changing."
+    },
+    {
+      "front": "Give the unit of acceleration and two ways to write it.",
+      "back": "Metres per second squared: m/s² or ms⁻²."
+    },
+    {
+      "front": "Jun says an object is decelerating at −2 m/s². What is wrong?",
+      "back": "He does not need the negative sign because he already said decelerating. Say decelerating at 2 m/s², or accelerating at −2 m/s²."
+    },
+    {
+      "front": "Why is a vertical line at the end of a sprinter’s speed-time graph impossible?",
+      "back": "It would mean going from 10 m/s to 0 m/s in no time. A runner cannot stop instantaneously."
+    },
+    {
+      "front": "On a distance-time graph the gradient is speed. What is the gradient on a speed-time graph?",
+      "back": "Acceleration."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Speed-time graphs",
+    "instructions": "Answer each question with a number or a short phrase. Give accelerations in m/s² and speeds in m/s.",
+    "questions": [
+      {
+        "prompt": "A car speeds up from 0 to 20 m/s in 8 seconds at a constant rate. What is its acceleration, in m/s²?",
+        "answer": "2.5",
+        "accepted": [
+          "2.5",
+          "2.5 m/s²",
+          "2.5 m/s2",
+          "2.5 ms⁻²",
+          "2.5 m/s^2"
+        ],
+        "explanation": "Acceleration = change in speed ÷ time = 20 ÷ 8 = 2.5 m/s²."
+      },
+      {
+        "prompt": "An object slows down from 18 m/s to 6 m/s in 4 seconds at a constant rate. At what rate is it decelerating, in m/s²?",
+        "answer": "3",
+        "accepted": [
+          "3",
+          "3 m/s²",
+          "3 m/s2",
+          "3 ms⁻²",
+          "3 m/s^2"
+        ],
+        "explanation": "The speed falls by 18 − 6 = 12 m/s in 4 seconds, and 12 ÷ 4 = 3 m/s²."
+      },
+      {
+        "prompt": "A car starts from rest and accelerates at 4 m/s² for 3 seconds. What is its speed after 3 seconds, in m/s?",
+        "answer": "12",
+        "accepted": [
+          "12",
+          "12 m/s",
+          "12m/s",
+          "12 ms⁻¹"
+        ],
+        "explanation": "The speed rises by 4 m/s each second: 4 × 3 = 12 m/s."
+      },
+      {
+        "prompt": "A car accelerates from rest at 3.5 m/s² until it reaches 21 m/s. How many seconds does this take?",
+        "answer": "6",
+        "accepted": [
+          "6",
+          "6 s",
+          "6 seconds"
+        ],
+        "explanation": "Time = change in speed ÷ acceleration = 21 ÷ 3.5 = 6 seconds."
+      },
+      {
+        "prompt": "A speed-time graph has a horizontal line at 12 m/s for 5 seconds. What is the acceleration during this time, in m/s²?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "0 m/s²",
+          "0 m/s2",
+          "0 ms⁻²",
+          "zero"
+        ],
+        "explanation": "A horizontal line means the speed is not changing, so the acceleration is 0 m/s²."
+      },
+      {
+        "prompt": "A speed-time graph has a horizontal line lying along the x-axis. What is the speed of the object, in m/s?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "0 m/s",
+          "0m/s",
+          "zero"
+        ],
+        "explanation": "The line along the x-axis is a constant speed of 0 m/s, so the object is stationary."
+      },
+      {
+        "prompt": "An object travelling at 15 m/s decelerates at 2.5 m/s² for 4 seconds. What is its speed then, in m/s?",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "5 m/s",
+          "5m/s",
+          "5 ms⁻¹"
+        ],
+        "explanation": "The speed falls by 2.5 × 4 = 10 m/s, and 15 − 10 = 5 m/s."
+      },
+      {
+        "prompt": "On a speed-time graph, what does the gradient of the line represent?",
+        "answer": "acceleration",
+        "accepted": [
+          "acceleration",
+          "the acceleration"
+        ],
+        "explanation": "Acceleration is the change in speed divided by the change in time, which is the gradient of a speed-time graph."
+      },
+      {
+        "prompt": "A speed-time graph shows the speed rising from 6 m/s to 30 m/s in 12 seconds at a constant rate. What is the acceleration, in m/s²?",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "2 m/s²",
+          "2 m/s2",
+          "2 ms⁻²",
+          "2 m/s^2"
+        ],
+        "explanation": "The speed rises by 30 − 6 = 24 m/s in 12 seconds, and 24 ÷ 12 = 2 m/s²."
+      },
+      {
+        "prompt": "An object slows from 10 m/s to 0 m/s in 20 seconds at a constant rate. What is its acceleration, in m/s²? (Give a negative number.)",
+        "answer": "-0.5",
+        "accepted": [
+          "-0.5",
+          "−0.5",
+          "-0.5 m/s²",
+          "−0.5 m/s²",
+          "-0.5 m/s2",
+          "-0.5 ms⁻²"
+        ],
+        "explanation": "The change in speed is 0 − 10 = −10 m/s over 20 seconds, so −10 ÷ 20 = −0.5 m/s²."
+      }
+    ]
+  }
+}

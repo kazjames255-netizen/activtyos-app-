@@ -1,0 +1,678 @@
+{
+  "agent": "physics-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the main features of the solar system."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The Sun, planets and dwarf planets",
+              "emoji": "☀️"
+            },
+            {
+              "title": "Moons"
+            },
+            {
+              "title": "The universal force of gravity"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "solar system",
+              "def": "The Sun and the collection of objects in orbit around it."
+            },
+            {
+              "term": "planet",
+              "def": "A very large, spherical object in orbit around a star that has cleared the path of its orbit of other objects."
+            },
+            {
+              "term": "dwarf planet",
+              "def": "A large object in orbit around a star that has not cleared the path of its orbit of other objects."
+            },
+            {
+              "term": "moon",
+              "def": "A natural object in orbit around a planet."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is in the solar system?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Our solar system has a single star at its centre: the {Sun}. It also contains:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Eight planets"
+            },
+            {
+              "title": "Several dwarf planets"
+            },
+            {
+              "title": "Many moons"
+            },
+            {
+              "title": "Millions of comets and asteroids"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The Sun is a fairly typical star. It looks different from the other stars because it is much nearer."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The rocky inner planets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are four rocky (inner) planets. In order of distance from the Sun they are:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Mercury",
+              "sub": "The smallest planet"
+            },
+            {
+              "title": "Venus",
+              "sub": "A planet of very similar size to Earth"
+            },
+            {
+              "title": "Earth",
+              "sub": "Our planet, with liquid water"
+            },
+            {
+              "title": "Mars",
+              "sub": "Smaller and cooler than Earth"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Earth is the third closest planet to the Sun. It has a rocky surface that is partly covered in water."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The outer planets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The four outer planets are much larger than the inner planets. They are made of gases and ices instead of rocks."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Jupiter",
+              "sub": "A gas giant, the largest of all the planets"
+            },
+            {
+              "title": "Saturn",
+              "sub": "A gas giant with an enormous set of rings"
+            },
+            {
+              "title": "Uranus",
+              "sub": "An ice giant"
+            },
+            {
+              "title": "Neptune",
+              "sub": "An ice giant, and the furthest planet from the Sun"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why are they called ice giants?",
+          "text": "Uranus and Neptune are colder and further from the Sun, so they contain large amounts of frozen material."
+        },
+        {
+          "t": "text",
+          "text": "A memory trick for the order of the planets: **M**y **V**ery **E**asy **M**ethod **J**ust **S**peeds **U**p **N**aming (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Rocky or giant?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a planet, then tap the group it belongs to.",
+          "columns": [
+            "Rocky inner planet",
+            "Gas or ice giant (outer planet)"
+          ],
+          "items": [
+            {
+              "text": "Mercury",
+              "col": 0
+            },
+            {
+              "text": "Jupiter",
+              "col": 1
+            },
+            {
+              "text": "Earth",
+              "col": 0
+            },
+            {
+              "text": "Neptune",
+              "col": 1
+            },
+            {
+              "text": "Mars",
+              "col": 0
+            },
+            {
+              "text": "Saturn",
+              "col": 1
+            },
+            {
+              "text": "Venus",
+              "col": 0
+            },
+            {
+              "text": "Uranus",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Patterns in the planets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The further a planet is from the Sun, the lower its temperature. It receives less energy from the Sun to heat it."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Mercury 167 °C",
+            "Venus 464 °C",
+            "Earth 15 °C",
+            "Mars –65 °C",
+            "Neptune –200 °C"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which planet breaks the pattern?",
+          "text": "**Venus**. It is far hotter than the pattern suggests, because it has a thick atmosphere that traps energy from the Sun."
+        },
+        {
+          "t": "text",
+          "text": "The four inner planets have a much higher density than the four outer planets. The inner planets are mostly dense rock, but the outer planets are made from less dense gases and ices."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Dwarf planets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Dwarf planets are other very large objects that orbit the Sun. They are not counted as ‘full’ planets because they have not cleared their orbital path of other objects."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Ceres",
+            "Pluto",
+            "Haumea",
+            "Makemake",
+            "Eris"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are five named dwarf planets. {Pluto} is the best known. It was once considered to be a main planet."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Asteroids and comets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The solar system contains billions of smaller rocks orbiting the Sun. These are **asteroids**. They range from a few metres to nearly 100 km across."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The asteroid belt: a ring of millions of asteroids between the orbits of Mars and Jupiter.",
+            "The Kuiper belt: a region of asteroids beyond the orbit of Neptune.",
+            "The Oort cloud: a region of asteroids at the edge of the solar system."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "There are also billions of icy rocks called **comets**. Most are in the Oort cloud, too far away to see. Sometimes a comet is knocked out and begins to orbit the Sun in a very long, elliptical orbit. Near the Sun we can see its gassy tail."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Galaxies are not part of the solar system. Our solar system is itself within a galaxy."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the region",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each name to what it is.",
+          "pairs": [
+            {
+              "a": "Asteroid belt",
+              "b": "A ring of millions of asteroids between the orbits of Mars and Jupiter"
+            },
+            {
+              "a": "Kuiper belt",
+              "b": "A region of asteroids beyond the orbit of Neptune"
+            },
+            {
+              "a": "Oort cloud",
+              "b": "The region at the edge of the solar system where most comets are found"
+            },
+            {
+              "a": "Comet",
+              "b": "An icy rock that can show a gassy tail near the Sun"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Moon",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Earth has one natural satellite: the {Moon}. Its own name is simply ‘the Moon’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "It takes about one month to orbit Earth once.",
+            "As it orbits, it also rotates on its axis, and one rotation takes the same time as one orbit."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "So the same side of the Moon faces Earth at all times."
+        },
+        {
+          "t": "choice",
+          "q": "Why do we always see the same side of the Moon from Earth?",
+          "options": [
+            "The Moon does not spin at all",
+            "The Moon takes the same time to spin once as to orbit Earth once",
+            "The Moon takes a whole year to spin once"
+          ],
+          "answer": 1,
+          "why": "The Moon’s period of rotation is the same as the period of its orbit."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Moons of other planets",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A moon is a natural satellite of a planet. Moons orbit planets, while planets orbit a star. Most moons are much smaller than the planet they orbit."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Mercury and Venus",
+              "sub": "No moons"
+            },
+            {
+              "title": "Mars",
+              "sub": "Two small moons: Phobos and Deimos"
+            },
+            {
+              "title": "Jupiter",
+              "sub": "Over 90 moons"
+            },
+            {
+              "title": "Saturn",
+              "sub": "Over 100 moons"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Ganymede, one of Jupiter’s moons, is the largest moon in the solar system. It is wider than the planet Mercury, but it is a {moon} because it orbits a planet."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Planet, dwarf planet or moon?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap an object, then tap the group it belongs to.",
+          "columns": [
+            "Planet",
+            "Dwarf planet",
+            "Moon"
+          ],
+          "items": [
+            {
+              "text": "Neptune",
+              "col": 0
+            },
+            {
+              "text": "Pluto",
+              "col": 1
+            },
+            {
+              "text": "Ganymede",
+              "col": 2
+            },
+            {
+              "text": "Mars",
+              "col": 0
+            },
+            {
+              "text": "Eris",
+              "col": 1
+            },
+            {
+              "text": "Triton",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Newton’s law of gravity",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Isaac Newton realised that the force that pulls an apple down from a tree is the same kind of force that acts on the moving planets. It attracts all objects with mass towards each other. He called it {gravity}."
+        },
+        {
+          "t": "text",
+          "text": "Newton’s universal law of gravity says the force between any two objects is:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "larger when the objects have more mass",
+            "smaller when the objects are further apart"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Gravity acts everywhere, even across the huge distances of space. It is not just a force near a planet’s surface."
+        },
+        {
+          "t": "choices",
+          "q": "Check the law.",
+          "items": [
+            {
+              "q": "Which change makes the gravitational force between two objects larger?",
+              "options": [
+                "Moving them further apart",
+                "Decreasing their masses",
+                "Increasing their masses"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which change makes the gravitational force between two objects smaller?",
+              "options": [
+                "Moving them further apart",
+                "Increasing their masses",
+                "Moving them closer together"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How gravity makes an orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Newton’s thought experiment: imagine standing on a very tall hill and throwing a ball sideways (with no air resistance)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Gravity pulls the ball down, so it follows a curved path and hits the ground.",
+            "Throw it harder and it travels further before it lands.",
+            "Earth is almost a sphere, so the ground curves away below the ball.",
+            "Throw it fast enough and the ball falls at the same rate that the ground curves away. It is always falling, but never gets closer to the ground. It is in orbit."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Planets orbit the Sun in the same way. The Sun’s gravity is always pulling them towards it. They accelerate towards the Sun but do not get any closer, because they are moving fast enough. Real orbits are slightly squashed circles (elliptical), not perfect circles."
+        },
+        {
+          "t": "choice",
+          "q": "In the thought experiment, what happens when the ball is thrown fast enough?",
+          "options": [
+            "It flies off in a straight line",
+            "It falls at the same rate as the ground curves away, so it stays in orbit",
+            "It stops falling because gravity switches off"
+          ],
+          "answer": 1,
+          "why": "The ball is constantly falling towards the ground but never gets any closer to it: that is an orbit."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The solar system has the Sun (a star), eight planets, several dwarf planets, an asteroid belt, clouds of comets and over 100 moons.",
+            "The four inner planets are rocky: Mercury, Venus, Earth, Mars. The four outer planets are gas or ice giants: Jupiter, Saturn, Uranus, Neptune.",
+            "Gravitational forces cause the planets to orbit the Sun and the moons to orbit the planets."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the solar system?",
+      "back": "The Sun and the collection of objects in orbit around it."
+    },
+    {
+      "front": "What is a planet?",
+      "back": "A very large, spherical object in orbit around a star that has cleared the path of its orbit of other objects."
+    },
+    {
+      "front": "What is a dwarf planet?",
+      "back": "A large object in orbit around a star that has not cleared the path of its orbit of other objects. Example: Pluto."
+    },
+    {
+      "front": "What is a moon?",
+      "back": "A natural object in orbit around a planet."
+    },
+    {
+      "front": "Which four planets are the rocky inner planets?",
+      "back": "Mercury, Venus, Earth and Mars."
+    },
+    {
+      "front": "Which four planets are the outer planets, made of gases and ices?",
+      "back": "Jupiter, Saturn, Uranus and Neptune."
+    },
+    {
+      "front": "Why are Uranus and Neptune called ice giants?",
+      "back": "They are colder and further from the Sun, so they contain large amounts of frozen material."
+    },
+    {
+      "front": "Which planet is the exception to ‘the further from the Sun, the cooler’?",
+      "back": "Venus. It has a thick atmosphere that traps energy from the Sun."
+    },
+    {
+      "front": "What is the asteroid belt?",
+      "back": "A ring of millions of asteroids between the orbits of Mars and Jupiter."
+    },
+    {
+      "front": "Why do we always see the same side of the Moon?",
+      "back": "The Moon takes the same time to rotate once as to orbit Earth once (about one month)."
+    },
+    {
+      "front": "Why is Ganymede a moon and not a planet?",
+      "back": "It orbits a planet (Jupiter)."
+    },
+    {
+      "front": "What does Newton’s law say about the size of the gravitational force between two objects?",
+      "back": "It is larger when the objects have more mass and smaller when they are further apart."
+    },
+    {
+      "front": "Why do the planets orbit the Sun?",
+      "back": "The Sun’s gravity is always pulling them towards it. They accelerate towards the Sun but do not get closer, because they are moving fast enough."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The solar system",
+    "instructions": "Answer each question with a word, a name or a number. Use what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "Venus is further from the Sun than Mercury but is hotter (464 °C compared with 167 °C). What does Venus have around it that traps energy from the Sun? (One word.)",
+        "answer": "atmosphere",
+        "accepted": [
+          "the atmosphere",
+          "its atmosphere",
+          "a thick atmosphere",
+          "thick atmosphere",
+          "its thick atmosphere"
+        ],
+        "explanation": "Venus has a thick atmosphere that traps energy from the Sun."
+      },
+      {
+        "prompt": "Which two planets are sometimes called ice giants? (Give both names.)",
+        "answer": "Uranus and Neptune",
+        "accepted": [
+          "neptune and uranus",
+          "uranus, neptune",
+          "neptune, uranus",
+          "uranus & neptune",
+          "neptune & uranus"
+        ],
+        "explanation": "They are colder and further from the Sun, so they contain large amounts of frozen material."
+      },
+      {
+        "prompt": "What is the name of the largest moon in the solar system?",
+        "answer": "Ganymede",
+        "accepted": [
+          "ganymede"
+        ],
+        "explanation": "Ganymede, one of Jupiter’s moons, is the largest moon and is wider than Mercury."
+      },
+      {
+        "prompt": "What is the name of the ring of millions of asteroids between the orbits of Mars and Jupiter?",
+        "answer": "asteroid belt",
+        "accepted": [
+          "the asteroid belt"
+        ],
+        "explanation": "Asteroids are spread in a ring called the asteroid belt between Mars and Jupiter."
+      },
+      {
+        "prompt": "How many named dwarf planets does the lesson list (Ceres, Pluto, Haumea, Makemake and Eris)?",
+        "answer": "5",
+        "accepted": [
+          "five"
+        ],
+        "explanation": "Ceres, Pluto, Haumea, Makemake and Eris make five."
+      },
+      {
+        "prompt": "About how many months does the Moon take to orbit Earth once?",
+        "answer": "1",
+        "accepted": [
+          "one",
+          "1 month",
+          "one month",
+          "about 1 month",
+          "about one month"
+        ],
+        "explanation": "The Moon takes about one month to orbit Earth."
+      },
+      {
+        "prompt": "How many moons does Mars have?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Mars has two small moons, Phobos and Deimos."
+      },
+      {
+        "prompt": "Which scientist developed a theory of gravity from apples falling on Earth and the movement of the planets?",
+        "answer": "Isaac Newton",
+        "accepted": [
+          "newton"
+        ],
+        "explanation": "Newton realised the same force acts on falling objects and on the planets."
+      },
+      {
+        "prompt": "Newton’s law says the gravitational force between two objects is larger when the objects have more of what?",
+        "answer": "mass",
+        "accepted": [
+          "masses"
+        ],
+        "explanation": "The force is larger between objects with more mass."
+      },
+      {
+        "prompt": "In which year did Galileo discover four of Jupiter’s moons with an early telescope?",
+        "answer": "1610",
+        "accepted": [],
+        "explanation": "Ganymede, Callisto, Io and Europa were discovered by Galileo in 1610."
+      }
+    ]
+  }
+}

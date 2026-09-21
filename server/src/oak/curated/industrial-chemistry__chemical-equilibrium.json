@@ -1,0 +1,589 @@
+{
+  "agent": "chem-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain the concept of chemical equilibrium and the characteristics of a system in which equilibrium is established."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Introduction to {equilibrium}",
+              "sub": "equal rates, constant amounts"
+            },
+            {
+              "title": "{Closed} systems and equilibria",
+              "sub": "why matter must stay in"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "dynamic equilibrium",
+              "def": "Occurs in a closed system when the forward and backward reactions of a reversible chemical reaction occur at the same rate; and the concentrations of reactants and products remain constant."
+            },
+            {
+              "term": "reaction rate",
+              "def": "The speed with which a chemical reaction takes place, measured by the amount of a reactant used or amount of product formed in a given time."
+            },
+            {
+              "term": "closed system",
+              "def": "One in which matter cannot enter or leave the observed environment, allowing only energy transfer between the system and its surrounding environment."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Balanced opposites",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Equilibrium} is a state where opposing forces or processes are balanced. Two everyday examples:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Mechanical equilibrium",
+              "sub": "a balanced seesaw: the opposing forces are equal"
+            },
+            {
+              "title": "Thermal equilibrium",
+              "sub": "two objects at different temperatures end up at the same temperature when in contact. Heat moves from a hot coffee to the surroundings until both are the same temperature"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Chemical equilibrium: equal rates",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Remember: in a reversible reaction the reactants form products, which can then react together to reform the reactants. In A + B ⇌ C + D the forward reaction makes C + D and the backward reaction makes A + B. Depending on the conditions, they can happen separately or at the same time."
+        },
+        {
+          "t": "callout",
+          "text": "Chemical {equilibrium} is when the rate of the forward reaction equals the rate of the backward reaction."
+        },
+        {
+          "t": "reveal",
+          "label": "How the rates change",
+          "text": "At the start the forward reaction has a very high rate and the backward reaction is basically at zero. Over time the two rates become equal. That is equilibrium."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Amounts stay constant",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Follow a reaction that starts with only reactants:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "at the start there are no products",
+            "as the reaction goes on, the amount of reactants drops and the amount of products rises",
+            "at equilibrium both amounts level off: there is no change in the amount of either reactants or products"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "At equilibrium the amounts are {constant}, not necessarily {equal}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Dynamic equilibrium",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Even though the amounts of reactants and products stay constant, the forward and backward reactions carry on. This is called {dynamic equilibrium}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "at the molecular level, reactions are continuously happening",
+            "reactant makes product, and product makes reactant, all the time",
+            "there is no overall change in the amounts, even though both reactions are still occurring",
+            "the rate of the forward reaction equals the rate of the backward reaction"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "“Equilibrium” does not mean the reactions have stopped. It means the two rates are equal, so the amounts stay constant."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: what is true at equilibrium?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "At equilibrium, the amounts of reactants and products …",
+              "options": [
+                "stay constant",
+                "must always be equal",
+                "keep changing"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "At equilibrium, the forward and backward reactions …",
+              "options": [
+                "both stop",
+                "both continue at equal rates",
+                "only the backward one continues"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why is it called dynamic equilibrium?",
+              "options": [
+                "Because the reactions are still happening",
+                "Because nothing is happening",
+                "Because the amounts change quickly"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which is possible at equilibrium?",
+              "options": [
+                "The amounts of reactants and products are different, and both stay constant",
+                "The forward reaction is faster than the backward reaction, and the amounts stay constant",
+                "All the reactants have been used up"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Model 1: the busy road",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One way to picture dynamic equilibrium is a busy road:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "cars enter and leave the road at the same rate",
+            "the number of cars on the road stays constant",
+            "red cars represent the amount of reactants at equilibrium",
+            "blue cars represent the amount of products at equilibrium"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The cars keep moving, so it is dynamic. The example in the lesson has two red cars and four blue cars on the road at all times, even though cars keep entering and leaving."
+        },
+        {
+          "t": "choice",
+          "q": "On the busy road, cars enter and leave at the same rate. Which part of chemical equilibrium does that show?",
+          "options": [
+            "The rate of the forward reaction equals the rate of the backward reaction",
+            "The reaction has finished",
+            "Only the forward reaction is happening"
+          ],
+          "answer": 0,
+          "why": "Cars entering and leaving at the same rate models equal forward and backward reaction rates."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A coloured equilibrium",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Nitrogen dioxide (NO₂) and dinitrogen tetroxide (N₂O₄) make a reversible reaction:"
+        },
+        {
+          "t": "callout",
+          "text": "2NO₂ ⇌ N₂O₄"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "NO₂",
+              "sub": "dark brown"
+            },
+            {
+              "title": "N₂O₄",
+              "sub": "colourless"
+            },
+            {
+              "title": "a mixture of both",
+              "sub": "light brown"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In a closed glass container at equilibrium, both gases are present. So the colour stays {light brown}. It does not switch between dark brown and colourless."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Equilibrium at the level of molecules",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at 2NO₂ ⇌ N₂O₄. NO₂ has 1 nitrogen atom and 2 oxygen atoms. N₂O₄ has 2 nitrogen atoms and 4 oxygen atoms, so two NO₂ molecules make one N₂O₄ molecule."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Not usually equal",
+              "sub": "the amounts of reactant and product molecules are constant, but very often not equal"
+            },
+            {
+              "title": "Equal rates",
+              "sub": "for each pair of smaller molecules that combine, a larger molecule splits"
+            },
+            {
+              "title": "No visible change",
+              "sub": "the proportion of reactant and product molecules stays the same, so properties like colour stay the same"
+            },
+            {
+              "title": "Never all product",
+              "sub": "product molecules may change back to reactants before all the reactants have reacted"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Check: molecules at equilibrium",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Think about 2NO₂ ⇌ N₂O₄ at equilibrium.",
+          "items": [
+            {
+              "q": "Two NO₂ molecules combine to make a larger molecule. To keep the rates equal, what happens?",
+              "options": [
+                "One N₂O₄ molecule splits",
+                "Two more NO₂ molecules combine",
+                "The reaction stops"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why can the observable properties (such as colour) stay the same?",
+              "options": [
+                "The proportion of reactant and product molecules stays the same",
+                "All the molecules stop changing",
+                "Only reactants are present"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why is the maximum possible amount of product never made?",
+              "options": [
+                "Product molecules change back to reactants before all the reactants have reacted",
+                "The reaction cannot start",
+                "Reactants always run out first"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Closed systems",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A {closed system} is one where no matter can enter or leave, but energy can be transferred."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Open system",
+              "sub": "matter and energy can both enter and leave. E.g. an open round-bottomed flask: gas can escape through the neck."
+            },
+            {
+              "title": "Closed system",
+              "sub": "matter cannot leave, but energy can pass through the flask when it is heated."
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What can cross the boundary of a closed system?",
+          "options": [
+            "energy only",
+            "matter only",
+            "matter and energy"
+          ],
+          "answer": 0,
+          "why": "In a closed system no matter can enter or leave, but energy can be transferred."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Equilibrium needs a closed system",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Dynamic equilibrium can only be achieved in a closed system."
+        },
+        {
+          "t": "list",
+          "items": [
+            "if reactants and products can enter or leave the system, equilibrium cannot be maintained",
+            "continuous adding or removing of substances disrupts the balance between the forward and backward reaction rates",
+            "so the system cannot reach a state where the rates are equal"
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A reaction is heated in a flask that is open at the top, so gas can escape. Can dynamic equilibrium be reached?",
+              "options": [
+                "Yes",
+                "No, because matter leaving disrupts the balance"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In a closed system, dynamic equilibrium is possible because …",
+              "options": [
+                "matter cannot enter or leave",
+                "energy cannot be transferred",
+                "the reactions have stopped"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Model 2: water and food colouring",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Fill two containers with equal amounts of water.",
+            "Add a few drops of food colouring to one container and stir.",
+            "Pipette 1 cm³ from the first container to the second, and at the same time move the same amount of colourless water from the second back to the first.",
+            "Repeat several times and record what you see."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What you might see",
+          "text": "At the start container A is coloured and B is colourless. After the first transfer A is slightly less intense and B is very slightly coloured. After a few transfers the colours become more similar. At ‘equilibrium’ the colour intensity stays the same in both containers with each transfer."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Evaluating the two models",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each point a good point or a limitation of the model?",
+          "columns": [
+            "Good point",
+            "Limitation"
+          ],
+          "items": [
+            {
+              "text": "Water model: the colour stays constant, like the constant amounts at equilibrium",
+              "col": 0
+            },
+            {
+              "text": "Water model: it mimics a closed system",
+              "col": 0
+            },
+            {
+              "text": "Water model: it ends with two solutions of equal concentration, which is not typical of equilibrium",
+              "col": 1
+            },
+            {
+              "text": "Road model: cars enter and leave at the same rate, like equal forward and backward rates",
+              "col": 0
+            },
+            {
+              "text": "Road model: cars come from and go to outside the road, so it looks like an open system",
+              "col": 1
+            },
+            {
+              "text": "Both models: they do not show individual molecules continuously changing",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "At equilibrium, both reactants and products are formed at the same rate.",
+            "Amounts of reactants and products remain constant at equilibrium.",
+            "Equilibrium can only occur in a closed system."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is dynamic equilibrium?",
+      "back": "In a closed system, the forward and backward reactions of a reversible reaction occur at the same rate, and the amounts (concentrations) of reactants and products stay constant."
+    },
+    {
+      "front": "What is a closed system?",
+      "back": "One where no matter can enter or leave, but energy can be transferred."
+    },
+    {
+      "front": "What is the reaction rate?",
+      "back": "The speed of a reaction: the amount of reactant used or product formed in a given time."
+    },
+    {
+      "front": "At equilibrium, how do the rates of the forward and backward reactions compare?",
+      "back": "They are equal."
+    },
+    {
+      "front": "At equilibrium, are the amounts of reactants and products constant or equal?",
+      "back": "Constant. They are not necessarily equal."
+    },
+    {
+      "front": "Have the reactions stopped at equilibrium?",
+      "back": "No. Both reactions carry on, which is why it is called dynamic equilibrium."
+    },
+    {
+      "front": "Can equilibrium happen in an open system?",
+      "back": "No. Matter entering or leaving disrupts the balance between the forward and backward rates."
+    },
+    {
+      "front": "What colour is the equilibrium mixture of 2NO₂ ⇌ N₂O₄?",
+      "back": "Light brown. NO₂ is dark brown, N₂O₄ is colourless, and both are present."
+    },
+    {
+      "front": "For 2NO₂ ⇌ N₂O₄ at equilibrium, what happens each time two NO₂ molecules combine?",
+      "back": "A larger N₂O₄ molecule splits, so the rates stay equal."
+    },
+    {
+      "front": "Why is the maximum possible amount of product never formed at equilibrium?",
+      "back": "Product molecules may change back to reactants before all the reactant molecules have reacted."
+    },
+    {
+      "front": "What do the red and blue cars in the busy road model represent?",
+      "back": "Red cars: the amount of reactants. Blue cars: the amount of products. Cars enter and leave at the same rate."
+    },
+    {
+      "front": "A limitation of the busy road and water models?",
+      "back": "They do not show the dynamic part: individual molecules continuously changing."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Chemical equilibrium",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "In a sealed glass container, dark brown NO₂ and colourless N₂O₄ reach equilibrium in 2NO₂ ⇌ N₂O₄. What colour does the mixture appear? Answer with two words.",
+        "answer": "light brown",
+        "explanation": "Both gases are present at equilibrium, so the colour is light brown and stays that way."
+      },
+      {
+        "prompt": "At equilibrium, the amounts of reactants and products stay ______. Fill in the gap with one word (equal or constant).",
+        "answer": "constant",
+        "explanation": "The amounts stay constant, but they are not necessarily equal."
+      },
+      {
+        "prompt": "At equilibrium, the rate of the forward reaction is ______ the rate of the backward reaction. Fill in the gap with one word.",
+        "answer": "equal",
+        "accepted": [
+          "equal to",
+          "the same as",
+          "same as"
+        ],
+        "explanation": "Equilibrium is when the forward and backward reaction rates are equal."
+      },
+      {
+        "prompt": "Dynamic equilibrium can only be achieved in which type of system: open or closed?",
+        "answer": "closed",
+        "accepted": [
+          "closed system"
+        ],
+        "explanation": "In an open system matter can enter or leave, which disrupts the balance."
+      },
+      {
+        "prompt": "Can matter enter or leave a closed system? Answer yes or no.",
+        "answer": "no",
+        "explanation": "In a closed system no matter can enter or leave, but energy can be transferred."
+      },
+      {
+        "prompt": "At equilibrium in 2NO₂ ⇌ N₂O₄, two NO₂ molecules combine. How many N₂O₄ molecules must split to keep the rates equal? Give a number.",
+        "answer": "1",
+        "accepted": [
+          "one"
+        ],
+        "explanation": "For each pair of smaller molecules combining, one larger molecule splits."
+      },
+      {
+        "prompt": "In the busy road model, the red cars represent the reactants. What do the blue cars represent? Answer with one word.",
+        "answer": "products",
+        "accepted": [
+          "the products"
+        ],
+        "explanation": "The blue cars represent the amount of products at equilibrium."
+      },
+      {
+        "prompt": "The reaction rate is measured by the amount of reactant used or product formed in a given ______. Fill in the gap with one word.",
+        "answer": "time",
+        "explanation": "Reaction rate is the amount of reactant used or product formed in a given time."
+      }
+    ]
+  }
+}

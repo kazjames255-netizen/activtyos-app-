@@ -1,0 +1,648 @@
+{
+  "agent": "w4-maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use multiplication and division to calculate unknown values in ratio problems."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will decide which multiplication or division equation solves a ratio problem, and then use ratio tables to find missing values."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Represent problems with {multiplication} and {division}"
+            },
+            {
+              "title": "Ratio tables"
+            },
+            {
+              "title": "Solve ratio problems"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "ratio",
+              "def": "A ratio shows the relative sizes of 2 or more values and allows you to compare a part with another part in a whole."
+            },
+            {
+              "term": "for every",
+              "def": "For every allows you to talk about the relative sizes of the values, e.g. for every 2 squares there is 1 triangle."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Quiz teams as multiplication",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each quiz team has 2 adults and 3 children, so 5 people. Here are 3 teams, one team in each row of an array:"
+        },
+        {
+          "t": "text",
+          "text": "🧑🧑🧒🧒🧒\n🧑🧑🧒🧒🧒\n🧑🧑🧒🧒🧒"
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "2",
+              "add": "× 3",
+              "result": "6",
+              "note": "Adults: 2 in one team × 3 teams = 6 adults."
+            },
+            {
+              "root": "3",
+              "add": "× 3",
+              "result": "9",
+              "note": "Children: 3 in one team × 3 teams = 9 children."
+            },
+            {
+              "root": "5",
+              "add": "× 3",
+              "result": "15",
+              "note": "People: 5 in one team × 3 teams = 15 people."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where are the numbers?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the equations 2 × 3 = 6, 3 × 3 = 9 and 5 × 3 = 15."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The **2** is the number of adults in one team.",
+            "The **first 3** (in 3 × 3) is the number of children in one team.",
+            "The **5** is the number of people in one whole team.",
+            "The **last 3** in every equation is the number of teams taking part."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "When you write an equation, be sure you can explain where each number is in the picture, bar model or array."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What does the number mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each team has 2 adults and 3 children. Look at this equation: 2 × 6 = 12"
+        },
+        {
+          "t": "choice",
+          "q": "What does the 6 stand for?",
+          "options": [
+            "The number of adults in one team",
+            "The number of teams",
+            "The number of children"
+          ],
+          "answer": 1,
+          "why": "2 adults in one team × 6 teams = 12 adults, so the 6 is the number of teams."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Using division",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes we know the total and need to find the number of teams. Each team has 2 adults and 3 children."
+        },
+        {
+          "t": "list",
+          "items": [
+            "45 people in total: each team has 5 people, so 45 ÷ 5 = 9 teams.",
+            "24 adults: each team has 2 adults, so 24 ÷ 2 = 12 teams. Each team has 3 children, so 3 × 12 = 36 children.",
+            "24 children: each team has 3 children, so 24 ÷ 3 = 8 teams. Each team has 2 adults, so 2 × 8 = 16 adults."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Divide to find how many teams. Then multiply to find the other value."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Quiz teams: your turn",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each team has 2 adults and 3 children."
+        },
+        {
+          "t": "choices",
+          "q": "Work out the missing number.",
+          "items": [
+            {
+              "q": "35 people take part. How many teams?",
+              "options": [
+                "7",
+                "5",
+                "10"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "18 adults take part. How many teams?",
+              "options": [
+                "6",
+                "9",
+                "36"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "30 children take part. How many adults?",
+              "options": [
+                "10",
+                "15",
+                "20"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "27 children take part. How many teams?",
+              "options": [
+                "9",
+                "3",
+                "13"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the equation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every cheese and tomato sandwich you need 2 slices of bread, 3 slices of cheese and 4 slices of tomato. Choose the equation that solves each problem."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "How many sandwiches can you make with 40 slices of bread?",
+              "options": [
+                "40 ÷ 2",
+                "40 × 2",
+                "40 ÷ 4"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many slices of tomato do you need for 100 sandwiches?",
+              "options": [
+                "4 ÷ 100",
+                "100 ÷ 4",
+                "4 × 100"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "How many sandwiches can you make with 27 slices of cheese?",
+              "options": [
+                "27 × 3",
+                "27 ÷ 3",
+                "27 ÷ 4"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sandwich problems in steps",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "26 slices of bread: 26 ÷ 2 = 13 sandwiches. That is 13 times as many as 1 sandwich, so 3 × 13 = 39 slices of cheese and 4 × 13 = 52 slices of tomato.",
+            "28 slices of tomato: 28 ÷ 4 = 7 sandwiches. Then 3 × 7 = 21 slices of cheese.",
+            "25 slices of cheese: 25 ÷ 3 is 8 with 1 left over. You can make 8 sandwiches with 1 slice of cheese left over."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A ratio table",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha and Alex share marbles. For every 2 marbles Aisha has, Alex has 3 marbles."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Aisha’s marbles: 2, 4, 6, 8, 10 …",
+            "Alex’s marbles: 3, 6, 9, 12, 15 …",
+            "Total number of marbles: 5, 10, 15, 20, 25 …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Aisha always has a multiple of 2, Alex always has a multiple of 3, and the total is always a multiple of 5. Look for the multiplication links in the table."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which column do I need?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each problem to the column of the table you start from.",
+          "pairs": [
+            {
+              "a": "They share 20 marbles. How many does Aisha get?",
+              "b": "Start from the total column"
+            },
+            {
+              "a": "Aisha gets 8 marbles. How many does Alex get?",
+              "b": "Start from Aisha’s column"
+            },
+            {
+              "a": "Alex gets 12 marbles. How many marbles altogether?",
+              "b": "Start from Alex’s column"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Solving with the table",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If Aisha gets 18 marbles, how many does Alex get, and how many marbles are shared altogether?"
+        },
+        {
+          "t": "text",
+          "text": "In the basic ratio Aisha has 2 marbles. 18 = 2 × 9, so Aisha has 9 times as many marbles. So there must be 9 times as many for Alex and 9 times as many altogether."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "3",
+              "add": "× 9",
+              "result": "27",
+              "note": "Alex: 3 marbles in the basic ratio × 9 = 27 marbles."
+            },
+            {
+              "root": "5",
+              "add": "× 9",
+              "result": "45",
+              "note": "Total: 5 marbles in the basic ratio × 9 = 45 marbles."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Marbles: your turn",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 2 marbles Aisha has, Alex has 3 marbles."
+        },
+        {
+          "t": "choices",
+          "q": "Use the table to work out each missing number.",
+          "items": [
+            {
+              "q": "They share 35 marbles. How many does Alex get?",
+              "options": [
+                "14",
+                "21",
+                "15"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Aisha gets 16 marbles. How many does Alex get?",
+              "options": [
+                "24",
+                "18",
+                "32"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Alex gets 24 marbles. How many does Aisha get?",
+              "options": [
+                "12",
+                "16",
+                "8"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Alex gets 27 marbles. How many marbles altogether?",
+              "options": [
+                "18",
+                "45",
+                "54"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Pancake recipe",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha uses this recipe to make 12 pancakes: 2 eggs, 3 spoons of sugar and 6 spoons of flour."
+        },
+        {
+          "t": "text",
+          "text": "**Problem:** Aisha and 3 friends want 6 pancakes each. How much sugar? 4 people × 6 = 24 pancakes. 24 is 2 times as many as 12, so she needs 2 times as much sugar: 2 × 3 = 6 spoons."
+        },
+        {
+          "t": "text",
+          "text": "**Problem:** Aisha has 12 eggs. How much flour? 12 eggs is 6 times as many as 2, so she needs 6 times as much flour: 6 × 6 = 36 spoons."
+        },
+        {
+          "t": "text",
+          "text": "**Problem:** 300 pancakes are needed. How many eggs? 300 ÷ 12 = 25, so she needs 25 times as much: 25 × 2 = 50 eggs."
+        },
+        {
+          "t": "reveal",
+          "label": "What do the two 6s mean in 6 × 6 = 36?",
+          "text": "The first 6 is how many times as many eggs there are (12 eggs is 6 times 2). The second 6 is the spoons of flour in the recipe."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pancakes: your turn",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The recipe makes 12 pancakes with 2 eggs, 3 spoons of sugar and 6 spoons of flour."
+        },
+        {
+          "t": "choices",
+          "q": "Work out each missing number.",
+          "items": [
+            {
+              "q": "How many spoons of flour for 24 pancakes?",
+              "options": [
+                "12",
+                "18",
+                "24"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many spoons of sugar for 60 pancakes?",
+              "options": [
+                "12",
+                "15",
+                "30"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How many eggs for 36 pancakes?",
+              "options": [
+                "4",
+                "6",
+                "8"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How many pancakes can you make with 9 spoons of sugar?",
+              "options": [
+                "36",
+                "27",
+                "24"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Use multiplication and division to calculate unknown values in ratio problems",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Ratio tables show the multiplicative relationship between the variables.",
+            "Different representations (bar models, arrays, tables) can show the same mathematical structure.",
+            "You can use multiplication and division to represent ratio problems and to solve problems with missing values.",
+            "Say how many times as many there are, then multiply every value in the ratio by that amount."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Quiz team: 2 adults and 3 children. Write the equation for the adults in 3 teams.",
+      "back": "2 × 3 = 6\n\n2 adults in one team, 3 teams."
+    },
+    {
+      "front": "Quiz team: 2 adults and 3 children. Write the equation for the people in 3 teams.",
+      "back": "5 × 3 = 15\n\n5 people in one team, 3 teams."
+    },
+    {
+      "front": "In 3 × 5 = 15 (children in 5 quiz teams), what does the 5 stand for?",
+      "back": "The number of teams."
+    },
+    {
+      "front": "Each team has 5 people. How many teams from 45 people?",
+      "back": "9 teams (45 ÷ 5 = 9)."
+    },
+    {
+      "front": "Each team has 2 adults and 3 children. 24 adults take part. How many teams and how many children?",
+      "back": "12 teams and 36 children.\n\n24 ÷ 2 = 12, then 3 × 12 = 36."
+    },
+    {
+      "front": "Each team has 2 adults and 3 children. 24 children take part. How many teams and how many adults?",
+      "back": "8 teams and 16 adults.\n\n24 ÷ 3 = 8, then 2 × 8 = 16."
+    },
+    {
+      "front": "Each sandwich uses 2 slices of bread. How many sandwiches from 26 slices?",
+      "back": "13 sandwiches (26 ÷ 2 = 13)."
+    },
+    {
+      "front": "Each sandwich uses 3 slices of cheese. How many sandwiches from 25 slices, and what is left?",
+      "back": "8 sandwiches with 1 slice left over.\n\n25 ÷ 3 = 8 remainder 1."
+    },
+    {
+      "front": "Marbles in the ratio 2 : 3. What kind of number is the total always?",
+      "back": "A multiple of 5 (2 + 3 = 5)."
+    },
+    {
+      "front": "Marbles in the ratio 2 : 3. Aisha gets 18. How many does Alex get?",
+      "back": "27.\n\n18 = 2 × 9, so Alex has 3 × 9 = 27."
+    },
+    {
+      "front": "Marbles in the ratio 2 : 3. Alex gets 18. How many are shared altogether?",
+      "back": "30.\n\n18 = 3 × 6, so the total is 5 × 6 = 30."
+    },
+    {
+      "front": "A recipe makes 12 pancakes with 2 eggs. How many eggs for 300 pancakes?",
+      "back": "50 eggs.\n\n300 ÷ 12 = 25, then 2 × 25 = 50."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Use multiplication and division to calculate unknown values in ratio problems",
+    "instructions": "Answer each question with a number. Think about which multiplication or division equation solves the problem.",
+    "questions": [
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. 45 people take part. How many teams are there?",
+        "answer": "9",
+        "accepted": [
+          "9 teams",
+          "nine"
+        ],
+        "explanation": "Each team has 5 people and 45 ÷ 5 = 9."
+      },
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. 20 adults take part. How many children take part?",
+        "answer": "30",
+        "accepted": [
+          "30 children",
+          "thirty"
+        ],
+        "explanation": "20 ÷ 2 = 10 teams, and 3 × 10 = 30 children."
+      },
+      {
+        "prompt": "Each quiz team has 2 adults and 3 children. 27 children take part. How many adults take part?",
+        "answer": "18",
+        "accepted": [
+          "18 adults",
+          "eighteen"
+        ],
+        "explanation": "27 ÷ 3 = 9 teams, and 2 × 9 = 18 adults."
+      },
+      {
+        "prompt": "Each sandwich uses 2 slices of bread, 3 slices of cheese and 4 slices of tomato. How many sandwiches can you make with 26 slices of bread?",
+        "answer": "13",
+        "accepted": [
+          "13 sandwiches",
+          "thirteen"
+        ],
+        "explanation": "26 ÷ 2 = 13."
+      },
+      {
+        "prompt": "Each sandwich uses 2 slices of bread, 3 slices of cheese and 4 slices of tomato. How many slices of cheese do you need to make 100 sandwiches?",
+        "answer": "300",
+        "accepted": [
+          "300 slices",
+          "three hundred"
+        ],
+        "explanation": "You need 100 times as much cheese as for 1 sandwich: 3 × 100 = 300."
+      },
+      {
+        "prompt": "Each sandwich uses 2 slices of bread, 3 slices of cheese and 4 slices of tomato. You have 28 slices of tomato. How many slices of cheese do you need?",
+        "answer": "21",
+        "accepted": [
+          "21 slices",
+          "twenty-one",
+          "twenty one"
+        ],
+        "explanation": "28 ÷ 4 = 7 sandwiches, and 3 × 7 = 21 slices of cheese."
+      },
+      {
+        "prompt": "Each sandwich uses 3 slices of cheese. A pack has 25 slices of cheese. How many whole sandwiches can you make?",
+        "answer": "8",
+        "accepted": [
+          "8 sandwiches",
+          "eight"
+        ],
+        "explanation": "25 ÷ 3 is 8 with 1 slice left over."
+      },
+      {
+        "prompt": "For every 2 marbles Aisha has, Alex has 3 marbles. Aisha gets 18 marbles. How many does Alex get?",
+        "answer": "27",
+        "accepted": [
+          "27 marbles",
+          "twenty-seven",
+          "twenty seven"
+        ],
+        "explanation": "18 = 2 × 9, so Alex has 3 × 9 = 27."
+      },
+      {
+        "prompt": "For every 2 marbles Aisha has, Alex has 3 marbles. Alex gets 18 marbles. How many marbles do they share altogether?",
+        "answer": "30",
+        "accepted": [
+          "30 marbles",
+          "thirty"
+        ],
+        "explanation": "18 = 3 × 6, so the total is 5 × 6 = 30."
+      },
+      {
+        "prompt": "A recipe makes 12 pancakes and uses 2 eggs, 3 spoons of sugar and 6 spoons of flour. How many spoons of flour are needed if Aisha uses 12 eggs?",
+        "answer": "36",
+        "accepted": [
+          "36 spoons",
+          "thirty-six",
+          "thirty six"
+        ],
+        "explanation": "12 eggs is 6 times as many as 2, so she needs 6 × 6 = 36 spoons of flour."
+      },
+      {
+        "prompt": "A recipe makes 12 pancakes and uses 2 eggs, 3 spoons of sugar and 6 spoons of flour. How many eggs are needed for 300 pancakes?",
+        "answer": "50",
+        "accepted": [
+          "50 eggs",
+          "fifty"
+        ],
+        "explanation": "300 ÷ 12 = 25 and 2 × 25 = 50."
+      }
+    ]
+  }
+}

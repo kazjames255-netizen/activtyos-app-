@@ -1,0 +1,627 @@
+{
+  "agent": "science-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can construct and interpret family tree diagrams showing information about inheritance of a feature."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Interpreting {family trees}",
+              "sub": "shapes, lines, generations and shading"
+            },
+            {
+              "title": "Inheritance of {genetic disorders}",
+              "sub": "cystic fibrosis and polydactyly"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "family tree",
+              "def": "A family tree diagram is a model of inheritance, showing whether a characteristic was passed from parents to offspring."
+            },
+            {
+              "term": "carrier",
+              "def": "A carrier of a recessive genetic disorder does not express the disorder in their phenotype, but has one recessive allele in their genotype that can be passed to offspring."
+            },
+            {
+              "term": "genotype",
+              "def": "The combination of alleles that an individual has for each gene."
+            },
+            {
+              "term": "phenotype",
+              "def": "The physical characteristics of an organism."
+            },
+            {
+              "term": "inheritance",
+              "def": "The passing of genetic information from parents to offspring by reproduction."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Quick recap: genotypes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each cell has two copies of each gene, one inherited from each parent. The combination of alleles is the genotype. Dominant alleles have a capital letter and recessive alleles a lowercase letter."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{EE}",
+              "sub": "homozygous dominant"
+            },
+            {
+              "title": "{Ee}",
+              "sub": "heterozygous"
+            },
+            {
+              "title": "{ee}",
+              "sub": "homozygous recessive"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A family tree shows the genotypes and phenotypes that offspring inherit from their parents. It is also called a family pedigree."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to read a family tree",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Males are shown as squares. Females are shown as circles.",
+            "Reproduction is shown as a horizontal line that runs directly between two parents.",
+            "The offspring of the parents are shown in the next row, joined to the reproduction line.",
+            "Each row is a generation."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Read this family tree",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Individuals are numbered so we can talk about them. Here is a family tree described in words:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Row 1: parents 1 and 2, joined by a reproduction line",
+            "Row 2: children 3, 4 and 5 (joined to that line) and individual 6",
+            "Row 3: children 7 and 8, joined to the line between 3 and 6"
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Answer using the tree above.",
+          "items": [
+            {
+              "q": "How many generations are shown?",
+              "options": [
+                "2",
+                "3",
+                "8"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which individuals are the parents of 7 and 8?",
+              "options": [
+                "1 and 2",
+                "3 and 6",
+                "4 and 5"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Is 6 a child of 1 and 2?",
+              "options": [
+                "Yes",
+                "No, 6 is not joined to their reproduction line"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Shading and keys",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The shading of the circles and squares is changed to show the genotype and phenotype. A key is always provided."
+        },
+        {
+          "t": "text",
+          "text": "In the example key used in this lesson:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "grey = homozygous dominant (BB)",
+            "white = homozygous recessive (bb)",
+            "striped grey and white = heterozygous (Bb)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: a heterozygous male and a homozygous dominant female have three children: a homozygous dominant male, a homozygous dominant female and a heterozygous female."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the mistake",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use the key: grey = homozygous dominant, white = homozygous recessive, striped = heterozygous."
+        },
+        {
+          "t": "choice",
+          "q": "A circle is shaded grey and labelled as female bb. What is the mistake?",
+          "options": [
+            "Circles should be males",
+            "The shading and the label do not match: grey is homozygous dominant but bb is homozygous recessive",
+            "Females should be shown as squares"
+          ],
+          "answer": 1,
+          "why": "Grey means homozygous dominant (BB), but bb is homozygous recessive (white). A circle correctly shows a female."
+        },
+        {
+          "t": "choice",
+          "q": "A square is labelled as female Bb. What is the mistake?",
+          "options": [
+            "Squares show males, so the label should say male",
+            "Bb should be shown as grey",
+            "Nothing, it is correct"
+          ],
+          "answer": 0,
+          "why": "Squares are males and circles are females."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Genetic disorders",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alleles can lead to genetic disorders. A change in the genetic code (a mutation) can change a protein's structure, and a changed protein can be non-functional."
+        },
+        {
+          "t": "text",
+          "text": "**Cystic fibrosis** is a genetic disorder that affects mucus production. The protein affected helps the movement of chloride ions and water. Without it, mucus becomes too thick (viscous) and blocks small ducts in the body, including the airways in the lungs."
+        },
+        {
+          "t": "callout",
+          "text": "Cystic fibrosis is a recessive condition, so an individual must inherit two recessive alleles (ff) to have it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Carriers",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{FF}",
+              "sub": "no cystic fibrosis"
+            },
+            {
+              "title": "{Ff}",
+              "sub": "carrier: no cystic fibrosis, but can pass on f"
+            },
+            {
+              "title": "{ff}",
+              "sub": "cystic fibrosis"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A carrier of a recessive genetic disorder is heterozygous. They can pass the allele to their offspring but do not express the disorder in their phenotype."
+        },
+        {
+          "t": "choice",
+          "q": "Which genotype is a carrier of cystic fibrosis?",
+          "options": [
+            "FF (two dominant alleles)",
+            "Ff (one dominant, one recessive)",
+            "ff (two recessive alleles)"
+          ],
+          "answer": 1,
+          "why": "A carrier is heterozygous: one dominant and one recessive allele."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two healthy parents, one child with CF",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How can a child have cystic fibrosis when neither parent does? Both parents can be carriers (Ff). Each parent passes on one of their alleles."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "F",
+              "add": "F",
+              "result": "FF"
+            },
+            {
+              "root": "F",
+              "add": "f",
+              "result": "Ff"
+            },
+            {
+              "root": "f",
+              "add": "F",
+              "result": "Ff"
+            },
+            {
+              "root": "f",
+              "add": "f",
+              "result": "ff"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The child who inherits an f allele from each parent is ff and has the disorder. Only 1 of the 4 boxes is ff, so the probability is 1 in 4 (25%) each time reproduction takes place."
+        },
+        {
+          "t": "reveal",
+          "label": "What if one parent is a carrier (Ff) and the other is FF?",
+          "text": "The boxes are FF, FF, Ff and Ff. No child can be ff, and 50% of the offspring are carriers (Ff)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Recessive disorder key",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For a recessive disorder like cystic fibrosis a family tree key shows more than two groups:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Unaffected male / female",
+            "Affected male / female",
+            "Carrier male / female"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: individuals 1 and 2 are both carriers (Ff), with one recessive and one dominant allele each. Their child, individual 3, has cystic fibrosis: he inherited a recessive allele from each parent (ff)."
+        },
+        {
+          "t": "text",
+          "text": "So the same two parents can have children with different genotypes, because each parent passes on one of their alleles."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Polydactyly: a dominant disorder",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Polydactyly** is a genetic disorder where a baby is born with extra fingers and toes. It also happens in animals such as cats. It is a **dominant** genetic disorder."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "PP → polydactyly",
+            "Pp → polydactyly",
+            "pp → no polydactyly"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "One dominant allele is enough to show a dominant disorder. There are no carriers of a dominant disorder, so the heterozygous genotype is not a separate category in the key."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work out the genotype",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A family tree can be used to work out genotypes. Polydactyly: parent 1 has it, parent 2 does not, and child 4 does not."
+        },
+        {
+          "t": "choices",
+          "q": "Follow the clues.",
+          "items": [
+            {
+              "q": "What is the genotype of parent 2 (no polydactyly)?",
+              "options": [
+                "PP (two dominant alleles)",
+                "Pp (one dominant, one recessive)",
+                "pp (two recessive alleles)"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Child 4 has no polydactyly. What is child 4's genotype?",
+              "options": [
+                "Pp (one dominant, one recessive)",
+                "pp (two recessive alleles)",
+                "PP (two dominant alleles)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Child 4 inherited one p from each parent. So what must parent 1 (who has polydactyly) be?",
+              "options": [
+                "Pp (one dominant, one recessive)",
+                "PP (two dominant alleles)",
+                "pp (two recessive alleles)"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Predict the probability",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A family tree can be used with a Punnett square to predict the possible genotypes and phenotypes of offspring."
+        },
+        {
+          "t": "choices",
+          "q": "Work out the Punnett square, then choose the answer.",
+          "items": [
+            {
+              "q": "Cystic fibrosis (recessive). Two carriers (Ff × Ff). What is the probability of a child with cystic fibrosis?",
+              "options": [
+                "25%",
+                "50%",
+                "75%"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Polydactyly (dominant). A parent with Pp and a parent with pp. What is the probability of a child with polydactyly?",
+              "options": [
+                "25%",
+                "50%",
+                "100%"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Polydactyly (dominant). Two Pp parents. What is the probability of a child with polydactyly?",
+              "options": [
+                "50%",
+                "75%",
+                "100%"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Cystic fibrosis. Carrier (Ff) with an unaffected FF parent. What percentage of the children are carriers?",
+              "options": [
+                "25%",
+                "50%",
+                "100%"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Does the probability change for each child?",
+          "text": "No. The probability is the same each time reproduction takes place."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Offspring inherit two alleles, one from each parent. The combination of these alleles is the genotype.",
+            "The phenotypes and genotypes of members of a family can be shown in a family tree (pedigree).",
+            "A family tree can be used to work out an individual's genotype if their phenotype and relatives' genotypes are known.",
+            "A family tree can be used to work out the history and probability of genetic disorders such as cystic fibrosis (recessive) and polydactyly (dominant)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a family tree diagram?",
+      "back": "A model of inheritance showing whether a characteristic was passed from parents to offspring. It is also called a pedigree."
+    },
+    {
+      "front": "In a family tree, what shape shows a male and what shape shows a female?",
+      "back": "Males are squares and females are circles."
+    },
+    {
+      "front": "What does a horizontal line between two parents show?",
+      "back": "Reproduction. The offspring are shown in the next row, joined to this line."
+    },
+    {
+      "front": "What does each row of a family tree show?",
+      "back": "A generation."
+    },
+    {
+      "front": "What is a carrier of a recessive genetic disorder?",
+      "back": "Someone who does not have the disorder but has one recessive allele that can be passed on. They are heterozygous."
+    },
+    {
+      "front": "What genotype does someone need to have cystic fibrosis (F dominant, f recessive)?",
+      "back": "ff (two recessive alleles)."
+    },
+    {
+      "front": "What is cystic fibrosis?",
+      "back": "A recessive genetic disorder that affects mucus production: mucus becomes too thick and blocks small ducts, including the airways."
+    },
+    {
+      "front": "What is the probability that two carriers (Ff × Ff) have a child with cystic fibrosis?",
+      "back": "25% (1 in 4), and it is the same each time reproduction takes place."
+    },
+    {
+      "front": "What is polydactyly?",
+      "back": "A dominant genetic disorder where a baby is born with extra fingers and toes."
+    },
+    {
+      "front": "Which genotypes give polydactyly (P dominant, p recessive)?",
+      "back": "PP or Pp. One dominant allele is enough."
+    },
+    {
+      "front": "Are there carriers of a dominant disorder?",
+      "back": "No. Anyone with a dominant allele shows the disorder."
+    },
+    {
+      "front": "How can a family tree help work out a genotype?",
+      "back": "Use each person's phenotype and their relatives' genotypes. E.g. an unaffected child of a dominant disorder must be pp, so they inherited a p from each parent."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Models of single-gene inheritance: family tree diagrams",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "What shape represents a female in a family tree?",
+        "answer": "circle",
+        "accepted": [
+          "a circle",
+          "circles"
+        ],
+        "explanation": "Females are shown as circles and males as squares."
+      },
+      {
+        "prompt": "What shape represents a male in a family tree?",
+        "answer": "square",
+        "accepted": [
+          "a square",
+          "squares"
+        ],
+        "explanation": "Males are shown as squares and females as circles."
+      },
+      {
+        "prompt": "A family tree has four rows of individuals. How many generations does it show?",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "Each row of a family tree is one generation."
+      },
+      {
+        "prompt": "What word describes a person with a recessive genetic disorder allele who does not have the disorder themselves?",
+        "answer": "carrier",
+        "accepted": [
+          "a carrier"
+        ],
+        "explanation": "A carrier is heterozygous and can pass the allele on without showing the disorder."
+      },
+      {
+        "prompt": "Cystic fibrosis is caused by a recessive allele (f). A person with cystic fibrosis has the genotype ff. Is this genotype homozygous or heterozygous?",
+        "answer": "homozygous",
+        "accepted": [
+          "homozygous recessive"
+        ],
+        "explanation": "A recessive disorder needs two recessive alleles. Two of the same allele (ff) is homozygous."
+      },
+      {
+        "prompt": "Two carriers of cystic fibrosis (Ff × Ff) have a child. What is the percentage probability that the child has cystic fibrosis?",
+        "answer": "25%",
+        "accepted": [
+          "25",
+          "25 %",
+          "25 percent"
+        ],
+        "explanation": "The Punnett square gives FF, Ff, Ff and ff, so 1 of 4 boxes (25%) is ff."
+      },
+      {
+        "prompt": "A carrier of cystic fibrosis (Ff) has a child with an unaffected parent who is FF. What is the percentage probability that the child is a carrier?",
+        "answer": "50%",
+        "accepted": [
+          "50",
+          "50 %",
+          "50 percent"
+        ],
+        "explanation": "Ff × FF gives FF, FF, Ff and Ff, so half of the boxes are Ff."
+      },
+      {
+        "prompt": "Polydactyly is a dominant disorder (P). A parent with genotype Pp has a child with a parent with genotype pp. What is the percentage probability that the child has polydactyly?",
+        "answer": "50%",
+        "accepted": [
+          "50",
+          "50 %",
+          "50 percent"
+        ],
+        "explanation": "Pp × pp gives Pp, Pp, pp and pp, so half are Pp and show the disorder."
+      },
+      {
+        "prompt": "Two parents both have the genotype Pp for polydactyly. What is the percentage probability that their child has polydactyly?",
+        "answer": "75%",
+        "accepted": [
+          "75",
+          "75 %",
+          "75 percent"
+        ],
+        "explanation": "The boxes are PP, Pp, Pp and pp. Three of the four contain a dominant allele, so 75%."
+      },
+      {
+        "prompt": "A person does not have polydactyly (a dominant disorder, allele P). How many dominant P alleles does their genotype contain?",
+        "answer": "0",
+        "accepted": [
+          "none",
+          "zero"
+        ],
+        "explanation": "Anyone with a dominant allele would show the disorder, so an unaffected person has two recessive alleles (pp) and no P alleles."
+      }
+    ]
+  }
+}

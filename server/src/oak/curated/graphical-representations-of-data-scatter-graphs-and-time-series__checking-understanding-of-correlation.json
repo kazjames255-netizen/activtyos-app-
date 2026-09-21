@@ -1,0 +1,487 @@
+{
+  "agent": "w4-maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can interpret scatter graphs."
+        },
+        {
+          "t": "text",
+          "text": "You will learn how to spot correlation on a scatter graph, and what it does and does not tell us about the data."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Identifying {correlation}"
+            },
+            {
+              "title": "Interpreting {correlation} in context"
+            },
+            {
+              "title": "Correlation is not causation"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "correlation",
+              "def": "Correlation describes the extent to which the relationship is close to a linear relationship."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Correlation may be positive or negative, depending on whether one variable generally increases as another increases, or whether it decreases."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Is there an association?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scatter graphs can be used to investigate the nature of a relationship between two variables."
+        },
+        {
+          "t": "text",
+          "text": "If the points seem to form a discernible shape or pathway through the graph, that suggests the two variables are {associated}. If the points are all over the place, as if randomly placed, there is not much of an association."
+        },
+        {
+          "t": "reveal",
+          "label": "Why does a pathway matter?",
+          "text": "A pathway leaves some parts of the graph without any points. That suggests the variables are interacting with each other in some way."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Linear or non-linear?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An association may be linear or non-linear."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Linear}",
+              "sub": "the points form a straight line"
+            },
+            {
+              "title": "{Non-linear}",
+              "sub": "the points form a curve"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "When the points appear to form a straight line, the rate of change is constant throughout the data. In these cases, there is correlation."
+        },
+        {
+          "t": "callout",
+          "text": "When the points form a curve, there is a relationship between the variables. But {correlation} is not the best model for this association."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Positive correlation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When the points form an **upward sloping line**, we describe the variables as having {positive correlation}."
+        },
+        {
+          "t": "callout",
+          "text": "Each time the independent variable increases, the dependent variable increases at a constant rate."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Negative correlation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When the points form a **downward sloping line**, we describe the variables as having {negative correlation}."
+        },
+        {
+          "t": "callout",
+          "text": "Each time the independent variable increases, the dependent variable decreases at a constant rate."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-negative"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the descriptions",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which type of relationship does each description of a scatter graph show?",
+          "columns": [
+            "Positive correlation",
+            "Negative correlation",
+            "Association, but not linear",
+            "No association"
+          ],
+          "items": [
+            {
+              "text": "The points follow a straight line sloping upwards",
+              "col": 0
+            },
+            {
+              "text": "As one variable increases, the other increases at a constant rate",
+              "col": 0
+            },
+            {
+              "text": "The points follow a straight line sloping downwards",
+              "col": 1
+            },
+            {
+              "text": "As one variable increases, the other decreases at a constant rate",
+              "col": 1
+            },
+            {
+              "text": "The points form a curve",
+              "col": 2
+            },
+            {
+              "text": "The points seem to be randomly placed all over the graph",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How clear is the correlation?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Correlation can be clearer to see in some scatter graphs than in others. Two graphs can both show positive correlation, but in one the relationship between the variables is clearer."
+        },
+        {
+          "t": "callout",
+          "text": "The clearer graph is the one where the points are more {tightly packed} along the pathway of a straight line."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which is clearer?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Graph A and Graph B both show positive correlation. In Graph A the points are tightly packed along a straight line. In Graph B the points are more spread out. Which graph shows the clearer correlation?",
+          "options": [
+            "Graph A",
+            "Graph B",
+            "They are exactly as clear as each other"
+          ],
+          "answer": 0,
+          "why": "The clearer correlation is where the points are more tightly packed along the straight-line pathway."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How much data?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A small amount of data may not be enough to make a reliable assessment of correlation."
+        },
+        {
+          "t": "text",
+          "text": "Andeep plotted sunshine and temperature for Bradford for just five months. The points sloped downwards, so it looked like negative correlation: months with more sunshine tend to be colder. But that doesn’t seem right."
+        },
+        {
+          "t": "reveal",
+          "label": "What happened with more data?",
+          "text": "With every month from 1941 to 2022, it now looks like a positive correlation: months with more sunshine tend to be warmer. That makes more sense. The five points may just have been a chance finding."
+        },
+        {
+          "t": "callout",
+          "text": "A more accurate assessment of correlation can be obtained by plotting a {larger amount} of data points."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Correlation in context",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A correlation tells us how the variables tend to change, so we should describe it in the context of the data."
+        },
+        {
+          "t": "text",
+          "text": "Stornoway weather data (every month from 1941 to 2022) can be modelled with a negative correlation between rainfall and sunshine."
+        },
+        {
+          "t": "reveal",
+          "label": "What does that suggest?",
+          "text": "The more rainfall there is in a month, the less visible sunshine there is likely to be."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say what it means",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the statement that best describes what each correlation suggests.",
+          "items": [
+            {
+              "q": "Suppose a scatter graph of the temperature and the number of ice creams sold each day shows positive correlation.",
+              "options": [
+                "On hotter days, more ice creams tend to be sold",
+                "On hotter days, fewer ice creams tend to be sold",
+                "There is no association"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Suppose a scatter graph of the temperature and the number of hot drinks sold each day shows negative correlation.",
+              "options": [
+                "On hotter days, more hot drinks tend to be sold",
+                "On hotter days, fewer hot drinks tend to be sold",
+                "The points must form a curve"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Correlation is not causation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A scatter graph of regions in England and Wales shows a positive correlation between the number of cell phone towers and transport emissions. Does that mean cell towers cause transport emissions?"
+        },
+        {
+          "t": "text",
+          "text": "That doesn’t seem likely. Building more cell towers is unlikely to directly cause more transport emissions."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Population goes up",
+              "sub": "more cell towers are likely to be built"
+            },
+            {
+              "title": "Population goes up",
+              "sub": "more transport emissions are likely"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Both variables have a positive correlation with {population}. That can explain the positive correlation between cell towers and transport emissions."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Cause or not?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Two variables show positive correlation on a scatter graph. Which conclusion is the safest?",
+          "options": [
+            "One variable definitely causes the other to increase",
+            "The variables tend to increase together, but this does not prove one causes the other",
+            "There is no association between the variables"
+          ],
+          "answer": 1,
+          "why": "A positive correlation does not always mean that an increase in one variable is causing an increase in the other. Both might depend on a third variable."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Points that don’t fit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha, Jacob and Sam have data about jobs in 2023: mean hours worked per week and mean weekly pay. Each has a different idea about the correlation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Aisha: working more hours per week means you earn more, so positive correlation.",
+            "Jacob: some jobs pay more than others, so no correlation.",
+            "Sam: if your job pays more you can afford to work fewer hours, so negative correlation."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What does the scatter graph show?",
+          "text": "Overall, there seems to be a positive correlation. Most of the points form an upward sloping straight line, but some points don’t quite fit."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The distribution of the points may suggest correlation, which can be positive or negative, or suggest there is no correlation or association.",
+            "Points forming a straight line suggest correlation. Points forming a curve show a non-linear association.",
+            "Correlation is easier to assess when there is a larger amount of data.",
+            "Interpret the correlation in the context of the data.",
+            "Correlation does not necessarily mean that one variable is affecting the other."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does correlation describe?",
+      "back": "The extent to which the relationship between two variables is close to a linear relationship."
+    },
+    {
+      "front": "What shape of points suggests positive correlation?",
+      "back": "An upward sloping straight line."
+    },
+    {
+      "front": "What shape of points suggests negative correlation?",
+      "back": "A downward sloping straight line."
+    },
+    {
+      "front": "What does it mean if the points on a scatter graph seem randomly placed all over the graph?",
+      "back": "There is not much of an association between the two variables."
+    },
+    {
+      "front": "If the points form a curve, is correlation the best model?",
+      "back": "No. There is a non-linear association, but correlation is not the best model for it."
+    },
+    {
+      "front": "Two scatter graphs both show positive correlation. In which is the correlation clearer?",
+      "back": "The one where the points are more tightly packed along a straight line."
+    },
+    {
+      "front": "Why is a small amount of data a problem when assessing correlation?",
+      "back": "It may not be enough for a reliable assessment. A larger amount of data gives a more accurate assessment."
+    },
+    {
+      "front": "Rainfall and sunshine in Stornoway show negative correlation. What does that suggest?",
+      "back": "The more rainfall there is in a month, the less visible sunshine there is likely to be."
+    },
+    {
+      "front": "Does correlation always mean that one variable causes the other?",
+      "back": "No. Two variables may be correlated because they both depend on a third variable."
+    },
+    {
+      "front": "Cell towers and transport emissions are positively correlated. Which third variable is linked to both?",
+      "back": "Population. As population increases, both the number of cell towers and the transport emissions tend to increase."
+    },
+    {
+      "front": "When points form a straight line, what does that suggest about the rate of change?",
+      "back": "It is constant throughout the data."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking understanding of correlation",
+    "instructions": "Answer each question with one word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What word describes the extent to which the relationship between two variables is close to a linear relationship?",
+        "answer": "correlation",
+        "explanation": "Correlation describes how close the relationship is to a linear relationship."
+      },
+      {
+        "prompt": "The points on a scatter graph form an upward sloping straight line. Is the correlation positive or negative?",
+        "answer": "positive",
+        "accepted": [
+          "positive correlation"
+        ],
+        "explanation": "An upward sloping line means that as one variable increases, the other increases too."
+      },
+      {
+        "prompt": "The points on a scatter graph form a downward sloping straight line. Is the correlation positive or negative?",
+        "answer": "negative",
+        "accepted": [
+          "negative correlation"
+        ],
+        "explanation": "A downward sloping line means that as one variable increases, the other decreases."
+      },
+      {
+        "prompt": "The points on a scatter graph form a curve. Is correlation the best model for this association? Answer yes or no.",
+        "answer": "no",
+        "explanation": "A curve shows a non-linear association, and correlation is not the best model for it."
+      },
+      {
+        "prompt": "The points on a scatter graph seem to be randomly placed all over the graph. Is there an association between the variables? Answer yes or no.",
+        "answer": "no",
+        "explanation": "Randomly placed points do not form a shape or pathway, so there is not much of an association."
+      },
+      {
+        "prompt": "A more accurate assessment of correlation can be obtained by plotting a (smaller or larger) amount of data. Which word is correct?",
+        "answer": "larger",
+        "explanation": "A small amount of data may not be enough for a reliable assessment; more data points give a more accurate one."
+      },
+      {
+        "prompt": "Stornoway rainfall and sunshine show a negative correlation. As the rainfall in a month increases, does the sunshine tend to increase or decrease?",
+        "answer": "decrease",
+        "accepted": [
+          "decreases"
+        ],
+        "explanation": "Negative correlation means one variable decreases as the other increases: more rainfall means less visible sunshine."
+      },
+      {
+        "prompt": "Cell towers and transport emissions in a region are both positively correlated with which third variable? Give one word.",
+        "answer": "population",
+        "explanation": "As the population of a region increases, both cell towers and transport emissions tend to increase."
+      },
+      {
+        "prompt": "A pupil says that a correlation between two variables always shows that one causes the other. Is the pupil right? Answer yes or no.",
+        "answer": "no",
+        "explanation": "Correlation does not necessarily imply that one variable is affecting the other."
+      }
+    ]
+  }
+}

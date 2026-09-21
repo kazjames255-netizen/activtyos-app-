@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../firebase";
 import { notify } from "../lib/notify";
+import { exportChildLearning } from "../lib/hubPrivacy";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -167,6 +168,8 @@ async function gather(req: import("express").Request) {
       ...referredBy.docs.map((d) => ({ as: "friend", tenantId: d.get("tenantId"), discount: d.get("friendDiscount") ?? d.get("friendOff") ?? null, bookingRef: d.get("bookingRef") ?? null, at: d.get("at") ?? null })),
     ];
     out.emailPreferences = prefs?.exists ? prefs.data() : null;
+    // Learning Hub: enrolments, homework hand-ins + marks, flashcard progress, quiz attempts, mastery, lesson attendance.
+    Object.assign(out, await exportChildLearning(uid, childIds));
   }
   return out;
 }

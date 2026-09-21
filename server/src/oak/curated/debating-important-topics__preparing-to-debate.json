@@ -1,0 +1,693 @@
+{
+  "agent": "english-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can {prepare} to take part in a debate."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson, we will prepare for taking part in a full debate."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Preparing to debate as a team"
+            },
+            {
+              "title": "Preparing a speech"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "generate",
+              "def": "To produce or create something."
+            },
+            {
+              "term": "order",
+              "def": "To arrange things in a particular way."
+            },
+            {
+              "term": "assign",
+              "def": "To allocate or designate."
+            },
+            {
+              "term": "liaise",
+              "def": "To communicate with someone else."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First, the motion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The first thing you find out when taking part in a debate is the {motion}: the name for the belief or proposal that is being debated."
+        },
+        {
+          "t": "text",
+          "text": "A great motion is clear and easy to understand, fair for both sides, relatable, interesting and important, thought provoking, and appropriate and respectful."
+        },
+        {
+          "t": "text",
+          "text": "As a class, you can choose a motion you designed last lesson, or one like this:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "This house would make after-school clubs compulsory.",
+            "This house believes that pupils should decide the school lunch menu.",
+            "This house would decrease the amount of playtime for pupils in KS2."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The fairest way to decide is to hold a class vote, so you can pick the motion that the **majority** want to use."
+        },
+        {
+          "t": "choice",
+          "q": "In a class vote, the motion chosen is the one the majority want. What does ‘majority’ mean?",
+          "options": [
+            "most people",
+            "the teacher only",
+            "the fewest people"
+          ],
+          "answer": 0,
+          "why": "The majority means most people."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which team are you?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now we need to know if we are arguing for or against the motion."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "For the motion",
+              "sub": "proposition"
+            },
+            {
+              "title": "Against the motion",
+              "sub": "opposition"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Confirming which team you will be can be decided by tossing a coin, or by using another way to randomly decide."
+        },
+        {
+          "t": "text",
+          "text": "In our example, the motion is ‘This house believes that pupils should decide the school lunch menu’, and we will argue for the proposition."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is a good way to confirm which team you will be?",
+          "options": [
+            "tossing a coin",
+            "letting the loudest pupils pick",
+            "always choosing the side you like"
+          ],
+          "answer": 0,
+          "why": "Which team you are can be decided by tossing a coin or another way to randomly decide."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Prepare as a team: GOAL",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Once you know the motion and which team you are on, it is time to work as a team. Follow four steps. The acronym **GOAL** helps us remember the steps and their order."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{G}enerate"
+            },
+            {
+              "title": "{O}rder"
+            },
+            {
+              "title": "{A}ssign"
+            },
+            {
+              "title": "{L}iaise"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Following GOAL guides a team from having no points at all to being ready to start a debate and make their speeches."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap: how is GOAL different from PEPS?",
+          "text": "GOAL is how a team prepares for a debate. PEPS (point, explanation, proof, summary) is how you structure a speech."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "G is for Generate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To **generate** means to produce or create something. Before a debate, a team generates as many points as possible, to try to make sure they have thought of all the likely arguments for or against the motion."
+        },
+        {
+          "t": "callout",
+          "text": "Points do not have to be fully formed or written in sentences. They are only rough ideas at this stage and may be written in note form."
+        },
+        {
+          "t": "text",
+          "text": "One person can be appointed as **scribe** to write the points down."
+        },
+        {
+          "t": "choice",
+          "q": "Who is the team member who writes the points down?",
+          "options": [
+            "the scribe",
+            "the timekeeper",
+            "the chairperson"
+          ],
+          "answer": 0,
+          "why": "One person can be appointed as scribe to write the points down."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Points for the proposition",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Motion: ‘This house believes that pupils should decide the school lunch menu.’ Here are points generated in note form for the proposition. Tap each one."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Increased engagement, satisfaction and enjoyment",
+              "def": "It will help children to enjoy lunch much more if they are involved in deciding the menu."
+            },
+            {
+              "term": "Reduced food waste",
+              "def": "If children have decided that this is the food they want, they are more likely to eat it all up, so there is less food waste."
+            },
+            {
+              "term": "Increases nutritional knowledge",
+              "def": "An opportunity to speak to pupils about nutritional knowledge, so they know how to put a balanced, nutritional menu together."
+            },
+            {
+              "term": "Cultural representation",
+              "def": "Every single person in the school feels that the menu is for them and reflects them in some way."
+            },
+            {
+              "term": "Boost school morale",
+              "def": "A great initiative to help children feel good about coming to school and having lunch."
+            },
+            {
+              "term": "Practical life skills",
+              "def": "As adults, we all have to put menus together to decide what to eat, so this is a good skill for children to learn too."
+            },
+            {
+              "term": "Parent and carer involvement",
+              "def": "Children could go home and come up with ideas with their families, so the school community feels involved."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "O is for Order",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Next, the team **orders** its points by how effective they are, from best to worst. The points at the top of the list are then assigned to speakers to use in the debate."
+        },
+        {
+          "t": "text",
+          "text": "A point could be considered most effective because:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "it may provoke an emotional response from the audience",
+            "it has elements of health and safety involved",
+            "it is particularly relevant to the audience",
+            "it will involve some proof that is particularly strong",
+            "it is an area of expertise for one of the speakers",
+            "it will be particularly difficult to argue against"
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Could this be a reason to put a point higher up the list? Tap a sentence, then tap the column.",
+          "columns": [
+            "A reason to rank a point higher",
+            "Not a reason"
+          ],
+          "items": [
+            {
+              "text": "It is particularly relevant to the audience.",
+              "col": 0
+            },
+            {
+              "text": "It will be particularly difficult to argue against.",
+              "col": 0
+            },
+            {
+              "text": "It will involve some proof that is particularly strong.",
+              "col": 0
+            },
+            {
+              "text": "It would be difficult to find proof for.",
+              "col": 1
+            },
+            {
+              "text": "It will make the opposing team angry.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ordering points",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is one way to order three points for the **proposition** team:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Increased engagement, satisfaction and enjoyment: if pupils are engaged, satisfied and enjoying lunch, what more can you ask for?",
+            "2. Cultural representation: children from different countries can find it hard to feel at home at school if they do not feel culturally represented at lunchtime.",
+            "3. Parent and carer involvement"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Now you try. The **opposition** team argues against the motion ‘This house believes that pupils should decide the school lunch menu’. Which order would you put these three points in, from 1 to 3?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "could lead to conflict",
+            "lack of nutritional knowledge",
+            "preference for unhealthy food"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see one way to order them",
+          "text": "1. Lack of nutritional knowledge: if the nutrition is not right in the lunch menu, the entire school suffers, and it has an element of health and safety. 2. Preference for unhealthy food: even with good nutritional knowledge, a menu built from a preference for unhealthy food won’t be a very good menu. 3. Could lead to conflict."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A is for Assign, L is for Liaise",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Next, the team **assigns** a point, or points, to each speaker."
+        },
+        {
+          "t": "text",
+          "text": "Finally, the team **liaises** with each other while writing their speeches. To liaise means to communicate with someone else."
+        },
+        {
+          "t": "callout",
+          "text": "Liaising means teammates do not repeat each other’s arguments. When writing notes for a speech, it is important to liaise with your teammates to make sure there is no overlapping between your arguments."
+        },
+        {
+          "t": "choice",
+          "q": "Why should teammates liaise while they write their speeches?",
+          "options": [
+            "so they do not repeat each other’s arguments",
+            "so they can all read out exactly the same speech",
+            "so they can find out what the other team will say"
+          ],
+          "answer": 0,
+          "why": "Liaising with your team helps to avoid repetition, so there is no overlapping between your arguments."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Preparing a speech: notes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Debates can be lively, engaging and exciting arguments between two teams. They are often unpredictable, because elements such as rebuttal and points of information are improvised and cannot be planned beforehand. This is what makes a debate different from a speech competition."
+        },
+        {
+          "t": "callout",
+          "text": "Speeches are more effective when they are not read word for word. Instead, a speaker uses **notes** prepared before the debate to help them."
+        },
+        {
+          "t": "text",
+          "text": "Notes are a brief and concise way to record information. They are personal to the person reading them and help guide a speaker’s speech."
+        },
+        {
+          "t": "text",
+          "text": "Clear notes help to:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "ease nervousness",
+            "keep the speaker on track if they lose their way",
+            "help the speaker make eye contact with the audience",
+            "keep the speaker’s structure clear"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do notes look like?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Notes are not full sentences. They may feature some of the following instead:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "bullet points",
+            "keywords",
+            "abbreviations",
+            "initialisms",
+            "short phrases",
+            "punctuation: brackets, dashes, exclamation marks"
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Would this feature in a speaker’s notes? Tap an item, then tap the column.",
+          "columns": [
+            "Could be in notes",
+            "Not in notes"
+          ],
+          "items": [
+            {
+              "text": "keywords",
+              "col": 0
+            },
+            {
+              "text": "initialisms",
+              "col": 0
+            },
+            {
+              "text": "short phrases",
+              "col": 0
+            },
+            {
+              "text": "full sentences",
+              "col": 1
+            },
+            {
+              "text": "word for word quotations",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Notes in action",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Notes: C.R. (important) diverse schs - some feel not INCLUDED"
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "C.R.",
+              "def": "An initialism for ‘cultural representation’."
+            },
+            {
+              "term": "(important)",
+              "def": "Punctuation: brackets are used."
+            },
+            {
+              "term": "schs",
+              "def": "An abbreviation for ‘schools’."
+            },
+            {
+              "term": "some feel not",
+              "def": "A short phrase."
+            },
+            {
+              "term": "INCLUDED",
+              "def": "A keyword, with capitals to help it stand out."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see how a speaker reads it out",
+          "text": "“I believe that pupils should decide the school lunch menu because it will help with cultural representation, which is such an important aspect of school life, especially in diverse schools where some pupils may not always feel included.”"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Notes for PEPS",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You write your notes for each part of the PEPS structure: point, explanation, proof and summary. Here is an example for the proposition:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Point: C.R. (important) diverse schs - some feel not INCLUDED",
+            "Explanation: feeling represented essential for mental health/sense of belonging; reflects real-world diversity - diff cuisines from around world (travel)",
+            "Proof: my best friend (not from UK) said “feels like this school isn’t for me” - lunch menu - no food from home country",
+            "Summary: schs responsibility to create inclusive environment throughout whole building, incl. lunch hall - pupils choosing menu would do this"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Your notes are personal to you. Remember to liaise with your teammates so your arguments do not overlap."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Rehearse and deliver",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now it is time to **rehearse** (practise for a later public performance). You practise turning your notes into full sentences for an audience."
+        },
+        {
+          "t": "text",
+          "text": "This is a great time to practise adding persuasive techniques that may not be in your notes, such as rhetorical questions and flattery."
+        },
+        {
+          "t": "text",
+          "text": "Top tips for delivering your speech:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "use facial expressions and gestures",
+            "stand up straight",
+            "speak in a loud, clear voice",
+            "make eye contact with the audience",
+            "keep your feet grounded and flat on the floor"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Your partner gives you feedback on your rehearsal. What should you do next?",
+          "options": [
+            "take the feedback on board and have another go to improve",
+            "ignore it and stop rehearsing",
+            "read your notes out word for word"
+          ],
+          "answer": 0,
+          "why": "In rehearsal, you take the feedback on board and have another go to try to improve your delivery."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Thorough {preparation} is important for a debate.",
+            "Preparing for a debate includes {generating} points for your side of the argument.",
+            "Points can be {ordered} from strongest to weakest to make sure the most effective points are included.",
+            "{Liaising} with your team while writing speeches helps to avoid repetition.",
+            "The PEPS structure stands for: point, explanation, proof, summary."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does the acronym GOAL stand for?",
+      "back": "Generate, order, assign, liaise.\n\nIt helps a team remember how to prepare for a debate."
+    },
+    {
+      "front": "What is the first thing you find out when taking part in a debate?",
+      "back": "The motion."
+    },
+    {
+      "front": "How can a team fairly decide which side (proposition or opposition) it will argue?",
+      "back": "By tossing a coin, or another way to randomly decide."
+    },
+    {
+      "front": "What does it mean to generate points, and how do you write them at first?",
+      "back": "To produce or create as many points as you can. They are rough ideas that can be in note form, not full sentences."
+    },
+    {
+      "front": "Who is appointed to write the team’s points down while generating?",
+      "back": "One person, the scribe."
+    },
+    {
+      "front": "Name three reasons that could make one point more effective than another.",
+      "back": "For example: it may provoke an emotional response from the audience; it has elements of health and safety; it is relevant to the audience; it has particularly strong proof; it is an area of expertise for one of the speakers; it is difficult to argue against."
+    },
+    {
+      "front": "How do you order your points, and what do you do with the ones at the top?",
+      "back": "Order them by effectiveness, from best to worst. Then assign the points at the top of the list to speakers."
+    },
+    {
+      "front": "Why should teammates liaise while writing their speeches?",
+      "back": "To avoid repetition: so they do not overlap or repeat each other’s arguments."
+    },
+    {
+      "front": "Why are speeches more effective when speakers use notes?",
+      "back": "Speeches are more effective when they are not read word for word. Notes help to ease nervousness, keep the speaker on track, make eye contact easier and keep the structure clear."
+    },
+    {
+      "front": "Name two elements of a debate that are improvised and cannot be planned beforehand.",
+      "back": "Rebuttal and points of information."
+    },
+    {
+      "front": "Name four things that may feature in a speaker’s notes.",
+      "back": "Any of: bullet points, keywords, abbreviations, initialisms, short phrases, punctuation (brackets, dashes, exclamation marks). Not full sentences."
+    },
+    {
+      "front": "What is an initialism?",
+      "back": "A short form made from initials, such as C.R. for ‘cultural representation’ in a speaker’s notes."
+    },
+    {
+      "front": "What does it mean to rehearse?",
+      "back": "To practise for a later public performance. Practise turning your notes into full sentences and adding persuasive techniques such as rhetorical questions and flattery."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Preparing to debate",
+    "instructions": "Answer each question with one word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Which GOAL step means ‘to produce or create something’, such as points?",
+        "answer": "generate",
+        "explanation": "To generate means to produce or create something."
+      },
+      {
+        "prompt": "Which GOAL step means ‘to arrange things in a particular way’, such as putting points from best to worst?",
+        "answer": "order",
+        "explanation": "To order means to arrange things in a particular way."
+      },
+      {
+        "prompt": "Which GOAL step means ‘to allocate or designate’, such as giving points to each speaker?",
+        "answer": "assign",
+        "explanation": "To assign means to allocate or designate."
+      },
+      {
+        "prompt": "Which GOAL step means ‘to communicate with someone else’?",
+        "answer": "liaise",
+        "explanation": "To liaise means to communicate with someone else, so teammates do not repeat each other’s arguments."
+      },
+      {
+        "prompt": "How many steps are in the GOAL acronym?",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "GOAL has four steps: generate, order, assign, liaise."
+      },
+      {
+        "prompt": "What is the name for the team member who is appointed to write the points down?",
+        "answer": "scribe",
+        "accepted": [
+          "the scribe"
+        ],
+        "explanation": "One person can be appointed as scribe to write the points down."
+      },
+      {
+        "prompt": "A speaker uses ___ to guide their speech, instead of reading it word for word (one word).",
+        "answer": "notes",
+        "explanation": "Speeches are more effective when they are not read word for word, so speakers use notes."
+      },
+      {
+        "prompt": "In a speaker’s notes, ‘C.R.’ stands for ‘cultural representation’. What is this kind of short form, made from initials, called (one word starting with i)?",
+        "answer": "initialism",
+        "accepted": [
+          "an initialism"
+        ],
+        "explanation": "C.R. is an initialism for ‘cultural representation’."
+      },
+      {
+        "prompt": "A class vote picks the motion that the ___ want. Which word means ‘most people’?",
+        "answer": "majority",
+        "accepted": [
+          "the majority"
+        ],
+        "explanation": "The majority means most people."
+      },
+      {
+        "prompt": "Which verb means ‘to practise for a later public performance’?",
+        "answer": "rehearse",
+        "explanation": "To rehearse is to practise for a later public performance."
+      }
+    ]
+  }
+}

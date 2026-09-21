@@ -53,7 +53,7 @@ const AREA_LABEL: Record<string, string> = {
   calendar: "the events calendar", tasks: "the task manager", medical: "children's medical records",
   incidents: "concerns & first aid", medication: "Medication", moments: "Moments", documents: "Documents",
   finances: "Finances", moneyops: "Money in / out", marketing: "Marketing", messaging: "Messages & newsfeed",
-  email: "Email", franchise: "franchise tools",
+  email: "Email", franchise: "franchise tools", learninghub: "the Teaching Hub",
 };
 
 export async function enforceAccess(req: Request, res: Response, next: NextFunction) {

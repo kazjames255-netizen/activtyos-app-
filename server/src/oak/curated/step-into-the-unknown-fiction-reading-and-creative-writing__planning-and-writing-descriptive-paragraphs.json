@@ -1,0 +1,578 @@
+{
+  "agent": "w4-english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can create a specific atmosphere by linking vocabulary choices and creating a semantic field."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Using adjectives and {semantic fields} to plan"
+            },
+            {
+              "title": "{Writing} using adjectives and semantic fields"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "descriptive",
+              "def": "Describing something in an interesting and detailed way."
+            },
+            {
+              "term": "atmosphere",
+              "def": "The feeling or sense evoked by the setting or environment."
+            },
+            {
+              "term": "adjective",
+              "def": "A word that describes or defines a noun."
+            },
+            {
+              "term": "planning",
+              "def": "The act of deciding how to do something."
+            },
+            {
+              "term": "semantic field",
+              "def": "A group of words or expressions that are related in meaning."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is descriptive writing for?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Descriptive writing is designed to create a clear **atmosphere** for the reader and to paint a picture of an image."
+        },
+        {
+          "t": "callout",
+          "text": "You can build this skill so well that you can embed it in narrative writing, or even in a persuasive piece of writing, to create a specific effect on your audience."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Semantic fields",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **semantic field** is a group of words or expressions that are related in meaning."
+        },
+        {
+          "t": "text",
+          "text": "Using a semantic field helps us to create a consistent image for the reader. It is a pattern over the course of your text, made of words that are linked in their meaning."
+        },
+        {
+          "t": "text",
+          "text": "If you can create a consistent image, you help the reader to soak into the atmosphere."
+        },
+        {
+          "t": "callout",
+          "text": "Choose your adjectives carefully in a descriptive paragraph in order to create a semantic field."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Look at the image",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Imagine an image of an idyllic scene: a river, flowers, trees and a bright blue sky above. Four focal points can jump out at you."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Sky",
+              "sub": "The blue sky and sunlight catching the flowers"
+            },
+            {
+              "title": "River and bridge",
+              "sub": "The clear water with the bridge running over it"
+            },
+            {
+              "title": "Purple flowers",
+              "sub": "In the foreground"
+            },
+            {
+              "title": "Pink flowers",
+              "sub": "In the background"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Decide the feeling, then choose adjectives",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To create a semantic field, first decide what the overall feeling associated with the image is. Think about the colours, the weather above and the stillness of the water."
+        },
+        {
+          "t": "reveal",
+          "label": "What overall feeling do you get?",
+          "text": "You might feel a sense of **calmness and tranquillity** when you picture this scene."
+        },
+        {
+          "t": "text",
+          "text": "Now choose adjectives that fit the overall mood of calmness and tranquillity, going beyond just ‘purple’ or ‘pink’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Sky",
+              "sub": "serene, unclouded, cerulean"
+            },
+            {
+              "title": "River and bridge",
+              "sub": "placid, harmonious, soothing"
+            },
+            {
+              "title": "Purple flowers",
+              "sub": "elegant, dreamy, enchanting"
+            },
+            {
+              "title": "Pink flowers",
+              "sub": "blushing, delicate, divine"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Do the words match the mood?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Why might adjectives such as ‘vibrant’, ‘kaleidoscopic’ and ‘ravishing’ not be as effective in this description?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the reason",
+          "text": "These words give the impression of a scene that is more loud and overwhelmingly beautiful, rather than the calm, tranquil scene we are trying to describe."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "You should reach for ambitious words, but not just the most impressive-sounding ones. Make sure that all the words you use are creating a consistent atmosphere."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Moving through the scene",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "As well as describing the focal points, think about how you move through the scene. We want a sense of progression, and we want to glide through it rather than just have a static view."
+        },
+        {
+          "t": "text",
+          "text": "Which words would add to a semantic field of calmness when moving through a scene?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "leisurely",
+            "glide",
+            "wander",
+            "stroll",
+            "drifting",
+            "amble"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Does it fit a calm scene?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort the words: would you use them to create a calm semantic field?",
+          "columns": [
+            "Fits a calm scene",
+            "Doesn’t fit a calm scene"
+          ],
+          "items": [
+            {
+              "text": "serene",
+              "col": 0
+            },
+            {
+              "text": "marching",
+              "col": 1
+            },
+            {
+              "text": "strolling",
+              "col": 0
+            },
+            {
+              "text": "cacophonous",
+              "col": 1
+            },
+            {
+              "text": "soothing",
+              "col": 0
+            },
+            {
+              "text": "chaotic",
+              "col": 1
+            },
+            {
+              "text": "placid",
+              "col": 0
+            },
+            {
+              "text": "tense",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The single paragraph outline",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To plan a paragraph, use a single paragraph outline with three parts."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Focus of the paragraph",
+              "sub": "Which part of the image you will focus on, and what kind of language you might use"
+            },
+            {
+              "title": "Supporting detail",
+              "sub": "Notes on details, for example petal colour"
+            },
+            {
+              "title": "Concluding idea",
+              "sub": "The feeling you want to leave the reader with"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Outlines in action",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Example outline: daisies",
+          "text": "**Focus:** Daisies. Heavenly imagery, as if they are angels. **Supporting details:** petals are white, centres are golden; feelings of disbelief at their beauty; stems swaying in the wind; the scent is intoxicating, bewitching, captivating. **Concluding idea:** carrying that pure joy at the sight and smell of the flowers away with you."
+        },
+        {
+          "t": "reveal",
+          "label": "Example outline: the sky",
+          "text": "**Focus:** Clear sky. Feelings of calmness and tranquillity. **Supporting details:** colour = cerulean; eyes drifting towards the sky; serene; the sky is cloudless. **Concluding idea:** looking at the sky creates the feeling of a deep, calming exhale."
+        },
+        {
+          "t": "callout",
+          "text": "A strong concluding idea is impactful, so that it stays with the reader."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which part of the plan?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each part of the outline to what you write in it.",
+          "pairs": [
+            {
+              "a": "Focus of the paragraph",
+              "b": "which part of the image, and what kind of language"
+            },
+            {
+              "a": "Supporting detail",
+              "b": "notes on details, such as petal colour"
+            },
+            {
+              "a": "Concluding idea",
+              "b": "the feeling you want to leave the reader with"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mixed signals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A student wrote: ‘The tall trees towered above me and I could feel their weight pressing down on me. When the sunlight caught the bark, the dappled effect was like a calming ripple in the water.’"
+        },
+        {
+          "t": "reveal",
+          "label": "What feedback would you give?",
+          "text": "The trees feel oppressive in their weight, but then also calming at the same time. This doesn’t create a clear image for the reader. Create a consistent mood throughout to help the reader imagine the scene."
+        },
+        {
+          "t": "reveal",
+          "label": "How could it be fixed?",
+          "text": "Continue the oppressive atmosphere in the second sentence instead of bringing in a calming picture: ‘The dappled effect was like a disease spreading amongst the trees.’"
+        },
+        {
+          "t": "text",
+          "text": "Here is a sentence that does create a semantic field: ‘The serene sky enveloped me in a comforting hug.’ The words ‘serene’, ‘enveloped’, ‘comforting’ and ‘hug’ all create a soothing tone."
+        },
+        {
+          "t": "callout",
+          "text": "It’s not about using the biggest words in your vocabulary. It’s about making sure the words come together effectively."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Semantic field check",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which group of words makes a calm semantic field?",
+              "options": [
+                "placid, harmonious, soothing",
+                "placid, cacophonous, marching",
+                "serene, chaotic, tense"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why was the student’s paragraph about the trees confusing?",
+              "options": [
+                "It mixed an oppressive mood with a calming one",
+                "It used too few words",
+                "It had no verbs"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these would fit a semantic field of calmness?",
+              "options": [
+                "Glide, drifting, leisurely",
+                "Marching, chaotic, tense"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The serene sky enveloped me in a comforting hug. What tone do these words create?",
+              "options": [
+                "A soothing tone",
+                "A tense tone"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Write it, then edit it",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now write your descriptive paragraphs from your plan. Remember to use adjectives and verbs to create a semantic field."
+        },
+        {
+          "t": "text",
+          "text": "Then edit your work. Read back over it. Could you:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "find more ambitious adjectives to describe the focal points of the image?",
+            "add more variety to the verbs in your descriptive paragraphs?",
+            "create a more consistent semantic field?"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Descriptive writing is designed to create a clear atmosphere for the reader and paint a picture of an image.",
+            "Semantic fields can be used to create that picture for the reader.",
+            "A semantic field is a group of words or expressions that are related in meaning.",
+            "Choose your adjectives carefully in a descriptive paragraph in order to create a semantic field."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is descriptive writing designed to do?",
+      "back": "Create a clear atmosphere for the reader and paint a picture of an image."
+    },
+    {
+      "front": "What is an atmosphere?",
+      "back": "The feeling or sense evoked by the setting or environment."
+    },
+    {
+      "front": "What is an adjective?",
+      "back": "A word that describes or defines a noun."
+    },
+    {
+      "front": "What is a semantic field?",
+      "back": "A group of words or expressions that are related in meaning."
+    },
+    {
+      "front": "Why is a semantic field effective in descriptive writing?",
+      "back": "It helps to create a consistent image for the reader."
+    },
+    {
+      "front": "What is planning?",
+      "back": "The act of deciding how to do something."
+    },
+    {
+      "front": "What do you decide first, before you choose adjectives for a semantic field?",
+      "back": "The overall feeling associated with the image (for example calmness and tranquillity)."
+    },
+    {
+      "front": "Why aren’t ‘vibrant’, ‘kaleidoscopic’ and ‘ravishing’ effective for a calm scene?",
+      "back": "They give the impression of a scene that is more loud and overwhelmingly beautiful than calm and tranquil."
+    },
+    {
+      "front": "Give some verbs that fit a calm semantic field for moving through a scene.",
+      "back": "glide, wander, stroll, drifting, amble"
+    },
+    {
+      "front": "What are the three parts of a single paragraph outline?",
+      "back": "Focus of the paragraph, supporting detail and concluding idea."
+    },
+    {
+      "front": "What do you write in the ‘focus of the paragraph’ box?",
+      "back": "Which part of the image you will focus on and what kind of language you might use."
+    },
+    {
+      "front": "What do you write in the ‘concluding idea’ box?",
+      "back": "The feeling you want to leave the reader with."
+    },
+    {
+      "front": "Why was the student’s paragraph about the tall trees not effective?",
+      "back": "The trees felt oppressive but also calming at the same time, which doesn’t create a clear image. Create a consistent mood throughout."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Using adjectives and semantic fields to plan and write descriptive paragraphs",
+    "instructions": "Answer each question with a word or short phrase, using what you have learned about atmosphere, adjectives, semantic fields and planning a paragraph.",
+    "questions": [
+      {
+        "prompt": "What is the name for a group of words or expressions that are related in meaning?",
+        "answer": "semantic field",
+        "accepted": [
+          "a semantic field"
+        ],
+        "explanation": "That is the definition of a semantic field."
+      },
+      {
+        "prompt": "Which word means the feeling or sense evoked by the setting or environment?",
+        "answer": "atmosphere",
+        "accepted": [
+          "the atmosphere"
+        ],
+        "explanation": "Atmosphere is the feeling or sense evoked by the setting or environment."
+      },
+      {
+        "prompt": "What type of writing is designed to create a clear atmosphere and paint a picture for the reader?",
+        "answer": "descriptive",
+        "accepted": [
+          "descriptive writing"
+        ],
+        "explanation": "Descriptive writing is designed to create an atmosphere and paint a picture."
+      },
+      {
+        "prompt": "What word class are ‘serene’, ‘placid’ and ‘cerulean’?",
+        "answer": "adjective",
+        "accepted": [
+          "adjectives",
+          "an adjective"
+        ],
+        "explanation": "They are words that describe nouns such as the sky or the river."
+      },
+      {
+        "prompt": "The lesson chose the overall mood of calmness and what? Answer with one word meaning peacefulness, starting with ‘t’.",
+        "answer": "tranquillity",
+        "accepted": [
+          "tranquility"
+        ],
+        "explanation": "The lesson chooses calmness and tranquillity as the overall mood."
+      },
+      {
+        "prompt": "Which word does NOT fit a calm scene: serene, placid, cacophonous or soothing?",
+        "answer": "cacophonous",
+        "accepted": [],
+        "explanation": "Serene, placid and soothing are calm words, but cacophonous is not helpful in describing a calm image."
+      },
+      {
+        "prompt": "Which verb fits a calm scene: marching or strolling?",
+        "answer": "strolling",
+        "accepted": [],
+        "explanation": "Strolling is a leisurely movement that adds to a semantic field of calmness."
+      },
+      {
+        "prompt": "In the single paragraph outline, which box do you use for the feeling you want to leave the reader with?",
+        "answer": "concluding idea",
+        "accepted": [
+          "the concluding idea"
+        ],
+        "explanation": "The concluding idea is where you note the feeling you want to leave the reader with."
+      },
+      {
+        "prompt": "In the single paragraph outline, which box do you use for notes on details such as petal colour?",
+        "answer": "supporting detail",
+        "accepted": [
+          "the supporting detail",
+          "supporting details"
+        ],
+        "explanation": "The supporting detail box lists notes on details."
+      },
+      {
+        "prompt": "‘Serene’, ‘enveloped’, ‘comforting’ and ‘hug’ create which tone: soothing or tense?",
+        "answer": "soothing",
+        "accepted": [],
+        "explanation": "All of these words feel calm and comforting, so they create a soothing tone."
+      }
+    ]
+  }
+}

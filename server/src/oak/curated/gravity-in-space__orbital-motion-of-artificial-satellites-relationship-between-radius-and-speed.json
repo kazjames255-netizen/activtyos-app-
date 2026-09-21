@@ -1,0 +1,618 @@
+{
+  "agent": "physics-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe changes to a satellite’s speed and velocity and explain what happens to its orbital radius if its speed changes."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Satellites"
+            },
+            {
+              "title": "Speed of orbit"
+            },
+            {
+              "title": "Different orbits"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "satellite",
+              "def": "An object which orbits a planet. Satellites can be natural (moons) or artificial."
+            },
+            {
+              "term": "orbital path",
+              "def": "The path a satellite takes around the planet it orbits."
+            },
+            {
+              "term": "orbital radius",
+              "def": "The radius of an orbit, measured from the centre of the planet."
+            },
+            {
+              "term": "polar orbit",
+              "def": "An orbit in which the satellite passes over the poles of a planet."
+            },
+            {
+              "term": "geostationary orbit",
+              "def": "An orbit in which the satellite is stationary in the sky as it orbits in the same time as the planet spins, directly above its equator."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Satellites",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Any object in orbit around a planet is a {satellite} of that planet."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Natural satellite",
+              "sub": "The Moon is Earth’s only natural satellite. It takes about 27 days to orbit."
+            },
+            {
+              "title": "Artificial satellites",
+              "sub": "Launched into orbit on large rockets since 1957. Earth now has over 12 000."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Artificial satellites do many jobs, including communications, television, weather monitoring and spying. Sputnik 1 was the first one."
+        },
+        {
+          "t": "choices",
+          "q": "Check yourself.",
+          "items": [
+            {
+              "q": "Ganymede is a moon of Jupiter. What kind of satellite is it?",
+              "options": [
+                "An artificial satellite of Jupiter",
+                "An artificial satellite of the Sun",
+                "A natural satellite of Jupiter"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which of these is an artificial satellite?",
+              "options": [
+                "Sputnik 1",
+                "Jupiter",
+                "The Moon"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Low Earth orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Many satellites are in a **low Earth orbit**: between 300 km and 2000 km above Earth’s surface."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They are close to Earth, so microwave signals can be sent to and from them very quickly.",
+            "This type of satellite is often used in observation systems.",
+            "The International Space Station (ISS) is in a low Earth orbit at a height of 400 km, completing 15 orbits each day. It has a crew and can be seen from the ground with the naked eye."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Polar orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some satellites are in a **polar orbit**. They travel around Earth going over the north and south poles, again and again."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They orbit between 500 km and 800 km above Earth’s surface and complete 10 to 15 orbits every day.",
+            "Earth rotates beneath them, so they pass directly above most parts of its surface each day.",
+            "Weather satellites are usually in this type of orbit, so they can take detailed pictures of much of the atmosphere each day."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Geostationary orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Satellites in a **geostationary orbit** are in a ring directly above the equator."
+        },
+        {
+          "t": "list",
+          "items": [
+            "They orbit at the same rate that Earth rotates: one complete orbit takes exactly 24 hours.",
+            "So they stay directly above a fixed point on the equator and appear stationary in the sky.",
+            "Television broadcast satellites use this orbit, so a satellite dish does not need to move to keep a constant signal."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Check the timing",
+          "text": "After 6 hours Earth has turned a quarter of a turn and the satellite has moved a quarter of the way round its orbit, so it is still directly above the same point."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which orbit?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a description, then tap the orbit it matches.",
+          "columns": [
+            "Polar orbit",
+            "Geostationary orbit"
+          ],
+          "items": [
+            {
+              "text": "Passes over the north and south poles",
+              "col": 0
+            },
+            {
+              "text": "Directly above the equator",
+              "col": 1
+            },
+            {
+              "text": "Appears stationary in the sky",
+              "col": 1
+            },
+            {
+              "text": "Earth rotates beneath it, so it passes over most of the surface each day",
+              "col": 0
+            },
+            {
+              "text": "One orbit takes exactly 24 hours",
+              "col": 1
+            },
+            {
+              "text": "Orbits 500 km to 800 km up, completing 10 to 15 orbits a day",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Speed and velocity in orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Most satellites travel around Earth in circular orbits. This is circular motion."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Their **speed** stays constant.",
+            "But their direction of travel changes all the time, so their **velocity** is always changing. (Velocity includes direction as well as speed.)",
+            "A change in velocity is an acceleration, and that needs a resultant force. Here the force is Earth’s gravitational pull on the satellite."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why the speed stays the same",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The gravitational force is the only force acting on a satellite in orbit. It acts towards the centre of Earth, always at right angles to the direction of movement."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A force at right angles to the movement changes the direction, but not the speed.",
+            "There are no frictional forces in space (above the atmosphere), so a satellite does not slow down.",
+            "It does not need a thrust force to keep moving."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The force pulls the satellite towards Earth’s centre, but the satellite does not move in the direction of the force. It moves along the circle, at right angles to it."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: forces and motion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer about a satellite in a circular orbit around Earth.",
+          "items": [
+            {
+              "q": "Its speed is…",
+              "options": [
+                "always decreasing",
+                "constant",
+                "always increasing"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Its velocity is…",
+              "options": [
+                "constantly changing because its direction changes",
+                "constant"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which force is the only one acting on it?",
+              "options": [
+                "Gravitational force",
+                "Thrust",
+                "Friction"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The gravitational force acts…",
+              "options": [
+                "towards the centre of Earth",
+                "in the direction the satellite is moving"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Modelling an orbit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can model circular motion with a rubber bung on a thread that goes through a thin tube, with masses hanging from the other end."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The bung represents an orbiting satellite. Its direction is always changing.",
+            "The tension in the thread represents the gravitational force on the satellite.",
+            "A bigger hanging mass gives more tension, which simulates a bigger gravitational force."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Larger circles take longer to complete. The smaller the orbital radius, the shorter the time for each orbit. This is also true for satellites orbiting Earth."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Orbital radius",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Orbital radius is measured from the **centre** of the planet, not from its surface. So add the height of the orbit to the radius of Earth (6370 km)."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "6370 km",
+              "add": "500 km",
+              "result": "6870 km",
+              "note": "Orbital radius = radius of Earth + height above the surface"
+            },
+            {
+              "root": "6370 km",
+              "add": "1500 km",
+              "result": "7870 km",
+              "note": "The same rule for a satellite 1500 km up"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: orbital speed",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A satellite orbits 500 km above Earth’s surface and takes 1.6 hours for one orbit. The radius of Earth is 6370 km. Find its speed."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Step 1, orbital radius = 6370 km + 500 km = 6870 km",
+            "Step 2, orbital path length = 2 × π × orbital radius = 2 × π × 6870 km = 43 165 km",
+            "Step 3, speed = orbital path length ÷ orbital period = 43 165 km ÷ 1.6 hours = 27 000 km/h (2 significant figures)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The answer has 2 significant figures because the time was given to 2 significant figures."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Radius and speed",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The orbital speed of a satellite depends only on its orbital radius. It does not depend on the mass of the satellite. All satellites at the same height above Earth have the same speed."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The greater the orbital radius, the slower the satellite moves.",
+            "For a stable orbit, a satellite that moves closer to Earth must speed up.",
+            "A satellite that gets further from Earth must slow down, or it will escape from its orbit and drift off into space."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You cannot choose both the orbital radius and the speed of a satellite. Choose one, and the other is fixed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: radius and speed",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A satellite is 300 km above Earth’s surface. What is its orbital radius? (Radius of Earth = 6370 km)",
+              "options": [
+                "6070 km",
+                "300 km",
+                "6370 km",
+                "6670 km"
+              ],
+              "answer": 3
+            },
+            {
+              "q": "Satellite A has a smaller orbital radius than satellite B. Which moves faster?",
+              "options": [
+                "A",
+                "B",
+                "They have the same speed"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Two satellites orbit at the same height. One has a much bigger mass. Compared with the smaller one, its speed is…",
+              "options": [
+                "greater",
+                "the same",
+                "smaller"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A satellite moves to a larger orbital radius and stays in a stable orbit. Its speed must…",
+              "options": [
+                "stay the same",
+                "increase",
+                "decrease"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Satellites are objects in orbit around a planet. They can be natural or artificial.",
+            "Satellites in low Earth orbits can take detailed images of Earth. Polar orbit satellites pass over most parts of Earth’s surface each day as Earth rotates beneath them.",
+            "Communication satellites are in geostationary orbits above the equator. They orbit once each day, so they stay above the same point on the ground.",
+            "Gravity makes a satellite follow a circular orbital path. The greater the orbital radius, the lower the speed."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a satellite?",
+      "back": "An object which orbits a planet. Satellites can be natural (moons) or artificial."
+    },
+    {
+      "front": "What is Earth’s only natural satellite?",
+      "back": "The Moon. It takes about 27 days to orbit Earth."
+    },
+    {
+      "front": "How were artificial satellites put into orbit, and when did this start?",
+      "back": "They are launched on large rockets, since 1957. Sputnik 1 was the first."
+    },
+    {
+      "front": "What is a low Earth orbit?",
+      "back": "An orbit between 300 km and 2000 km above Earth’s surface. Satellites there are often used in observation systems."
+    },
+    {
+      "front": "What is a polar orbit?",
+      "back": "An orbit in which the satellite passes over the north and south poles."
+    },
+    {
+      "front": "Why do polar-orbit satellites pass over most of Earth’s surface each day?",
+      "back": "Earth rotates beneath them as they travel."
+    },
+    {
+      "front": "What is a geostationary orbit?",
+      "back": "An orbit directly above the equator in which the satellite orbits in the same time as Earth spins, so it appears stationary in the sky."
+    },
+    {
+      "front": "How long does a geostationary satellite take for one orbit?",
+      "back": "Exactly 24 hours."
+    },
+    {
+      "front": "What is the only force acting on a satellite in orbit?",
+      "back": "The gravitational force, acting towards the centre of Earth."
+    },
+    {
+      "front": "What happens to a satellite’s speed and velocity in a circular orbit?",
+      "back": "Its speed is constant, but its velocity is always changing because its direction changes."
+    },
+    {
+      "front": "Why does gravity not change a satellite’s speed?",
+      "back": "It acts at right angles to the direction of movement, so it only changes the direction."
+    },
+    {
+      "front": "How do you find the orbital radius of a satellite?",
+      "back": "Add the height above the surface to the radius of Earth. Example: 6370 km + 500 km = 6870 km."
+    },
+    {
+      "front": "What is the length of a circular orbital path?",
+      "back": "2 × π × orbital radius."
+    },
+    {
+      "front": "How does orbital radius affect a satellite’s speed?",
+      "back": "The greater the orbital radius, the slower the satellite. The satellite’s mass makes no difference."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Orbital motion of artificial satellites: relationship between radius and speed",
+    "instructions": "Answer each question with a number or a short answer. Give calculation answers in km or km/h without needing to write the unit.",
+    "questions": [
+      {
+        "prompt": "A satellite is 1200 km above Earth’s surface. The radius of Earth is 6370 km. What is its orbital radius, in km?",
+        "answer": "7570",
+        "accepted": [
+          "7 570",
+          "7,570",
+          "7570 km",
+          "7 570 km",
+          "7,570 km"
+        ],
+        "explanation": "Orbital radius = 6370 + 1200 = 7570 km."
+      },
+      {
+        "prompt": "A satellite has an orbital radius of 9000 km. Using orbital path length = 2 × π × orbital radius, what is the path length in km, to 3 significant figures?",
+        "answer": "56500",
+        "accepted": [
+          "56 500",
+          "56,500",
+          "56500 km",
+          "56 500 km",
+          "56,500 km"
+        ],
+        "explanation": "2 × π × 9000 = 56 549 km, which is 56 500 km to 3 significant figures."
+      },
+      {
+        "prompt": "A satellite in polar orbit is 800 km above Earth’s surface and takes 1.70 hours for one orbit. The radius of Earth is 6370 km. What is its orbital speed in km/h, to 3 significant figures?",
+        "answer": "26500",
+        "accepted": [
+          "26 500",
+          "26,500",
+          "26500 km/h",
+          "26 500 km/h",
+          "26,500 km/h"
+        ],
+        "explanation": "Orbital radius = 7170 km; path length = 2 × π × 7170 = 45 050 km; speed = 45 050 ÷ 1.70 = 26 500 km/h."
+      },
+      {
+        "prompt": "The ISS completes 15 orbits each day (24 hours). How many hours does one orbit take?",
+        "answer": "1.6",
+        "accepted": [
+          "1.6 hours",
+          "1.6 h",
+          "1.60"
+        ],
+        "explanation": "24 hours ÷ 15 orbits = 1.6 hours per orbit."
+      },
+      {
+        "prompt": "How long does a geostationary satellite take to complete one orbit of Earth, in hours?",
+        "answer": "24",
+        "accepted": [
+          "24 hours",
+          "24 h",
+          "one day",
+          "1 day"
+        ],
+        "explanation": "It orbits at the same rate that Earth rotates, so one orbit takes exactly 24 hours."
+      },
+      {
+        "prompt": "What is the only force acting on a satellite in orbit? (Give the name of the force.)",
+        "answer": "gravitational force",
+        "accepted": [
+          "gravity",
+          "the gravitational force",
+          "the force of gravity",
+          "gravitational pull"
+        ],
+        "explanation": "Gravity acts towards the centre of Earth and is the only force on the satellite."
+      },
+      {
+        "prompt": "A satellite passes over the north and south poles on each orbit. What type of orbit is it in?",
+        "answer": "polar",
+        "accepted": [
+          "polar orbit",
+          "a polar orbit"
+        ],
+        "explanation": "An orbit that passes over the poles is a polar orbit."
+      },
+      {
+        "prompt": "A satellite moves to a larger orbital radius and stays in a stable orbit. Does its speed become faster or slower?",
+        "answer": "slower",
+        "accepted": [
+          "it becomes slower",
+          "lower",
+          "it decreases",
+          "decreases"
+        ],
+        "explanation": "The greater the orbital radius, the lower the speed."
+      },
+      {
+        "prompt": "For a satellite in a circular orbit, which one stays constant: its speed or its velocity?",
+        "answer": "speed",
+        "accepted": [
+          "its speed"
+        ],
+        "explanation": "Its direction keeps changing, so its velocity changes, but its speed stays constant."
+      }
+    ]
+  }
+}

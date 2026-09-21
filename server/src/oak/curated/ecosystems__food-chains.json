@@ -1,0 +1,879 @@
+{
+  "agent": "science-ks3b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify producers and consumers and explain what is shown by a food chain diagram."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Feeding relationships"
+            },
+            {
+              "title": "What is a food chain?"
+            },
+            {
+              "title": "Changing populations"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "food-chain"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "producer",
+              "def": "A producer is an organism that makes its own food."
+            },
+            {
+              "term": "consumer",
+              "def": "A consumer is an organism that eats other organisms for food."
+            },
+            {
+              "term": "food chain",
+              "def": "A food chain diagram shows how food is transferred from one population of organisms to another."
+            },
+            {
+              "term": "population",
+              "def": "A group of organisms of the same type in the same place is called a population."
+            },
+            {
+              "term": "model",
+              "def": "Scientists use models as simpler representations of complex things and ideas."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "food-chain"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why organisms need food",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All living organisms need a supply of food to survive."
+        },
+        {
+          "t": "text",
+          "text": "Food is a fuel. All organisms use it for {cellular respiration}, which provides the energy for life processes such as movement."
+        },
+        {
+          "t": "callout",
+          "text": "Organisms get their food in different ways. Some **make their own food**. Some **eat other organisms**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Producers and consumers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Plants use light and chemicals from their surroundings to make their own food. This is called photosynthesis."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Producer",
+              "sub": "makes its own food"
+            },
+            {
+              "title": "Consumer",
+              "sub": "eats other organisms to get its food"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A zebra is a consumer: it eats grass. A bear is a consumer: it catches and eats a salmon. Animals cannot make their own food."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Everything links back to plants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All animals, including humans, rely on plants for their food. Without plants, animals would not be able to survive."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Bread and breakfast cereal come from wheat.",
+            "A cow gets its food from grass, so a beef burger links back to grass.",
+            "A chicken gets its food from the grains of wheat."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Even if you eat meat…",
+          "text": "You still rely on plants, because the animal you eat got its food from plants."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Producer or consumer?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each organism into the correct group.",
+          "columns": [
+            "Producer",
+            "Consumer"
+          ],
+          "items": [
+            {
+              "text": "grass",
+              "col": 0
+            },
+            {
+              "text": "wheat",
+              "col": 0
+            },
+            {
+              "text": "cress",
+              "col": 0
+            },
+            {
+              "text": "tree",
+              "col": 0
+            },
+            {
+              "text": "cow",
+              "col": 1
+            },
+            {
+              "text": "owl",
+              "col": 1
+            },
+            {
+              "text": "snail",
+              "col": 1
+            },
+            {
+              "text": "human",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a food chain?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A food chain diagram shows how food is passed from one type of organism to another by feeding."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "grass → rabbit → fox"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Grass makes its own food. Grass is food for the rabbit.",
+            "The rabbit is food for the fox."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Food chains are often simplified: just write the names of the organisms and draw arrows between them."
+        }
+      ],
+      "pics": [
+        {
+          "id": "food-chain"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do the arrows mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The arrows show the **direction that food moves** along the food chain. They always point to the organism that gets the food."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "wheat → mouse → cat"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The arrows do not mean ‘eats’. They mean ‘is food for’: wheat is food for the mouse, and the mouse is food for the cat."
+        },
+        {
+          "t": "choice",
+          "q": "In the food chain wheat → mouse → cat, which way does the food move?",
+          "options": [
+            "From the cat to the mouse to the wheat",
+            "From the wheat to the mouse to the cat"
+          ],
+          "answer": 1,
+          "why": "The arrows show the direction that food moves, and they point to the organism that gets the food."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Every food chain starts with a producer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Producers make all of the food for the rest of the organisms in the chain, so a food chain always starts with a producer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Tree",
+              "sub": "producer",
+              "emoji": "🌳"
+            },
+            {
+              "title": "Giraffe",
+              "sub": "primary consumer",
+              "emoji": "🦒"
+            },
+            {
+              "title": "Lion",
+              "sub": "secondary consumer",
+              "emoji": "🦁"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Primary means first, like a primary school. The first consumer in a chain is the **primary consumer**. The second is the **secondary consumer**. A third consumer is called a **tertiary consumer**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Name each organism",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a food chain: wheat → mouse → cat → owl."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which organism is the producer?",
+              "options": [
+                "wheat",
+                "mouse",
+                "owl"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which organism is the primary consumer?",
+              "options": [
+                "cat",
+                "mouse",
+                "wheat"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which organism is the secondary consumer?",
+              "options": [
+                "owl",
+                "wheat",
+                "cat"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which organism is the tertiary consumer?",
+              "options": [
+                "owl",
+                "mouse",
+                "wheat"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the producer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A food chain from the Atlantic Ocean: phytoplankton → zooplankton → herring → billfish."
+        },
+        {
+          "t": "choice",
+          "q": "You may not know what phytoplankton are. What can you tell about them from the food chain?",
+          "options": [
+            "They must be producers, because the food chain starts with them",
+            "They could be producers or consumers",
+            "You cannot tell anything from the food chain"
+          ],
+          "answer": 0,
+          "why": "All food chains start with a producer, so the organism at the start must be a producer."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a population?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A population is the number of individuals of one type of organism in a specific place."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The population of fish in a pond",
+            "The population of daisies in a field"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The size of a population is always changing. It changes because of reproduction, death and migration (moving into and out of the area)."
+        },
+        {
+          "t": "reveal",
+          "label": "Try it: 6 humans in a classroom",
+          "text": "The population is 6. If two of them migrate out of the classroom, the population is now 4."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Each level is a population",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A food chain diagram is a **model**. To keep it simple, it usually shows just one organism at each level. In reality, each level is a whole population."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "cabbage → slug → hedgehog"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How many populations?",
+          "text": "There are three populations: cabbages, slugs and hedgehogs. The diagram does not tell us how many slugs there are."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Changing populations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A change in the size of one population affects other populations in the same food chain."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "lettuce → snail → thrush → hawk"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Imagine the number of **thrushes decreases**. What happens?"
+        },
+        {
+          "t": "reveal",
+          "label": "Snails",
+          "text": "There are fewer thrushes to eat them, so the snail population increases."
+        },
+        {
+          "t": "reveal",
+          "label": "Lettuces",
+          "text": "More snails eat the lettuces, so the lettuce population decreases."
+        },
+        {
+          "t": "reveal",
+          "label": "Hawks",
+          "text": "There are fewer thrushes for the hawks to eat, so the hawk population decreases."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Predict the change",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "In grass → rabbit → fox, the number of foxes goes down. What happens to the rabbit population?",
+              "options": [
+                "It decreases",
+                "It increases"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In wheat → mouse → owl, the number of mice goes down. What happens to the owl population?",
+              "options": [
+                "It decreases because there is less food",
+                "It increases because there is less food"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Bees are getting scarce. Flowering plants need bees for pollination and birds eat bees. Which populations could be affected?",
+              "options": [
+                "Only the birds",
+                "Only the flowering plants",
+                "Both the birds and the flowering plants"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Food chain diagrams are models. They show how food passes from one type of organism to another.",
+            "The arrows show the direction in which food moves.",
+            "Food chains always start with a producer that makes its own food.",
+            "Consumers rely on other organisms as a source of food.",
+            "A change in the size of one population affects other populations in the food chain."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "food-chain"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a producer?",
+      "back": "An organism that makes its own food.\n\nExample: plants such as grass and wheat."
+    },
+    {
+      "front": "What is a consumer?",
+      "back": "An organism that eats other organisms for food.\n\nAll animals are consumers."
+    },
+    {
+      "front": "What do plants use to make their own food?",
+      "back": "Light and chemicals from their surroundings (photosynthesis)."
+    },
+    {
+      "front": "What does a food chain diagram show?",
+      "back": "How food is passed from one type of organism to another by feeding."
+    },
+    {
+      "front": "What do the arrows in a food chain show?",
+      "back": "The direction that food moves along the chain (they mean ‘is food for’, not ‘eats’)."
+    },
+    {
+      "front": "What does every food chain start with?",
+      "back": "A producer, because producers make the food for the rest of the chain."
+    },
+    {
+      "front": "What is the first consumer in a food chain called?",
+      "back": "The primary consumer.\n\nPrimary means first, like a primary school."
+    },
+    {
+      "front": "What is the second consumer in a food chain called?",
+      "back": "The secondary consumer."
+    },
+    {
+      "front": "What is a third consumer in a food chain called?",
+      "back": "A tertiary consumer."
+    },
+    {
+      "front": "What is a population?",
+      "back": "A group of organisms of the same type in the same place.\n\nExample: the population of fish in a pond."
+    },
+    {
+      "front": "Name three things that change the size of a population.",
+      "back": "Reproduction, death and migration (moving into or out of an area)."
+    },
+    {
+      "front": "In a food chain diagram, what does each level really represent?",
+      "back": "A whole population of that organism, not just one individual."
+    },
+    {
+      "front": "Why is a food chain diagram called a model?",
+      "back": "A model is a simpler representation of something complex. A food chain shows how food moves between populations."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Food chains",
+    "instructions": "Answer each question with a word, a short phrase or a number.",
+    "questions": [
+      {
+        "prompt": "What word describes an organism that eats other organisms to get its food?",
+        "answer": "consumer",
+        "explanation": "A consumer is an organism that eats other organisms for food."
+      },
+      {
+        "prompt": "In the food chain wheat → mouse → cat → owl, which organism is the producer?",
+        "answer": "wheat",
+        "explanation": "Food chains start with the organism that makes its own food: the wheat plant."
+      },
+      {
+        "prompt": "In the food chain wheat → mouse → cat → owl, which organism is the secondary consumer?",
+        "answer": "cat",
+        "explanation": "The mouse is the first (primary) consumer, so the cat, which eats the mouse, is the second (secondary) consumer."
+      },
+      {
+        "prompt": "In the food chain wheat → mouse → cat → owl, which organism is the tertiary consumer?",
+        "answer": "owl",
+        "explanation": "The owl is the third consumer in the chain."
+      },
+      {
+        "prompt": "Plants use light and chemicals from their surroundings to make their own food. What is this process called?",
+        "answer": "photosynthesis",
+        "explanation": "Plants make their own food by photosynthesis."
+      },
+      {
+        "prompt": "A classroom has a population of 6 humans. Two of them migrate out of the classroom. How many humans are in the population now?",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "6 − 2 = 4."
+      },
+      {
+        "prompt": "In the food chain lettuce → snail → thrush → hawk, the number of thrushes decreases. Does the snail population increase or decrease? (Answer increase or decrease.)",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "Fewer thrushes means fewer snails are eaten, so the snail population increases."
+      },
+      {
+        "prompt": "In the food chain lettuce → snail → thrush → hawk, the number of thrushes decreases. Does the hawk population increase or decrease? (Answer increase or decrease.)",
+        "answer": "decrease",
+        "accepted": [
+          "decreases"
+        ],
+        "explanation": "There are fewer thrushes for the hawks to eat, so the hawk population decreases."
+      },
+      {
+        "prompt": "The arrows in a food chain diagram show the direction that what moves along the chain? (Answer in one word: it is what organisms eat.)",
+        "answer": "food",
+        "explanation": "The arrows show the direction that food moves along the food chain."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 5,
+        "doThis": [
+          "Start with quick revision: an organism is a thing that is alive, or was once living. A word for an organism that eats other organisms as food is a consumer.",
+          "Read the goal together, then look at the five key words: producer, consumer, food chain, population, model.",
+          "Ask what each key word means before showing the meaning."
+        ],
+        "say": "I can identify producers and consumers and explain what is shown by a food chain diagram.",
+        "keywords": [
+          {
+            "term": "producer",
+            "meaning": "A producer is an organism that makes its own food."
+          },
+          {
+            "term": "consumer",
+            "meaning": "A consumer is an organism that eats other organisms for food."
+          },
+          {
+            "term": "food chain",
+            "meaning": "A food chain diagram shows how food is transferred from one population of organisms to another."
+          },
+          {
+            "term": "population",
+            "meaning": "A group of organisms of the same type in the same place is called a population."
+          },
+          {
+            "term": "model",
+            "meaning": "Scientists use models as simpler representations of complex things and ideas."
+          }
+        ],
+        "checkFor": {
+          "ask": "What is a producer?",
+          "lookFor": "An organism that makes its own food."
+        },
+        "recap": [
+          "Our goal: I can identify producers and consumers and explain what is shown by a food chain diagram.",
+          "A producer makes its own food. A consumer eats other organisms for food."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Producers and consumers",
+        "minutes": 8,
+        "doThis": [
+          "Explain that all living organisms need a supply of food to survive. Food is a fuel: all organisms use it for cellular respiration, which provides energy for life processes such as movement.",
+          "Explain that some organisms make their own food, and some eat other organisms. Plants use light and chemicals from their surroundings to make their own food, by photosynthesis. Animals cannot make their own food.",
+          "Point out that all animals, including humans, rely on plants for their food: a beef burger comes from a cow, and the cow gets its food from grass."
+        ],
+        "keyIdeas": [
+          "Producers are organisms that can make their own food, including plants and some microorganisms.",
+          "Consumers (e.g. humans and other animals) cannot make their own food; they get their food by eating other organisms.",
+          "All animals, including humans, rely on plants for their food."
+        ],
+        "examples": [
+          "Producers: grass, wheat and cress.",
+          "Consumers: cat, snail, owl, thrush, sparrow, mouse, cow and human, because they eat other organisms."
+        ],
+        "keywords": [
+          {
+            "term": "producer",
+            "meaning": "A producer is an organism that makes its own food."
+          },
+          {
+            "term": "consumer",
+            "meaning": "A consumer is an organism that eats other organisms for food."
+          }
+        ],
+        "checkFor": {
+          "ask": "Is a cow a producer or a consumer, and why?",
+          "lookFor": "A consumer, because it cannot make its own food. It eats grass."
+        },
+        "recap": [
+          "Plants are producers: they make their own food.",
+          "Animals, including humans, are consumers: they eat other organisms to get their food.",
+          "All animals, including humans, rely on plants for food."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Food chains and what the arrows mean",
+        "minutes": 7,
+        "doThis": [
+          "Show a simple food chain, such as grass → rabbit → fox. Explain that a food chain diagram shows how food is passed from one type of organism to another by feeding.",
+          "Explain that the arrows show the direction in which food moves. They always point to the organism that gets the food. The arrows mean 'is food for', not 'eats'.",
+          "Explain that every food chain starts with a producer, because producers make all of the food for the rest of the organisms in the chain."
+        ],
+        "keyIdeas": [
+          "A food chain diagram shows the feeding relationships between populations of organisms.",
+          "The arrows in a food chain diagram show the direction in which food moves.",
+          "All food chains start with a producer."
+        ],
+        "keywords": [
+          {
+            "term": "food chain",
+            "meaning": "A food chain diagram shows how food is transferred from one population of organisms to another."
+          }
+        ],
+        "examples": [
+          "grass → rabbit → fox: grass is food for the rabbit, and the rabbit is food for the fox.",
+          "corn → mouse → owl: the arrows point towards the organism that gets the food."
+        ],
+        "checkFor": {
+          "ask": "In corn → mouse → owl, what do the arrows mean?",
+          "lookFor": "They show the direction food moves, and mean 'is food for'. The corn is food for the mouse and the mouse is food for the owl. They do not mean 'eats'."
+        },
+        "recap": [
+          "A food chain shows how food passes from one type of organism to another.",
+          "The arrows show which way the food moves. They mean 'is food for'.",
+          "A food chain always starts with a producer."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Naming producers and consumers in a chain",
+        "minutes": 5,
+        "doThis": [
+          "Show tree → giraffe → lion. The tree is a producer. The giraffe eats a producer, so it is the primary consumer. Primary means first.",
+          "An animal that eats a primary consumer is the secondary consumer. Sometimes a food chain has more consumers, and a third consumer is called a tertiary consumer.",
+          "Ask the student what they can tell about an organism they do not know, if it comes first in a food chain."
+        ],
+        "examples": [
+          "tree → giraffe → lion: the tree is the producer, the giraffe is the primary consumer, the lion is the secondary consumer.",
+          "wheat → mouse → cat → owl: wheat is the producer, the mouse is the primary consumer, the cat is the secondary consumer, the owl is the tertiary consumer.",
+          "phytoplankton → zooplankton → herring → billfish: phytoplankton must be a producer, because all food chains start with a producer."
+        ],
+        "checkFor": {
+          "ask": "In wheat → mouse → cat → owl, which organism is the secondary consumer?",
+          "lookFor": "The cat. It eats the mouse, which is the primary consumer."
+        },
+        "recap": [
+          "The first consumer is the primary consumer, the second is the secondary consumer, and the third is the tertiary consumer.",
+          "The organism at the start of a food chain must be a producer."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Populations and food chains as models",
+        "minutes": 6,
+        "doThis": [
+          "Explain that a population is a group of organisms of the same type in the same place, for example the population of fish in a pond or the population of daisies in a field.",
+          "Explain that the size of a population is always changing, because of reproduction, death and migration (moving into and out of an area). Give an example: 6 humans in a classroom is a population of 6, and if 2 of them migrate out, it is now 4.",
+          "Explain that a food chain diagram is a model. It usually shows just one organism at each level, but in reality each level is a whole population."
+        ],
+        "keyIdeas": [
+          "A food chain diagram shows the feeding relationships between populations of organisms."
+        ],
+        "keywords": [
+          {
+            "term": "population",
+            "meaning": "A group of organisms of the same type in the same place is called a population."
+          },
+          {
+            "term": "model",
+            "meaning": "Scientists use models as simpler representations of complex things and ideas."
+          }
+        ],
+        "examples": [
+          "6 humans in a classroom: the population is 6. After 2 migrate out, the population is 4.",
+          "cabbage → slug → hedgehog has three populations: cabbages, slugs and hedgehogs. The diagram does not tell us how many slugs there are."
+        ],
+        "checkFor": {
+          "ask": "How many populations are there in cabbage → slug → hedgehog?",
+          "lookFor": "Three: cabbages, slugs and hedgehogs. Each level is a whole population."
+        },
+        "recap": [
+          "A population is a group of organisms of the same type in the same place.",
+          "A food chain is a model. Each level shows a whole population."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Changing populations",
+        "minutes": 5,
+        "doThis": [
+          "Explain that a change in the size of one population affects other populations in the same food chain.",
+          "Work through lettuce → snail → thrush → hawk: if some lettuces are harvested, the lettuce population decreases, which leaves less food for the snails, and so on along the chain.",
+          "Then try it the other way: if the hawk population increases, work out what happens to the thrushes, snails and lettuces."
+        ],
+        "keyIdeas": [
+          "A change in the size of a population will affect other populations in the food chain."
+        ],
+        "examples": [
+          "Lettuces are harvested: the lettuce population decreases. There is less food for snails, so the snail population decreases. Fewer snails means less food for thrushes and hawks, so those populations decrease too.",
+          "The hawk population increases: more thrushes are eaten, so the thrush population decreases. Fewer thrushes eat fewer snails, so the snail population increases. More snails eat more lettuces, so the lettuce population decreases."
+        ],
+        "checkFor": {
+          "ask": "In lettuce → snail → thrush → hawk, what happens to the snail population if the number of thrushes goes down?",
+          "lookFor": "The snail population increases, because fewer snails are eaten by thrushes."
+        },
+        "recap": [
+          "A change in one population affects the others in the food chain.",
+          "Think about what eats what, and what has more or less food."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Build and predict together",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to build a food chain from some organism names and label the producer and the consumers.",
+          "Ask the student to say what happens to the populations in the chain if one population gets smaller, one link at a time."
+        ],
+        "examples": [
+          "wheat → mouse → cat → owl: label wheat the producer, mouse the primary consumer, cat the secondary consumer and owl the tertiary consumer."
+        ],
+        "checkFor": {
+          "ask": "Bees are getting scarce, and birds eat bees. What happens to the bird population?",
+          "lookFor": "Fewer bees means less food for the birds, so the bird population decreases."
+        },
+        "recap": [
+          "Draw the chain with the arrows pointing the right way.",
+          "Then think through what happens to each population when one changes."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 4,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to name producers and consumers in a food chain, match key words to their meanings, pick out examples of populations, put organisms in food chain order, and say what happens when a population changes.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain what a food chain shows and what the arrows mean.",
+          "Finish with the summary: food chain diagrams are models; the arrows show the direction food moves; food chains always start with a producer; consumers rely on other organisms for food; a change in one population affects the others."
+        ],
+        "checkFor": {
+          "ask": "What does a food chain show, and where does it always start?",
+          "lookFor": "It shows how food passes from one type of organism to another, and it always starts with a producer."
+        },
+        "recap": [
+          "Can you do it now? I can identify producers and consumers and explain what is shown by a food chain diagram.",
+          "Remember: the arrows show which way the food moves, and a change in one population affects the others."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils think the arrows in a food chain diagram mean 'eats', and that each level is one individual organism.",
+        "fix": "Explain that the arrows show the direction food moves and mean 'is food for'. Explain that each level of the diagram is a population of organisms."
+      },
+      {
+        "mistake": "Pupils draw the arrows the wrong way round, pointing to the organism that is eaten.",
+        "fix": "The arrows always point to the organism that gets the food."
+      }
+    ],
+    "watchOut": [
+      "Check the arrows every time the student draws a food chain: they must point towards the organism that gets the food.",
+      "Every food chain starts with a producer. If the student is unsure whether an unfamiliar organism is a producer, look at where it sits in the chain.",
+      "When predicting population changes, ask the student to go one link at a time and say why, using what each organism eats and what eats it."
+    ]
+  }
+}

@@ -29,6 +29,9 @@ const TENANT_SCOPED = [
   "customerGroups", "childFiles", "broadcasts", "wallet", "walletEntries",
   "notifications", "schedulerFired",
   "calendarEvents", "inventory",
+  // Learning Hub (docs/learning-hub.md) — every hub collection carries tenantId.
+  "hubTopics", "hubNotes", "hubEnrolments", "hubQuestions", "hubAssessments", "hubAttempts",
+  "hubPings", "hubMastery", "hubHomework", "hubSubmissions", "hubFlashcards", "hubFlashcardReviews", "hubLessons", "hubGroups", "hubBoards", "hubBoardTemplates", "hubFamilyInvites",
   "emailMessages", "scheduledEmails", "emailSuppressions",
 ];
 

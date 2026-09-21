@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { STAGES, type Lead, type Stage } from "./SalesApp";
 
 // Every demo video call someone's actually booked from the public /demo
@@ -18,6 +19,7 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", ho
 const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
 
 export function VideoCallsPanel({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void }) {
+  const router = useRouter();
   const now = Date.now();
   const booked = leads.filter((l) => l.slotAt && new Date(l.slotAt).getTime() >= now).sort((a, b) => (a.slotAt! < b.slotAt! ? -1 : 1));
 
@@ -51,10 +53,10 @@ export function VideoCallsPanel({ leads, onOpen, onMove }: { leads: Lead[]; onOp
                   <li key={l.id} data-ui="card" className={`flex flex-wrap items-center gap-3 px-3.5 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                     <div className="flex min-w-0 flex-1 cursor-pointer items-center gap-3" onClick={() => onOpen(l)}>
                       {l.videoRoom ? (
-                        <a href={`https://meet.jit.si/${l.videoRoom}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                        <button type="button" onClick={(e) => { e.stopPropagation(); router.push(`/platform/call/${l.id}`); }}
                           className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] hover:bg-[#dde8fb]">
-                          📹 Video call · {timeFmt.format(new Date(l.slotAt!))} ↗
-                        </a>
+                          📹 Video call · {timeFmt.format(new Date(l.slotAt!))}
+                        </button>
                       ) : (
                         <span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f]">📹 Video call · {timeFmt.format(new Date(l.slotAt!))}</span>
                       )}

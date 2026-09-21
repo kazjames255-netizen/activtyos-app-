@@ -1,0 +1,555 @@
+{
+  "agent": "science-ks3b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe how predators and prey are adapted to help them survive."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Types of adaptation"
+            },
+            {
+              "title": "Adaptations to avoid predators"
+            },
+            {
+              "title": "Adaptations to help predators catch prey"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "adaptation",
+              "def": "An adaptation is a feature that organisms have to help them live in a particular place."
+            },
+            {
+              "term": "camouflage",
+              "def": "Camouflage is a strategy that organisms use to disguise their appearance, usually by blending in with their surroundings."
+            },
+            {
+              "term": "prey",
+              "def": "A prey is an animal that is caught and eaten by another animal."
+            },
+            {
+              "term": "predator",
+              "def": "A predator is an animal that hunts and eats other animals."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is an adaptation?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All living organisms have features that help them to survive in the places that they live. These features are called **adaptations**."
+        },
+        {
+          "t": "text",
+          "text": "There are two main types of adaptation:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Feeding",
+              "sub": "adaptations that help with feeding"
+            },
+            {
+              "title": "Protection",
+              "sub": "adaptations that protect the organism"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Polar bear adaptations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Polar bears live in the Arctic, where temperatures are low. Their adaptations help them to feed and stay protected there."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "White fur",
+              "sub": "blends in with the background (camouflage)"
+            },
+            {
+              "title": "Small ears and tail",
+              "sub": "reduce heat loss",
+              "emoji": "👂"
+            },
+            {
+              "title": "Thick coat and fat layer",
+              "sub": "keep warm"
+            },
+            {
+              "title": "Pads on the feet",
+              "sub": "insulate the feet on cold ground and help to grip"
+            },
+            {
+              "title": "Sharp claws and teeth",
+              "sub": "help to catch, grip and eat prey",
+              "emoji": "🦷"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The greasy fur also helps the polar bear to dry quickly."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Cactus adaptations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Cacti often live in deserts. Deserts are dry, and hot in the day but cold at night."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Leaves reduced to spines",
+              "sub": "reduce water loss and protect the plant from being eaten by consumers"
+            },
+            {
+              "title": "Swollen stem",
+              "sub": "stores water"
+            },
+            {
+              "title": "Green stem",
+              "sub": "photosynthesis takes place here, not in the leaves"
+            },
+            {
+              "title": "Long roots and shallow roots",
+              "sub": "long roots get water from deep underground, shallow roots get water from dew"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Where do adaptations come from?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Adaptations are features that organisms choose to have. True or false?",
+          "options": [
+            "True",
+            "False: organisms inherit adaptations from their parents"
+          ],
+          "answer": 1,
+          "why": "Adaptations are not features that organisms choose to have. Organisms inherit them from their parent or parents."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Prey and their adaptations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Prey are the organisms that are hunted for food. Prey want to avoid being eaten, and have adaptations that help them to do this."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "wide field of vision",
+            "camouflage",
+            "warning signs",
+            "mimicry",
+            "spines and hairs",
+            "eyespots",
+            "chemicals and smells"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Eyesight:** prey need to see predators. Their eyes are often on the side of the head, which gives a wide field of view. A hare is an example."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Camouflage",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Camouflage helps organisms to blend into their surroundings. By using camouflage, organisms can hide in plain sight."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Some organisms can change their colour to match their surroundings, for example squid and chameleons.",
+            "Others blend in by matching their surroundings or by having a pattern, for example a stick insect, a lizard and a giraffe."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Warning signs and mimicry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some animals advertise where they are by being brightly coloured. Many organisms that are bright yellow, red or orange are poisonous. Black and white colours may also show that the organism would be a horrible snack for a predator."
+        },
+        {
+          "t": "text",
+          "text": "Some organisms are not all they seem. They **mimic** (copy) other organisms that are poisonous, and this helps to protect them from predators."
+        },
+        {
+          "t": "text",
+          "text": "Examples of warning colours: poison dart frogs, the burnet moth and the giant millipede."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Spines, hairs, eyespots and chemicals",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Spines",
+              "sub": "make it difficult for predators to eat them (hedgehog, sea urchin)"
+            },
+            {
+              "title": "Hairs",
+              "sub": "make it more difficult to eat them (caterpillars)"
+            },
+            {
+              "title": "Eyespots",
+              "sub": "either deflect a predator or startle it"
+            },
+            {
+              "title": "Chemicals",
+              "sub": "smell and taste unpleasant, or repel predators (stink bug, wood ant)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "How does it help prey?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each adaptation of prey to how it helps.",
+          "pairs": [
+            {
+              "a": "Bright colours",
+              "b": "Warn a predator that the prey is poisonous or tastes unpleasant"
+            },
+            {
+              "a": "Eyes on the side of the head",
+              "b": "Help the prey to see predators over a wide field of view"
+            },
+            {
+              "a": "Hairs",
+              "b": "Make the prey more difficult to eat"
+            },
+            {
+              "a": "Chemicals and smells",
+              "b": "Repel or put off predators"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predator adaptations: jaws and eyesight",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Predators have adaptations that help them to catch prey. These include strong jaws and good eyesight, camouflage, tools for hunters (claws, talons and beaks) and speed."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Apex predators have sharp teeth to kill and tear meat. Their jaws have big muscles, which makes them powerful.",
+            "Predators, especially apex predators, have excellent eyesight. Their eyes are often together at the front of the head, which helps them to judge distance really well."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Camouflage, claws, beaks and speed",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "**Camouflage:** predators use camouflage too. It helps them to get closer to their prey, and many can sneak up on prey unnoticed.",
+            "**Tools for hunters:** talons and claws are curved and sharp. The beaks of some birds can stab fish swimming in the water.",
+            "**Speed:** catching prey by surprise is an important tactic. Predators are often able to run fast or catch prey off guard."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Camouflage is used by both. It helps prey to hide from predators, and it helps predators to approach prey unnoticed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Prey or predator adaptation?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does each adaptation help prey to avoid being eaten, or help a predator to catch prey?",
+          "columns": [
+            "Helps prey avoid being eaten",
+            "Helps a predator catch prey"
+          ],
+          "items": [
+            {
+              "text": "eyes on the side of the head",
+              "col": 0
+            },
+            {
+              "text": "spines",
+              "col": 0
+            },
+            {
+              "text": "warning colours",
+              "col": 0
+            },
+            {
+              "text": "eyespots",
+              "col": 0
+            },
+            {
+              "text": "eyes facing forwards",
+              "col": 1
+            },
+            {
+              "text": "curved, sharp talons",
+              "col": 1
+            },
+            {
+              "text": "big jaw muscles",
+              "col": 1
+            },
+            {
+              "text": "sharp teeth to tear meat",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Squirrel and lizard",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A squirrel feeds on nuts at the top of a tree. How do its sharp claws help?",
+              "options": [
+                "They help it to climb and grip",
+                "They make it smell unpleasant"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A squirrel’s large tail helps it to…",
+              "options": [
+                "balance",
+                "startle predators with eyespots"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A lizard in a sandy desert is the same colour as its surroundings. This adaptation is called…",
+              "options": [
+                "mimicry",
+                "camouflage"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these helps a lizard to avoid being eaten by birds?",
+              "options": [
+                "Long legs that help it to run fast",
+                "Sharp curved talons to kill prey"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Adaptations are features of organisms that help them to live in a particular place.",
+            "Some adaptations help prey to avoid predation.",
+            "Some adaptations help predators to catch their prey.",
+            "An example of an adaptation which both predators and prey use is camouflage.",
+            "Camouflage helps prey to hide from predators. It also helps predators to approach prey unnoticed."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an adaptation?",
+      "back": "A feature that organisms have to help them live in a particular place."
+    },
+    {
+      "front": "What are the two main types of adaptation?",
+      "back": "Adaptations that help with feeding and adaptations that provide protection."
+    },
+    {
+      "front": "Are adaptations features that organisms choose to have?",
+      "back": "No. Organisms inherit adaptations from their parents."
+    },
+    {
+      "front": "What is camouflage?",
+      "back": "A strategy that organisms use to disguise their appearance, usually by blending in with their surroundings."
+    },
+    {
+      "front": "Why do prey often have eyes on the side of the head?",
+      "back": "It gives them a wide field of view, so they can see predators."
+    },
+    {
+      "front": "What might bright yellow, red or orange colours warn a predator?",
+      "back": "That the organism is poisonous (or tastes unpleasant)."
+    },
+    {
+      "front": "What is mimicry?",
+      "back": "Copying another organism that is poisonous, which helps to protect the mimic from predators."
+    },
+    {
+      "front": "What are the two ways eyespots help prey?",
+      "back": "They deflect predators or startle them."
+    },
+    {
+      "front": "How do spines help prey?",
+      "back": "They make it difficult for predators to eat them.\n\nExamples: hedgehog, sea urchin."
+    },
+    {
+      "front": "Why do predators often have eyes facing forwards?",
+      "back": "Eyes at the front of the head help them to judge distance really well."
+    },
+    {
+      "front": "What do sharp teeth and big jaw muscles do for an apex predator?",
+      "back": "Sharp teeth kill and tear meat. Big muscles make the jaws powerful."
+    },
+    {
+      "front": "What do talons, claws and beaks help predators to do?",
+      "back": "Catch and kill prey. Talons and claws are curved and sharp, and some beaks can stab fish."
+    },
+    {
+      "front": "Which adaptation is used by both predators and prey?",
+      "back": "Camouflage."
+    },
+    {
+      "front": "How does camouflage help a predator?",
+      "back": "It helps the predator to get closer to its prey without being noticed."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Adaptations of predators and prey",
+    "instructions": "Answer each question with a word, a short phrase or a number.",
+    "questions": [
+      {
+        "prompt": "How many main types of adaptation are there (adaptations for feeding and adaptations for protection)?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "The two main types are adaptations that help with feeding and adaptations that provide protection."
+      },
+      {
+        "prompt": "What is the name for a strategy that organisms use to blend in with their surroundings?",
+        "answer": "camouflage",
+        "explanation": "Camouflage disguises an organism’s appearance, usually by blending in with its surroundings."
+      },
+      {
+        "prompt": "Prey often have their eyes on which part of the head: the side or the front? (Answer side or front.)",
+        "answer": "side",
+        "accepted": [
+          "the side",
+          "sides"
+        ],
+        "explanation": "Eyes on the side of the head give prey a wide field of view to spot predators."
+      },
+      {
+        "prompt": "Predators often have their eyes on which part of the head: the side or the front? (Answer side or front.)",
+        "answer": "front",
+        "accepted": [
+          "the front"
+        ],
+        "explanation": "Forward-facing eyes help predators to judge distance."
+      },
+      {
+        "prompt": "What is it called when an organism copies another organism that is poisonous, to protect itself from predators?",
+        "answer": "mimicry",
+        "explanation": "Mimicry is looking like another organism that predators will avoid."
+      },
+      {
+        "prompt": "Bright yellow, red or orange colours on an animal often show that it is what? (Answer in one word.)",
+        "answer": "poisonous",
+        "accepted": [
+          "toxic"
+        ],
+        "explanation": "Many brightly coloured organisms are poisonous, so the colours warn predators."
+      },
+      {
+        "prompt": "What are the leaves of a cactus reduced to?",
+        "answer": "spines",
+        "explanation": "The spines reduce water loss and protect the plant from being eaten by consumers."
+      },
+      {
+        "prompt": "A polar bear has small ears and a small tail. What do they reduce?",
+        "answer": "heat loss",
+        "explanation": "Small ears and tail reduce heat loss in the cold Arctic."
+      },
+      {
+        "prompt": "A squirrel’s sharp claws help it to climb and to hold on tightly to the tree and the nuts. Which 4-letter word beginning with g means to hold on tightly?",
+        "answer": "grip",
+        "explanation": "Sharp claws help the squirrel to climb and grip."
+      }
+    ]
+  }
+}

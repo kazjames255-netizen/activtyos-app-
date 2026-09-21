@@ -1,0 +1,601 @@
+{
+  "agent": "w4-science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the formation of sedimentary rock and suggest information that can be obtained from its layers."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Forming sedimentary rocks",
+              "sub": "From loose sediment to solid rock"
+            },
+            {
+              "title": "Sedimentary layers",
+              "sub": "What strata can tell us"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "sediment",
+              "def": "A material deposited by water, wind or ice, such as pebbles, sand, or salts left by evaporation."
+            },
+            {
+              "term": "deposition",
+              "def": "The process of sediment grains settling out (being deposited) from water or wind as their flow slows, or as ice melts."
+            },
+            {
+              "term": "compaction",
+              "def": "A process where sediment grains become compacted (squashed closer together) during burial."
+            },
+            {
+              "term": "cementation",
+              "def": "A process by which sediment grains are cemented (stuck together) by minerals deposited from groundwater, turning the sediment into rock."
+            },
+            {
+              "term": "strata",
+              "def": "Layers of rock (several rock beds) formed by the deposition of sediment."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where sediment comes from",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Over many years, rock on Earth's surface is weathered by biological, chemical or physical processes."
+        },
+        {
+          "t": "text",
+          "text": "The weakened or broken rock can be eroded, which means transported to a new location. Wind, glaciers and rivers or streams can all do this."
+        },
+        {
+          "t": "callout",
+          "text": "Faster flowing wind or water can transport **more** and **larger** rock fragments. Slower flowing wind or water can only move **smaller, lighter** fragments."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: moving fragments",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which is more likely to carry many large rock fragments a long way?",
+              "options": [
+                "Fast flowing water",
+                "Slow flowing water"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A slow flowing stream can mainly carry...",
+              "options": [
+                "large, heavy rocks",
+                "smaller, lighter fragments"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these can move bits of rock or sand to another place?",
+              "options": [
+                "Only water",
+                "Water, wind, ice and gravity",
+                "Only wind"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Deposition: dropping sediment",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When wind or water slows down, the rock fragments it is carrying are dropped."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Wind slows",
+              "sub": "when it hits an obstruction, such as trees or mountains"
+            },
+            {
+              "title": "Water slows",
+              "sub": "when it flows across flatter land"
+            },
+            {
+              "title": "Glaciers melt",
+              "sub": "and drop the rock fragments they carried"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Material dropped like this is called {sediment}. Sediments are small grains, and they can be made of many types of material:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "sand",
+            "pebbles",
+            "mud",
+            "organic remains",
+            "salts"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The process of dropping sediments is called {deposition}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Compaction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Over time, deposition builds up layers of different sediments on top of each other."
+        },
+        {
+          "t": "text",
+          "text": "The weight of the upper layers exerts pressure on the layers below. It is a bit like being at the bottom of a rugby pile!"
+        },
+        {
+          "t": "text",
+          "text": "This increasing pressure causes the sediments to undergo {compaction}. Compaction pushes sediment grains closer together and squeezes out groundwater that may be between the grains."
+        },
+        {
+          "t": "reveal",
+          "label": "Which layer is compacted the least?",
+          "text": "The layer with the fewest layers above it. Less weight means less pressure, so lower compaction."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: compaction",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "In a stack of sediment layers, which layer feels the greatest pressure?",
+          "options": [
+            "The top layer, with nothing above it",
+            "The bottom layer, with the most layers above it",
+            "All layers feel the same pressure"
+          ],
+          "answer": 1,
+          "why": "The weight of the upper layers presses on the layers below, so the layer with the most layers above it is compacted the most."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Cementation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Water in nature always contains minerals. Minerals are crystal-like substances, such as quartz or calcite."
+        },
+        {
+          "t": "text",
+          "text": "Groundwater moving between sediment grains can deposit these minerals in the pores, which are the spaces between the grains."
+        },
+        {
+          "t": "text",
+          "text": "The increased pressure (and temperature) in a compacted layer gives the conditions for mineral crystals to form in the pores."
+        },
+        {
+          "t": "callout",
+          "text": "The mineral crystals act like {glue}, sticking the sediment grains together. This is called {cementation}. A sedimentary rock is now formed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Compaction or cementation?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Are these about compaction or about cementation?",
+          "columns": [
+            "Compaction",
+            "Cementation"
+          ],
+          "items": [
+            {
+              "text": "Caused by the pressure of the layers above",
+              "col": 0
+            },
+            {
+              "text": "Squashes the sediment grains closer together",
+              "col": 0
+            },
+            {
+              "text": "Squeezes out groundwater",
+              "col": 0
+            },
+            {
+              "text": "Mineral crystals grow in the pores",
+              "col": 1
+            },
+            {
+              "text": "Acts like a glue between the grains",
+              "col": 1
+            },
+            {
+              "text": "Minerals deposited from groundwater stick the grains together",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The journey from sediment to rock",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are many steps to making a sedimentary rock:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Weathering and erosion of existing rocks",
+            "Deposition of sediments",
+            "Compaction of sediment layers",
+            "Cementation by minerals from groundwater"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Because there are so many steps, the process takes **millions of years**. The oldest sedimentary rocks in the UK were formed from sand sediments deposited 1000 million years ago."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Different sediments, different rocks",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All sedimentary rocks form by the same processes, but different sediments form different sedimentary rocks."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Sand",
+              "sub": "forms sandstone"
+            },
+            {
+              "title": "Gravel",
+              "sub": "forms conglomerate"
+            },
+            {
+              "title": "Clay",
+              "sub": "forms shale"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Some sedimentary rocks form from the remains of living organisms:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Microscopic plankton",
+              "sub": "form chalk"
+            },
+            {
+              "title": "Larger shellfish remains",
+              "sub": "form limestone"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the sediment to its rock",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each sediment to the sedimentary rock it forms.",
+          "pairs": [
+            {
+              "a": "sand",
+              "b": "sandstone"
+            },
+            {
+              "a": "gravel",
+              "b": "conglomerate"
+            },
+            {
+              "a": "clay",
+              "b": "shale"
+            },
+            {
+              "a": "microscopic plankton",
+              "b": "chalk"
+            },
+            {
+              "a": "larger shellfish remains",
+              "b": "limestone"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Strata: reading the layers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sedimentary rocks form in layers. One layer is a {stratum}. Many layers are {strata}."
+        },
+        {
+          "t": "text",
+          "text": "Upper strata were deposited after (later than) lower strata. So the position of each stratum helps to build a **relative timeline**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Upper stratum",
+              "sub": "recent deposition, so anything found there is from the recent past"
+            },
+            {
+              "title": "Lower stratum",
+              "sub": "earlier deposition, so anything found there is from the distant past"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Clues to the past",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists study strata to gain information about the past. Objects found in each stratum help build an understanding of the organisms that lived at that time."
+        },
+        {
+          "t": "text",
+          "text": "Strata also give clues to past environments:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Cross-beds",
+              "sub": "form due to shifts in sediment deposition. They can be caused by a change in wind direction, which can be evidence of an ancient desert.",
+              "emoji": "🛏️"
+            },
+            {
+              "title": "Ripples",
+              "sub": "suggest a current was present when the sediment was deposited. This could mean an ancient river, stream or sea bed."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: strata",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "A cliff shows four layers of sedimentary rock. What are these layers called?",
+              "options": [
+                "A stratum",
+                "Strata"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "In a set of strata, which layer was deposited first?",
+              "options": [
+                "The highest layer",
+                "The lowest layer"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ripples found in strata suggest that...",
+              "options": [
+                "a current was present when the sediment was deposited",
+                "the sediment was deposited by melting ice only",
+                "the rock formed in only a few years"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these is NOT one of the steps that turns sediment into rock?",
+              "options": [
+                "Compaction",
+                "Cementation",
+                "Melting"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Formation of sedimentary rock",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Water in nature always contains minerals.",
+            "Sediments are deposited when wind or waterways slow down or when glaciers melt.",
+            "Layers of sediment form over many years, leading to compaction.",
+            "Sedimentary rock forms when sediment is buried and compressed, and minerals from groundwater cement the grains together.",
+            "Strata can be used to create a relative timeline and give clues to the environment when the sediments were deposited."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a sediment?",
+      "back": "A material deposited by water, wind or ice, such as pebbles, sand, or salts left by evaporation."
+    },
+    {
+      "front": "What is deposition?",
+      "back": "The process of sediment grains settling out from water or wind as their flow slows, or as ice melts."
+    },
+    {
+      "front": "Name three things that cause sediment to be deposited.",
+      "back": "Wind slowing down, water slowing down, and glaciers melting."
+    },
+    {
+      "front": "What is compaction?",
+      "back": "Sediment grains are squashed closer together during burial, by the pressure of the layers above."
+    },
+    {
+      "front": "What is squeezed out of the sediment during compaction?",
+      "back": "Groundwater that may be between the grains."
+    },
+    {
+      "front": "What is cementation?",
+      "back": "Sediment grains are stuck together by minerals deposited from groundwater, turning the sediment into rock."
+    },
+    {
+      "front": "How do compaction and cementation differ?",
+      "back": "Compaction is due to pressure. In cementation, mineral crystals act like glue holding the grains together."
+    },
+    {
+      "front": "Put the four steps of sedimentary rock formation in order.",
+      "back": "Weathering and erosion, deposition, compaction, cementation."
+    },
+    {
+      "front": "About how long does it take for a sedimentary rock to form?",
+      "back": "Millions of years."
+    },
+    {
+      "front": "What are strata?",
+      "back": "Layers of rock formed by the deposition of sediment.\n\nOne layer is a stratum."
+    },
+    {
+      "front": "In a set of strata, which layers are older?",
+      "back": "The deeper (lower) layers. Higher layers were deposited later."
+    },
+    {
+      "front": "What might ripples in strata suggest?",
+      "back": "A current was present when the sediment was deposited, so there might have been an ancient river, stream or sea bed."
+    },
+    {
+      "front": "What sedimentary rock does clay form?",
+      "back": "Shale.\n\nSand forms sandstone and gravel forms conglomerate."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Formation of sedimentary rock",
+    "instructions": "Answer each question with a word, a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What is the name of the process of dropping sediments?",
+        "answer": "deposition",
+        "explanation": "Deposition is the process of sediment grains settling out from water or wind as their flow slows, or as ice melts."
+      },
+      {
+        "prompt": "What is the name of the process that pushes sediment grains closer together?",
+        "answer": "compaction",
+        "explanation": "Compaction happens because of pressure from the layers above."
+      },
+      {
+        "prompt": "What is the name of the process where mineral crystals glue the grains together?",
+        "answer": "cementation",
+        "explanation": "Cementation sticks sediment grains together with minerals from groundwater."
+      },
+      {
+        "prompt": "What is the word for one single layer of sedimentary rock (the singular of 'strata')?",
+        "answer": "stratum",
+        "explanation": "One layer is a stratum and many layers are strata."
+      },
+      {
+        "prompt": "Which sedimentary rock is formed from the sediment sand?",
+        "answer": "sandstone",
+        "explanation": "Sand forms sandstone."
+      },
+      {
+        "prompt": "Which sedimentary rock is formed from the sediment clay?",
+        "answer": "shale",
+        "explanation": "Clay forms shale."
+      },
+      {
+        "prompt": "Which sedimentary rock is formed from the sediment gravel?",
+        "answer": "conglomerate",
+        "explanation": "Gravel forms conglomerate."
+      },
+      {
+        "prompt": "Chalk is formed from the remains of which tiny living things?",
+        "answer": "plankton",
+        "accepted": [
+          "microscopic plankton"
+        ],
+        "explanation": "Chalk is formed from microscopic plankton remains."
+      },
+      {
+        "prompt": "Is a sedimentary rock formed in a few years or in millions of years? Answer with the time it takes.",
+        "answer": "millions of years",
+        "accepted": [
+          "millions"
+        ],
+        "explanation": "There are many steps to making a sedimentary rock, so it takes millions of years."
+      },
+      {
+        "prompt": "In a set of strata, is the highest or the lowest layer the one deposited first?",
+        "answer": "lowest",
+        "accepted": [
+          "the lowest",
+          "lowest layer"
+        ],
+        "explanation": "Lower strata were deposited earlier, and upper strata were deposited later."
+      }
+    ]
+  }
+}

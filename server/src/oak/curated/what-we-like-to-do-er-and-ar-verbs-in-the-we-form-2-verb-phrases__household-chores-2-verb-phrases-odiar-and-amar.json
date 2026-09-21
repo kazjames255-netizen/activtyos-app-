@@ -1,0 +1,505 @@
+{
+  "agent": "spanish-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand and give opinions about doing household chores using 2-verb phrases with ‘odiar’ and ‘amar’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Discover Spanish {dishes}"
+            },
+            {
+              "title": "Understand {opinions} on chores"
+            },
+            {
+              "title": "Give {opinions} on chores"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "infinitive",
+              "def": "The form of the verb found in a dictionary. It gives the general meaning of the verb."
+            },
+            {
+              "term": "gerund",
+              "def": "The -ing form of the verb that works as a noun in a sentence."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tapas",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy practises Spanish with Alex. She talks about traditional Spanish food."
+        },
+        {
+          "t": "text",
+          "text": "**Tapas** are small traditional Spanish dishes."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "la tortilla",
+            "las croquetas",
+            "las gambas",
+            "los mejillones",
+            "el pulpo",
+            "las aceitunas"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Practising the names of tapas is a useful way to revisit {sound-spelling} correspondences."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "I love it! I hate it!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy and Alex say what they love and what they hate. Here are some ways to say it."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Amo las tapas. = I love tapas.",
+            "Odio correr. = I hate to run.",
+            "Amo cocinar. = I love to cook."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Amo** means ‘I love’. **Odio** means ‘I hate’."
+        },
+        {
+          "t": "choice",
+          "q": "What does ‘Odio’ mean?",
+          "options": [
+            "I hate",
+            "I love",
+            "I have"
+          ],
+          "answer": 0,
+          "why": "Odio comes from odiar (to hate, hating). Odio correr = I hate to run."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofía and Quique make a list of the chores that **nosotros** (we) love and hate. Ángela and Rubén have another list, for what **ellos** (they) love and hate."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{amar}",
+              "sub": "to love, loving"
+            },
+            {
+              "title": "{odiar}",
+              "sub": "to hate, hating"
+            },
+            {
+              "title": "{hacer}",
+              "sub": "to do, to make"
+            },
+            {
+              "title": "{tener}",
+              "sub": "to have, having"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Remember: ‘we’ and ‘they’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With an -ar verb, remove -ar. For ‘we’ add **-amos**. For ‘they’ add **-an**. With an -er verb, remove -er. For ‘we’ add **-emos**. For ‘they’ add **-en**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ordenamos los juguetes. = We tidy up the toys.",
+            "Lavan el suelo. = They wash the floor.",
+            "Hacemos la cama. = We make the bed.",
+            "Hacen una lista. = They make a list."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "amar and odiar: ‘we’ and ‘they’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Amar and odiar are -ar verbs. Remove -ar, then add the ending."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "am",
+              "add": "amos",
+              "result": "amamos",
+              "note": "we love"
+            },
+            {
+              "root": "am",
+              "add": "an",
+              "result": "aman",
+              "note": "they love"
+            },
+            {
+              "root": "odi",
+              "add": "amos",
+              "result": "odiamos",
+              "note": "we hate"
+            },
+            {
+              "root": "odi",
+              "add": "an",
+              "result": "odian",
+              "note": "they hate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "2-verb phrases",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To say someone **loves** or **hates** doing something, use amar or odiar in the right form. Then add the **infinitive**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Odiamos {ordenar} la ropa. = We hate tidying up the clothes.",
+            "Amamos {preparar} una fiesta. = We love preparing a party.",
+            "Odian {hacer} la cama. = They hate making the bed."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The first verb (amar or odiar) changes to show who. The second verb stays in the {infinitive}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "English: -ing or to + verb",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In English we usually use the gerund (-ing form) in 2-verb phrases: ‘They hate making the bed.’"
+        },
+        {
+          "t": "reveal",
+          "label": "Can we say it another way?",
+          "text": "Yes! Both translations are possible in English. You can use the infinitive: ‘They hate to make the bed.’ Or you can use the gerund: ‘They hate making the bed.’"
+        },
+        {
+          "t": "text",
+          "text": "After amar or odiar, the second verb in Spanish is the **infinitive**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "We or they?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the verb endings! -amos means ‘we’ and -an means ‘they’."
+        },
+        {
+          "t": "sort",
+          "q": "Is each sentence about ‘we’ or ‘they’?",
+          "columns": [
+            "we",
+            "they"
+          ],
+          "items": [
+            {
+              "text": "Aman ordenar la ropa.",
+              "col": 1
+            },
+            {
+              "text": "Odiamos hacer la cama.",
+              "col": 0
+            },
+            {
+              "text": "Amamos limpiar la cocina.",
+              "col": 0
+            },
+            {
+              "text": "Odian lavar los juguetes.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Understand the opinion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct English.",
+          "items": [
+            {
+              "q": "Odiamos lavar los juguetes.",
+              "options": [
+                "They hate washing the toys.",
+                "We hate washing the toys.",
+                "We love washing the toys."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Aman preparar la tarta.",
+              "options": [
+                "We love preparing the cake.",
+                "They hate preparing the cake.",
+                "They love preparing the cake."
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Amamos ordenar la habitación.",
+              "options": [
+                "We love tidying up the room.",
+                "They love tidying up the room.",
+                "We hate tidying up the room."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Give your opinion",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct Spanish.",
+          "items": [
+            {
+              "q": "They hate cleaning the kitchen.",
+              "options": [
+                "Odiamos limpiar la cocina.",
+                "Odian limpiar la cocina.",
+                "Odian limpian la cocina."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "We love washing the floor.",
+              "options": [
+                "Aman lavar el suelo.",
+                "Amamos lavamos el suelo.",
+                "Amamos lavar el suelo."
+              ],
+              "answer": 2
+            },
+            {
+              "q": "They love helping mum for an hour.",
+              "options": [
+                "Aman ayudar a la mamá por una hora.",
+                "Amamos ayudar a la mamá por una hora.",
+                "Aman ayudan a la mamá por una hora."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which statement is TRUE?",
+          "options": [
+            "The second verb changes to the -ing form in Spanish.",
+            "amar and odiar change to show who, and the next verb is an infinitive.",
+            "The second verb changes to show who loves or hates."
+          ],
+          "answer": 1,
+          "why": "We change amar or odiar to say who loves or hates, but the verb that follows is in the infinitive."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Tapas are small traditional Spanish dishes. Practising their names revisits sound-spelling correspondences.",
+            "‘We’ with an -ar verb: remove -ar and add **-amos**. ‘They’: remove -ar and add **-an**.",
+            "To say someone loves or hates doing something, use the right form of **amar** or **odiar** followed by an **infinitive**.",
+            "In English this can be the infinitive (to + verb) or the gerund (-ing)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are tapas?",
+      "back": "Small traditional Spanish dishes."
+    },
+    {
+      "front": "What does ‘amar’ mean?",
+      "back": "To love, loving."
+    },
+    {
+      "front": "What does ‘odiar’ mean?",
+      "back": "To hate, hating."
+    },
+    {
+      "front": "Which verb form follows amar or odiar in Spanish?",
+      "back": "The infinitive.\n\nOdian lavar el coche."
+    },
+    {
+      "front": "Say ‘we love’ and ‘they love’ with amar.",
+      "back": "we love = amamos\nthey love = aman"
+    },
+    {
+      "front": "Say ‘we hate’ and ‘they hate’ with odiar.",
+      "back": "we hate = odiamos\nthey hate = odian"
+    },
+    {
+      "front": "Which verb changes in ‘Odiamos ordenar la ropa’: odiamos or ordenar?",
+      "back": "odiamos changes to show who hates.\nordenar stays in the infinitive."
+    },
+    {
+      "front": "What does ‘Odiamos ordenar la ropa’ mean?",
+      "back": "We hate tidying up the clothes."
+    },
+    {
+      "front": "What does ‘Aman ayudar en el jardín’ mean?",
+      "back": "They love helping in the garden."
+    },
+    {
+      "front": "What do hacer and tener mean?",
+      "back": "hacer = to do, to make\ntener = to have, having"
+    },
+    {
+      "front": "Two ways to say ‘They hate making the bed’ in English?",
+      "back": "They hate making the bed. (gerund)\nThey hate to make the bed. (infinitive)"
+    },
+    {
+      "front": "What does ‘Odio’ mean?",
+      "back": "I hate.\n\nOdio correr. = I hate to run."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Household chores: 2-verb phrases ‘odiar’ and ‘amar’",
+    "instructions": "Answer each question with a short answer. Write the Spanish words in lower case.",
+    "questions": [
+      {
+        "prompt": "Write the ‘we’ form of the verb odiar (to hate).",
+        "answer": "odiamos",
+        "explanation": "Remove the -ar ending and add -amos: odi + amos."
+      },
+      {
+        "prompt": "Write the ‘they’ form of the verb amar (to love).",
+        "answer": "aman",
+        "explanation": "Remove the -ar ending and add -an: am + an."
+      },
+      {
+        "prompt": "Is ‘Odian hacer la comida’ about ‘we’ or ‘they’? Answer with one word.",
+        "answer": "they",
+        "explanation": "The ending -an means ‘they’."
+      },
+      {
+        "prompt": "Is ‘Amamos hacer una tarta’ about ‘we’ or ‘they’? Answer with one word.",
+        "answer": "we",
+        "explanation": "The ending -amos means ‘we’."
+      },
+      {
+        "prompt": "Write in English: ‘Amamos preparar una fiesta’.",
+        "answer": "we love preparing a party",
+        "accepted": [
+          "we love to prepare a party"
+        ],
+        "explanation": "Amamos means ‘we love’ and preparar means ‘to prepare’. Both English forms are possible."
+      },
+      {
+        "prompt": "Write in English: ‘Odian hacer la cama’.",
+        "answer": "they hate making the bed",
+        "accepted": [
+          "they hate to make the bed"
+        ],
+        "explanation": "Odian means ‘they hate’ and hacer la cama means ‘make the bed’."
+      },
+      {
+        "prompt": "Complete in Spanish with the infinitive of lavar: ‘Amamos ___ el suelo.’ (We love washing the floor.)",
+        "answer": "lavar",
+        "explanation": "After amar we always use the infinitive."
+      },
+      {
+        "prompt": "Write in Spanish: ‘they hate cleaning the kitchen’.",
+        "answer": "odian limpiar la cocina",
+        "accepted": [
+          "ellos odian limpiar la cocina"
+        ],
+        "explanation": "Use the ‘they’ form odian, then the infinitive limpiar."
+      },
+      {
+        "prompt": "In the phrase ‘Odiamos ordenar la ropa’, which verb is the infinitive?",
+        "answer": "ordenar",
+        "explanation": "Ordenar is the infinitive. Odiamos is odiar changed to mean ‘we hate’."
+      },
+      {
+        "prompt": "What does ‘odio’ mean in English? Answer with two words.",
+        "answer": "i hate",
+        "explanation": "Odio is the ‘I’ form of odiar (to hate), as in ‘Odio correr’ = I hate to run."
+      }
+    ]
+  }
+}

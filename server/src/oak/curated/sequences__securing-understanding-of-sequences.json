@@ -1,0 +1,508 @@
+{
+  "agent": "w4-maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can begin to generalise a sequence."
+        },
+        {
+          "t": "text",
+          "text": "Given a few numbers, you can carry a sequence on by using a rule. Rules can be shown with diagrams and described in words."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Continuing sequences from a {rule}"
+            },
+            {
+              "title": "{Representations} of sequences"
+            },
+            {
+              "title": "Describing a rule in {words}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Sequence",
+              "def": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Many rules, one start",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha starts a sequence: 2, 4, … What could come next? Different rules give different sequences."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Double each time: 2, 4, 8, 16, 32, …",
+            "Add 2 each time: 2, 4, 6, 8, 10, …",
+            "Add 2, then add 3, then add 4, …: 2, 4, 7, 11, 16, …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There is no single answer. Two numbers can be continued in many different ways, and each of them makes a sequence."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Continuing from a rule",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Start on −8. Here are three different rules and the sequences they make."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Add 10: −8, 2, 12, 22, 32, …",
+            "Multiply by 10: −8, −80, −800, −8000, −80000, …",
+            "Multiply by −0.5: −8, 4, −2, 1, −0.5, …"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A rule such as “add 10” or “multiply by 10” tells you how to get every next number from the one before."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "From two numbers to a rule",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You are given −2, 10, … Continue it in two ways."
+        },
+        {
+          "t": "text",
+          "text": "Constant additive: find the difference first. 10 − (−2) = 12, so add 12 each time."
+        },
+        {
+          "t": "lead",
+          "text": "−2, 10, 22, 34, 46, …"
+        },
+        {
+          "t": "text",
+          "text": "Constant multiplicative: find the multiplier first. 10 ÷ (−2) = −5, so multiply by −5 each time."
+        },
+        {
+          "t": "lead",
+          "text": "−2, 10, −50, 250, −1250, …"
+        },
+        {
+          "t": "callout",
+          "text": "Notice that a negative multiplier makes the numbers switch between negative and positive."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sequences with fractions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Start with 1/10, 2/5, … A common denominator can help. Write 2/5 as 4/10."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Additive: 4/10 − 1/10 = 3/10, so add 3/10 each time: 1/10, 4/10, 7/10, 10/10 (which is 1), …",
+            "Multiplicative: 2/5 ÷ 1/10 = 4/10 ÷ 1/10 = 4, so multiply by 4 each time: 1/10, 2/5, 8/5, 32/5, …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can leave your answers as fractions or decimals. Pick whichever makes most sense."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Continue −6, 12",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A sequence starts −6, 12, … Work out the difference or the multiplier, then choose."
+        },
+        {
+          "t": "choice",
+          "q": "Which two numbers come next if the sequence has a constant additive pattern?",
+          "options": [
+            "24, 36",
+            "30, 48",
+            "−24, 48",
+            "6, 24"
+          ],
+          "answer": 1,
+          "why": "12 − (−6) = 18, so add 18: 12 + 18 = 30 and 30 + 18 = 48."
+        },
+        {
+          "t": "choice",
+          "q": "Which two numbers come next if the sequence has a constant multiplicative pattern?",
+          "options": [
+            "30, 48",
+            "−24, 48",
+            "−12, 12",
+            "24, 48"
+          ],
+          "answer": 1,
+          "why": "12 ÷ (−6) = −2, so multiply by −2: 12 × (−2) = −24 and −24 × (−2) = 48."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Describe it in words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Say where the sequence starts AND what the rule is. Then anybody reading your description can write the same sequence."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Start on 1 then add 2 each time: 1, 3, 5, 7, 9, …",
+            "Start on 1 then multiply by 3 each time: 1, 3, 9, 27, 81, …",
+            "Start on 25 then multiply by 2/5 each time: 25, 10, 4, 1.6, 0.64, …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Lots of different sequences add 2 each time, so it matters to say what you start on."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which description fits?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the description that makes each sequence.",
+          "items": [
+            {
+              "options": [
+                "Start on 5 then multiply by 0.5 each time",
+                "Start on 5 then subtract 2.5 each time"
+              ],
+              "answer": 0,
+              "q": "5, 2.5, 1.25, …"
+            },
+            {
+              "options": [
+                "Start on 7 then multiply by 3 each time",
+                "Start on 7 then add −3 each time"
+              ],
+              "answer": 1,
+              "q": "7, 4, 1, −2, …"
+            },
+            {
+              "options": [
+                "Start on 9 then multiply by −2 each time",
+                "Start on 9 then add −27 each time"
+              ],
+              "answer": 0,
+              "q": "9, −18, 36, …"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Rules in diagrams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A rule can be shown with a diagram. Imagine building towers from rods. Each tower is one value in the sequence: the first tower is the first value, the second tower is the second value, and so on."
+        },
+        {
+          "t": "list",
+          "items": [
+            "If one more small rod is added each time, that is a constant additive pattern: the same value is added each time.",
+            "If a longer rod is added each time instead, that sequence adds a different value.",
+            "Two sequences with the same rule are not the same sequence if they start on a different value.",
+            "Two sequences are the same when they are made of the same values in the same order."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Diagrams can help you see how a pattern is developing."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Putting two sequences together",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Add two sequences together term by term: first with first, second with second, and so on."
+        },
+        {
+          "t": "list",
+          "items": [
+            "P goes up by 3 each time: 2, 5, 8, 11",
+            "Q goes down by 2 each time: 10, 8, 6, 4",
+            "P + Q: 12, 13, 14, 15. The total goes up by 3 − 2 = 1 each time."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "An increase of 3 and a decrease of 2 together make an overall increase of 1 each time."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Combine and check",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "R goes up by 5 each time. S goes down by 2 each time. R and S are added together term by term."
+        },
+        {
+          "t": "choice",
+          "q": "How does the total change from one term to the next?",
+          "options": [
+            "It increases by 7",
+            "It increases by 3",
+            "It decreases by 3",
+            "It increases by 10"
+          ],
+          "answer": 1,
+          "why": "+5 and −2 together make 5 − 2 = 3, an increase of 3 each time."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A repeating counter pattern",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura and Andeep make a repeating pattern from counters. One section is: triangle, oval, oval, oval, square. Then the section repeats. Every counter is numbered 1, 2, 3, …"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Every multiple of 5 is a square: counters 5, 10, 15, 20, 25, …",
+            "So counter 25 is a square.",
+            "Counters 144, 145 and 146: 145 is a multiple of 5, so it is a square. That makes 144 an oval and 146 a triangle."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Spotting where the pattern repeats helps you work out any counter without drawing them all."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which counter?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Same pattern: triangle, oval, oval, oval, square, then repeat. Think about the multiples of 5."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "options": [
+                "triangle",
+                "oval",
+                "square"
+              ],
+              "answer": 2,
+              "q": "What shape is counter 60?"
+            },
+            {
+              "options": [
+                "triangle",
+                "oval",
+                "square"
+              ],
+              "answer": 1,
+              "q": "What shape is counter 73?"
+            },
+            {
+              "options": [
+                "triangle",
+                "oval",
+                "square"
+              ],
+              "answer": 0,
+              "q": "What shape is counter 101?"
+            },
+            {
+              "options": [
+                "20",
+                "40",
+                "50",
+                "200"
+              ],
+              "answer": 1,
+              "q": "How many squares are there among counters 1 to 200?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Securing understanding of sequences",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If we know a rule for a sequence, we can continue it from a starting value.",
+            "There can be more than one rule linking two successive numbers in a sequence.",
+            "To continue with a constant additive rule, find the difference. For a constant multiplicative rule, find the multiplier.",
+            "It is possible to describe a sequence in words if we know enough values: say where it starts and what the rule is.",
+            "Rules can be demonstrated with diagrams. This can help us see how a pattern is developing."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a sequence?",
+      "back": "A sequence is a succession of objects, diagrams or values usually formed according to a rule."
+    },
+    {
+      "front": "If we know a rule for a sequence, what else do we need to continue it?",
+      "back": "A starting value.\n\nStart on −8 and add 10: −8, 2, 12, 22, …"
+    },
+    {
+      "front": "Can two numbers such as 2, 4, … be continued in only one way?",
+      "back": "No. There can be more than one rule linking two successive numbers.\n\nDouble: 2, 4, 8, 16. Add 2: 2, 4, 6, 8."
+    },
+    {
+      "front": "What is the rule for the sequence 2, 4, 7, 11, 16, …?",
+      "back": "Add 2, then add 3, then add 4, then add 5, …"
+    },
+    {
+      "front": "How do you continue −2, 10, … with a constant additive pattern?",
+      "back": "Find the difference: 10 − (−2) = 12. Then add 12 each time.\n\n−2, 10, 22, 34, 46, …"
+    },
+    {
+      "front": "How do you continue −2, 10, … with a constant multiplicative pattern?",
+      "back": "Find the multiplier: 10 ÷ (−2) = −5. Then multiply by −5 each time.\n\n−2, 10, −50, 250, −1250, …"
+    },
+    {
+      "front": "What happens to the numbers when the multiplier is negative?",
+      "back": "They switch between positive and negative."
+    },
+    {
+      "front": "How can a common denominator help with a fraction sequence?",
+      "back": "It makes the difference or multiplier easier to see.\n\n2/5 = 4/10, so 1/10, 4/10 adds 3/10 each time."
+    },
+    {
+      "front": "Why should a description of a sequence say where it starts?",
+      "back": "Lots of different sequences use the same rule. Saying the start and the rule lets anyone write the same sequence.\n\nStart on 1 then add 2 each time."
+    },
+    {
+      "front": "When are two sequences the same sequence?",
+      "back": "When they are made of the same values in the same order (same start and same rule)."
+    },
+    {
+      "front": "A sequence adds 5 each time and another subtracts 2 each time. Add them term by term: how does the total change?",
+      "back": "It increases by 3 each time (5 − 2 = 3)."
+    },
+    {
+      "front": "In a repeating pattern of 5 counters, what can you say about every multiple of 5?",
+      "back": "They are all the same shape: the last counter of each section.\n\nTriangle, oval, oval, oval, square: counters 5, 10, 15, … are squares."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Securing understanding of sequences",
+    "instructions": "Continue each sequence using the rule named in the question: find the difference (for additive) or the multiplier (for multiplicative) first. Type a minus sign as - and write decimals with a decimal point.",
+    "questions": [
+      {
+        "prompt": "A sequence starts 1, 3, … and has a constant additive pattern. What is the 5th number?",
+        "answer": "9",
+        "explanation": "The difference is 3 − 1 = 2, so the numbers are 1, 3, 5, 7, 9."
+      },
+      {
+        "prompt": "A sequence starts 1, 3, … and has a constant multiplicative pattern. What is the 5th number?",
+        "answer": "81",
+        "explanation": "The multiplier is 3 ÷ 1 = 3, so the numbers are 1, 3, 9, 27, 81."
+      },
+      {
+        "prompt": "A sequence starts 0.1, 1, … and has a constant additive pattern. What is the 5th number?",
+        "answer": "3.7",
+        "explanation": "The difference is 1 − 0.1 = 0.9, so the numbers are 0.1, 1, 1.9, 2.8, 3.7."
+      },
+      {
+        "prompt": "A sequence starts 0.1, 1, … and has a constant multiplicative pattern. What is the 5th number?",
+        "answer": "1000",
+        "explanation": "The multiplier is 1 ÷ 0.1 = 10, so the numbers are 0.1, 1, 10, 100, 1000."
+      },
+      {
+        "prompt": "A sequence starts −16, 8, … and has a constant additive pattern. What is the 3rd number?",
+        "answer": "32",
+        "explanation": "The difference is 8 − (−16) = 24, and 8 + 24 = 32."
+      },
+      {
+        "prompt": "A sequence starts −16, 8, … and has a constant multiplicative pattern. What is the 3rd number?",
+        "answer": "-4",
+        "explanation": "The multiplier is 8 ÷ (−16) = −1/2, and 8 × (−1/2) = −4.",
+        "accepted": [
+          "−4"
+        ]
+      },
+      {
+        "prompt": "A sequence starts 25, 10, … and has a constant multiplicative pattern. What is the 4th number? Give a decimal.",
+        "answer": "1.6",
+        "explanation": "The multiplier is 10 ÷ 25 = 2/5. Then 10 × 2/5 = 4 and 4 × 2/5 = 1.6."
+      },
+      {
+        "prompt": "A sequence starts −2, 10, … and has a constant multiplicative pattern. What is the 5th number?",
+        "answer": "-1250",
+        "explanation": "The multiplier is 10 ÷ (−2) = −5, giving −2, 10, −50, 250, −1250.",
+        "accepted": [
+          "−1250"
+        ]
+      },
+      {
+        "prompt": "In a repeating pattern the section is triangle, oval, oval, oval, square, and counters are numbered from 1. What shape is counter 85?",
+        "answer": "square",
+        "explanation": "85 is a multiple of 5, so it is the last counter of a section: a square."
+      },
+      {
+        "prompt": "The counter pattern triangle, oval, oval, oval, square repeats and the counters are numbered from 1. How many ovals are there among counters 1 to 200?",
+        "answer": "120",
+        "explanation": "There are 200 ÷ 5 = 40 sections, each with 3 ovals: 40 × 3 = 120."
+      }
+    ]
+  }
+}

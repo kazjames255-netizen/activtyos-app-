@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/tasks/taskDisplay";
@@ -31,7 +32,7 @@ const KIND_ORDER: Kind[] = ["person", "business", "group", "franchise", "school"
 // `direction` only applies to a real email exchange (the question/reply
 // thread — see LeadModal): "in" is the lead's own words, "out" is HQ's.
 // Absent on every other activity type (a logged call, a note, …).
-interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string; direction?: "in" | "out"; shared?: boolean }
+export interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string; direction?: "in" | "out"; shared?: boolean }
 interface SalesTask {
   id: string; t: string; due?: string | null; time?: string | null; who?: string;
   // The assignee's email and the repeat this date belongs to. Both were missing,
@@ -129,7 +130,7 @@ type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
  * guard would have to be remembered every time someone touches this file, and
  * the next omission is another white screen on the page you use to sell.
  */
-const BIZ_TYPE_LABEL: Record<string, string> = {
+export const BIZ_TYPE_LABEL: Record<string, string> = {
   holiday: "Holiday camps & clubs", wraparound: "Breakfast & after-school", activity: "Sports & activity classes",
   tuition: "Tuition & learning", preschool: "Pre-school / playgroup", nursery: "Nursery / day care",
   childminder: "Childminder", school: "School / MAT", other: "Other childcare",
@@ -370,6 +371,7 @@ export function SalesApp() {
 // stage now gets the full page width as its own tab; the "Move to" dropdown
 // (already added for non-drag devices) is the only way to change stage now.
 function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; onBookDemo: (id: string, slotAt: string) => void }) {
+  const router = useRouter();
   const [stage, setStage] = useState<Stage>("new");
   const items = leads.filter((l) => l.stage === stage);
   const sum = items.reduce((a, b) => a + b.estMrr, 0);
@@ -414,10 +416,10 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
             )}
             {l.slotAt && (
               l.videoRoom ? (
-                <a href={`https://meet.jit.si/${l.videoRoom}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                <button type="button" onClick={(e) => { e.stopPropagation(); router.push(`/platform/call/${l.id}`); }}
                   className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#dde8fb]">
-                  📹 Video call · {slotFmt.format(new Date(l.slotAt))} ↗
-                </a>
+                  📹 Video call · {slotFmt.format(new Date(l.slotAt))}
+                </button>
               ) : (
                 <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
                   📹 Video call · {slotFmt.format(new Date(l.slotAt))}
@@ -656,6 +658,7 @@ function Dashboard({ leads }: { leads: Lead[] }) {
 
 // ── Lead modal (add / edit / activity) ──────────────────────────────────────
 function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead, newActs: NewActivity[]) => void; onDelete?: () => void; onAnswerQuestion: (id: string, answer: string) => Promise<void> }) {
+  const router = useRouter();
   const [f, setF] = useState<Lead>(() => lead ?? {
     id: "", business: "", kind: "business", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
   });
@@ -702,7 +705,6 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
       setNoteBusy(false);
     }
   };
-  const [videoOpen, setVideoOpen] = useState(false);
   // Touches logged here are sent on Save (POST …/activities — the server
   // stamps at/by); shown in the list immediately with a local placeholder.
   const [pending, setPending] = useState<NewActivity[]>([]);
@@ -760,19 +762,13 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           <div className="border-b border-[var(--line)] bg-[#eef4fd] p-5">
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📹 Video call{f.slotAt ? ` · ${slotFmt.format(new Date(f.slotAt))}` : ""}</span>
-              <button type="button" onClick={() => setVideoOpen((v) => !v)} className="ml-auto rounded-lg border border-[#dbe6fb] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
-                {videoOpen ? "Hide call" : "Join call here"}
+              {/* A real portal page (/platform/call/<id>), not a modal iframe
+                  or an external tab — the call, and a place to take notes on
+                  it, live inside the app the same as everything else. */}
+              <button type="button" onClick={() => { onClose(); router.push(`/platform/call/${f.id}`); }} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-bold text-white hover:brightness-110">
+                Join call →
               </button>
-              <a href={`https://meet.jit.si/${f.videoRoom}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-[#dbe6fb] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">Open in new tab ↗</a>
             </div>
-            {videoOpen && (
-              <iframe
-                src={`https://meet.jit.si/${f.videoRoom}#config.prejoinPageEnabled=true`}
-                allow="camera; microphone; fullscreen; display-capture; autoplay"
-                className="mt-3 w-full rounded-xl border border-[var(--line)]"
-                style={{ height: 480 }}
-              />
-            )}
           </div>
         )}
         <div className="border-b border-[var(--line)] bg-[var(--panel)] p-5">

@@ -1,0 +1,600 @@
+{
+  "agent": "english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify and analyse layout and linguistic features of a diary entry."
+        },
+        {
+          "t": "text",
+          "text": "Before we write a diary entry as the girl in ‘The Journey’, we need to know what a good diary entry contains."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Purpose and layout of a diary entry"
+            },
+            {
+              "title": "Linguistic features of a diary entry"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "purpose",
+              "def": "The aim of the text, the reason it was written."
+            },
+            {
+              "term": "recount",
+              "def": "A piece of writing that recalls an event or experience."
+            },
+            {
+              "term": "layout",
+              "def": "The way a text is structured."
+            },
+            {
+              "term": "linguistic features",
+              "def": "A structure of language that uses words."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a diary entry?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A diary is a personal book that a person writes in. Each time they write in it, that is called a **diary entry**."
+        },
+        {
+          "t": "callout",
+          "text": "The {purpose} of a diary entry is to **recount** important experiences and **express feelings**."
+        },
+        {
+          "t": "text",
+          "text": "A diary is just for the writer to read. It is personal and private to them."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the purpose",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Sam writes in her diary about her first day at a new school and how nervous she felt. What is she doing?",
+          "options": [
+            "Telling a made-up story",
+            "Recounting an important experience and expressing her feelings",
+            "Telling other people about her life"
+          ],
+          "answer": 1,
+          "why": "A diary entry recounts important personal experiences and expresses feelings. It is private, so it is not for telling other people about your life or for a made-up story."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Our diary entry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You will write a diary entry from the perspective of the girl in ‘The Journey’. It will recount what happened on the journey and express how she feels now, on a train close to safety."
+        },
+        {
+          "t": "text",
+          "text": "In the model entry, the girl is called Leia. The book does not name her, so you can use Leia or choose your own name."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Friday 5th March 2024",
+            "Dear Diary,",
+            "I am writing this from a train …",
+            "Goodnight, Leia"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The layout of a diary entry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Layout** means the way the writing is organised on the page. A diary entry has four layout features."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Date",
+              "sub": "written at the top on the left. It records when the entry was written"
+            },
+            {
+              "title": "Greeting",
+              "sub": "always ‘Dear Diary’ with a comma after"
+            },
+            {
+              "title": "Paragraphs",
+              "sub": "organise the recount in chronological order"
+            },
+            {
+              "title": "Sign-off",
+              "sub": "ends the entry. It is personal and can vary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does each part do?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each layout feature to its job.",
+          "pairs": [
+            {
+              "a": "date",
+              "b": "records when the entry was written"
+            },
+            {
+              "a": "greeting",
+              "b": "‘Dear Diary,’ with a comma after"
+            },
+            {
+              "a": "paragraphs",
+              "b": "organise the recount in chronological order"
+            },
+            {
+              "a": "sign-off",
+              "b": "ends the entry, and is personal to the writer"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What comes where?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer about a diary entry.",
+          "items": [
+            {
+              "q": "What is at the very top, on the left?",
+              "options": [
+                "the sign-off",
+                "the date",
+                "the paragraphs"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What comes straight after the date?",
+              "options": [
+                "the greeting, ‘Dear Diary,’",
+                "the sign-off",
+                "a title and a summary"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What comes last?",
+              "options": [
+                "the date",
+                "the greeting",
+                "the sign-off"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Linguistic features",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Diary entries have special {linguistic features} to achieve their purpose. There are four to look for."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "First person and informal language",
+              "sub": "a personal piece of writing about yourself"
+            },
+            {
+              "title": "Past tense",
+              "sub": "to recount experiences and events"
+            },
+            {
+              "title": "Fronted adverbials of time",
+              "sub": "to sequence events in time order"
+            },
+            {
+              "title": "Present tense",
+              "sub": "to express current feelings"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "First person and informal language",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A diary entry is written in the **first person**, using the pronoun {I}. The language is **informal** because the writing is personal and private."
+        },
+        {
+          "t": "text",
+          "text": "Here are ways informal language appears in the model entry:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Contractions: ‘I can’t believe how far we have travelled!’",
+            "CAPITAL LETTERS for emphasis: ‘we have FINALLY sat down!’",
+            "Exaggeration: ‘Home must be hundreds or maybe even thousands of miles away.’",
+            "Casual words: ‘how crazy the journey was going to be’"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Diary style or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is the sentence in diary style, or not?",
+          "columns": [
+            "Diary style (first person, informal)",
+            "Not diary style (third person, formal)"
+          ],
+          "items": [
+            {
+              "text": "I am SO happy to be on a seat!",
+              "col": 0
+            },
+            {
+              "text": "She was pleased to be seated.",
+              "col": 1
+            },
+            {
+              "text": "I can’t believe how far we have travelled!",
+              "col": 0
+            },
+            {
+              "text": "The family had travelled a great distance.",
+              "col": 1
+            },
+            {
+              "text": "My legs were wobbling like jelly.",
+              "col": 0
+            },
+            {
+              "text": "Her legs were unsteady.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Past tense for the recount",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A recount is about something that has already happened, so we use **past tense**. Diary entries use simple past and progressive past."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Simple past",
+              "sub": "Every day, I wanted to rest"
+            },
+            {
+              "title": "Progressive past",
+              "sub": "My heart was pounding"
+            }
+          ]
+        },
+        {
+          "t": "chips",
+          "items": [
+            "we left",
+            "we ran away",
+            "I had no idea",
+            "my legs were wobbling"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Fronted adverbials of time",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A fronted adverbial of time goes at the **front** of a sentence and tells us **when** something happened. It helps to put the events in chronological order."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Every day,",
+            "Yesterday,",
+            "Then,"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "See it in the model entry",
+          "text": "**Then,** we spent a few nights on a ferry. **Yesterday,** I drew a picture in the dirt with a stick. Notice the comma after each one."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the time words",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which of these is a fronted adverbial of time?",
+              "options": [
+                "Yesterday,",
+                "Dear Diary,",
+                "Mama said"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which of these is a fronted adverbial of time?",
+              "options": [
+                "hundreds of miles",
+                "Then,",
+                "wobbling like jelly"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Why are fronted adverbials of time useful in a diary?",
+              "options": [
+                "They help sequence the events in time order",
+                "They show that the writing is formal",
+                "They tell us the writer’s name"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Present tense for feelings now",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Towards the end of a diary entry, the writer often shifts from past to **present tense** to show how they feel **now**."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "I can’t believe …",
+            "I am writing this …",
+            "my legs ache …",
+            "I miss my friends."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A diary entry is not all in past tense. It uses past tense to recount events and present tense to express how the writer is feeling now."
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence shows how the writer feels right now?",
+          "options": [
+            "My heart was pounding.",
+            "I miss my friends.",
+            "We ran away from a security guard."
+          ],
+          "answer": 1,
+          "why": "‘I miss my friends’ is in the present tense and shows a current feeling. The other two sentences recount past events."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Analysing the features of diary entries",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The purpose of a diary entry is to recount important personal experiences and to express feelings.",
+            "Layout: date, greeting (‘Dear Diary,’), paragraphs and a sign-off.",
+            "A diary entry is written in the first person and uses informal language.",
+            "Simple past and progressive past tenses recount what the writer experienced and felt.",
+            "Fronted adverbials of time sequence events in chronological order.",
+            "Present tense is used at points to show how the writer is feeling now."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the purpose of a diary entry?",
+      "back": "To recount important personal experiences and to express feelings."
+    },
+    {
+      "front": "Who is a diary written for?",
+      "back": "Only the writer. It is personal and private."
+    },
+    {
+      "front": "What does layout mean?",
+      "back": "The way a text is structured."
+    },
+    {
+      "front": "What is a recount?",
+      "back": "A piece of writing that recalls an event or experience."
+    },
+    {
+      "front": "Put the layout features of a diary entry in order.",
+      "back": "Date, greeting (‘Dear Diary,’), paragraphs to organise the recount, sign-off."
+    },
+    {
+      "front": "What is the greeting in a diary entry?",
+      "back": "‘Dear Diary,’ (with a comma after it)."
+    },
+    {
+      "front": "What do paragraphs do in a diary entry?",
+      "back": "They organise the recount in chronological order."
+    },
+    {
+      "front": "Which person is a diary entry written in?",
+      "back": "First person, using the pronoun ‘I’."
+    },
+    {
+      "front": "Why is the language in a diary entry informal?",
+      "back": "Because the writing is personal and private.\n\nExample: I can’t believe how far we have travelled!"
+    },
+    {
+      "front": "Which tense recounts what the writer experienced?",
+      "back": "Past tense (simple past and progressive past).\n\nExample: I wanted to rest. My heart was pounding."
+    },
+    {
+      "front": "What do fronted adverbials of time do?",
+      "back": "They sequence events in a recount in chronological order.\n\nExamples: Every day, Yesterday, Then,"
+    },
+    {
+      "front": "When does a diary entry shift into present tense?",
+      "back": "When the writer expresses how they are feeling now.\n\nExample: I miss my friends."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Analysing the features of diary entries",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "What is written at the very top of a diary entry, on the left side?",
+        "answer": "the date",
+        "accepted": [
+          "date",
+          "a date"
+        ],
+        "explanation": "The date is written at the top on the left and records when the entry was written."
+      },
+      {
+        "prompt": "What is the greeting at the start of a diary entry? (Write the two words.)",
+        "answer": "Dear Diary",
+        "accepted": [
+          "dear diary",
+          "Dear Diary,",
+          "dear diary,"
+        ],
+        "explanation": "The greeting is always ‘Dear Diary’ followed by a comma."
+      },
+      {
+        "prompt": "Which punctuation mark comes straight after ‘Dear Diary’?",
+        "answer": "comma",
+        "accepted": [
+          "a comma",
+          ","
+        ],
+        "explanation": "The greeting ‘Dear Diary,’ has a comma after it."
+      },
+      {
+        "prompt": "Which part of a diary entry comes last?",
+        "answer": "the sign-off",
+        "accepted": [
+          "sign-off",
+          "sign off",
+          "the sign off",
+          "signoff"
+        ],
+        "explanation": "A sign-off ends the diary entry."
+      },
+      {
+        "prompt": "What is the word for a piece of writing that recalls an event or experience?",
+        "answer": "recount",
+        "accepted": [
+          "a recount"
+        ],
+        "explanation": "A recount is a piece of writing that recalls an event or experience."
+      },
+      {
+        "prompt": "A diary entry uses the pronoun ‘I’. Which person is it written in: first, second or third?",
+        "answer": "first person",
+        "accepted": [
+          "first",
+          "1st person",
+          "first-person"
+        ],
+        "explanation": "A diary entry is written in the first person using the pronoun ‘I’."
+      },
+      {
+        "prompt": "Which tense does the writer use to recount what happened in a diary entry?",
+        "answer": "past tense",
+        "accepted": [
+          "past",
+          "the past tense"
+        ],
+        "explanation": "A recount is about something that has already happened, so it uses past tense."
+      },
+      {
+        "prompt": "Which kind of phrase, such as ‘Yesterday,’ or ‘Then,’ at the start of a sentence, helps put events in time order?",
+        "answer": "fronted adverbial of time",
+        "accepted": [
+          "fronted adverbial",
+          "fronted adverbials",
+          "fronted adverbials of time",
+          "adverbial of time",
+          "time adverbial"
+        ],
+        "explanation": "Fronted adverbials of time sequence events chronologically."
+      },
+      {
+        "prompt": "Which tense shows how the writer is feeling now, such as ‘I miss my friends’?",
+        "answer": "present tense",
+        "accepted": [
+          "present",
+          "the present tense"
+        ],
+        "explanation": "A diary entry shifts into present tense to express how the writer is currently feeling."
+      }
+    ]
+  }
+}

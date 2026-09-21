@@ -1,0 +1,561 @@
+{
+  "agent": "w4-maths-ks4a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can appreciate that a function is a mathematical relationship that uniquely maps a set of numbers onto another set of numbers."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Function vocabulary",
+              "sub": "function, domain, range"
+            },
+            {
+              "title": "Identifying functions",
+              "sub": "what is, and is not, a function"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "function",
+              "def": "A function is a mathematical relationship that uniquely maps values of one set to the values of another set."
+            },
+            {
+              "term": "domain",
+              "def": "The domain of a function is the set of values that the mapping is performed on."
+            },
+            {
+              "term": "range",
+              "def": "The range of a function is the set of values mapped to by the function and the stated domain."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A function has inputs and outputs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A function takes an input and performs a series of operations, leading to an output. For any valid input, there is an output."
+        },
+        {
+          "t": "text",
+          "text": "The function ×2 maps the inputs 0 to 5 onto the outputs 0, 2, 4, 6, 8, 10."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "0 → 0",
+            "1 → 2",
+            "2 → 4",
+            "3 → 6",
+            "4 → 8",
+            "5 → 10"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What does “uniquely maps” mean?",
+          "text": "The function ×2 uniquely maps 1 to 2 and to no other value. Each input goes to its own output."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Domain and range on a graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If x goes through the function ×2, the output is 2x. This is the graph of the function 2x (the graph of y = 2x)."
+        },
+        {
+          "t": "callout",
+          "text": "When graphing functions we call the x values the {domain} and the y values the {range}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The domain is on the horizontal axis.",
+            "The range is on the vertical axis.",
+            "Our domain is mapped onto our range."
+          ]
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "x",
+              "add": "×3, then −1",
+              "result": "3x − 1",
+              "note": "The graph of this function is called the graph of the function 3x − 1."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which axis?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "On the graph of a function, which axis shows the range?",
+          "options": [
+            "The horizontal axis",
+            "The vertical axis"
+          ],
+          "answer": 1,
+          "why": "The domain is the horizontal axis and the range is the vertical axis."
+        },
+        {
+          "t": "choice",
+          "q": "Which word describes the set of inputs to a function?",
+          "options": [
+            "Range",
+            "Domain",
+            "Output"
+          ],
+          "answer": 1,
+          "why": "The set of inputs is called the domain."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding the range of x²",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia graphs the function x². She says: “You can square negative numbers, so the range includes −3, −2 and −1.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Is Sofia right?",
+          "text": "Watch out! She had the labels the wrong way round. −3, −2 and −1 are in the **domain** of x² but not in the range. The function x² has no values below zero, so its range is greater than or equal to zero."
+        },
+        {
+          "t": "text",
+          "text": "Now the function 1 − x². For example, 2 maps to 1 − 2² = −3 and 3 maps to 1 − 3² = −8."
+        },
+        {
+          "t": "reveal",
+          "label": "What is the range of 1 − x²?",
+          "text": "You will not find any output above 1, so the range is less than or equal to 1."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "In the domain only, or in both?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The function is x² + 2. You can square any number, so every number is a valid input (it is in the domain). Its outputs are never below 2."
+        },
+        {
+          "t": "sort",
+          "q": "Is each value in the domain only, or in both the domain and the range of x² + 2?",
+          "columns": [
+            "In the domain only",
+            "In both the domain and the range"
+          ],
+          "items": [
+            {
+              "text": "−4",
+              "col": 0
+            },
+            {
+              "text": "0",
+              "col": 0
+            },
+            {
+              "text": "1",
+              "col": 0
+            },
+            {
+              "text": "2",
+              "col": 1
+            },
+            {
+              "text": "6",
+              "col": 1
+            },
+            {
+              "text": "11",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Check some",
+          "text": "x = 0 gives 0² + 2 = 2, x = 2 gives 2² + 2 = 6 and x = 3 gives 3² + 2 = 11, so 2, 6 and 11 are outputs. Nothing below 2 can be an output."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Restricting the domain",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To be a function, every value in the domain must be able to be mapped to a value in the range."
+        },
+        {
+          "t": "text",
+          "text": "The function 1/x is not valid as it stands: x = 0 is not a valid input, because dividing by 0 is undefined."
+        },
+        {
+          "t": "callout",
+          "text": "We make it a valid function by {restricting the domain}: “x can be any value except 0”. A restriction on the domain defines the invalid inputs."
+        },
+        {
+          "t": "text",
+          "text": "Some functions are already valid for every x. For example, 3 − 2x has no x value we cannot input."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the invalid input",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which restriction makes each function valid?",
+          "items": [
+            {
+              "q": "10/(x − 3)",
+              "options": [
+                "x can be any value except −3",
+                "x can be any value except 3",
+                "No restriction is needed"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "4/(x + 6)",
+              "options": [
+                "x can be any value except 6",
+                "No restriction is needed",
+                "x can be any value except −6"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "5 − 3x",
+              "options": [
+                "No restriction is needed",
+                "x can be any value except 0",
+                "x can be any value except 5"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "7/(3x)",
+              "options": [
+                "x can be any value except 0",
+                "x can be any value except 3",
+                "x can be any value except 7"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One-to-one and many-to-one",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For the function 2x, one input uniquely maps to one output. That makes 2x a {one-to-one} function."
+        },
+        {
+          "t": "text",
+          "text": "For the function x², many inputs uniquely map to the same one output. For example, −1 and 1 both map to 1, and −2 and 2 both map to 4. That makes x² a {many-to-one} function."
+        },
+        {
+          "t": "callout",
+          "text": "Both one-to-one and many-to-one relationships make valid functions."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "One-to-one or many-to-one?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each function.",
+          "columns": [
+            "One-to-one",
+            "Many-to-one"
+          ],
+          "items": [
+            {
+              "text": "4 − x",
+              "col": 0
+            },
+            {
+              "text": "x³",
+              "col": 0
+            },
+            {
+              "text": "3x − 3",
+              "col": 0
+            },
+            {
+              "text": "6x²",
+              "col": 1
+            },
+            {
+              "text": "x² − 9",
+              "col": 1
+            },
+            {
+              "text": "x² + 3",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Many functions with x² are many-to-one, but not all. The function 3x², where x is greater than or equal to 0, is one-to-one, because the domain restriction removes the negative inputs."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One-to-many is not a function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The function √x is one-to-one when x is greater than or equal to 0."
+        },
+        {
+          "t": "text",
+          "text": "Positive or negative √x is different. The input 4 maps to both +2 and −2: one input maps to many, non-unique outputs. This is a one-to-many relationship."
+        },
+        {
+          "t": "callout",
+          "text": "One-to-many relationships are {not valid functions}. A function uniquely maps values of the domain to values of the range, and here 4 does not map uniquely to +2 or to −2."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Valid function or not?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Does each relationship make a valid function?",
+          "items": [
+            {
+              "q": "The input 3 maps to 9, and the input −3 also maps to 9.",
+              "options": [
+                "Valid function (many-to-one)",
+                "Not a valid function (one-to-many)"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The input 25 maps to both 5 and −5.",
+              "options": [
+                "Valid function (many-to-one)",
+                "Not a valid function (one-to-many)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The input 6 maps only to 12.",
+              "options": [
+                "Not a valid function (one-to-many)",
+                "Valid function (one-to-one)"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Checking and securing understanding of functions",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A function is a mathematical relationship that uniquely maps values of one set to the values of another set.",
+            "The set of inputs is the domain and the set of outputs is the range.",
+            "Functions that uniquely map each value in their domain to one value in their range are one-to-one.",
+            "If many values in the domain map to the same value in the range, the function is many-to-one.",
+            "One-to-many functions do not exist, because they do not uniquely map each value in their domain."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a function?",
+      "back": "A mathematical relationship that uniquely maps values of one set to the values of another set."
+    },
+    {
+      "front": "What is the domain of a function?",
+      "back": "The set of values that the mapping is performed on (the inputs)."
+    },
+    {
+      "front": "What is the range of a function?",
+      "back": "The set of values mapped to by the function and the stated domain (the outputs)."
+    },
+    {
+      "front": "On a graph, which axis is the domain and which is the range?",
+      "back": "The horizontal axis is the domain (the x values). The vertical axis is the range (the y values)."
+    },
+    {
+      "front": "What is the range of the function x²?",
+      "back": "Greater than or equal to zero.\n\nThe function x² has no values below zero."
+    },
+    {
+      "front": "What is the range of the function 1 − x²?",
+      "back": "Less than or equal to 1."
+    },
+    {
+      "front": "Why is x = 0 not a valid input for 1/x?",
+      "back": "Dividing by 0 is undefined.\n\nWe restrict the domain: “x can be any value except 0”."
+    },
+    {
+      "front": "What does it mean to restrict the domain?",
+      "back": "It is a restriction on the domain that defines the invalid inputs, so the relationship becomes a valid function."
+    },
+    {
+      "front": "What is a one-to-one function?",
+      "back": "One input uniquely maps to one output.\n\nExample: 2x."
+    },
+    {
+      "front": "What is a many-to-one function?",
+      "back": "Many inputs uniquely map to the same one output.\n\nExample: x² maps both −2 and 2 to 4."
+    },
+    {
+      "front": "Is a one-to-many relationship a valid function?",
+      "back": "No. One input maps to many, non-unique outputs.\n\nExample: positive or negative √x maps 4 to both +2 and −2."
+    },
+    {
+      "front": "Is 3x², where x is greater than or equal to 0, one-to-one or many-to-one?",
+      "back": "One-to-one. The domain restriction removes the negative inputs."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking and securing understanding of functions",
+    "instructions": "Answer each question with a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "For the function 5x − 4, what is the output when the input is 6?",
+        "answer": "26",
+        "accepted": [
+          "26"
+        ],
+        "explanation": "5 × 6 − 4 = 30 − 4 = 26."
+      },
+      {
+        "prompt": "The function halves x and then adds 4. What is the output when the input is 10?",
+        "answer": "9",
+        "accepted": [
+          "9"
+        ],
+        "explanation": "10 ÷ 2 = 5, then 5 + 4 = 9."
+      },
+      {
+        "prompt": "For the function x² − 4x, what is the output when the input is 6?",
+        "answer": "12",
+        "accepted": [
+          "12"
+        ],
+        "explanation": "6² − 4 × 6 = 36 − 24 = 12."
+      },
+      {
+        "prompt": "The range of the function x² is “greater than or equal to” which number?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "zero"
+        ],
+        "explanation": "The function x² has no values below zero."
+      },
+      {
+        "prompt": "The range of the function 1 − x² is “less than or equal to” which number?",
+        "answer": "1",
+        "accepted": [
+          "1",
+          "one"
+        ],
+        "explanation": "1 − x² can never be more than 1, because x² is never below 0."
+      },
+      {
+        "prompt": "Which x value must be excluded from the domain of the function 6/(x + 3)?",
+        "answer": "-3",
+        "accepted": [
+          "-3",
+          "−3",
+          "minus 3",
+          "negative 3"
+        ],
+        "explanation": "When x = −3 the denominator is 0, and dividing by 0 is undefined."
+      },
+      {
+        "prompt": "For the function x², how many different inputs map to the output 9?",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "two"
+        ],
+        "explanation": "Both 3 and −3 map to 9, so x² is many-to-one."
+      },
+      {
+        "prompt": "Is 3x², where x is greater than or equal to 0, a one-to-one or a many-to-one function? Answer with one-to-one or many-to-one.",
+        "answer": "one-to-one",
+        "accepted": [
+          "one to one"
+        ],
+        "explanation": "The restriction removes the negative inputs, so each output comes from only one input."
+      },
+      {
+        "prompt": "For the function x² − 4x, is the value −5 in the domain only, or in both the domain and the range? Answer domain only or both.",
+        "answer": "domain only",
+        "accepted": [],
+        "explanation": "x² − 4x is never below −4, so −5 is a valid input but never an output."
+      },
+      {
+        "prompt": "Is “positive or negative √x” a valid function? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "no"
+        ],
+        "explanation": "The input 4 maps to both 2 and −2, so it is one-to-many and does not uniquely map."
+      }
+    ]
+  }
+}

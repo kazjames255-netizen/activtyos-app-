@@ -1,0 +1,544 @@
+{
+  "agent": "w4-maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can plot and interpret data points on scatter graphs."
+        },
+        {
+          "t": "text",
+          "text": "You will learn how to turn pairs of numbers into points, and how to decide which variable goes on which axis."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Plotting {scatter graphs}"
+            },
+            {
+              "title": "Interpreting {scatter graphs}"
+            },
+            {
+              "title": "Which variable goes where?"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "bivariate data",
+              "def": "Bivariate data has two variables, where each data point for one variable has a corresponding data point for the other variable."
+            },
+            {
+              "term": "scatter graph",
+              "def": "A scatter graph is a visual representation for bivariate data. It can be useful when determining the nature of the relationship between the variables."
+            },
+            {
+              "term": "independent variable",
+              "def": "An independent (explanatory) variable is a measure that is predicted to have an effect on another variable."
+            },
+            {
+              "term": "dependent variable",
+              "def": "A dependent (response) variable is a measure whose value is predicted to be affected by an explanatory variable."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Data in pairs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia has weather data from the Met Office for Stornoway. She has one table of total rainfall (mm) and one table of total sunshine (hours) for the same months."
+        },
+        {
+          "t": "text",
+          "text": "The two sets of data can be combined to make **bivariate data**: each value of one variable is paired with a value of the other."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "February: 16 mm rain"
+            },
+            {
+              "title": "February: 87 hours sun"
+            },
+            {
+              "title": "One pair: 16 and 87"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Data is given as {pairs of values}. Each month gives one pair."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the bivariate data",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is bivariate data?",
+          "options": [
+            "The heights of 20 pupils",
+            "The height and the arm length of each of 20 pupils",
+            "The names of 20 pupils"
+          ],
+          "answer": 1,
+          "why": "Bivariate data has two variables, with each value of one paired with a value of the other. Here every pupil has a height and an arm length."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Choosing a scale",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before you plot a scatter graph, decide the scale on each axis. The scale has to cover all the numbers."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Rainfall: the minimum is 16 mm and the maximum is 131 mm. A sensible scale could be from 0 to 140 mm.",
+            "Sunshine: the minimum is 87 hours and the maximum is 249 hours. A sensible scale could be from 0 to 300 hours."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Does the scale fit?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A variable has a minimum value of 12 and a maximum value of 95. Which scale would NOT cover all of the values?",
+          "options": [
+            "0 to 50",
+            "0 to 100",
+            "0 to 120"
+          ],
+          "answer": 0,
+          "why": "The maximum value, 95, is bigger than 50, so a scale that stops at 50 would leave points off the graph."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Plotting a point",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each pair of bivariate data is plotted as a pair of coordinates by marking a point or a cross on the grid. Here rainfall is on the horizontal axis and sunshine is on the vertical axis."
+        },
+        {
+          "t": "list",
+          "items": [
+            "February: 16 mm of rainfall and 87 hours of sunshine.",
+            "Go across the horizontal axis to 16.",
+            "Go up the vertical axis to 87.",
+            "Mark a point there."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If you draw by hand with a pencil, a {cross} can be easier to place accurately."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the coordinates",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Rainfall (mm) is on the horizontal axis and sunshine (hours) is on the vertical axis. Which coordinates should be plotted?",
+          "items": [
+            {
+              "q": "August: 58 mm of rainfall and 249 hours of sunshine",
+              "options": [
+                "(249, 58)",
+                "(58, 249)",
+                "(58, 58)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "October: 98 mm of rainfall and 103 hours of sunshine",
+              "options": [
+                "(98, 103)",
+                "(103, 98)",
+                "(98, 98)"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "June: 38 mm of rainfall and 219 hours of sunshine",
+              "options": [
+                "(219, 38)",
+                "(38, 38)",
+                "(38, 219)"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why plot more data?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "With just five points, Sofia could not see any visible relationship between rainfall and sunshine. But a conclusion based on five data points does not seem very reliable."
+        },
+        {
+          "t": "text",
+          "text": "So she looked at data for every month from 1941 to 2022."
+        },
+        {
+          "t": "callout",
+          "text": "Using more data can make any potential relationship between two variables {easier to see}."
+        },
+        {
+          "t": "reveal",
+          "label": "What did the extra data show?",
+          "text": "Sofia could now see a relationship: the more rainfall there is in a month, the less sunshine there tends to be in that month."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which axis?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes it seems that one variable is affecting the other. For the Stornoway data, it seems most reasonable that the amount of rainfall in a month affects how much sunshine we can see."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Independent} variable",
+              "sub": "horizontal axis (rainfall)"
+            },
+            {
+              "title": "{Dependent} variable",
+              "sub": "vertical axis (sunshine)"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The independent (explanatory) variable goes on the {horizontal} axis. The dependent (response) variable goes on the {vertical} axis."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the descriptions",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which axis is each variable plotted on?",
+          "columns": [
+            "Horizontal axis",
+            "Vertical axis"
+          ],
+          "items": [
+            {
+              "text": "Independent variable",
+              "col": 0
+            },
+            {
+              "text": "The variable that is predicted to have an effect on the other variable",
+              "col": 0
+            },
+            {
+              "text": "Explanatory variable",
+              "col": 0
+            },
+            {
+              "text": "Dependent variable",
+              "col": 1
+            },
+            {
+              "text": "The variable whose value is predicted to be affected by the other variable",
+              "col": 1
+            },
+            {
+              "text": "Response variable",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What if you are not sure?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex and Aisha are looking at house prices and incomes for regions of the UK. They disagree about which variable goes on the horizontal axis."
+        },
+        {
+          "t": "text",
+          "text": "Aisha thinks that people with higher incomes have more money to spend on houses. So it seems more likely that income affects house prices, and she plots income as the independent variable on the horizontal axis."
+        },
+        {
+          "t": "text",
+          "text": "Switching the axes reflects the data points in the line y = x, but the same relationship can still be seen."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out! What if I choose the wrong way round?",
+          "text": "Don’t worry. It shouldn’t affect your interpretation of the data too much. If you are unsure, use the variable that seems most likely to be affecting the other as your independent variable and plot it on the horizontal axis."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Numbers in thousands",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Axis titles can tell you the numbers are in thousands. Then you don’t need to write long numbers such as 20 000, 25 000 and 30 000 on the scale."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Median annual income (£ 1000s): the number 30 on the scale stands for £30 000.",
+            "Population (1000s): the number 600 on the scale stands for 600 000 people."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "An axis is labelled “median annual income (£ thousands)”. What does the number 35 on that axis stand for?",
+              "options": [
+                "£35",
+                "£3500",
+                "£35 000"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What happens to the points if you swap the two axes on a scatter graph?",
+              "options": [
+                "They are reflected in the line y = x",
+                "The points disappear",
+                "The relationship completely changes"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "You are unsure which variable affects the other. What should you do?",
+              "options": [
+                "Use the variable that seems most likely to be affecting the other as the independent variable",
+                "Always choose the first variable in the table",
+                "Don’t plot the graph"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Bivariate data has two variables, with values in pairs.",
+            "A scatter graph plots each pair as a point (or cross) on a grid, using a scale that covers all the values.",
+            "The independent (explanatory) variable goes on the horizontal axis. The dependent (response) variable goes on the vertical axis.",
+            "Swapping the axes reflects the points in y = x, but the same relationship is still seen.",
+            "More data points can make a relationship easier to see."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is bivariate data?",
+      "back": "Data with two variables, where each value of one variable is paired with a value of the other."
+    },
+    {
+      "front": "What is a scatter graph?",
+      "back": "A visual representation of bivariate data. It can help you see the nature of the relationship between the variables."
+    },
+    {
+      "front": "What is an independent (explanatory) variable?",
+      "back": "A measure that is predicted to have an effect on another variable."
+    },
+    {
+      "front": "What is a dependent (response) variable?",
+      "back": "A measure whose value is predicted to be affected by an explanatory variable."
+    },
+    {
+      "front": "Which axis does the independent variable go on?",
+      "back": "The horizontal axis."
+    },
+    {
+      "front": "Which axis does the dependent variable go on?",
+      "back": "The vertical axis."
+    },
+    {
+      "front": "February: 16 mm of rainfall and 87 hours of sunshine. Rainfall is on the horizontal axis. What are the coordinates?",
+      "back": "(16, 87)\n\nGo across 16, then up 87."
+    },
+    {
+      "front": "Rainfall ranges from 16 mm to 131 mm. What scale could Sofia use for rainfall?",
+      "back": "0 to 140 mm, because it covers all the values."
+    },
+    {
+      "front": "What happens to the points if you swap the axes?",
+      "back": "They are reflected in the line y = x, but the same relationship can still be seen."
+    },
+    {
+      "front": "You are not sure which variable affects the other. What should you do?",
+      "back": "Use the variable that seems most likely to be affecting the other as the independent variable, and plot it on the horizontal axis."
+    },
+    {
+      "front": "Why can plotting more data points help?",
+      "back": "It can make any relationship between the variables easier to see. Conclusions from just five points are not very reliable."
+    },
+    {
+      "front": "An axis says “median annual income (£ thousands)”. What does 30 on the scale mean?",
+      "back": "£30 000"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking understanding of scatter graphs",
+    "instructions": "Answer each question with a word, a number or a pair of coordinates. Sofia’s weather data is for Stornoway: rainfall in mm and sunshine in hours.",
+    "questions": [
+      {
+        "prompt": "What word describes data that has two variables, where each value of one variable is paired with a value of the other?",
+        "answer": "bivariate",
+        "accepted": [
+          "bivariate data"
+        ],
+        "explanation": "Bivariate data has two variables, with each data point of one paired with a data point of the other."
+      },
+      {
+        "prompt": "What type of graph is a visual representation of bivariate data?",
+        "answer": "scatter graph",
+        "accepted": [
+          "scatter",
+          "a scatter graph"
+        ],
+        "explanation": "A scatter graph plots each pair of bivariate data as a point or cross on a grid."
+      },
+      {
+        "prompt": "On which axis (horizontal or vertical) should the independent variable be plotted?",
+        "answer": "horizontal",
+        "accepted": [
+          "horizontal axis",
+          "the horizontal axis"
+        ],
+        "explanation": "By convention the independent (explanatory) variable goes on the horizontal axis."
+      },
+      {
+        "prompt": "On which axis (horizontal or vertical) should the dependent variable be plotted?",
+        "answer": "vertical",
+        "accepted": [
+          "vertical axis",
+          "the vertical axis"
+        ],
+        "explanation": "The dependent (response) variable goes on the vertical axis."
+      },
+      {
+        "prompt": "Rainfall is on the horizontal axis and sunshine is on the vertical axis. In February there were 16 mm of rainfall and 87 hours of sunshine. Write the coordinates of the point, in the form (x, y).",
+        "answer": "(16, 87)",
+        "accepted": [
+          "(16,87)",
+          "16, 87",
+          "16,87",
+          "(16 , 87)"
+        ],
+        "explanation": "The horizontal value comes first: across 16, up 87."
+      },
+      {
+        "prompt": "Rainfall is on the horizontal axis and sunshine is on the vertical axis. In April there were 131 mm of rainfall and 200 hours of sunshine. Write the coordinates of the point, in the form (x, y).",
+        "answer": "(131, 200)",
+        "accepted": [
+          "(131,200)",
+          "131, 200",
+          "131,200",
+          "(131 , 200)"
+        ],
+        "explanation": "Across 131 on the horizontal axis, then up 200 on the vertical axis."
+      },
+      {
+        "prompt": "The rainfall values run from 16 mm to 131 mm. In the lesson, Sofia said a sensible rainfall scale could be from 0 to what number of mm?",
+        "answer": "140",
+        "accepted": [
+          "140 mm"
+        ],
+        "explanation": "A scale from 0 to 140 mm covers all the rainfall values."
+      },
+      {
+        "prompt": "If you swap the axes on a scatter graph, the points are reflected in which line? Write the equation of the line.",
+        "answer": "y = x",
+        "accepted": [
+          "y=x"
+        ],
+        "explanation": "Switching the axes reflects the data points in the line y = x."
+      },
+      {
+        "prompt": "An income axis is labelled “median annual income (£ 1000s)”. The number 30 on this axis stands for how many pounds? Write the number only.",
+        "answer": "30000",
+        "accepted": [
+          "30 000",
+          "30,000",
+          "£30000",
+          "£30 000",
+          "£30,000"
+        ],
+        "explanation": "The axis is in thousands of pounds, so 30 stands for 30 thousand pounds, £30 000."
+      }
+    ]
+  }
+}

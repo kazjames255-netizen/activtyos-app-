@@ -1,0 +1,545 @@
+{
+  "agent": "french-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can ask and answer intonation questions to identify something."
+        },
+        {
+          "t": "text",
+          "text": "I can recognise and pronounce [ch]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "the sound {[ch]}"
+            },
+            {
+              "title": "{intonation} questions"
+            },
+            {
+              "title": "practising vocabulary"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[ch]",
+              "def": "Pronounced ‘ch’ as in ‘chercher’, which means ‘to look for’."
+            },
+            {
+              "term": "quoi",
+              "def": "Meaning ‘what’."
+            },
+            {
+              "term": "intonation",
+              "def": "The rise and fall of the voice in speaking."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The sound [ch]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The sound [ch] sounds like the ‘ch’ in ‘chercher’, which means ‘to look for’. Listen, repeat and read these words."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "{ch}ercher",
+            "bou{ch}e",
+            "{ch}at",
+            "va{ch}e",
+            "{ch}eval"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More words with [ch]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Read these words with [ch]. Say them aloud."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{ch}ocolat",
+              "sub": "chocolate",
+              "emoji": "🍫"
+            },
+            {
+              "title": "{ch}anter",
+              "sub": "to sing, singing"
+            },
+            {
+              "title": "pelu{ch}e",
+              "sub": "cuddly toy"
+            },
+            {
+              "title": "{ch}oses",
+              "sub": "things"
+            },
+            {
+              "title": "tou{ch}er",
+              "sub": "to touch, touching"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why can’t you hear the ‘t’ in chocolat?",
+          "text": "The ‘t’ at the end of chocolat is a silent final consonant, so you do not say it."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the [ch]",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which word has the sound [ch]?",
+          "items": [
+            {
+              "options": [
+                "sac",
+                "peluche",
+                "stylo"
+              ],
+              "answer": 1
+            },
+            {
+              "options": [
+                "ballon",
+                "orange",
+                "chanter"
+              ],
+              "answer": 2
+            },
+            {
+              "options": [
+                "chocolat",
+                "banane",
+                "jeu"
+              ],
+              "answer": 0
+            },
+            {
+              "options": [
+                "sac",
+                "un",
+                "toucher"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Intonation questions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To change a statement into an intonation question, you raise your voice at the end."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "C’est un chat.",
+              "sub": "Statement: It’s a cat.",
+              "emoji": "🐈"
+            },
+            {
+              "title": "C’est un chat ?",
+              "sub": "Question: Is it a cat?",
+              "emoji": "🐈"
+            },
+            {
+              "title": "Non, c’est un chien.",
+              "sub": "Response: No, it’s a dog.",
+              "emoji": "🐕"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "These are also called yes/no questions because the answer is always yes or no."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Asking with ‘ou’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can also ask a question with ‘ou’, which means ‘or’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "C’est une peluche ou c’est un animal ?",
+            "C’est un animal."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Un animal means ‘an animal’, so this answer says it is an animal."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "You say ‘C’est une banane’ and raise your voice at the end. What have you made?",
+          "options": [
+            "A yes/no question",
+            "A silent final consonant",
+            "A feminine noun"
+          ],
+          "answer": 0,
+          "why": "Raising your voice at the end of a statement makes an intonation question, which is a yes/no question."
+        },
+        {
+          "t": "choice",
+          "q": "Is this a yes/no question? ‘C’est un stylo ?’",
+          "options": [
+            "Yes, the answer is yes or no",
+            "No, the answer is a number"
+          ],
+          "answer": 0,
+          "why": "The answer to a yes/no question is always yes or no."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Asking ‘what?’ with quoi",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can also use intonation to ask an information question, for example ‘what?’. You put a question word after ‘c’est’."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "C’est",
+              "add": "quoi ?",
+              "result": "C’est quoi ?",
+              "note": "What is it?"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Quoi’ means ‘what’ in French, and ‘c’est quoi ?’ means ‘what is it?’. In English it is different: we usually put question words at the start."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Questions and answers",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French to the English.",
+          "pairs": [
+            {
+              "a": "quoi",
+              "b": "what"
+            },
+            {
+              "a": "C’est quoi ?",
+              "b": "What is it?"
+            },
+            {
+              "a": "ou",
+              "b": "or"
+            },
+            {
+              "a": "C’est un chat ?",
+              "b": "Is it a cat?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Answer ‘c’est quoi ?’",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Someone asks ‘C’est quoi ?’ Choose the correct answer.",
+          "items": [
+            {
+              "q": "It’s a cuddly toy.",
+              "options": [
+                "C’est un peluche.",
+                "C’est une peluche."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "It’s a dog.",
+              "options": [
+                "C’est un chien.",
+                "C’est une chien."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "It’s a bottle.",
+              "options": [
+                "C’est un bouteille.",
+                "C’est une bouteille."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "It’s an exercise book.",
+              "options": [
+                "C’est un cahier.",
+                "C’est une cahier."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Practise vocabulary",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When learning a new language it is important to practise vocabulary regularly to strengthen your memory."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The words you learnt most recently are the easiest to remember.",
+            "The words learnt a month ago need a bit more effort.",
+            "Words learnt before that need hard work."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why practise?",
+          "text": "Practising helps you remember words you learnt recently, know how to spell, pronounce and recognise them, and make them stick in your long-term memory. It is like a vocabulary workout: the more you train your brain, the easier it is to remember new words."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Vocabulary workout",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French word to the English.",
+          "pairs": [
+            {
+              "a": "oui",
+              "b": "yes"
+            },
+            {
+              "a": "non",
+              "b": "no"
+            },
+            {
+              "a": "malade",
+              "b": "ill"
+            },
+            {
+              "a": "calme",
+              "b": "calm"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "How often should you practise new vocabulary?",
+          "options": [
+            "Regularly",
+            "Occasionally",
+            "Sometimes"
+          ],
+          "answer": 0,
+          "why": "New words have to be practised regularly or you might forget them."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The sound [ch] sounds like the ‘ch’ in ‘chercher’, which means ‘to look for’.",
+            "You make an intonation question by raising your voice at the end of a statement: c’est un chat ?",
+            "You can make an information question by adding a question word after c’est, like ‘quoi’, which means ‘what’: c’est quoi ?",
+            "Practise vocabulary regularly to strengthen your memory."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How do you pronounce [ch]?",
+      "back": "Like the ‘ch’ in ‘chercher’, which means ‘to look for’."
+    },
+    {
+      "front": "What does ‘chercher’ mean?",
+      "back": "to look for"
+    },
+    {
+      "front": "What does ‘chanter’ mean?",
+      "back": "to sing, singing"
+    },
+    {
+      "front": "What does ‘chocolat’ mean? Can you hear the ‘t’?",
+      "back": "chocolate. No: the final ‘t’ is a silent final consonant."
+    },
+    {
+      "front": "What is intonation?",
+      "back": "The rise and fall of the voice in speaking."
+    },
+    {
+      "front": "How do you change a statement into an intonation question?",
+      "back": "Raise your voice at the end.\n\nC’est un chat. → C’est un chat ?"
+    },
+    {
+      "front": "Why are intonation questions also called yes/no questions?",
+      "back": "Because the answer is always yes or no."
+    },
+    {
+      "front": "What does ‘quoi’ mean?",
+      "back": "what"
+    },
+    {
+      "front": "What does ‘c’est quoi ?’ mean?",
+      "back": "What is it?"
+    },
+    {
+      "front": "Where does the question word ‘quoi’ go?",
+      "back": "After ‘c’est’: c’est quoi ?\n\nIn English we usually put question words at the start."
+    },
+    {
+      "front": "What does ‘ou’ mean?",
+      "back": "or\n\nC’est une peluche ou c’est un animal ?"
+    },
+    {
+      "front": "Which words are the easiest to remember?",
+      "back": "The words you learnt most recently. Practise regularly to strengthen your memory."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What is it? Intonation questions and ‘quoi’",
+    "instructions": "Answer with one word or a short phrase. In the un/une questions, choose un for a masculine noun and une for a feminine noun.",
+    "questions": [
+      {
+        "prompt": "What does the French word ‘quoi’ mean in English?",
+        "answer": "what",
+        "explanation": "Quoi means ‘what’."
+      },
+      {
+        "prompt": "What does ‘c’est quoi ?’ mean in English?",
+        "answer": "what is it",
+        "accepted": [
+          "what is it?"
+        ],
+        "explanation": "C’est means ‘it is’ and quoi means ‘what’, so c’est quoi ? means ‘What is it?’."
+      },
+      {
+        "prompt": "To change ‘C’est un chat.’ into a question, you raise your ___ at the end. Which word fills the gap?",
+        "answer": "voice",
+        "accepted": [
+          "your voice",
+          "the voice",
+          "tone",
+          "tone of voice"
+        ],
+        "explanation": "An intonation question is made by raising your voice at the end of a statement."
+      },
+      {
+        "prompt": "What is the name for the rise and fall of the voice in speaking?",
+        "answer": "intonation",
+        "explanation": "Intonation is the rise and fall of the voice in speaking."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ chat.",
+        "answer": "un",
+        "explanation": "Chat is masculine, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ photo.",
+        "answer": "une",
+        "explanation": "Photo is feminine, so we use une."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ animal.",
+        "answer": "un",
+        "explanation": "Animal is masculine, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ bouteille.",
+        "answer": "une",
+        "explanation": "Bouteille is feminine, so we use une."
+      },
+      {
+        "prompt": "What does the French word ‘oui’ mean in English?",
+        "answer": "yes",
+        "explanation": "Oui means yes."
+      },
+      {
+        "prompt": "What does the French word ‘malade’ mean in English?",
+        "answer": "ill",
+        "accepted": [
+          "sick",
+          "unwell"
+        ],
+        "explanation": "Malade means ill."
+      },
+      {
+        "prompt": "What does the French word ‘choses’ mean in English?",
+        "answer": "things",
+        "explanation": "Choses means things."
+      }
+    ]
+  }
+}

@@ -1,0 +1,655 @@
+{
+  "agent": "w4-french-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use BORDER to describe my ideal future family life using a range of future and conditional verbs."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Revisiting vocabulary"
+            },
+            {
+              "title": "Singular conditional and future -er verbs"
+            },
+            {
+              "title": "Writing about family",
+              "emoji": "👨‍👩‍👧"
+            }
+          ]
+        }
+      ],
+      "art": [
+        "👨‍👩‍👧"
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "BORDER",
+              "def": "extended writing acronym"
+            },
+            {
+              "term": "conditional",
+              "def": "a form of verb used to express what would happen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Revisiting vocabulary",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the words Jun is revising to their meanings.",
+          "pairs": [
+            {
+              "a": "le manque",
+              "b": "lack, shortage"
+            },
+            {
+              "a": "puisque",
+              "b": "as, because, since (seeing as)"
+            },
+            {
+              "a": "les félicitations",
+              "b": "congratulations"
+            },
+            {
+              "a": "la boite",
+              "b": "box"
+            },
+            {
+              "a": "le handicap",
+              "b": "disability"
+            },
+            {
+              "a": "la nécessité",
+              "b": "necessity"
+            },
+            {
+              "a": "la Saint-Sylvestre",
+              "b": "New Year’s Eve"
+            },
+            {
+              "a": "le Nouvel an",
+              "b": "New Year’s Day"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Jun’s sentence",
+          "text": "Le manque de communication est un problème. = The lack of communication is a problem."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three verbs like ‘recevoir’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are the singular present tense forms of three verbs. Tap through them, then try the questions below."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "recevoir: to receive",
+              "sub": "je reçois, tu reçois, il, elle, on reçoit"
+            },
+            {
+              "title": "décevoir: to disappoint",
+              "sub": "je déçois, tu déçois, il, elle, on déçoit"
+            },
+            {
+              "title": "apercevoir: to see",
+              "sub": "j’aperçois, tu aperçois, il, elle, on aperçoit"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The singular imperative forms of ‘recevoir’ and ‘décevoir’ are ‘Reçois !’ and ‘Déçois !’. ‘Apercevoir’ isn’t really used in the imperative."
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct French for the English.",
+          "items": [
+            {
+              "q": "I disappoint",
+              "options": [
+                "je reçois",
+                "je déçois",
+                "j’aperçois"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "he receives",
+              "options": [
+                "il reçoit",
+                "il déçoit",
+                "il aperçoit"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "you see",
+              "options": [
+                "tu déçois",
+                "tu reçois",
+                "tu aperçois"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Receive!",
+              "options": [
+                "Déçois !",
+                "Reçois !"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Conditional or future?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Conditional and 1-verb future -er verbs both use the **infinitive** as the stem. Add the imperfect tense endings to form the conditional. Add the future endings to form the 1-verb future."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ai",
+              "result": "je parlerai",
+              "note": "1-verb future: I will speak"
+            },
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "je parlerais",
+              "note": "conditional: I would speak"
+            },
+            {
+              "root": "parler",
+              "add": "a",
+              "result": "il, elle, on parlera",
+              "note": "1-verb future: he, she, we will speak"
+            },
+            {
+              "root": "parler",
+              "add": "ait",
+              "result": "il, elle, on parlerait",
+              "note": "conditional: he, she, we would speak"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Will or would?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each verb in the 1-verb future (will) or the conditional (would)?",
+          "columns": [
+            "1-verb future (will)",
+            "Conditional (would)"
+          ],
+          "items": [
+            {
+              "text": "j’imaginerai",
+              "col": 0
+            },
+            {
+              "text": "tu imagineras",
+              "col": 0
+            },
+            {
+              "text": "on imaginera",
+              "col": 0
+            },
+            {
+              "text": "tu imaginerais",
+              "col": 1
+            },
+            {
+              "text": "je nommerais",
+              "col": 1
+            },
+            {
+              "text": "il nommerait",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The writing task",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Jun has to write 150 words in French about two bullet points:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the advantages and disadvantages of a large family",
+            "what your future family life will be like"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It is really important to answer **both** bullet points and give detailed answers. This is your chance to show what you can do."
+        }
+      ],
+      "art": [
+        "👨‍👩‍👧"
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "BORDER",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "BORDER is a useful way to structure extended writing. Each letter is one step."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "B",
+              "sub": "Basic bullet answer"
+            },
+            {
+              "title": "O",
+              "sub": "Opinion"
+            },
+            {
+              "title": "R",
+              "sub": "Reason"
+            },
+            {
+              "title": "D",
+              "sub": "Develop"
+            },
+            {
+              "title": "E",
+              "sub": "Extend"
+            },
+            {
+              "title": "R",
+              "sub": "Review"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "B: basic bullet answer",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Start with your basic answer to the first bullet point. Jun writes:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Un avantage d’avoir une grande famille est qu’il y a toujours une personne avec qui parler.",
+            "Un inconvénient est qu’il faut tout partager."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In English: an advantage is that you can always speak to someone. A disadvantage is sharing."
+        },
+        {
+          "t": "reveal",
+          "label": "Must you write about your own family?",
+          "text": "No. Jun doesn’t have to talk about his personal family experiences. By using ‘on’ (for example ‘une personne avec qui on peut parler’) he can speak more generally about what he thinks might be the advantages or disadvantages of large families."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "O and R: opinion and reason",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now add an opinion (O) and a reason (R). Jun writes:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Je pense que les grandes familles sont supers, parce que les enfants peuvent jouer ensemble.",
+            "Je n’aimerais pas partager une chambre ou mes affaires, car c’est énervant. (énervant = annoying)"
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which of these words can introduce the reason for an opinion?",
+          "options": [
+            "parce que",
+            "ensuite",
+            "même si"
+          ],
+          "answer": 0,
+          "why": "Jun uses parce que and car to give his reasons: ‘because’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "D: develop",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now develop your answer. Jun mentions a friend and uses a perfect tense verb:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "J’ai un copain avec quatre frères et il m’a dit que c’est difficile."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How did Jun develop his answer?",
+          "text": "He introduced another person (‘J’ai un copain…’) and he used a different tense (‘Il m’a dit…’)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "E: extend",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now extend your last sentence using the third person conditional and a relative clause. Jun adds:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "…donc il voudrait avoir une plus grande maison où personne ne partagerait de chambre."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In English: so he would like to have a bigger house where nobody would share a room. The relative clause is the part that starts with ‘où’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "R: review",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Finish by reviewing your answer. Ask yourself questions:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Is my answer relevant to the bullet point?",
+            "Have I included a justified opinion?",
+            "Do my verb endings match the subject of the verb?",
+            "Have I agreed my adjectives?"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can write about real family life if you want to. If not, you can make general points or even make something up."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which BORDER step?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which step of BORDER does each sentence from Jun’s essay show?",
+          "columns": [
+            "B: basic bullet answer",
+            "O + R: opinion and reason",
+            "D: develop",
+            "E: extend"
+          ],
+          "items": [
+            {
+              "text": "Un avantage d’avoir une grande famille est qu’il y a toujours une personne avec qui parler.",
+              "col": 0
+            },
+            {
+              "text": "Un inconvénient est qu’il faut tout partager.",
+              "col": 0
+            },
+            {
+              "text": "Je pense que les grandes familles sont supers, parce que les enfants peuvent jouer ensemble.",
+              "col": 1
+            },
+            {
+              "text": "Je n’aimerais pas partager une chambre ou mes affaires, car c’est énervant.",
+              "col": 1
+            },
+            {
+              "text": "J’ai un copain avec quatre frères et il m’a dit que c’est difficile",
+              "col": 2
+            },
+            {
+              "text": "donc il voudrait avoir une plus grande maison où personne ne partagerait de chambre",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Future family life",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For the second bullet point, Jun plans with BORDER:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "B: dream partner, small house in the countryside",
+            "O: I prefer to be quiet and far from the town…",
+            "R: …where there is too much noise",
+            "D: later, become a parent, would like two or three children…",
+            "E: …I would play with them every day"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "À l’avenir, je trouverai le partenaire de mes rêves et nous habiterons dans une petite maison à la campagne. Je voudrais y habiter, car je préfère être tranquille et loin de la ville où il y a trop de bruit. Plus tard, j’aimerais devenir parent et je voudrais deux ou trois enfants et on jouerait ensemble chaque jour. J’adore les enfants !"
+        },
+        {
+          "t": "reveal",
+          "label": "Spot the verbs",
+          "text": "1-verb future: je trouverai, nous habiterons. Conditional: je voudrais, j’aimerais, on jouerait. The conditional and the 1-verb future can be used together to talk about plans and hopes for the future."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The conditional and the 1-verb future can be used together to talk about plans and hopes for the future.",
+            "For a longer written task, answer both bullet points and develop your answers in detail.",
+            "BORDER helps you respond fully and accurately: Basic bullet answer, Opinion, Reason, Develop, Extend, Review."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does BORDER stand for?",
+      "back": "B: Basic bullet answer\nO: Opinion\nR: Reason\nD: Develop\nE: Extend\nR: Review"
+    },
+    {
+      "front": "What is BORDER useful for?",
+      "back": "It is an extended writing acronym: a tool to respond fully and accurately to bullet point writing prompts."
+    },
+    {
+      "front": "In a longer written task with two bullet points, what should you do?",
+      "back": "Answer both bullet points and develop your ideas as much as possible."
+    },
+    {
+      "front": "Which two words can introduce the reason for an opinion?",
+      "back": "parce que and car (because)"
+    },
+    {
+      "front": "What can the future and the conditional be used together to express?",
+      "back": "Plans and hopes for the future.\n\nJ’aimerais avoir une très grande famille (conditional). Je ne me marierai pas, mais j’habiterai avec ma partenaire (1-verb future)."
+    },
+    {
+      "front": "In BORDER, what can you do at the D step (Develop)?",
+      "back": "Add another person and use a different tense.\n\nJ’ai un copain avec quatre frères et il m’a dit que c’est difficile."
+    },
+    {
+      "front": "In BORDER, what can you do at the E step (Extend)?",
+      "back": "Extend your last sentence with the third person conditional and a relative clause.\n\n…il voudrait avoir une plus grande maison où personne ne partagerait de chambre."
+    },
+    {
+      "front": "Name two questions to ask yourself at the Review step of BORDER.",
+      "back": "Is my answer relevant to the bullet point? Have I included a justified opinion? Do my verb endings match the subject? Have I agreed my adjectives?"
+    },
+    {
+      "front": "Do you have to write about your real family in the longer task?",
+      "back": "No. You can make general points or even make something up."
+    },
+    {
+      "front": "What does ‘puisque’ mean?",
+      "back": "as, because, since (seeing as)"
+    },
+    {
+      "front": "What does ‘le manque’ mean?",
+      "back": "lack, shortage\n\nLe manque de communication est un problème."
+    },
+    {
+      "front": "What do ‘recevoir’, ‘décevoir’ and ‘apercevoir’ mean?",
+      "back": "to receive, to disappoint, to see\n\nje reçois, je déçois, j’aperçois"
+    },
+    {
+      "front": "What does ‘Reçois !’ mean?",
+      "back": "Receive! (‘Apercevoir’ isn’t really used in the imperative.)"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: La famille de mes rêves : extended writing",
+    "instructions": "Answer in the language the question asks for. Write one word for the BORDER questions. In French answers, check your accents.",
+    "questions": [
+      {
+        "prompt": "In the BORDER acronym, what does the letter O stand for? Answer with one word.",
+        "answer": "opinion",
+        "explanation": "BORDER: Basic bullet answer, Opinion, Reason, Develop, Extend, Review."
+      },
+      {
+        "prompt": "In the BORDER acronym, what does the letter D stand for? Answer with one word.",
+        "answer": "develop",
+        "explanation": "D is Develop: for example, add another person and use a different tense."
+      },
+      {
+        "prompt": "In the BORDER acronym, what does the letter E stand for? Answer with one word.",
+        "answer": "extend",
+        "explanation": "E is Extend: for example, use the third person conditional and a relative clause."
+      },
+      {
+        "prompt": "In the BORDER acronym, what does the third letter, R, stand for? Answer with one word.",
+        "answer": "reason",
+        "explanation": "The third letter is R for Reason. The last letter is R for Review."
+      },
+      {
+        "prompt": "In the BORDER acronym, what does the last letter, R, stand for? Answer with one word.",
+        "answer": "review",
+        "explanation": "The last step is Review: check relevance, opinion, verb endings and adjectives."
+      },
+      {
+        "prompt": "Write in French, using ‘je voudrais’ or ‘j’aimerais’ followed by avoir and ‘une grande famille’: ‘I would like to have a large family.’",
+        "answer": "je voudrais avoir une grande famille",
+        "accepted": [
+          "j’aimerais avoir une grande famille",
+          "j'aimerais avoir une grande famille"
+        ],
+        "explanation": "‘Je voudrais’ or ‘j’aimerais’ + the infinitive avoir + une grande famille."
+      },
+      {
+        "prompt": "Write in French, keeping the English word order and using the conditional of adopter: ‘If possible, she would adopt two children.’",
+        "answer": "si possible, elle adopterait deux enfants",
+        "accepted": [
+          "si possible elle adopterait deux enfants"
+        ],
+        "explanation": "The conditional of adopter for elle is adopterait."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of habiter: ‘he will live’.",
+        "answer": "il habitera",
+        "explanation": "habiter + -a = il habitera."
+      },
+      {
+        "prompt": "What does ‘puisque’ mean in English? Answer with one word.",
+        "answer": "because",
+        "accepted": [
+          "as",
+          "since"
+        ],
+        "explanation": "‘Puisque’ means as, because or since."
+      },
+      {
+        "prompt": "What does ‘le manque’ mean in English?",
+        "answer": "lack",
+        "accepted": [
+          "shortage",
+          "a lack",
+          "a shortage",
+          "the lack",
+          "the shortage"
+        ],
+        "explanation": "‘Le manque’ means lack or shortage."
+      },
+      {
+        "prompt": "Write in French, using the present tense of décevoir: ‘you (singular) disappoint’.",
+        "answer": "tu déçois",
+        "explanation": "The tu form of décevoir is déçois, with a cedilla."
+      }
+    ]
+  }
+}

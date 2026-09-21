@@ -1,0 +1,664 @@
+{
+  "agent": "french-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use ‘faire’ to mean ‘go’ and for other present tense activities."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to recognise, write and pronounce [ch]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{faire} = do, make"
+            },
+            {
+              "title": "{faire} = go"
+            },
+            {
+              "title": "the {[ch]} sound"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[ch]",
+              "def": "pronounced as in ‘chercher’"
+            },
+            {
+              "term": "faire",
+              "def": "to do, to make, to go"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The [ch] sound",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "[ch] is pronounced as in ‘chercher’. Read these words and say them aloud."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "{ch}ercher",
+            "diman{ch}e",
+            "{ch}at",
+            "{ch}ien"
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "bou{ch}e",
+              "sub": "mouth"
+            },
+            {
+              "title": "{ch}anter",
+              "sub": "to sing, singing"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In all these words the letters {ch} make the [ch] sound."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "[ch] or [s(s)]?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does each word have the sound [ch] or the sound [s(s)]? Put it in the right column.",
+          "columns": [
+            "[ch]",
+            "[s(s)]"
+          ],
+          "items": [
+            {
+              "text": "broche (brooch)",
+              "col": 0
+            },
+            {
+              "text": "brosse (brush)",
+              "col": 1
+            },
+            {
+              "text": "chaud (hot)",
+              "col": 0
+            },
+            {
+              "text": "sot (silly)",
+              "col": 1
+            },
+            {
+              "text": "crache (spits)",
+              "col": 0
+            },
+            {
+              "text": "crasse (grime)",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Faire: to do, to make",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Remember: faire means both to do and to make. Here are the singular forms of the verb."
+        },
+        {
+          "t": "list",
+          "items": [
+            "je fais = I do, I make",
+            "tu fais = you do, you make",
+            "il fait = he does, he makes",
+            "elle fait = she does, she makes"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Look at the endings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The verb endings for ‘je’ and ‘tu’ are the same. The ending for il and elle is different."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "je {fais}",
+            "tu {fais}",
+            "il {fait}",
+            "elle {fait}"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do fais and fait sound different?",
+          "text": "No! Because of the silent final consonant (SFC), fais and fait are pronounced the same. Only the spelling is different."
+        },
+        {
+          "t": "choice",
+          "q": "Which two pronouns use the same spelling, ‘fais’?",
+          "options": [
+            "je and tu",
+            "je and il",
+            "tu and elle"
+          ],
+          "answer": 0,
+          "why": "Je fais and tu fais both end in -fais. Il and elle use fait."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Faire + an activity",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Faire is often followed by an activity. Tap through the phrases and read the meanings."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "faire le lit",
+              "sub": "to make the bed",
+              "emoji": "🛏️"
+            },
+            {
+              "title": "faire le ménage",
+              "sub": "to do the housework"
+            },
+            {
+              "title": "faire les courses",
+              "sub": "to do the food shopping"
+            },
+            {
+              "title": "faire les devoirs",
+              "sub": "to do homework"
+            },
+            {
+              "title": "faire la cuisine",
+              "sub": "to do the cooking"
+            },
+            {
+              "title": "faire une activité",
+              "sub": "to do an activity"
+            },
+            {
+              "title": "faire le modèle",
+              "sub": "to make the model"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Use the definite article ({le}, {la}, {les}) with many faire activities."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the faire phrases",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each French phrase to its meaning.",
+          "pairs": [
+            {
+              "a": "faire le lit",
+              "b": "to make the bed"
+            },
+            {
+              "a": "faire le ménage",
+              "b": "to do the housework"
+            },
+            {
+              "a": "faire les courses",
+              "b": "to do the food shopping"
+            },
+            {
+              "a": "faire les devoirs",
+              "b": "to do homework"
+            },
+            {
+              "a": "faire la cuisine",
+              "b": "to do the cooking"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which form of faire?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form of faire.",
+          "items": [
+            {
+              "q": "Tu ____ une activité.",
+              "options": [
+                "fait",
+                "fais"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Elle ____ le ménage.",
+              "options": [
+                "fais",
+                "fait"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Il ____ le lit.",
+              "options": [
+                "fait",
+                "fais"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Je ____ les courses.",
+              "options": [
+                "fais",
+                "fait"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Faire can mean ‘to go’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Faire does not always mean ‘to do’ or ‘to make’. With some activities it means ‘to go’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "faire une promenade",
+              "sub": "to go for a walk"
+            },
+            {
+              "title": "faire les magasins",
+              "sub": "to go shopping"
+            },
+            {
+              "title": "faire un voyage",
+              "sub": "to go on a trip"
+            },
+            {
+              "title": "faire une promenade en bateau",
+              "sub": "to go for a boat ride",
+              "emoji": "🚢"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘Faire les magasins’ is shopping for fun. ‘Faire les courses’ is food shopping."
+        },
+        {
+          "t": "reveal",
+          "label": "A funny one: faire le pont",
+          "text": "Faire le pont literally means ‘to make the bridge’, but it is used for ‘to have a long weekend’. In France, when a bank holiday falls on a Tuesday or a Thursday, people like to ‘faire le pont’."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Weather and visits",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We also use faire to talk about the weather."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "faire beau",
+              "sub": "to be nice weather"
+            },
+            {
+              "title": "faire mauvais",
+              "sub": "to be bad weather"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "To say ‘visit’ for a town or city, use faire une visite de + the town or city."
+        },
+        {
+          "t": "list",
+          "items": [
+            "faire une visite de Paris = to visit Paris",
+            "faire une visite de Londres = to visit London",
+            "Je fais une visite de Manchester. = I am visiting Manchester."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Some names of cities sound different in French!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does faire mean here?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each phrase by what faire means in it.",
+          "columns": [
+            "to do / to make",
+            "to go",
+            "something else (weather, visit, long weekend)"
+          ],
+          "items": [
+            {
+              "text": "faire le lit",
+              "col": 0
+            },
+            {
+              "text": "faire la cuisine",
+              "col": 0
+            },
+            {
+              "text": "faire une promenade",
+              "col": 1
+            },
+            {
+              "text": "faire les magasins",
+              "col": 1
+            },
+            {
+              "text": "faire un voyage",
+              "col": 1
+            },
+            {
+              "text": "faire beau",
+              "col": 2
+            },
+            {
+              "text": "faire une visite de Londres",
+              "col": 2
+            },
+            {
+              "text": "faire le pont",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What do they mean?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct English meaning.",
+          "items": [
+            {
+              "q": "Il fait mauvais.",
+              "options": [
+                "He does bad things.",
+                "It is bad weather.",
+                "He goes shopping."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Je fais un voyage.",
+              "options": [
+                "I go on a trip.",
+                "I make the bed.",
+                "I do the housework."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu fais les magasins.",
+              "options": [
+                "You do the food shopping.",
+                "You go shopping.",
+                "You go for a walk."
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Faire always means ‘to do’ or ‘to make’? Not so! It has lots of different meanings, including ‘to go’."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Remember",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[ch] is pronounced as in the word ‘chercher’.",
+            "Faire is used to talk about activities and translates as both ‘to do’ and ‘to make’. It is often followed by the definite articles le, la and les.",
+            "The singular forms of faire are je fais, tu fais and il/elle fait.",
+            "Faire also means ‘to go’ with some activities, and ‘is’ in weather expressions."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [ch] pronounced?",
+      "back": "As in ‘chercher’."
+    },
+    {
+      "front": "What does faire mean?",
+      "back": "To do, to make, to go."
+    },
+    {
+      "front": "What does “je fais” mean?",
+      "back": "I do, I make."
+    },
+    {
+      "front": "What does “il fait” mean?",
+      "back": "He does, he makes."
+    },
+    {
+      "front": "Which forms of faire are spelled ‘fais’?",
+      "back": "Je fais and tu fais.\n\nIl fait and elle fait use ‘fait’."
+    },
+    {
+      "front": "Why do “fais” and “fait” sound the same?",
+      "back": "Because of the silent final consonant (SFC)."
+    },
+    {
+      "front": "What does “faire les courses” mean?",
+      "back": "To do the food shopping."
+    },
+    {
+      "front": "What does “faire les magasins” mean?",
+      "back": "To go shopping.\n\nIt is shopping for fun."
+    },
+    {
+      "front": "What does “faire une promenade” mean?",
+      "back": "To go for a walk."
+    },
+    {
+      "front": "What does “faire le pont” mean?",
+      "back": "To have a long weekend.\n\nLiterally it means ‘to make the bridge’."
+    },
+    {
+      "front": "What do “faire beau” and “faire mauvais” mean?",
+      "back": "Faire beau = to be nice weather.\nFaire mauvais = to be bad weather."
+    },
+    {
+      "front": "How do you say “to visit Paris”?",
+      "back": "Faire une visite de Paris."
+    },
+    {
+      "front": "Which articles often follow faire in activities?",
+      "back": "The definite articles le, la and les.\n\nfaire le lit, faire la cuisine, faire les devoirs"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What people do: ‘faire’, meaning ‘go’",
+    "instructions": "Answer each question in French or English as asked. Remember the forms je fais, tu fais and il/elle fait, and the different meanings of faire.",
+    "questions": [
+      {
+        "prompt": "Translate into French: ‘She is doing the cooking.’",
+        "answer": "Elle fait la cuisine.",
+        "accepted": [
+          "Elle fait la cuisine",
+          "elle fait la cuisine"
+        ],
+        "explanation": "Elle takes fait, and faire la cuisine means to do the cooking."
+      },
+      {
+        "prompt": "Translate into French: ‘He is making the bed.’",
+        "answer": "Il fait le lit.",
+        "accepted": [
+          "Il fait le lit",
+          "il fait le lit"
+        ],
+        "explanation": "Il takes fait, and faire le lit means to make the bed."
+      },
+      {
+        "prompt": "Translate into French: ‘You do the shopping.’ (food shopping)",
+        "answer": "Tu fais les courses.",
+        "accepted": [
+          "Tu fais les courses",
+          "tu fais les courses"
+        ],
+        "explanation": "Tu takes fais, and faire les courses is food shopping."
+      },
+      {
+        "prompt": "Translate into French: ‘I do the housework.’",
+        "answer": "Je fais le ménage.",
+        "accepted": [
+          "Je fais le ménage",
+          "je fais le ménage"
+        ],
+        "explanation": "Je takes fais, and faire le ménage means to do the housework."
+      },
+      {
+        "prompt": "Translate into French: ‘You are doing an activity.’",
+        "answer": "Tu fais une activité.",
+        "accepted": [
+          "Tu fais une activité",
+          "tu fais une activité"
+        ],
+        "explanation": "Tu takes fais, and faire une activité means to do an activity."
+      },
+      {
+        "prompt": "Translate into French: ‘She’s doing the housework.’",
+        "answer": "Elle fait le ménage.",
+        "accepted": [
+          "Elle fait le ménage",
+          "elle fait le ménage"
+        ],
+        "explanation": "Elle takes fait, and faire le ménage means to do the housework."
+      },
+      {
+        "prompt": "What does “faire une promenade” mean in English?",
+        "answer": "to go for a walk",
+        "accepted": [
+          "go for a walk",
+          "to go on a walk",
+          "go on a walk",
+          "going for a walk",
+          "to go for a walk."
+        ],
+        "explanation": "Faire often means ‘to go’ in activities like this."
+      },
+      {
+        "prompt": "What does “faire mauvais” mean in English?",
+        "answer": "to be bad weather",
+        "accepted": [
+          "bad weather",
+          "it is bad weather",
+          "it’s bad weather",
+          "it's bad weather",
+          "the weather is bad"
+        ],
+        "explanation": "We use faire to talk about the weather."
+      },
+      {
+        "prompt": "What does “faire le pont” mean in English?",
+        "answer": "to have a long weekend",
+        "accepted": [
+          "have a long weekend",
+          "a long weekend",
+          "to have a long weekend."
+        ],
+        "explanation": "It literally means ‘to make the bridge’, but it is used for a long weekend."
+      },
+      {
+        "prompt": "Task A: Which letters complete the word bro__e (a brooch): ch or ss?",
+        "answer": "ch",
+        "accepted": [
+          "CH",
+          "Ch"
+        ],
+        "explanation": "Broche (brooch) has the sound [ch], as in chercher. Brosse (brush) has [s(s)]."
+      },
+      {
+        "prompt": "Task A: Which letters complete the word cra__e (grime): ch or ss?",
+        "answer": "ss",
+        "accepted": [
+          "SS",
+          "Ss"
+        ],
+        "explanation": "Crasse (grime) has [s(s)]. Crache (spits) has [ch]."
+      }
+    ]
+  }
+}

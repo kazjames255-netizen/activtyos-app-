@@ -1,0 +1,677 @@
+{
+  "agent": "w4-english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the correct spelling of homophones and near-homophones."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{homophones}",
+              "sub": "words that sound the same"
+            },
+            {
+              "title": "{near-homophones}",
+              "sub": "words that sound very similar"
+            },
+            {
+              "title": "recognise and category",
+              "sub": "two curriculum words"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "near-homophone",
+              "def": "A word that sounds very similar to another word but has a slightly different spelling and a different meaning."
+            },
+            {
+              "term": "word class",
+              "def": "The different types of words that are used to form sentences, like adjectives, adverbs, nouns and verbs."
+            },
+            {
+              "term": "context",
+              "def": "The surrounding words or sentences that help determine the meaning of a word or phrase."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homophones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Homophones sound the same, but have different spellings and different meanings. Homophone comes from Greek: ‘homos’ means ‘one and the same’ and ‘phon’ means ‘sound’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "On entry, each {guest} was asked to remove their shoes.",
+            "She {guessed} the answer correctly on her first attempt."
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{guest}",
+              "sub": "a noun: a person who has been invited somewhere"
+            },
+            {
+              "title": "{guessed}",
+              "sub": "a verb, past tense (-ed): you make a guess, you are not sure of the answer"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Be careful with the -ed suffix. It can sound like a /t/, which is why these homophones get confused."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Near-homophones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A word may be a homophone or a near-homophone depending on your accent or pronunciation. Near-homophones sound very similar to another word, but have a different spelling and a different meaning."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{ac}cept",
+              "sub": "You should always accept help if you need it."
+            },
+            {
+              "title": "{ex}cept",
+              "sub": "We all went to the party except for Grandad."
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is true?",
+          "options": [
+            "Near-homophones sound exactly the same.",
+            "Near-homophones sound very similar, but not exactly the same."
+          ],
+          "answer": 1,
+          "why": "Near-homophones sound very similar to another word but have a slightly different spelling and a different meaning. Homophones are the ones that sound the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "accept or except?",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "accept",
+              "def": "To agree to something. They agreed to accept each other’s opinions and move on."
+            },
+            {
+              "term": "except",
+              "def": "The exception: the person or thing that did not do or follow the rest. The village shop is open every day except Sunday."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The prefix ‘ex-’ in except means the exception."
+        },
+        {
+          "t": "choices",
+          "q": "Which spelling fits the gap?",
+          "items": [
+            {
+              "q": "Everyone ___ Mia was ready to leave.",
+              "options": [
+                "accept",
+                "except"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I will ___ your invitation to the party.",
+              "options": [
+                "accept",
+                "except"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "wary or weary?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "As with homophones, we must use the context to help us."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{wary}",
+              "sub": "on guard against threat or danger. I was always taught to be wary of strangers."
+            },
+            {
+              "title": "{weary}",
+              "sub": "tired in body or mind. After a long day of hiking, I am feeling weary."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Knowing the meanings of homophones and near-homophones helps us to spell and use them correctly."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "seen or scene?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can use the context of the sentence to work out the spelling of a homophone."
+        },
+        {
+          "t": "list",
+          "items": [
+            "I haven’t {seen} my best friend for ages!",
+            "I painted a {scene} from a walk that I went on."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Is ‘scene’ a homonym too?",
+          "text": "Yes. The word ‘scene’ is also a homonym, because it can have more than one meaning. It can be the place where something is taking place, or a scene in a film: a part where continuous action is taking place."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "proceed or precede?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some people say these two words in a very similar way. They are near-homophones with slightly different spellings and different meanings. The prefix helps!"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{pro}ceed",
+              "sub": "‘pro-’: to go forward, to advance, to move on. Wait for the green light before you proceed to cross the street."
+            },
+            {
+              "title": "{pre}cede",
+              "sub": "‘pre-’: to come before. The national anthem will precede the start of a big sports event."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "profit or prophet?",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{profit}",
+              "sub": "making money. The cake stand made the biggest profit at the school fair."
+            },
+            {
+              "title": "{prophet}",
+              "sub": "someone regarded to be a messenger from God. The prophet delivered a message of hope and guidance for the future."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Look at the letters that are different, and think of your own way to remember each spelling. For example: if I made a pro-fit, I might not be able to fit all that money into my wallet!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Homophones or near-homophones?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "In this lesson, some pairs are certainly homophones and some are near-homophones (they can sound very similar, depending on pronunciation). Sort each pair.",
+          "columns": [
+            "Homophones",
+            "Near-homophones"
+          ],
+          "items": [
+            {
+              "text": "seen / scene",
+              "col": 0
+            },
+            {
+              "text": "bored / board",
+              "col": 0
+            },
+            {
+              "text": "profit / prophet",
+              "col": 0
+            },
+            {
+              "text": "wary / weary",
+              "col": 1
+            },
+            {
+              "text": "advice / advise",
+              "col": 1
+            },
+            {
+              "text": "device / devise",
+              "col": 1
+            },
+            {
+              "text": "accept / except",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "advice or advise?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use the context of a sentence to work out the word class as well as the meaning. These near-homophones sound slightly different."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "adv{ice}",
+              "sub": "a noun: guidance that is given to you. My mum always gives the best advice."
+            },
+            {
+              "title": "adv{ise}",
+              "sub": "a verb, a doing word. I advise you to always try your best."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "A trick to check",
+          "text": "Say the other spelling in the sentence and listen. ‘My mum always gives the best advise’ does not sound right, and neither does ‘I advice you to always try your best’. This helps you to hear when it is not correct."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "-ce for nouns, -se for verbs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If we can remember the spelling of one word, it can help us to spell other words with related meanings. Both device and advice are nouns with -ce. Both devise and advise are verbs with -se."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "de{vice}",
+              "sub": "a noun: you can plug your device in to charge it"
+            },
+            {
+              "title": "de{vise}",
+              "sub": "a verb: to come up with. Let’s devise a plan to tackle this problem."
+            }
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Sort each word into the word class it has.",
+          "columns": [
+            "Noun (-ce)",
+            "Verb (-se)"
+          ],
+          "items": [
+            {
+              "text": "advice",
+              "col": 0
+            },
+            {
+              "text": "device",
+              "col": 0
+            },
+            {
+              "text": "advise",
+              "col": 1
+            },
+            {
+              "text": "devise",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Choose the right word",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the context and the meaning of each word to choose.",
+          "items": [
+            {
+              "q": "Mum gave me some good ___ about secondary school.",
+              "options": [
+                "advice",
+                "advise"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "I ___ you to wear a coat.",
+              "options": [
+                "advice",
+                "advise"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I plugged in my ___ to charge it.",
+              "options": [
+                "device",
+                "devise"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Let’s ___ a plan to solve this puzzle.",
+              "options": [
+                "device",
+                "devise"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Wait for the green light before you ___ across the road.",
+              "options": [
+                "proceed",
+                "precede"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The bell will ___ the start of the lesson, so it comes first.",
+              "options": [
+                "proceed",
+                "precede"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The stall made a lot of ___ at the school fair.",
+              "options": [
+                "profit",
+                "prophet"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The dog was ___ of strangers and stayed on guard.",
+              "options": [
+                "wary",
+                "weary"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Curriculum words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now for two words to learn by heart."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "reco{g}nise",
+              "sub": "I could barely recognise him."
+            },
+            {
+              "title": "cate{go}ry",
+              "sub": "I split them into different categories."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "In **recognise**, the ‘g’ is not always pronounced. It ends -se, and sounds like zzz.",
+            "In **category**, the ‘o’ is an unstressed vowel sound, so you do not always hear it. Try saying it in chunks: cat-eh-gor-y."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spell it!",
+      "blocks": [
+        {
+          "t": "spell",
+          "q": "Listen, then type the word.",
+          "words": [
+            "recognise",
+            "category"
+          ],
+          "tips": [
+            "sound it out.",
+            "think about the tricky parts.",
+            "read the word and check."
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Which of these is spelt correctly?",
+          "items": [
+            {
+              "options": [
+                "recanise",
+                "recognice",
+                "recognise",
+                "reckanise"
+              ],
+              "answer": 2
+            },
+            {
+              "options": [
+                "catagry",
+                "categry",
+                "catigory",
+                "category"
+              ],
+              "answer": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What did you learn?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Near-homophones sound very similar to another word but have a slightly different spelling and a different meaning.",
+            "Accept and except, wary and weary, advice and advise, device and devise are near-homophones.",
+            "The context of a sentence helps us work out the meaning of a word and its word class.",
+            "Nouns often end in -ce (advice, device) and verbs in -se (advise, devise).",
+            "There are no spelling rules for homophones or near-homophones, so we learn them by sight or come up with our own way to remember them.",
+            "Curriculum words: recognise and category."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a near-homophone?",
+      "back": "A word that sounds very similar to another word but has a slightly different spelling and a different meaning."
+    },
+    {
+      "front": "What is the difference between a homophone and a near-homophone?",
+      "back": "Near-homophones do not sound exactly the same; they sound very similar. Homophones sound the same."
+    },
+    {
+      "front": "What is the difference between ‘guest’ and ‘guessed’?",
+      "back": "guest: a noun, a person who has been invited.\nguessed: a verb in the past tense (-ed), making a guess."
+    },
+    {
+      "front": "What is the difference between ‘accept’ and ‘except’?",
+      "back": "accept: to agree to something.\nexcept: the exception, the one that was left out.\n\nThe shop is open every day except Sunday."
+    },
+    {
+      "front": "What do ‘wary’ and ‘weary’ mean?",
+      "back": "wary: on guard against threat or danger.\nweary: tired in body or mind."
+    },
+    {
+      "front": "What is the difference between ‘seen’ and ‘scene’?",
+      "back": "seen: as in ‘I have seen you’.\nscene: the place where something is taking place, or a part of a film.\n\nThey are homophones."
+    },
+    {
+      "front": "What do ‘proceed’ and ‘precede’ mean?",
+      "back": "proceed (pro-): to go forward, to move on.\nprecede (pre-): to come before."
+    },
+    {
+      "front": "What do ‘profit’ and ‘prophet’ mean?",
+      "back": "profit: making money.\nprophet: someone regarded to be a messenger from God."
+    },
+    {
+      "front": "Which of ‘advice’ and ‘advise’ is the noun, and which is the verb?",
+      "back": "advice (-ce) is the noun: a thing that is given to you.\nadvise (-se) is the verb: a doing word."
+    },
+    {
+      "front": "Which of ‘device’ and ‘devise’ is the noun, and which is the verb?",
+      "back": "device (-ce) is the noun: a thing.\ndevise (-se) is the verb: to come up with, as in ‘devise a plan’."
+    },
+    {
+      "front": "What trick can help you choose between advice and advise?",
+      "back": "Say the other spelling in the sentence. If it does not sound right, it is not the correct one."
+    },
+    {
+      "front": "What is tricky about the spelling of ‘recognise’?",
+      "back": "The ‘g’ is not always pronounced. It has a ‘g’ in the middle and ends with -se."
+    },
+    {
+      "front": "What is tricky about the spelling of ‘category’?",
+      "back": "The ‘o’ is an unstressed vowel, so you do not always hear it. Say it in chunks: cat-eh-gor-y."
+    },
+    {
+      "front": "Is there a spelling rule for homophones and near-homophones?",
+      "back": "No. We must learn them by sight, use the context, or come up with our own way to remember them."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Spelling further near-homophones and homophones",
+    "instructions": "Use the context and the meaning of each sentence to choose the correct homophone or near-homophone. Type your answer as a single word.",
+    "questions": [
+      {
+        "prompt": "The dog was ___ of other dogs and preferred to be alone. (Choose the word that means on guard against danger: wary or weary.)",
+        "answer": "wary",
+        "explanation": "Wary means on guard against threat or danger. Weary means tired."
+      },
+      {
+        "prompt": "After you’ve shown your ticket, you can ___ to your seat. (Choose the word that means to move on: proceed or precede.)",
+        "answer": "proceed",
+        "explanation": "Proceed (pro-) means to go forward or move on."
+      },
+      {
+        "prompt": "The artist painted the ___ so beautifully. (Choose seen or scene.)",
+        "answer": "scene",
+        "explanation": "A scene is the place where something is taking place. The artist painted it."
+      },
+      {
+        "prompt": "By the evening, I am often ___ and ready for bed. (Choose wary or weary.)",
+        "answer": "weary",
+        "explanation": "Weary means tired in body or mind."
+      },
+      {
+        "prompt": "They agreed to ___ each other’s opinions and move on. (Choose accept or except.)",
+        "answer": "accept",
+        "explanation": "Accept means to agree to something."
+      },
+      {
+        "prompt": "The village shop is open every day ___ Sunday. (Choose accept or except.)",
+        "answer": "except",
+        "explanation": "Except means the exception: every day but Sunday."
+      },
+      {
+        "prompt": "My mum always gives the best ___. (Choose advice or advise.)",
+        "answer": "advice",
+        "explanation": "Here we need a noun, a thing you are given, so it is advice with -ce."
+      },
+      {
+        "prompt": "Let’s ___ a plan to tackle this problem. (Choose device or devise.)",
+        "answer": "devise",
+        "explanation": "To devise is a verb, a doing word, so it ends in -se."
+      },
+      {
+        "prompt": "Which word means ‘to come before’: proceed or precede?",
+        "answer": "precede",
+        "explanation": "Precede (pre-) means to come before, like the anthem before a sports event."
+      },
+      {
+        "prompt": "Which word means ‘making money’: profit or prophet?",
+        "answer": "profit",
+        "explanation": "Profit means making money. A prophet is someone regarded to be a messenger from God."
+      },
+      {
+        "prompt": "Complete the sentence: I could barely ___ him. (Spell the curriculum word that starts with ‘rec’ and has a ‘g’ in the middle.)",
+        "answer": "recognise",
+        "explanation": "recognise: the ‘g’ is not always pronounced, and it ends in -se."
+      },
+      {
+        "prompt": "Spell the singular of ‘categories’. (It is a curriculum word that starts with ‘cat’.)",
+        "answer": "category",
+        "explanation": "category: the ‘o’ is an unstressed vowel, so say it in chunks: cat-eh-gor-y."
+      }
+    ]
+  }
+}

@@ -1,0 +1,570 @@
+{
+  "agent": "w4-english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can vary sentence structures accurately in my descriptive writing."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Simple} sentences"
+            },
+            {
+              "title": "{Compound} sentences"
+            },
+            {
+              "title": "{Complex} sentences"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "clause",
+              "def": "A group of words with a subject and a verb."
+            },
+            {
+              "term": "subject",
+              "def": "The person, place, or thing performing the action of the sentence."
+            },
+            {
+              "term": "verb",
+              "def": "A doing, being or having word."
+            },
+            {
+              "term": "complete",
+              "def": "Having all the necessary or appropriate parts."
+            },
+            {
+              "term": "subordinate",
+              "def": "Means to be lower in rank or position."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why do sentence types matter?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The purpose of descriptive writing is to create an atmosphere and paint a picture for the reader, so that they can fully imagine the scene you are describing."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at three sentence types and how to use them for effect. If you control your sentence structures, you can create specific effects with them."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "It isn’t enough for the grammar and punctuation to be correct. The choice of sentence type can change the way a reader responds to your writing."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Simple sentences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **simple sentence** is one main clause. It has a subject and a verb and expresses one complete thought."
+        },
+        {
+          "t": "text",
+          "text": "‘The blossoms wilted.’"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Subject: the blossoms",
+            "Verb: wilted"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What effect can short sentences have?",
+          "text": "Short sentences can make the writing feel tense, because it keeps stopping and starting quite abruptly. They can also make the writing very easy to understand, but it might start to feel repetitive quite quickly."
+        },
+        {
+          "t": "callout",
+          "text": "Don’t overuse any sentence structure. If you do, the effect gets weaker each time."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Compound sentences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **compound sentence** joins two main clauses to form one complete sentence."
+        },
+        {
+          "t": "text",
+          "text": "The two main clauses are typically joined with a **coordinating conjunction** or a semicolon."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "and",
+            "for",
+            "but",
+            "so",
+            "yet",
+            "nor",
+            "or"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "‘The blossoms wilted, but the new buds were ready to spring from the ground.’"
+        },
+        {
+          "t": "list",
+          "items": [
+            "First main clause: ‘The blossoms wilted’. It is a complete sentence on its own.",
+            "Coordinating conjunction: ‘but’.",
+            "Second main clause: ‘the new buds were ready to spring from the ground’. It also makes sense on its own."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Punctuating compound sentences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are two rules."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "With a coordinating conjunction",
+              "sub": "Put a comma before the conjunction: ‘The trees towered above me, yet I felt a sense of peace.’"
+            },
+            {
+              "title": "Without one",
+              "sub": "You can use a semicolon: ‘The trees towered above me; I felt a sense of looming tension.’"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The semicolon works a bit like a conjunction. It links two main clauses that express connected ideas."
+        },
+        {
+          "t": "reveal",
+          "label": "Spot the mistakes",
+          "text": "‘The vines twisted around the structure so, the bridge felt smaller.’ The comma comes after the conjunction. It should come before it. ‘The sky was crystal clear but I could see clouds in the distance.’ There is no comma before ‘but’. Correct: ‘The petals were vibrant red, but the stems were a dull green.’"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The effect of compound sentences",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "They join two ideas together, so they might help the reader have a better idea of how the image you’re describing works as a whole.",
+            "They might create a faster pace, since the reader isn’t pausing as much as they would if it were all simple sentences."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "An example mixing simple and compound sentences",
+          "text": "The stones of the path crunched under my boots. I lifted my gaze, and the small door nestled in the stone wall caught my eye. I was curious. Gorgeous flowers of blushing pinks, dazzling yellows and vibrant blues lined the path, **yet** the place was deserted."
+        },
+        {
+          "t": "text",
+          "text": "The comma before ‘yet’ in the last sentence creates a contrast: the flowers are beautiful, but the place is deserted."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Punctuate compound sentences",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which sentence is punctuated correctly?",
+              "options": [
+                "The path was narrow, but the flowers were bright.",
+                "The path was narrow but, the flowers were bright.",
+                "The path was narrow but the flowers were bright."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How can you join two main clauses if you are not using a coordinating conjunction?",
+              "options": [
+                "With a semicolon",
+                "With an apostrophe",
+                "With a capital letter"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many main clauses does a compound sentence have?",
+              "options": [
+                "One",
+                "Two",
+                "One plus a subordinate clause"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Complex sentences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **complex sentence** is made up of one main clause and one or more subordinate clauses."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A main clause is a complete thought and makes sense on its own: ‘The purple flowers jostled together.’",
+            "A subordinate clause adds extra information to complement the main clause, but it doesn’t make sense on its own: ‘Swaying in the wind.’"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Link them and you form a complex sentence: ‘Swaying in the wind, the purple flowers jostled together.’"
+        },
+        {
+          "t": "text",
+          "text": "The two are often joined with a **subordinating conjunction** such as since, because, until or if: ‘Because there was a breeze, the purple flowers jostled together.’"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where does the subordinate clause go?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The subordinate clause can go at the beginning, in the middle or at the end of the sentence."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Beginning: a comma after it",
+              "sub": "Because there was a breeze, the purple flowers jostled together."
+            },
+            {
+              "title": "Middle: commas, dashes or brackets around it",
+              "sub": "The purple flowers, blowing in the breeze, jostled together."
+            },
+            {
+              "title": "End: no comma before it",
+              "sub": "The purple flowers jostled together because there was a breeze."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why use complex sentences?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The subordinate clause provides extra, complementary information for the main clause. In descriptive writing this adds detail, which helps the reader to picture the scene."
+        },
+        {
+          "t": "callout",
+          "text": "When you write, use a mixture of simple, compound and complex sentences. Then reflect: where did you use each one, and what effect might it have on the reader? Is your writing more effective with all three?"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the sentences",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each sentence simple, compound or complex?",
+          "columns": [
+            "Simple",
+            "Compound",
+            "Complex"
+          ],
+          "items": [
+            {
+              "text": "Petals covered the ground.",
+              "col": 0
+            },
+            {
+              "text": "The stream trickled past the stones.",
+              "col": 0
+            },
+            {
+              "text": "The gate creaked, and the ivy trembled.",
+              "col": 1
+            },
+            {
+              "text": "The path was narrow; the flowers were bright.",
+              "col": 1
+            },
+            {
+              "text": "The bridge looked old, yet it felt strong.",
+              "col": 1
+            },
+            {
+              "text": "Because the sun was setting, the sky glowed orange.",
+              "col": 2
+            },
+            {
+              "text": "The children laughed until the sun went down.",
+              "col": 2
+            },
+            {
+              "text": "The purple flowers, blowing in the breeze, jostled together.",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sentence types check",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each sentence type to its definition.",
+          "pairs": [
+            {
+              "a": "simple sentence",
+              "b": "one main clause"
+            },
+            {
+              "a": "compound sentence",
+              "b": "two main clauses joined with a coordinating conjunction or a semicolon"
+            },
+            {
+              "a": "complex sentence",
+              "b": "one main clause and at least one subordinate clause"
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which sentence is correctly punctuated?",
+              "options": [
+                "Since the storm was coming, the birds flew home.",
+                "Since the storm was coming the birds flew home.",
+                "Since the storm was coming, the birds, flew home."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "‘The birds flew home since the storm was coming.’ Do you need a comma before ‘since’?",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which sentence type can add complementary detail to help the reader picture the scene?",
+              "options": [
+                "Complex sentences",
+                "Only simple sentences"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A simple sentence has one main clause.",
+            "Compound sentences are two main clauses joined together with a coordinating conjunction or semicolon.",
+            "Complex sentences are one main clause and at least one subordinate clause.",
+            "The subordinate clause can go at the beginning, middle and end of a sentence."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a clause?",
+      "back": "A group of words with a subject and a verb."
+    },
+    {
+      "front": "What is a simple sentence?",
+      "back": "One main clause: it has a subject and a verb and expresses one complete thought.\n\nThe blossoms wilted."
+    },
+    {
+      "front": "What effect can simple sentences have on the reader?",
+      "back": "They can create tension, because the writing keeps stopping and starting abruptly. They are easy to understand but can feel repetitive."
+    },
+    {
+      "front": "What is a compound sentence?",
+      "back": "Two main clauses joined together with a coordinating conjunction or a semicolon."
+    },
+    {
+      "front": "Name the coordinating conjunctions.",
+      "back": "and, for, but, so, yet, nor, or"
+    },
+    {
+      "front": "Where does the comma go in a compound sentence with a coordinating conjunction?",
+      "back": "Before the conjunction.\n\nThe trees towered above me, yet I felt a sense of peace."
+    },
+    {
+      "front": "How can you join two main clauses without a coordinating conjunction?",
+      "back": "Use a semicolon.\n\nThe trees towered above me; I felt a sense of looming tension."
+    },
+    {
+      "front": "What effects can compound sentences have?",
+      "back": "They join two ideas so the reader sees how the image works as a whole, and they can create a faster pace."
+    },
+    {
+      "front": "What is a complex sentence?",
+      "back": "One main clause and at least one subordinate clause."
+    },
+    {
+      "front": "What is the difference between a main clause and a subordinate clause?",
+      "back": "A main clause makes sense on its own. A subordinate clause adds extra information but doesn’t make sense on its own."
+    },
+    {
+      "front": "Give some subordinating conjunctions.",
+      "back": "since, because, until, if"
+    },
+    {
+      "front": "Where can the subordinate clause go, and how is it punctuated at the beginning?",
+      "back": "Beginning, middle or end. At the beginning it needs a comma after it."
+    },
+    {
+      "front": "How do you punctuate a subordinate clause in the middle of a sentence?",
+      "back": "Put commas, dashes or brackets around it.\n\nThe purple flowers, blowing in the breeze, jostled together."
+    },
+    {
+      "front": "Why are complex sentences effective in descriptive writing?",
+      "back": "They add complementary detail, which helps the reader picture the scene."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Using simple, compound and complex sentences in descriptive writing",
+    "instructions": "Answer each question with a word or short phrase, using what you have learned about simple, compound and complex sentences.",
+    "questions": [
+      {
+        "prompt": "What do we call a group of words with a subject and a verb?",
+        "answer": "clause",
+        "accepted": [
+          "a clause"
+        ],
+        "explanation": "A clause is a group of words with a subject and a verb."
+      },
+      {
+        "prompt": "How many main clauses does a simple sentence have? Answer with a number.",
+        "answer": "1",
+        "accepted": [
+          "one"
+        ],
+        "explanation": "A simple sentence is one main clause."
+      },
+      {
+        "prompt": "What type of sentence is this? ‘The blossoms wilted.’ Answer simple, compound or complex.",
+        "answer": "simple",
+        "accepted": [
+          "simple sentence",
+          "a simple sentence"
+        ],
+        "explanation": "It has one main clause: the subject is ‘the blossoms’ and the verb is ‘wilted’."
+      },
+      {
+        "prompt": "What is the coordinating conjunction in this sentence? ‘The blossoms wilted, but the new buds were ready to spring from the ground.’",
+        "answer": "but",
+        "accepted": [],
+        "explanation": "‘But’ joins the two main clauses."
+      },
+      {
+        "prompt": "Which punctuation mark goes before the coordinating conjunction in a compound sentence?",
+        "answer": "comma",
+        "accepted": [
+          "a comma",
+          ","
+        ],
+        "explanation": "The rule is to put a comma before the conjunction, as in ‘The trees towered above me, yet I felt a sense of peace.’"
+      },
+      {
+        "prompt": "In this lesson, which punctuation mark can join two main clauses when you are not using a coordinating conjunction?",
+        "answer": "semicolon",
+        "accepted": [
+          "a semicolon",
+          ";"
+        ],
+        "explanation": "A semicolon can link two main clauses that express connected ideas."
+      },
+      {
+        "prompt": "What is the subordinating conjunction in this sentence? ‘Because there was a breeze, the purple flowers jostled together.’",
+        "answer": "because",
+        "accepted": [],
+        "explanation": "‘Because’ introduces the subordinate clause ‘because there was a breeze’."
+      },
+      {
+        "prompt": "What type of sentence is this? ‘Swaying in the wind, the purple flowers jostled together.’ Answer simple, compound or complex.",
+        "answer": "complex",
+        "accepted": [
+          "complex sentence",
+          "a complex sentence"
+        ],
+        "explanation": "It has one main clause (‘the purple flowers jostled together’) and a subordinate clause (‘Swaying in the wind’)."
+      },
+      {
+        "prompt": "Which punctuation mark comes after a subordinate clause at the beginning of a sentence?",
+        "answer": "comma",
+        "accepted": [
+          "a comma",
+          ","
+        ],
+        "explanation": "A subordinate clause at the beginning needs a comma after it."
+      },
+      {
+        "prompt": "‘The purple flowers jostled together because there was a breeze.’ Do you need a comma before ‘because’? Answer yes or no.",
+        "answer": "no",
+        "accepted": [],
+        "explanation": "When the subordinate clause is at the end of the sentence you don’t need a comma before it."
+      }
+    ]
+  }
+}

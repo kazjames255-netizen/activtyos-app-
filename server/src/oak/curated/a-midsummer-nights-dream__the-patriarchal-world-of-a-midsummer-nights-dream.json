@@ -1,0 +1,550 @@
+{
+  "agent": "english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explore how the patriarchy is presented in ‘A Midsummer Night’s Dream’, focusing on the openings of Act 1 and Act 2."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Act 1",
+              "sub": "the patriarchal world of Athens"
+            },
+            {
+              "title": "How Shakespeare presents the patriarchy"
+            },
+            {
+              "title": "Act 2",
+              "sub": "Titania and Oberon"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "patriarchy",
+              "def": "a society in which men hold the power; the laws and structure of that society prevent women from having power"
+            },
+            {
+              "term": "quotation",
+              "def": "words from a text"
+            },
+            {
+              "term": "analysis",
+              "def": "in English, this means looking at a text closely and considering what it might mean and why it was written in that way"
+            },
+            {
+              "term": "conflict",
+              "def": "a serious argument"
+            },
+            {
+              "term": "dialogue",
+              "def": "in a play, these are the words that the characters say"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Athens: a patriarchal society",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a **patriarchy**, men hold the power. The laws and structure of that society prevent women from having power."
+        },
+        {
+          "t": "callout",
+          "text": "Athens, where Act 1 is set, is a patriarchal society. Egeus even has the right to kill his daughter."
+        },
+        {
+          "t": "text",
+          "text": "Act 1 begins with a **conflict**: Egeus is furious with his daughter Hermia. Let’s look at the quotations that show us how the patriarchy works."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Egeus’s first words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "After greeting Duke Theseus, Egeus’s first lines of dialogue are:"
+        },
+        {
+          "t": "text",
+          "text": "“Full of vexation come I, with complaint / Against my child, my daughter Hermia.” (1.1.22-23)"
+        },
+        {
+          "t": "text",
+          "text": "Egeus speaks for 23 lines. He is furious at his daughter for wanting to marry Lysander, rather than Demetrius, the man he has chosen for her."
+        },
+        {
+          "t": "reveal",
+          "label": "Why is Egeus so angry?",
+          "text": "Hermia wants to marry the man she loves, Lysander. Egeus has chosen Demetrius for her and expects to be obeyed."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "“As she is mine”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Egeus ends his speech with a threat:"
+        },
+        {
+          "t": "text",
+          "text": "“Be it so she will not here, before your grace, / Consent to marry with Demetrius, / I beg the ancient privilege of Athens: / As she is mine, I may dispose of her - / Which shall be either to this gentleman / Or to her death.” (1.1.39-44)"
+        },
+        {
+          "t": "reveal",
+          "label": "What does Egeus threaten to do?",
+          "text": "If Hermia will not marry Demetrius, he says she can be given “either to this gentleman / Or to her death”: she must marry Demetrius or be killed."
+        },
+        {
+          "t": "reveal",
+          "label": "Why is he able to threaten her?",
+          "text": "He asks for “the ancient privilege of Athens”. Athens is a patriarchal society, so a father has the power to command what happens to his daughter."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Theseus backs Egeus",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Duke Theseus supports Egeus, telling Hermia:"
+        },
+        {
+          "t": "text",
+          "text": "“Be advised, fair maid, / To you your father should be as a god.” (1.1.46-47)"
+        },
+        {
+          "t": "text",
+          "text": "This is a comparison. Theseus does not think Egeus is really a god. He thinks Hermia should think of her father as a god because he is her father and she owes him her duty."
+        },
+        {
+          "t": "choice",
+          "q": "What does Theseus mean by “your father should be as a god”?",
+          "options": [
+            "Egeus really is a god",
+            "Hermia should think of her father like a god, because she owes him her duty",
+            "Hermia should pray to the gods every day"
+          ],
+          "answer": 1,
+          "why": "Theseus is comparing Egeus to a god: Hermia should think of him that way because he is her father and she owes him her duty."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hermia’s choices",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Theseus says that Hermia must obey her father or choose to:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "“die the death”",
+              "sub": "(1.1.65)"
+            },
+            {
+              "title": "“endure the livery of a nun”",
+              "sub": "(1.1.70) become a nun"
+            },
+            {
+              "title": "marry Demetrius",
+              "sub": "the man her father has chosen"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Hermia is in a really difficult position. She is not given a huge amount of choice."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Analysing a quotation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Analysis** means looking at a text closely and thinking about what it might mean and why it was written that way. Here is Izzy’s analysis:"
+        },
+        {
+          "t": "text",
+          "text": "“The patriarchy is most powerfully presented when Egeus says, ‘Full of vexation come I, with complaint / Against my child, my daughter Hermia.’ Egeus focuses on his own anger first, and Hermia, his own daughter, is the last thing he mentions. He also repeats that she is ‘my child’ and ‘my daughter’ showing he believes he owns her, almost as if she is his property.”"
+        },
+        {
+          "t": "reveal",
+          "label": "What did Izzy do?",
+          "text": "She picked a quotation, looked closely at the language (“my child”, “my daughter”) and explained what it could mean: Egeus believes he owns Hermia, like his property."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Words and what they show",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each quotation to what it could show about the patriarchy.",
+          "pairs": [
+            {
+              "a": "“Full of vexation come I”",
+              "b": "Egeus puts his own anger first, and Hermia is the last thing he mentions"
+            },
+            {
+              "a": "“she is mine”",
+              "b": "makes clear he thinks Hermia is his property"
+            },
+            {
+              "a": "“dispose”",
+              "b": "shows he feels he can do anything he likes with her"
+            },
+            {
+              "a": "“your father should be as a god”",
+              "b": "Hermia should obey her father and owes him her duty"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Aisha’s longer analysis",
+          "text": "Aisha says Egeus is happy to hurt Hermia emotionally by making her marry someone she doesn’t love, and physically by killing her. She writes about the words and what they could mean in more than one sentence."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 2: another conflict",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Just as Act 1 begins with a conflict, so does Act 2. The play moves from the patriarchal world of Athens to the magical forest."
+        },
+        {
+          "t": "text",
+          "text": "This time the conflict is between Titania, Queen of the Fairies, and Oberon, King of the Fairies. Oberon says he wants a little boy “to be my henchman” (servant):"
+        },
+        {
+          "t": "text",
+          "text": "OBERON: “Give me that boy and I will go with thee.” / TITANIA: “Not for thy fairy kingdom.” (2.1.143-144)"
+        },
+        {
+          "t": "reveal",
+          "label": "‘Tarry, rash wanton’",
+          "text": "Oberon also says, “Tarry, rash wanton”: ‘wait, disobedient woman’. He thinks Titania is being disobedient."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Are they equal?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia says: “This dialogue emphasises their equality, not the power of the patriarchy.” What could have led her to this conclusion?"
+        },
+        {
+          "t": "reveal",
+          "label": "Sofia’s clues",
+          "text": "Titania does not just obey. She says she has “forsworn” (refused) Oberon’s bed and company, and she refuses to give him the boy: “Not for thy fairy kingdom.”"
+        },
+        {
+          "t": "callout",
+          "text": "It could be argued that Titania is presented as Oberon’s equal."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Oberon’s plan",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Despite Titania’s power, Oberon does get the boy from her. He uses a magical potion:"
+        },
+        {
+          "t": "text",
+          "text": "“Having once this juice / I’ll watch Titania when she is asleep, / And drop the liquor of it in her eyes. / The next thing then she waking looks upon [...] She shall pursue it with the soul of love. [...] I’ll make her render up her page to me.” (2.1.177-185)"
+        },
+        {
+          "t": "reveal",
+          "label": "Powerful or powerless?",
+          "text": "Powerful: Oberon gets what he wants. Powerless: he can’t control Titania, so he has to use a potion and trickery while she sleeps. Sofia says it is almost as if Shakespeare is saying Titania is more powerful than Oberon when she is not under a spell."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Powerful or powerless?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does each detail show the patriarchy as powerful or powerless?",
+          "columns": [
+            "Powerful",
+            "Powerless"
+          ],
+          "items": [
+            {
+              "text": "Egeus says he may “dispose of” Hermia",
+              "col": 0
+            },
+            {
+              "text": "Hermia could be killed or made a nun if she disobeys",
+              "col": 0
+            },
+            {
+              "text": "Theseus says a father should be “as a god”",
+              "col": 0
+            },
+            {
+              "text": "Hermia refuses to marry Demetrius and plans to leave Athens with Lysander",
+              "col": 1
+            },
+            {
+              "text": "Titania refuses to give Oberon the boy",
+              "col": 1
+            },
+            {
+              "text": "Oberon has to use a magical potion to get the boy",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer these questions about the openings of Acts 1 and 2.",
+          "items": [
+            {
+              "q": "Which two characters are in conflict at the start of Act 2?",
+              "options": [
+                "Egeus and Hermia",
+                "Oberon and Titania",
+                "Theseus and Egeus"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which key word means ‘a serious argument’?",
+              "options": [
+                "dialogue",
+                "quotation",
+                "conflict"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Where is Act 1 set, and where is Act 2 set?",
+              "options": [
+                "Act 1 in the magical forest, Act 2 in Athens",
+                "Act 1 in Athens, Act 2 in the magical forest",
+                "Both in Athens"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "It is easy to think Hermia has no power at all. But she refuses to marry Demetrius, says she will marry Lysander, and is willing to leave her father and the place she was born rather than obey him."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "The patriarchal world of ‘A Midsummer Night’s Dream’",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Athens is a patriarchal society.",
+            "Egeus has the right to kill his daughter.",
+            "Act 1 and Act 2 both begin with a conflict.",
+            "It could be argued that Titania is presented as Oberon’s equal.",
+            "Oberon has to use a magical love potion on Titania in order to get what he wants."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a patriarchy?",
+      "back": "A society in which men hold the power; the laws and structure of that society prevent women from having power."
+    },
+    {
+      "front": "How is Athens presented in ‘A Midsummer Night’s Dream’?",
+      "back": "As a patriarchal society."
+    },
+    {
+      "front": "What right does Egeus have over Hermia in Athens?",
+      "back": "He has the right to kill his daughter if she does not obey him (“the ancient privilege of Athens”)."
+    },
+    {
+      "front": "Why is Egeus furious at the start of Act 1?",
+      "back": "Hermia wants to marry Lysander instead of Demetrius, the man Egeus has chosen for her."
+    },
+    {
+      "front": "Complete Egeus’s words: “As she is ___, I may dispose of her.”",
+      "back": "mine.\n\nThis suggests he thinks Hermia is his property."
+    },
+    {
+      "front": "Complete Theseus’s words: “To you your father should be as a ___.”",
+      "back": "god.\n\nHermia should think of her father this way because she owes him her duty."
+    },
+    {
+      "front": "Besides marrying Demetrius, what two other fates does Theseus say Hermia could face if she does not obey?",
+      "back": "She will “die the death” or “endure the livery of a nun” (become a nun)."
+    },
+    {
+      "front": "What do Act 1 and Act 2 have in common at their openings?",
+      "back": "Both begin with a conflict."
+    },
+    {
+      "front": "What is the conflict at the start of Act 2?",
+      "back": "Oberon and Titania argue over a little boy Oberon wants as his servant. Titania says, “Not for thy fairy kingdom.”"
+    },
+    {
+      "front": "Why could Titania be seen as Oberon’s equal?",
+      "back": "She answers him back and refuses to give him the boy: their dialogue emphasises their equality."
+    },
+    {
+      "front": "How does Oberon get the boy from Titania?",
+      "back": "He uses a magical love potion on her eyes while she is asleep."
+    },
+    {
+      "front": "What does ‘analysis’ mean in English?",
+      "back": "Looking at a text closely and considering what it might mean and why it was written in that way."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The patriarchal world of William Shakespeare’s ‘A Midsummer Night’s Dream’",
+    "instructions": "Answer each question with a word or a short phrase, using the key words and quotations from the lesson.",
+    "questions": [
+      {
+        "prompt": "What word means a society in which men hold the power?",
+        "answer": "patriarchy",
+        "accepted": [
+          "Patriarchy",
+          "patriarchal",
+          "Patriarchal",
+          "a patriarchy"
+        ],
+        "explanation": "In a patriarchy men hold the power, and the laws and structure of society prevent women from having power."
+      },
+      {
+        "prompt": "What is the word for words taken from a text?",
+        "answer": "quotation",
+        "accepted": [
+          "Quotation",
+          "quote",
+          "a quotation"
+        ],
+        "explanation": "A quotation is words from a text."
+      },
+      {
+        "prompt": "What is the word for a serious argument?",
+        "answer": "conflict",
+        "accepted": [
+          "Conflict",
+          "a conflict"
+        ],
+        "explanation": "Act 1 and Act 2 both begin with a conflict, a serious argument."
+      },
+      {
+        "prompt": "Which character says, “As she is mine, I may dispose of her”?",
+        "answer": "Egeus",
+        "accepted": [
+          "egeus"
+        ],
+        "explanation": "Egeus says this about his daughter Hermia."
+      },
+      {
+        "prompt": "Which city does Egeus mean when he begs “the ancient privilege of” it?",
+        "answer": "Athens",
+        "accepted": [
+          "athens"
+        ],
+        "explanation": "Egeus asks for the ancient privilege of Athens, which lets a father decide his daughter’s fate."
+      },
+      {
+        "prompt": "Complete Theseus’s line: “To you your father should be as a ...”",
+        "answer": "god",
+        "accepted": [
+          "God",
+          "a god",
+          "a God"
+        ],
+        "explanation": "Theseus says Hermia should think of her father as a god, because she owes him her duty."
+      },
+      {
+        "prompt": "Which character is King of the Fairies and wants a little boy as his servant?",
+        "answer": "Oberon",
+        "accepted": [
+          "oberon"
+        ],
+        "explanation": "Oberon demands the boy from Titania, who refuses."
+      },
+      {
+        "prompt": "What does Oberon plan to put on Titania’s eyes while she is asleep?",
+        "answer": "a magical love potion",
+        "accepted": [
+          "potion",
+          "love potion",
+          "magical potion",
+          "the potion",
+          "a magical potion",
+          "love juice",
+          "a potion"
+        ],
+        "explanation": "The potion makes her fall in love with the next thing she sees, so he can get the boy."
+      },
+      {
+        "prompt": "In which Act do Titania and Oberon first argue over the little boy? (Write the number.)",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "two",
+          "Act 2",
+          "act 2",
+          "Act two"
+        ],
+        "explanation": "Just as Act 1 begins with a conflict, so does Act 2."
+      }
+    ]
+  }
+}

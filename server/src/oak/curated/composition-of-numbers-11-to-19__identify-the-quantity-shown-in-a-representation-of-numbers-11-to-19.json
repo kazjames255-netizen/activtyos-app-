@@ -1,0 +1,605 @@
+{
+  "agent": "maths-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the quantity shown in a representation of numbers 11 to 19."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Teen numbers"
+            },
+            {
+              "title": "Partitioning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "partition",
+              "def": "Splitting an object or value into smaller parts."
+            },
+            {
+              "term": "tens",
+              "def": "A ten is a group of 10 ones."
+            },
+            {
+              "term": "ones",
+              "def": "Individual objects, grouped in ones."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "part-whole-model"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What do we know about teen numbers?",
+      "blocks": [
+        {
+          "t": "chips",
+          "items": [
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19"
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "These are teen numbers.",
+            "The teen numbers are between 10 and 20.",
+            "They all start with a 1.",
+            "They can be made of one ten and some ones."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting straws",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can count a bundle of 10 straws and some more."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 ten",
+              "sub": "a bundle of 10 straws"
+            },
+            {
+              "title": "1 one",
+              "sub": "1 more straw"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "10 and one more is 11. We can say “one ten 1”. **11 is one ten and one one.**"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "12 is 10 and 2 more",
+            "13 is 10 and 3 more",
+            "14 is 10 and 4 more",
+            "15 is 10 and 5 more"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting on from ten",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Every teen number is made of 1 ten and some ones, so we can count on from the ten."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "one ten 1",
+            "one ten 2",
+            "one ten 3",
+            "one ten 4",
+            "one ten 5",
+            "one ten 6",
+            "one ten 7",
+            "one ten 8",
+            "one ten 9"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What comes after one ten 9?",
+          "text": "Two tens. That is 20."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ten and a bit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each box holds 10 pencils. There are some extra pencils."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 ten",
+              "sub": "10 pencils in the box"
+            },
+            {
+              "title": "6 ones",
+              "sub": "6 more pencils"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "There are 10 pencils and 6 more.",
+            "Count on: 11, 12, 13, 14, 15, 16.",
+            "There is 1 ten and 6 ones. There are 16 pencils."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "This number is **ten and a bit**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Teen number words",
+      "blocks": [
+        {
+          "t": "chips",
+          "items": [
+            "eleven",
+            "twelve",
+            "thirteen",
+            "fourteen",
+            "fifteen",
+            "sixteen",
+            "seventeen",
+            "eighteen",
+            "nineteen"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "What do you notice? You can see the ones at the start of some of the number words. You can see teen at the end of most of them."
+        },
+        {
+          "t": "reveal",
+          "label": "Look at fourteen",
+          "text": "Fourteen is four and teen. It is 1 ten and 4 ones. We say the four ones first, then the ten."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Who is correct?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Check which digit means the ten and which means the ones."
+        },
+        {
+          "t": "choice",
+          "q": "There are 10 pencils and 7 more pencils. Which number shows how many?",
+          "options": [
+            "70",
+            "17",
+            "71"
+          ],
+          "answer": 1,
+          "why": "10 and 7 more is 1 ten and 7 ones. That is 17."
+        },
+        {
+          "t": "choice",
+          "q": "There is 1 ten and 5 ones. Which number is it?",
+          "options": [
+            "51",
+            "15",
+            "5"
+          ],
+          "answer": 1,
+          "why": "The 1 means 1 ten and the 5 means 5 ones, so the number is 15."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Partitioning",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To **partition** a number is to split the number into parts."
+        },
+        {
+          "t": "text",
+          "text": "There are 15 counters. There is 1 ten and 5 ones."
+        },
+        {
+          "t": "callout",
+          "text": "15 = 10 + 5"
+        },
+        {
+          "t": "text",
+          "text": "15 can be partitioned into 1 ten and 5 ones."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The ones part grows",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Teen numbers can be partitioned into a ten and some ones. We can show it with an addition equation."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "11 = 10 + 1",
+            "12 = 10 + 2",
+            "13 = 10 + 3"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "The ones part increases by 1 each time."
+        },
+        {
+          "t": "text",
+          "text": "Teen numbers can also be shown on a part-part-whole model."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ten frames",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The teen numbers can be shown with counters on two ten frames."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 ten",
+              "sub": "a full ten frame"
+            },
+            {
+              "title": "3 ones",
+              "sub": "3 counters on the next frame"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What number is shown?",
+          "text": "1 ten and 3 ones. 13 = 10 + 3. The number is **13**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Complete the partition",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the missing number.",
+          "items": [
+            {
+              "q": "17 = 10 + ?",
+              "options": [
+                "7",
+                "1",
+                "17"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "14 can be partitioned into 1 ten and how many ones?",
+              "options": [
+                "1",
+                "4",
+                "10"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "19 = 10 + ?",
+              "options": [
+                "10",
+                "9",
+                "1"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "16 is made of 1 ten and ? ones.",
+              "options": [
+                "6",
+                "1",
+                "16"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the number",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each teen number to its tens and ones.",
+          "pairs": [
+            {
+              "a": "16",
+              "b": "1 ten and 6 ones"
+            },
+            {
+              "a": "18",
+              "b": "1 ten and 8 ones"
+            },
+            {
+              "a": "14",
+              "b": "1 ten and 4 ones"
+            },
+            {
+              "a": "19",
+              "b": "1 ten and 9 ones"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Words to numbers",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the numeral for each number word.",
+          "items": [
+            {
+              "q": "seventeen",
+              "options": [
+                "70",
+                "17",
+                "71"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "thirteen",
+              "options": [
+                "13",
+                "30",
+                "31"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "eighteen",
+              "options": [
+                "80",
+                "81",
+                "18"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "twelve",
+              "options": [
+                "21",
+                "12",
+                "20"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The numbers 11 to 19 can be formed by combining a ten and ones.",
+            "The numbers 11 to 19 can be partitioned into a ten and ones.",
+            "Ten frames can be used to represent the numbers 11 to 19."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "15 = 10 + 5"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “partition” mean?",
+      "back": "Splitting an object or value into smaller parts."
+    },
+    {
+      "front": "What is a ten?",
+      "back": "A group of 10 ones."
+    },
+    {
+      "front": "What are ones?",
+      "back": "Individual objects, grouped in ones."
+    },
+    {
+      "front": "Teen numbers are made of one ten and what?",
+      "back": "Some ones (a bit). We call this “ten and a bit”."
+    },
+    {
+      "front": "15 = 10 + ?",
+      "back": "5.\n\n15 can be partitioned into 1 ten and 5 ones."
+    },
+    {
+      "front": "12 = 10 + ?",
+      "back": "2."
+    },
+    {
+      "front": "What happens to the ones part in 11 = 10 + 1, 12 = 10 + 2, 13 = 10 + 3?",
+      "back": "The ones part increases by 1 each time."
+    },
+    {
+      "front": "What number comes after “one ten 9”?",
+      "back": "Two tens (20)."
+    },
+    {
+      "front": "What does a Gattegno chart show us?",
+      "back": "Tens and ones."
+    },
+    {
+      "front": "What do we say first in “fourteen”: the ones or the ten?",
+      "back": "The ones. We say four, then teen (the ten)."
+    },
+    {
+      "front": "How can we show teen numbers with counters?",
+      "back": "On two ten frames: one full frame of 10, and some ones on the next."
+    },
+    {
+      "front": "17 is 1 ten and how many ones?",
+      "back": "7 ones."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Identify the quantity shown in a representation of numbers 11 to 19",
+    "instructions": "Answer each question. Each teen number can be partitioned into 1 ten and some ones.",
+    "questions": [
+      {
+        "prompt": "15 = 10 + ___",
+        "answer": "5",
+        "accepted": [
+          "five"
+        ],
+        "explanation": "15 is made of 1 ten and 5 ones."
+      },
+      {
+        "prompt": "17 = 10 + ___",
+        "answer": "7",
+        "accepted": [
+          "seven"
+        ],
+        "explanation": "17 is made of 1 ten and 7 ones."
+      },
+      {
+        "prompt": "13 = 10 + ___",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "13 is made of 1 ten and 3 ones."
+      },
+      {
+        "prompt": "11 = 10 + ___",
+        "answer": "1",
+        "accepted": [
+          "one"
+        ],
+        "explanation": "11 is made of 1 ten and 1 one."
+      },
+      {
+        "prompt": "Twelve is 1 ten and how many ones?",
+        "answer": "2",
+        "accepted": [
+          "two",
+          "2 ones",
+          "two ones"
+        ],
+        "explanation": "Twelve is written 12: 1 ten and 2 ones."
+      },
+      {
+        "prompt": "Fourteen: 14 = 10 + ___",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "Fourteen is 1 ten and 4 ones."
+      },
+      {
+        "prompt": "Sixteen: 16 = 10 + ___",
+        "answer": "6",
+        "accepted": [
+          "six"
+        ],
+        "explanation": "Sixteen is 1 ten and 6 ones."
+      },
+      {
+        "prompt": "Eighteen: 18 = 10 + ___",
+        "answer": "8",
+        "accepted": [
+          "eight"
+        ],
+        "explanation": "Eighteen is 1 ten and 8 ones."
+      },
+      {
+        "prompt": "19 = 10 + ___",
+        "answer": "9",
+        "accepted": [
+          "nine"
+        ],
+        "explanation": "19 is made of 1 ten and 9 ones."
+      },
+      {
+        "prompt": "Write the number that is 1 ten and 6 ones.",
+        "answer": "16",
+        "accepted": [
+          "sixteen"
+        ],
+        "explanation": "1 ten and 6 ones makes 16."
+      }
+    ]
+  }
+}

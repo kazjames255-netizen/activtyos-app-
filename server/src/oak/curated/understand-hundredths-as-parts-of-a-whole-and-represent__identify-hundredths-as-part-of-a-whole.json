@@ -1,0 +1,624 @@
+{
+  "agent": "maths-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify {hundredths} as part of a whole."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will find out what one hundredth is and how it links to ones and tenths."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "one {hundredth}",
+              "sub": "and the whole"
+            },
+            {
+              "title": "hundredths in {different contexts}",
+              "sub": "metres, litres, kilograms"
+            },
+            {
+              "title": "{many} hundredths",
+              "sub": "multiples of one hundredth"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "equal",
+              "def": "Exactly the same amount or value."
+            },
+            {
+              "term": "tenth",
+              "def": "One part of ten equal parts."
+            },
+            {
+              "term": "hundredth",
+              "def": "One part of one hundred equal parts."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One whole, one hundred parts",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is one whole. The whole has been divided into **100 equal parts**."
+        },
+        {
+          "t": "callout",
+          "text": "Each part is one {hundredth} of the whole."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "one whole"
+            },
+            {
+              "title": "100 equal parts"
+            },
+            {
+              "title": "one {hundredth}",
+              "sub": "one part out of 100"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The parts must be **equal**: every part is exactly the same size."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "100 hundredths make one whole",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can show the same whole with base 10 blocks. There are one hundred small blocks again."
+        },
+        {
+          "t": "reveal",
+          "label": "How many hundredths make one whole?",
+          "text": "One hundred hundredths are equal to **one whole**."
+        },
+        {
+          "t": "callout",
+          "text": "There are {100 hundredths} in one whole."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tenths and hundredths",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Start with one whole. Divide it into **ten equal parts**. Each part is one {tenth}."
+        },
+        {
+          "t": "text",
+          "text": "Now divide each tenth into **ten equal parts**. Each new part is one {hundredth}."
+        },
+        {
+          "t": "reveal",
+          "label": "How many hundredths are in one tenth?",
+          "text": "One tenth is equal to **ten hundredths**. In a base 10 block picture, each column is one tenth and each row is one tenth too."
+        },
+        {
+          "t": "callout",
+          "text": "There are {10 hundredths} in one tenth."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Ten hundredths are equal to …",
+          "options": [
+            "one whole",
+            "one tenth",
+            "ten tenths"
+          ],
+          "answer": 1,
+          "why": "There are 10 hundredths in one tenth."
+        },
+        {
+          "t": "choice",
+          "q": "How many hundredths are there in one whole?",
+          "options": [
+            "10",
+            "100",
+            "1000"
+          ],
+          "answer": 1,
+          "why": "The whole is divided into one hundred equal parts, so there are 100 hundredths."
+        },
+        {
+          "t": "choice",
+          "q": "A whole is divided into ten equal parts. Each part is one …",
+          "options": [
+            "tenth",
+            "hundredth"
+          ],
+          "answer": 0,
+          "why": "One part of ten equal parts is a tenth."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hundredths of a metre",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Hundredths are not only squares. Here is a number line that shows **one metre**, from 0 m to 1 m."
+        },
+        {
+          "t": "text",
+          "text": "The whole (one metre) has been divided into one hundred equal parts. Each part is {one hundredth of a metre}."
+        },
+        {
+          "t": "callout",
+          "text": "You can find hundredths on a line as well as in a square."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More contexts: litres and kilograms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Hundredths can be found in lots of different contexts. What is the whole this time?"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "one whole {litre}",
+              "sub": "each of 100 equal parts is one hundredth of a litre"
+            },
+            {
+              "title": "one whole {kilogram} of rice",
+              "sub": "one tenth of a kilogram, then one hundredth of a kilogram"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which is the smallest amount of rice?",
+          "text": "One hundredth of a kilogram. One whole kilogram is the biggest, one tenth is smaller, and one hundredth is smaller still."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which whole?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "A litre of water is divided into 100 equal parts. Each part is one … of a litre.",
+              "options": [
+                "tenth",
+                "hundredth",
+                "whole"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A metre is divided into ten equal parts. Each part is one … of a metre.",
+              "options": [
+                "tenth",
+                "hundredth",
+                "whole"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "One tenth of a kilogram is divided into ten equal parts. Each part is one … of a kilogram.",
+              "options": [
+                "tenth",
+                "hundredth",
+                "whole"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting more than one hundredth",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The whole has been divided into 100 equal parts. If **two parts** are shaded, that is {two hundredths} of the whole."
+        },
+        {
+          "t": "text",
+          "text": "It does not matter where the two parts are placed. It is still two hundredths."
+        },
+        {
+          "t": "text",
+          "text": "If **ten parts** are shaded, that is {ten hundredths}."
+        },
+        {
+          "t": "reveal",
+          "label": "How else could we describe ten hundredths?",
+          "text": "Ten hundredths is the same as **one tenth**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One amount, many descriptions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Twenty four parts out of 100 are shaded. That is {24 hundredths}. Is there another way to say it?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ten hundredths is one tenth. So twenty hundredths is two tenths.",
+            "So 24 hundredths is **two tenths and four hundredths**."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Here is another. Three tenths is the same as 30 hundredths. So one hundredth less than three tenths is **29 hundredths**."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Hundredths do not only live in a square. 29 hundredths is still 29 hundredths on a number line, in a jug of water or in a bag of rice."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Same as 30 hundredths?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each amount the same as 30 hundredths? Tap an amount, then tap its column.",
+          "columns": [
+            "Same as 30 hundredths",
+            "Not the same"
+          ],
+          "items": [
+            {
+              "text": "3 tenths",
+              "col": 0
+            },
+            {
+              "text": "3 hundredths",
+              "col": 1
+            },
+            {
+              "text": "2 tenths and 10 hundredths",
+              "col": 0
+            },
+            {
+              "text": "10 tenths",
+              "col": 1
+            },
+            {
+              "text": "1 tenth and 20 hundredths",
+              "col": 0
+            },
+            {
+              "text": "1 tenth and 2 hundredths",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the amounts",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each amount to the number of hundredths.",
+          "pairs": [
+            {
+              "a": "1 tenth",
+              "b": "10 hundredths"
+            },
+            {
+              "a": "2 tenths",
+              "b": "20 hundredths"
+            },
+            {
+              "a": "1 whole",
+              "b": "100 hundredths"
+            },
+            {
+              "a": "5 tenths and 3 hundredths",
+              "b": "53 hundredths"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Fill in the missing numbers",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Pick the number that completes each sentence.",
+          "items": [
+            {
+              "q": "47 hundredths = … tenths and 7 hundredths",
+              "options": [
+                "4",
+                "40",
+                "47"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "3 tenths and 6 hundredths = … hundredths",
+              "options": [
+                "9",
+                "36",
+                "306"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "68 hundredths = 6 tenths and … hundredths",
+              "options": [
+                "6",
+                "8",
+                "68"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "2 tenths and 15 hundredths = … hundredths",
+              "options": [
+                "17",
+                "215",
+                "35"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "When a whole is divided into one hundred equal parts, each part is one **hundredth**.",
+            "Ten hundredths are equal to one **tenth**.",
+            "One hundred hundredths are equal to one **whole**.",
+            "If you shade more than one hundredth, you have multiple hundredths of the whole, and it does not matter where they are placed."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can find {hundredths} of a square, a metre, a litre or a kilogram."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “equal” mean?",
+      "back": "Exactly the same amount or value."
+    },
+    {
+      "front": "What is a hundredth?",
+      "back": "One part of one hundred equal parts."
+    },
+    {
+      "front": "What is a tenth?",
+      "back": "One part of ten equal parts."
+    },
+    {
+      "front": "How many hundredths are there in one whole?",
+      "back": "100 hundredths."
+    },
+    {
+      "front": "How many hundredths are there in one tenth?",
+      "back": "10 hundredths.\n\nTen hundredths is equal to one tenth."
+    },
+    {
+      "front": "How do you make hundredths from a whole?",
+      "back": "Cut the whole into ten equal parts (tenths). Then cut each tenth into ten equal parts (hundredths)."
+    },
+    {
+      "front": "A metre is divided into 100 equal parts. What is each part?",
+      "back": "One hundredth of a metre."
+    },
+    {
+      "front": "Two parts out of 100 equal parts are shaded. Does it matter where they are?",
+      "back": "No. It is still two hundredths."
+    },
+    {
+      "front": "How many hundredths are the same as 3 tenths?",
+      "back": "30 hundredths.\n\nTen hundredths is one tenth, so 3 tenths is 30 hundredths."
+    },
+    {
+      "front": "Say 24 hundredths as tenths and hundredths.",
+      "back": "2 tenths and 4 hundredths."
+    },
+    {
+      "front": "What is one hundredth less than 3 tenths?",
+      "back": "29 hundredths.\n\n3 tenths is 30 hundredths."
+    },
+    {
+      "front": "In a base 10 block picture of one whole, what does each column stand for?",
+      "back": "One tenth of the whole.\n\nEach column is ten hundredths."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Identify hundredths as part of a whole",
+    "instructions": "Answer each question with a number or a short word. Use what you know: there are 10 hundredths in one tenth and 100 hundredths in one whole.",
+    "questions": [
+      {
+        "prompt": "How many hundredths are there in one whole?",
+        "answer": "100",
+        "accepted": [
+          "100 hundredths",
+          "one hundred",
+          "one hundred hundredths"
+        ],
+        "explanation": "The whole is divided into one hundred equal parts, so there are 100 hundredths."
+      },
+      {
+        "prompt": "How many hundredths are there in one tenth?",
+        "answer": "10",
+        "accepted": [
+          "10 hundredths",
+          "ten",
+          "ten hundredths"
+        ],
+        "explanation": "Each tenth is divided into ten equal parts, so one tenth is ten hundredths."
+      },
+      {
+        "prompt": "A litre of water is divided into 100 equal parts. What is each part called? (Write one word.)",
+        "answer": "hundredth",
+        "accepted": [
+          "a hundredth",
+          "one hundredth",
+          "1 hundredth",
+          "one hundredth of a litre"
+        ],
+        "explanation": "One part of one hundred equal parts is a hundredth."
+      },
+      {
+        "prompt": "3 tenths = ___ hundredths",
+        "answer": "30",
+        "accepted": [
+          "30 hundredths",
+          "thirty"
+        ],
+        "explanation": "Each tenth is 10 hundredths, so 3 tenths is 3 × 10 = 30 hundredths."
+      },
+      {
+        "prompt": "6 tenths = ___ hundredths",
+        "answer": "60",
+        "accepted": [
+          "60 hundredths",
+          "sixty"
+        ],
+        "explanation": "Each tenth is 10 hundredths, so 6 tenths is 6 × 10 = 60 hundredths."
+      },
+      {
+        "prompt": "24 hundredths = 2 tenths and ___ hundredths",
+        "answer": "4",
+        "accepted": [
+          "4 hundredths",
+          "four"
+        ],
+        "explanation": "2 tenths is 20 hundredths, and 24 − 20 = 4 hundredths."
+      },
+      {
+        "prompt": "5 tenths and 7 hundredths = ___ hundredths",
+        "answer": "57",
+        "accepted": [
+          "57 hundredths",
+          "fifty seven",
+          "fifty-seven"
+        ],
+        "explanation": "5 tenths is 50 hundredths, and 50 + 7 = 57 hundredths."
+      },
+      {
+        "prompt": "2 tenths and 5 hundredths = ___ hundredths",
+        "answer": "25",
+        "accepted": [
+          "25 hundredths",
+          "twenty five",
+          "twenty-five"
+        ],
+        "explanation": "2 tenths is 20 hundredths, and 20 + 5 = 25 hundredths."
+      },
+      {
+        "prompt": "What is one hundredth less than 3 tenths? Write your answer as a number of hundredths.",
+        "answer": "29",
+        "accepted": [
+          "29 hundredths",
+          "twenty nine",
+          "twenty-nine"
+        ],
+        "explanation": "3 tenths is 30 hundredths, and one hundredth less is 29 hundredths."
+      },
+      {
+        "prompt": "How many tenths are the same as 100 hundredths?",
+        "answer": "10",
+        "accepted": [
+          "10 tenths",
+          "ten",
+          "ten tenths"
+        ],
+        "explanation": "There are 10 hundredths in one tenth, and 100 ÷ 10 = 10, so 100 hundredths is 10 tenths (one whole)."
+      }
+    ]
+  }
+}

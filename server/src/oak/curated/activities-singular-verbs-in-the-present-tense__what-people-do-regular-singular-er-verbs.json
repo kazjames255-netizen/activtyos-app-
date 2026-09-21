@@ -1,0 +1,936 @@
+{
+  "agent": "french-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe classroom activities using the singular form of the simple present tense with -er verbs."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to recognise and pronounce [ai]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "the {[ai]} sound"
+            },
+            {
+              "title": "new {-er} verbs"
+            },
+            {
+              "title": "verb {endings}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[ai]",
+              "def": "pronounced as in ‘vrai’"
+            },
+            {
+              "term": "infinitive",
+              "def": "the dictionary form of a verb giving its general meaning"
+            },
+            {
+              "term": "regular verb",
+              "def": "a verb that follows the regular rules"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The [ai] sound",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "[ai] is pronounced as in ‘vrai’. Read these words and say them aloud."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "vr{ai}",
+            "sem{ai}ne",
+            "m{ai}son",
+            "f{ai}re",
+            "mauv{ai}s",
+            "{ai}mer",
+            "r{ai}son"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Faire means to do, doing. Mauvais means bad. Aimer means to like."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the [ai] sound",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the right word.",
+          "items": [
+            {
+              "q": "Which word has the [ai] sound?",
+              "options": [
+                "maison",
+                "cinéma",
+                "ici"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which word does NOT have the [ai] sound?",
+              "options": [
+                "faire",
+                "mauvais",
+                "garçon"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which word has the [ai] sound?",
+              "options": [
+                "ici",
+                "semaine",
+                "cinq"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "New verbs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are six regular -er verbs. Each one is an infinitive."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "aimer",
+              "sub": "to like"
+            },
+            {
+              "title": "trouver",
+              "sub": "to find"
+            },
+            {
+              "title": "cocher",
+              "sub": "to tick"
+            },
+            {
+              "title": "porter",
+              "sub": "to wear"
+            },
+            {
+              "title": "rester",
+              "sub": "to stay, staying"
+            },
+            {
+              "title": "passer",
+              "sub": "to spend, spending (time)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the verbs",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each French verb to its English meaning.",
+          "pairs": [
+            {
+              "a": "aimer",
+              "b": "to like"
+            },
+            {
+              "a": "trouver",
+              "b": "to find"
+            },
+            {
+              "a": "cocher",
+              "b": "to tick"
+            },
+            {
+              "a": "porter",
+              "b": "to wear"
+            },
+            {
+              "a": "rester",
+              "b": "to stay"
+            },
+            {
+              "a": "passer",
+              "b": "to spend"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More useful words",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "l’école",
+              "sub": "the school"
+            },
+            {
+              "title": "l’uniforme",
+              "sub": "the uniform"
+            },
+            {
+              "title": "la solution",
+              "sub": "the solution"
+            },
+            {
+              "title": "la semaine",
+              "sub": "the week"
+            },
+            {
+              "title": "chaque",
+              "sub": "every"
+            },
+            {
+              "title": "en ce moment",
+              "sub": "at the moment"
+            },
+            {
+              "title": "avec",
+              "sub": "with"
+            },
+            {
+              "title": "à",
+              "sub": "to, at"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does it mean?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct English meaning.",
+          "items": [
+            {
+              "q": "Chaque semaine est calme en ce moment.",
+              "options": [
+                "Every week is calm at the moment.",
+                "Every school is calm at the moment.",
+                "Every solution is calm at the moment."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu trouves la solution à l’école.",
+              "options": [
+                "You wear the solution at school.",
+                "You find the solution at school.",
+                "You tick the school solution."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Il passe une semaine avec un ami.",
+              "options": [
+                "He spends a week with a friend.",
+                "He stays every week at school.",
+                "He wears a uniform with a friend."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The infinitive",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The infinitive is the dictionary form of the verb. It gives the general meaning. In English it can be translated as ‘to …’ or ‘…ing’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{aimer}",
+              "sub": "to like, liking (the long form: the infinitive)"
+            },
+            {
+              "title": "{aime}",
+              "sub": "likes, is liking (the short form)"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The infinitive shows no subject and no tense. That is why we have to change it to say who is doing the action."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Verbs change for the pronoun",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In French, regular verb endings change to match the pronoun. This also happens in English!"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Tu portes un uniforme. = You wear a uniform.",
+            "Elle porte un uniforme. = She wears a uniform.",
+            "Je porte un uniforme. = I wear a uniform."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In English the verb changes in the she/he form (she wear**s**). In French the tu form gets its own ending too (tu porte**s**)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The -er verb endings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Take the -er off the infinitive, then add the ending that matches the pronoun."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "trouv",
+              "add": "e",
+              "result": "je trouve",
+              "note": "je → -e"
+            },
+            {
+              "root": "trouv",
+              "add": "es",
+              "result": "tu trouves",
+              "note": "tu → -es"
+            },
+            {
+              "root": "trouv",
+              "add": "e",
+              "result": "il trouve",
+              "note": "il/elle → -e"
+            },
+            {
+              "root": "aim",
+              "add": "e",
+              "result": "j’aime",
+              "note": "Je shortens to j’ in j’aime."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do the endings sound different?",
+          "text": "No! Je trouve, tu trouves and il trouve sound the same because of the silent final consonant (SFC). So check the spelling carefully."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Add the ending",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form of the verb.",
+          "items": [
+            {
+              "q": "Tu ____ (porter) un uniforme.",
+              "options": [
+                "porte",
+                "portes"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Je ____ (trouver) la solution.",
+              "options": [
+                "trouve",
+                "trouves"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Elle ____ (rester) à l’école.",
+              "options": [
+                "reste",
+                "restes"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu ____ (passer) une semaine à la maison.",
+              "options": [
+                "passe",
+                "passes"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Build a sentence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Let’s translate ‘She finds the word at school.’ in four steps."
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Choose the pronoun: elle.",
+            "2. Change the infinitive to match: trouver → trouve.",
+            "3. Add the article and the noun: le mot.",
+            "4. Add where: à l’école."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Put it together",
+          "text": "Elle trouve le mot à l’école."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the sentences",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each French sentence to its English meaning.",
+          "pairs": [
+            {
+              "a": "Je trouve la réponse.",
+              "b": "I find the answer."
+            },
+            {
+              "a": "Tu portes un uniforme.",
+              "b": "You wear a uniform."
+            },
+            {
+              "a": "Il aime la voiture.",
+              "b": "He likes the car."
+            },
+            {
+              "a": "Elle reste à l’école.",
+              "b": "She stays at school."
+            },
+            {
+              "a": "Tu passes une semaine à la maison.",
+              "b": "You spend a week at home."
+            },
+            {
+              "a": "Je coche le numéro.",
+              "b": "I tick the number."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Infinitive or not?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is an infinitive?",
+          "options": [
+            "aimer",
+            "aime",
+            "aimes"
+          ],
+          "answer": 0,
+          "why": "Aimer is the long form, the dictionary form. Aime and aimes are forms that match a pronoun."
+        },
+        {
+          "t": "choice",
+          "q": "How do you say ‘I find’?",
+          "options": [
+            "Je trouver",
+            "Je trouve",
+            "Je trouves"
+          ],
+          "answer": 1,
+          "why": "With je, a regular -er verb takes the ending -e."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "You can’t use the infinitive with ‘je’. The long form means ‘to …’ or ‘…ing’, so it must change to match the pronoun."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Remember",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[ai] is pronounced as in ‘vrai’.",
+            "The infinitive of a French verb can be translated into English as ‘to …’ or ‘…ing’, for example to do or doing.",
+            "The singular regular -er verb endings are: je → -e, tu → -es, il/elle → -e."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [ai] pronounced?",
+      "back": "As in ‘vrai’.\n\nmaison, semaine, faire, mauvais"
+    },
+    {
+      "front": "What is an infinitive?",
+      "back": "The dictionary form of a verb, giving its general meaning.\n\naimer = to like, liking"
+    },
+    {
+      "front": "What is a regular verb?",
+      "back": "A verb that follows the regular rules."
+    },
+    {
+      "front": "What is the ending of a regular -er verb with ‘je’?",
+      "back": "-e\n\nje trouve"
+    },
+    {
+      "front": "What is the ending of a regular -er verb with ‘tu’?",
+      "back": "-es\n\ntu trouves"
+    },
+    {
+      "front": "What is the ending of a regular -er verb with ‘il’ or ‘elle’?",
+      "back": "-e\n\nil trouve, elle trouve"
+    },
+    {
+      "front": "What happens to ‘je’ in “j’aime”?",
+      "back": "Je shortens to j’."
+    },
+    {
+      "front": "How can a French infinitive like “aimer” be translated into English?",
+      "back": "As ‘to …’ or ‘…ing’.\n\nto like, liking"
+    },
+    {
+      "front": "What does “passer” mean?",
+      "back": "To spend, spending (time)."
+    },
+    {
+      "front": "What does “en ce moment” mean?",
+      "back": "At the moment."
+    },
+    {
+      "front": "What does “chaque” mean?",
+      "back": "Every."
+    },
+    {
+      "front": "Do “je trouve” and “tu trouves” sound different?",
+      "back": "No. They sound the same because of the silent final consonant (SFC)."
+    },
+    {
+      "front": "What does “Elle porte un uniforme” mean?",
+      "back": "She wears a uniform."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What people do: regular singular -er verbs",
+    "instructions": "Use the endings je → -e, tu → -es, il/elle → -e. Write the answers in French or English as asked.",
+    "questions": [
+      {
+        "prompt": "What is the ending of a regular -er verb with ‘je’?",
+        "answer": "e",
+        "accepted": [
+          "-e",
+          "E",
+          "the letter e"
+        ],
+        "explanation": "Je takes -e, for example je trouve."
+      },
+      {
+        "prompt": "What is the ending of a regular -er verb with ‘tu’?",
+        "answer": "es",
+        "accepted": [
+          "-es",
+          "ES"
+        ],
+        "explanation": "Tu takes -es, for example tu trouves."
+      },
+      {
+        "prompt": "Write the correct form of rester: Tu ____ à l’école.",
+        "answer": "restes",
+        "accepted": [
+          "Restes"
+        ],
+        "explanation": "Tu takes the ending -es."
+      },
+      {
+        "prompt": "Write the correct form of porter: Elle ____ un uniforme.",
+        "answer": "porte",
+        "accepted": [
+          "Porte"
+        ],
+        "explanation": "Elle takes the ending -e."
+      },
+      {
+        "prompt": "Write the correct form of trouver: Je ____ la réponse.",
+        "answer": "trouve",
+        "accepted": [
+          "Trouve"
+        ],
+        "explanation": "Je takes the ending -e."
+      },
+      {
+        "prompt": "Write the correct form of passer: Tu ____ une semaine intéressante.",
+        "answer": "passes",
+        "accepted": [
+          "Passes"
+        ],
+        "explanation": "Tu takes the ending -es."
+      },
+      {
+        "prompt": "Translate into French: ‘I tick the answer.’",
+        "answer": "Je coche la réponse.",
+        "accepted": [
+          "Je coche la réponse",
+          "je coche la réponse"
+        ],
+        "explanation": "Cocher is a regular -er verb, and je takes -e."
+      },
+      {
+        "prompt": "Translate into French: ‘She finds the word at school.’",
+        "answer": "Elle trouve le mot à l’école.",
+        "accepted": [
+          "Elle trouve le mot à l'école.",
+          "Elle trouve le mot à l’école",
+          "Elle trouve le mot à l'école",
+          "elle trouve le mot à l’école"
+        ],
+        "explanation": "Elle takes trouve, the word is le mot, and at school is à l’école."
+      },
+      {
+        "prompt": "In this lesson, what does “passer” mean in English?",
+        "answer": "to spend",
+        "accepted": [
+          "spend",
+          "to spend time",
+          "spending",
+          "to spend, spending"
+        ],
+        "explanation": "Passer means to spend, spending (time)."
+      },
+      {
+        "prompt": "In this lesson, what does “porter” mean in English?",
+        "answer": "to wear",
+        "accepted": [
+          "wear",
+          "wearing",
+          "to wear, wearing"
+        ],
+        "explanation": "Porter means to wear, wearing."
+      },
+      {
+        "prompt": "What does “chaque” mean in English?",
+        "answer": "every",
+        "accepted": [
+          "Every"
+        ],
+        "explanation": "Chaque means every, for example chaque semaine is every week."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 4,
+        "doThis": [
+          "Read the goal together, then look at the three key words: [ai], infinitive and regular verb.",
+          "Ask the student what an infinitive is before showing the meaning.",
+          "Explain that the lesson also practises recognising and pronouncing [ai]."
+        ],
+        "say": "I can describe classroom activities using the singular form of the simple present tense with -er verbs.",
+        "keywords": [
+          {
+            "term": "[ai]",
+            "meaning": "pronounced as in 'vrai'"
+          },
+          {
+            "term": "infinitive",
+            "meaning": "the dictionary form of a verb giving its general meaning"
+          },
+          {
+            "term": "regular verb",
+            "meaning": "a verb that follows the regular rules"
+          }
+        ],
+        "checkFor": {
+          "ask": "What is the infinitive of a verb?",
+          "lookFor": "The dictionary form of a verb giving its general meaning."
+        },
+        "recap": [
+          "Our goal: I can describe classroom activities using the singular form of the simple present tense with -er verbs.",
+          "An infinitive is the dictionary form of a verb. A regular verb follows the regular rules."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The [ai] sound",
+        "minutes": 5,
+        "doThis": [
+          "Say each word for the student to repeat: vrai, semaine, maison, faire, mauvais, aimer.",
+          "Point out that [ai] is pronounced as in 'vrai'.",
+          "Give the meanings: faire is to do or doing, mauvais is bad, and aimer is to like."
+        ],
+        "keyIdeas": [
+          "[ai] sounds like 'vrai'."
+        ],
+        "keywords": [
+          {
+            "term": "[ai]",
+            "meaning": "pronounced as in 'vrai'"
+          }
+        ],
+        "checkFor": {
+          "ask": "Which of these words has the [ai] sound: maison, faire, mauvais?",
+          "lookFor": "All three: maison, faire and mauvais."
+        },
+        "recap": [
+          "[ai] is pronounced as in 'vrai'.",
+          "Practise saying vrai, semaine, maison, faire, mauvais and aimer."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "New vocabulary",
+        "minutes": 7,
+        "doThis": [
+          "Say each word for the student to repeat, then give its English meaning.",
+          "Verbs (each one an infinitive): aimer means to like, trouver to find, cocher to tick, porter to wear, rester to stay or staying, and passer to spend or spending (time).",
+          "Other words: l'école the school, l'uniforme the uniform, la solution the solution, la semaine the week, chaque every, en ce moment at the moment, avec with, and à to or at."
+        ],
+        "keyIdeas": [
+          "chaque means every.",
+          "en ce moment means at the moment."
+        ],
+        "examples": [
+          "Chaque école est calme en ce moment. = Every school is calm at the moment.",
+          "Chaque semaine est calme en ce moment. = Every week is calm at the moment."
+        ],
+        "checkFor": {
+          "ask": "What does chaque mean in English?",
+          "lookFor": "Every."
+        },
+        "recap": [
+          "aimer means to like, trouver to find, cocher to tick, porter to wear, rester to stay and passer to spend.",
+          "Chaque means every, and en ce moment means at the moment."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The infinitive",
+        "minutes": 5,
+        "doThis": [
+          "Explain that the infinitive is the dictionary form of the verb: it gives the general meaning but shows no subject and no tense.",
+          "Show that in English it can be translated as 'to ...' or '...ing': aimer means to like or liking, but aime means likes or is liking.",
+          "Explain that aimer is the long form of the verb and aime is the short form, so the long form has to change to say who is doing the action."
+        ],
+        "keyIdeas": [
+          "The infinitive of a verb in English can be translated as 'to ...' or '...ing'.",
+          "aimer is the long form of the verb (the infinitive) and aime is the short form."
+        ],
+        "keywords": [
+          {
+            "term": "infinitive",
+            "meaning": "the dictionary form of a verb giving its general meaning"
+          }
+        ],
+        "examples": [
+          "Aimer le professeur est bon. = Liking the teacher is good.",
+          "Il aime le professeur. = He likes the teacher."
+        ],
+        "checkFor": {
+          "ask": "Which one is the infinitive: aimer, aime or aimes?",
+          "lookFor": "aimer, the long form, meaning to like or liking."
+        },
+        "recap": [
+          "The infinitive is the dictionary form of a verb: aimer means to like or liking.",
+          "It shows no subject, so it has to change to say who is doing the action."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The singular -er verb endings",
+        "minutes": 7,
+        "doThis": [
+          "Explain that in French, regular verb endings change to match the pronoun, as they do in English, for example wear and wears.",
+          "Show how to make the verb: take -er off the infinitive, then add -e for je, -es for tu, and -e for il or elle. Je shortens to j' in j'aime.",
+          "Point out that je trouve, tu trouves and il trouve sound the same because of the silent final consonant, so the student must check the spelling of the ending."
+        ],
+        "keyIdeas": [
+          "Regular -er verb endings in the present tense are -e for 'je', -es for 'tu' and -e for 'il/elle'."
+        ],
+        "keywords": [
+          {
+            "term": "regular verb",
+            "meaning": "a verb that follows the regular rules"
+          }
+        ],
+        "examples": [
+          "trouver: je trouve, tu trouves, il trouve.",
+          "porter: je porte, tu portes, elle porte (I wear, you wear, she wears).",
+          "aimer: j'aime, tu aimes, il aime.",
+          "rester: je reste, tu restes, il reste, elle reste."
+        ],
+        "checkFor": {
+          "ask": "How do we say 'you wear a uniform' using porter?",
+          "lookFor": "Tu portes un uniforme. The ending for tu is -es."
+        },
+        "recap": [
+          "Take -er off the verb and add an ending: -e for je, -es for tu and -e for il or elle.",
+          "Je trouve, tu trouves, il trouve. Je shortens to j' in j'aime."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Add the ending",
+        "minutes": 6,
+        "doThis": [
+          "Read each sentence with the verb ending missing and ask the student to add it: Tu rest__ à l'école, Je rest__ à l'école, Il rest__ à l'école, Elle rest__ à l'école.",
+          "Show that the ending -es tells us the pronoun is tu: ___ portes un uniforme bleu, ___ restes calme, ___ aimes l'anglais.",
+          "Check each ending against its pronoun together."
+        ],
+        "examples": [
+          "Tu restes à l'école. = You stay at school.",
+          "Je reste à l'école. = I stay at school.",
+          "Il reste à l'école. = He stays at school.",
+          "Elle reste à l'école. = She stays at school."
+        ],
+        "checkFor": {
+          "ask": "Which pronoun fits the gap: ___ portes un uniforme bleu?",
+          "lookFor": "Tu, because the ending -es goes with tu."
+        },
+        "recap": [
+          "Look at the pronoun, then add the right ending.",
+          "Tu restes, je reste, il reste, elle reste."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Build and translate sentences",
+        "minutes": 6,
+        "doThis": [
+          "Build 'She finds the word at school' in four steps: choose the pronoun (elle), change trouver to trouve, add the article and the noun (le mot), then add where (à l'école).",
+          "Ask the student to translate the other sentences, remembering that mais means but.",
+          "Check each verb ending against its pronoun."
+        ],
+        "examples": [
+          "She finds the word at school. = Elle trouve le mot à l'école.",
+          "He likes the bike but you like the car. = Il aime le vélo mais tu aimes la voiture.",
+          "You wear a uniform. = Tu portes un uniforme.",
+          "I find the answer. = Je trouve la réponse."
+        ],
+        "checkFor": {
+          "ask": "Why do we say 'je trouve' and not 'je trouver'?",
+          "lookFor": "The infinitive means 'to find' or 'finding', so it has to change to match the pronoun. With je, a regular -er verb takes the ending -e."
+        },
+        "recap": [
+          "Pick the pronoun, change the verb ending, then add the rest of the sentence.",
+          "Elle trouve le mot à l'école. Il aime le vélo mais tu aimes la voiture."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 7,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them to match French words such as l'école to English, tick the infinitives, tick the words with the [ai] sound, say what chaque means, give the verb ending for je, and put a translation in order.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to say the [ai] sound and the three endings: -e for je, -es for tu, and -e for il or elle.",
+          "Finish with the summary: [ai] is pronounced as in 'vrai'; the infinitive of a verb can be translated into English as 'to ...' or '...ing'; the singular regular -er verb endings are -e for je, -es for tu and -e for il or elle."
+        ],
+        "checkFor": {
+          "ask": "What is the ending of a regular -er verb with je, with tu, and with il or elle?",
+          "lookFor": "-e for je, -es for tu, and -e for il or elle."
+        },
+        "recap": [
+          "Can you do it now? I can describe classroom activities using the singular form of the simple present tense with -er verbs.",
+          "Remember: je -e, tu -es, il or elle -e."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils may use the infinitive with 'je', for example 'je trouver'.",
+        "fix": "Explain that the long form of the verb (the infinitive) means 'to ...' or '...ing', so it needs changing for the correct subject pronoun: je trouve."
+      },
+      {
+        "mistake": "Pupils may forget the -s on tu because it cannot be heard.",
+        "fix": "Je trouve, tu trouves and il trouve sound the same because of the silent final consonant, so check the spelling of the ending every time."
+      }
+    ],
+    "watchOut": [
+      "Use English as a bridge: the verb changes in English too (you wear, she wears), so endings that change are not a new idea.",
+      "Verbs are not just action words: they can also show things we cannot see or hear, such as liking (aimer) or finding (trouver).",
+      "Keep sentences to the verbs and words practised in the lesson: aimer, cocher, passer, porter, rester and trouver."
+    ]
+  }
+}

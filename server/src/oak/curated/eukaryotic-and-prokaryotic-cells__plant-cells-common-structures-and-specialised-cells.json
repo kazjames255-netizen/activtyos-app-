@@ -1,0 +1,713 @@
+{
+  "agent": "w4-comb-bio",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify common structures of plant cells and relate each structure to its function."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Sub-cellular} structures of plant cells"
+            },
+            {
+              "title": "{Specialised} plant cells"
+            },
+            {
+              "title": "Features of specialised plant cells"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell wall",
+              "def": "A subcellular structure made from cellulose fibres that strengthens the cell and supports the plant."
+            },
+            {
+              "term": "chloroplast",
+              "def": "A subcellular structure that contains the green pigment chlorophyll, which absorbs light for photosynthesis."
+            },
+            {
+              "term": "permanent vacuole",
+              "def": "A subcellular structure filled with cell sap that helps keep the cell turgid."
+            },
+            {
+              "term": "photosynthesis",
+              "def": "A chemical reaction that plants use to make glucose, taking place in the chloroplasts."
+            },
+            {
+              "term": "active transport",
+              "def": "The net movement of particles from a low to high concentration, against a concentration gradient, using energy."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "photosynthesis"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The plant cell model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "This is a 2D model of a plant cell. It shows the common subcellular structures you find in a plant cell."
+        },
+        {
+          "t": "text",
+          "text": "Plant and animal cells have these subcellular structures in common:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "nucleus",
+            "cell membrane",
+            "ribosomes",
+            "mitochondria",
+            "cytoplasm"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Plant cells also have **three additional structures**:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Cell wall}",
+              "sub": "the outermost layer"
+            },
+            {
+              "title": "{Chloroplasts}"
+            },
+            {
+              "title": "Large {permanent vacuole}"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In a plant cell the cell wall is the outermost layer. The cell membrane is the second layer in."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Jobs of the shared structures",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each subcellular structure has a specific function. First, the ones that plant and animal cells share:"
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell membrane",
+              "def": "Partially permeable: it lets some substances through but not others, and controls what enters and exits the cell. This keeps the internal conditions of the cell relatively constant."
+            },
+            {
+              "term": "ribosomes",
+              "def": "Where protein synthesis takes place."
+            },
+            {
+              "term": "cytoplasm",
+              "def": "A jelly-like liquid containing salts and nutrients, where many chemical reactions occur."
+            },
+            {
+              "term": "mitochondrion",
+              "def": "Where aerobic respiration occurs. It contains the enzymes for respiration."
+            },
+            {
+              "term": "nucleus",
+              "def": "Controls the cell activities. It contains the DNA, which is the genetic material."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Jobs of the plant-only structures",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "chloroplast",
+              "def": "This is where photosynthesis takes place. It contains the green pigment chlorophyll, which absorbs light energy for photosynthesis."
+            },
+            {
+              "term": "cell wall",
+              "def": "On the very outside of the plant cell. It is made from cellulose fibres, and it strengthens the cell and supports the plant."
+            },
+            {
+              "term": "large permanent vacuole",
+              "def": "Filled with cell sap to help keep the cell turgid."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Photosynthesis is how plants make {glucose}. It takes place in the chloroplasts."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Plant cell structures",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Which structure is made from cellulose fibres?",
+              "options": [
+                "cell wall",
+                "chloroplast",
+                "nucleus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which structure absorbs light for photosynthesis?",
+              "options": [
+                "mitochondrion",
+                "ribosome",
+                "chloroplast"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "The large permanent vacuole is filled with …",
+              "options": [
+                "chlorophyll",
+                "cell sap",
+                "cellulose"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which structure is found in both plant and animal cells?",
+              "options": [
+                "cell wall",
+                "mitochondrion",
+                "chloroplast"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Plants use photosynthesis to make …",
+              "options": [
+                "DNA",
+                "cellulose",
+                "glucose"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Specialised plant cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Specialised cells in plants are adapted to carry out specific functions. They have specific shapes and structures, including subcellular structures, that help them do a specific job. Here are five examples:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Palisade cell",
+              "sub": "in leaves"
+            },
+            {
+              "title": "Guard cell",
+              "sub": "underside of leaves"
+            },
+            {
+              "title": "Root hair cell",
+              "sub": "in roots"
+            },
+            {
+              "title": "Xylem"
+            },
+            {
+              "title": "Phloem"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The palisade cell is a specialised cell. It is the type of cell used for the 2D plant cell model. And not all plant cells contain chloroplasts: root hair cells do not."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Palisade cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Function:** to absorb as much light as possible for photosynthesis. Palisade cells are found at the top of leaves."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "many chloroplasts",
+              "def": "To absorb as much light as possible for photosynthesis. The more chloroplasts, the more sunlight can be absorbed."
+            },
+            {
+              "term": "column shape",
+              "def": "So that they can be packed close together at the top of the leaf. The more palisade cells there are, the more light can be absorbed."
+            },
+            {
+              "term": "found at the top of the leaf",
+              "def": "To absorb as much light as possible."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Guard cells and stomata",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Guard cells are found on the **underside** of leaves. They open and close the **stomata**, which are little holes."
+        },
+        {
+          "t": "text",
+          "text": "When the stomata are open, carbon dioxide diffuses into the leaf, and water vapour and oxygen diffuse out."
+        },
+        {
+          "t": "callout",
+          "text": "Stomata are located on the underside of leaves to limit the amount of water lost through evaporation."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Guard cells: day and night",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Guard cells are adapted to their function in these ways:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "In bright light",
+              "sub": "Guard cells absorb water by osmosis and become turgid. This keeps the stomata open."
+            },
+            {
+              "title": "In low light",
+              "sub": "Guard cells lose water and become flaccid. This makes the stomata close."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why does this matter?",
+          "text": "When the stomata are open, water can evaporate. When they are closed, water cannot leave, so this helps control how much water the leaf loses."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Root hair cells",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The outside surface of roots is covered in root hair cells. **Function:** to absorb water and minerals from the soil. Water is absorbed by osmosis. Mineral ions are absorbed by active transport."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "long, thin, hair-like projection",
+              "def": "To increase the surface area for absorption of water and mineral ions."
+            },
+            {
+              "term": "large permanent vacuole",
+              "def": "To store as much water as possible."
+            },
+            {
+              "term": "many mitochondria",
+              "def": "To release the energy needed for the active transport of minerals from the soil."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Do root hair cells have chloroplasts?",
+          "text": "No. Photosynthesis cannot take place without sunlight, so there are no chloroplasts in root hair cells."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Xylem",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The xylem and the phloem run up the stem of plants. The **xylem** transports water upwards from the roots to the leaves, in one direction."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "cell walls thickened with lignin",
+              "def": "To strengthen the hollow tubes and provide support."
+            },
+            {
+              "term": "ends of the cells broken down",
+              "def": "This forms long hollow tubes that allow water to move through."
+            },
+            {
+              "term": "effectively dead",
+              "def": "Xylem cells contain no subcellular structures, allowing water to pass through freely."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Phloem",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The **phloem** transports glucose and amino acids up and down the plant."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "sieve plates",
+              "def": "They join the cells and have small holes that allow glucose and amino acids to flow through (translocation)."
+            },
+            {
+              "term": "companion cells",
+              "def": "They contain many mitochondria, which release energy to help transport glucose and amino acids."
+            },
+            {
+              "term": "few subcellular structures",
+              "def": "This allows more glucose and amino acids to flow through."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Xylem: {water}, upwards only. Phloem: {glucose and amino acids}, up and down."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which specialised cell?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which specialised plant cell has each feature?",
+          "columns": [
+            "Palisade cell",
+            "Root hair cell",
+            "Xylem",
+            "Phloem"
+          ],
+          "items": [
+            {
+              "text": "column shape, so they pack close together",
+              "col": 0
+            },
+            {
+              "text": "many chloroplasts",
+              "col": 0
+            },
+            {
+              "text": "found at the top of the leaf",
+              "col": 0
+            },
+            {
+              "text": "long, thin, hair-like projection",
+              "col": 1
+            },
+            {
+              "text": "found on the outside surface of roots",
+              "col": 1
+            },
+            {
+              "text": "cell walls thickened with lignin",
+              "col": 2
+            },
+            {
+              "text": "ends broken down to make hollow tubes",
+              "col": 2
+            },
+            {
+              "text": "sieve plates with small holes",
+              "col": 3
+            },
+            {
+              "text": "companion cells",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Leaves, roots and stems",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "What are the little holes on the underside of leaves called?",
+              "options": [
+                "sieve plates",
+                "stomata",
+                "cilia"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "When the stomata are open, which gas diffuses into the leaf?",
+              "options": [
+                "carbon dioxide",
+                "oxygen",
+                "glucose"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Why do the stomata close in low light?",
+              "options": [
+                "So that light can get in",
+                "So that glucose can escape",
+                "So that water cannot leave the leaf"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which tissue transports water from the roots to the leaves?",
+              "options": [
+                "phloem",
+                "xylem",
+                "guard cells"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which of these moves up and down the plant?",
+              "options": [
+                "water in the xylem",
+                "oxygen in the guard cells",
+                "glucose and amino acids in the phloem"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Why do root hair cells have many mitochondria?",
+              "options": [
+                "To absorb light",
+                "To make the cell wall thicker",
+                "To release energy for active transport of minerals"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Plant and animal cells have some common subcellular structures. Plant cells usually have three additional structures: the cell wall, chloroplasts and a large permanent vacuole.",
+            "Each subcellular structure has a specific function within the cell.",
+            "Specialised plant cells are adapted for their function: palisade cells, guard cells, root hair cells, xylem and phloem.",
+            "They each have specific features that enable them to carry out their functions."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the cell wall made from, and what does it do?",
+      "back": "It is made from cellulose fibres. It strengthens the cell and supports the plant."
+    },
+    {
+      "front": "What is a chloroplast?",
+      "back": "A subcellular structure that contains the green pigment chlorophyll, which absorbs light for photosynthesis. Photosynthesis takes place in the chloroplasts."
+    },
+    {
+      "front": "What is the permanent vacuole?",
+      "back": "A subcellular structure filled with cell sap that helps keep the cell turgid."
+    },
+    {
+      "front": "What is photosynthesis?",
+      "back": "A chemical reaction that plants use to make glucose, taking place in the chloroplasts."
+    },
+    {
+      "front": "What is active transport?",
+      "back": "The net movement of particles from a low to high concentration, against a concentration gradient, using energy."
+    },
+    {
+      "front": "Name the three extra structures that plant cells usually have.",
+      "back": "The cell wall, chloroplasts and a large permanent vacuole."
+    },
+    {
+      "front": "Where are palisade cells found, and why?",
+      "back": "At the top of leaves, so they can absorb as much light as possible for photosynthesis."
+    },
+    {
+      "front": "Name three adaptations of palisade cells.",
+      "back": "Many chloroplasts; column shape so they pack close together; found at the top of the leaf."
+    },
+    {
+      "front": "What do guard cells do?",
+      "back": "They open and close the stomata (little holes on the underside of leaves)."
+    },
+    {
+      "front": "What happens to guard cells in bright light and in low light?",
+      "back": "Bright light: they absorb water by osmosis, become turgid and keep the stomata open.\n\nLow light: they lose water, become flaccid and the stomata close."
+    },
+    {
+      "front": "What do root hair cells do, and how is each substance absorbed?",
+      "back": "They absorb water and minerals from the soil.\n\nWater is absorbed by osmosis; mineral ions by active transport."
+    },
+    {
+      "front": "What does the xylem transport?",
+      "back": "Water, upwards from the roots to the leaves, in one direction.\n\nIts cell walls are thickened with lignin."
+    },
+    {
+      "front": "What does the phloem transport?",
+      "back": "Glucose and amino acids, up and down the plant."
+    },
+    {
+      "front": "Do root hair cells contain chloroplasts?",
+      "back": "No. Photosynthesis cannot take place without sunlight, so there are no chloroplasts in root hair cells."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Plant cells: common structures and specialised cells",
+    "instructions": "Write a short answer to each question. Use the words from the lesson.",
+    "questions": [
+      {
+        "prompt": "Which structure is the outermost layer of a plant cell? (two words)",
+        "answer": "cell wall",
+        "accepted": [
+          "the cell wall"
+        ],
+        "explanation": "The cell wall is the outermost layer of the plant cell; the cell membrane is the second layer in."
+      },
+      {
+        "prompt": "Which substance in the cell wall provides strength and support?",
+        "answer": "cellulose",
+        "explanation": "The cell wall is made from cellulose fibres."
+      },
+      {
+        "prompt": "What is the name of the green pigment in chloroplasts that absorbs light?",
+        "answer": "chlorophyll",
+        "explanation": "Chlorophyll absorbs light for photosynthesis."
+      },
+      {
+        "prompt": "Which process do plants use to make glucose?",
+        "answer": "photosynthesis",
+        "explanation": "Photosynthesis takes place in the chloroplasts and makes glucose."
+      },
+      {
+        "prompt": "Which structure is filled with cell sap to help keep the cell turgid? (two words)",
+        "answer": "permanent vacuole",
+        "accepted": [
+          "the permanent vacuole",
+          "large permanent vacuole"
+        ],
+        "explanation": "The large permanent vacuole is filled with cell sap."
+      },
+      {
+        "prompt": "Which specialised plant cells are found at the top of leaves to absorb light? (two words)",
+        "answer": "palisade cells",
+        "accepted": [
+          "palisade cell",
+          "the palisade cells"
+        ],
+        "explanation": "Palisade cells are at the top of leaves so they can absorb as much light as possible."
+      },
+      {
+        "prompt": "Which specialised plant cells open and close the stomata? (two words)",
+        "answer": "guard cells",
+        "accepted": [
+          "guard cell",
+          "the guard cells"
+        ],
+        "explanation": "Guard cells control if the stomata are open or closed."
+      },
+      {
+        "prompt": "Root hair cells absorb water and ___ from the soil. Write the missing word.",
+        "answer": "minerals",
+        "accepted": [
+          "mineral ions"
+        ],
+        "explanation": "Root hair cells absorb water and minerals from the soil."
+      },
+      {
+        "prompt": "By which process do root hair cells absorb water?",
+        "answer": "osmosis",
+        "explanation": "Water is absorbed by osmosis; mineral ions are absorbed by active transport."
+      },
+      {
+        "prompt": "Which tissue in the stem transports water upwards from the roots to the leaves?",
+        "answer": "xylem",
+        "explanation": "The xylem transports water upwards in one direction."
+      },
+      {
+        "prompt": "Which tissue in the stem transports glucose and amino acids up and down the plant?",
+        "answer": "phloem",
+        "explanation": "The phloem transports glucose and amino acids up and down."
+      },
+      {
+        "prompt": "Xylem cell walls are thickened with ___, which strengthens the hollow tubes. Write the missing word.",
+        "answer": "lignin",
+        "explanation": "Lignin strengthens the hollow xylem tubes and provides support."
+      }
+    ]
+  }
+}

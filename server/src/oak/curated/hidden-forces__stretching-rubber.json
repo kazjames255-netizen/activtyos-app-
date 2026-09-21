@@ -1,0 +1,525 @@
+{
+  "agent": "science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can investigate the extension of a rubber band, and compare the behaviour to that of a spring."
+        },
+        {
+          "t": "text",
+          "text": "Does a rubber band stretch in the same way as a spring? You will find out."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Measuring the extension of a rubber band"
+            },
+            {
+              "title": "Describing the stretch"
+            },
+            {
+              "title": "Explaining the stretching pattern"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "extension",
+              "def": "The extension of a rubber band is its change in length."
+            },
+            {
+              "term": "elastic",
+              "def": "A rubber band is elastic; it returns to its original length after forces are removed from it."
+            },
+            {
+              "term": "directly proportional",
+              "def": "Variables are directly proportional when one is a constant multiple of the other."
+            },
+            {
+              "term": "long molecular chains",
+              "def": "Rubber contains long molecular chains, that uncoil when it stretches."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stretching a rubber band",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A rubber band gets longer when you put a force on it, just like a spring. But there are differences."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A spring stays the same thickness and just gets longer.",
+            "A rubber band gets **thinner** as it gets longer. The more force, the thinner it gets.",
+            "Both return to their original length and size when the force is removed. This is {elastic} behaviour."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We investigate a rubber band the same way as a spring: hang it up, hang masses from it to make a constant downward force, and measure the extension. The extension is how much longer the band has become."
+        },
+        {
+          "t": "callout",
+          "text": "The question: is the extension of a rubber band {directly proportional} to the force on it? When you double the force, does the extension double? A spring does this, but we do not yet know about a rubber band."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Predictions",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which prediction is about the extension being directly proportional to the force?",
+          "options": [
+            "The rubber band will get thinner as you add force",
+            "If the force doubles, the extension will double",
+            "The rubber band will look shiny",
+            "The rubber band will get warmer"
+          ],
+          "answer": 1,
+          "why": "Directly proportional means that doubling the force doubles the extension."
+        },
+        {
+          "t": "choice",
+          "q": "A pupil predicts: There is no extension when there is no force pulling on the band. Is this consistent with the extension being directly proportional to the force?",
+          "options": [
+            "Yes",
+            "No"
+          ],
+          "answer": 0,
+          "why": "In a directly proportional relationship, no force means no extension."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Setting up the rubber band",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Hang the rubber band from a clamp stand and put a vertical ruler beside it, with the ruler’s zero exactly level with the bottom of the band."
+        },
+        {
+          "t": "text",
+          "text": "A rubber band is loose, so it is harder to find its bottom than for a spring. Do not stretch it! Gently pull down on the band with a second ruler to find its natural length, keep that ruler horizontal, and line it up with the zero on the vertical ruler."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Why the second ruler?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Why do you gently pull down on the rubber band with a second ruler before measuring?",
+          "options": [
+            "To stretch it as far as possible",
+            "To make it thinner",
+            "To find its natural length without stretching it, so the zero can be lined up",
+            "To add a force of 1 N"
+          ],
+          "answer": 2,
+          "why": "The band is loose, so this technique finds its natural (unstretched) length to line up with zero."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Taking measurements",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Set up the equipment with zero on the ruler in line with the bottom of the rubber band.",
+            "Hang a mass hanger on the band and measure the extension.",
+            "Add masses one at a time and measure the extension for each."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Record the force and extension in a table, then plot extension against force. Your values will be different from others, but the pattern should be the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The rubber band graph",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "A typical graph for a rubber band is a smooth {S-shaped curve}. Do not draw a straight line of best fit through the points."
+        },
+        {
+          "t": "text",
+          "text": "Conclusion: the extension is NOT directly proportional to the force, because the line is not a straight line. This is different from a spring."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which line is a rubber band?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which graph of extension against force is typical for a rubber band?",
+          "options": [
+            "A straight line through the origin",
+            "A smooth S-shaped curve",
+            "A horizontal line",
+            "A straight line that goes downwards"
+          ],
+          "answer": 1,
+          "why": "Rubber bands give a smooth S-shaped curve, so the extension is not directly proportional to the force."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hard, easy, hard again",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The band behaves differently depending on the size of the force."
+        },
+        {
+          "t": "match",
+          "q": "Match each part of the graph to how the band behaves.",
+          "pairs": [
+            {
+              "a": "Small forces (start of the graph)",
+              "b": "hard to stretch at first"
+            },
+            {
+              "a": "Medium forces (middle of the graph)",
+              "b": "easier to stretch"
+            },
+            {
+              "a": "Larger forces (end of the graph)",
+              "b": "hard to stretch again"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "To compare two sections, look at the extra stretch for each extra newton. A bigger extra stretch per newton means the band is easier to stretch there."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which part is easier to stretch?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Going from 2 N to 3 N stretches a rubber band by an extra 1.0 cm. Going from 5 N to 6 N stretches it by an extra 3.0 cm. Where is the band easier to stretch?",
+          "options": [
+            "From 2 N to 3 N",
+            "Both are equally easy",
+            "It cannot be stretched",
+            "From 5 N to 6 N"
+          ],
+          "answer": 3,
+          "why": "An extra 3.0 cm for one more newton is a bigger stretch than 1.0 cm, so the band is easier to stretch there."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why does rubber behave this way?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A spring’s coils move apart evenly when you pull, so a spring stretches in proportion to the force."
+        },
+        {
+          "t": "text",
+          "text": "Rubber contains {long chains of molecules}. Normally these chains are coiled up together."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A small force starts to uncoil the chains, but this does not cause much stretching.",
+            "Larger forces make the chains line up more easily, so the band stretches more easily.",
+            "Near their maximum length the chains can hardly stretch any more, so the band is hard to stretch again."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Explain the graph",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which part of the rubber band graph does each explanation belong to?",
+          "columns": [
+            "Start (hard to stretch)",
+            "Middle (easier to stretch)",
+            "End (hard to stretch again)"
+          ],
+          "items": [
+            {
+              "text": "The long chains of molecules are coiled together",
+              "col": 0
+            },
+            {
+              "text": "The molecule chains are able to straighten out",
+              "col": 1
+            },
+            {
+              "text": "The chains have straightened and cannot stretch much more",
+              "col": 2
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Why does a rubber band stretch differently from a spring?",
+          "options": [
+            "It is made from a softer material, and that is the whole reason",
+            "Its long molecular chains behave differently from metal coils",
+            "It is not elastic",
+            "Springs are always thicker"
+          ],
+          "answer": 1,
+          "why": "The long molecular chains in rubber uncoil in stages, which gives the S-shaped curve. A spring’s coils just move apart evenly."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Test yourself",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A rubber band is 7.0 cm long unloaded and 11.5 cm long with a force on it. What is its extension?",
+              "options": [
+                "7.0 cm",
+                "11.5 cm",
+                "4.5 cm",
+                "18.5 cm"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What happens to the width of a rubber band as you stretch it?",
+              "options": [
+                "It gets thicker",
+                "It stays the same",
+                "It doubles",
+                "It gets thinner"
+              ],
+              "answer": 3
+            },
+            {
+              "q": "What does it mean that a rubber band is elastic?",
+              "options": [
+                "It never stretches",
+                "It returns to its original length when the force is removed",
+                "Its extension is directly proportional to the force",
+                "It gets thicker when stretched"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The extension of a rubber band is not proportional to the force on it, but rubber is elastic.",
+            "A rubber band is hard to stretch at first, then easier to stretch, then hard to stretch again (an S-shaped graph).",
+            "The behaviour of rubber is explained by the uncoiling of long molecular chains.",
+            "A spring stretches in proportion to the force (Hooke’s law), and a rubber band does not."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What happens to the thickness of a rubber band when it is stretched?",
+      "back": "It gets thinner as it gets longer. (A spring stays the same thickness.)"
+    },
+    {
+      "front": "What does elastic mean?",
+      "back": "The material returns to its original length after the forces are removed."
+    },
+    {
+      "front": "What is the extension of a rubber band?",
+      "back": "Its change in length (how much longer it has become)."
+    },
+    {
+      "front": "What does directly proportional mean?",
+      "back": "One variable is a constant multiple of the other: doubling the force would double the extension."
+    },
+    {
+      "front": "Is the extension of a rubber band directly proportional to the force on it?",
+      "back": "No. The graph is not a straight line."
+    },
+    {
+      "front": "What shape is the graph of extension against force for a rubber band?",
+      "back": "A smooth S-shaped curve. Do not draw a straight line through it."
+    },
+    {
+      "front": "Describe how a rubber band stretches as the force increases.",
+      "back": "Hard to stretch at first, then easier to stretch, then hard to stretch again."
+    },
+    {
+      "front": "What structure in rubber explains its stretching pattern?",
+      "back": "Long molecular chains, which uncoil when the band stretches."
+    },
+    {
+      "front": "Why is a rubber band hard to stretch at first?",
+      "back": "The long molecular chains are coiled together. A small force only starts to uncoil them."
+    },
+    {
+      "front": "Why does a rubber band become hard to stretch again at large forces?",
+      "back": "The molecular chains have straightened and are close to their maximum length."
+    },
+    {
+      "front": "How do you find the natural length of the band before measuring?",
+      "back": "Gently pull down on it with a second ruler, without stretching it, and line that ruler up with the zero on the vertical ruler."
+    },
+    {
+      "front": "How does a spring stretch differently from a rubber band?",
+      "back": "A spring’s extension is directly proportional to the force (Hooke’s law): its coils move apart evenly. A rubber band’s is not."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Stretching rubber",
+    "instructions": "Answer each question with a word, a number or a short phrase. Give units where they are asked for.",
+    "questions": [
+      {
+        "prompt": "What happens to the thickness of a rubber band as you stretch it: does it get thicker, thinner or stay the same?",
+        "answer": "thinner",
+        "accepted": [
+          "it gets thinner",
+          "gets thinner"
+        ],
+        "explanation": "A rubber band becomes thinner as it gets longer."
+      },
+      {
+        "prompt": "What word describes a material that returns to its original length after the force is removed?",
+        "answer": "elastic",
+        "accepted": [
+          "Elastic",
+          "it is elastic"
+        ],
+        "explanation": "Rubber bands and springs are elastic."
+      },
+      {
+        "prompt": "A rubber band is 7.0 cm long unloaded and 11.5 cm long when a force acts on it. What is its extension? Give your answer in cm.",
+        "answer": "4.5 cm",
+        "accepted": [
+          "4.5",
+          "4.5cm"
+        ],
+        "explanation": "Extension = 11.5 − 7.0 = 4.5 cm."
+      },
+      {
+        "prompt": "A mass hanger gives a force of 1 N and each 100 g mass adds 1 N. What is the total force with a hanger and 3 masses? Give your answer in newtons.",
+        "answer": "4 N",
+        "accepted": [
+          "4",
+          "4N",
+          "four newtons"
+        ],
+        "explanation": "Hanger 1 N + 3 × 1 N = 4 N."
+      },
+      {
+        "prompt": "Is the extension of a rubber band directly proportional to the force on it? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "No",
+          "not directly proportional"
+        ],
+        "explanation": "The graph is an S-shaped curve, not a straight line through the origin."
+      },
+      {
+        "prompt": "What shape is the line of best fit for a typical rubber band graph of extension against force?",
+        "answer": "S-shaped curve",
+        "accepted": [
+          "an S-shaped curve",
+          "S shaped curve",
+          "a smooth S-shaped curve",
+          "smooth S-shaped curve",
+          "S-shape",
+          "an S shape",
+          "S curve",
+          "S shaped"
+        ],
+        "explanation": "The curve is a smooth S shape, so a straight line should not be drawn."
+      },
+      {
+        "prompt": "What structure inside rubber explains how it stretches? Give a short phrase.",
+        "answer": "long molecular chains",
+        "accepted": [
+          "long chains of molecules",
+          "molecular chains",
+          "long chain molecules",
+          "long molecule chains",
+          "chains of molecules"
+        ],
+        "explanation": "Long molecular chains uncoil as the band stretches."
+      },
+      {
+        "prompt": "On the S-shaped graph, is the rubber band easier or harder to stretch in the middle part than at the start?",
+        "answer": "easier",
+        "accepted": [
+          "easier to stretch",
+          "it is easier",
+          "easy"
+        ],
+        "explanation": "The molecule chains are able to straighten out, so the band stretches more easily there."
+      },
+      {
+        "prompt": "Going from 2 N to 3 N a rubber band stretches an extra 1.0 cm; going from 5 N to 6 N it stretches an extra 3.0 cm. Which force change is where the band is easier to stretch: 2 N to 3 N or 5 N to 6 N?",
+        "answer": "5 N to 6 N",
+        "accepted": [
+          "5 to 6",
+          "5 N to 6 N",
+          "from 5 N to 6 N",
+          "5N to 6N"
+        ],
+        "explanation": "A bigger extra stretch for each newton means the band is easier to stretch there."
+      }
+    ]
+  }
+}

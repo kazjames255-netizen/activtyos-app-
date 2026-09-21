@@ -1,0 +1,547 @@
+{
+  "agent": "w4-maths-ks2a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how to use long multiplication to multiply two 2-digit numbers regrouping ones to tens."
+        },
+        {
+          "t": "text",
+          "text": "We will learn a written method that puts all the steps in one layout."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Introducing {long multiplication}"
+            },
+            {
+              "title": "{Regrouping} ones to tens"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "partial product",
+              "def": "Any of the multiplication results we get leading up to an overall multiplication result is a partial product."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: 16 × 4. We partition 16 into 10 and 6. The partial products are 40 and 24. Add them to get the overall product, 64."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Grid model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 24 seats in each row and there are 32 rows. You could represent 32 × 24 using a grid model."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "32 × 20"
+            },
+            {
+              "title": "32 × 4"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The grid splits 24 into 20 and 4. The partial products are 32 × 20 and 32 × 4."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Long multiplication",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Long multiplication combines the steps in one written method. It is more efficient than separate calculations."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Write the larger number at the top.",
+            "Write the other factor underneath.",
+            "Leave space for two partial products and the total."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Let’s use it for 32 × 24 to see how it works."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 1: multiply by the ones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "32 × 24. Start with the ones digit, 4."
+        },
+        {
+          "t": "list",
+          "items": [
+            "4 × 2 ones = 8 ones. Write 8 in the ones column.",
+            "4 × 3 tens = 12 tens. 12 tens is 120, so write 2 in the tens column and 1 in the hundreds column."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "First partial product",
+          "text": "The first partial product is **128**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 2: placeholder, then the tens",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now multiply by the tens digit, 2 tens."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Put 0 as a placeholder, as we are multiplying by a tens digit.",
+            "2 tens × 2 ones = 4 tens.",
+            "2 tens × 3 tens = 6 hundreds."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Second partial product",
+          "text": "The second partial product is **640**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 3: sum the partial products",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We now have two partial products. Add them together."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "128",
+              "add": "640",
+              "result": "768"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "32 × 24 = 768. There are 768 seats altogether."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Comparing two methods",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at 33 × 21 done two ways."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Short multiplication and combining partial products: 21 is partitioned into 20 and 1. 33 × 20 = 660 and 33 × 1 = 33. Add them: 693.",
+            "Long multiplication: multiply by the ones (33), put in the placeholder, multiply by the tens (660). Add them: 693."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Both show the same factors and product. The partial products are recorded differently."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Why the placeholder?",
+      "blocks": [
+        {
+          "q": "Why do we put 0 as a placeholder before the second partial product?",
+          "options": [
+            "Because we are multiplying by a tens digit",
+            "Because we are multiplying by a ones digit",
+            "Because the ones digit is finished, so the zero is not needed"
+          ],
+          "answer": 0,
+          "why": "All multiples of ten have a 0 in the ones column, so the second partial product starts with a 0.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Regrouping ones to tens",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A ticket costs £16 and 45 tickets are sold. This is 45 × 16."
+        },
+        {
+          "t": "list",
+          "items": [
+            "6 × 5 ones = 30 ones. Write 0 in the ones column and regroup 3 tens. Write the 3 at the top so you remember it.",
+            "6 × 4 tens = 24 tens. Add the 3 tens: 27 tens. Write 7 in the tens column and 2 in the hundreds column. The first partial product is 270.",
+            "Put 0 as a placeholder.",
+            "1 ten × 5 ones = 5 tens. 1 ten × 4 tens = 4 hundreds. The second partial product is 450.",
+            "Sum: 270 + 450 = 720."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What did you notice?",
+          "text": "6 × 5 ones is greater than 10 ones, so we had to regroup. The regrouped 3 tens was put above so it did not get in the way of the rest of the working."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another regrouping",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam’s mum buys 12 tickets at £17 each. This is 17 × 12."
+        },
+        {
+          "t": "list",
+          "items": [
+            "2 × 7 ones = 14 ones. Write 4 in the ones column and regroup 10 ones for 1 ten.",
+            "2 × 1 ten = 2 tens. Add the regrouped 1 ten: 3 tens. The first partial product is 34.",
+            "Put 0 as a placeholder.",
+            "1 ten × 7 ones = 7 tens. 1 ten × 1 ten = 1 hundred. The second partial product is 170.",
+            "Sum: 34 + 170 = 204."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The total cost is £204."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Will it need regrouping?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Look at the first step, multiplying the ones digits. Does it make more than 9 ones, so we regroup ones to tens?",
+          "columns": [
+            "More than 9 ones: regroup ones to tens",
+            "9 ones or fewer: no regrouping"
+          ],
+          "items": [
+            {
+              "text": "24 × 13 (3 × 4)",
+              "col": 0
+            },
+            {
+              "text": "32 × 11 (1 × 2)",
+              "col": 1
+            },
+            {
+              "text": "27 × 13 (3 × 7)",
+              "col": 0
+            },
+            {
+              "text": "43 × 12 (2 × 3)",
+              "col": 1
+            },
+            {
+              "text": "18 × 15 (5 × 8)",
+              "col": 0
+            },
+            {
+              "text": "41 × 31 (1 × 1)",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These are mistakes to look out for in long multiplication."
+        },
+        {
+          "t": "reveal",
+          "label": "Forgetting a regrouped ten",
+          "text": "Andeep forgot to regroup the one ten: he did not write it down in the correct place to remind him to add it on in the next calculation. Write the regrouped value at the top so you remember it."
+        },
+        {
+          "t": "reveal",
+          "label": "Multiplying by ones, not tens",
+          "text": "In the second row you multiply by the tens digit. That means 2 tens, not 2 ones, and you need the placeholder 0."
+        },
+        {
+          "t": "reveal",
+          "label": "Not summing properly",
+          "text": "After the two partial products, sum them carefully to find the product."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "With a 3-digit number",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A ticket costs £23. 121 tickets are sold. This is 121 × 23."
+        },
+        {
+          "t": "list",
+          "items": [
+            "3 × 1 = 3. 3 × 2 tens = 60. 3 × 1 hundred = 300. The first partial product is 363.",
+            "Put 0 as a placeholder.",
+            "2 tens × 1 = 20. 2 tens × 2 tens = 400. 2 tens × 1 hundred = 2,000. The second partial product is 2,420.",
+            "Sum: 363 + 2,420 = 2,783."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The total amount is £2,783. Remember the unit: pounds."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work it out",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use long multiplication to answer each question.",
+          "items": [
+            {
+              "q": "What is 26 × 13?",
+              "options": [
+                "338",
+                "104",
+                "328"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is 34 × 25?",
+              "options": [
+                "238",
+                "950",
+                "850"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is 52 × 18?",
+              "options": [
+                "468",
+                "936",
+                "946"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Long multiplication is a written strategy for multiplication by a 2-digit number."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Partial products are calculated and the sum is found to find the product.",
+            "Regrouping can also occur and should be recorded."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Remember the placeholder 0 when you move from the ones to the tens."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does long multiplication do?",
+      "back": "It combines the steps in one written method. It is more efficient than separate calculations."
+    },
+    {
+      "front": "When using the long multiplication layout, which number usually goes at the top?",
+      "back": "The larger number."
+    },
+    {
+      "front": "What is a partial product?",
+      "back": "Any of the multiplication results we get leading up to an overall multiplication result."
+    },
+    {
+      "front": "Why do we write 0 as a placeholder before the second partial product?",
+      "back": "Because we are multiplying by a tens digit. All multiples of ten have a 0 in the ones column."
+    },
+    {
+      "front": "What are the three steps of long multiplication?",
+      "back": "1) Multiply by the ones digit (first partial product).\n2) Put the 0 placeholder and multiply by the tens digit (second partial product).\n3) Sum the partial products."
+    },
+    {
+      "front": "32 × 24 in long multiplication: what are the two partial products and the product?",
+      "back": "128 and 640.\n128 + 640 = 768"
+    },
+    {
+      "front": "When do we regroup ones to tens?",
+      "back": "When the ones multiplied together make more than 9 ones.\n\n6 × 5 ones = 30 ones, so regroup 3 tens."
+    },
+    {
+      "front": "Where do we write a regrouped value in these lessons?",
+      "back": "At the top, so it is not confused with regrouping when the partial products are added."
+    },
+    {
+      "front": "17 × 12: what is 2 × 7 ones, and what do we do?",
+      "back": "14 ones. Write 4 in the ones column and regroup 1 ten."
+    },
+    {
+      "front": "45 × 16: what are the two partial products and the product?",
+      "back": "270 and 450.\n270 + 450 = 720"
+    },
+    {
+      "front": "Both methods for 33 × 21 give 693. What is different?",
+      "back": "The partial products are recorded differently, but they are both there."
+    },
+    {
+      "front": "Andeep forgot to write down a regrouped ten. What went wrong?",
+      "back": "He did not write the regrouped ten down in the correct place to remind him to add it on in the next calculation, so his answer was incorrect."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how to use long multiplication to multiply two 2-digit numbers regrouping ones to tens",
+    "instructions": "Use long multiplication with the larger factor at the top. Write your answers as numbers (you do not need to write the £ sign).",
+    "questions": [
+      {
+        "prompt": "Task A: Use long multiplication to calculate 201 × 23.",
+        "answer": "4623",
+        "accepted": [
+          "4,623"
+        ],
+        "explanation": "The partial products are 603 and 4,020. 603 + 4,020 = 4,623."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 211 × 23.",
+        "answer": "4853",
+        "accepted": [
+          "4,853"
+        ],
+        "explanation": "211 × 3 = 633 and 211 × 20 = 4,220. 633 + 4,220 = 4,853."
+      },
+      {
+        "prompt": "Task A: Use long multiplication to calculate 121 × 23.",
+        "answer": "2783",
+        "accepted": [
+          "2,783"
+        ],
+        "explanation": "121 × 3 = 363 and 121 × 20 = 2,420. 363 + 2,420 = 2,783."
+      },
+      {
+        "prompt": "Task A: When you calculate 201 × 23, what is the second partial product (201 × 20)?",
+        "answer": "4020",
+        "accepted": [
+          "4,020"
+        ],
+        "explanation": "201 × 2 = 402, and 20 is 10 times the size, so 201 × 20 = 4,020."
+      },
+      {
+        "prompt": "Task B: A football match is selling tickets at £24 each. It sells 43 tickets on Monday. How many pounds was made?",
+        "answer": "1032",
+        "accepted": [
+          "1,032",
+          "£1032",
+          "£1,032"
+        ],
+        "explanation": "43 × 24: 43 × 4 = 172 and 43 × 20 = 860. 172 + 860 = 1,032."
+      },
+      {
+        "prompt": "Task B: It costs £14 to see the junior team. 44 tickets were sold. How many pounds was made?",
+        "answer": "616",
+        "accepted": [
+          "£616"
+        ],
+        "explanation": "44 × 14: 44 × 4 = 176 and 44 × 10 = 440. 176 + 440 = 616."
+      },
+      {
+        "prompt": "Task B: Swimming tickets cost £13 each. 225 tickets were sold. How many pounds was made altogether?",
+        "answer": "2925",
+        "accepted": [
+          "2,925",
+          "£2925",
+          "£2,925"
+        ],
+        "explanation": "225 × 13: 225 × 3 = 675 and 225 × 10 = 2,250. 675 + 2,250 = 2,925."
+      },
+      {
+        "prompt": "Task B: Swimming tickets for the final cost £34 each. 51 tickets are sold in the first hour. How many pounds was made?",
+        "answer": "1734",
+        "accepted": [
+          "1,734",
+          "£1734",
+          "£1,734"
+        ],
+        "explanation": "51 × 34: 51 × 4 = 204 and 51 × 30 = 1,530. 204 + 1,530 = 1,734."
+      },
+      {
+        "prompt": "Task B: Andeep forgot to regroup the one ten when he used long multiplication to solve 214 × 14. What is the correct product?",
+        "answer": "2996",
+        "accepted": [
+          "2,996"
+        ],
+        "explanation": "214 × 4 = 856 and 214 × 10 = 2,140. 856 + 2,140 = 2,996."
+      },
+      {
+        "prompt": "Task B: Use long multiplication to calculate 317 × 12.",
+        "answer": "3804",
+        "accepted": [
+          "3,804"
+        ],
+        "explanation": "317 × 2 = 634 and 317 × 10 = 3,170. 634 + 3,170 = 3,804."
+      }
+    ]
+  }
+}

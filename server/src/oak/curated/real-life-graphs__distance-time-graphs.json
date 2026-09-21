@@ -1,0 +1,630 @@
+{
+  "agent": "maths-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can calculate time intervals and speed of sections of a distance-time graph."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Calculating distance",
+              "sub": "from distance-time and displacement-time graphs"
+            },
+            {
+              "title": "Calculating speed",
+              "sub": "using the gradient"
+            },
+            {
+              "title": "Average speed",
+              "sub": "total distance ÷ total time"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "gradient",
+              "def": "The gradient is a measure of how steep a line is. It is calculated by finding the rate of change in the y-direction with respect to the positive x-direction."
+            },
+            {
+              "term": "displacement",
+              "def": "Displacement is the distance from the starting point when measured in a straight line."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Total distance on a distance-time graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A journey has these stages: 50 km in 1 hour, 100 km in 1.5 hours, stop, then 225 km in 2 hours, stop again, and the final 25 km in 1 hour."
+        },
+        {
+          "t": "text",
+          "text": "You could add the stages: 50 + 100 + 225 + 25 = 400 km. But there is a quicker way."
+        },
+        {
+          "t": "callout",
+          "text": "A distance-time graph shows the total distance travelled so far at any given time. To find the total distance, look at the {y-coordinate} of the end of the final line segment and read it off the axis."
+        },
+        {
+          "t": "reveal",
+          "label": "Reading scales carefully",
+          "text": "Some coordinates are easier to read than others, so always check the scale and units. If there are 5 sections between 20 and 30, each gridline is 10 ÷ 5 = 2. Counting on from 20: 22, 24, 26, 28, 30. A point on the second gridline above 20 is 24."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Reading a scale",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Between 100 and 200 there are 5 equal sections. What does each gridline represent?",
+              "options": [
+                "5",
+                "20",
+                "50"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Between 0 and 60 there are 6 equal sections. What does each gridline represent?",
+              "options": [
+                "6",
+                "10",
+                "12"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Between 20 and 30 there are 5 sections. What is the value on the third gridline above 20?",
+              "options": [
+                "23",
+                "26",
+                "60"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "100 to 200 is a change of 100, and 100 ÷ 5 = 20. 0 to 60 is 60, and 60 ÷ 6 = 10. Each gridline between 20 and 30 is 2, so the third one above 20 is 20 + 2 + 2 + 2 = 26."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Total distance on a displacement-time graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Displacement-time graphs (sometimes called distance from home graphs) show the straight line distance you are from a fixed start point at any time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The journey may finish at 0 m. That just means it finished where it started, not that it was short.",
+            "To find the overall distance we cannot just look at the end of the final line segment. We have to consider the parts moving away from home and the parts moving back towards home.",
+            "A horizontal line represents no movement, so no distance is travelled and we do not add anything for it."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: 5 km away, 5 km back, then 12 km away, 12 km back. Total distance = 5 + 5 + 12 + 12 = **34 km**. The furthest distance from home was 12 km, so the total is not double the furthest distance (that would be 24 km)."
+        },
+        {
+          "t": "callout",
+          "text": "Consider each time the direction changes as a separate section, and add up the distances."
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "On a distance-time graph, the overall distance is the y-coordinate of the final point of the journey.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 0,
+          "why": "A distance-time graph shows total distance travelled at any given time, so the final point gives the overall distance."
+        },
+        {
+          "t": "choice",
+          "q": "On a displacement-time graph, the total distance is always double the furthest distance from home.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "You need to take the distance travelled after each change of direction into account, and journeys do not need to start and end at the same point."
+        },
+        {
+          "t": "choice",
+          "q": "A displacement-time graph shows someone walking 8 km away from home, then 5 km back towards home. What is the total distance travelled?",
+          "options": [
+            "3 km",
+            "8 km",
+            "13 km"
+          ],
+          "answer": 2,
+          "why": "Add each section: 8 km away + 5 km back = 13 km. They finish 3 km from home, but the distance travelled is 13 km."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Speed is the gradient",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use distance-time graphs to calculate speed. Put the distance and the time into a ratio table and find the distance for 1 unit of time."
+        },
+        {
+          "t": "list",
+          "items": [
+            "First stage: 100 km in 1 hour. The speed is 100 km/h. The line continues straight to (2, 200), so it is a constant 100 km/h for the first 2 hours.",
+            "Second stage: 200 km in the next 4 hours. Divide both by 4: 50 km in 1 hour. The speed is 50 km/h."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "On a distance-time graph, {speed is the gradient of the line}. The speed of each section of a journey is the gradient of that line segment (as long as the units are consistent)."
+        },
+        {
+          "t": "text",
+          "text": "This is the same as the formula speed = distance ÷ time. Finding the gradient means dividing the change in y (distance) by the change in x (time)."
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Careful with the units",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Speed = distance ÷ time, so the units come from the axes. Suppose a graph shows 500 m travelled in 12 minutes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "500 ÷ 12 ≈ 41.7, and the units are metres per minute (m/min).",
+            "For metres per second, write 12 minutes in seconds: 12 × 60 = 720 seconds.",
+            "500 ÷ 720 ≈ 0.694, so the speed is about 0.7 m/s."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "If time is measured in minutes, the gradient gives distance per minute. A gradient of 0.5 with distance in km and time in minutes is 0.5 km per minute, not 0.5 km/h."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Minutes to km/h",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Time is often measured in minutes when we want the speed in km/h or mph. Example: 10 km in 20 minutes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Method 1: 20 minutes is 20/60 = 1/3 of an hour. Dividing by 1/3 is the same as multiplying by 3, so 10 × 3 = 30 km in 1 hour.",
+            "Method 2: work up to 60 minutes. 20 minutes × 3 = 60 minutes, so 10 km × 3 = 30 km.",
+            "The speed is **30 km/h**."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The gradient of that line is still a half (10 ÷ 20 = 0.5 km per minute), even though we write the speed as {30 km/h}."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Calculate the speed",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "240 m in 40 seconds. Speed in m/s?",
+              "options": [
+                "6 m/s",
+                "0.17 m/s",
+                "9600 m/s"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "60 km in 40 minutes. Speed in km/h?",
+              "options": [
+                "1.5 km/h",
+                "90 km/h",
+                "150 km/h"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "15 km in 30 minutes. Speed in km/h?",
+              "options": [
+                "0.5 km/h",
+                "30 km/h",
+                "45 km/h"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "900 m in 3 minutes. Speed in m/min?",
+              "options": [
+                "300 m/min",
+                "3 m/min",
+                "2700 m/min"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "240 ÷ 40 = 6. For 60 km in 40 minutes: 40 minutes = 2/3 hour, and 60 ÷ (2/3) = 90 (or 20 minutes is 30 km, so 60 minutes is 90 km). 30 minutes is half an hour, so 15 × 2 = 30. 900 ÷ 3 = 300."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Negative gradients on displacement-time graphs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The same journey can be drawn as a distance-time graph and a displacement-time graph. Suppose the last section is 500 m in 8 minutes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Distance-time graph: 500 ÷ 8 = 62.5 metres per minute.",
+            "Displacement-time graph: the line goes down, so the gradient is −500 ÷ 8 = −62.5."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A negative gradient on a displacement-time graph represents moving in the opposite direction (back towards the start point). Assuming all movement is in a straight line, find the gradient as normal and write the speed as the {positive value}: 62.5 metres per minute."
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Speed from a displacement-time graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "On a displacement-time graph a line segment goes from 360 km down to 0 km in 6 hours."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "The gradient of the segment is",
+              "options": [
+                "60",
+                "−60",
+                "−2160"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The speed is",
+              "options": [
+                "60 km/h",
+                "−60 km/h",
+                "2160 km/h"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "The displacement changes by −360 km in 6 hours: −360 ÷ 6 = −60. The negative sign shows the object is moving back towards the start, but the speed is written as the positive value, 60 km/h."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Average speed",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When a journey has several sections, we find the average speed from the total distance travelled and the total time taken."
+        },
+        {
+          "t": "text",
+          "text": "Aisha runs 2200 m in 14 minutes in a two-stage run. Average speed = 2200 ÷ 14 ≈ 157 metres per minute."
+        },
+        {
+          "t": "reveal",
+          "label": "Why not just average the two speeds?",
+          "text": "Her speeds were 200 m/min for the first part and 100 m/min for the second part. Averaging those gives 150, but the answer is 157. She kept the faster speed for longer (8 minutes at 200 m/min, then 6 minutes at 100 m/min), which brings her average speed up."
+        },
+        {
+          "t": "text",
+          "text": "Another example: 1000 km in 6 hours gives 1000 ÷ 6 ≈ 167 km/h."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Average speed check",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A cyclist rides 60 km in 1 hour, then 30 km in 2 hours. Average speed?",
+              "options": [
+                "30 km/h",
+                "37.5 km/h",
+                "45 km/h"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A runner covers 60 m in 4 seconds then 20 m in 6 seconds. Average speed?",
+              "options": [
+                "8 m/s",
+                "9.2 m/s",
+                "10 m/s"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "Cyclist: total distance 60 + 30 = 90 km, total time 1 + 2 = 3 hours, and 90 ÷ 3 = 30 km/h. Runner: total distance 60 + 20 = 80 m, total time 4 + 6 = 10 s, and 80 ÷ 10 = 8 m/s."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A distance-time graph shows the total distance travelled at any given time.",
+            "From a displacement-time graph, consider each time the direction changes as a separate section and add the distances.",
+            "The distance travelled divided by the time taken gives the speed. This is the gradient of the line segment.",
+            "When calculating speed, be aware of the units you are working with.",
+            "Average speed is the total distance divided by the total time taken."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How do you find the total distance on a distance-time graph?",
+      "back": "Read the y-coordinate at the end of the final line segment."
+    },
+    {
+      "front": "On a distance-time graph, what does the gradient of a line segment represent?",
+      "back": "The speed for that section of the journey."
+    },
+    {
+      "front": "What is the formula for speed?",
+      "back": "Speed = distance ÷ time (the change in distance divided by the change in time)."
+    },
+    {
+      "front": "What does a horizontal line on a distance-time graph mean?",
+      "back": "No distance was travelled for that time."
+    },
+    {
+      "front": "What does a slanted line on a distance-time graph mean?",
+      "back": "The distance from the start is changing over time."
+    },
+    {
+      "front": "How do you find the total distance from a displacement-time graph?",
+      "back": "Treat each change of direction as a separate section and add up the distances. Horizontal sections add nothing."
+    },
+    {
+      "front": "On a displacement-time graph, is the total distance always double the furthest distance from home?",
+      "back": "No. You must take the distance travelled after each change of direction into account, and journeys do not need to start and end at the same point."
+    },
+    {
+      "front": "500 m in 8 minutes. What is the speed in metres per minute?",
+      "back": "500 ÷ 8 = 62.5 metres per minute."
+    },
+    {
+      "front": "How do you write 20 minutes in hours?",
+      "back": "20/60 = 1/3 of an hour."
+    },
+    {
+      "front": "10 km in 20 minutes. What is the speed in km/h?",
+      "back": "30 km/h (20 minutes × 3 = 60 minutes, so 10 km × 3 = 30 km)."
+    },
+    {
+      "front": "What does a negative gradient mean on a displacement-time graph, and how do you write the speed?",
+      "back": "Moving back towards the start point. Write the speed as the positive value, for example −62.5 gives a speed of 62.5 metres per minute."
+    },
+    {
+      "front": "How do you calculate average speed?",
+      "back": "Total distance travelled ÷ total time taken."
+    },
+    {
+      "front": "Why should you not find average speed by averaging the speeds of each section?",
+      "back": "The sections may last for different times. Spending longer at the faster speed brings the average up."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Distance-time graphs",
+    "instructions": "Answer each question with a number. Include the units the question asks for.",
+    "questions": [
+      {
+        "prompt": "A distance-time graph shows a journey with these stages: 30 km in 1 hour, a stop, 45 km in 2 hours, another stop, then 25 km in 1 hour. What is the total distance, in km?",
+        "answer": "100",
+        "accepted": [
+          "100",
+          "100 km",
+          "100km",
+          "100 kilometres"
+        ],
+        "explanation": "Add the stages: 30 + 45 + 25 = 100 km. On a distance-time graph this is the y-coordinate of the end of the final line segment."
+      },
+      {
+        "prompt": "A displacement-time graph shows someone walking 3 km away from home and 3 km back, then 2 km away and 2 km back, with a 20-minute rest in between. What is the total distance travelled, in km?",
+        "answer": "10",
+        "accepted": [
+          "10",
+          "10 km",
+          "10km",
+          "10 kilometres"
+        ],
+        "explanation": "3 + 3 + 2 + 2 = 10 km. The rest is a horizontal line, so it adds no distance."
+      },
+      {
+        "prompt": "A displacement-time graph shows someone walking 8 km away from home, and then 5 km back towards home. What is the total distance they travelled, in km?",
+        "answer": "13",
+        "accepted": [
+          "13",
+          "13 km",
+          "13km",
+          "13 kilometres"
+        ],
+        "explanation": "8 km away + 5 km back = 13 km, even though they finish 3 km from home."
+      },
+      {
+        "prompt": "Between 100 and 200 on an axis there are 5 equal sections. What value does each gridline represent?",
+        "answer": "20",
+        "accepted": [
+          "20"
+        ],
+        "explanation": "The change from 100 to 200 is 100, and 100 ÷ 5 = 20."
+      },
+      {
+        "prompt": "A line segment on a distance-time graph shows 120 km travelled in 3 hours. What is the speed, in km/h?",
+        "answer": "40",
+        "accepted": [
+          "40",
+          "40 km/h",
+          "40km/h",
+          "40 kph"
+        ],
+        "explanation": "Speed is the gradient: 120 ÷ 3 = 40 km/h."
+      },
+      {
+        "prompt": "A line segment shows 15 km travelled in 20 minutes. What is the speed, in km/h?",
+        "answer": "45",
+        "accepted": [
+          "45",
+          "45 km/h",
+          "45km/h",
+          "45 kph"
+        ],
+        "explanation": "20 minutes is one third of an hour, so 15 km × 3 = 45 km in 1 hour."
+      },
+      {
+        "prompt": "A distance-time graph shows 240 m travelled in 40 seconds. What is the speed, in m/s?",
+        "answer": "6",
+        "accepted": [
+          "6",
+          "6 m/s",
+          "6m/s",
+          "6 ms⁻¹"
+        ],
+        "explanation": "240 ÷ 40 = 6 metres per second."
+      },
+      {
+        "prompt": "On a displacement-time graph, a line segment goes from 360 km down to 0 km in 6 hours. What is the speed, in km/h? (Give the positive value.)",
+        "answer": "60",
+        "accepted": [
+          "60",
+          "60 km/h",
+          "60km/h",
+          "60 kph"
+        ],
+        "explanation": "The gradient is −360 ÷ 6 = −60, and the speed is written as the positive value, 60 km/h."
+      },
+      {
+        "prompt": "The gradient of a line is 0.5 km per minute. What is the speed in km/h?",
+        "answer": "30",
+        "accepted": [
+          "30",
+          "30 km/h",
+          "30km/h",
+          "30 kph"
+        ],
+        "explanation": "There are 60 minutes in an hour, so 0.5 × 60 = 30 km/h."
+      },
+      {
+        "prompt": "A cyclist rides 60 km in 1 hour, then 30 km in 2 hours. What is the average speed, in km/h?",
+        "answer": "30",
+        "accepted": [
+          "30",
+          "30 km/h",
+          "30km/h",
+          "30 kph"
+        ],
+        "explanation": "Total distance 90 km ÷ total time 3 hours = 30 km/h."
+      }
+    ]
+  }
+}

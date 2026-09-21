@@ -1,0 +1,707 @@
+{
+  "agent": "chem-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe corrosion in detail, including chemical equations, and describe what actions can be taken to prevent corrosion."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Understanding} corrosion",
+              "sub": "types, rusting and half equations"
+            },
+            {
+              "title": "{Preventing} corrosion",
+              "sub": "barriers, sacrificial protection, electroplating"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "corrosion",
+              "def": "The gradual deterioration of a substance when it reacts with substances in the environment, for example when a metal oxidises in air."
+            },
+            {
+              "term": "rusting",
+              "def": "The corrosion of iron or steel, in the presence of water and oxygen."
+            },
+            {
+              "term": "tarnishing",
+              "def": "The process by which a thin, discoloured layer forms on the surface of a metal due to reactions with the environment, e.g. oxidation."
+            },
+            {
+              "term": "sacrificial protection",
+              "def": "Using a more reactive metal to corrode preferentially, to protect another metal from corrosion."
+            },
+            {
+              "term": "electroplating",
+              "def": "A process that uses electricity to deposit a thin layer of metal onto the surface of another conductive object."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is corrosion?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Corrosion} is the gradual deterioration of a substance when it reacts with substances in the environment, for example when a metal oxidises in air."
+        },
+        {
+          "t": "text",
+          "text": "Corrosion weakens structures, leading to failures and economic loss."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out! Corrosion or corrosive?",
+          "text": "Corrosive chemicals (the hazard symbol) can damage living tissues and materials through direct contact, so they are an immediate threat. Corrosion is the gradual degradation of materials like metals. Corrosive chemicals can speed corrosion up, but they are not the same thing."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is an example of corrosion rather than a corrosive chemical hazard?",
+          "options": [
+            "A metal hinge slowly turning a rust colour over time",
+            "A chemical damaging a surface on direct contact",
+            "A hazard symbol on a bottle"
+          ],
+          "answer": 0,
+          "why": "Corrosion is gradual degradation of a metal. Corrosive chemicals cause immediate damage on contact."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Types of corrosion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Galvanic corrosion} happens when two different metals are in contact in a corrosive environment."
+        },
+        {
+          "t": "list",
+          "items": [
+            "the more reactive metal (the anode) corrodes",
+            "the less reactive metal (the cathode) is protected",
+            "example: steel and copper touching in a salty place, such as on a ship. The steel corrodes faster."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "{Pitting corrosion} is localised corrosion that makes small holes or pits in the metal."
+        },
+        {
+          "t": "list",
+          "items": [
+            "it often happens in metals that have a protective oxide layer",
+            "chloride ions (from salt) can break down the protective layer and cause pits",
+            "example: stainless steel can develop pits in salt water"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tarnishing",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Metals react with oxygen to form metal oxides (oxidation). Group 1 metals oxidise very quickly, so their surface {tarnishes}. Most metals oxidise slowly."
+        },
+        {
+          "t": "text",
+          "text": "Tarnishing is a surface effect: a thin film forms because of a chemical reaction with substances in the air. It happens on metals like silver, copper and brass, forming a thin layer of oxide or sulfide."
+        },
+        {
+          "t": "callout",
+          "text": "Tarnishing makes a metal dull and discoloured, but it does not cause structural damage. It can be easily removed without affecting the metal underneath, for example with silver polish."
+        },
+        {
+          "t": "choice",
+          "q": "A silver picture frame has gone dull after years on a shelf. What has happened?",
+          "options": [
+            "It has tarnished: a thin discoloured layer has formed on its surface",
+            "Its inside has been weakened by tarnishing",
+            "It has rusted"
+          ],
+          "answer": 0,
+          "why": "Silver tarnishes, which only affects the surface. Rusting only happens to iron and steel."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Oxide layers can protect metals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some metals form a thin, stable oxide layer that stops further corrosion. Aluminium reacts with oxygen to form aluminium oxide, Al₂O₃."
+        },
+        {
+          "t": "list",
+          "items": [
+            "the layer is thin",
+            "it sticks (adheres) strongly to the aluminium",
+            "it prevents further oxidation and corrosion",
+            "it is effectively transparent"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The oxide layer is a {physical barrier}: it stops oxygen and water reaching the metal underneath."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "aluminium → aluminium oxide",
+              "sub": "food containers"
+            },
+            {
+              "title": "chromium → chromium oxide",
+              "sub": "stainless steel"
+            },
+            {
+              "title": "titanium → titanium oxide",
+              "sub": "aerospace"
+            },
+            {
+              "title": "iron → iron oxide (rust)",
+              "sub": "porous and flakes off, leading to more corrosion"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Why does an aluminium oxide layer protect the aluminium under it?",
+          "options": [
+            "It forms a physical barrier that keeps oxygen and water away from the metal",
+            "It flakes off to leave fresh aluminium",
+            "Aluminium does not react with oxygen at all"
+          ],
+          "answer": 0,
+          "why": "Aluminium does react with oxygen, but the thin oxide layer sticks strongly and stops further oxidation."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Rusting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Rusting} is a specific type of corrosion that only affects iron and steel. Rust looks brown, flaky and powdery."
+        },
+        {
+          "t": "text",
+          "text": "Rusting needs all three: **iron**, **oxygen** (air) and **water**. With iron and oxygen but no water, or iron and water but no oxygen, rusting will not occur."
+        },
+        {
+          "t": "callout",
+          "text": "iron + oxygen + water → (hydrated) iron(III) oxide"
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "In everyday language people say “rusting” for any corrosion. That is not correct. Rusting is only for iron and steel."
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which of these metals can rust?",
+              "options": [
+                "copper",
+                "steel",
+                "aluminium"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "An iron nail is kept in dry air. It has oxygen but no water. What happens?",
+              "options": [
+                "It rusts as normal",
+                "It does not rust because water is missing",
+                "It rusts faster"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A silver frame goes dull. Is this rusting?",
+              "options": [
+                "Yes, all corrosion is rusting",
+                "No, rusting is only for iron and steel"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Rusting and half equations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Rusting is a bit like an electrochemical reaction, with an anode and a cathode on the iron surface. Two half equations show what happens."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Anode: {oxidation}",
+              "sub": "Fe(s) → Fe²⁺(aq) + 2e⁻"
+            },
+            {
+              "title": "Cathode: {reduction}",
+              "sub": "O₂(g) + 2H₂O(l) + 4e⁻ → 4OH⁻(aq)"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Iron loses electrons. This is oxidation. Iron is oxidised to iron(II) ions.",
+            "Oxygen gains electrons. This is reduction. Oxygen is reduced to hydroxide ions.",
+            "The electrons move from the iron to the oxygen."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The end result is hydrated iron(III) oxide, Fe₂O₃·xH₂O, the familiar rust colour. The x shows that different amounts of water can be present."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "How rust forms, and check",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are many ways rusting can happen. Here is one way, in two steps. The iron(II) ions and hydroxide ions react, then the product reacts with oxygen."
+        },
+        {
+          "t": "text",
+          "text": "Fe²⁺(aq) + 2OH⁻(aq) → Fe(OH)₂(s)"
+        },
+        {
+          "t": "text",
+          "text": "4Fe(OH)₂(s) + O₂(g) → 2Fe₂O₃·H₂O(s) + 2H₂O(l)"
+        },
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "In Fe(s) → Fe²⁺(aq) + 2e⁻, what happens to iron?",
+              "options": [
+                "It loses 2 electrons: it is oxidised",
+                "It gains 2 electrons: it is reduced",
+                "It does not change"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "In O₂(g) + 2H₂O(l) + 4e⁻ → 4OH⁻(aq), the electrons are on the left. What does this tell us about the oxygen?",
+              "options": [
+                "It loses electrons (oxidation)",
+                "It gains electrons (reduction)",
+                "It does not change"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "During rusting, the electrons move …",
+              "options": [
+                "from the oxygen to the iron",
+                "from the iron to the oxygen",
+                "nowhere"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Electrolytes and the rusting nail test",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Rusting speeds up when iron is in contact with an {electrolyte}, such as salty water. An electrolyte is an aqueous solution containing ions that can conduct electricity. The ions carry and transfer electrons, and help the electrochemical reactions in rusting."
+        },
+        {
+          "t": "text",
+          "text": "An iron nail was left in four test tubes. Sort them by what you would see."
+        },
+        {
+          "t": "sort",
+          "q": "Which nails rust?",
+          "columns": [
+            "No rust",
+            "Rusts"
+          ],
+          "items": [
+            {
+              "text": "Boiled water with a layer of oil on top",
+              "col": 0
+            },
+            {
+              "text": "Sealed container with calcium chloride",
+              "col": 0
+            },
+            {
+              "text": "Salt water solution (severe rust)",
+              "col": 1
+            },
+            {
+              "text": "Open to the air (air and moisture)",
+              "col": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why?",
+          "text": "Boiling removes oxygen and the oil stops new oxygen getting in. Calcium chloride dries out the air, so there is no moisture. Salt water is an electrolyte, so it speeds up rusting. Air and moisture cause normal rusting."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Preventing corrosion: barriers and desiccants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Rust prevention can be done by keeping away oxygen or water. The simplest way is to cover the metal with a {physical barrier}:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "greasing",
+            "painting",
+            "plastic coatings"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "These coatings can be damaged easily, so they need regular maintenance."
+        },
+        {
+          "t": "text",
+          "text": "{Desiccants} are substances that absorb moisture from the air and keep sealed places dry. They can reduce metal oxidation."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "silica gel",
+              "sub": "small transparent beads, used in packaging for electronics and food"
+            },
+            {
+              "title": "calcium chloride",
+              "sub": "white beads, granules or powder, used in industry, e.g. dehumidifiers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sacrificial protection and galvanising",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In {sacrificial protection} a more reactive metal is used to protect a less reactive metal. The more reactive metal corrodes (is sacrificed) instead."
+        },
+        {
+          "t": "text",
+          "text": "Example: zinc blocks (anodes) on a ship’s hull corrode instead of the steel hull, but will eventually need replacing."
+        },
+        {
+          "t": "text",
+          "text": "{Galvanising} is a specific type of sacrificial protection. Iron or steel is coated with a layer of zinc, most commonly by hot-dipping. The zinc corrodes and stops the iron rusting. It protects even if the coating is scratched, but the zinc layer can eventually wear away and need recoating."
+        },
+        {
+          "t": "choice",
+          "q": "Why do zinc blocks protect a steel ship’s hull?",
+          "options": [
+            "Zinc is more reactive, so it corrodes instead of the steel",
+            "Zinc is less reactive, so it corrodes instead of the steel",
+            "Zinc is a paint that covers the hull"
+          ],
+          "answer": 0,
+          "why": "In sacrificial protection the more reactive metal corrodes in place of the metal being protected."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Electroplating",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Electroplating} coats a metal object with a thin layer of another metal using an electric current. It is used to improve appearance and corrosion resistance."
+        },
+        {
+          "t": "list",
+          "items": [
+            "the metal object to be plated is the cathode",
+            "the solution contains ions of the plating metal",
+            "the electric current makes the metal deposit on the object",
+            "before plating, the object is cleaned and put in the metal salt solution"
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Benefits",
+              "sub": "a shiny, decorative finish; protects the base metal from corrosion"
+            },
+            {
+              "title": "Drawbacks",
+              "sub": "expensive and needs specialist equipment"
+            },
+            {
+              "title": "Example",
+              "sub": "silver-plated jewellery"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Alloys and regular maintenance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "{Alloys} are mixtures of two or more elements, where at least one is a metal. Some alloys resist corrosion."
+        },
+        {
+          "t": "text",
+          "text": "Stainless steel is made of iron, nickel and chromium (and other elements). Metals like chromium form a protective metal oxide layer. Alloys like this can be more expensive than pure metals."
+        },
+        {
+          "t": "callout",
+          "text": "Not all alloys resist corrosion better than pure metals. Only certain alloys, like stainless steel, do because of their composition."
+        },
+        {
+          "t": "text",
+          "text": "Regular checks and maintenance give long-term protection: inspections, cleaning and touch-ups. This makes metals last longer, reduces the cost of replacements and repairs, and increases safety and reliability."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: prevention methods",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each example to the method it shows.",
+          "pairs": [
+            {
+              "a": "Silica gel packets in a box",
+              "b": "Desiccant"
+            },
+            {
+              "a": "Painting a metal test tube holder",
+              "b": "Physical barrier"
+            },
+            {
+              "a": "Zinc blocks on a ship’s hull",
+              "b": "Sacrificial protection"
+            },
+            {
+              "a": "A thin layer of silver put onto jewellery using electric current",
+              "b": "Electroplating"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is a physical barrier that can be damaged easily and needs regular maintenance?",
+          "options": [
+            "Painting",
+            "Zinc blocks on a hull",
+            "A desiccant"
+          ],
+          "answer": 0,
+          "why": "Coatings such as paint, grease and plastic can be damaged easily and need regular maintenance."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Corrosion is a general process of degradation of metals through various causes.",
+            "Rusting is a specific type of corrosion, affecting iron in the presence of air and moisture.",
+            "A metal oxide layer can protect the underlying metal if the oxide forms a physical barrier.",
+            "Some coatings contain a more reactive metal to give sacrificial protection, e.g. zinc to galvanise.",
+            "Electroplating can improve the appearance and/or the resistance to corrosion of metal objects."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is corrosion?",
+      "back": "The gradual deterioration of a substance when it reacts with substances in the environment, e.g. a metal oxidising in air."
+    },
+    {
+      "front": "How is corrosion different from a corrosive chemical?",
+      "back": "Corrosive chemicals damage living tissue and materials immediately on contact. Corrosion is the gradual degradation of materials like metals."
+    },
+    {
+      "front": "What is rusting?",
+      "back": "The corrosion of iron or steel in the presence of water and oxygen."
+    },
+    {
+      "front": "Word equation for rusting?",
+      "back": "iron + oxygen + water → (hydrated) iron(III) oxide"
+    },
+    {
+      "front": "What is tarnishing?",
+      "back": "A thin, discoloured layer forms on a metal surface (e.g. silver, copper, brass). It is dull but does not damage the structure, and can be removed."
+    },
+    {
+      "front": "How does an aluminium oxide layer protect aluminium?",
+      "back": "It is thin, sticks strongly and forms a physical barrier that stops oxygen and water reaching the metal, preventing further oxidation."
+    },
+    {
+      "front": "Why does iron oxide (rust) not protect iron?",
+      "back": "Rust is porous and flakes off, leading to more corrosion."
+    },
+    {
+      "front": "Rusting half equation at the anode?",
+      "back": "Fe(s) → Fe²⁺(aq) + 2e⁻\n\nIron loses electrons: oxidation."
+    },
+    {
+      "front": "Rusting half equation at the cathode?",
+      "back": "O₂(g) + 2H₂O(l) + 4e⁻ → 4OH⁻(aq)\n\nOxygen gains electrons: reduction."
+    },
+    {
+      "front": "Why does salty water speed up rusting?",
+      "back": "Salt water is an electrolyte: its ions carry and transfer electrons and help the electrochemical reactions."
+    },
+    {
+      "front": "What is a desiccant?",
+      "back": "A substance that absorbs moisture from the air and keeps sealed places dry, e.g. silica gel or calcium chloride."
+    },
+    {
+      "front": "What is sacrificial protection?",
+      "back": "Using a more reactive metal that corrodes instead, to protect another metal, e.g. zinc blocks on a ship’s hull."
+    },
+    {
+      "front": "What is galvanising?",
+      "back": "Coating iron or steel with a layer of zinc (most commonly by hot-dipping). The zinc corrodes, preventing rust."
+    },
+    {
+      "front": "In electroplating, what is the metal object to be plated?",
+      "back": "The cathode. A current makes metal ions from the solution deposit on it as a thin layer."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Corrosion and its prevention: including half equations",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "Rusting only affects steel and which other metal?",
+        "answer": "iron",
+        "explanation": "Rusting is the corrosion of iron or steel only."
+      },
+      {
+        "prompt": "Iron rusts when it is in contact with oxygen and which other substance?",
+        "answer": "water",
+        "explanation": "Rusting needs iron, oxygen (air) and water."
+      },
+      {
+        "prompt": "Zinc blocks are attached to a steel ship’s hull. Which corrodes instead: the zinc blocks or the steel hull? Answer with one word.",
+        "answer": "zinc",
+        "accepted": [
+          "the zinc blocks",
+          "zinc blocks"
+        ],
+        "explanation": "Zinc is more reactive than iron, so the zinc blocks are sacrificed instead of the steel."
+      },
+      {
+        "prompt": "In Fe → Fe²⁺ + 2e⁻, how many electrons does each iron atom lose? Give a number.",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "The equation shows 2e⁻ being lost, so each iron atom loses two electrons."
+      },
+      {
+        "prompt": "In O₂ + 2H₂O + 4e⁻ → 4OH⁻, how many electrons are gained? Give a number.",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "The equation shows 4e⁻ on the left-hand side, so four electrons are gained."
+      },
+      {
+        "prompt": "Iron loses electrons to form iron(II) ions. Is the iron oxidised or reduced? Answer with one word.",
+        "answer": "oxidised",
+        "accepted": [
+          "oxidized"
+        ],
+        "explanation": "Loss of electrons is oxidation, so the iron is oxidised."
+      },
+      {
+        "prompt": "In electroplating, is the metal object to be plated the anode or the cathode? Answer with one word.",
+        "answer": "cathode",
+        "explanation": "The object to be plated is the cathode, and the metal deposits on it."
+      },
+      {
+        "prompt": "Silica gel and calcium chloride absorb moisture from the air. What word describes this type of substance? Answer with one word.",
+        "answer": "desiccant",
+        "accepted": [
+          "desiccants"
+        ],
+        "explanation": "Desiccants absorb moisture from the air and help keep sealed places dry."
+      },
+      {
+        "prompt": "A solution containing ions, such as salty water, speeds up rusting because its ions carry electrons. What is this type of solution called?",
+        "answer": "electrolyte",
+        "explanation": "An electrolyte is an aqueous solution containing ions that can conduct electricity."
+      },
+      {
+        "prompt": "Which type of corrosion makes small holes or pits in a metal? Answer with one word.",
+        "answer": "pitting",
+        "accepted": [
+          "pitting corrosion"
+        ],
+        "explanation": "Pitting corrosion is localised corrosion that creates small holes or pits."
+      }
+    ]
+  }
+}

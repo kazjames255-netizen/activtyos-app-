@@ -1,0 +1,518 @@
+{
+  "agent": "english-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explore the perception of sin in ‘Romeo and Juliet’ and how it relates to societal expectations."
+        },
+        {
+          "t": "text",
+          "text": "You will look at how Juliet perceives sin in Act 4, Scene 1, then read a model response and see what makes it an effective analytical paragraph."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The perception of {sin}"
+            },
+            {
+              "title": "Considering a model response"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "sin",
+              "def": "the offence of breaking, or the breaking of, a religious or moral law"
+            },
+            {
+              "term": "religious sin",
+              "def": "a transgression against divine law that results in lasting punishment from God"
+            },
+            {
+              "term": "sanctified",
+              "def": "to make something or someone holy"
+            },
+            {
+              "term": "societal expectations",
+              "def": "the beliefs and norms that a society holds about how individuals should behave and act"
+            },
+            {
+              "term": "bigamy",
+              "def": "the act of entering into a marriage with one person while still legally married to another"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Religion and sin",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Religion was an integral part of Elizabethan England. Therefore religious sin was an important consideration in society."
+        },
+        {
+          "t": "text",
+          "text": "Arguably, the concept of religious sin can be seen throughout ‘Romeo and Juliet’ because:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Romeo and Juliet commit a religious sin by taking their own lives",
+            "Juliet fakes her own death to avoid the sin of bigamy"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If Juliet had married Count Paris while already married to Romeo, she would have been committing {bigamy}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Juliet’s choice",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, Juliet must choose between:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "the sin of taking her own life: this was a religious sin in the Elizabethan period, and those who committed suicide could not be buried on consecrated ground",
+            "the sin of committing bigamy: this was definitely considered a moral sin in the Elizabethan period, and some religious sects also considered it a sin against God"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In Act 4, Scene 1, Juliet declares that she will take her own life rather than marry Count Paris."
+        },
+        {
+          "t": "reveal",
+          "label": "What might her choice reveal?",
+          "text": "By making a judgement on which sin to commit, Juliet’s choice might reveal ideas about societal expectations and the perception of sin. One idea: Juliet sees bigamy as the greater sin, as she would rather commit the sin of taking her own life than sin against Romeo, her husband."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "“God joined”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When speaking of her marriage to Romeo, Juliet says:"
+        },
+        {
+          "t": "callout",
+          "text": "“God joined my heart and Romeo’s” (Act 4, Scene 1, line 56)"
+        },
+        {
+          "t": "text",
+          "text": "The idea of God joining them together shows that Juliet sees their marriage as religiously **sanctified**. Juliet perceives her marriage as holy, so to commit bigamy would be a religious sin."
+        },
+        {
+          "t": "choice",
+          "q": "What does “God joined my heart and Romeo’s” suggest about how Juliet sees her marriage?",
+          "options": [
+            "That it is religiously sanctified",
+            "That it is a secret she is ashamed of"
+          ],
+          "answer": 0,
+          "why": "The idea of God joining them together shows that Juliet sees their marriage as religiously sanctified, that is, holy."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "“An unstained wife”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Juliet also says she would:"
+        },
+        {
+          "t": "callout",
+          "text": "“[die] without fear or doubt, / To live an unstained wife to my sweet love.” (Act 4, Scene 1, lines 89-90)"
+        },
+        {
+          "t": "text",
+          "text": "In this context, to be “unstained” means that Juliet wishes to be a pure and honourable wife to Romeo. Remember that Elizabethan England was a patriarchal society: men were in control, and women were expected to be obedient and submissive."
+        },
+        {
+          "t": "reveal",
+          "label": "How might this link to societal expectations?",
+          "text": "The idea of being “unstained” links to the idea that women were supposed to be faithful to their husbands. The word “stained” arguably has connotations of sexual shame, which could link to how women were specifically expected to be sexually ‘pure’ and faithful to their husbands."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two interpretations",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We might interpret Juliet’s perception of sin in two ways. She considers bigamy the greater sin because:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "she sees her marriage to Romeo as sanctified by God",
+            "of the idea that women should be loyal and faithful to their husbands"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How do both connect sin to societal expectations?",
+          "text": "Her perception of bigamy as the greater sin, due to the religious sanctification of her marriage, could be seen as coming from religious doctrine and teachings. Her wish to remain “unstained” for Romeo could be read as the societal expectations of a patriarchal society."
+        },
+        {
+          "t": "callout",
+          "text": "Arguably, both interpretations link the perception of sin to societal expectations."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "An analytical paragraph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An analytical paragraph should include:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "a topic sentence that explains the focus of the paragraph",
+            "tentative language",
+            "analysis of methods",
+            "a concluding sentence that summarises the paragraph and considers the writer’s intentions"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It might also include alternative interpretations in order to create a convincing argument."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The topic sentence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The model response opens with:"
+        },
+        {
+          "t": "callout",
+          "text": "‘Shakespeare arguably considers the nature of sin and societal expectations through Juliet’s perception of sin in Act 4, Scene 1.’"
+        },
+        {
+          "t": "reveal",
+          "label": "Why is this an effective topic sentence?",
+          "text": "It informs the reader of the specific theme and the focal scene, and it offers a clear indication of the focus of the paragraph."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tentative language and analysis",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The model says: “Arguably, this bestows religious sanctification onto their marriage, since it implies that God both intended and facilitated their union. Because she sees her marriage as religiously sanctified, we might interpret Juliet’s perception of bigamy as a religious sin.”"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“Arguably” and “might” are tentative language. There is no one right answer about a text, so we offer our ideas rather than saying something concrete and absolute.",
+            "The model analyses the phrase “God joined” by explaining its effect on the reader, rather than simply pointing out the method being used.",
+            "The last sentence links the analysis to the argument."
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Check the model response.",
+          "items": [
+            {
+              "q": "Which of these is tentative language?",
+              "options": [
+                "arguably",
+                "concrete and absolute"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which word in the model introduces an alternative interpretation?",
+              "options": [
+                "Alternatively",
+                "Because"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Alternative views and conclusions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The model’s second half begins “Alternatively, we might also see Juliet’s perception of bigamy as stemming from societal expectations of how a wife should behave.” Adding an alternative interpretation shows there are multiple ways to reach the same conclusion from the textual evidence."
+        },
+        {
+          "t": "text",
+          "text": "The model ends with a concluding sentence that summarises the main argument and considers Shakespeare’s intentions:"
+        },
+        {
+          "t": "callout",
+          "text": "‘Perhaps by connecting the concept of sin to societal expectations, Shakespeare is suggesting that sin is a social construct. It is society that decides what is sinful rather than sin being universally innate and understood.’"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding more evidence",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To develop your argument, look for further moments in the text that support your interpretation. Did you think of these?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Romeo and Juliet use religious language such as “pilgrim” and “shrine” in their first conversation in Act 1, Scene 5.",
+            "Juliet says she cannot “speak ill” of her husband. By calling Romeo her “husband” rather than by his name, Shakespeare implies that Juliet is adhering to societal expectations of how a wife should behave through her loyalty."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which interpretation?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which interpretation of Juliet’s perception of sin does each idea support?",
+          "columns": [
+            "Her marriage is sanctified by God",
+            "Women should be loyal and faithful to their husbands"
+          ],
+          "items": [
+            {
+              "text": "“God joined my heart and Romeo’s”",
+              "col": 0
+            },
+            {
+              "text": "Juliet perceives her marriage as holy",
+              "col": 0
+            },
+            {
+              "text": "Bigamy would be a religious sin",
+              "col": 0
+            },
+            {
+              "text": "“an unstained wife”",
+              "col": 1
+            },
+            {
+              "text": "“Stained” has connotations of sexual shame",
+              "col": 1
+            },
+            {
+              "text": "Women in a patriarchal society were expected to be obedient and submissive",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Evidence match",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each idea to the keyword it shows.",
+          "pairs": [
+            {
+              "a": "Romeo and Juliet take their own lives",
+              "b": "A religious sin"
+            },
+            {
+              "a": "Marrying Count Paris while still married to Romeo",
+              "b": "Bigamy"
+            },
+            {
+              "a": "“God joined my heart and Romeo’s”",
+              "b": "A marriage that is sanctified"
+            },
+            {
+              "a": "Women should be loyal and faithful to their husbands",
+              "b": "A societal expectation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "By taking their own lives, Romeo and Juliet are committing a religious sin.",
+            "Arguably, Juliet perceives the sin of bigamy as a greater sin than taking her own life.",
+            "Through this, we might suggest that Shakespeare has positioned Romeo and Juliet’s marriage as religiously sanctified.",
+            "Alternatively, we could say that Juliet’s perception of sin has been influenced by societal expectations of women.",
+            "Arguably, both interpretations link the perception of sin to societal expectations."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is sin?",
+      "back": "The offence of breaking, or the breaking of, a religious or moral law."
+    },
+    {
+      "front": "What is a religious sin?",
+      "back": "A transgression against divine law that results in lasting punishment from God."
+    },
+    {
+      "front": "What does sanctified mean?",
+      "back": "To make something or someone holy."
+    },
+    {
+      "front": "What is bigamy?",
+      "back": "The act of entering into a marriage with one person while still legally married to another."
+    },
+    {
+      "front": "Which two sins does Juliet arguably choose between?",
+      "back": "The sin of taking her own life and the sin of committing bigamy."
+    },
+    {
+      "front": "What might Juliet’s choice of which sin to commit reveal?",
+      "back": "Ideas about societal expectations and the perception of sin."
+    },
+    {
+      "front": "What does “God joined my heart and Romeo’s” suggest?",
+      "back": "That Juliet sees their marriage as religiously sanctified, so to commit bigamy would be a religious sin (Act 4, Scene 1)."
+    },
+    {
+      "front": "What does it mean to be “unstained” in Juliet’s line “To live an unstained wife to my sweet love”?",
+      "back": "To be a pure and honourable wife to Romeo (Act 4, Scene 1)."
+    },
+    {
+      "front": "Which two interpretations explain why Juliet sees bigamy as the greater sin?",
+      "back": "She sees her marriage as sanctified by God, or she is influenced by the idea that women should be loyal and faithful to their husbands."
+    },
+    {
+      "front": "Name the four things an analytical paragraph should include.",
+      "back": "A topic sentence, tentative language, analysis of methods, and a concluding sentence that summarises the paragraph and considers the writer’s intentions."
+    },
+    {
+      "front": "Why can adding an alternative interpretation strengthen an argument?",
+      "back": "It shows there are multiple ways to reach the same conclusion based on the textual evidence."
+    },
+    {
+      "front": "What might Shakespeare be suggesting by linking sin to societal expectations?",
+      "back": "Perhaps that sin is a social construct: it is society that decides what is sinful."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘Romeo and Juliet’: exploring the perception of sin and societal expectations",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Juliet sees her marriage to Romeo as holy. Which keyword, beginning with ‘s’, describes a marriage that has been made holy?",
+        "answer": "sanctified",
+        "accepted": [],
+        "explanation": "Sanctified means to make something or someone holy."
+      },
+      {
+        "prompt": "In which act and scene does Juliet say “God joined my heart and Romeo’s”? (Give the act number and scene number.)",
+        "answer": "act 4, scene 1",
+        "accepted": [
+          "act 4 scene 1",
+          "act four scene one",
+          "act four, scene one",
+          "act 4, scene one",
+          "4.1"
+        ],
+        "explanation": "The line is from Act 4, Scene 1, line 56."
+      },
+      {
+        "prompt": "Which word describes marrying Count Paris while still legally married to Romeo?",
+        "answer": "bigamy",
+        "accepted": [],
+        "explanation": "Bigamy is entering into a marriage with one person while still legally married to another."
+      },
+      {
+        "prompt": "Which word in Juliet’s Act 4, Scene 1 speech has connotations of being pure? (one word, beginning with ‘u’)",
+        "answer": "unstained",
+        "accepted": [],
+        "explanation": "“Unstained” means Juliet wishes to be a pure and honourable wife to Romeo."
+      },
+      {
+        "prompt": "By taking their own lives, Romeo and Juliet are committing what kind of sin? (one word)",
+        "answer": "religious",
+        "accepted": [
+          "a religious sin",
+          "religious sin"
+        ],
+        "explanation": "They are committing a religious sin."
+      },
+      {
+        "prompt": "In Elizabethan England, women were expected to be loyal and ______ to their husbands. Which one-word adjective, beginning with ‘f’, is missing?",
+        "answer": "faithful",
+        "accepted": [],
+        "explanation": "Women were expected to be loyal and faithful to their husbands."
+      },
+      {
+        "prompt": "Romeo and Juliet use religious language such as “shrine” and “______” in their first conversation in Act 1, Scene 5. Which word, meaning a traveller to a holy place and beginning with ‘pil’, is missing?",
+        "answer": "pilgrim",
+        "accepted": [
+          "a pilgrim"
+        ],
+        "explanation": "Romeo and Juliet use religious language such as “pilgrim” and “shrine” in their first conversation."
+      },
+      {
+        "prompt": "What do we call a sentence at the start of a paragraph that explains the focus of the paragraph?",
+        "answer": "topic sentence",
+        "accepted": [
+          "a topic sentence",
+          "the topic sentence"
+        ],
+        "explanation": "An analytical paragraph should open with a topic sentence."
+      },
+      {
+        "prompt": "Which word starting with ‘a’ opens the model response’s second half to introduce an alternative interpretation?",
+        "answer": "alternatively",
+        "accepted": [],
+        "explanation": "“Alternatively, we might also see Juliet’s perception of bigamy as stemming from societal expectations.”"
+      }
+    ]
+  }
+}

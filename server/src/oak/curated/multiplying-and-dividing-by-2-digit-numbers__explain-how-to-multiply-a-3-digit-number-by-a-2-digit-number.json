@@ -1,0 +1,534 @@
+{
+  "agent": "w4-maths-ks2a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how to multiply a 3-digit number by a 2-digit number."
+        },
+        {
+          "t": "text",
+          "text": "We will use three steps to make a big multiplication easier."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Partition} one of the factors"
+            },
+            {
+              "title": "Calculate the {partial products}"
+            },
+            {
+              "title": "{Add} the partial products to recombine"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "partial product",
+              "def": "Any of the multiplication results we get leading up to an overall multiplication result is a partial product."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: 16 × 4."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Partition 16 into 10 and 6.",
+            "4 × 10 = 40. This is a partial product.",
+            "4 × 6 = 24. This is a partial product.",
+            "Add them: 40 + 24 = 64. This is the overall product."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Grid or area model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 31 seats in each row and there are 29 rows. How many seats altogether?"
+        },
+        {
+          "t": "text",
+          "text": "This is a multiplication: 31 × 29. We can show it in a grid (area) model."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "31 in each row"
+            },
+            {
+              "title": "29 rows"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The grid model shows that each row has 31 seats and there are 29 rows."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Partition the smaller number",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To make multiplying easier, we can partition the smaller number. The smaller number is 29."
+        },
+        {
+          "t": "text",
+          "text": "There are still 31 seats in each row, but now we partition 29 rows into 20 rows and 9 rows."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "31 × 20",
+              "sub": "20 rows"
+            },
+            {
+              "title": "31 × 9",
+              "sub": "9 rows"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Both multiplications are easier to calculate. We are trying to be more efficient."
+        }
+      ],
+      "pics": [
+        {
+          "id": "part-whole-model"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which partition?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at 58 × 34. The smaller factor is 34."
+        },
+        {
+          "q": "How do we partition the smaller factor, 34?",
+          "options": [
+            "30 and 4",
+            "3 and 4",
+            "50 and 8"
+          ],
+          "answer": 0,
+          "why": "34 is 30 and 4, so the calculations are 58 × 30 and 58 × 4.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Part-part-whole model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A part-part-whole model can show the same strategy. The whole is 31 × 29. The parts are 31 × 20 and 31 × 9."
+        },
+        {
+          "t": "text",
+          "text": "These are the partial products."
+        },
+        {
+          "t": "list",
+          "items": [
+            "31 × 2 = 62, and 20 is 10 times the size, so 31 × 20 = 620.",
+            "31 × 9 = 279.",
+            "Add the partial products: 620 + 279 = 899."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "So how many seats?",
+          "text": "31 × 29 = 899. There were 899 seats in the section."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now 43 × 22. We partition 22 into 20 and 2."
+        },
+        {
+          "t": "list",
+          "items": [
+            "First part: 43 × 20 = 860.",
+            "Second part: 43 × 2 = 86.",
+            "Sum the partial products: 860 + 86 = 946."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "43 × 22 = 946. There were 946 seats."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Fill in the partition",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use partitioning to find the missing number in each pair of expressions.",
+          "items": [
+            {
+              "q": "74 × 16 = 74 × 10 + 74 × ?",
+              "options": [
+                "6",
+                "16",
+                "60"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "52 × 35 = 52 × 30 + 52 × ?",
+              "options": [
+                "3",
+                "5",
+                "35"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "68 × 21 = 68 × 20 + 68 × ?",
+              "options": [
+                "2",
+                "1",
+                "21"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the partition",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each multiplication to the two multiplications you get when you partition the smaller factor.",
+          "pairs": [
+            {
+              "a": "26 × 14",
+              "b": "26 × 10 and 26 × 4"
+            },
+            {
+              "a": "37 × 25",
+              "b": "37 × 20 and 37 × 5"
+            },
+            {
+              "a": "48 × 33",
+              "b": "48 × 30 and 48 × 3"
+            },
+            {
+              "a": "59 × 12",
+              "b": "59 × 10 and 59 × 2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three digits",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A stall stocks 232 bottles of water on each shelf. It has 17 full shelves. How many bottles?"
+        },
+        {
+          "t": "text",
+          "text": "This is 232 × 17. The grid model shows that each shelf has 232 bottles and there are 17 shelves. We partition the smaller number, 17, into 10 and 7."
+        },
+        {
+          "t": "list",
+          "items": [
+            "232 × 10 = 2,320. This is the first partial product.",
+            "232 × 7 = 1,624. This is the second partial product.",
+            "Sum the partial products: 2,320 + 1,624 = 3,944."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are 3,944 bottles altogether."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Another 3-digit example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 23 seats in each row and 341 rows. This is 23 × 341. We partition 23 into 20 and 3."
+        },
+        {
+          "t": "list",
+          "items": [
+            "341 × 20 = 6,820 (first partial product).",
+            "341 × 3 = 1,023 (second partial product).",
+            "Sum the partial products: 6,820 + 1,023 = 7,843."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can use a grid model or a part-part-whole model to show your thinking."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep drew a grid for 245 × 33. He partitioned 33 as 3 and 3."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see what went wrong",
+          "text": "33 was partitioned incorrectly. The grid should show 30 and 3, so the calculations are 245 × 30 and 245 × 3."
+        },
+        {
+          "q": "For 402 × 22, which two partial products do we add?",
+          "options": [
+            "8,040 and 804",
+            "804 and 804",
+            "8,040 and 8,040"
+          ],
+          "answer": 0,
+          "why": "402 × 20 = 8,040 and 402 × 2 = 804, and 22 is 20 and 2.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work it out",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Partition the smaller number, calculate the partial products and add them.",
+          "items": [
+            {
+              "q": "What is 142 × 15?",
+              "options": [
+                "1,491",
+                "2,130",
+                "2,230"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is 235 × 12?",
+              "options": [
+                "2,820",
+                "2,397",
+                "2,810"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is 316 × 21?",
+              "options": [
+                "948",
+                "7,636",
+                "6,636"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "We can use informal methods of multiplication to calculate the product."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Partition one of the factors.",
+            "Calculate the partial products.",
+            "Add the partial products to recombine."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Remember: partition the smaller number so the calculations are easier."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a partial product?",
+      "back": "Any of the multiplication results we get leading up to an overall multiplication result.\n\n16 × 4: the partial products are 40 and 24."
+    },
+    {
+      "front": "What are the three steps to multiply using partitioning?",
+      "back": "1) Partition one of the factors.\n2) Calculate the partial products.\n3) Add the partial products to recombine."
+    },
+    {
+      "front": "Which factor do we partition to make multiplying easier?",
+      "back": "The smaller number."
+    },
+    {
+      "front": "In the grid model for 31 × 29, what does the 31 show?",
+      "back": "31 seats in each row. There are 29 rows."
+    },
+    {
+      "front": "Partition 29 into tens and ones.",
+      "back": "20 and 9, so 31 × 29 becomes 31 × 20 and 31 × 9."
+    },
+    {
+      "front": "31 × 2 = 62. What is 31 × 20?",
+      "back": "620. It is 10 times the size."
+    },
+    {
+      "front": "What are the partial products of 16 × 4?",
+      "back": "40 (4 × 10) and 24 (4 × 6). Add them to get the product, 64."
+    },
+    {
+      "front": "43 × 22: what are the two partial products and the product?",
+      "back": "860 (43 × 20) and 86 (43 × 2). 860 + 86 = 946."
+    },
+    {
+      "front": "232 × 17: partition 17 and give the two partial products.",
+      "back": "17 = 10 + 7.\n232 × 10 = 2,320 and 232 × 7 = 1,624."
+    },
+    {
+      "front": "What is the product of 232 × 17?",
+      "back": "3,944\n\n2,320 + 1,624 = 3,944"
+    },
+    {
+      "front": "How should 33 be partitioned in 245 × 33?",
+      "back": "30 and 3, so the calculations are 245 × 30 and 245 × 3."
+    },
+    {
+      "front": "What goes in the parts of a part-part-whole model for 31 × 29?",
+      "back": "The partial products: 31 × 20 and 31 × 9."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how to multiply a 3-digit number by a 2-digit number",
+    "instructions": "Partition the smaller factor, calculate the partial products and add them to find each product. Write your answer as a number.",
+    "questions": [
+      {
+        "prompt": "Task A: Partition 12 into 10 and 2 to calculate 35 × 12. What is the product?",
+        "answer": "420",
+        "accepted": [],
+        "explanation": "35 × 10 = 350 and 35 × 2 = 70. 350 + 70 = 420."
+      },
+      {
+        "prompt": "Task A: Partition 17 into 10 and 7 to calculate 43 × 17. What is the product?",
+        "answer": "731",
+        "accepted": [],
+        "explanation": "43 × 10 = 430 and 43 × 7 = 301. 430 + 301 = 731."
+      },
+      {
+        "prompt": "Task B: Calculate 323 × 23.",
+        "answer": "7429",
+        "accepted": [
+          "7,429"
+        ],
+        "explanation": "323 × 20 = 6,460 and 323 × 3 = 969. 6,460 + 969 = 7,429."
+      },
+      {
+        "prompt": "Task B: Calculate 431 × 22.",
+        "answer": "9482",
+        "accepted": [
+          "9,482"
+        ],
+        "explanation": "431 × 20 = 8,620 and 431 × 2 = 862. 8,620 + 862 = 9,482."
+      },
+      {
+        "prompt": "Task B: Calculate 204 × 34.",
+        "answer": "6936",
+        "accepted": [
+          "6,936"
+        ],
+        "explanation": "204 × 30 = 6,120 and 204 × 4 = 816. 6,120 + 816 = 6,936."
+      },
+      {
+        "prompt": "Task B: Calculate 420 × 12.",
+        "answer": "5040",
+        "accepted": [
+          "5,040"
+        ],
+        "explanation": "420 × 10 = 4,200 and 420 × 2 = 840. 4,200 + 840 = 5,040."
+      },
+      {
+        "prompt": "Task B: Calculate 389 × 12.",
+        "answer": "4668",
+        "accepted": [
+          "4,668"
+        ],
+        "explanation": "389 × 10 = 3,890 and 389 × 2 = 778. 3,890 + 778 = 4,668."
+      },
+      {
+        "prompt": "232 × 17 is partitioned into 232 × 10 and 232 × 7. What is the partial product 232 × 7?",
+        "answer": "1624",
+        "accepted": [
+          "1,624"
+        ],
+        "explanation": "232 × 7 = 1,624."
+      },
+      {
+        "prompt": "245 × 33 is partitioned into 245 × 30 and 245 × 3. What is the partial product 245 × 30?",
+        "answer": "7350",
+        "accepted": [
+          "7,350"
+        ],
+        "explanation": "245 × 3 = 735, and 30 is 10 times the size, so 245 × 30 = 7,350."
+      },
+      {
+        "prompt": "A stall has 17 full shelves with 232 bottles of water on each shelf. How many bottles is that altogether?",
+        "answer": "3944",
+        "accepted": [
+          "3,944"
+        ],
+        "explanation": "232 × 17 = 2,320 + 1,624 = 3,944."
+      }
+    ]
+  }
+}

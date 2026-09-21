@@ -1,0 +1,720 @@
+{
+  "agent": "maths-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe and write decimal numbers with {hundredths} in different ways."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will count in hundredths, using decimals and fractions, and go beyond one whole."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "count up to {one whole}",
+              "sub": "0.01, 0.02, 0.03…"
+            },
+            {
+              "title": "count in {multiples}",
+              "sub": "of hundredths"
+            },
+            {
+              "title": "count {beyond one}",
+              "sub": "1.01, 1.02, 1.03…"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "hundredth",
+              "def": "One part of one hundred equal parts."
+            },
+            {
+              "term": "decimal number",
+              "def": "A decimal number has a decimal point followed by digits that show the fractional part."
+            },
+            {
+              "term": "fraction",
+              "def": "Shows us how many equal parts in a whole."
+            },
+            {
+              "term": "multiple",
+              "def": "The result of multiplying a number by an integer. For example 2 × 5 = 10, so 10 is a multiple of 2 and of 5."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One hundredth is 0.01",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "This square is one whole. The whole has been divided into **100 equal parts**. Each part is one {hundredth}."
+        },
+        {
+          "t": "callout",
+          "text": "We record one hundredth as {0.01}."
+        },
+        {
+          "t": "text",
+          "text": "When we combine the parts, we can count forwards and backwards in hundredths."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting in decimal language",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Count in hundredths using decimals. Say every digit after the point: “zero point zero one, zero point zero two, zero point zero three…”"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "0.01",
+            "0.02",
+            "0.03",
+            "0.04",
+            "0.05",
+            "0.06",
+            "0.07",
+            "0.08",
+            "0.09",
+            "0.1 (or 0.10)",
+            "0.11",
+            "0.12"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "After 0.09 we reach ten hundredths. Ten hundredths {regroup} to make one tenth, so the next number is 0.1 (or 0.10)."
+        },
+        {
+          "t": "text",
+          "text": "You can count backwards too, starting from one whole: 1, 0.99, 0.98, 0.97…"
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting in fraction language",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can also count in hundredths using fractional language: one hundredth, two hundredths, three hundredths…"
+        },
+        {
+          "t": "text",
+          "text": "Counting in decimals **and** in fractions is called {dual counting}."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "0.01 = 1 hundredth",
+            "0.02 = 2 hundredths",
+            "0.09 = 9 hundredths",
+            "0.1 = 10 hundredths",
+            "0.2 = 20 hundredths"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What comes after 9 hundredths?",
+          "text": "**10 hundredths**, which is the same as one tenth, written 0.1 or 0.10."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Saying 0.34",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There is more than one way to say a decimal number. Here are two ways to say **0.34**:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“Zero point three four”",
+            "“34 hundredths”"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "We do not say “zero point thirty four” or “thirty four tenths”. We say the digits after the decimal point one by one, or we say 34 hundredths."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: counting",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which is the correct way to say 0.62?",
+              "options": [
+                "Zero point sixty two",
+                "Zero point six two",
+                "Sixty two tenths"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.47 is the same as …",
+              "options": [
+                "47 tenths",
+                "47 hundredths",
+                "4 hundredths and 7 tenths"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Counting up in hundredths, what comes after 0.19?",
+              "options": [
+                "0.110",
+                "0.2",
+                "0.019"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Counting up in hundredths, what comes after 0.29?",
+              "options": [
+                "0.30 (or 0.3)",
+                "0.210",
+                "0.290"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting in multiples of hundredths",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Our times tables help us count in different multiples of hundredths."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Ten hundredths:** 0.10, 0.20, 0.30, 0.40 … up to 1.00.",
+            "**Two hundredths:** 0.02, 0.04, 0.06 …",
+            "**Five hundredths:** 0.05, 0.10, 0.15 … (five hundredths, ten hundredths, fifteen hundredths…)."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "You can count forwards and backwards in any multiple of hundredths. Choose your own times table, such as 4 hundredths, and try it."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Recording a count as an equation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When you count on or back one multiple, you can record it as an equation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Start at 0.24, count on two hundredths: **0.24 + 0.02 = 0.26**",
+            "Then do the inverse. Start at 0.26 and subtract 0.02: **0.26 − 0.02 = 0.24**",
+            "Fractions work too: 30/100 + 10/100 = 40/100, the same as 0.30 + 0.10 = 0.40"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Which equation matches: 0.04 + ? = 0.05?",
+          "text": "0.04 + **0.01** = 0.05. Counting on one hundredth from 4 hundredths gives 5 hundredths."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Missing numbers",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which number completes each equation?",
+          "items": [
+            {
+              "q": "0.65 + ___ = 0.70",
+              "options": [
+                "0.05",
+                "0.5",
+                "0.15"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "0.30 + ___ = 0.35",
+              "options": [
+                "0.5",
+                "0.05",
+                "0.35"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.47 + ___ = 0.50",
+              "options": [
+                "0.3",
+                "0.03",
+                "0.13"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.85 − ___ = 0.80",
+              "options": [
+                "0.05",
+                "0.5",
+                "0.15"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "0.90 − ___ = 0.86",
+              "options": [
+                "0.4",
+                "0.14",
+                "0.04"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Counting beyond one whole",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can keep counting in hundredths after one whole."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "1.01",
+            "1.02",
+            "1.03",
+            "1.04",
+            "1.05",
+            "1.06",
+            "1.07"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "In decimal language: “one point zero one, one point zero two, one point zero three…”"
+        },
+        {
+          "t": "text",
+          "text": "In fraction language: “one and one hundredth, one and two hundredths…” or “101 hundredths, 102 hundredths, 103 hundredths…” (improper fractions)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Numbers greater than one",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A decimal number with hundredths greater than one can be shown in different ways."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "1",
+              "add": "0.07",
+              "result": "1.07",
+              "note": "One whole and 7 hundredths."
+            },
+            {
+              "root": "2",
+              "add": "0.18",
+              "result": "2.18",
+              "note": "Two wholes and 18 hundredths."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "1.07 = one and seven hundredths = 1 7/100.",
+            "1.07 is also **107 hundredths**: one whole is 100 hundredths, plus 7 hundredths."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How would you say 1.18?",
+          "text": "“One point one eight”, or “one and eighteen hundredths”."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Same number, different words",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each decimal to its description.",
+          "pairs": [
+            {
+              "a": "1.07",
+              "b": "1 and 7 hundredths"
+            },
+            {
+              "a": "1.17",
+              "b": "1 and 17 hundredths"
+            },
+            {
+              "a": "2.05",
+              "b": "2 and 5 hundredths"
+            },
+            {
+              "a": "3.86",
+              "b": "3 and 86 hundredths"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Same value as 0.4?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap a way of writing a number, then tap the column it belongs in.",
+          "columns": [
+            "Same value as 0.4",
+            "Not the same"
+          ],
+          "items": [
+            {
+              "text": "4 tenths",
+              "col": 0
+            },
+            {
+              "text": "40 hundredths",
+              "col": 0
+            },
+            {
+              "text": "40/100",
+              "col": 0
+            },
+            {
+              "text": "0.40",
+              "col": 0
+            },
+            {
+              "text": "4 hundredths",
+              "col": 1
+            },
+            {
+              "text": "0.04",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: beyond one",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "2.08 is the same as how many hundredths?",
+              "options": [
+                "28",
+                "208",
+                "2008"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "1.25 is the same as how many hundredths?",
+              "options": [
+                "125",
+                "25",
+                "1025"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How do you write 5 tenths and 3 hundredths?",
+              "options": [
+                "0.35",
+                "0.53",
+                "5.3"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "You can count in hundredths in decimal language (0.01, 0.02…) and in fraction language (one hundredth, two hundredths…). This is dual counting.",
+            "Ten hundredths regroup to make one tenth.",
+            "You can count in any multiple of hundredths and record it as an equation.",
+            "You can count beyond one whole: 1.01, 1.02, 1.03… is the same as 101 hundredths, 102 hundredths…"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A number can be said in more than one way: 0.25 is {zero point two five}, {25 hundredths}, or {2 tenths and 5 hundredths}."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How do you write one hundredth as a decimal?",
+      "back": "0.01"
+    },
+    {
+      "front": "What is dual counting?",
+      "back": "Counting hundredths in decimals and in fractions."
+    },
+    {
+      "front": "Counting up in hundredths, what comes after 0.09?",
+      "back": "0.1 (or 0.10).\n\nTen hundredths regroup to make one tenth."
+    },
+    {
+      "front": "What is a multiple?",
+      "back": "The result of multiplying a number by an integer.\n\n2 × 5 = 10, so 10 is a multiple of 2 and of 5."
+    },
+    {
+      "front": "What is a fraction?",
+      "back": "It shows us how many equal parts in a whole."
+    },
+    {
+      "front": "Two ways to say 0.34?",
+      "back": "“Zero point three four” or “34 hundredths”."
+    },
+    {
+      "front": "Count in fives from 0.05: 0.05, 0.10, 0.15 … what are the next two?",
+      "back": "0.20 and 0.25.\n\nFive hundredths, ten hundredths, fifteen hundredths, twenty hundredths, twenty five hundredths."
+    },
+    {
+      "front": "Count on: 0.24 + 0.02 = ?",
+      "back": "0.26\n\nThe inverse is 0.26 − 0.02 = 0.24."
+    },
+    {
+      "front": "Write 40 hundredths as a decimal and as fractions.",
+      "back": "0.4 (or 0.40), 40/100 or 4/10."
+    },
+    {
+      "front": "Ways to describe 0.25?",
+      "back": "Zero point two five, twenty five hundredths, two tenths and five hundredths."
+    },
+    {
+      "front": "Write 1 and 7 hundredths as a decimal.",
+      "back": "1.07\n\nAs a fraction it is 1 7/100, or 107/100."
+    },
+    {
+      "front": "How many hundredths are in 1.07?",
+      "back": "107 hundredths.\n\nOne whole is 100 hundredths, plus 7 hundredths."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Describe and write decimal numbers with hundredths in different ways",
+    "instructions": "Fill in the missing number in each equation and answer the questions. Write your answers as decimals unless it says otherwise.",
+    "questions": [
+      {
+        "prompt": "0.70 + 0.10 = ___",
+        "answer": "0.8",
+        "accepted": [
+          "0.80",
+          "zero point eight",
+          ".8"
+        ],
+        "explanation": "70 hundredths + 10 hundredths = 80 hundredths, which is 0.80 or 0.8."
+      },
+      {
+        "prompt": "0.65 + ___ = 0.70",
+        "answer": "0.05",
+        "accepted": [
+          "zero point zero five",
+          ".05",
+          "5 hundredths"
+        ],
+        "explanation": "65 hundredths + 5 hundredths = 70 hundredths."
+      },
+      {
+        "prompt": "0.06 + ___ = 0.08",
+        "answer": "0.02",
+        "accepted": [
+          "zero point zero two",
+          ".02",
+          "2 hundredths"
+        ],
+        "explanation": "6 hundredths + 2 hundredths = 8 hundredths."
+      },
+      {
+        "prompt": "___ + 0.12 = 0.15",
+        "answer": "0.03",
+        "accepted": [
+          "zero point zero three",
+          ".03",
+          "3 hundredths"
+        ],
+        "explanation": "3 hundredths + 12 hundredths = 15 hundredths."
+      },
+      {
+        "prompt": "0.36 = 0.32 + ___",
+        "answer": "0.04",
+        "accepted": [
+          "zero point zero four",
+          ".04",
+          "4 hundredths"
+        ],
+        "explanation": "32 hundredths + 4 hundredths = 36 hundredths."
+      },
+      {
+        "prompt": "0.85 − ___ = 0.80",
+        "answer": "0.05",
+        "accepted": [
+          "zero point zero five",
+          ".05",
+          "5 hundredths"
+        ],
+        "explanation": "85 hundredths − 5 hundredths = 80 hundredths."
+      },
+      {
+        "prompt": "___ − 0.08 = 0.16",
+        "answer": "0.24",
+        "accepted": [
+          "zero point two four",
+          ".24",
+          "24 hundredths"
+        ],
+        "explanation": "16 hundredths + 8 hundredths = 24 hundredths, so 0.24 − 0.08 = 0.16."
+      },
+      {
+        "prompt": "0.81 = 0.90 − ___",
+        "answer": "0.09",
+        "accepted": [
+          "zero point zero nine",
+          ".09",
+          "9 hundredths"
+        ],
+        "explanation": "90 hundredths − 9 hundredths = 81 hundredths."
+      },
+      {
+        "prompt": "Counting up in hundredths, what number comes after 0.49?",
+        "answer": "0.5",
+        "accepted": [
+          "0.50",
+          "zero point five",
+          ".5",
+          "50 hundredths"
+        ],
+        "explanation": "49 hundredths + 1 hundredth = 50 hundredths, which is 0.5 (or 0.50)."
+      },
+      {
+        "prompt": "Write 5 tenths and 3 hundredths as a decimal.",
+        "answer": "0.53",
+        "accepted": [
+          "zero point five three",
+          ".53"
+        ],
+        "explanation": "5 in the tenths column and 3 in the hundredths column: 0.53."
+      },
+      {
+        "prompt": "How many hundredths are in 1.07?",
+        "answer": "107",
+        "accepted": [
+          "107 hundredths",
+          "one hundred and seven",
+          "one hundred and seven hundredths"
+        ],
+        "explanation": "One whole is 100 hundredths, and 100 + 7 = 107 hundredths."
+      },
+      {
+        "prompt": "Write 1 and 7 hundredths as a decimal.",
+        "answer": "1.07",
+        "accepted": [
+          "one point zero seven"
+        ],
+        "explanation": "1 whole, 0 tenths and 7 hundredths: 1.07."
+      }
+    ]
+  }
+}

@@ -1,0 +1,691 @@
+{
+  "agent": "french-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use ‘en’ to say ‘in’ or ‘by’ and ‘faire’ for different activities in the present tense."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to recognise and pronounce [ç/c]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "the {[ç/c]} sound"
+            },
+            {
+              "title": "{en} = in or by"
+            },
+            {
+              "title": "{faire} activities"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[ç/c]",
+              "def": "pronounced as in ‘ici’"
+            },
+            {
+              "term": "en",
+              "def": "in/by"
+            },
+            {
+              "term": "faire",
+              "def": "to do, to make, to go"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The [ç/c] sound",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "[ç/c] is pronounced as in ‘ici’. Read these words and say them aloud."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "i{ci}",
+            "{ci}néma",
+            "fran{ç}ais",
+            "gar{ç}on",
+            "dé{ci}der",
+            "{ce}la",
+            "mer{ci}"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Garçon means boy. Décider means to decide, deciding."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which letters make [ç/c]?",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "The sound [ç/c] is spelled {ce}, {ci} or {ç}."
+        },
+        {
+          "t": "reveal",
+          "label": "Is every ‘c’ a [ç/c] sound?",
+          "text": "No! Not every ‘c’ is a [ç/c] sound. It is just ce, ci and ç."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the spelling",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Each word has the sound [ç/c]. Which spelling does it use?",
+          "columns": [
+            "ce",
+            "ci",
+            "ç"
+          ],
+          "items": [
+            {
+              "text": "cela",
+              "col": 0
+            },
+            {
+              "text": "cependant",
+              "col": 0
+            },
+            {
+              "text": "cinq",
+              "col": 1
+            },
+            {
+              "text": "merci",
+              "col": 1
+            },
+            {
+              "text": "ancien",
+              "col": 1
+            },
+            {
+              "text": "façon",
+              "col": 2
+            },
+            {
+              "text": "garçon",
+              "col": 2
+            },
+            {
+              "text": "français",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Être: to be",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Être means to be, being. The singular forms of the verb are:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "je suis = I am",
+            "tu es = you are",
+            "il est = he is",
+            "elle est = she is"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We usually follow {être} with an adjective. Il est français."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adjectives: add an -e",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Add an -e in the feminine form!"
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "français",
+              "add": "e",
+              "result": "française",
+              "note": "Il est français. Elle est française."
+            },
+            {
+              "root": "anglais",
+              "add": "e",
+              "result": "anglaise"
+            },
+            {
+              "root": "petit",
+              "add": "e",
+              "result": "petite"
+            },
+            {
+              "root": "grand",
+              "add": "e",
+              "result": "grande"
+            },
+            {
+              "root": "content",
+              "add": "e",
+              "result": "contente",
+              "note": "Elle est contente. (She is pleased.)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Masculine or feminine?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct adjective.",
+          "items": [
+            {
+              "q": "Il est ____. (He is English.)",
+              "options": [
+                "anglais",
+                "anglaise"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Elle est ____. (She is pleased.)",
+              "options": [
+                "content",
+                "contente"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Tu es ____ ? (Are you short? said to a girl)",
+              "options": [
+                "petit",
+                "petite"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Je suis ____. (I am tall, said by a boy.)",
+              "options": [
+                "grand",
+                "grande"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One word, two meanings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Words in English often have different meanings. Look at ‘pupils’:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Pupils get bigger in the dark.",
+            "The pupils are talking."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Words can have more than one meaning in French too."
+        },
+        {
+          "t": "callout",
+          "text": "The other words in the sentence (the {context}) show which meaning is right."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘En’ means ‘in’ and ‘by’",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "en voiture",
+              "sub": "by car",
+              "emoji": "🚗"
+            },
+            {
+              "title": "en bateau",
+              "sub": "by boat",
+              "emoji": "🚢"
+            },
+            {
+              "title": "en français",
+              "sub": "in French"
+            },
+            {
+              "title": "en classe",
+              "sub": "in class"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Je fais un voyage en voiture. = I’m going on a journey by car.",
+            "L’acteur parle en français. = The actor is speaking in French."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Use the clues",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To choose between ‘in’ and ‘by’, look at the other words in the sentence."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Le médecin parle en anglais. = The doctor is speaking in English. (**in**)",
+            "Il fait une promenade en bateau. = He is going on a trip by boat. (**by**)",
+            "Le garçon est actif en classe. = The boy is active in class. (**in**)",
+            "Tu es en France ? = Are you in France? (**in**)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What about the girl who goes food shopping?",
+          "text": "La fille fait des courses en voiture. = The girl is going food shopping by car. (**by**)"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "In or by?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "What does ‘en’ mean in each sentence?",
+          "columns": [
+            "in",
+            "by"
+          ],
+          "items": [
+            {
+              "text": "L’actrice parle en français.",
+              "col": 0
+            },
+            {
+              "text": "Je fais un voyage en bateau.",
+              "col": 1
+            },
+            {
+              "text": "Tu es en classe.",
+              "col": 0
+            },
+            {
+              "text": "La fille fait un voyage en voiture.",
+              "col": 1
+            },
+            {
+              "text": "Le garçon parle en anglais.",
+              "col": 0
+            },
+            {
+              "text": "Elle fait les courses en voiture.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Faire: lots of meanings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘Faire’ means do, make and go, but sometimes we can’t translate it literally!"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "faire le lit",
+              "sub": "to make the bed",
+              "emoji": "🛏️"
+            },
+            {
+              "title": "faire la cuisine",
+              "sub": "to do the cooking"
+            },
+            {
+              "title": "faire les courses",
+              "sub": "to do the food shopping"
+            },
+            {
+              "title": "faire les magasins",
+              "sub": "to go shopping"
+            },
+            {
+              "title": "faire une promenade",
+              "sub": "to go for a walk"
+            },
+            {
+              "title": "faire beau",
+              "sub": "to be nice weather"
+            },
+            {
+              "title": "faire mauvais",
+              "sub": "to be bad weather"
+            },
+            {
+              "title": "faire une visite de Londres",
+              "sub": "to visit London"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Faire la grasse matinée",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Faire la grasse matinée literally means ‘to do/make the fat morning’! French speakers use it for ‘to have a lie-in’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Tu fais quoi le week-end ? = What do you do at the weekend?",
+            "Je fais la grasse matinée le dimanche ! = I have a lie-in on a Sunday!"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Use {fais} with ‘je’ and ‘tu’, and {fait} with il, elle or a name."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Faire in action",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Il fait beau.",
+              "options": [
+                "It is nice weather.",
+                "It is bad weather.",
+                "He is going for a walk."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Tu fais les magasins.",
+              "options": [
+                "You go shopping.",
+                "You do the housework.",
+                "You make the bed."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Elle fait une visite de Londres.",
+              "options": [
+                "She goes shopping in London.",
+                "She goes on a tour of London.",
+                "She does the housework in London."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Il ____ la grasse matinée le dimanche.",
+              "options": [
+                "fais",
+                "fait"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Remember",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[ç/c] is a sound spelling correspondence. Both ce/ci and ç make the sound in ‘ici’.",
+            "Être is the verb ‘to be’ and is often followed by an adjective. Adjectives often have a masculine and a feminine version in French.",
+            "In French many words have more than one meaning, and the context helps you to know which meaning to use. ‘En’ means ‘in’ and ‘by’.",
+            "Faire translates as ‘to do’, ‘to make’ and ‘to go’, but in some expressions it can’t be easily translated."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [ç/c] pronounced?",
+      "back": "As in ‘ici’."
+    },
+    {
+      "front": "Which spellings make the sound [ç/c]?",
+      "back": "ce, ci and ç.\n\ncela, merci, garçon"
+    },
+    {
+      "front": "What are the singular forms of être (to be)?",
+      "back": "je suis, tu es, il est, elle est."
+    },
+    {
+      "front": "How do you usually make an adjective feminine?",
+      "back": "Add an -e.\n\nfrançais → française"
+    },
+    {
+      "front": "What does ‘en’ mean?",
+      "back": "In or by."
+    },
+    {
+      "front": "What does “en voiture” mean?",
+      "back": "By car."
+    },
+    {
+      "front": "What does “en français” mean?",
+      "back": "In French."
+    },
+    {
+      "front": "Why can’t you always translate ‘en’ as ‘in’?",
+      "back": "Many French words have more than one meaning. ‘En’ means ‘in’ and ‘by’.\n\nUse the other words in the sentence (the context) to decide."
+    },
+    {
+      "front": "What does faire mean?",
+      "back": "To do, to make, to go."
+    },
+    {
+      "front": "What does “faire le pont” mean?",
+      "back": "To have a long weekend."
+    },
+    {
+      "front": "What does “faire la grasse matinée” mean?",
+      "back": "To have a lie-in.\n\nLiterally it is ‘to do the fat morning’."
+    },
+    {
+      "front": "What does “Tu fais quoi le week-end ?” mean?",
+      "back": "What do you do at the weekend?"
+    },
+    {
+      "front": "Which form of faire goes with je and tu, and which with il and elle?",
+      "back": "Fais goes with je and tu. Fait goes with il, elle or a name."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What people do: ‘en’, meaning ‘in’ and ‘by’",
+    "instructions": "Use the other words in each sentence to decide what ‘en’ means, then translate the faire sentences and the être sentences.",
+    "questions": [
+      {
+        "prompt": "What does ‘en’ mean in: Le médecin parle en anglais. (in or by?)",
+        "answer": "in",
+        "accepted": [
+          "In"
+        ],
+        "explanation": "The doctor is speaking in English."
+      },
+      {
+        "prompt": "What does ‘en’ mean in: Il fait une promenade en bateau. (in or by?)",
+        "answer": "by",
+        "accepted": [
+          "By"
+        ],
+        "explanation": "He is going on a trip by boat."
+      },
+      {
+        "prompt": "What does ‘en’ mean in: Le garçon est actif en classe. (in or by?)",
+        "answer": "in",
+        "accepted": [
+          "In"
+        ],
+        "explanation": "The boy is active in class."
+      },
+      {
+        "prompt": "What does ‘en’ mean in: La fille fait des courses en voiture. (in or by?)",
+        "answer": "by",
+        "accepted": [
+          "By"
+        ],
+        "explanation": "The girl is going food shopping by car."
+      },
+      {
+        "prompt": "What does ‘en’ mean in: Tu es en France ? (in or by?)",
+        "answer": "in",
+        "accepted": [
+          "In"
+        ],
+        "explanation": "Are you in France?"
+      },
+      {
+        "prompt": "Write in French: ‘He is English.’",
+        "answer": "Il est anglais.",
+        "accepted": [
+          "Il est anglais",
+          "il est anglais"
+        ],
+        "explanation": "Il takes est, and the masculine adjective is anglais."
+      },
+      {
+        "prompt": "Write in French: ‘You are English.’ (said to a girl)",
+        "answer": "Tu es anglaise.",
+        "accepted": [
+          "Tu es anglaise",
+          "tu es anglaise"
+        ],
+        "explanation": "Tu takes es, and a feminine adjective adds -e: anglaise."
+      },
+      {
+        "prompt": "Write in French: ‘I am French.’ (said by a girl)",
+        "answer": "Je suis française.",
+        "accepted": [
+          "Je suis française",
+          "je suis française"
+        ],
+        "explanation": "Je takes suis, and a feminine adjective adds -e: française."
+      },
+      {
+        "prompt": "Translate into English: Il fait le ménage.",
+        "answer": "He does the housework.",
+        "accepted": [
+          "He does the housework",
+          "He is doing the housework",
+          "He’s doing the housework",
+          "He's doing the housework",
+          "he does the housework"
+        ],
+        "explanation": "Faire le ménage means to do the housework, and il takes fait."
+      },
+      {
+        "prompt": "Translate into English: Il fait mauvais.",
+        "answer": "It is bad weather.",
+        "accepted": [
+          "It is bad weather",
+          "It’s bad weather",
+          "It's bad weather",
+          "The weather is bad",
+          "it is bad weather"
+        ],
+        "explanation": "Faire mauvais is used to talk about bad weather."
+      },
+      {
+        "prompt": "Translate into English: Tu fais les magasins.",
+        "answer": "You go shopping.",
+        "accepted": [
+          "You go shopping",
+          "You are going shopping",
+          "You’re going shopping",
+          "You're going shopping",
+          "you go shopping"
+        ],
+        "explanation": "Faire les magasins means to go shopping."
+      },
+      {
+        "prompt": "Translate into English: Je fais une promenade en bateau.",
+        "answer": "I go on a boat ride.",
+        "accepted": [
+          "I go on a boat ride",
+          "I am going on a boat ride",
+          "I’m going on a boat ride",
+          "I'm going on a boat ride",
+          "I go for a boat ride",
+          "I am going for a boat ride"
+        ],
+        "explanation": "Faire une promenade means to go for a walk or ride, and en bateau means by boat."
+      }
+    ]
+  }
+}

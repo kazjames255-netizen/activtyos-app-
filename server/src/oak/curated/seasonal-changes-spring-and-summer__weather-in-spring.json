@@ -1,0 +1,518 @@
+{
+  "agent": "science-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe weather in spring."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Weather} in spring"
+            },
+            {
+              "title": "A {forecast}"
+            },
+            {
+              "title": "Measuring {rainfall}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "weather",
+              "def": "Weather is what the conditions are like in a particular place at a particular time. For example, rain, wind or sun."
+            },
+            {
+              "term": "season",
+              "def": "Seasons are periods of similar weather. In the UK there are four seasons (spring, summer, autumn and winter)."
+            },
+            {
+              "term": "spring",
+              "def": "Spring is the season that comes after winter and before summer."
+            },
+            {
+              "term": "rain gauge",
+              "def": "A rain gauge is a device for measuring how much rain has fallen."
+            },
+            {
+              "term": "measure",
+              "def": "To measure is to find out the size of something or how much of something there is."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Weather changes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The children look at photos from Year 1."
+        },
+        {
+          "t": "text",
+          "text": "The weather in the photos is not the same."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "winter",
+              "sub": "Very cold and frosty."
+            },
+            {
+              "title": "spring",
+              "sub": "Flowers, colour and blue sky."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The weather is often different in each season."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Types of weather",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are five common types of weather."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "cold",
+              "sub": "It feels chilly outside."
+            },
+            {
+              "title": "cloudy",
+              "sub": "Lots of clouds in the sky."
+            },
+            {
+              "title": "windy",
+              "sub": "The wind is strong."
+            },
+            {
+              "title": "rainy",
+              "sub": "You get wet outside."
+            },
+            {
+              "title": "sunny",
+              "sub": "The sky often looks blue."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Look closely",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Windy weather can be hard to spot."
+        },
+        {
+          "t": "text",
+          "text": "Look at the trees. Do the branches move?"
+        },
+        {
+          "t": "text",
+          "text": "Cloudy weather does not always mean rain."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Sometimes it is just a cloudy day."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the weather",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each type of weather to its clue.",
+          "pairs": [
+            {
+              "a": "cold",
+              "b": "It feels very chilly outside."
+            },
+            {
+              "a": "cloudy",
+              "b": "There are lots of clouds in the sky."
+            },
+            {
+              "a": "windy",
+              "b": "You might see the branches of trees moving."
+            },
+            {
+              "a": "rainy",
+              "b": "You will get wet if you go outside."
+            },
+            {
+              "a": "sunny",
+              "b": "The sky often looks blue."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Weather in spring",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "April is in the season of spring."
+        },
+        {
+          "t": "text",
+          "text": "Alex visits a farm in April."
+        },
+        {
+          "t": "text",
+          "text": "The weather changes. Sun. Cloud. Rain."
+        },
+        {
+          "t": "callout",
+          "text": "The weather in spring can be mixed. It can have wind, rain and sunshine at different times."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "wind"
+            },
+            {
+              "title": "rain",
+              "emoji": "🌧️"
+            },
+            {
+              "title": "sunshine"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spring weather",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "What can the weather in spring be like?",
+          "options": [
+            "Hot and sunny every day",
+            "Snowy every day",
+            "Mixed, with wind, rain and sunshine"
+          ],
+          "answer": 2,
+          "why": "Spring weather can be mixed, with periods of wind, rain and sunshine."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A forecast",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha has seen a lot of rain this week."
+        },
+        {
+          "t": "text",
+          "text": "She thinks tomorrow will be rainy and cloudy too."
+        },
+        {
+          "t": "callout",
+          "text": "When we guess or predict the weather, it is called a {forecast}."
+        },
+        {
+          "t": "reveal",
+          "label": "Is a forecast always right?",
+          "text": "No. One forecast said rain on Tuesday. It was cloudy."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Forecast check",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "What do we call a guess about tomorrow’s weather?",
+              "options": [
+                "a season",
+                "a forecast",
+                "a measure"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A forecast said rain. It was cloudy. What does this show?",
+              "options": [
+                "A forecast is not always right.",
+                "A forecast is always right."
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How much rain?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha takes an umbrella when she goes out in spring."
+        },
+        {
+          "t": "text",
+          "text": "There is often rain in spring."
+        },
+        {
+          "t": "text",
+          "text": "How can she find out how much rain there is?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "She can use a rain gauge."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A rain gauge",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "A rain gauge collects and measures how much rain has fallen."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A rain gauge has numbers on it.",
+            "Read the number next to the level of water.",
+            "The higher the number, the more rain has fallen.",
+            "Keep it in one place."
+          ]
+        }
+      ],
+      "art": [
+        "🌧️"
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Rain gauge check",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Answer each question.",
+          "items": [
+            {
+              "q": "One rain gauge shows 10 mm. Another shows 25 mm. Which has more rain?",
+              "options": [
+                "the one with 10 mm",
+                "the one with 25 mm"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The rain gauge shows 30 mm on Monday and 10 mm on Tuesday. Which day had more rain?",
+              "options": [
+                "Monday",
+                "Tuesday"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Where should a rain gauge stay?",
+              "options": [
+                "in your hand while you run",
+                "in one place"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Make a rain gauge",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You need a clean plastic bottle, scissors, a ruler or lolly stick, tape and a waterproof pen."
+        },
+        {
+          "t": "list",
+          "items": [
+            "An adult cuts the bottle in two.",
+            "Turn the top half upside down inside the bottom half. It is a funnel.",
+            "Tape a ruler to the side. Zero lines up with the bottom.",
+            "Put it outside on a flat surface for 24 hours.",
+            "Read the number next to the water."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The weather is often different in each season.",
+            "Weather can be cold, cloudy, windy, rainy or sunny.",
+            "The weather in spring can be mixed, with wind, rain and sunshine.",
+            "Rain can be collected and measured using a rain gauge."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is weather?",
+      "back": "What the conditions are like in a particular place at a particular time. For example, rain, wind or sun."
+    },
+    {
+      "front": "Is the weather the same in every season?",
+      "back": "No. The weather is often different in each season."
+    },
+    {
+      "front": "What does cold weather feel like?",
+      "back": "It feels very chilly outside."
+    },
+    {
+      "front": "What is cloudy weather?",
+      "back": "There are lots of clouds in the sky."
+    },
+    {
+      "front": "What is windy weather?",
+      "back": "The wind is strong. You might see the branches of trees moving."
+    },
+    {
+      "front": "What happens if you go outside in rainy weather?",
+      "back": "You will get wet!"
+    },
+    {
+      "front": "What does the sky often look like on a sunny day?",
+      "back": "Blue."
+    },
+    {
+      "front": "What can the weather in spring be like?",
+      "back": "Mixed, with periods of wind, rain and sunshine."
+    },
+    {
+      "front": "What is it called when we guess or predict the weather?",
+      "back": "A forecast."
+    },
+    {
+      "front": "What is a rain gauge?",
+      "back": "A device for collecting and measuring how much rain has fallen."
+    },
+    {
+      "front": "On a rain gauge, what does a higher number mean?",
+      "back": "More rain has fallen."
+    },
+    {
+      "front": "What does measure mean?",
+      "back": "To find out the size of something or how much of something there is."
+    },
+    {
+      "front": "Spring comes after which season, and before which season?",
+      "back": "After winter and before summer."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Weather in spring",
+    "instructions": "Answer each question with a word or a short answer.",
+    "questions": [
+      {
+        "prompt": "Which weather word means “there are lots of clouds in the sky”?",
+        "answer": "cloudy",
+        "explanation": "Cloudy weather means lots of clouds in the sky."
+      },
+      {
+        "prompt": "Which weather word means “you will get wet if you go outside”?",
+        "answer": "rainy",
+        "explanation": "If you go outside when the weather is rainy, you will get wet."
+      },
+      {
+        "prompt": "Which weather word means “it feels very chilly outside”?",
+        "answer": "cold",
+        "explanation": "Cold weather feels very chilly outside."
+      },
+      {
+        "prompt": "Which weather word means “the wind is strong”?",
+        "answer": "windy",
+        "explanation": "Windy weather means the wind is strong."
+      },
+      {
+        "prompt": "What do we call a guess or prediction about tomorrow’s weather?",
+        "answer": "forecast",
+        "accepted": [
+          "a forecast",
+          "weather forecast"
+        ],
+        "explanation": "When we try to guess or predict the weather, it is called a forecast."
+      },
+      {
+        "prompt": "What do we use to collect and measure rain?",
+        "answer": "rain gauge",
+        "accepted": [
+          "a rain gauge"
+        ],
+        "explanation": "A rain gauge collects and measures how much rain has fallen."
+      },
+      {
+        "prompt": "Rain gauge A shows 15 mm. Rain gauge B shows 35 mm. Which one has more rain? Write A or B.",
+        "answer": "B",
+        "accepted": [
+          "gauge B",
+          "rain gauge B"
+        ],
+        "explanation": "The higher the number, the more rain has fallen, and 35 is higher than 15."
+      },
+      {
+        "prompt": "April is in which season?",
+        "answer": "spring",
+        "explanation": "April is in the season of spring."
+      }
+    ]
+  }
+}

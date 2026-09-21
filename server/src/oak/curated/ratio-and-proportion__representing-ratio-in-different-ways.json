@@ -1,0 +1,587 @@
+{
+  "agent": "w4-maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can represent ratio in different ways and use multiplication to find missing values."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at ratios where each value is more than one, draw them as bar models and use multiplication to work out missing numbers."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{many to many} ratios"
+            },
+            {
+              "title": "Bar models"
+            },
+            {
+              "title": "Multiplication equations"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the words to see what they mean."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "many to many",
+              "def": "You use many to many to describe ratios where each value is more than one, e.g. for every 3 boys there are 4 girls."
+            },
+            {
+              "term": "ratio",
+              "def": "A ratio shows the relative sizes of 2 or more values and lets you compare a part with another part in a whole."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Is it many to many?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a many to many ratio, each value is more than one."
+        },
+        {
+          "t": "sort",
+          "q": "Sort these ratios.",
+          "columns": [
+            "Many to many",
+            "Not many to many"
+          ],
+          "items": [
+            {
+              "text": "For every 5 red there are 2 blue",
+              "col": 0
+            },
+            {
+              "text": "For every 1 red there are 4 blue",
+              "col": 1
+            },
+            {
+              "text": "For every 6 red there are 5 blue",
+              "col": 0
+            },
+            {
+              "text": "For every 3 red there is 1 blue",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sharing marbles",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha and Alex are sharing marbles. For every 2 marbles Aisha has, Alex has 3 marbles."
+        },
+        {
+          "t": "text",
+          "text": "Aisha:  🔴🔴"
+        },
+        {
+          "t": "text",
+          "text": "Alex:  🔵🔵🔵"
+        },
+        {
+          "t": "text",
+          "text": "This is a many to many ratio, as they each have more than 1 marble. Sharing in a ratio is not always an equal share, and that is fine."
+        },
+        {
+          "t": "callout",
+          "text": "There are 5 marbles in total."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Drawing a bar model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can draw a bar model round the marbles. Each section of the bar stands for one marble."
+        },
+        {
+          "t": "text",
+          "text": "Aisha:  [1] [1]"
+        },
+        {
+          "t": "text",
+          "text": "Alex:  [1] [1] [1]"
+        },
+        {
+          "t": "text",
+          "text": "Aisha has 2 sections and Alex has 3 sections. There are 5 sections in total, so there are 5 marbles in total."
+        },
+        {
+          "t": "reveal",
+          "label": "Why is the total important?",
+          "text": "When we work with ratio it is important to know the value of the whole as well as the values of the parts."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Making the bar bigger",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What if each section is worth 2 marbles? Aisha still has 2 sections and Alex still has 3 sections."
+        },
+        {
+          "t": "text",
+          "text": "Aisha has 4 marbles. Alex has 6 marbles. There are 10 marbles in total."
+        },
+        {
+          "t": "text",
+          "text": "We can put any number in the sections as long as we put the same number in each one. If each section is worth 10, Aisha has 20 marbles, Alex has 30 marbles and there are 50 in total. If each section is worth 6, there are 5 lots of 6, which is 30 marbles in total."
+        },
+        {
+          "t": "callout",
+          "text": "Same ratio: for every 2 marbles Aisha has, Alex has 3 marbles."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Your turn: bar models",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha and Alex still share marbles in the ratio 2 to 3. Aisha has 2 sections and Alex has 3 sections."
+        },
+        {
+          "t": "choices",
+          "q": "Each section of the bar is worth 5 marbles.",
+          "items": [
+            {
+              "q": "How many marbles does Aisha have?",
+              "options": [
+                "10",
+                "7",
+                "25"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "How many marbles does Alex have?",
+              "options": [
+                "8",
+                "15",
+                "10"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How many marbles are there in total?",
+              "options": [
+                "25",
+                "15",
+                "10"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which totals work?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 3 orange marbles there are 4 blue marbles. The bar has 3 + 4 = 7 sections. Whatever number we put in each section, the total is 7 lots of it."
+        },
+        {
+          "t": "callout",
+          "text": "The total number of marbles will always be a **multiple of 7**."
+        },
+        {
+          "t": "text",
+          "text": "For every 7 orange marbles there are 3 blue marbles. The bar has 7 + 3 = 10 sections."
+        },
+        {
+          "t": "callout",
+          "text": "The total number of marbles will always be a **multiple of 10**."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check the total",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam shares fruit in a many to many ratio: for every 4 apples there are 5 grapes."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these could be the total number of pieces of fruit?",
+          "options": [
+            "28",
+            "27",
+            "30"
+          ],
+          "answer": 1,
+          "why": "4 + 5 = 9 sections, so the total is a multiple of 9. 27 = 9 × 3. 28 and 30 are not multiples of 9."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Using multiplication",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now Aisha has 8 marbles. In the basic ratio she has 2 marbles, so she has 4 times as many. Everything is multiplied by 4."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "2",
+              "add": "× 4",
+              "result": "8",
+              "note": "Aisha: 2 marbles in the basic ratio × 4 = 8 marbles."
+            },
+            {
+              "root": "3",
+              "add": "× 4",
+              "result": "12",
+              "note": "Alex: 3 marbles in the basic ratio × 4 = 12 marbles."
+            },
+            {
+              "root": "5",
+              "add": "× 4",
+              "result": "20",
+              "note": "Total: 5 marbles in the basic ratio (2 + 3) × 4 = 20 marbles."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The **4** is the number the original amount has been multiplied by. The **5** is the total number of marbles in the basic ratio, so 2 + 3."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding a missing part",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 3 marbles Aisha has, Alex has 4 marbles. Alex has 20 marbles. How many does Aisha have, and what is the total?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Alex has 4 in the basic ratio and 4 × 5 = 20, so everything is multiplied by 5.",
+            "Aisha: 3 × 5 = 15 marbles.",
+            "Total: the basic ratio has 3 + 4 = 7 marbles, and 7 × 5 = 35 marbles."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How can we check?",
+          "text": "The bar shows Aisha’s 15 and Alex’s 20, and 15 + 20 = 35, which matches 7 × 5 = 35."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Fruit sums",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 2 apples there are 5 oranges. The basic ratio has 2 + 5 = 7 pieces of fruit."
+        },
+        {
+          "t": "choices",
+          "q": "Work out each missing number.",
+          "items": [
+            {
+              "q": "There are 20 oranges (5 × 4). How many apples?",
+              "options": [
+                "8",
+                "10",
+                "4"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "There are 20 oranges. How many pieces of fruit in total?",
+              "options": [
+                "28",
+                "27",
+                "25"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "There are 6 apples (2 × 3). How many oranges?",
+              "options": [
+                "12",
+                "15",
+                "18"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "There are 35 pieces of fruit in total (7 × 5). How many apples?",
+              "options": [
+                "10",
+                "15",
+                "25"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the question to the calculation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 3 stars there are 4 triangles."
+        },
+        {
+          "t": "match",
+          "q": "Match each question to the multiplication that solves it.",
+          "pairs": [
+            {
+              "a": "12 stars: how many triangles?",
+              "b": "4 × 4 = 16"
+            },
+            {
+              "a": "12 triangles: how many stars?",
+              "b": "3 × 3 = 9"
+            },
+            {
+              "a": "15 stars: how many triangles?",
+              "b": "4 × 5 = 20"
+            },
+            {
+              "a": "20 triangles: how many stars?",
+              "b": "3 × 5 = 15"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Pancakes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha is making pancakes. For every 2 eggs, she uses 3 spoons of sugar."
+        },
+        {
+          "t": "choice",
+          "q": "If Aisha uses 10 eggs, how many spoons of sugar does she need?",
+          "options": [
+            "13",
+            "15",
+            "20"
+          ],
+          "answer": 1,
+          "why": "10 eggs is 2 × 5, so everything is multiplied by 5: 3 × 5 = 15 spoons of sugar."
+        },
+        {
+          "t": "reveal",
+          "label": "What about 1 egg?",
+          "text": "For 1 egg she needs 1.5 spoons of sugar."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Representing ratio in different ways",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Many to many ratios are ratios where each value is more than one.",
+            "Bar models can show unequal sharing and many to many sharing.",
+            "Representations show the relationship between the two variables and help us see which calculations to do.",
+            "Use multiplication to find a missing part: work out what the original amount was multiplied by.",
+            "You can work out the value of the total using multiplication too."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “many to many” describe?",
+      "back": "Ratios where each value is more than one.\n\nFor every 3 boys there are 4 girls."
+    },
+    {
+      "front": "Is “for every 1 red there are 4 blue” a many to many ratio?",
+      "back": "No. One of the values is 1, so not every value is more than one."
+    },
+    {
+      "front": "What can a bar model show?",
+      "back": "Unequal sharing, or many to many sharing."
+    },
+    {
+      "front": "Aisha has 2 marbles for every 3 that Alex has. How many marbles are there in the basic ratio?",
+      "back": "5 marbles (2 + 3)."
+    },
+    {
+      "front": "Each section of a bar model can be worth any number. What must be true?",
+      "back": "The same number must go in every section."
+    },
+    {
+      "front": "Ratio 2 : 3 and each section is worth 10 marbles. What is the total?",
+      "back": "50 marbles (5 sections × 10)."
+    },
+    {
+      "front": "For every 3 orange marbles there are 4 blue marbles. The total is always a multiple of which number? Give the largest number that works.",
+      "back": "7 (3 + 4 = 7 sections)."
+    },
+    {
+      "front": "For every 7 orange marbles there are 3 blue marbles. The total is always a multiple of which number? Give the largest number that works.",
+      "back": "10 (7 + 3 = 10 sections)."
+    },
+    {
+      "front": "Ratio 2 : 3. Aisha has 8 marbles. How many does Alex have?",
+      "back": "12.\n\n8 is 2 × 4, so Alex has 3 × 4 = 12."
+    },
+    {
+      "front": "In 5 × 4 = 20 for the marbles, what does the 5 stand for?",
+      "back": "The total number of marbles in the basic ratio (2 + 3)."
+    },
+    {
+      "front": "In 2 × 4 = 8 for Aisha’s marbles, what does the 4 stand for?",
+      "back": "The number the original amount has been multiplied by."
+    },
+    {
+      "front": "Ratio 3 : 4 and Alex has 20 marbles. How many does Aisha have?",
+      "back": "15.\n\n4 × 5 = 20, so Aisha has 3 × 5 = 15."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Representing ratio in different ways",
+    "instructions": "Answer each question with a number or a short word. Use multiplication to find the missing values.",
+    "questions": [
+      {
+        "prompt": "Aisha and Alex share marbles. For every 2 marbles Aisha has, Alex has 3 marbles. Each section of the bar is worth 5 marbles. How many marbles does Aisha have?",
+        "answer": "10",
+        "accepted": [
+          "10 marbles",
+          "ten"
+        ],
+        "explanation": "Aisha has 2 sections and 2 × 5 = 10."
+      },
+      {
+        "prompt": "For every 2 marbles Aisha has, Alex has 3 marbles. Each section of the bar is worth 5 marbles. How many marbles are there in total?",
+        "answer": "25",
+        "accepted": [
+          "25 marbles",
+          "twenty-five",
+          "twenty five"
+        ],
+        "explanation": "There are 2 + 3 = 5 sections and 5 × 5 = 25."
+      },
+      {
+        "prompt": "For every 3 orange marbles there are 4 blue marbles. The total number of marbles is always a multiple of which number? Give the largest number that works.",
+        "answer": "7",
+        "accepted": [
+          "seven"
+        ],
+        "explanation": "The bar has 3 + 4 = 7 sections."
+      },
+      {
+        "prompt": "For every 7 orange marbles there are 3 blue marbles. The total number of marbles is always a multiple of which number? Give the largest number that works.",
+        "answer": "10",
+        "accepted": [
+          "ten"
+        ],
+        "explanation": "The bar has 7 + 3 = 10 sections."
+      },
+      {
+        "prompt": "For every 2 marbles Aisha has, Alex has 3 marbles. Aisha has 14 marbles. How many marbles does Alex have?",
+        "answer": "21",
+        "accepted": [
+          "21 marbles",
+          "twenty-one",
+          "twenty one"
+        ],
+        "explanation": "14 = 2 × 7, so Alex has 3 × 7 = 21."
+      },
+      {
+        "prompt": "For every 3 marbles Aisha has, Alex has 4 marbles. Alex has 28 marbles. How many marbles are there in total?",
+        "answer": "49",
+        "accepted": [
+          "49 marbles",
+          "forty-nine",
+          "forty nine"
+        ],
+        "explanation": "28 = 4 × 7 and the basic ratio has 3 + 4 = 7 marbles, so the total is 7 × 7 = 49."
+      },
+      {
+        "prompt": "For every 3 stars there are 4 triangles. There are 12 stars. How many triangles are there?",
+        "answer": "16",
+        "accepted": [
+          "16 triangles",
+          "sixteen"
+        ],
+        "explanation": "12 = 3 × 4, so there are 4 × 4 = 16 triangles."
+      },
+      {
+        "prompt": "For every 3 stars there are 4 triangles. There are 12 triangles. How many stars are there?",
+        "answer": "9",
+        "accepted": [
+          "9 stars",
+          "nine"
+        ],
+        "explanation": "12 = 4 × 3, so there are 3 × 3 = 9 stars."
+      },
+      {
+        "prompt": "For every 2 eggs, Aisha uses 3 spoons of sugar. She uses 10 eggs. How many spoons of sugar does she need?",
+        "answer": "15",
+        "accepted": [
+          "15 spoons",
+          "fifteen"
+        ],
+        "explanation": "10 = 2 × 5, so she needs 3 × 5 = 15 spoons."
+      },
+      {
+        "prompt": "For every 2 eggs, Aisha uses 3 spoons of sugar. How many spoons of sugar does she need for 1 egg?",
+        "answer": "1.5",
+        "accepted": [
+          "1.5 spoons",
+          "one and a half",
+          "1 and a half"
+        ],
+        "explanation": "For 1 egg she needs 1.5 spoons of sugar."
+      }
+    ]
+  }
+}

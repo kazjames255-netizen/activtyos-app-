@@ -1,0 +1,609 @@
+{
+  "agent": "science-ks3b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe and explain the relationship between predator and prey populations."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Predators and prey"
+            },
+            {
+              "title": "Changing populations"
+            },
+            {
+              "title": "Predator-prey relationships"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "predator",
+              "def": "An animal that hunts and eats another animal."
+            },
+            {
+              "term": "prey",
+              "def": "An animal that is caught and eaten by another animal."
+            },
+            {
+              "term": "population",
+              "def": "A group of organisms of the same type, in the same place, is called a population."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Consumers by position",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Producers always begin a food chain. Consumers are named by their position in the chain."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "grass → grasshopper → frog → snake → hawk"
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Grass",
+              "sub": "producer"
+            },
+            {
+              "title": "Grasshopper",
+              "sub": "primary consumer"
+            },
+            {
+              "title": "Frog",
+              "sub": "secondary consumer",
+              "emoji": "🐸"
+            },
+            {
+              "title": "Snake",
+              "sub": "tertiary consumer",
+              "emoji": "🐍"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The hawk is the **quaternary consumer**. Quaternary means fourth. The primary consumer always eats the producer. All the other consumers eat other animals."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predators and prey",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An animal that hunts and eats other animals is a **predator**. The animals that the predator catches to eat are its **prey**."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Frog",
+              "sub": "predator of the grasshopper",
+              "emoji": "🐸"
+            },
+            {
+              "title": "Grasshopper",
+              "sub": "prey of the frog"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predator and prey at once",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "An animal can be both. In grass → grasshopper → frog → snake → hawk:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The snake is a predator of the frog. The frog is the prey of the snake.",
+            "The hawk is a predator of the snake. The snake is the prey of the hawk."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The hawk is at the end of the chain. It is the {apex predator} (top predator). An apex predator is not prey for any other organism."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the roles",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Food chain: algae → shrimp → cod → seal → polar bear."
+        },
+        {
+          "t": "sort",
+          "q": "Sort each organism by its role in this food chain.",
+          "columns": [
+            "Neither predator nor prey",
+            "Prey only",
+            "Predator and prey",
+            "Apex predator"
+          ],
+          "items": [
+            {
+              "text": "algae",
+              "col": 0
+            },
+            {
+              "text": "shrimp",
+              "col": 1
+            },
+            {
+              "text": "cod",
+              "col": 2
+            },
+            {
+              "text": "seal",
+              "col": 2
+            },
+            {
+              "text": "polar bear",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Label the food chain",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Food chain: algae → shrimp → cod → seal → polar bear."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Which organism is the primary consumer?",
+              "options": [
+                "shrimp",
+                "cod",
+                "seal"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which organism is the tertiary consumer?",
+              "options": [
+                "cod",
+                "seal",
+                "polar bear"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which organism is the quaternary consumer?",
+              "options": [
+                "seal",
+                "algae",
+                "polar bear"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which organism is the prey of the seal?",
+              "options": [
+                "polar bear",
+                "cod",
+                "algae"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a population?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A population is the number of one type of organism in a specific area. For example, the number of goldfish in a pond or the number of wheat plants in a field."
+        },
+        {
+          "t": "text",
+          "text": "Food chain diagrams are models that show populations of organisms. Populations are always changing:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Births",
+              "sub": "reproduction adds new individuals"
+            },
+            {
+              "title": "Deaths",
+              "sub": "for example disease, predation or changes to the environment"
+            },
+            {
+              "title": "Migration",
+              "sub": "moving into or out of an area"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What changes a population?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lots of factors can change the size of a population."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Predation"
+            },
+            {
+              "title": "Disease"
+            },
+            {
+              "title": "Seasons"
+            },
+            {
+              "title": "Natural disasters",
+              "sub": "volcanic eruptions, floods, wildfires"
+            },
+            {
+              "title": "Human activities",
+              "sub": "hunting and fishing, deforestation, pollution, climate change, conservation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Fast or slow?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Natural disasters and large-scale human activities tend to have large and rapid impacts on populations. In a flood, the population of an organism can fall very quickly."
+        },
+        {
+          "t": "text",
+          "text": "Diseases can also reduce a population significantly. But diseases usually reduce it over a longer period and kill less of the population than a natural disaster does."
+        },
+        {
+          "t": "callout",
+          "text": "Humans help populations recover through {conservation}. Restoring the places that organisms live is one way to do it."
+        },
+        {
+          "t": "choice",
+          "q": "Which usually reduces a population more quickly and by more?",
+          "options": [
+            "A disease",
+            "A natural disaster such as a flood"
+          ],
+          "answer": 1,
+          "why": "Natural disasters have large and rapid impacts. Diseases usually reduce a population over a longer period and kill less of it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The story of the muskox",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Muskox live in Alaska. There were once many of them.",
+            "They were hunted by humans, almost to extinction, between 1900 and 1930.",
+            "Regulations on hunting have helped to conserve the species.",
+            "They have not yet recovered to the numbers seen before 1900."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "What did the muskox population do after conservation began?",
+          "options": [
+            "It rose, but not back to the numbers seen before 1900",
+            "It rose to more than before 1900",
+            "It stayed at almost zero"
+          ],
+          "answer": 0,
+          "why": "Hunting regulations helped the species, but the numbers are still lower than before 1900."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Natural or human?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each of these a natural disaster or a human activity?",
+          "columns": [
+            "Natural disaster",
+            "Human activity"
+          ],
+          "items": [
+            {
+              "text": "floods",
+              "col": 0
+            },
+            {
+              "text": "volcanic eruptions",
+              "col": 0
+            },
+            {
+              "text": "hunting",
+              "col": 1
+            },
+            {
+              "text": "deforestation",
+              "col": 1
+            },
+            {
+              "text": "conservation",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predators and prey depend on each other",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Predators and their prey are closely linked. The population of each depends on the other."
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. As the prey population increases, there is more food for the predators, so the predator population begins to increase.",
+            "2. More predators eat more prey, so the prey population decreases quickly. There is then less food for the predators, so their population decreases.",
+            "3. A smaller predator population means fewer prey are eaten, so the prey population begins to increase again."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A predator-prey model",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Over a long period of time, both populations go up and down. A graph of this is called a **predator-prey model**."
+        },
+        {
+          "t": "text",
+          "text": "Real example: grass → Arctic hare → Canadian lynx. The lynx is the apex predator. Its population goes up and down following the population of Arctic hares."
+        },
+        {
+          "t": "reveal",
+          "label": "When hares are high in number…",
+          "text": "The number of lynx starts to increase, because there is more food for them."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Predict the populations",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "If the prey population decreases, the predator population will…",
+              "options": [
+                "increase, because there is less food",
+                "decrease, because there is less food for them to eat"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "If the predator population decreases, the prey population will…",
+              "options": [
+                "increase, because the prey are not being hunted as much",
+                "decrease, because there is less food"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "If the prey population increases, the predator population will…",
+              "options": [
+                "decrease, because there is more food",
+                "increase, because there is lots of food available"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "If the predator population increases, the prey population will…",
+              "options": [
+                "decrease, because lots of predators hunt them",
+                "increase, because there are more predators"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Predators are animals that hunt and catch other animals for food. The animals they hunt are called prey.",
+            "Populations of all organisms can be affected by factors such as seasons, natural disasters and conservation.",
+            "Populations of predators and prey rely on each other.",
+            "The cycle between predator and prey populations is shown in a predator-prey model."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a predator?",
+      "back": "An animal that hunts and eats other animals."
+    },
+    {
+      "front": "What is prey?",
+      "back": "An animal that is caught and eaten by another animal."
+    },
+    {
+      "front": "In grass → grasshopper → frog, which animal is the predator of the grasshopper?",
+      "back": "The frog. The grasshopper is the prey of the frog."
+    },
+    {
+      "front": "What is an apex predator?",
+      "back": "The organism at the end of a food chain. It is not prey for any other organism."
+    },
+    {
+      "front": "Which consumer always eats the producer?",
+      "back": "The primary consumer."
+    },
+    {
+      "front": "What does quaternary mean?",
+      "back": "Fourth. The quaternary consumer is the fourth consumer in a food chain."
+    },
+    {
+      "front": "What is a population?",
+      "back": "The number of one type of organism in a specific area."
+    },
+    {
+      "front": "What three things change the size of a population?",
+      "back": "Births (reproduction), deaths and migration."
+    },
+    {
+      "front": "What is migration?",
+      "back": "Moving into or out of an area."
+    },
+    {
+      "front": "Which usually reduces a population more quickly: a natural disaster or a disease?",
+      "back": "A natural disaster. Diseases usually reduce a population over a longer period and kill less of it."
+    },
+    {
+      "front": "What does conservation mean for populations?",
+      "back": "Helping populations to recover. Restoring the places that organisms live is one way that humans do this."
+    },
+    {
+      "front": "If there is a large population of predators, what happens to the prey population?",
+      "back": "It falls quickly, because lots of the prey are eaten."
+    },
+    {
+      "front": "What is the graph of predator and prey populations going up and down called?",
+      "back": "A predator-prey model."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Predator-prey relationships",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "In the food chain grass → grasshopper → frog → snake → hawk, which animal is the apex predator?",
+        "answer": "hawk",
+        "explanation": "The hawk is at the end of the food chain and is not prey for any other organism."
+      },
+      {
+        "prompt": "In the food chain grass → grasshopper → frog → snake → hawk, which animal is the prey of the frog?",
+        "answer": "grasshopper",
+        "explanation": "The frog is a predator of the grasshopper, so the grasshopper is its prey."
+      },
+      {
+        "prompt": "Primary means first, secondary means second and tertiary means third. What does quaternary mean? (Answer in one word.)",
+        "answer": "fourth",
+        "accepted": [
+          "4th"
+        ],
+        "explanation": "The quaternary consumer is the fourth consumer in the food chain."
+      },
+      {
+        "prompt": "What word means moving into or out of an area?",
+        "answer": "migration",
+        "explanation": "Migration is moving into or out of an area, so it can increase or decrease a population."
+      },
+      {
+        "prompt": "Which usually reduces a population over a longer period and kills less of it: a disease or a natural disaster?",
+        "answer": "disease",
+        "accepted": [
+          "a disease",
+          "diseases"
+        ],
+        "explanation": "Diseases usually reduce the population over a longer period and kill less of the population than a natural disaster does."
+      },
+      {
+        "prompt": "If the population of prey decreases, will the predator population increase or decrease? (Answer increase or decrease.)",
+        "answer": "decrease",
+        "accepted": [
+          "decreases"
+        ],
+        "explanation": "There is less food for the predators to eat."
+      },
+      {
+        "prompt": "If the population of predators decreases, will the prey population increase or decrease? (Answer increase or decrease.)",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "The prey are not being hunted as much."
+      },
+      {
+        "prompt": "If the population of prey increases, will the predator population increase or decrease? (Answer increase or decrease.)",
+        "answer": "increase",
+        "accepted": [
+          "increases"
+        ],
+        "explanation": "There is lots of food available for the predators."
+      },
+      {
+        "prompt": "If the population of predators increases, will the prey population increase or decrease? (Answer increase or decrease.)",
+        "answer": "decrease",
+        "accepted": [
+          "decreases"
+        ],
+        "explanation": "Lots of predators will hunt the prey for food."
+      }
+    ]
+  }
+}

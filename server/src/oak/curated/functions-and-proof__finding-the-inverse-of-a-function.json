@@ -1,0 +1,822 @@
+{
+  "agent": "w4-maths-ks4a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can find the inverse of a function."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Finding the inverse of a function"
+            },
+            {
+              "title": "The graphs of functions and their inverse"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "function",
+              "def": "A function is a mathematical relationship that uniquely maps values of one set to the values of another set."
+            },
+            {
+              "term": "domain",
+              "def": "The domain of a function is the set of values that the mapping is performed on."
+            },
+            {
+              "term": "range",
+              "def": "The range of a function is the set of values mapped to by the function and the stated domain."
+            },
+            {
+              "term": "inverse function",
+              "def": "An inverse function reverses the mapping of the original function."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mapping back",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For f(x) = 5x, the values of the domain (x) are mapped onto the values of the range (f(x)) by multiplying by 5. For example, f(−1) = −5, f(0) = 0, f(1) = 5 and f(2) = 10."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes we need to map values of the range back to the domain. If f(x) = 20, what value of x mapped to 20?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "5x = 20",
+            "x = 20 ÷ 5",
+            "x = 4"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The same works for 75 and −40: x = 75 ÷ 5 = 15 and x = −40 ÷ 5 = −8. Each time we divide by 5 to map back from the range to the domain."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The inverse function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To map any f(x) value back we can use x = f(x) ÷ 5. This is known as the {inverse function}, as it reverses the mapping."
+        },
+        {
+          "t": "callout",
+          "text": "We write it using this notation: f⁻¹(x) = x ÷ 5, or f⁻¹(x) = x/5."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A function maps values of the domain to values in the range.",
+            "The inverse function maps values of the range back to values in the domain.",
+            "The range of a function is the domain of its inverse function."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What does f⁻¹(x) mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep says: “With exponents, x to the power of −1 equals 1/x. Doesn’t that mean f⁻¹(x) equals 1/f(x)?”"
+        },
+        {
+          "t": "reveal",
+          "label": "Sam’s answer",
+          "text": "No. This is function notation. f⁻¹(x) means “f inverse of x”. We have seen an example like this before: sin⁻¹(x) is “sine inverse of x”."
+        },
+        {
+          "t": "text",
+          "text": "For f(x) = x + 10 the inverse function is f⁻¹(x) = x − 10. We say it aloud as “f inverse of x equals x minus 10”."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pick the inverse",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the inverse function f⁻¹(x) of each function.",
+          "items": [
+            {
+              "q": "f(x) = 8x",
+              "options": [
+                "f⁻¹(x) = 8x",
+                "f⁻¹(x) = x/8",
+                "f⁻¹(x) = x − 8"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "f(x) = x − 9",
+              "options": [
+                "f⁻¹(x) = x + 9",
+                "f⁻¹(x) = 9 − x",
+                "f⁻¹(x) = x − 9"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "f(x) = x + 21",
+              "options": [
+                "f⁻¹(x) = x + 21",
+                "f⁻¹(x) = 21x",
+                "f⁻¹(x) = x − 21"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "f(x) = x/5",
+              "options": [
+                "f⁻¹(x) = 5x",
+                "f⁻¹(x) = x − 5",
+                "f⁻¹(x) = x/5"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Check by substituting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can check that an inverse function is correct by substituting a value into the original function."
+        },
+        {
+          "t": "text",
+          "text": "f(x) = 12x maps 4 to 48. Does the inverse function f⁻¹(x) = x/12 map 48 back to 4?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(4) = 12(4) = 48",
+            "f⁻¹(48) = 48/12 = 4"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It does, so we know we are correct: the inverse function reverses the mapping. Another example: f(x) = x + 15 has inverse f⁻¹(x) = x − 15, and f(7) = 22 while f⁻¹(22) = 22 − 15 = 7."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Multi-step functions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Functions with several steps still have an inverse. We find it by making x the subject."
+        },
+        {
+          "t": "text",
+          "text": "f(x) = 2x + 1. Subtract 1 from both sides: f(x) − 1 = 2x. Then divide both sides by 2:"
+        },
+        {
+          "t": "callout",
+          "text": "x = (f(x) − 1)/2, so the inverse function is “subtract 1, then divide by 2”: f⁻¹(x) = (x − 1)/2."
+        },
+        {
+          "t": "text",
+          "text": "Check it works: f(8) = 2(8) + 1 = 17, and f⁻¹(17) = (17 − 1)/2 = 8. The inverse function has reversed the mapping from 17 back to 8."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Going the other way",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now try f(x) = (x − 1)/2. To map f(x) back to the original x we must “multiply by 2, then add 1”."
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(x) = (x − 1)/2",
+            "2f(x) = x − 1",
+            "2f(x) + 1 = x",
+            "So f⁻¹(x) = 2x + 1"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Check: f(9) = (9 − 1)/2 = 4, and f⁻¹(4) = 2(4) + 1 = 9. The inverse function reverses the mapping."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Make x the subject",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Which is the inverse function f⁻¹(x)?",
+          "items": [
+            {
+              "q": "f(x) = 3x + 5",
+              "options": [
+                "f⁻¹(x) = x/3 − 5",
+                "f⁻¹(x) = (x − 5)/3",
+                "f⁻¹(x) = 3(x − 5)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "f(x) = 5(x − 2)",
+              "options": [
+                "f⁻¹(x) = x/5 + 2",
+                "f⁻¹(x) = 5x + 2",
+                "f⁻¹(x) = (x − 2)/5"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "f(x) = x/4 + 6",
+              "options": [
+                "f⁻¹(x) = 4x − 6",
+                "f⁻¹(x) = x/4 − 6",
+                "f⁻¹(x) = 4(x − 6)"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check with a value",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The function f(x) = x/3 + 2 maps 12 to 6. Which candidate inverse maps 6 back to 12?"
+        },
+        {
+          "t": "choice",
+          "q": "Which one reverses the mapping?",
+          "options": [
+            "f⁻¹(x) = 3x − 2",
+            "f⁻¹(x) = 3(x − 2)",
+            "f⁻¹(x) = x/3 − 2"
+          ],
+          "answer": 1,
+          "why": "3(6 − 2) = 12, so it maps 6 back to 12. The other two give 16 and 0."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Graphs of a function and its inverse",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at f(x) = 2x and its inverse f⁻¹(x) = x/2. The function maps 1 to 2, 2 to 4, 3 to 6 and 4 to 8. The inverse maps 2 to 1, 4 to 2, 6 to 3 and 8 to 4."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "(1, 2)  →  (2, 1)",
+            "(2, 4)  →  (4, 2)",
+            "(3, 6)  →  (6, 3)",
+            "(4, 8)  →  (8, 4)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Because the inverse function reverses the mapping, the x coordinate has become the y coordinate and vice versa."
+        },
+        {
+          "t": "callout",
+          "text": "The graph of the inverse function is a {reflection} of the original function in the line y = x."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Domain and range swap",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at tables of values for f(x) and f⁻¹(x). The domain of the original function is the range of the inverse function, and the range of the original function is the domain of the inverse function."
+        },
+        {
+          "t": "text",
+          "text": "For example, f(x) = 4x − 1 has inverse f⁻¹(x) = (x + 1)/4. Since f(2) = 7 and f(3) = 11, we get f⁻¹(7) = 2 and f⁻¹(11) = 3."
+        },
+        {
+          "t": "choices",
+          "q": "Answer these.",
+          "items": [
+            {
+              "q": "The point (3, 12) is on the graph of f. Which point is on the graph of f⁻¹?",
+              "options": [
+                "(3, 12)",
+                "(12, 3)",
+                "(−3, −12)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The domain of f becomes the ___ of f⁻¹.",
+              "options": [
+                "domain",
+                "range",
+                "reflection"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When an inverse needs a restriction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If we reflect a many-to-one function such as f(x) = x² in the line y = x, we create a one-to-many relationship. That is not a valid function."
+        },
+        {
+          "t": "text",
+          "text": "We can get round this by restricting the domain of the original function, for example f(x) = x² where x is greater than or equal to 0. Then it is one-to-one and the inverse function is f⁻¹(x) = √x."
+        },
+        {
+          "t": "choice",
+          "q": "Why can the inverse of f(x) = x² (for all x) not be a valid function?",
+          "options": [
+            "Reflecting it in y = x gives a one-to-many relationship",
+            "Its domain is the same as its range",
+            "It does not have a graph"
+          ],
+          "answer": 0,
+          "why": "One input would map to many outputs, so the reflection is not a valid function. Restricting the domain fixes it."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Restriction needed?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which of these functions need their domain restricted so that the inverse is valid?",
+          "columns": [
+            "Inverse is valid as it stands (one-to-one)",
+            "Restrict the domain first (many-to-one)"
+          ],
+          "items": [
+            {
+              "text": "3x + 1",
+              "col": 0
+            },
+            {
+              "text": "x − 4",
+              "col": 0
+            },
+            {
+              "text": "2x",
+              "col": 0
+            },
+            {
+              "text": "x²",
+              "col": 1
+            },
+            {
+              "text": "x² + 3",
+              "col": 1
+            },
+            {
+              "text": "5 − x²",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Finding the inverse of a function",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The inverse of a function can be found by rearranging to make x the subject.",
+            "The inverse function reverses the mapping of the original function.",
+            "The graph of the inverse function is a reflection in the line y = x.",
+            "Not all functions have an inverse function as the inverse may be a one-to-many relationship, but it may be possible to restrict the domain to make the inverse function valid."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an inverse function?",
+      "back": "A function that reverses the mapping of the original function."
+    },
+    {
+      "front": "How do you read f⁻¹(x)?",
+      "back": "“f inverse of x”. It is function notation and does not mean 1/f(x)."
+    },
+    {
+      "front": "What is the inverse of f(x) = 9x?",
+      "back": "f⁻¹(x) = x/9"
+    },
+    {
+      "front": "What is the inverse of f(x) = x + 10?",
+      "back": "f⁻¹(x) = x − 10"
+    },
+    {
+      "front": "How do you find the inverse of a multi-step function?",
+      "back": "Make x the subject (rearrange the function)."
+    },
+    {
+      "front": "f(x) = 2x + 1. What is f⁻¹(x)?",
+      "back": "f⁻¹(x) = (x − 1)/2\n\nSubtract 1, then divide by 2."
+    },
+    {
+      "front": "How can you check that an inverse function is correct?",
+      "back": "Put a value into f, then put the output into f⁻¹. You should get back to the value you started with.\n\nExample: f(x) = 12x, f(4) = 48 and f⁻¹(48) = 4."
+    },
+    {
+      "front": "The range of a function is the ___ of its inverse function.",
+      "back": "Domain."
+    },
+    {
+      "front": "How are the graphs of f and f⁻¹ related?",
+      "back": "They are reflections of each other in the line y = x."
+    },
+    {
+      "front": "The point (2, 4) is on the graph of f. What point is on the graph of f⁻¹?",
+      "back": "(4, 2): the x and y coordinates swap."
+    },
+    {
+      "front": "Why does f(x) = x² need a restricted domain to have a valid inverse?",
+      "back": "It is many-to-one, so its reflection is one-to-many, which is not a valid function.\n\nWith x greater than or equal to 0 the inverse is f⁻¹(x) = √x."
+    },
+    {
+      "front": "f(x) = 4x − 11. What is f⁻¹(x)?",
+      "back": "f⁻¹(x) = (x + 11)/4\n\nAdd 11, then divide by 4."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Finding the inverse of a function",
+    "instructions": "Answer each question with a number, a word, or y = x where asked.",
+    "questions": [
+      {
+        "prompt": "f(x) = 6x − 5. What value of x maps to 37?",
+        "answer": "7",
+        "accepted": [
+          "7"
+        ],
+        "explanation": "6x − 5 = 37 gives 6x = 42, so x = 7."
+      },
+      {
+        "prompt": "f(x) = 3x + 5. What is f⁻¹(20)?",
+        "answer": "5",
+        "accepted": [
+          "5"
+        ],
+        "explanation": "f⁻¹(x) = (x − 5)/3, so f⁻¹(20) = 15/3 = 5. Check: f(5) = 20."
+      },
+      {
+        "prompt": "f(x) = 2(x − 3). What is f⁻¹(10)?",
+        "answer": "8",
+        "accepted": [
+          "8"
+        ],
+        "explanation": "f⁻¹(x) = x/2 + 3, so f⁻¹(10) = 5 + 3 = 8. Check: f(8) = 2(5) = 10."
+      },
+      {
+        "prompt": "f(x) = 4x − 1, so f⁻¹(x) = (x + 1)/4. What is f⁻¹(15)?",
+        "answer": "4",
+        "accepted": [
+          "4"
+        ],
+        "explanation": "f⁻¹(15) = (15 + 1)/4 = 16/4 = 4."
+      },
+      {
+        "prompt": "f(x) = x/7 + 4, so f⁻¹(x) = 7(x − 4). What is f⁻¹(25)?",
+        "answer": "147",
+        "accepted": [
+          "147"
+        ],
+        "explanation": "f⁻¹(25) = 7(25 − 4) = 7 × 21 = 147."
+      },
+      {
+        "prompt": "The point (3, 12) is on the graph of y = f(x). What is the x coordinate of the matching point on the graph of y = f⁻¹(x)?",
+        "answer": "12",
+        "accepted": [
+          "12"
+        ],
+        "explanation": "The inverse reverses the mapping, so the coordinates swap: (12, 3)."
+      },
+      {
+        "prompt": "The graph of f⁻¹ is a reflection of the graph of f in which line? Write it as y = x.",
+        "answer": "y = x",
+        "accepted": [
+          "y=x"
+        ],
+        "explanation": "The graph of the inverse function is a reflection of the original function in the line y = x."
+      },
+      {
+        "prompt": "f(x) = x², where x is greater than or equal to 0, has inverse f⁻¹(x) = √x. What is f⁻¹(49)?",
+        "answer": "7",
+        "accepted": [
+          "7"
+        ],
+        "explanation": "√49 = 7. Check: f(7) = 49."
+      },
+      {
+        "prompt": "The domain of f becomes the ___ of f⁻¹. Write the missing word.",
+        "answer": "range",
+        "accepted": [],
+        "explanation": "The domain of the original function is the range of the inverse function."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 4,
+        "doThis": [
+          "Start with quick revision: substitute a value into a function, and rearrange an equation to make a letter the subject.",
+          "Read the goal together, then look at the four key words: function, domain, range, inverse function.",
+          "Ask what each key word means before showing the meaning."
+        ],
+        "say": "I can find the inverse of a function.",
+        "keywords": [
+          {
+            "term": "function",
+            "meaning": "A function is a mathematical relationship that uniquely maps values of one set to the values of another set."
+          },
+          {
+            "term": "domain",
+            "meaning": "The domain of a function is the set of values that the mapping is performed on."
+          },
+          {
+            "term": "range",
+            "meaning": "The range of a function is the set of values mapped to by the function and the stated domain."
+          },
+          {
+            "term": "inverse function",
+            "meaning": "An inverse function reverses the mapping of the original function."
+          }
+        ],
+        "checkFor": {
+          "ask": "For y = 7(x − 12), what is y when x = 6? And what is x when y = 35?",
+          "lookFor": "y = −42 when x = 6, and x = 17 when y = 35."
+        },
+        "recap": [
+          "Our goal: I can find the inverse of a function.",
+          "An inverse function reverses the mapping of the original function."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Mapping forwards and mapping back",
+        "minutes": 6,
+        "doThis": [
+          "Show that f(x) = 5x maps values of the domain (x) onto values of the range (f(x)) by multiplying by 5, using a table of values.",
+          "Then ask a backwards question: if f(x) = 20, what value of x mapped to 20? Write 5x = 20 and solve the equation.",
+          "Point out that each time the student divided by 5 to map back from the range to the domain."
+        ],
+        "keyIdeas": [
+          "A function maps values of the domain to values in the range.",
+          "Sometimes we need to map values of the range back to the domain."
+        ],
+        "examples": [
+          "f(x) = 5x: f(−1) = −5, f(0) = 0, f(1) = 5, f(2) = 10.",
+          "If f(x) = 20: 5x = 20, so x = 20 ÷ 5 = 4.",
+          "If f(x) = 75: 5x = 75, so x = 75 ÷ 5 = 15.",
+          "If f(x) = −40: 5x = −40, so x = −40 ÷ 5 = −8."
+        ],
+        "checkFor": {
+          "ask": "For f(x) = 5x, what value of x mapped to 75?",
+          "lookFor": "15, found by solving 5x = 75, so x = 75 ÷ 5."
+        },
+        "recap": [
+          "f(x) = 5x maps x to 5x by multiplying by 5.",
+          "To map back, divide by 5: if f(x) = 20 then x = 4."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The inverse function, its notation and checking it",
+        "minutes": 8,
+        "doThis": [
+          "Explain that to map any f(x) value back we can use x = f(x) ÷ 5. This is the inverse function, because it reverses the mapping. It is written f⁻¹(x) = x ÷ 5, or f⁻¹(x) = x/5.",
+          "Explain that f⁻¹(x) is function notation and is said 'f inverse of x'. It does not mean 1 divided by f(x).",
+          "Show how to check an inverse: put a value into the original function, then put the answer into the inverse function. The inverse function must map it back to the value the student started with."
+        ],
+        "keyIdeas": [
+          "The inverse function maps the output to the input.",
+          "The inverse function reverses the mapping of the original function.",
+          "The range of a function is the domain of its inverse function."
+        ],
+        "examples": [
+          "f(x) = 12x has inverse f⁻¹(x) = x/12.",
+          "f(x) = x + 10 has inverse f⁻¹(x) = x − 10, said 'f inverse of x equals x minus 10'.",
+          "Check f⁻¹(x) = x/12: f(4) = 12(4) = 48, and f⁻¹(48) = 48/12 = 4.",
+          "Check f⁻¹(x) = x − 15 for f(x) = x + 15: f(7) = 22, and f⁻¹(22) = 22 − 15 = 7."
+        ],
+        "checkFor": {
+          "ask": "What does f⁻¹(x) mean, and does it mean 1 divided by f(x)?",
+          "lookFor": "It means 'f inverse of x', the inverse function of f(x). It is function notation and does not mean 1 divided by f(x)."
+        },
+        "recap": [
+          "The inverse function reverses the mapping: it maps the output back to the input.",
+          "f⁻¹(x) is said 'f inverse of x'.",
+          "Check by putting a value in, then putting the answer into the inverse. You should get the value you started with."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Functions with more than one step",
+        "minutes": 6,
+        "doThis": [
+          "Explain that functions with several steps still have an inverse. Find it by making x the subject.",
+          "Work through f(x) = 2x + 1: subtract 1 from both sides, then divide both sides by 2.",
+          "Then work back the other way with f(x) = (x − 1)/2, and check both by substituting a value."
+        ],
+        "keyIdeas": [
+          "By changing the subject, you can find the inverse function."
+        ],
+        "examples": [
+          "f(x) = 2x + 1, so f(x) − 1 = 2x. The inverse is 'subtract 1 then divide by 2': f⁻¹(x) = (x − 1)/2.",
+          "Check: f(8) = 2(8) + 1 = 17, and f⁻¹(17) = (17 − 1)/2 = 8.",
+          "f(x) = (x − 1)/2, so 2f(x) = x − 1 and 2f(x) + 1 = x. The inverse is 'multiply by 2 then add 1': f⁻¹(x) = 2x + 1.",
+          "Check: f(9) = (9 − 1)/2 = 4, and f⁻¹(4) = 2(4) + 1 = 9."
+        ],
+        "checkFor": {
+          "ask": "How do you find the inverse of f(x) = 2x + 1?",
+          "lookFor": "Make x the subject: subtract 1 from f(x), then divide by 2, so f⁻¹(x) = (x − 1)/2."
+        },
+        "recap": [
+          "To find the inverse of a multi-step function, make x the subject.",
+          "For f(x) = 2x + 1 the inverse is 'subtract 1 then divide by 2'.",
+          "Always check by substituting a value."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Graphs of a function and its inverse",
+        "minutes": 7,
+        "doThis": [
+          "Take f(x) = 2x and list the points it maps: 1 to 2, 2 to 4, 3 to 6 and 4 to 8. The inverse maps 2 to 1, 4 to 2, 6 to 3 and 8 to 4.",
+          "Ask what the student notices about the coordinates. The x coordinate has become the y coordinate and the other way round. Then draw the line y = x and show that the two sets of points are reflections of each other in it.",
+          "Show that the domain and range swap: the domain of the original function is the range of the inverse function, and the range of the original function is the domain of the inverse function."
+        ],
+        "keyIdeas": [
+          "There is a graphical connection between a function and its inverse.",
+          "The graph of the inverse function is a reflection of the original function in the line y = x.",
+          "The domain of the original function is the range of the inverse function. The range of the original function is the domain of the inverse function."
+        ],
+        "examples": [
+          "f(x) = 2x has points (1, 2), (2, 4), (3, 6), (4, 8). Its inverse has points (2, 1), (4, 2), (6, 3), (8, 4).",
+          "f(x) = 4x − 1: f(2) = 7 and f(3) = 11, so the inverse maps 7 to 2 and 11 to 3."
+        ],
+        "checkFor": {
+          "ask": "A function and its inverse are a reflection of each other in which line?",
+          "lookFor": "The line y = x."
+        },
+        "recap": [
+          "The inverse function swaps x and y: (1, 2) becomes (2, 1).",
+          "The graph of an inverse function is a reflection in the line y = x.",
+          "The domain of a function becomes the range of its inverse, and the range becomes the domain."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "When an inverse needs a restricted domain",
+        "minutes": 4,
+        "doThis": [
+          "Show that reflecting a many-to-one function such as f(x) = x² in the line y = x gives a one-to-many relationship. One input maps to many outputs, so that is not a valid function.",
+          "Explain that the fix is to restrict the domain of the original function, for example f(x) = x² where x is greater than or equal to 0. Then the inverse function is valid and is still a reflection in the line y = x."
+        ],
+        "keyIdeas": [
+          "Not all functions have an inverse function, as the inverse may be a one-to-many relationship.",
+          "It may be possible to restrict the domain to make the inverse function valid."
+        ],
+        "checkFor": {
+          "ask": "Why is the reflection of f(x) = x² in the line y = x not a valid function?",
+          "lookFor": "Reflecting a many-to-one function gives a one-to-many relationship, where one input maps to many outputs. Restricting the domain fixes it."
+        },
+        "recap": [
+          "Not every function has a valid inverse as it stands.",
+          "A one-to-many relationship is not a valid function.",
+          "Restricting the domain of the original function can fix it."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Find and check inverses together",
+        "minutes": 6,
+        "doThis": [
+          "Give the student a function and ask them to make x the subject to find the inverse function.",
+          "Check each answer by substituting a value: the inverse function must map the output back to the input.",
+          "Then check a candidate inverse using a mapped pair of values, and say why an inverse that fails to map back is wrong."
+        ],
+        "examples": [
+          "f(x) = 3x + 5 has inverse f⁻¹(x) = (x − 5)/3.",
+          "f(x) = 5(x − 2) has inverse f⁻¹(x) = x/5 + 2.",
+          "f(x) = x/4 + 6 has inverse f⁻¹(x) = 4(x − 6).",
+          "f(x) = x/3 + 2 maps 12 to 6. f⁻¹(x) = 3(x − 2) maps 6 back to 12, because 3(6 − 2) = 12."
+        ],
+        "checkFor": {
+          "ask": "How can you show that f⁻¹(x) = 3(x − 2) is the inverse of f(x) = x/3 + 2?",
+          "lookFor": "f(12) = 6, and f⁻¹(6) = 3(6 − 2) = 12, so the inverse maps the output back to the input."
+        },
+        "recap": [
+          "Make x the subject to find the inverse.",
+          "Then check it: the inverse must map the output back to the input."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks about the notation for an inverse function, finding the value of x that mapped to a given output, choosing and matching inverse functions, and the line of reflection.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to explain how to find an inverse function and what its graph looks like.",
+          "Finish with the summary: the inverse of a function can be found by making x the subject; the inverse function reverses the mapping, so its graph is a reflection in the line y = x; not all functions have an inverse function, but restricting the domain can make it valid."
+        ],
+        "checkFor": {
+          "ask": "How do you find the inverse of a function, and how are the two graphs connected?",
+          "lookFor": "Rearrange to make x the subject. The graph of the inverse function is a reflection of the original function in the line y = x."
+        },
+        "recap": [
+          "Can you do it now? I can find the inverse of a function.",
+          "Remember: make x the subject, and check by mapping back. The graphs are reflections in y = x."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils confuse the domain and the range when they think about the inverse function.",
+        "fix": "The range of a function is the domain of its inverse function. Use a table of values for both to show the swap."
+      },
+      {
+        "mistake": "Pupils read f⁻¹(x) as 1 divided by f(x), because x to the power of −1 means 1 over x.",
+        "fix": "Explain that this is function notation. f⁻¹(x) is said 'f inverse of x' and means the inverse function, just as sin⁻¹(x) is 'sine inverse of x'."
+      }
+    ],
+    "watchOut": [
+      "Get the student to check every inverse by substituting a value: the inverse function must reverse the mapping and give the starting value back.",
+      "When saying an inverse function aloud, say it in full, for example 'f inverse of x equals x minus 10'.",
+      "Give the student the chance to notice the pattern in the coordinates before telling them that the x and y coordinates swap."
+    ]
+  }
+}

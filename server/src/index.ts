@@ -19,6 +19,7 @@ import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
 import { rateLimit } from "./lib/rateLimit";
+import { gzipResponses } from "./lib/gzip";
 import { staffAnnouncements } from "./routes/staffAnnouncements";
 import { learning } from "./routes/learning";
 import { leave } from "./routes/leave";
@@ -89,6 +90,7 @@ import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
 import { enforceSubscription } from "./middleware/subscription";
 import { enforceAccess } from "./middleware/access";
+import { learningHub } from "./routes/learningHub";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 
@@ -124,6 +126,8 @@ app.use("/api/emails/inbound/resend", emailsResendInbound);
 // Firestore caps a document at 1MB, so anything past this can't be stored
 // anyway and gets a clear error rather than a size failure.
 app.use(express.json({ limit: "2mb" }));
+// gzip every JSON / text response ≥ 1 KB (res.send / res.json only — the SSE stream and images are left alone).
+app.use(gzipResponses);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
@@ -238,6 +242,7 @@ app.use("/api/credentials", credentials);
 app.use("/api/staff-announcements", staffAnnouncements);
 app.use("/api/leave", leave);
 app.use("/api/learning", learning);
+app.use("/api/learning-hub", learningHub);
 app.use("/api/reviews", reviews);
 app.use("/api/availability", availability);
 app.use("/api/dashboard", dashboard);

@@ -1,0 +1,614 @@
+{
+  "agent": "maths-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe and represent {hundredths} as a decimal number."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will learn how to write hundredths as decimals, using a place value chart."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "one hundredth {the size}"
+            },
+            {
+              "title": "the {hundredths} column",
+              "sub": "on a place value chart"
+            },
+            {
+              "title": "writing {0.01}, {0.12}, {0.48}",
+              "sub": "hundredths as decimals"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "hundredth",
+              "def": "The name we give to one part of one hundred equal parts."
+            },
+            {
+              "term": "one hundredth the size",
+              "def": "When a whole is divided into one hundred equal parts, we can say one of those parts is one hundredth the size of the whole."
+            },
+            {
+              "term": "hundredths column",
+              "def": "The hundredths column places the number of hundredths a given number has."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "10 times the size, one tenth the size",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at how these numbers are related."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "1 → 10: 10 times the size",
+            "10 → 1: one tenth the size",
+            "1 → 0.1: one tenth the size"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We can say **10 times bigger** or **10 times the size**. We can say **10 times smaller** or **one tenth the size**."
+        },
+        {
+          "t": "callout",
+          "text": "0.1 is ten times smaller than 1. When a digit moves {one column to the right}, it becomes one tenth the size."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One hundredth the size",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Make a number 10 times smaller, then 10 times smaller again. It has been made **100 times smaller**."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "1000 → 100 → 10",
+            "100 → 10 → 1",
+            "1 → 0.1 → 0.01"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The digit has moved **two columns to the right**. The number is now {one hundredth the size}."
+        },
+        {
+          "t": "reveal",
+          "label": "What is one hundredth the size of 1000?",
+          "text": "**10**. 1000 → 100 (one tenth the size) → 10 (one tenth the size again)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The hundredths column",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A place value chart shows the value of each digit. Going right, each column is one tenth the size of the one before."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "tens",
+            "ones",
+            ". (decimal point)",
+            "tenths",
+            "hundredths"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The {hundredths column} is the column to the right of the tenths column."
+        },
+        {
+          "t": "text",
+          "text": "The decimal point separates the ones from the fractional parts. If there are no fractional parts, we do not need a zero after the decimal point."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Where does one hundredth go?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Take 0.1 and divide it into ten equal parts. Each part is one hundredth. So one hundredth is **one tenth the size of a tenth**."
+        },
+        {
+          "t": "text",
+          "text": "Or take 1 and divide it into one hundred equal parts. Each part is one hundredth. So one hundredth is **one hundredth the size of one**."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "0.1",
+              "add": "÷ 10",
+              "result": "0.01",
+              "note": "One tenth divided into ten equal parts: each part is one hundredth."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "One hundredth is written as {0.01}. The 1 is in the hundredths column."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: one tenth or one hundredth the size?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct number.",
+          "items": [
+            {
+              "q": "One hundredth the size of 200 is …",
+              "options": [
+                "20",
+                "2",
+                "0.2"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "One tenth the size of 50 is …",
+              "options": [
+                "500",
+                "5",
+                "0.5"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "One hundredth the size of 8 is …",
+              "options": [
+                "0.8",
+                "0.08",
+                "0.008"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.1 made 10 times smaller is …",
+              "options": [
+                "0.01",
+                "0.11",
+                "0.001"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Recording more than one hundredth",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One hundredth can be written as 0.01. What about more than one hundredth?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "4 hundredths is written **0.04**.",
+            "40 hundredths is written **0.40**. We say “zero point four zero” or “zero point four”.",
+            "12 hundredths is written **0.12**. We say “zero point one two”.",
+            "23 hundredths is written **0.23**."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why is 12 hundredths written as 0.12?",
+          "text": "10 hundredths make one tenth, so the 1 goes in the {tenths column}. The remaining 2 hundredths go in the {hundredths column}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some people write 12 hundredths as 0.012. Is that right?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "No! 0.012 puts the 1 in the hundredths column and the 2 in the next column along. **12 hundredths is 0.12**: ten hundredths regroup into one tenth, and 2 hundredths are left over."
+        },
+        {
+          "t": "callout",
+          "text": "Two-digit hundredths, like 12 or 48, take up {two columns}: the tenths column and the hundredths column."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hundredths of a length",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A ladybird has crawled 48 hundredths the length of a stick."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "48",
+              "add": "hundredths",
+              "result": "0.48",
+              "note": "4 tenths and 8 hundredths."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We write this as **0.48**. You can describe amounts by comparing them to one hundred hundredths (the whole stick)."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Write as a decimal",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each amount to its decimal.",
+          "pairs": [
+            {
+              "a": "7 hundredths",
+              "b": "0.07"
+            },
+            {
+              "a": "23 hundredths",
+              "b": "0.23"
+            },
+            {
+              "a": "2 tenths and 6 hundredths",
+              "b": "0.26"
+            },
+            {
+              "a": "94 hundredths",
+              "b": "0.94"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Read the hundredths",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "How do you write 15 hundredths?",
+              "options": [
+                "0.015",
+                "0.15",
+                "1.5"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "How do you write 6 hundredths?",
+              "options": [
+                "0.6",
+                "0.06",
+                "0.006"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is the 8 worth in 0.58?",
+              "options": [
+                "8 tenths",
+                "8 hundredths",
+                "8 ones"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "0.7 is the same as how many hundredths?",
+              "options": [
+                "7",
+                "70",
+                "700"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Where is the 4?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Look at the digit 4 in each number. Tap a number, then tap the column that says what the 4 is worth.",
+          "columns": [
+            "The 4 is worth 4 tenths",
+            "The 4 is worth 4 hundredths"
+          ],
+          "items": [
+            {
+              "text": "0.41",
+              "col": 0
+            },
+            {
+              "text": "0.34",
+              "col": 1
+            },
+            {
+              "text": "0.4",
+              "col": 0
+            },
+            {
+              "text": "0.04",
+              "col": 1
+            },
+            {
+              "text": "0.46",
+              "col": 0
+            },
+            {
+              "text": "0.94",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If a digit moves one column to the right, it becomes one tenth the size.",
+            "One hundredth is one tenth the size of one tenth, and one hundredth the size of one.",
+            "The hundredths column is to the right of the tenths column.",
+            "You can write hundredths as decimals. One hundredth = 0.01 and 23 hundredths = 0.23."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Ten hundredths regroup as one {tenth}, so 12 hundredths is {0.12}, not 0.012."
+        }
+      ],
+      "pics": [
+        {
+          "id": "decimal-place-value"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a hundredth?",
+      "back": "The name we give to one part of one hundred equal parts."
+    },
+    {
+      "front": "What happens to a digit if it moves one column to the right?",
+      "back": "It becomes one tenth the size (10 times smaller)."
+    },
+    {
+      "front": "What happens to a digit if it moves two columns to the right?",
+      "back": "It becomes one hundredth the size (100 times smaller)."
+    },
+    {
+      "front": "Which column is to the right of the tenths column?",
+      "back": "The hundredths column."
+    },
+    {
+      "front": "How do you write one hundredth as a decimal?",
+      "back": "0.01"
+    },
+    {
+      "front": "One hundredth is one tenth the size of what?",
+      "back": "One tenth. If you divide 0.1 into ten equal parts, each part is one hundredth."
+    },
+    {
+      "front": "One hundredth is one hundredth the size of what?",
+      "back": "One. If you divide 1 into one hundred equal parts, each part is one hundredth."
+    },
+    {
+      "front": "Write 4 hundredths as a decimal.",
+      "back": "0.04"
+    },
+    {
+      "front": "Write 12 hundredths as a decimal.",
+      "back": "0.12\n\n10 hundredths regroup as one tenth, and 2 hundredths are left over. It is not 0.012."
+    },
+    {
+      "front": "How do you say 0.40?",
+      "back": "“Zero point four zero” or “zero point four”."
+    },
+    {
+      "front": "What does the decimal point do?",
+      "back": "It separates the ones from the fractional parts (tenths, hundredths…)."
+    },
+    {
+      "front": "A ladybird crawled 48 hundredths of the length of a stick. Write this as a decimal.",
+      "back": "0.48"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Describe and represent hundredths as a decimal number",
+    "instructions": "Write your answers as decimals or numbers. Think about which place value column each digit goes in.",
+    "questions": [
+      {
+        "prompt": "Write 9 hundredths as a decimal.",
+        "answer": "0.09",
+        "accepted": [
+          "zero point zero nine",
+          "nought point zero nine",
+          ".09"
+        ],
+        "explanation": "9 hundredths goes in the hundredths column, with a 0 in the tenths column: 0.09."
+      },
+      {
+        "prompt": "Write 37 hundredths as a decimal.",
+        "answer": "0.37",
+        "accepted": [
+          "zero point three seven",
+          "nought point three seven",
+          ".37"
+        ],
+        "explanation": "37 hundredths is 3 tenths and 7 hundredths, so 0.37."
+      },
+      {
+        "prompt": "Write 5 tenths and 2 hundredths as a decimal.",
+        "answer": "0.52",
+        "accepted": [
+          "zero point five two",
+          "nought point five two",
+          ".52"
+        ],
+        "explanation": "5 in the tenths column and 2 in the hundredths column: 0.52."
+      },
+      {
+        "prompt": "Write 94 hundredths as a decimal.",
+        "answer": "0.94",
+        "accepted": [
+          "zero point nine four",
+          "nought point nine four",
+          ".94"
+        ],
+        "explanation": "94 hundredths is 9 tenths and 4 hundredths, so 0.94."
+      },
+      {
+        "prompt": "What is one hundredth the size of 500?",
+        "answer": "5",
+        "accepted": [
+          "five"
+        ],
+        "explanation": "Making 500 one tenth the size gives 50, and one tenth the size again gives 5."
+      },
+      {
+        "prompt": "What is one tenth the size of 0.1? Write it as a decimal.",
+        "answer": "0.01",
+        "accepted": [
+          "zero point zero one",
+          "nought point zero one",
+          ".01",
+          "one hundredth"
+        ],
+        "explanation": "0.1 divided into ten equal parts: each part is one hundredth, 0.01."
+      },
+      {
+        "prompt": "What is one hundredth the size of 8? Write it as a decimal.",
+        "answer": "0.08",
+        "accepted": [
+          "zero point zero eight",
+          "nought point zero eight",
+          ".08",
+          "8 hundredths"
+        ],
+        "explanation": "8 is made one tenth the size (0.8), then one tenth the size again (0.08)."
+      },
+      {
+        "prompt": "In the number 0.86, how many hundredths are there in total?",
+        "answer": "86",
+        "accepted": [
+          "86 hundredths",
+          "eighty six",
+          "eighty-six"
+        ],
+        "explanation": "8 tenths is 80 hundredths, and 80 + 6 = 86 hundredths."
+      },
+      {
+        "prompt": "Which column is directly to the right of the tenths column? (Write one word.)",
+        "answer": "hundredths",
+        "accepted": [
+          "the hundredths column",
+          "hundredths column",
+          "hundredth"
+        ],
+        "explanation": "Each column to the right is one tenth the size, so after tenths comes hundredths."
+      },
+      {
+        "prompt": "Write 60 hundredths as a decimal with two digits after the decimal point.",
+        "answer": "0.60",
+        "accepted": [
+          "zero point six zero",
+          "nought point six zero",
+          ".60"
+        ],
+        "explanation": "60 hundredths is 6 tenths and 0 hundredths: 0.60, which we can also write 0.6."
+      }
+    ]
+  }
+}

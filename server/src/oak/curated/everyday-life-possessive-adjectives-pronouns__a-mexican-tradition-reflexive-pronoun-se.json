@@ -1,0 +1,673 @@
+{
+  "agent": "spanish-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use the reflexive pronoun ‘se’ before a range of verbs in the context of describing the Mexican custom ‘Day of the Dead’."
+        },
+        {
+          "t": "text",
+          "text": "I can accurately pronounce words with penultimate syllable stress."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{penultimate} syllable stress"
+            },
+            {
+              "title": "reflexive pronoun {se}"
+            },
+            {
+              "title": "Día de {Muertos}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "reflexive pronoun",
+              "def": "used to indicate doing something to yourself, words like ‘myself’ and ‘yourself’"
+            },
+            {
+              "term": "se",
+              "def": "reflexive pronoun ‘himself’, ‘herself’ or ‘itself’"
+            },
+            {
+              "term": "possessive adjective",
+              "def": "word that goes before a noun to show ownership or belonging"
+            },
+            {
+              "term": "su",
+              "def": "possessive adjective ‘his’, ‘her’ or ‘its’ for singular nouns"
+            },
+            {
+              "term": "sus",
+              "def": "possessive adjective ‘his’, ‘her’ or ‘its’ for plural nouns"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Penultimate syllable stress",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Penultimate means ‘second-last’. Say these words aloud: the stress is on the second-last syllable."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "vamos",
+            "sobre",
+            "mundo",
+            "amigo",
+            "playa",
+            "problema",
+            "barrio",
+            "tienen",
+            "casa",
+            "coches"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In Spanish, words ending in a {vowel}, {-n} or {-s} generally have penultimate syllable stress. No accent is needed."
+        },
+        {
+          "t": "text",
+          "text": "When a word only has two syllables, the second-last is actually the first, as in **playa** and **barrio**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Penultimate stress and the accent",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If a word ending in a **different consonant** has penultimate syllable stress, there is an accent on the stressed vowel."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "f{ú}tbol",
+            "dif{í}cil",
+            "{ú}til",
+            "{á}rbol",
+            "l{á}piz",
+            "d{é}bil"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What about flores?",
+          "text": "‘Lápiz’ ends in -z and ‘débil’ in -l, so they both need an accent to show the penultimate syllable stress. ‘Flores’ ends in -s, so it doesn’t!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Accent or no accent?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "All of these words have penultimate syllable stress. Which column does each word belong in?",
+          "columns": [
+            "No accent needed (ends in a vowel, -n or -s)",
+            "Accent needed (ends in a different consonant)"
+          ],
+          "items": [
+            {
+              "text": "amigo",
+              "col": 0
+            },
+            {
+              "text": "flores",
+              "col": 0
+            },
+            {
+              "text": "tienen",
+              "col": 0
+            },
+            {
+              "text": "barrio",
+              "col": 0
+            },
+            {
+              "text": "árbol",
+              "col": 1
+            },
+            {
+              "text": "fútbol",
+              "col": 1
+            },
+            {
+              "text": "lápiz",
+              "col": 1
+            },
+            {
+              "text": "débil",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Revisiting some verbs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These verbs are all in Nadia’s story. Some end in -se: that is the reflexive pronoun ‘se’ joined to the verb."
+        },
+        {
+          "t": "match",
+          "q": "Match each Spanish verb to its English meaning.",
+          "pairs": [
+            {
+              "a": "sentarse",
+              "b": "to sit (oneself) down"
+            },
+            {
+              "a": "mostrar",
+              "b": "to show"
+            },
+            {
+              "a": "saltar",
+              "b": "to jump"
+            },
+            {
+              "a": "pagar",
+              "b": "to pay"
+            },
+            {
+              "a": "tocar",
+              "b": "to touch"
+            },
+            {
+              "a": "guardar",
+              "b": "to keep"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same verb, different meaning",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some Spanish verbs have a **completely different meaning** when used with a reflexive pronoun."
+        },
+        {
+          "t": "list",
+          "items": [
+            "quedar = to meet up: queda con amigos (she, he meets up with friends)",
+            "quedarse = to remain, to stay: se queda en casa (she, he stays at home)",
+            "acordar = to agree on: acuerda el precio (she, he agrees on the price)",
+            "acordarse = to remember: se acuerda (she, he remembers)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Reflexive verbs are not just for routine activities: there are many reflexive verbs in Spanish."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "What does it mean?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct meaning of each sentence.",
+          "items": [
+            {
+              "q": "Queda con sus amigos.",
+              "options": [
+                "She meets up with her friends.",
+                "She stays with her friends.",
+                "She remembers her friends."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Se acuerda de su abuelo.",
+              "options": [
+                "She agrees on her grandfather.",
+                "She remembers her grandfather.",
+                "She stays with her grandfather."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Acuerda el precio.",
+              "options": [
+                "She remembers the price.",
+                "She agrees on the price.",
+                "She stays at the price."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Se queda en casa.",
+              "options": [
+                "She meets up at home.",
+                "She stays at home.",
+                "She remembers home."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stem changes: acordarse and sentarse",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Acordarse** has a stem change from o to ue in the forms for ‘I’, ‘you (singular)’, ‘she, he, it’ and ‘they’."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "yo me ac{ue}rdo — I remember",
+            "tú te ac{ue}rdas — you remember",
+            "ella, él se ac{ue}rda — she, he, it remembers",
+            "ellos, ellas se ac{ue}rdan — they remember"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Sentarse** has a stem change from e to ie in the same forms."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "yo me s{ie}nto — I sit down",
+            "tú te s{ie}ntas — you sit down",
+            "ella, él se s{ie}nta — she, he, it sits down",
+            "ellos, ellas se s{ie}ntan — they sit down"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The reflexive pronoun se",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When the ‘doer’ and the ‘receiver’ of the verb are **not** the same person, we use an **a** before the object."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Lava al perro. (She, he washes the dog.)",
+            "Sienta al niño cerca. (She, he sits the child down nearby.)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "When the ‘doer’ and the ‘receiver’ are the **same person**, we use a reflexive pronoun before the verb. **Se** means ‘himself’, ‘herself’ or ‘itself’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Se lava. (She, he washes herself, himself.)",
+            "Se sienta cerca. (She, he sits herself, himself down nearby.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In English, the reflexive pronouns are sometimes optional, but never in Spanish!"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Who does it to whom?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘She washes the dog’?",
+          "options": [
+            "Lava al perro.",
+            "Se lava."
+          ],
+          "answer": 0,
+          "why": "The doer (she) and the receiver (the dog) are different, so there is no reflexive pronoun, and we use a before the object."
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘He washes himself’?",
+          "options": [
+            "Lava al perro.",
+            "Se lava."
+          ],
+          "answer": 1,
+          "why": "The doer and the receiver are the same person, so we use the reflexive pronoun se."
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘She sits the child down nearby’?",
+          "options": [
+            "Se sienta cerca.",
+            "Sienta al niño cerca."
+          ],
+          "answer": 1,
+          "why": "The doer (she) and the receiver (the child) are different, so we use a before the object and no reflexive pronoun."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "se, su or sus?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Su** (‘his’, ‘her’, ‘its’) and **se** (‘herself’, ‘himself’, ‘itself’) are similar, so take care! Su(s) goes before a noun. Se goes before a verb."
+        },
+        {
+          "t": "choices",
+          "q": "Choose se, su or sus to complete each sentence.",
+          "items": [
+            {
+              "q": "___ levanta temprano. (She gets up early.)",
+              "options": [
+                "se",
+                "su",
+                "sus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ abuelos son simpáticos. (Her grandparents are kind.)",
+              "options": [
+                "se",
+                "su",
+                "sus"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Nadia ___ sienta al lado de su abuela. (Nadia sits down next to her grandmother.)",
+              "options": [
+                "se",
+                "su",
+                "sus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Nadia va a la calle con ___ hermano. (Nadia goes to the street with her brother.)",
+              "options": [
+                "se",
+                "su",
+                "sus"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Día de Muertos",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Nadia has Mexican family and tells Lucía about Día de Muertos, a very well-known Mexican tradition."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Día de Muertos is a unique custom, and very important for the Mexican community.",
+            "It is a way of thinking about the dead.",
+            "For Mexicans, the dead come to the Earth on this day.",
+            "‘Pan de muerto’ is a type of traditional bread."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "An altar is a type of table used for religious ceremonies or spiritual offerings."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Nadia’s Día de Muertos",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the morning, Nadia gets up early to help her grandmother. They prepare pan de muerto and a little fruit for the altar. Her altar has various levels."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "first level",
+              "sub": "the Earth"
+            },
+            {
+              "title": "second level",
+              "sub": "the sky (el cielo)"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Nadia puts photos of her grandfather there and sits down next to her grandmother. She stays at home for a few hours with her family and remembers her grandfather."
+        },
+        {
+          "t": "text",
+          "text": "In the afternoon, she puts on fun clothes, paints herself white and black and goes to the street with her brother. In her neighbourhood there is a festival with loud music and coloured lights."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check the story",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "What is the first level of Nadia’s altar?",
+          "options": [
+            "The Earth",
+            "The sky",
+            "The garden"
+          ],
+          "answer": 0,
+          "why": "The levels of the altar are different parts of the world: the first level is the Earth and the second is the sky."
+        },
+        {
+          "t": "choice",
+          "q": "What do Nadia and her grandmother prepare for the altar?",
+          "options": [
+            "Tacos and mole",
+            "Pan de muerto and a little fruit",
+            "Tamales and mole"
+          ],
+          "answer": 1,
+          "why": "They prepare pan de muerto and a little fruit for the altar."
+        },
+        {
+          "t": "choice",
+          "q": "‘Nadia se pinta de blanco y negro.’ What does it mean?",
+          "options": [
+            "Nadia paints herself white and black.",
+            "Nadia paints her house white and black."
+          ],
+          "answer": 0,
+          "why": "Se pinta has the reflexive pronoun se: Nadia does it to herself."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Spanish words ending in a vowel, -n or -s naturally have penultimate syllable stress, e.g. vamos and mundo.",
+            "If a word ending in a different consonant has penultimate syllable stress, there is an accent on the stressed vowel, e.g. fútbol.",
+            "Some Spanish verbs have a completely different meaning when used with a reflexive pronoun, e.g. quedar (to meet up) and quedarse (to stay, remain).",
+            "The reflexive pronoun se means ‘himself’, ‘herself’ or ‘itself’ before a verb, e.g. se lava.",
+            "To say ‘his’, ‘her’ or ‘its’ before a noun we use su (singular) or sus (plural)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Which words naturally have penultimate (second-last) syllable stress?",
+      "back": "Words ending in a vowel, -n or -s.\n\nvamos, mundo"
+    },
+    {
+      "front": "When does a word with penultimate syllable stress need an accent?",
+      "back": "When it ends in a different consonant: the accent goes on the stressed vowel.\n\nfútbol, difícil, útil, árbol"
+    },
+    {
+      "front": "Does “flores” need an accent?",
+      "back": "No. It ends in -s, so penultimate stress is natural."
+    },
+    {
+      "front": "What does “quedar” mean?",
+      "back": "to meet up\n\nQueda con amigos."
+    },
+    {
+      "front": "What does “quedarse” mean?",
+      "back": "to remain, to stay\n\nSe queda en casa."
+    },
+    {
+      "front": "What does “acordar” mean?",
+      "back": "to agree on\n\nAcuerda el precio."
+    },
+    {
+      "front": "What does “acordarse” mean?",
+      "back": "to remember\n\nSe acuerda."
+    },
+    {
+      "front": "What stem change does “acordarse” have?",
+      "back": "o to ue\n\nme acuerdo, te acuerdas, se acuerda, se acuerdan"
+    },
+    {
+      "front": "What stem change does “sentarse” have?",
+      "back": "e to ie\n\nme siento, te sientas, se sienta, se sientan"
+    },
+    {
+      "front": "What does the reflexive pronoun “se” mean?",
+      "back": "himself, herself or itself\n\nSe lava. (She, he washes herself, himself.)"
+    },
+    {
+      "front": "What is the difference between “Lava al perro” and “Se lava”?",
+      "back": "Lava al perro = She, he washes the dog (doer and receiver are different, so we use a).\nSe lava = She, he washes herself, himself."
+    },
+    {
+      "front": "How do you say “his, her or its” before a plural noun?",
+      "back": "sus\n\nSus abuelos son mexicanos."
+    },
+    {
+      "front": "What is the difference between “se” and “su”?",
+      "back": "Se goes before a verb (se sienta).\nSu goes before a noun (su familia)."
+    },
+    {
+      "front": "In Nadia’s altar, what is the first level and what is the second?",
+      "back": "The first level is the Earth (la Tierra) and the second level is the sky (el cielo)."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: A Mexican tradition: reflexive pronoun ‘se’",
+    "instructions": "Answer each question with a short answer. Some answers are in Spanish and some are in English. Use the rules for stress, the meanings of the verbs, and se and su from the lesson.",
+    "questions": [
+      {
+        "prompt": "The word “lapiz” has penultimate syllable stress and ends in -z. Write it with its accent.",
+        "answer": "lápiz",
+        "explanation": "A word ending in a consonant other than -n or -s with penultimate syllable stress has an accent on the stressed vowel."
+      },
+      {
+        "prompt": "The word “debil” has penultimate syllable stress and ends in -l. Write it with its accent.",
+        "answer": "débil",
+        "explanation": "It ends in a different consonant (-l), so the accent goes on the stressed vowel."
+      },
+      {
+        "prompt": "Does the word “flores” need an accent? Answer yes or no.",
+        "answer": "no",
+        "explanation": "It ends in -s, so penultimate syllable stress is natural and no accent is needed."
+      },
+      {
+        "prompt": "“Queda con sus primos.” Complete the English: “She ___ up with some cousins.” (one word)",
+        "answer": "meets",
+        "explanation": "Quedar means to meet up."
+      },
+      {
+        "prompt": "“Se queda en casa por la mañana.” Complete the English: “She ___ at home in the morning.” (one word)",
+        "answer": "stays",
+        "accepted": [
+          "remains"
+        ],
+        "explanation": "Quedarse means to remain, to stay."
+      },
+      {
+        "prompt": "“Acuerda la hora de la fiesta.” Complete the English: “She ___ on the time of the party.” (one word)",
+        "answer": "agrees",
+        "explanation": "Acordar means to agree on."
+      },
+      {
+        "prompt": "“Se acuerda de personas especiales.” Complete the English: “She ___ special people.” (one word)",
+        "answer": "remembers",
+        "explanation": "Acordarse means to remember."
+      },
+      {
+        "prompt": "Write se or su: … queda en la cocina para organizar la comida. (She stays in the kitchen to organise the food.)",
+        "answer": "se",
+        "explanation": "Queda is a verb, and Nadia does it herself, so we need se."
+      },
+      {
+        "prompt": "Write se or su: … familia prepara un altar con papeles de colores y luces. (Her family prepares an altar with coloured paper and lights.)",
+        "answer": "su",
+        "explanation": "Familia is a noun, so we need su (‘her’)."
+      },
+      {
+        "prompt": "Write se or su: … casa está llena de flores. (Her house is full of flowers.)",
+        "answer": "su",
+        "explanation": "Casa is a noun, so we need su (‘her’)."
+      },
+      {
+        "prompt": "Write se or su: … sienta en la habitación para ver las fotos. (She sits down in the room to see the photos.)",
+        "answer": "se",
+        "explanation": "Sienta is a verb, and she sits herself down, so we need se."
+      },
+      {
+        "prompt": "Write se or su: … hermano participa en el festival. (Her brother participates in the festival.)",
+        "answer": "su",
+        "explanation": "Hermano is a noun, so we need su (‘her’)."
+      }
+    ]
+  }
+}

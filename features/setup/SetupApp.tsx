@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
-import { CORE_VIEWS } from "@/lib/use-customer-area";
+import { CORE_VIEWS, featureOff } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/ui";
 import { useT } from "@/lib/i18n/provider";
 import { PrintableDoc } from "@/features/money/doc-shared";
@@ -39,6 +39,8 @@ import {
   type VoucherProvider,
   type RatioGroup,
   TOILET_QUESTION,
+  HUB_DEFAULTS,
+  type HubSettings,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
@@ -47,6 +49,9 @@ import { MembershipTierCard } from "@/features/parent/MembershipsApp";
 import { CERT_TEMPLATES, CERT_ACCENTS, certTemplateOf, certificateDoc, openCertificate, CERT_SAMPLE } from "@/features/learning/certificates";
 import { useCredentials } from "@/features/learning/credentials";
 import { useTeam } from "@/features/team/useTeam";
+import { LevelsEditorDraft } from "@/features/learninghub/progress/levels";
+import { YearGroupsEditor } from "@/features/learninghub/quiz/YearGroupsEditor";
+import { SubjectColoursEditor } from "@/features/learninghub/SubjectColourPicker";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -93,7 +98,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcements" | "roles" | "reviews" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcements" | "roles" | "reviews" | "learning" | "hub" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -207,6 +212,21 @@ function NotificationsTab() {
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
+
+/** Who a feature is for — shown under its name in Setup → Features. */
+const FEATURE_HINTS: Record<string, string> = {
+  learninghub: "For tutoring providers — topics, lessons, quizzes, homework, flashcards and live lessons",
+};
+
+const MARK_RULES: { id: HubSettings["questionKinds"][number]["mark"]; label: string }[] = [
+  { id: "choice", label: "One right option" },
+  { id: "multi", label: "All the right options" },
+  { id: "exact", label: "Typed text must match" },
+  { id: "numeric", label: "Number within a tolerance" },
+  { id: "match", label: "Every pair matched" },
+  { id: "order", label: "Items in the exact order" },
+  { id: "manual", label: "Tutor marks it" },
+];
 
 // ── Small shared pieces ────────────────────────────────────────────────────
 
@@ -1338,7 +1358,7 @@ export function SetupApp() {
     finance: "Finance", reconciliation: "Reconciliation", locations: "Locations", staff: "Team",
   };
   const backLabel = fromView ? (FROM_LABELS[fromView] ?? fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "reviews", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "reviews", "learning", "hub", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1395,6 +1415,8 @@ export function SetupApp() {
     ["reviews", t("setup.tabReviews")],
     ...(portal === "company" ? [["roles", t("setup.tabRolesPermissions")] as [Tab, string]] : []),
     ["learning", t("setup.tabLearning")],
+    // The tutoring Learning Hub's own settings — only once the hub is switched on.
+    ...(!featureOff(settings.features, "learninghub") ? [["hub", "Teaching Hub"] as [Tab, string]] : []),
     ["meals", t("setup.tabMeals")],
     ["medication", t("setup.tabMedication")],
     ["safeguarding", t("setup.tabSafeguarding")],
@@ -2488,6 +2510,96 @@ export function SetupApp() {
         </Section>
       )}
 
+      {activeTab === "hub" && (() => {
+        const h = settings.hub ?? HUB_DEFAULTS;
+        const setH = (patch: Partial<HubSettings>) => set("hub", { ...h, ...patch });
+        const num = (v: string, lo: number, hi: number) => Math.min(hi, Math.max(lo, Math.round(Number(v) || 0)));
+        const setKind = (i: number, patch: Partial<HubSettings["questionKinds"][number]>) => setH({ questionKinds: h.questionKinds.map((k, j) => (j === i ? { ...k, ...patch } : k)) });
+        const moveKind = (i: number, d: -1 | 1) => { const a = [...h.questionKinds]; const j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; setH({ questionKinds: a }); };
+        const addKind = () => {
+          const taken = new Set(h.questionKinds.map((k) => k.id));
+          let id = `kind-${uid()}`; while (taken.has(id)) id = `kind-${uid()}`;
+          setH({ questionKinds: [...h.questionKinds, { id, label: "New question type", mark: "exact" }] });
+        };
+        return (
+          <>
+            <Section title="Marking & progress" lede="How quizzes are passed, when students see the answers, and what a placement test is for.">
+              <Row label="Pass mark" hint="The default pass mark (%) for a new quiz. You can still change it per quiz.">
+                <Input type="number" min={1} max={100} value={h.passMarkPct} onChange={(e) => setH({ passMarkPct: num(e.target.value, 1, 100) })} className="w-24" aria-label="Pass mark percent" />
+              </Row>
+              <Row label="Require a placement test" hint="On: a student must sit a placement test (or be waived by you) for a subject before its quizzes unlock.">
+                <Toggle on={h.requireDiagnostic} onChange={(v) => setH({ requireDiagnostic: v })} labels={["On", "Off"]} />
+              </Row>
+              <Row label="Show right answers" hint="When a student sees the correct answers and explanations after a quiz. The default keeps them back until the quiz is passed, so a child can't just re-sit it to read the answers off. You always see them.">
+                <Select value={h.revealAnswers} onChange={(e) => setH({ revealAnswers: e.target.value as HubSettings["revealAnswers"] })} className="w-full sm:w-56" aria-label="When answers are revealed">
+                  <option value="after_pass">Once they pass the quiz</option>
+                  <option value="after_submit">Straight after they submit</option>
+                  <option value="after_marked">Once you have marked it</option>
+                  <option value="never">Never</option>
+                </Select>
+              </Row>
+              <Row label="Retakes" hint="Whether a student can sit a quiz or placement test again once they've handed it in. You can override this per quiz, and allow one more attempt for a single student from Results.">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={h.retakePolicy} onChange={(e) => setH({ retakePolicy: e.target.value as HubSettings["retakePolicy"] })} className="w-full sm:w-56" aria-label="Retake policy">
+                    <option value="unlimited">Unlimited retakes</option>
+                    <option value="once">One attempt only</option>
+                    <option value="cooldown">Wait between attempts</option>
+                  </Select>
+                  {h.retakePolicy === "cooldown" && (
+                    <span className="inline-flex items-center gap-2"><Input type="number" min={1} max={720} value={h.retakeCooldownHours} onChange={(e) => setH({ retakeCooldownHours: num(e.target.value, 1, 720) })} className="w-24" aria-label="Hours to wait between attempts" /><span className="text-[12px] font-bold text-[var(--ink-2)]">hours</span></span>
+                  )}
+                </div>
+              </Row>
+              {h.retakePolicy === "unlimited" && (
+                <Row label="Short break after not passing" hint="With unlimited retakes: after this many tries in a row that don't reach the pass mark, each further go waits a few minutes (so they go back over the lesson first). 0 turns it off. You can let a student straight back in from Results.">
+                  <span className="inline-flex flex-wrap items-center gap-2">
+                    <Input type="number" min={0} max={10} value={h.retakeBreakAfter} onChange={(e) => setH({ retakeBreakAfter: num(e.target.value, 0, 10) })} className="w-20" aria-label="Tries in a row before a break (0 = off)" />
+                    <span className="text-[12px] font-bold text-[var(--ink-2)]">tries, then</span>
+                    <Input type="number" min={5} max={720} value={h.retakeBreakMinutes} onChange={(e) => setH({ retakeBreakMinutes: num(e.target.value, 5, 720) })} className="w-24" aria-label="Minutes to wait" disabled={h.retakeBreakAfter === 0} />
+                    <span className="text-[12px] font-bold text-[var(--ink-2)]">minutes</span>
+                  </span>
+                </Row>
+              )}
+              <Row label="Homework due date" hint="Days between setting homework and its default due date.">
+                <Input type="number" min={0} max={90} value={h.homeworkDueDays} onChange={(e) => setH({ homeworkDueDays: num(e.target.value, 0, 90) })} className="w-24" aria-label="Homework default due days" />
+              </Row>
+            </Section>
+
+            <Section title="Attainment levels" lede="The levels students and parents see for how well they know a topic or subject, lowest first. A student reaches a level once their mastery is at or above its %. Two to eight levels; rename them or move the thresholds to suit how you teach.">
+              <LevelsEditorDraft bands={h.masteryBands} onCommit={(b) => setH({ masteryBands: b })} />
+            </Section>
+
+            <Section title="Year groups" lede="The year groups (or grades, levels…) you can aim a quiz or placement test at, and tag each student with. Families only see the ones that suit their child.">
+              <YearGroupsEditor groups={h.yearGroups} onChange={(g) => setH({ yearGroups: g })} defaults={HUB_DEFAULTS.yearGroups} />
+            </Section>
+
+            <Section title="Subject colours" lede="Give each subject its own colour. Every card, chip and tile for that subject — in the Teaching Hub and in your families' My Classroom — uses it. You can also change one from a subject's ⋯ menu in the hub.">
+              <SubjectColoursEditor colours={h.subjectColours ?? {}} onChange={(subjectColours) => setH({ subjectColours })} />
+            </Section>
+
+            <Section title="Question types" lede="The kinds of question you can write. Rename or reorder them freely; the marking rule decides how answers are checked automatically.">
+              {h.questionKinds.map((k, i) => (
+                <div key={k.id} className="flex flex-wrap items-center gap-2 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                  <Input value={k.label} maxLength={60} onChange={(e) => setKind(i, { label: e.target.value })} className="min-w-[160px] flex-1" aria-label={`Question type ${i + 1} name`} />
+                  <Select value={k.mark} onChange={(e) => setKind(i, { mark: e.target.value as HubSettings["questionKinds"][number]["mark"] })} className="w-full sm:w-56" aria-label={`Question type ${i + 1} marking rule`}>
+                    {MARK_RULES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  </Select>
+                  <span className="flex items-center">
+                    <button type="button" disabled={i === 0} onClick={() => moveKind(i, -1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={`Move ${k.label} up`}>↑</button>
+                    <button type="button" disabled={i === h.questionKinds.length - 1} onClick={() => moveKind(i, 1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={`Move ${k.label} down`}>↓</button>
+                    <button type="button" disabled={h.questionKinds.length <= 1} onClick={() => setH({ questionKinds: h.questionKinds.filter((_, j) => j !== i) })} className="rounded-full px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--red-soft)] hover:text-[var(--red)] disabled:opacity-30" aria-label={`Remove ${k.label}`}>Remove</button>
+                  </span>
+                </div>
+              ))}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {h.questionKinds.length < 12 && <Button sm onClick={addKind}>＋ Add a question type</Button>}
+                <Button sm onClick={() => setH({ questionKinds: HUB_DEFAULTS.questionKinds })}>Restore the defaults</Button>
+              </div>
+            </Section>
+          </>
+        );
+      })()}
+
       {activeTab === "features" && (() => {
         const fe = settings.features;
         const setFe = (view: string, v: boolean) => set("features", { ...fe, [view]: v });
@@ -2536,7 +2648,7 @@ export function SetupApp() {
               lede="Switch off anything you don't use — it leaves your dashboard entirely. For anything families also see, flip the nested “Show to families” switch to keep it for yourself but hide it from them."
             >
               {optional.map((it) => {
-                const on = fe[it.view] !== false;
+                const on = !featureOff(fe, it.view);
                 const keys = custKeys[it.view];
                 const shownToFamilies = keys ? keys.every((k) => ca[k] !== false) && !ca.simpleMode : false;
                 return (
@@ -2544,6 +2656,7 @@ export function SetupApp() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-[200px] flex-1">
                         <div className="text-[13px] font-bold">{it.label ?? it.view}</div>
+                        {FEATURE_HINTS[it.view] && <div className="mt-0.5 text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{FEATURE_HINTS[it.view]}</div>}
                         {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">👪 Families see this too</div>}
                       </div>
                       <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />

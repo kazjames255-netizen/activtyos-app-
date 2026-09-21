@@ -1,0 +1,562 @@
+{
+  "agent": "w4-science-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe what coal, oil and natural gas are, how they formed, and why they are non-renewable energy resources."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Coal",
+              "sub": "How it forms from dead plants"
+            },
+            {
+              "title": "Crude oil and natural gas",
+              "sub": "How they form from dead plankton"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "decomposition",
+              "def": "The break down of dead and decaying matter."
+            },
+            {
+              "term": "organic matter",
+              "def": "Organic matter comes from living organisms. It contains carbon atoms as the main framework of compounds to which hydrogen atoms can attach."
+            },
+            {
+              "term": "fossil fuel",
+              "def": "Fossil fuels are formed over millions of years from the dead remains of organisms."
+            },
+            {
+              "term": "plankton",
+              "def": "Microscopic, aquatic plants and animals."
+            },
+            {
+              "term": "hydrocarbons",
+              "def": "Molecules made up of hydrogen and carbon atoms only."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What are fossil fuels?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Coal, crude oil and natural gas are all {fossil fuels}. They are made from the dead remains of organisms over millions of years."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Coal"
+            },
+            {
+              "title": "Crude oil"
+            },
+            {
+              "title": "Natural gas"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Hydrocarbons",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All three fossil fuels contain {hydrocarbons}. Hydrocarbons are molecules made up of hydrogen and carbon atoms **only**."
+        },
+        {
+          "t": "text",
+          "text": "One example of a hydrocarbon is a molecule with two carbon atoms and six hydrogen atoms."
+        },
+        {
+          "t": "choice",
+          "q": "Which set of atoms could make a hydrocarbon?",
+          "options": [
+            "Hydrogen and carbon atoms only",
+            "Hydrogen, carbon and sulfur atoms",
+            "Carbon and oxygen atoms only"
+          ],
+          "answer": 0,
+          "why": "Hydrocarbons contain hydrogen and carbon atoms only. A molecule that contains a sulfur atom is not a hydrocarbon."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is coal?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Coal is a black, sedimentary rock. It is made of mostly carbon and hydrocarbons."
+        },
+        {
+          "t": "text",
+          "text": "It may contain low amounts of impurities, such as **sulfur**."
+        },
+        {
+          "t": "callout",
+          "text": "Coal is a combustible (it burns) sedimentary rock because it is made mostly of carbon, with some impurities."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How coal forms: swamps and peat",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Coal forms over millions of years from dead trees and other plants. About 300 million years ago, in the Carboniferous period, the Earth was covered in swampy forests."
+        },
+        {
+          "t": "text",
+          "text": "The dead plants became buried under layers of plant material and mud. The conditions were {anaerobic}, and this slowed down decomposition, so most of the carbon was kept."
+        },
+        {
+          "t": "reveal",
+          "label": "What does anaerobic mean?",
+          "text": "Anaerobic means without oxygen."
+        },
+        {
+          "t": "text",
+          "text": "These conditions, along with high temperatures and pressure, led to the formation of peat."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Peat",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Peat is a material made of partially decomposed organic matter (largely plant material) from waterlogged environments such as swamps."
+        },
+        {
+          "t": "text",
+          "text": "Peat can be dried and used as a fuel. In some places it is used for heating, to cook food and to generate small amounts of electricity."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "From peat to coal",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The layers of dead plants and sediment kept experiencing high pressure from the weight of the material above, and high temperatures from Earth."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "dead plants",
+              "add": "anaerobic conditions + high temperature + high pressure",
+              "result": "peat"
+            },
+            {
+              "root": "peat",
+              "add": "continued high temperature + high pressure",
+              "result": "coal",
+              "note": "Peat is turned into hard, carbon-rich coal."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: coal",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Why did the anaerobic conditions matter?",
+              "options": [
+                "They slowed down decomposition, so most of the carbon was kept",
+                "They sped up decomposition",
+                "They turned the plants into plankton"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What is peat?",
+              "options": [
+                "Partially decomposed organic matter from waterlogged environments",
+                "A type of crude oil",
+                "A gas made of hydrogen"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "About how long ago was the Earth covered in the swampy forests that formed coal?",
+              "options": [
+                "300 years ago",
+                "300 thousand years ago",
+                "300 million years ago"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Coal may contain impurities such as...",
+              "options": [
+                "sulfur",
+                "plankton",
+                "peat"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Crude oil and natural gas: plankton",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Millions of years ago, dead {plankton} settled at the bottom of the oceans."
+        },
+        {
+          "t": "text",
+          "text": "Plankton are microscopic, aquatic plants and animals. Aquatic means they live in water. There are two main types:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Phytoplankton",
+              "sub": "plants"
+            },
+            {
+              "title": "Zooplankton",
+              "sub": "animals"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The dead plankton were covered in layers of mud and other sediment."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How crude oil and natural gas form",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Dead plankton settle at the bottom of the oceans.",
+            "The plankton become covered by sediments and mud.",
+            "High pressure from the sediments and rocks above, and high temperatures from the Earth, turn the dead plankton into crude oil and natural gas.",
+            "The crude oil and natural gas move through the pores in sedimentary rock.",
+            "Reservoirs of crude oil and natural gas form under impermeable rock."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Pores, reservoirs and drilling",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Crude oil and natural gas are found in the pores (little holes) in sedimentary rocks. They move through the pores until they reach {impermeable} rock, which they cannot pass through."
+        },
+        {
+          "t": "text",
+          "text": "They gather in reservoirs below the impermeable rock."
+        },
+        {
+          "t": "text",
+          "text": "To extract them, companies drill down through the impermeable rock to the reservoirs below. This can be done from land drilling rigs or offshore drilling rigs."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Coal, or oil and gas?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each clue: does it describe coal, or crude oil and natural gas?",
+          "columns": [
+            "Coal",
+            "Crude oil and natural gas"
+          ],
+          "items": [
+            {
+              "text": "Starts as dead trees and other plants in swampy forests",
+              "col": 0
+            },
+            {
+              "text": "Passes through a stage called peat",
+              "col": 0
+            },
+            {
+              "text": "A hard, black sedimentary rock",
+              "col": 0
+            },
+            {
+              "text": "Starts as dead plankton on the ocean floor",
+              "col": 1
+            },
+            {
+              "text": "Found in the pores of sedimentary rock",
+              "col": 1
+            },
+            {
+              "text": "Gathers in reservoirs below impermeable rock",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why we burn them, and why they will run out",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The organic matter that forms coal, crude oil and natural gas decomposes into hydrocarbons."
+        },
+        {
+          "t": "text",
+          "text": "Hydrocarbons can react with **oxygen** in combustion reactions. These reactions release large amounts of energy, which makes fossil fuels useful. We burn them to generate electricity, in vehicles and to cook our food."
+        },
+        {
+          "t": "callout",
+          "text": "Fossil fuels will eventually run out. They are **non-renewable** energy resources: they take millions of years to form and are being used at a faster rate than they are produced."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: true or false?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Is each statement true or false?",
+          "items": [
+            {
+              "q": "Crude oil and natural gas formed from dead plankton mixed in with sediments.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Oil and natural gas are found in the pores of igneous rock.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Coal is formed from deep sediments of organic matter made of prehistoric plants.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Fossil fuels are produced faster than we use them, so they are renewable.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Hydrocarbons react with oxygen in combustion reactions and release energy.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Formation of fossil fuels",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Coal is a sedimentary rock that burns because it is made mostly of carbon, with some impurities.",
+            "Coal is formed from deep sediments of organic matter made of prehistoric plants.",
+            "Oil and gas formed from dead plankton mixed in with sediments that formed millions of years ago.",
+            "Oil and natural gas are found in pores of sedimentary rock.",
+            "The organic matter that formed coal, oil and natural gas decomposed into hydrocarbons."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What are fossil fuels?",
+      "back": "Fuels formed over millions of years from the dead remains of organisms."
+    },
+    {
+      "front": "Name three fossil fuels.",
+      "back": "Coal, crude oil and natural gas."
+    },
+    {
+      "front": "What is a hydrocarbon?",
+      "back": "A molecule made up of hydrogen and carbon atoms only."
+    },
+    {
+      "front": "What is coal?",
+      "back": "A black sedimentary rock made of mostly carbon and hydrocarbons. It may contain impurities such as sulfur."
+    },
+    {
+      "front": "What was the Earth like when coal began to form, about 300 million years ago?",
+      "back": "It was covered in swampy forests (the Carboniferous period)."
+    },
+    {
+      "front": "What does anaerobic mean, and why did it matter for coal?",
+      "back": "Anaerobic means without oxygen. It slowed down decomposition, so most of the carbon was kept."
+    },
+    {
+      "front": "What is peat?",
+      "back": "A material made of partially decomposed organic matter (largely plant material) from waterlogged environments such as swamps."
+    },
+    {
+      "front": "What turns peat into coal?",
+      "back": "Continued high temperatures and high pressure."
+    },
+    {
+      "front": "What are plankton?",
+      "back": "Microscopic, aquatic plants and animals.\n\nPhytoplankton are plants and zooplankton are animals."
+    },
+    {
+      "front": "What are crude oil and natural gas formed from?",
+      "back": "Dead plankton, covered by sediments and mud on the ocean floor, turned into crude oil and gas by high pressure and high temperature."
+    },
+    {
+      "front": "Where are crude oil and natural gas found?",
+      "back": "In the pores of sedimentary rock. They gather in reservoirs below impermeable rock."
+    },
+    {
+      "front": "Why are fossil fuels useful?",
+      "back": "Hydrocarbons react with oxygen in combustion reactions, which release large amounts of energy."
+    },
+    {
+      "front": "Why are fossil fuels non-renewable?",
+      "back": "They take millions of years to form and are being used at a faster rate than they are produced."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Formation of fossil fuels",
+    "instructions": "Answer each question with a word, a number or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Dead swamp plants are buried and, in anaerobic conditions with high temperature and pressure, form a material. What is this material called?",
+        "answer": "peat",
+        "explanation": "Dead plants become peat first. Continued heat and pressure then turn peat into coal."
+      },
+      {
+        "prompt": "What does the word anaerobic mean?",
+        "answer": "without oxygen",
+        "accepted": [
+          "no oxygen"
+        ],
+        "explanation": "Anaerobic means without oxygen."
+      },
+      {
+        "prompt": "Hydrocarbons are molecules made of hydrogen atoms and which other type of atom only?",
+        "answer": "carbon",
+        "accepted": [
+          "carbon atoms"
+        ],
+        "explanation": "Hydrocarbons contain hydrogen and carbon atoms only."
+      },
+      {
+        "prompt": "Coal may contain low amounts of an impurity named in this lesson. It is an element that starts with the letter s. What is it?",
+        "answer": "sulfur",
+        "explanation": "Coal may contain low amounts of impurities such as sulfur."
+      },
+      {
+        "prompt": "Crude oil and natural gas were formed from dead what?",
+        "answer": "plankton",
+        "accepted": [
+          "dead plankton"
+        ],
+        "explanation": "Crude oil and natural gas formed from dead plankton mixed in with sediments."
+      },
+      {
+        "prompt": "Phytoplankton are plankton that are plants. What are plankton that are animals called?",
+        "answer": "zooplankton",
+        "explanation": "The two main types of plankton are phytoplankton (plants) and zooplankton (animals)."
+      },
+      {
+        "prompt": "Crude oil and natural gas gather in reservoirs below which type of rock, which they cannot pass through?",
+        "answer": "impermeable rock",
+        "accepted": [
+          "impermeable"
+        ],
+        "explanation": "They move through the pores in sedimentary rock until they reach impermeable rock."
+      },
+      {
+        "prompt": "Hydrocarbons react with which gas in combustion reactions?",
+        "answer": "oxygen",
+        "explanation": "Hydrocarbons react with oxygen in combustion reactions to release energy."
+      },
+      {
+        "prompt": "Are fossil fuels renewable or non-renewable?",
+        "answer": "non-renewable",
+        "accepted": [
+          "non renewable",
+          "nonrenewable"
+        ],
+        "explanation": "They are used at a faster rate than they are produced, and they take millions of years to form."
+      },
+      {
+        "prompt": "About how many million years ago was the Earth covered in the swampy forests that formed coal? Give the number only.",
+        "answer": "300",
+        "accepted": [
+          "300 million",
+          "300 million years"
+        ],
+        "explanation": "The swampy forests were about 300 million years ago, in the Carboniferous period."
+      }
+    ]
+  }
+}

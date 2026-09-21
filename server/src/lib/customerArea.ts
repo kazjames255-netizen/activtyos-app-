@@ -8,7 +8,7 @@ import { CA_FEATURES, firstOff } from "../../../lib/accessMap";
 // Simple mode keeps only the booking essentials, so every optional area is off.
 // A module the operator switched off in Setup → Features is off for their
 // families too (lib/accessMap.ts CA_FEATURES — the family nav hides the same).
-type Key = "wallet" | "memberships" | "refer" | "trips" | "moments" | "messaging" | "meals" | "coupons" | "newsfeed" | "timetable" | "accidents" | "medication" | "browse" | "codesBanner";
+type Key = "wallet" | "memberships" | "refer" | "trips" | "moments" | "messaging" | "meals" | "coupons" | "newsfeed" | "timetable" | "accidents" | "medication" | "browse" | "codesBanner" | "learninghub";
 
 /** Settings come through the access gate's short cache, which Setup clears on
  *  save — a switch reaches families on the next request. Pass the franchise a
@@ -18,5 +18,10 @@ export async function customerAreaOn(tenantId: string, key: Key, franchiseId?: s
   const ca = (s.customerArea ?? {}) as Record<string, unknown>;
   if (ca.simpleMode === true && key !== "browse") return false;
   if (firstOff(s.features as Record<string, unknown> | undefined, CA_FEATURES[key] ?? [])) return false;
+  // The Learning Hub has no Customer-area switch of its own: whether families
+  // see it is derived from Setup → Features alone (checked above). A stored
+  // `customerArea.learninghub` is only ever the default a Setup save wrote
+  // (false) and must not veto a hub that has been switched on.
+  if (key === "learninghub") return true;
   return ca[key] !== false;
 }

@@ -1,0 +1,548 @@
+{
+  "agent": "french-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use ‘un’ and ‘une’ to name belongings in French."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to recognise and pronounce the sound [un]."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "the sound {[un]}"
+            },
+            {
+              "title": "{un} and {une}"
+            },
+            {
+              "title": "naming belongings"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[un]",
+              "def": "The sound-symbol correspondence [un] is pronounced ‘un’ as in ‘brun’."
+            },
+            {
+              "term": "grammatical gender",
+              "def": "A way to categorise nouns as masculine or feminine."
+            },
+            {
+              "term": "indefinite articles",
+              "def": "The two words ‘un’ and ‘une’ meaning ‘a/an’."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The sound [un]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "[un] is a nasal sound. It is pronounced ‘un’ as in ‘brun’. Listen, repeat and read these words."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "l{un}di",
+              "sub": "Monday"
+            },
+            {
+              "title": "j{un}gle",
+              "sub": "jungle"
+            },
+            {
+              "title": "br{un}",
+              "sub": "brown (for hair or fur)"
+            },
+            {
+              "title": "comm{un}",
+              "sub": "common"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Un is also a word",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "{un} means ‘a/an’ and the number 1."
+        },
+        {
+          "t": "text",
+          "text": "So the sound [un] is also a word! The word ‘un’ has two meanings."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to see the two meanings",
+          "text": "un = **a/an** or **1**"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Every noun has a gender",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In French all nouns, including things, are either **masculine** or **feminine**."
+        },
+        {
+          "t": "text",
+          "text": "This is called grammatical gender. It is not the same as male or female."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "A feminine noun is not always a girl or a woman. A masculine noun is not always a boy or a man. Even things like a pen or a bag are masculine or feminine."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Masculine nouns: un",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To mean ‘a’ or ‘an’ in French, use {un} before a masculine noun. Un is the indefinite article for masculine nouns."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{un} univers",
+              "sub": "a universe"
+            },
+            {
+              "title": "{un} ballon",
+              "sub": "a ball",
+              "emoji": "🎈"
+            },
+            {
+              "title": "{un} sac",
+              "sub": "a bag"
+            },
+            {
+              "title": "{un} cahier",
+              "sub": "an exercise book"
+            },
+            {
+              "title": "{un} stylo",
+              "sub": "a pen"
+            },
+            {
+              "title": "{un} jeu",
+              "sub": "a game"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Feminine nouns: une",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The indefinite article ‘a’ or ‘an’ for a feminine noun is {une}."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{une} banane",
+              "sub": "a banana",
+              "emoji": "🍌"
+            },
+            {
+              "title": "{une} orange",
+              "sub": "an orange"
+            },
+            {
+              "title": "{une} peluche",
+              "sub": "a cuddly toy"
+            },
+            {
+              "title": "{une} bouteille",
+              "sub": "a bottle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Un and une",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Un and une sound different. Practise saying them: un – une – un – une – un – une."
+        },
+        {
+          "t": "callout",
+          "text": "Both nouns and their indefinite articles have grammatical gender: {un} for masculine nouns and {une} for feminine nouns."
+        },
+        {
+          "t": "reveal",
+          "label": "How many ways are there to say ‘a/an’?",
+          "text": "Two ways: **un** and **une**. You choose by the gender of the noun."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which word means ‘a/an’ before a FEMININE noun?",
+          "options": [
+            "un",
+            "une"
+          ],
+          "answer": 1,
+          "why": "Une is the indefinite article for feminine nouns; un is for masculine nouns."
+        },
+        {
+          "t": "choice",
+          "q": "True or false? Only people and animals have grammatical gender in French.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "All French nouns, including things, are masculine or feminine."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Masculine or feminine?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which word for ‘a/an’ goes with each noun? Sort the nouns.",
+          "columns": [
+            "masculine: un",
+            "feminine: une"
+          ],
+          "items": [
+            {
+              "text": "ballon",
+              "col": 0
+            },
+            {
+              "text": "peluche",
+              "col": 1
+            },
+            {
+              "text": "sac",
+              "col": 0
+            },
+            {
+              "text": "bouteille",
+              "col": 1
+            },
+            {
+              "text": "stylo",
+              "col": 0
+            },
+            {
+              "text": "banane",
+              "col": 1
+            },
+            {
+              "text": "univers",
+              "col": 0
+            },
+            {
+              "text": "orange",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Un or une?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose un or une.",
+          "items": [
+            {
+              "q": "___ sac",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ peluche",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ cahier",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ banane",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ jeu",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ orange",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "French and English",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French to the English.",
+          "pairs": [
+            {
+              "a": "un univers",
+              "b": "a universe"
+            },
+            {
+              "a": "une banane",
+              "b": "a banana"
+            },
+            {
+              "a": "un stylo",
+              "b": "a pen"
+            },
+            {
+              "a": "une bouteille",
+              "b": "a bottle"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "How do you say it?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct French.",
+          "items": [
+            {
+              "q": "a cuddly toy",
+              "options": [
+                "un peluche",
+                "une peluche"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "an exercise book",
+              "options": [
+                "un cahier",
+                "une cahier"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "an orange",
+              "options": [
+                "un orange",
+                "une orange"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "a game",
+              "options": [
+                "une jeu",
+                "un jeu"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "[un] is a nasal sound, as in ‘brun’.",
+            "Un is also a word. It means ‘a/an’ and the number 1.",
+            "All French nouns have grammatical gender: they are masculine or feminine.",
+            "The indefinite articles have gender too: un for masculine nouns and une for feminine nouns.",
+            "To name belongings, use the noun with the right word for ‘a/an’: un ballon, une peluche."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does ‘un’ mean in English?",
+      "back": "a/an, and also the number 1."
+    },
+    {
+      "front": "How do you pronounce the sound [un]?",
+      "back": "It is a nasal sound: ‘un’ as in ‘brun’."
+    },
+    {
+      "front": "What does ‘brun’ mean?",
+      "back": "brown (for hair or fur)"
+    },
+    {
+      "front": "What does ‘lundi’ mean?",
+      "back": "Monday"
+    },
+    {
+      "front": "What is grammatical gender?",
+      "back": "A way to categorise nouns as masculine or feminine."
+    },
+    {
+      "front": "Which nouns have grammatical gender in French?",
+      "back": "All of them, including things. They are either masculine or feminine."
+    },
+    {
+      "front": "Is grammatical gender the same as male or female?",
+      "back": "No. It is not the same."
+    },
+    {
+      "front": "What are ‘un’ and ‘une’ called?",
+      "back": "The indefinite articles (both mean ‘a/an’)."
+    },
+    {
+      "front": "Which indefinite article goes before a masculine noun?",
+      "back": "un\n\nun ballon (a ball)"
+    },
+    {
+      "front": "Which indefinite article goes before a feminine noun?",
+      "back": "une\n\nune banane (a banana)"
+    },
+    {
+      "front": "How do you say ‘a pen’ in French?",
+      "back": "un stylo"
+    },
+    {
+      "front": "How do you say ‘a cuddly toy’ in French?",
+      "back": "une peluche"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What is it? Naming belongings with ‘un’ and ‘une’",
+    "instructions": "Answer with one word (un or une) or a short phrase. Remember: un goes before masculine nouns and une goes before feminine nouns.",
+    "questions": [
+      {
+        "prompt": "Fill the gap with un or une: ___ jeu (a game)",
+        "answer": "un",
+        "explanation": "Jeu is a masculine noun, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ orange (an orange)",
+        "answer": "une",
+        "explanation": "Orange is a feminine noun, so we use une."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ stylo (a pen)",
+        "answer": "un",
+        "explanation": "Stylo is a masculine noun, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ bouteille (a bottle)",
+        "answer": "une",
+        "explanation": "Bouteille is a feminine noun, so we use une."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ ballon (a ball)",
+        "answer": "un",
+        "explanation": "Ballon is a masculine noun, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ peluche (a cuddly toy)",
+        "answer": "une",
+        "explanation": "Peluche is a feminine noun, so we use une."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ cahier (an exercise book)",
+        "answer": "un",
+        "explanation": "Cahier is a masculine noun, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: ___ sac (a bag)",
+        "answer": "un",
+        "explanation": "Sac is a masculine noun, so we use un."
+      },
+      {
+        "prompt": "All French nouns are either masculine or ___. Which word fills the gap?",
+        "answer": "feminine",
+        "explanation": "Every French noun has grammatical gender: masculine or feminine."
+      },
+      {
+        "prompt": "What does the French word ‘lundi’ mean in English?",
+        "answer": "monday",
+        "explanation": "Lundi is one of the words with the sound [un] and it means Monday."
+      }
+    ]
+  }
+}

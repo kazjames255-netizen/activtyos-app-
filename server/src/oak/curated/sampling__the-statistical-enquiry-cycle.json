@@ -1,0 +1,567 @@
+{
+  "agent": "maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand the stages of the Statistical Enquiry Cycle."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "What is the cycle?",
+              "sub": "five stages"
+            },
+            {
+              "title": "Evaluating the cycle",
+              "sub": "spot skipped stages and weak plans"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the term to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Statistical Enquiry Cycle",
+              "def": "The Statistical Enquiry Cycle is a cycle used to carry out a statistical investigation. There are five stages. This is an ongoing process as evaluation may lead to new/refined questioning."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A model of an investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When a statistical investigation takes place, a model of the process can be used. Imagine you want to find out how often families have a takeaway."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Plan the enquiry and ask a question, for example: how often do families have a takeaway?",
+            "Collect data to answer the question, for example with a survey or questionnaire, or from a secondary source such as a company that delivers takeaways.",
+            "Organise and present the data in a chart or diagram.",
+            "Analyse the data: look at the charts for significant findings and complete summary statistics such as the mean, median, mode and range.",
+            "Interpret the analysis in the context of the enquiry question.",
+            "Use the findings to refine the enquiry question or to take action."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The five stages",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A more formal model of the Statistical Enquiry Cycle has only five stages. Organising, presenting and analysing the data join together into one stage."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1. Planning"
+            },
+            {
+              "title": "2. Collecting"
+            },
+            {
+              "title": "3. Processing and presenting"
+            },
+            {
+              "title": "4. Interpreting"
+            },
+            {
+              "title": "5. Communicating and evaluating"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It is a {cycle}: evaluation may lead to a new or refined question, and then you go round again."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stage 1: Planning",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What does the planning stage involve?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Defining a question or hypothesis to investigate.",
+            "Deciding what data to collect, and how to collect and record it.",
+            "Deciding how the data will be processed and represented."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In the planning stage you think about all of the other stages of the process."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stage 2: Collecting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What does the collecting stage involve?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Gathering the data. This could be first hand or from other sources.",
+            "Considering how data on sensitive subjects may have challenges."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stage 3: Processing and presenting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What does the processing and presenting stage involve?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Organising and processing the data, which might need to be cleaned, potentially making use of technology.",
+            "Generating diagrams and charts to represent the data, potentially making use of technology."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What does “cleaning” data mean?",
+          "text": "Spreadsheet software struggles if answers contain unexpected characters. If one person types “6 hours” you remove the word “hours” so only the 6 is left. If another types “30 minutes” you must choose one unit: turn 30 minutes into a half hour, or turn 6 hours into 360 minutes."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stage 4: Interpreting",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What does the interpreting stage involve?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Analysing the diagrams, charts and statistical measures in the context of the problem.",
+            "Reaching conclusions, making inferences and/or predictions related to the statistical question or hypothesis.",
+            "Considering the reliability of the findings."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stage 5: Communicating and evaluating",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What does the communicating and evaluating stage involve?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Identifying weaknesses in the approach or the representations.",
+            "Suggesting improvements to the processes.",
+            "Refining the processes to get further information about the initial statistical question or hypothesis."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "This is why it is a cycle: you might go through it again to iron out flaws, or to investigate something interesting you found."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the event to the stage",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each event to the stage of the Statistical Enquiry Cycle it belongs to.",
+          "pairs": [
+            {
+              "a": "Deciding the question to investigate and which chart to use",
+              "b": "Planning"
+            },
+            {
+              "a": "Giving a questionnaire to 40 people",
+              "b": "Collecting"
+            },
+            {
+              "a": "Drawing a bar chart of the results",
+              "b": "Processing and presenting"
+            },
+            {
+              "a": "Looking at the results and deciding what they show",
+              "b": "Interpreting"
+            },
+            {
+              "a": "Spotting a weakness in the approach and suggesting improvements",
+              "b": "Communicating and evaluating"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What comes next?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which stage comes straight after Collecting?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which stage comes straight after Interpreting?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 4
+            },
+            {
+              "q": "Which stage comes first when you begin an enquiry?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Sam has planned his enquiry and gathered his data. What is the next stage?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Considering whether the findings can be trusted (their reliability) belongs to which stage?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 3
+            },
+            {
+              "q": "Removing the word “hours” from typed answers so a spreadsheet can read them belongs to which stage?",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "A teacher wants to see whether the hours a pupil revises and their test mark are related. Which chart fits when processing and presenting the data?",
+              "options": [
+                "Pie chart",
+                "Scatter graph"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Did Andeep follow the cycle?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep wants to investigate whether 15-year-old pupils are eating fruit and vegetables regularly. He asks ten 15-year-olds from his school two tick-box questions: how many portions of fruit or vegetables they ate yesterday, and on how many days in a week they eat at least one portion."
+        },
+        {
+          "t": "text",
+          "text": "He flicks through the responses and concludes that 15-year-olds are not eating fruit and vegetables regularly, because most pupils did not eat at least one portion on more than half of the days in a week."
+        },
+        {
+          "t": "reveal",
+          "label": "Planning and collecting",
+          "text": "His planning was quite limited but had a focus: he knew who he would ask and how. He did not decide how to process or represent the data. He asked ten pupils, a fairly small sample but one he could easily reach."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which stage did he skip?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which stage of the cycle did Andeep not really complete?",
+          "options": [
+            "Planning",
+            "Collecting",
+            "Processing and presenting",
+            "Communicating and evaluating"
+          ],
+          "answer": 2,
+          "why": "He only flicked through the ten responses. He could have looked at the modal response to each question and drawn a bar chart."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Skipping the processing and presenting stage may lead to false conclusions, or to missing something interesting in the data that could be explored further. All stages should be completed."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Evaluating Izzy’s enquiry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy wants to know the favourite colour of the pupils in her school. She asks 5 of her friends and shows the results on a scatter graph. She says: “Purple is the favourite colour!”"
+        },
+        {
+          "t": "choices",
+          "q": "Which stage does each comment belong to?",
+          "items": [
+            {
+              "q": "She should have planned more thoroughly who to ask, how to collect and record the data and how to process it.",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A scatter graph was the wrong choice of representation. A pie chart or a bar chart would have been a much better choice.",
+              "options": [
+                "Planning",
+                "Collecting",
+                "Processing and presenting",
+                "Interpreting",
+                "Communicating and evaluating"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Choosing the right measure",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura compares javelin throws by Year 10 and Year 11 pupils (eight throws each). She only calculates the mean and concludes that Year 10 pupils are better."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Mean: Year 10 17.925 m, Year 11 17.92375 m. Year 10 is only slightly higher.",
+            "Median: Year 10 17.42 m, Year 11 19.76 m. Year 11 is higher.",
+            "Range: Year 10 6.31 m, Year 11 15.45 m."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What went wrong?",
+          "text": "The mean is affected by extreme values. One very short throw of 5.87 m made the Year 11 mean lower. Laura should have used the median, which is not affected by extreme values."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The Statistical Enquiry Cycle has five stages: planning, collecting, processing and presenting, interpreting, and communicating and evaluating.",
+            "Planning defines the question and what data to collect. Collecting gathers the data.",
+            "Processing and presenting calculates statistical measures and draws charts. Interpreting reaches conclusions.",
+            "Communicating and evaluating identifies weaknesses and improvements. All stages should be completed to avoid false conclusions."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is the Statistical Enquiry Cycle?",
+      "back": "A cycle used to carry out a statistical investigation. It has five stages."
+    },
+    {
+      "front": "Name the five stages of the Statistical Enquiry Cycle in order.",
+      "back": "Planning, Collecting, Processing and presenting, Interpreting, Communicating and evaluating."
+    },
+    {
+      "front": "What does the planning stage involve?",
+      "back": "Defining a question to investigate and deciding what data to collect (how to collect and record it, and how it will be processed and represented)."
+    },
+    {
+      "front": "What does the collecting stage involve?",
+      "back": "Designing collection methods and gathering the data, first hand or from other sources."
+    },
+    {
+      "front": "What does the processing and presenting stage involve?",
+      "back": "Calculating statistical measures and making graphical representations (charts and diagrams). The data may need cleaning first."
+    },
+    {
+      "front": "What does the interpreting stage involve?",
+      "back": "Reaching conclusions and making inferences or predictions about the question, and considering how reliable the findings are."
+    },
+    {
+      "front": "What does the communicating and evaluating stage involve?",
+      "back": "Identifying weaknesses and suggesting improvements."
+    },
+    {
+      "front": "Why is it called a cycle?",
+      "back": "Evaluation may lead to a new or refined question, so you can go round again."
+    },
+    {
+      "front": "What does “cleaning” data mean?",
+      "back": "Making the data ready for a spreadsheet, for example removing the word “hours” from “6 hours” and using the same unit for every answer."
+    },
+    {
+      "front": "Which stage of the cycle decides which charts will be used?",
+      "back": "Planning."
+    },
+    {
+      "front": "What can happen if you skip the processing and presenting stage?",
+      "back": "You may draw false conclusions, or miss an interesting element of the data."
+    },
+    {
+      "front": "Which average is affected by extreme values, and which is not?",
+      "back": "The mean is affected. The median is not."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The Statistical Enquiry Cycle",
+    "instructions": "Answer each question with a number or a short word or phrase.",
+    "questions": [
+      {
+        "prompt": "How many stages does the (formal) Statistical Enquiry Cycle have?",
+        "answer": "5",
+        "accepted": [
+          "five"
+        ],
+        "explanation": "The five stages are planning, collecting, processing and presenting, interpreting, and communicating and evaluating."
+      },
+      {
+        "prompt": "Which stage comes first in the Statistical Enquiry Cycle?",
+        "answer": "planning",
+        "explanation": "You start by planning what you want to find out and how."
+      },
+      {
+        "prompt": "The last stage is called “Communicating and …”. Which word is missing?",
+        "answer": "evaluating",
+        "explanation": "The fifth stage is communicating and evaluating."
+      },
+      {
+        "prompt": "Which stage involves gathering the data, either first hand or from other sources?",
+        "answer": "collecting",
+        "explanation": "Collecting is about gathering the data."
+      },
+      {
+        "prompt": "Which stage involves reaching conclusions and making inferences about the question?",
+        "answer": "interpreting",
+        "explanation": "Interpreting means analysing the results in the context of the problem and reaching conclusions."
+      },
+      {
+        "prompt": "Removing the word “hours” from typed answers so a spreadsheet can read them belongs to which stage?",
+        "answer": "processing and presenting",
+        "accepted": [
+          "processing & presenting"
+        ],
+        "explanation": "Cleaning the data is part of processing the data."
+      },
+      {
+        "prompt": "One person wrote “30 minutes” for time spent watching television. What is 30 minutes as a number of hours (as a decimal)?",
+        "answer": "0.5",
+        "accepted": [
+          "1/2",
+          "half",
+          "half an hour"
+        ],
+        "explanation": "30 minutes is half of 60 minutes, so 0.5 hours."
+      },
+      {
+        "prompt": "Another person wrote “6 hours”. How many minutes is 6 hours?",
+        "answer": "360",
+        "accepted": [
+          "360 minutes"
+        ],
+        "explanation": "6 × 60 = 360."
+      },
+      {
+        "prompt": "Izzy showed the favourite colours of her friends on a scatter graph. Name a type of chart (two words) that would have been a much better choice.",
+        "answer": "pie chart",
+        "accepted": [
+          "a pie chart",
+          "bar chart",
+          "a bar chart"
+        ],
+        "explanation": "A pie chart or a bar chart would have been a much better choice, because there were not two sets of data that might be related."
+      },
+      {
+        "prompt": "Which is not affected by extreme values, the mean or the median?",
+        "answer": "median",
+        "accepted": [
+          "the median"
+        ],
+        "explanation": "The mean is affected by extreme values but the median is not."
+      }
+    ]
+  }
+}

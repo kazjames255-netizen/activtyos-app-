@@ -1,0 +1,526 @@
+{
+  "agent": "english-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explore the influence and presentation of religion through the character of Friar Lawrence in ‘Romeo and Juliet’."
+        },
+        {
+          "t": "text",
+          "text": "You will look at how Shakespeare portrays Friar Lawrence and his influence, then think about what Shakespeare might be suggesting about religion and Catholicism."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Friar Lawrence’s {influence}"
+            },
+            {
+              "title": "Friar Lawrence’s portrayal"
+            },
+            {
+              "title": "{Catholicism} and Shakespeare’s intentions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "influence",
+              "def": "the capacity to have an effect on the character, development, or behaviour of someone or something"
+            },
+            {
+              "term": "represent",
+              "def": "to give a clear understanding or impression of: to describe or present clearly"
+            },
+            {
+              "term": "deceit",
+              "def": "the action or practice of deceiving someone by concealing or misrepresenting the truth"
+            },
+            {
+              "term": "Catholicism",
+              "def": "the faith, practice, and church order of the Roman Catholic Church"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "An influential character",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Friar Lawrence is an incredibly influential character in ‘Romeo and Juliet’. He has the capacity to affect the characters and their behaviour. He:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "facilitates the marriage between Romeo and Juliet: he agrees to it and officially marries them",
+            "counsels Romeo to go to Mantua following Romeo’s banishment and agrees to send him news of Verona",
+            "provides Juliet with the potion that allows her to fake her own death"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Throughout the play, we see Friar Lawrence influencing the lives and behaviour of characters."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Is he responsible for the tragedy?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "To what extent is Friar Lawrence responsible for the tragedy? He facilitates the marriage, he tries to hide the marriage by assisting Juliet in faking her own death, and he tells Romeo that he will send him news of Verona."
+        },
+        {
+          "t": "reveal",
+          "label": "One pupil’s idea",
+          "text": "We could say he is responsible: he facilitates the marriage that creates the chain of events leading to the tragic ending. If he had not agreed to marry Romeo and Juliet, then arguably their love story would have ended after the Capulet ball."
+        },
+        {
+          "t": "text",
+          "text": "These are all hypotheticals, but they show us how much influence Friar Lawrence has on the tragic events."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why does he do it?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When agreeing to marry Romeo and Juliet, Friar Lawrence says:"
+        },
+        {
+          "t": "callout",
+          "text": "“For this alliance may so happy prove / To turn your households’ rancor to pure love.” (Act 2, Scene 3, lines 98-99)"
+        },
+        {
+          "t": "text",
+          "text": "Friar Lawrence is trying to provide a solution to a social problem: to end the feud between the Montagues and Capulets. We know from the Prince’s speech in Act 1, Scene 1 that the feud is negatively impacting society because of the fights that keep breaking out."
+        },
+        {
+          "t": "choice",
+          "q": "Which social problem is Friar Lawrence hoping the marriage might solve?",
+          "options": [
+            "The feud between the Montagues and Capulets",
+            "Romeo’s banishment from Verona"
+          ],
+          "answer": 0,
+          "why": "He hopes the alliance will turn the households’ rancor to pure love, ending the feud."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Friar Lawrence and religion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We might think of Friar Lawrence as **representing** religion in ‘Romeo and Juliet’. His character gives us a clear understanding of religion at the time."
+        },
+        {
+          "t": "text",
+          "text": "If he represents religion, what might Shakespeare be saying about the influence of religion on society? Tap for one idea."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for an idea",
+          "text": "Perhaps that religion was able to exert great influence over people’s lives and the course their lives took. Although the feud is solved by the marriage, Romeo and Juliet’s lives are the price paid for peace, which could represent how religious influence focuses on the big picture rather than the concerns of individuals."
+        },
+        {
+          "t": "callout",
+          "text": "Arguably, Friar Lawrence represents religion in ‘Romeo and Juliet’. Religion was at the very heart of government in Elizabethan England."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A mentor, or something more negative?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Friar Lawrence is often seen as a mentor and father figure to Romeo, because Romeo confides in him and seeks his advice. However, we might also consider his portrayal in a more negative light:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Friar Lawrence is aware of Romeo and Juliet’s marriage but does not say anything to their parents.",
+            "Friar Lawrence allows Juliet to fake her own death rather than admit that she cannot marry Count Paris because he married her to Romeo."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "What might this suggest about his character?"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Deceit and self-interest",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "deceit",
+              "def": "the action or practice of deceiving someone by concealing or misrepresenting the truth"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "We might interpret Friar Lawrence’s character as being deceitful. Though he is aware of the marriage between Romeo and Juliet, he does not share this information with their parents, even when it would have been useful to do so."
+        },
+        {
+          "t": "reveal",
+          "label": "One pupil’s idea",
+          "text": "It suggests that Friar Lawrence is capable of being deceitful and secretive, and that he is willing to put his own interests before the interests of others: he could have admitted to Lord Capulet that Juliet is already married, yet he does not do so."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The tomb in Act 5",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Act 5, Scene 3, despite finding Romeo dead, Friar Lawrence abandons Juliet in the tomb because:"
+        },
+        {
+          "t": "callout",
+          "text": "“a noise did scare me from the tomb” (line 271)"
+        },
+        {
+          "t": "reveal",
+          "label": "What perception might this create?",
+          "text": "It could create the perception that Friar Lawrence is cowardly. It adds to the idea that he places his own self-interest before the interests of others."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Advice to Romeo",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When consoling Romeo after his banishment, Friar Lawrence says:"
+        },
+        {
+          "t": "callout",
+          "text": "“Art thou a man? Thy form cries out thou art. / Thy tears are womanish” (Act 3, Scene 3, lines 119-120)"
+        },
+        {
+          "t": "choice",
+          "q": "By asking “Art thou a man?”, what is Friar Lawrence questioning?",
+          "options": [
+            "Romeo’s masculinity",
+            "Romeo’s identity"
+          ],
+          "answer": 0,
+          "why": "By specifically asking if Romeo is a “man”, Friar Lawrence implies that his actions suggest he is not one, so he is questioning his masculinity."
+        },
+        {
+          "t": "text",
+          "text": "This also implies religious influence on the societal pressure of gender stereotypes."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Friar Lawrence and Catholicism",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Though never explicitly stated, we can arguably see Friar Lawrence as representing {Catholicism}:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "a “Friar” is a man belonging to any of the Roman Catholic religious orders",
+            "‘Romeo and Juliet’ is set in Verona, and the predominant religion of Italy in the Elizabethan Era was Catholicism"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "What might Shakespeare be saying about Catholicism through this portrayal? He may have been presenting Catholicism as acting in its own self-interest and allowing others to suffer the consequences of its actions. He may also have been presenting Catholicism as adding to societal expectations of gender through Friar Lawrence’s presentation of Romeo’s masculinity."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Religion in Elizabethan England",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "There were deep religious divides between Catholicism and Protestantism at the time.",
+            "Queen Elizabeth I was Protestant; however, her predecessor, Queen Mary I, was Catholic.",
+            "To strengthen her position, Queen Elizabeth I passed laws to try to minimise the Catholic threat.",
+            "However, there were continual threats throughout her reign from those who wished to replace her with a Catholic monarch."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which queen was Catholic?",
+          "options": [
+            "Queen Elizabeth I",
+            "Queen Mary I"
+          ],
+          "answer": 1,
+          "why": "Queen Elizabeth I was Protestant; her predecessor, Queen Mary I, was Catholic."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What might it mean?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Queen Elizabeth I faced constant threats to her person and her throne from Catholic sympathisers and tried to minimise their influence. Arguably, she would have wanted Catholicism to be represented negatively in literature."
+        },
+        {
+          "t": "text",
+          "text": "Arguably, we might consider Shakespeare to have represented Catholicism through Friar Lawrence in a way that Queen Elizabeth I would have approved of. What are the implications? Tap for two ideas."
+        },
+        {
+          "t": "reveal",
+          "label": "Two ideas",
+          "text": "Perhaps Shakespeare was writing in a way to preserve the status quo, because a monarch would not want society to desire change. Or perhaps his intentions were to produce literature that the monarch approved of, to continue to have their favour."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Friar Lawrence’s actions",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Which idea does each action support?",
+          "columns": [
+            "His influence on events",
+            "A more negative portrayal"
+          ],
+          "items": [
+            {
+              "text": "He officially marries Romeo and Juliet",
+              "col": 0
+            },
+            {
+              "text": "He counsels Romeo to go to Mantua",
+              "col": 0
+            },
+            {
+              "text": "He agrees to send Romeo news of Verona",
+              "col": 0
+            },
+            {
+              "text": "He does not tell their parents about the marriage",
+              "col": 1
+            },
+            {
+              "text": "He leaves Juliet in the tomb because “a noise did scare me from the tomb”",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "A “Friar” is a man belonging to which group?",
+              "options": [
+                "The Protestant church of England",
+                "Any of the Roman Catholic religious orders",
+                "The royal court"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which religion was predominant in Italy in the Elizabethan Era?",
+              "options": [
+                "Catholicism",
+                "Protestantism"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Friar Lawrence hopes the marriage will turn the households’ rancor into what?",
+              "options": [
+                "pure hatred",
+                "pure love"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Arguably, Friar Lawrence represents religion in ‘Romeo and Juliet’.",
+            "Throughout the play, we see Friar Lawrence influencing the lives and behaviour of characters.",
+            "Potentially, we might see Shakespeare as criticising the influence of religion on society through Friar Lawrence.",
+            "Furthermore, we might see Shakespeare as criticising Catholicism through Friar Lawrence."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does influence mean?",
+      "back": "The capacity to have an effect on the character, development, or behaviour of someone or something."
+    },
+    {
+      "front": "What does it mean to represent something?",
+      "back": "To give a clear understanding or impression of: to describe or present clearly."
+    },
+    {
+      "front": "What is deceit?",
+      "back": "The action or practice of deceiving someone by concealing or misrepresenting the truth."
+    },
+    {
+      "front": "What is Catholicism?",
+      "back": "The faith, practice, and church order of the Roman Catholic Church."
+    },
+    {
+      "front": "Name three ways Friar Lawrence influences events in the play.",
+      "back": "He facilitates the marriage, counsels Romeo to go to Mantua after his banishment, and provides Juliet with the potion to fake her own death."
+    },
+    {
+      "front": "What is Friar Lawrence trying to achieve by marrying Romeo and Juliet?",
+      "back": "To provide a solution to a social problem: ending the feud between the Montagues and Capulets."
+    },
+    {
+      "front": "Which lines show Friar Lawrence’s hope for the marriage?",
+      "back": "“For this alliance may so happy prove / To turn your households’ rancor to pure love.” (Act 2, Scene 3)"
+    },
+    {
+      "front": "Why might we see Friar Lawrence as deceitful and secretive?",
+      "back": "He knows of the marriage but does not tell their parents, and lets Juliet fake her own death rather than admit she cannot marry Count Paris."
+    },
+    {
+      "front": "What does Friar Lawrence do in Act 5, Scene 3 that might make him seem cowardly?",
+      "back": "He abandons Juliet in the tomb because “a noise did scare me from the tomb”."
+    },
+    {
+      "front": "What might “Art thou a man?” suggest?",
+      "back": "That Friar Lawrence is questioning Romeo’s masculinity (Act 3, Scene 3)."
+    },
+    {
+      "front": "Why can we arguably see Friar Lawrence as representing Catholicism?",
+      "back": "A “Friar” belongs to the Roman Catholic religious orders, and Catholicism was the predominant religion of Italy, where the play is set, in the Elizabethan Era."
+    },
+    {
+      "front": "How did Queen Elizabeth I deal with the Catholic threat?",
+      "back": "To strengthen her position, she passed laws to try to minimise it. Arguably, she would have wanted Catholicism represented negatively in literature."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘Romeo and Juliet’: exploring the influence of religion on society",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Friar Lawrence has the capacity to affect the characters and their behaviour. Which keyword names this? (one word)",
+        "answer": "influence",
+        "accepted": [],
+        "explanation": "Influence means the capacity to have an effect on the character, development, or behaviour of someone or something."
+      },
+      {
+        "prompt": "After Romeo’s banishment, to which place does Friar Lawrence counsel him to go?",
+        "answer": "mantua",
+        "accepted": [],
+        "explanation": "He counsels Romeo to go to Mantua and agrees to send him news of Verona."
+      },
+      {
+        "prompt": "What does Friar Lawrence provide for Juliet that allows her to fake her own death?",
+        "answer": "a potion",
+        "accepted": [
+          "potion",
+          "the potion"
+        ],
+        "explanation": "He provides Juliet with the potion that allows her to fake her own death."
+      },
+      {
+        "prompt": "Complete the line from Act 5, Scene 3: “a noise did scare me from the ______”.",
+        "answer": "tomb",
+        "accepted": [
+          "the tomb"
+        ],
+        "explanation": "Friar Lawrence abandons Juliet in the tomb because of a noise."
+      },
+      {
+        "prompt": "Which noun means the action or practice of deceiving someone by concealing or misrepresenting the truth?",
+        "answer": "deceit",
+        "accepted": [],
+        "explanation": "Friar Lawrence keeping the marriage from the parents can be interpreted as deceitful."
+      },
+      {
+        "prompt": "Complete Friar Lawrence’s line: “To turn your households’ ______ to pure love.”",
+        "answer": "rancor",
+        "accepted": [
+          "rancour"
+        ],
+        "explanation": "He hopes the marriage will end the feud between the Montagues and Capulets."
+      },
+      {
+        "prompt": "Which religion was predominant in Italy, where the play is set, in the Elizabethan Era?",
+        "answer": "catholicism",
+        "accepted": [],
+        "explanation": "Catholicism was the predominant religion of Italy at that time."
+      },
+      {
+        "prompt": "Which queen was Protestant: Elizabeth I or Mary I?",
+        "answer": "elizabeth i",
+        "accepted": [
+          "queen elizabeth i",
+          "elizabeth",
+          "queen elizabeth"
+        ],
+        "explanation": "Queen Elizabeth I was Protestant; her predecessor Queen Mary I was Catholic."
+      },
+      {
+        "prompt": "Which queen, Elizabeth I’s predecessor, was Catholic?",
+        "answer": "mary i",
+        "accepted": [
+          "queen mary i",
+          "mary",
+          "queen mary"
+        ],
+        "explanation": "Queen Elizabeth I’s predecessor, Queen Mary I, was Catholic."
+      }
+    ]
+  }
+}

@@ -1,0 +1,589 @@
+{
+  "agent": "physics-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe what a star is and how it forms."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Stars"
+            },
+            {
+              "title": "Formation of a protostar"
+            },
+            {
+              "title": "A star is born"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "star",
+              "def": "A ball of very hot gas and plasma that emits radiation and is powered by nuclear fusion in its core."
+            },
+            {
+              "term": "nebula",
+              "def": "A region of space containing traces of gas (mostly hydrogen) and dust."
+            },
+            {
+              "term": "protostar",
+              "def": "A dense, hot ball of gas formed by a collapsed nebula."
+            },
+            {
+              "term": "nuclear fusion",
+              "def": "The process of merging small nuclei into larger nuclei with the release of energy."
+            },
+            {
+              "term": "main sequence star",
+              "def": "The stable period of a star when it is fusing hydrogen in its core."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stars in the night sky",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we look up at the night sky we see thousands of stars."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Stars twinkle because their light passes through moving air in Earth’s atmosphere.",
+            "The stars we can see are the brightest, nearby stars. They are only a tiny fraction of the billions of stars that are too faint or too far away to see with the naked eye."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Milky Way galaxy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "All the stars we can see are part of the {Milky Way} galaxy: a collection of around 300 billion stars."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The galaxy is held together by the force of gravity.",
+            "It rotates around its centre, taking about 240 million years for each turn.",
+            "All the stars inside it are in constant motion, including the Sun."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The only star inside our solar system is the Sun. All the other stars are outside the solar system, in the Milky Way."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The Sun is a star",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The Sun is a medium sized star, about 5 billion years old. It is just one of the 300 billion stars in our galaxy. Eight planets orbit it as it travels around the Milky Way."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Every star is a ball of hot gas and plasma, just like the Sun.",
+            "Stars are powered by nuclear fusion reactions in their cores. These release large amounts of energy that heat the star.",
+            "Hot stars emit electromagnetic radiation, including visible light. That is why we can see them."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why does the Sun look so different from other stars?",
+          "text": "It is much closer. Other stars are so far away that they look like tiny, faint points of light."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stars come in different sizes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some stars are smaller and dimmer than the Sun. Some are much larger and brighter."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Betelgeuse",
+              "sub": "A star in the constellation of Orion. Its diameter is over 600 times that of the Sun. It is cooler than the Sun, so it is reddish. It is about 80 000 times as bright."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "All stars are approximately spherical. They are not really pointy or ‘star shaped’."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: stars",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Betelgeuse is a cooler star than the Sun. What colour does that make it?",
+              "options": [
+                "Reddish",
+                "White",
+                "Blue"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Which shape are all stars, approximately?",
+              "options": [
+                "Spherical",
+                "Flat and pointy"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "What powers a star?",
+              "options": [
+                "Burning like a fire",
+                "Light from the Sun",
+                "Nuclear fusion reactions in its core"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is the Milky Way?",
+              "options": [
+                "A galaxy of about 300 billion stars",
+                "A single very large star",
+                "One of the planets in the solar system"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Stars have a life cycle",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stars can last for billions of years, but they are not unchanging. They pass through a life cycle."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A star is formed.",
+            "It has a stable period.",
+            "Then it starts to change before it gradually fades out or even explodes."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The Sun is about halfway through its stable period. It will begin to change significantly in about 5 billion years."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 1: a nebula collapses",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Stars are formed from a {nebula}: a region of space containing traces of gas and dust."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Most of the gas is hydrogen that was produced at the beginning of the Universe.",
+            "The dust is very fine particles of material formed in older stars. Those stars broke apart or exploded and scattered dust through the Milky Way.",
+            "A nebula can start to collapse when it is disturbed by stars or other objects passing nearby.",
+            "Gravitational forces pull the gas and dust particles closer together. The closer they get, the stronger the forces, so they accelerate towards each other. Over millions of years the nebula becomes denser."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 2: a protostar forms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "As the nebula collapses, gravitational forces compress it into a rotating sphere with a much higher density than the original nebula."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The particles are moving very quickly, so the temperature of this ball of gas is very high.",
+            "This ball of hot dense gas is called a {protostar}.",
+            "The pressure and temperature in its core are much higher than at its surface.",
+            "Some material from the nebula forms a disc rotating around the protostar. This material may go on to form planets."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the word",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each word to its meaning.",
+          "pairs": [
+            {
+              "a": "nebula",
+              "b": "A region of space containing traces of gas (mostly hydrogen) and dust"
+            },
+            {
+              "a": "protostar",
+              "b": "A dense, hot ball of gas formed by a collapsed nebula"
+            },
+            {
+              "a": "nuclear fusion",
+              "b": "Merging small nuclei into larger nuclei with the release of energy"
+            },
+            {
+              "a": "main sequence star",
+              "b": "A star in its stable period, fusing hydrogen in its core"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 3: fusion begins",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In a protostar, gravitational forces pull material inwards and the pressure from the hot core pushes outwards. If the protostar keeps absorbing material, the gravitational forces get larger, and the pressure and temperature of the core rise even further."
+        },
+        {
+          "t": "text",
+          "text": "Eventually the pressure in the core is high enough for **nuclear fusion** to begin. Small nuclei merge to form heavier nuclei, releasing large amounts of radiation that heat the centre of the star even more."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "hydrogen nucleus",
+              "add": "hydrogen nucleus",
+              "result": "helium nucleus",
+              "note": "Two hydrogen nuclei can fuse. The new nucleus has two protons, so it is helium."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A star is born",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Gamma radiation is released in the core and heats all the material in the star as it is absorbed. The object is now hot enough to emit large amounts of radiation from its surface, including infrared radiation and visible light. The protostar has become a star."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The size of the new star depends on how much material it gathered from the nebula.",
+            "The new star is in the main sequence of its life cycle. Its size and temperature stay fairly constant.",
+            "Most stars, including the Sun, are main sequence stars. They stay there while they fuse hydrogen in their cores.",
+            "The larger the star, the faster it uses up its hydrogen fuel, and the less time it spends in the main sequence."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: which stays longest?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct answer.",
+          "items": [
+            {
+              "q": "Which star stays in the main sequence for the longest time?",
+              "options": [
+                "A star with a very large mass",
+                "A star with a small mass"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A larger star uses up its hydrogen fuel…",
+              "options": [
+                "more slowly",
+                "at the same rate as a smaller star",
+                "faster"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is created when the fusion of two hydrogen nuclei happens?",
+              "options": [
+                "Helium",
+                "Carbon",
+                "Oxygen"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Before or after fusion starts?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Tap each item, then tap when it happens.",
+          "columns": [
+            "Before fusion starts",
+            "After fusion starts"
+          ],
+          "items": [
+            {
+              "text": "A cloud of gas and dust is pulled together by gravity",
+              "col": 0
+            },
+            {
+              "text": "Hydrogen nuclei fuse in the core",
+              "col": 1
+            },
+            {
+              "text": "A rotating ball of gas called a protostar",
+              "col": 0
+            },
+            {
+              "text": "A main sequence star",
+              "col": 1
+            },
+            {
+              "text": "Gamma radiation is released in the core",
+              "col": 1
+            },
+            {
+              "text": "A nebula is disturbed and starts to collapse",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The Milky Way galaxy contains billions of stars. A star is a hot ball of gas and plasma that gives out radiation, powered by nuclear fusion in its core.",
+            "A nebula is a region of space containing gas (mostly hydrogen) and dust. A protostar forms when a nebula collapses because of gravitational attraction.",
+            "A protostar becomes a star if the pressure in its core is high enough for nuclear fusion reactions to begin.",
+            "Stars have life cycles that typically last billions of years."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a star?",
+      "back": "A ball of very hot gas and plasma that emits radiation and is powered by nuclear fusion in its core."
+    },
+    {
+      "front": "What is the Milky Way?",
+      "back": "The galaxy that contains all the stars we can see: a collection of around 300 billion stars held together by gravity."
+    },
+    {
+      "front": "Why do stars twinkle?",
+      "back": "Their light passes through moving air in Earth’s atmosphere."
+    },
+    {
+      "front": "Why does the Sun look so different from other stars?",
+      "back": "It is much closer to us. Other stars look like tiny, faint points of light."
+    },
+    {
+      "front": "What is a nebula?",
+      "back": "A region of space containing traces of gas (mostly hydrogen) and dust."
+    },
+    {
+      "front": "What is a protostar?",
+      "back": "A dense, hot ball of gas formed by a collapsed nebula."
+    },
+    {
+      "front": "What makes a nebula start to collapse?",
+      "back": "It is disturbed by stars or other objects passing nearby, and gravitational forces then pull the gas and dust together."
+    },
+    {
+      "front": "Why does a collapsing nebula get very hot?",
+      "back": "The particles accelerate towards each other and move very quickly, so the temperature is very high."
+    },
+    {
+      "front": "What is nuclear fusion?",
+      "back": "The process of merging small nuclei into larger nuclei with the release of energy."
+    },
+    {
+      "front": "What happens when two hydrogen nuclei fuse?",
+      "back": "They form a helium nucleus (two protons)."
+    },
+    {
+      "front": "When does a protostar become a star?",
+      "back": "When the pressure in its core is high enough for nuclear fusion reactions to begin."
+    },
+    {
+      "front": "What is a main sequence star?",
+      "back": "A star in its stable period, fusing hydrogen in its core. Its size and temperature stay fairly constant."
+    },
+    {
+      "front": "Do larger stars spend more or less time in the main sequence?",
+      "back": "Less time, because they use up their hydrogen fuel faster."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Birth of a star",
+    "instructions": "Answer each question with a word or a number. Use what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "About how many stars are in the Milky Way galaxy?",
+        "answer": "300 billion",
+        "accepted": [
+          "300 000 million",
+          "300,000 million",
+          "300000 million",
+          "around 300 billion",
+          "about 300 billion"
+        ],
+        "explanation": "The Milky Way is a collection of around 300 billion stars."
+      },
+      {
+        "prompt": "What force holds the Milky Way galaxy together?",
+        "answer": "gravity",
+        "accepted": [
+          "gravitational force",
+          "the force of gravity",
+          "gravitational forces",
+          "the gravitational force"
+        ],
+        "explanation": "The galaxy is held together by the force of gravity."
+      },
+      {
+        "prompt": "What process powers the stars?",
+        "answer": "nuclear fusion",
+        "accepted": [
+          "fusion",
+          "nuclear fusion reactions",
+          "nuclear fusion reaction",
+          "fusion reactions"
+        ],
+        "explanation": "Stars are powered by nuclear fusion reactions in their cores."
+      },
+      {
+        "prompt": "What is the most common gas in a nebula?",
+        "answer": "hydrogen",
+        "accepted": [
+          "hydrogen gas"
+        ],
+        "explanation": "Most of the gas in a nebula is hydrogen produced at the beginning of the Universe."
+      },
+      {
+        "prompt": "Which element is produced when two hydrogen nuclei fuse?",
+        "answer": "helium",
+        "accepted": [
+          "helium nucleus"
+        ],
+        "explanation": "The new nucleus has two protons, so it is helium."
+      },
+      {
+        "prompt": "Which type of radiation is released in a star’s core by nuclear fusion and heats the material of the star?",
+        "answer": "gamma",
+        "accepted": [
+          "gamma radiation",
+          "gamma rays",
+          "gamma ray"
+        ],
+        "explanation": "Gamma radiation is released in the core and heats the material as it is absorbed."
+      },
+      {
+        "prompt": "About how many years does the Milky Way take to rotate once around its centre?",
+        "answer": "240 million",
+        "accepted": [
+          "240 million years",
+          "240,000,000",
+          "240000000",
+          "240 000 000",
+          "240,000,000 years"
+        ],
+        "explanation": "It takes about 240 million years for each turn."
+      },
+      {
+        "prompt": "About how many billion years old is the Sun?",
+        "answer": "5",
+        "accepted": [
+          "five",
+          "5 billion",
+          "five billion",
+          "5 billion years",
+          "five billion years"
+        ],
+        "explanation": "The Sun is about 5 billion years old."
+      },
+      {
+        "prompt": "Where in a protostar are the temperature and pressure greatest: at its surface or in its core?",
+        "answer": "core",
+        "accepted": [
+          "the core",
+          "its core",
+          "in the core",
+          "in its core",
+          "centre",
+          "the centre",
+          "in the centre"
+        ],
+        "explanation": "The material is most compressed in the core."
+      },
+      {
+        "prompt": "Betelgeuse has a diameter over how many times that of the Sun?",
+        "answer": "600",
+        "accepted": [
+          "600 times",
+          "over 600",
+          "over 600 times"
+        ],
+        "explanation": "Betelgeuse’s diameter is over 600 times the diameter of the Sun."
+      }
+    ]
+  }
+}

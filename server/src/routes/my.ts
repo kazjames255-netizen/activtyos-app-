@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { eraseChildLearning } from "../lib/hubPrivacy";
 import { z } from "zod";
 import { db } from "../firebase";
 import { librarySnap, loadSettings } from "../lib/tenantLibrary";
@@ -2715,6 +2716,8 @@ my.delete("/children/:id", async (req, res) => {
     res.status(409).json({ error: `${snap.get("name") ?? "This child"} is still booked in${refs.length ? ` (${refs.slice(0, 3).join(", ")}${refs.length > 3 ? ` and ${refs.length - 3} more` : ""})` : ""}. Cancel ${(refs.length || live.length) === 1 ? "that booking" : "those bookings"} first.` });
     return;
   }
+  // Learning Hub: enrolments, homework, flashcard progress, quiz attempts, mastery and lesson attendance go with the child (lib/hubPrivacy.ts).
+  await eraseChildLearning(snap.id);
   await snap.ref.set({ archived: true, archivedAt: new Date().toISOString() }, { merge: true });
   res.json({ ok: true, archived: true });
 });

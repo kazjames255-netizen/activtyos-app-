@@ -1,0 +1,277 @@
+
+=== PAGE 1 ===
+ActivityOS — Tutor Vertical
+Assessment Content Build Spec: Curriculum-Mapped Question Bank
+Purpose: everything needed to seed the Learning Hub's assessments, quizzes, course notes and mastery
+dashboard with original, curriculum-aligned content — for handoff to Claude Code as an engineering build task.
+Source: UK Department for Education National Curriculum in England, Mathematics programmes of study
+(updated 6 July 2020). Published under the Open Government Licence v3.0 — Crown copyright material
+explicitly released for free reuse and adaptation. No licensing risk in using these objectives as the basis for
+original questions.
+Prepared for Kaz James — ActivityOS / APF Activity Camps. Scope: Key Stage 2 Mathematics (Years 3–6). English and
+further subjects to follow as a second pass.
+
+=== PAGE 2 ===
+1. Data Schema (already agreed — for reference)
+These are the tables the generated content must conform to. Claude Code should validate every generated
+question against this shape before insert.
+topics
+tenant_id, subject, topic, subtopic, parent_topic_id
+assessments
+tenant_id, topic_id, type (diagnostic | quiz | homework),
+questions: JSON [
+{ question, options[], correct_answer, explanation }
+],
+created_by (tutor_id)
+assessment_attempts
+tenant_id, assessment_id, student_id, answers (JSON), score, completed_at
+course_notes
+tenant_id, topic_id, title, body, attachments[], created_by
+flashcards
+tenant_id, topic_id, front, back, created_by
+flashcard_reviews
+tenant_id, student_id, flashcard_id, last_reviewed_at, next_due_at, ease_factor
+mastery_scores (computed view)
+tenant_id, student_id, topic_id, score
+2. Topic Taxonomy — KS2 Maths (Years 3–6)
+10 top-level topics, each with a subtopic row per year group (Y3/Y4/Y5/Y6). Objectives below are condensed
+from the DfE programme of study — enough for Claude Code (or an LLM generation step) to write calibrated
+original questions per topic/year without re-fetching the source document.
+Number & Place Value
+Year 3
+Count in multiples of 4, 8, 50, 100. Recognise place value in 3-digit numbers. Compare/order numbers to 1,000.
+Read and write numbers to 1,000 in numerals and words.
+Year 4
+Count in multiples of 6, 7, 9, 25, 1,000. Place value in 4-digit numbers. Order/compare beyond 1,000. Round to
+nearest 10/100/1,000. Roman numerals to 100.
+Year 5
+Read/write/order/compare numbers to 1,000,000. Count forwards/backwards in powers of 10. Interpret negative
+numbers in context. Round to nearest 10/100/1,000/10,000/100,000. Roman numerals to 1,000.
+Year 6
+Read/write/order/compare numbers up to 10,000,000. Round any whole number to a required degree of
+accuracy. Use negative numbers in context; calculate intervals across zero.
+Addition & Subtraction
+
+=== PAGE 3 ===
+Year 3
+Mentally add/subtract a 3-digit number and 1s/10s/100s. Formal written columnar addition/subtraction to 3
+digits. Estimate and use inverse operations to check.
+Year 4
+Formal written methods to 4 digits. Estimate and use inverse operations. Solve two-step addition/subtraction
+problems in context.
+Year 5
+Formal written methods with numbers of more than 4 digits. Mental calculation with increasingly large numbers.
+Use rounding to check answers. Multi-step problems in context.
+Year 6
+Perform mental calculations including mixed operations and large numbers. Solve multi-step problems, deciding
+which operations/methods to use and why.
+Multiplication & Division
+Year 3
+Recall multiplication/division facts for 3, 4 and 8 times tables. Multiply two-digit by one-digit numbers. Solve
+problems involving scaling and correspondence (n objects to m objects).
+Year 4
+Recall tables up to 12×12. Multiply two/three-digit numbers by one-digit using formal written layout. Recognise
+factor pairs and commutativity. Apply the distributive law.
+Year 5
+Identify multiples, factors, common factors. Know prime numbers to 19; establish primality to 100. Long
+multiplication (up to 4-digit by 2-digit). Short division (up to 4-digit by 1-digit). Square and cube numbers.
+Multiply/divide by 10, 100, 1,000.
+Year 6
+Long multiplication (multi-digit by 2-digit). Long and short division by a 2-digit number, interpreting remainders
+appropriately. Identify common factors, common multiples and primes. Apply order of operations (BIDMAS).
+Fractions, Decimals & Percentages
+Year 3
+Count in tenths. Fractions of a discrete set of objects (unit and non-unit, small denominators). Equivalent
+fractions with small denominators. Add/subtract fractions with the same denominator.
+Year 4
+Equivalent fraction families. Count in hundredths. Fractions to calculate quantities. Decimal equivalents of 1/4,
+1/2, 3/4. Divide by 10/100. Round decimals to 1 d.p. Compare decimals to 2 d.p.
+Year 5
+Compare/order fractions with related denominators. Mixed numbers and improper fractions, converting between
+the two. Add/subtract fractions with related denominators. Multiply proper fractions and mixed numbers by whole
+numbers. Decimals to 3 d.p.; thousandths. Percentage/decimal/fraction equivalence basics (1/2, 1/4, 1/5, 2/5,
+4/5).
+
+=== PAGE 4 ===
+Year 6
+Use common factors to simplify fractions. Add/subtract fractions with different denominators. Multiply proper
+fractions. Divide a proper fraction by a whole number. Associate a fraction with division and find decimal
+equivalents. Recall fraction/decimal/percentage equivalences.
+Ratio & Proportion
+Year 3
+Not introduced — covered informally within Number and Fractions.
+Year 4
+Not introduced — covered informally within Number and Fractions.
+Year 5
+Not introduced as a standalone strand — foundational proportional reasoning built through Fractions and
+Measurement.
+Year 6
+Solve problems involving relative sizes of two quantities. Solve percentage problems (e.g. 15% of 360). Solve
+problems involving similar shapes where the scale factor is known. Solve problems involving unequal sharing
+and grouping.
+Algebra
+Year 3
+Not introduced.
+Year 4
+Not introduced.
+Year 5
+Not introduced as a standalone strand.
+Year 6
+Use simple formulae. Generate and describe linear number sequences. Express missing-number problems
+algebraically. Find pairs of numbers satisfying an equation with 2 unknowns. Enumerate combinations of 2
+variables.
+Measurement
+Year 3
+Measure/compare/add/subtract lengths, mass, capacity. Measure perimeter of simple 2-D shapes. Add/subtract
+money to give change. Tell/write time from an analogue clock incl. Roman numerals, 12- and 24-hour.
+Year 4
+Convert between units (km–m, hour–minute). Measure/calculate perimeter and area (by counting squares) of
+rectilinear shapes. Estimate/compare/calculate money. Convert time between analogue/digital and 12-/24-hour.
+Year 5
+
+=== PAGE 5 ===
+Convert between metric units. Approximate metric–imperial equivalences. Perimeter of composite rectilinear
+shapes. Area of rectangles (cm², m²). Estimate volume and capacity. Convert units of time. Use all 4 operations
+with measures, including decimals.
+Year 6
+Calculate and convert units of measure using decimal notation to 3 d.p. Convert miles/kilometres. Understand
+area/perimeter relationships. Calculate area of parallelograms and triangles. Calculate/compare volume of
+cubes and cuboids.
+Geometry — Properties of Shapes
+Year 3
+Draw 2-D shapes, make 3-D shapes. Recognise angles as a property of shape or a description of a turn. Identify
+right angles. Identify horizontal/vertical and perpendicular/parallel lines.
+Year 4
+Compare/classify shapes including quadrilaterals and triangles. Identify acute and obtuse angles;
+compare/order angles. Identify lines of symmetry. Complete a symmetric figure.
+Year 5
+Identify 3-D shapes from 2-D representations. Know angles are measured in degrees; estimate, compare, draw
+and measure angles. Identify angles at a point and on a straight line. Use properties of rectangles to find
+missing lengths/angles. Distinguish regular/irregular polygons.
+Year 6
+Draw 2-D shapes using given dimensions/angles. Build 3-D shapes including nets. Classify shapes and find
+unknown angles in triangles, quadrilaterals and polygons. Name parts of a circle. Recognise angles at a point,
+on a line, and vertically opposite.
+Geometry — Position & Direction
+Year 3
+Introduced informally within shape work — no standalone strand until Year 4.
+Year 4
+Describe positions on a 2-D grid as coordinates (first quadrant). Describe movements as translations. Plot
+points and draw polygons.
+Year 5
+Identify, describe and represent the position of a shape following a reflection or translation on a 2-D grid (first
+quadrant).
+Year 6
+Describe positions on the full coordinate grid (all 4 quadrants). Draw and translate shapes on the coordinate
+plane; reflect in the axes.
+Statistics
+Year 3
+
+=== PAGE 6 ===
+Interpret/present data using bar charts, pictograms and tables. Solve one- and two-step questions using scaled
+bar charts/pictograms/tables.
+Year 4
+Interpret/present discrete and continuous data (bar charts, time graphs). Solve comparison, sum and difference
+problems from graphs.
+Year 5
+Solve comparison/sum/difference problems using line graphs. Complete, read and interpret tables, including
+timetables.
+Year 6
+Interpret/construct pie charts and line graphs. Calculate and interpret the mean as an average.
+
+=== PAGE 7 ===
+3. Schema-Ready Sample Content (fully built — use as the
+style template)
+These two topic/year combinations are built out completely and validated against the schema in Section 1.
+Claude Code should treat these as the calibration reference for tone, difficulty and JSON shape when
+generating the remaining topics.
+Number & Place Value — Year 6
+Objectives covered: read/write/order/compare numbers up to 10,000,000; round any whole number to a required
+degree of accuracy; use negative numbers in context including calculating intervals across zero.
+{
+"tenant_id": "{tenant}",
+"topic": {"subject": "Maths", "topic": "Number & Place Value", "subtopic": "Year 6"},
+"type": "quiz",
+"questions": [
+{
+"question": "Round 6,847,392 to the nearest 100,000.",
+"options": ["6,800,000", "6,900,000", "6,850,000", "7,000,000"],
+"correct_answer": "6,800,000",
+"explanation": "The ten-thousands digit is 4, so round down: 6,847,392 rounds to 6,800,000."
+},
+{
+"question": "What is the value of the digit 5 in 3,592,146?",
+"options": ["5,000", "50,000", "500,000", "5,000,000"],
+"correct_answer": "500,000",
+"explanation": "The 5 is in the hundred-thousands column, so its value is 500,000."
+},
+{
+"question": "The temperature is -4C at 6am. By noon it has risen by 9C. What is the temperature at noon?",
+"options": ["5C", "13C", "-13C", "4C"],
+"correct_answer": "5C",
+"explanation": "Moving 9 degrees up from -4 crosses zero: -4 + 9 = 5C."
+}
+]
+}
+Fractions, Decimals & Percentages — Year 6
+Objectives covered: add/subtract fractions with different denominators; multiply proper fractions; divide a proper
+fraction by a whole number; recall fraction/decimal/percentage equivalences.
+{
+"tenant_id": "{tenant}",
+"topic": {"subject": "Maths", "topic": "Fractions, Decimals & Percentages", "subtopic": "Year 6"},
+"type": "quiz",
+"questions": [
+{
+"question": "Work out 2/3 + 1/6. Give your answer in its simplest form.",
+"options": ["3/9", "5/6", "3/6", "1/2"],
+"correct_answer": "5/6",
+"explanation": "Convert 2/3 to 4/6, then 4/6 + 1/6 = 5/6, already in simplest form."
+},
+{
+"question": "What is 1/4 divided by 2?",
+"options": ["1/2", "1/6", "1/8", "2/4"],
+"correct_answer": "1/8",
+"explanation": "Dividing a fraction by a whole number multiplies the denominator: 1/4 divided by 2 = 1/8."
+},
+{
+"question": "Which decimal is equivalent to 3/8?",
+"options": ["0.38", "0.375", "0.3", "0.83"],
+"correct_answer": "0.375",
+
+=== PAGE 8 ===
+"explanation": "3 divided by 8 = 0.375."
+}
+]
+}
+Diagnostic Assessment — construction rule
+Build each subject's diagnostic as a single mixed-topic paper pulling 1–2 questions from every topic across both
+the student's nominal year AND the year below. Score is reported per-topic (not just overall), which is what sets
+the baseline the mastery dashboard measures future quizzes against. This is a variant of the quiz type — same
+schema, type = "diagnostic", topic_id left null or set to a parent subject-level topic since it spans multiple topics.
+
+=== PAGE 9 ===
+4. Build Order for Claude Code
+1 Topics taxonomy + tenant scoping first — everything else depends on it. Seed the 10 topics x 4 years (40
+rows) from Section 2.
+2 Course notes + resource library — no dependencies, quick win, validates the topic-filter UI pattern.
+3 Quizzes + assessment_attempts + scoring — use Section 3's two topics as the generation template;
+extend to all 10 topics x 4 years using the objectives in Section 2.
+4 Diagnostic assessment as a variant of Step 3 (same components, different type + cross-topic baseline logic
+per Section 3's construction rule).
+5 Mastery dashboard — now has real attempt data to aggregate from Steps 3/4.
+6 Homework — adds a tutor-marking step on top of Step 3's submission flow.
+7 Flashcards + spaced repetition last — self-contained, no other panel depends on it.
+Anything not built for the current milestone should render greyed-out as "coming soon" per the existing
+feature-toggle pattern — not hidden.
+After each step: run node --check if applicable, confirm tenant_id scoping is enforced on every new query,
+confirm nav/data-view anchors resolve, and give a bold closing summary stating exactly what was built and
+what's next.
+5. Scope & Next Pass
+(cid:127) This spec covers KS2 Maths (Years 3–6) only, since that's the highest-value first vertical for
+baseline/end-of-unit testing.
+(cid:127) English (KS2) is the next subject to map, using the same DfE Open Government Licence source and the
+same taxonomy structure.
+(cid:127) Key Stage 1 (Years 1–2) and Key Stage 3 content exist in the same source document and can be mapped on
+request using the identical process.
+(cid:127) All content in this document is derived from Crown-copyright material published under the Open Government
+Licence v3.0 — safe to use, adapt and redistribute commercially with no licensing risk.

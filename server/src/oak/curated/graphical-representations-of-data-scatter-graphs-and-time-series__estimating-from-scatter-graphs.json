@@ -1,0 +1,504 @@
+{
+  "agent": "w4-maths-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can estimate from scatter graphs."
+        },
+        {
+          "t": "text",
+          "text": "You will learn how to draw a line of best fit and how to use it to estimate values."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Drawing a {line of best fit}"
+            },
+            {
+              "title": "Using a {line of best fit}"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "line of best fit",
+              "def": "A line of best fit is a line where the distance between each data point and the line is minimised."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A range is not very precise",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A scatter graph shows Met Office data about the weather in Heathrow for each month from 1941 to 2022: total sunshine (hours) and the mean of the daily maximum temperature (℃)."
+        },
+        {
+          "t": "text",
+          "text": "For a month with 200 hours of sunshine, most points lie between 15℃ and 25℃. So we could predict a maximum daily temperature between 15℃ and 25℃."
+        },
+        {
+          "t": "callout",
+          "text": "That is quite a broad range. What if a more precise estimate is needed? A {line of best fit} can help."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When can you draw one?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When bivariate data has correlation, the rate of change is approximately constant and the points appear to follow a straight line. A line of best fit shows the general pattern that the data follows."
+        },
+        {
+          "t": "text",
+          "text": "A line of best fit can be drawn for either positive or negative correlation."
+        },
+        {
+          "t": "callout",
+          "text": "A line of best fit is straight, so it is not an appropriate model for data that has a {non-linear association} or {no association}."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        },
+        {
+          "id": "scatter-negative"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Would a line of best fit be appropriate?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is it appropriate to draw a line of best fit?",
+          "columns": [
+            "Yes, appropriate",
+            "No, not appropriate"
+          ],
+          "items": [
+            {
+              "text": "Positive correlation",
+              "col": 0
+            },
+            {
+              "text": "Negative correlation",
+              "col": 0
+            },
+            {
+              "text": "An association which is not linear",
+              "col": 1
+            },
+            {
+              "text": "No association",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What makes a good line?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The line of best fit has the minimal possible distance between it and the data points. Try to draw the line as close as possible to as many points as possible."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Height",
+              "sub": "a line that is too high or too low is further from the points"
+            },
+            {
+              "title": "Gradient",
+              "sub": "a line that is too steep or too flat is further from the points"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Generally, the line should go roughly through the {middle} of the points and in the same direction as most of the points."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Drawing it by hand",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Computer software can calculate the optimal line of best fit. By hand, we can approximate its position:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Place your ruler over the scatter graph.",
+            "Rotate it until it follows the general direction of the data points.",
+            "Adjust the height until the top of it is near the middle of the data points.",
+            "Then draw your line."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "It may need some trial and error. Don’t just draw the line where the ruler first lands on the page."
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Do’s and don’ts",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A line of best fit may be drawn to the edge of the graph, but should not extend beyond the edge.",
+            "It does not need to go through the origin (0, 0), unless that is the best way to fit the data points."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out! Must the line start in the bottom left corner?",
+          "text": "No. The line of best fit can start anywhere on the vertical axis, depending on the distribution of the data points. A negative correlation shows this clearly."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check the line",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which statement about a line of best fit is true?",
+          "options": [
+            "It must always go through the origin",
+            "It can start anywhere on the vertical axis, depending on the points",
+            "It should be drawn wherever the ruler first lands"
+          ],
+          "answer": 1,
+          "why": "The line follows the distribution of the points, so it does not have to start at the origin."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Using the line to estimate",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A line of best fit can be used to estimate the value of one variable given the value of another."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Find the value on the horizontal axis (200 hours of sunshine).",
+            "Go up to the line of best fit.",
+            "Go across to the vertical axis and read the value."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "For Heathrow this gives a maximum daily temperature of 20.5℃, a more precise estimate than the range 15℃ to 25℃."
+        },
+        {
+          "t": "reveal",
+          "label": "Will it definitely be 20.5℃?",
+          "text": "No. It is not guaranteed; this is an estimate. Some months have been warmer than 20.5℃ and some have been colder."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Reading thousands",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Another graph, from the ONS, has the population (in thousands) on the horizontal axis and transport emissions (kt CO2e) on the vertical axis. Each point is a region in the UK. The line of best fit is provided."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A point on the line at 600 on the horizontal axis stands for a population of 600 000.",
+            "To estimate emissions for a population of 200 000, look for 200 on the horizontal axis, go up to the line, then across. The estimate is 300 kt CO2e."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Axis numbers in {thousands}: the number 200 stands for 200 000."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Read the line",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A line of best fit is straight, so a horizontal value halfway between two points on the line gives a vertical value halfway between their vertical values."
+        },
+        {
+          "t": "choices",
+          "q": "Use the readings from the line of best fit to estimate the missing value.",
+          "items": [
+            {
+              "q": "The line passes through horizontal 10 with vertical 30, and horizontal 30 with vertical 70. What is the vertical value for horizontal 20?",
+              "options": [
+                "40",
+                "50",
+                "60"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The line passes through horizontal 20 with vertical 80, and horizontal 60 with vertical 40. What is the vertical value for horizontal 40?",
+              "options": [
+                "50",
+                "70",
+                "60"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Population 100 (thousand) gives 2500 cell towers, and 300 (thousand) gives 6500. How many cell towers for a population of 200 000?",
+              "options": [
+                "4500",
+                "4000",
+                "5000"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which variable do we estimate?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex and Aisha plotted median annual income and median house prices. Aisha chose income as the independent variable (horizontal axis) and house price as the dependent variable (vertical axis)."
+        },
+        {
+          "t": "callout",
+          "text": "Lines of best fit should only be used to estimate the {dependent variable}."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check your understanding",
+      "blocks": [
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "A graph has income (independent variable) on the horizontal axis and house price (dependent variable) on the vertical axis. Which variable should you use the line of best fit to estimate?",
+              "options": [
+                "Income",
+                "House price"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A line of best fit is a line where the distance between each data point and the line is…",
+              "options": [
+                "maximised",
+                "minimised",
+                "always zero"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "An estimate from the line of best fit, such as 20.5℃, is…",
+              "options": [
+                "guaranteed to be exactly right",
+                "an estimate that is not guaranteed",
+                "always the highest value"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "When bivariate data has correlation, you can draw a line of best fit on its scatter graph.",
+            "The line of best fit should represent the trend of the data.",
+            "It can be used to estimate the values of a data point, but an estimate is not guaranteed.",
+            "Lines of best fit should only be used to estimate the dependent variable."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "scatter-graph"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a line of best fit?",
+      "back": "A line where the distance between each data point and the line is minimised."
+    },
+    {
+      "front": "When can you draw a line of best fit?",
+      "back": "When the data has correlation (a linear trend), whether positive or negative."
+    },
+    {
+      "front": "Is a line of best fit appropriate for a non-linear association or no association?",
+      "back": "No. A line of best fit is straight, so it is not an appropriate model for these."
+    },
+    {
+      "front": "Does a line of best fit always go through the origin?",
+      "back": "No. It can start anywhere on the vertical axis, depending on the distribution of the points."
+    },
+    {
+      "front": "Where should a line of best fit go in relation to the points?",
+      "back": "Roughly through the middle of the points, in the same direction as most of them, as close as possible to as many points as possible."
+    },
+    {
+      "front": "How can you draw a line of best fit by hand?",
+      "back": "Place a ruler over the graph, rotate it to follow the general direction of the points, adjust the height until the top is near the middle of the points, then draw the line."
+    },
+    {
+      "front": "How far can a line of best fit be drawn?",
+      "back": "To the edges of the graph, but not beyond the edge."
+    },
+    {
+      "front": "How do you use a line of best fit to estimate a value?",
+      "back": "Find the horizontal value, go up to the line, then go across to the vertical axis and read the value."
+    },
+    {
+      "front": "Heathrow: what maximum daily temperature does the line of best fit give for 200 hours of sunshine?",
+      "back": "20.5℃. It is an estimate, not guaranteed."
+    },
+    {
+      "front": "An axis is in thousands. What does 200 on the population axis stand for?",
+      "back": "200 000"
+    },
+    {
+      "front": "Which variable should lines of best fit be used to estimate?",
+      "back": "The dependent variable."
+    },
+    {
+      "front": "Why is a line of best fit better than a range for estimating?",
+      "back": "It gives a more precise single estimate. The Heathrow range 15℃ to 25℃ was quite broad."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Estimating from scatter graphs",
+    "instructions": "Answer each question with a word or a number. Where readings from a line of best fit are given, the line is straight.",
+    "questions": [
+      {
+        "prompt": "A line of best fit is a line where the distance between each data point and the line is …? (Choose: minimised or maximised.)",
+        "answer": "minimised",
+        "accepted": [
+          "minimized"
+        ],
+        "explanation": "The line of best fit is drawn so the distance between the points and the line is as small as possible."
+      },
+      {
+        "prompt": "Should you draw a line of best fit through data that has no association? Answer yes or no.",
+        "answer": "no",
+        "explanation": "A line of best fit is straight, so it is not an appropriate model for data with no association."
+      },
+      {
+        "prompt": "Does a line of best fit always have to go through the origin? Answer yes or no.",
+        "answer": "no",
+        "explanation": "It can start anywhere on the vertical axis, depending on the distribution of the data points."
+      },
+      {
+        "prompt": "Should a line of best fit only be used to estimate the independent variable or the dependent variable? Give one word.",
+        "answer": "dependent",
+        "accepted": [
+          "the dependent variable",
+          "dependent variable"
+        ],
+        "explanation": "Lines of best fit should only be used to estimate the dependent variable."
+      },
+      {
+        "prompt": "The Heathrow line of best fit gives a maximum daily temperature of 20.5℃ for a month with 200 hours of sunshine. Is this estimate guaranteed to be exactly right? Answer yes or no.",
+        "answer": "no",
+        "explanation": "It is an estimate. Some months have been warmer and some colder."
+      },
+      {
+        "prompt": "A population axis is labelled in thousands. What population, as a number, does the value 600 on that axis stand for?",
+        "answer": "600000",
+        "accepted": [
+          "600 000",
+          "600,000"
+        ],
+        "explanation": "600 thousand is 600 000."
+      },
+      {
+        "prompt": "A line of best fit passes through horizontal 10 with vertical 30, and horizontal 30 with vertical 70. What is the vertical value at horizontal 20?",
+        "answer": "50",
+        "explanation": "20 is halfway between 10 and 30, so the value is halfway between 30 and 70, which is 50."
+      },
+      {
+        "prompt": "A line of best fit passes through horizontal 20 with vertical 80, and horizontal 60 with vertical 40. What is the vertical value at horizontal 40?",
+        "answer": "60",
+        "explanation": "40 is halfway between 20 and 60, so the value is halfway between 80 and 40, which is 60."
+      },
+      {
+        "prompt": "On a line of best fit, a population of 100 thousand gives 2500 cell towers and 300 thousand gives 6500. How many cell towers does the line give for a population of 200 thousand?",
+        "answer": "4500",
+        "explanation": "200 is halfway between 100 and 300, so the value is halfway between 2500 and 6500, which is 4500."
+      }
+    ]
+  }
+}

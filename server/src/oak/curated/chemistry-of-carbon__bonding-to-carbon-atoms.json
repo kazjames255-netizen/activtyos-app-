@@ -1,0 +1,612 @@
+{
+  "agent": "w4-comb-chem",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe how each carbon atom can form up to four covalent bonds with up to four non-metal atoms."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Covalency}",
+              "sub": "how carbon bonds"
+            },
+            {
+              "title": "{Organic} compounds",
+              "sub": "chains, branches and rings"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "octet rule",
+              "def": "The tendency for atoms to fill their outer shell to 8 electrons to become stable. This occurs through chemical bonding, and results in the electron configuration of a noble gas."
+            },
+            {
+              "term": "covalent bond",
+              "def": "The strong electrostatic attraction between a shared pair of electrons and the nuclei of the bonded atoms."
+            },
+            {
+              "term": "molecule",
+              "def": "A particle consisting of a fixed number of (two or more) non-metal atoms covalently bonded together."
+            },
+            {
+              "term": "organic compound",
+              "def": "A chemical compound in which one or more atoms of carbon are covalently linked to atoms of other elements, most commonly hydrogen, oxygen, or nitrogen."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why do atoms bond?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A compound contains two or more different elements chemically combined together."
+        },
+        {
+          "t": "text",
+          "text": "Chemical bonds form because this increases the stability of substances. To become stable, a lot of elements will gain, lose or share electrons to end up with a total of 8 electrons in their outermost shell."
+        },
+        {
+          "t": "callout",
+          "text": "The {octet rule}: atoms tend to have a total of 8 electrons in their outermost (valence) shell. This is the electron arrangement of a noble gas."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Meet carbon",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "A non-metal",
+              "sub": "in Group 4 of the periodic table"
+            },
+            {
+              "title": "{4} outer electrons",
+              "sub": "carbon has 6 electrons in total"
+            },
+            {
+              "title": "Bonds to reach {8}",
+              "sub": "for a full outer shell"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "To increase its stability, a carbon atom forms chemical bonds with other atoms so that it ends up with 8 electrons in its outer shell."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The octet rule is not just for carbon. Most atoms follow it and fill their outer shells to a total of 8 electrons."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check: carbon’s shell",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A carbon atom has 4 electrons in its outer shell and needs 8. How many more electrons does it need?",
+          "options": [
+            "2",
+            "4",
+            "8"
+          ],
+          "answer": 1,
+          "why": "8 − 4 = 4. Carbon fills its outer shell with four more electrons, which it gets by sharing."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about carbon atoms is correct?",
+          "options": [
+            "Carbon is in Group 4 of the periodic table.",
+            "Carbon forms bonds to end up with 4 electrons in its outer shell.",
+            "Carbon is a metal."
+          ],
+          "answer": 0,
+          "why": "Carbon is a non-metal in Group 4. It bonds to reach 8 electrons in its outer shell, not 4."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a covalent bond?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Carbon forms covalent bonds with other non-metals. A covalent bond is made of a **shared pair of electrons**."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The pair of electrons is shared between two atoms.",
+            "The nuclei of the atoms are positively charged. The electrons are negatively charged.",
+            "The {electrostatic attraction} between the nuclei and the shared electrons is strong. It holds the atoms together."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In a covalent bond, each atom contributes one electron to the shared pair."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Up to four bonds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Carbon has four electrons in its outer shell. This means it can form up to a total of {four} covalent bonds with other non-metals. In almost all cases, carbon atoms form four bonds."
+        },
+        {
+          "t": "text",
+          "text": "The bonds can be single, double or triple bonds."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Single} bond",
+              "sub": "one shared pair of electrons"
+            },
+            {
+              "title": "{Double} bond",
+              "sub": "two shared pairs of electrons"
+            },
+            {
+              "title": "{Triple} bond",
+              "sub": "three shared pairs of electrons"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How does this add up?",
+          "text": "A double bond fills two of carbon’s four bonding sites. A triple bond fills three of them."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Count the bonds",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each type of bond to the number of shared pairs of electrons.",
+          "pairs": [
+            {
+              "a": "single bond",
+              "b": "one shared pair"
+            },
+            {
+              "a": "double bond",
+              "b": "two shared pairs"
+            },
+            {
+              "a": "triple bond",
+              "b": "three shared pairs"
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "A carbon atom has four bonding sites in total. A single bond fills one, a double bond fills two and a triple bond fills three. How many bonding sites are still free if it already has…",
+          "items": [
+            {
+              "q": "one double bond?",
+              "options": [
+                "1",
+                "2",
+                "3"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "one triple bond?",
+              "options": [
+                "1",
+                "2",
+                "3"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "two double bonds?",
+              "options": [
+                "0",
+                "1",
+                "2"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Molecules of carbon",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Carbon atoms can combine with other non-metal atoms to make a wide range of molecules. Each molecule has two or more atoms held together by covalent bonds."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "CO₂",
+              "sub": "carbon dioxide"
+            },
+            {
+              "title": "CH₄",
+              "sub": "methane"
+            },
+            {
+              "title": "CH₂O",
+              "sub": "methanal"
+            },
+            {
+              "title": "HCN",
+              "sub": "hydrogen cyanide"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Dot-and-cross diagrams model the covalent bonding in these molecules. They use dots and crosses to show the outer shell electrons of different atoms."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sharing in methane",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In methane, CH₄, the carbon atom shares one of its four outer electrons with each of the four hydrogen atoms."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Carbon began with 4 outer electrons. Sharing gives it 8.",
+            "Each hydrogen atom began with 1 electron. Sharing gives it 2.",
+            "Hydrogen only has one shell, and that shell holds 2 electrons when full."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Hydrogen is the exception to the octet rule. It is full with 2 electrons, not 8."
+        },
+        {
+          "t": "text",
+          "text": "Remember: in each covalent bond there is a pair of electrons in the shared space between the two atoms."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Other molecules",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "CO₂",
+              "sub": "carbon has two double bonds, one to each oxygen"
+            },
+            {
+              "title": "CH₂O",
+              "sub": "carbon has two single bonds to hydrogen and one double bond to oxygen"
+            },
+            {
+              "title": "HCN",
+              "sub": "carbon has one single bond to hydrogen and one triple bond to nitrogen"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Count them up",
+          "text": "In every one, carbon has four bonds in total, so its outer shell holds 8 electrons: 2 + 2 in CO₂, 1 + 1 + 2 in CH₂O and 1 + 3 in HCN."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Does the carbon have four bonds?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort each carbon atom by its bonds. Does it have four bonds in total?",
+          "columns": [
+            "Four bonds: full outer shell",
+            "Fewer than four: not stable"
+          ],
+          "items": [
+            {
+              "text": "Four single bonds (as in CH₄)",
+              "col": 0
+            },
+            {
+              "text": "Two double bonds (as in CO₂)",
+              "col": 0
+            },
+            {
+              "text": "One single bond and one triple bond (as in HCN)",
+              "col": 0
+            },
+            {
+              "text": "Two single bonds only (as in CH₂)",
+              "col": 1
+            },
+            {
+              "text": "One double bond and one single bond only",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Organic compounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are more carbon-containing compounds than compounds of any other element except hydrogen. This is due to the unique properties of carbon atoms."
+        },
+        {
+          "t": "callout",
+          "text": "An {organic compound} contains two or more elements, and one of them is carbon. The atoms are held together by covalent bonding."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A lot of organic compounds also include hydrogen, oxygen and nitrogen.",
+            "There are some exceptions. Substances like carbon dioxide are not usually considered to be organic compounds."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Shapes and sources",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Organic compounds come in all shapes and sizes. Their carbon atoms can form:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "straight chains",
+            "branched chains",
+            "rings"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "They can be found in nature, and they can also be produced synthetically."
+        },
+        {
+          "t": "match",
+          "q": "Match each organic compound to its description.",
+          "pairs": [
+            {
+              "a": "alanine (C₃H₇NO₂)",
+              "b": "an amino acid"
+            },
+            {
+              "a": "guanine (C₅H₅N₅O)",
+              "b": "found in DNA"
+            },
+            {
+              "a": "polymers",
+              "b": "very long carbon chains, made in a laboratory or on an industrial scale"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Families",
+          "text": "Because carbon forms so many compounds, we group them into families with similar properties, such as the alkane, alkene and alcohol families."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Organic or not?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is an organic compound?",
+          "options": [
+            "hydrogen chloride, HCl",
+            "ethanol, C₂H₅OH",
+            "sulfuric acid, H₂SO₄"
+          ],
+          "answer": 1,
+          "why": "Ethanol contains carbon joined to hydrogen and oxygen. HCl and H₂SO₄ contain no carbon atoms."
+        },
+        {
+          "t": "choice",
+          "q": "What is the smallest number of different elements in an organic compound?",
+          "options": [
+            "1",
+            "2",
+            "3"
+          ],
+          "answer": 1,
+          "why": "A compound has two or more elements, and in an organic compound one of them is carbon."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about organic compounds is true?",
+          "options": [
+            "They are only found in nature.",
+            "They can be produced synthetically.",
+            "They can only exist as short chains."
+          ],
+          "answer": 1,
+          "why": "Organic compounds are found in nature but can also be made synthetically. They can be long or short chains, branched chains or rings."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Bonding to carbon atoms",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Carbon atoms form up to four covalent bonds, filling their outer shell with four more electrons.",
+            "Carbon atoms can combine with other non-metal atoms to make a wide range of molecules, some with chains and rings.",
+            "An organic compound contains two or more elements (including carbon).",
+            "A lot of organic compounds also include hydrogen, oxygen and nitrogen.",
+            "Organic compounds can be found in nature, but also produced synthetically."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How many electrons are in the outer shell of a carbon atom?",
+      "back": "4. Carbon is a non-metal in Group 4."
+    },
+    {
+      "front": "What is the octet rule?",
+      "back": "The tendency for atoms to fill their outer shell to 8 electrons to become stable."
+    },
+    {
+      "front": "Which stable atoms have the electron arrangement that the octet rule aims for?",
+      "back": "The noble gases."
+    },
+    {
+      "front": "How many covalent bonds can a carbon atom form, at most?",
+      "back": "Four, with up to four other non-metal atoms. It fills its outer shell with four more electrons."
+    },
+    {
+      "front": "What is a covalent bond?",
+      "back": "The strong electrostatic attraction between a shared pair of electrons and the nuclei of the bonded atoms."
+    },
+    {
+      "front": "How many shared pairs of electrons are in a single, a double and a triple bond?",
+      "back": "Single: one pair. Double: two pairs. Triple: three pairs."
+    },
+    {
+      "front": "What is a molecule?",
+      "back": "A particle consisting of a fixed number of (two or more) non-metal atoms covalently bonded together."
+    },
+    {
+      "front": "What do the dots and crosses in a dot-and-cross diagram show?",
+      "back": "The outer shell electrons of the different atoms, and how they are shared in covalent bonds."
+    },
+    {
+      "front": "How many electrons does a hydrogen atom have when its outer shell is full?",
+      "back": "2. Hydrogen is the exception to the octet rule."
+    },
+    {
+      "front": "What is an organic compound?",
+      "back": "A compound with two or more elements, one of which is carbon, held together by covalent bonds. Most often the others are hydrogen, oxygen or nitrogen."
+    },
+    {
+      "front": "Name the three kinds of structure that the carbon atoms in organic compounds can make.",
+      "back": "Straight chains, branched chains and rings."
+    },
+    {
+      "front": "Are organic compounds only found in nature?",
+      "back": "No. They are found in nature but can also be made synthetically, for example polymers (very long carbon chains)."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Bonding to carbon atoms",
+    "instructions": "Answer each question with a word or a number. Use the words from the lesson.",
+    "questions": [
+      {
+        "prompt": "Fill in the gap using the word organic, carbon or covalent. An ___ compound is a compound that contains two or more elements (where one is carbon).",
+        "answer": "organic",
+        "explanation": "An organic compound has two or more elements, and one of them is carbon."
+      },
+      {
+        "prompt": "Fill in the gap using the word organic, carbon or covalent. An organic compound contains two or more elements, where one is ___.",
+        "answer": "carbon",
+        "explanation": "In an organic compound one of the elements has to be carbon."
+      },
+      {
+        "prompt": "Fill in the gap using the word organic, carbon or covalent. In an organic compound the atoms are held together through ___ bonding.",
+        "answer": "covalent",
+        "explanation": "The atoms are held together by covalent bonds (shared pairs of electrons)."
+      },
+      {
+        "prompt": "Fill in the gap using the word organic, carbon or covalent. Substances like carbon dioxide are not usually considered to be ___ compounds.",
+        "answer": "organic",
+        "explanation": "Carbon dioxide is one of the exceptions to the definition of an organic compound."
+      },
+      {
+        "prompt": "Fill in the gap using the word organic, carbon or covalent. Polymers are very long ___ chains.",
+        "answer": "carbon",
+        "explanation": "Polymers are synthetic organic compounds made of very long chains of carbon atoms."
+      },
+      {
+        "prompt": "How many pairs of electrons are shared in a triple bond? Write a number.",
+        "answer": "3",
+        "accepted": [
+          "three"
+        ],
+        "explanation": "A single bond shares one pair, a double bond two pairs and a triple bond three pairs."
+      },
+      {
+        "prompt": "In hydrogen cyanide, HCN, the carbon atom has one single bond to hydrogen and one triple bond to nitrogen. How many bonding sites of the carbon atom are filled in total (a single bond fills 1 and a triple bond fills 3)? Write a number.",
+        "answer": "4",
+        "accepted": [
+          "four"
+        ],
+        "explanation": "1 + 3 = 4 bonding sites filled, so carbon has a full outer shell of 8 electrons."
+      },
+      {
+        "prompt": "How many electrons does hydrogen have in its outer shell when it is full? Write a number.",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Hydrogen has only one shell, which holds 2 electrons when full. It is the exception to the octet rule."
+      },
+      {
+        "prompt": "The octet rule says atoms tend to fill their outer shell with how many electrons? Write a number.",
+        "answer": "8",
+        "accepted": [
+          "eight"
+        ],
+        "explanation": "Octet means 8: atoms are most stable with 8 electrons in their outer shell."
+      }
+    ]
+  }
+}

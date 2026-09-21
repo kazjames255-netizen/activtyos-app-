@@ -1,0 +1,487 @@
+{
+  "agent": "english-ks1",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can form the letters i, l and t."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Handwriting warm-up",
+              "sub": "Get your hands ready"
+            },
+            {
+              "title": "The letter i"
+            },
+            {
+              "title": "The letter l"
+            },
+            {
+              "title": "The letter t"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Warm up your hands",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Your hands and wrists get stronger when you exercise them."
+        },
+        {
+          "t": "text",
+          "text": "Warming up will help to improve your handwriting. It will help you to hold your pencil in the tripod grip for longer."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Finger tap warm-up",
+              "sub": "Pretend you have Play-Doh on your thumb. Squeeze it with each finger in turn."
+            },
+            {
+              "title": "Rolling wrists warm-up",
+              "sub": "Pretend to stir with a wooden spoon, one way and then the other way."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing patterns",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Practising writing patterns helps to prepare us for writing letters."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Up and down",
+              "sub": "Helps with letters that go up and down."
+            },
+            {
+              "title": "Zig-zag",
+              "sub": "Helps with letters that have straight or zig-zag lines."
+            },
+            {
+              "title": "Up, round and down",
+              "sub": "Helps with letters that have loops or curves."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Copy and continue the pattern with your tripod grip. Do not lift your pencil."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tramlines",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "tramlines",
+              "def": "Lines used to help people write neatly. They keep letters the same size and straight."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Tramlines have four lines. Each line has a name. From the top down:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The top line is the **ascender line**.",
+            "The next line down is the **x-height line**.",
+            "The next line down is the **baseline**.",
+            "The very bottom line is the **descender line**."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Name the lines",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each tramline to its name.",
+          "pairs": [
+            {
+              "a": "The top line",
+              "b": "ascender line"
+            },
+            {
+              "a": "The second line down",
+              "b": "x-height line"
+            },
+            {
+              "a": "The third line down",
+              "b": "baseline"
+            },
+            {
+              "a": "The very bottom line",
+              "b": "descender line"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter i",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Let’s look closely at the letter i. What can you see?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "The letter i is a small letter.",
+            "The letter i is an x-height letter.",
+            "The letter i has a dot at the top.",
+            "The letter i starts at the top and finishes with a flick."
+          ]
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "x-height letter",
+              "def": "Letters that reach the middle height on the line."
+            },
+            {
+              "term": "small letters",
+              "def": "Regular-sized letters that are not as tall as the tall letters."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "handwriting-lines"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to write i",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sit comfortably and hold your pencil. Then:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Start on the x-height line.",
+            "2. Go down to the baseline and do a flick.",
+            "3. Take your pencil off the page.",
+            "4. Add a dot at the top."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter i",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is true about the letter i?",
+          "options": [
+            "It has a dot at the top",
+            "It is a tall letter",
+            "It starts at the bottom"
+          ],
+          "answer": 0,
+          "why": "The letter i is a small letter. It starts at the top and has a dot at the top."
+        },
+        {
+          "t": "choice",
+          "q": "Which line do you start on to write i?",
+          "options": [
+            "The x-height line",
+            "The baseline",
+            "The ascender line"
+          ],
+          "answer": 0,
+          "why": "To write i, start on the x-height line, go down to the baseline, flick, then add a dot."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter l",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letter l is a tall letter.",
+            "The letter l goes down and finishes with a flick.",
+            "Part of the letter l goes above the x-height line."
+          ]
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "tall letters",
+              "def": "Letters that reach up high and are usually taller than the other letters in the alphabet."
+            },
+            {
+              "term": "ascender",
+              "def": "The part of a letter that extends above the level of the top of an x. It goes above the x-height line."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The letter l is an example of a letter with an ascender."
+        }
+      ],
+      "pics": [
+        {
+          "id": "handwriting-lines"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to write l",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "1. Start on the ascender line, because l is a tall letter.",
+            "2. Go all the way down to the baseline. Do not take your pencil off the paper.",
+            "3. When you reach the baseline, add a flick."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter l",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which line do you start on to write l?",
+          "options": [
+            "The ascender line",
+            "The x-height line",
+            "The descender line"
+          ],
+          "answer": 0,
+          "why": "The letter l is a tall letter, so you start on the ascender line and go down to the baseline."
+        },
+        {
+          "t": "choice",
+          "q": "What do we call the part of a letter that goes above the x-height line?",
+          "options": [
+            "An ascender",
+            "A baseline",
+            "A flick"
+          ],
+          "answer": 0,
+          "why": "An ascender is the part of a letter that goes above the x-height line. The letter l has one."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The letter t",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letter t goes down and finishes with a flick.",
+            "The letter t has a cross on the x-height line."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "To write t:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "1. Start just above the x-height line.",
+            "2. Go down and finish with a flick.",
+            "3. Take your pencil off the page.",
+            "4. Add a cross on the x-height line."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: the letter t",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Where does the cross of the letter t go?",
+          "options": [
+            "On the x-height line",
+            "On the baseline",
+            "On the descender line"
+          ],
+          "answer": 0,
+          "why": "The letter t has a cross on the x-height line."
+        },
+        {
+          "t": "choice",
+          "q": "What do you do before you add the cross to t?",
+          "options": [
+            "Take your pencil off the page",
+            "Start a new letter",
+            "Stay on the page and draw a dot"
+          ],
+          "answer": 0,
+          "why": "You lift your pencil off the page to add the cross."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Letter families",
+      "blocks": [
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "letter families",
+              "def": "Groups of letters that look similar and belong to the same group."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The letters i, l and t are formed in similar ways. They all start at the top and finish with a flick. So they are in the same letter family."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Letter families are not letters that are next to each other in the alphabet. Letters are in a family when they are formed in a similar way."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the letter",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each letter to something you do when you write it.",
+          "pairs": [
+            {
+              "a": "i",
+              "b": "Add a dot at the top"
+            },
+            {
+              "a": "l",
+              "b": "Start on the ascender line"
+            },
+            {
+              "a": "t",
+              "b": "Add a cross on the x-height line"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "How are letters put into letter families?",
+          "options": [
+            "They are formed in similar ways",
+            "They are next to each other in the alphabet",
+            "They make a word together"
+          ],
+          "answer": 0,
+          "why": "Letters that are formed in a similar way are in the same letter family."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The letters i, l and t are in a letter family. They all go down and finish with a flick.",
+            "The letter i has a dot at the top.",
+            "The letter l has an ascender: part of it goes above the x-height line.",
+            "The letter t has a cross on the x-height line."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Why do we warm up our hands before writing?",
+      "back": "Our hands and wrists get stronger when we exercise them. It helps our handwriting and helps us hold the pencil in the tripod grip for longer."
+    },
+    {
+      "front": "What helps to prepare us for writing letters?",
+      "back": "Practising writing patterns."
+    },
+    {
+      "front": "What are tramlines?",
+      "back": "Lines used to help people write neatly. They keep letters the same size and straight."
+    },
+    {
+      "front": "Name the four tramlines from the top down.",
+      "back": "Ascender line, x-height line, baseline, descender line."
+    },
+    {
+      "front": "Which line do you start on to write the letter i?",
+      "back": "The x-height line."
+    },
+    {
+      "front": "What do you add to the letter i after the flick?",
+      "back": "A dot at the top. Take your pencil off the page first."
+    },
+    {
+      "front": "What sort of letter is i?",
+      "back": "A small letter and an x-height letter."
+    },
+    {
+      "front": "Which line do you start on to write the letter l?",
+      "back": "The ascender line, because l is a tall letter."
+    },
+    {
+      "front": "What is an ascender?",
+      "back": "The part of a letter that goes above the x-height line.\n\nThe letter l has an ascender."
+    },
+    {
+      "front": "How is the letter l formed?",
+      "back": "It goes down and finishes with a flick."
+    },
+    {
+      "front": "What does the letter t have on the x-height line?",
+      "back": "A cross."
+    },
+    {
+      "front": "What are letter families?",
+      "back": "Groups of letters that are formed in a similar way.\n\ni, l and t all start at the top and finish with a flick."
+    }
+  ]
+}

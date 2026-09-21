@@ -1,0 +1,601 @@
+{
+  "agent": "w4-science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how plants can be grouped using observable characteristics."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Grouping plants"
+            },
+            {
+              "title": "Observing characteristics of plants"
+            },
+            {
+              "title": "Classification keys for plants"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "classify",
+              "def": "To classify things is to sort them into groups."
+            },
+            {
+              "term": "flowering",
+              "def": "Flowering plants reproduce by making seeds inside flowers."
+            },
+            {
+              "term": "non-flowering",
+              "def": "Non-flowering plants do not make flowers. Many reproduce by making spores. Conifers make seeds inside cones instead."
+            },
+            {
+              "term": "seeds",
+              "def": "Some plants reproduce by making seeds."
+            },
+            {
+              "term": "spores",
+              "def": "Some plants reproduce by making spores."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is a plant?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Three children looked at an apple tree, a silver ragwort, a cactus and a pansy. They said: “They don’t have flowers, so they aren’t plants”, “It’s not green, so it isn’t a plant” and “It’s a tree, so it isn’t a plant”."
+        },
+        {
+          "t": "reveal",
+          "label": "What do you think?",
+          "text": "These are all plants. Plants are living things that make their own food using light from the Sun and carbon dioxide from the air."
+        },
+        {
+          "t": "text",
+          "text": "Scientists have discovered around 382 000 different species of plants so far! Many plants have roots, a stem, leaves and flowers, but not all plants have all of these features."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "True or false?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Is each statement true or false?",
+          "items": [
+            {
+              "q": "All plants have flowers.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "All plants are green.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "All plants make their own food.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "All plants are living things.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "A tree cannot be a plant.",
+              "options": [
+                "True",
+                "False"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why do we group plants?",
+      "blocks": [
+        {
+          "t": "callout",
+          "text": "Scientists {classify} plants into groups to make it easier to identify, name and learn about them."
+        },
+        {
+          "t": "text",
+          "text": "We do this by looking at the similarities and differences between them."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Flowering plants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One way scientists classify plants is into flowering and non-flowering groups."
+        },
+        {
+          "t": "callout",
+          "text": "On flowering plants, flowers are the part of the plant where {seeds} are formed."
+        },
+        {
+          "t": "text",
+          "text": "Flowers come in lots of different shapes, sizes and colours. They look very different to each other, but they all have one thing in common: they all make seeds."
+        }
+      ],
+      "pics": [
+        {
+          "id": "plant-parts"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! No flowers to see",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex looked at a strawberry plant and a hosta. He couldn’t see any flowers, so he thought they were non-flowering plants."
+        },
+        {
+          "t": "reveal",
+          "label": "Do you agree?",
+          "text": "Most plants do not flower all year round. Hostas only flower for about three weeks in the summer. We can tell the strawberry plant must have had flowers because it has fruit containing seeds that were made inside the flowers."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes we may have to observe a plant over time, or carry out research using secondary sources, to find out if it flowers or not."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Seeds and spores",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists can also classify plants according to how they reproduce."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Flowering plants",
+              "sub": "Reproduce by making seeds."
+            },
+            {
+              "title": "Conifers (non-flowering)",
+              "sub": "Spruce, larch and pine trees have seeds that grow inside cones instead of flowers."
+            },
+            {
+              "title": "Ferns and mosses (non-flowering)",
+              "sub": "Reproduce with spores."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Spores are similar to seeds, but they have a simpler structure and are much smaller. They are formed in a part of non-flowering plants called the **sporangia**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Always, sometimes or never?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Is each statement always, sometimes or never true?",
+          "items": [
+            {
+              "q": "Flowering plants reproduce with seeds.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Flowering plants reproduce with spores.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Non-flowering plants reproduce with seeds.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Non-flowering plants reproduce with spores.",
+              "options": [
+                "always",
+                "sometimes",
+                "never"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the plants",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each plant in the right group.",
+          "columns": [
+            "Flowering plant (seeds)",
+            "Non-flowering: seeds in cones",
+            "Non-flowering: spores"
+          ],
+          "items": [
+            {
+              "text": "daisy",
+              "col": 0
+            },
+            {
+              "text": "strawberry",
+              "col": 0
+            },
+            {
+              "text": "larch",
+              "col": 1
+            },
+            {
+              "text": "spruce",
+              "col": 1
+            },
+            {
+              "text": "bracken",
+              "col": 2
+            },
+            {
+              "text": "pincushion moss",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Observable characteristics of plants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists classify plants by looking at the similarities and differences in their observable characteristics. We could observe:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "the shape of the leaves",
+            "whether there are flowers",
+            "whether there is fruit",
+            "how it reproduces",
+            "the colour of the leaves or flowers",
+            "what the stem is like",
+            "whether it has thorns"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Scientists will consider as many different observable characteristics as possible when they are deciding how to classify plants."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these is an observable characteristic of a plant?",
+          "options": [
+            "the name of the plant",
+            "whether it has thorns"
+          ],
+          "answer": 1,
+          "why": "We can see whether a plant has thorns. The name of a plant is not something we can see."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A classification key for plants",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy wanted to help other children identify her plants, so she made a classification key. She wrote a series of yes / no questions to divide her plants into smaller groups until there was only one plant left at the end of each branch."
+        },
+        {
+          "t": "reveal",
+          "label": "Izzy’s key",
+          "text": "Does the plant have a brown trunk? Yes: does it have acorns? Yes: oak tree. No: sycamore tree. No: does the plant have flowers? Yes: daisy. No: bracken."
+        },
+        {
+          "t": "callout",
+          "text": "A classification key can only include {yes} and {no} questions."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use Izzy’s key",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Izzy’s key: Does the plant have a brown trunk? Yes: does it have acorns? Yes = oak tree, no = sycamore tree. No: does the plant have flowers? Yes = daisy, no = bracken."
+        },
+        {
+          "t": "choices",
+          "q": "Which plant does the key give for each set of answers?",
+          "items": [
+            {
+              "q": "Brown trunk: yes. Acorns: no.",
+              "options": [
+                "oak tree",
+                "sycamore tree",
+                "bracken"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Brown trunk: no. Flowers: no.",
+              "options": [
+                "daisy",
+                "bracken",
+                "oak tree"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Brown trunk: no. Flowers: yes.",
+              "options": [
+                "daisy",
+                "sycamore tree",
+                "bracken"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Brown trunk: yes. Acorns: yes.",
+              "options": [
+                "oak tree",
+                "daisy",
+                "sycamore tree"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sofia’s key",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia found a buttercup, a bracken, a dandelion and a bramble. Here is her key."
+        },
+        {
+          "t": "reveal",
+          "label": "Sofia’s key",
+          "text": "Does the plant have flowers? No: bracken. Yes: does it have thorns on the stem? Yes: bramble. No: do the flowers have five petals? Yes: buttercup. No: dandelion."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these could be a question in a plant classification key?",
+          "options": [
+            "Does it have thorns on the stem?",
+            "What shape are the leaves?"
+          ],
+          "answer": 0,
+          "why": "Every question in a classification key must have a yes or no answer."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Scientists group plants to make it easier to identify, name and learn more about them.",
+            "We divide plants into groups by looking at similarities and differences between them.",
+            "We can classify plants according to how they reproduce and whether they are flowering or non-flowering."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What do scientists do when they classify plants, and why?",
+      "back": "They sort plants into groups, to make it easier to identify, name and learn about them."
+    },
+    {
+      "front": "What are plants?",
+      "back": "Living things that make their own food using light from the Sun and carbon dioxide from the air."
+    },
+    {
+      "front": "Do all plants have flowers? Are all plants green?",
+      "back": "No to both. Many plants have roots, a stem, leaves and flowers, but not all plants have all of these features."
+    },
+    {
+      "front": "About how many species of plants have scientists discovered so far?",
+      "back": "Around 382 000."
+    },
+    {
+      "front": "How do flowering plants reproduce?",
+      "back": "By making seeds inside flowers."
+    },
+    {
+      "front": "How do non-flowering plants reproduce?",
+      "back": "Some make spores (such as ferns and mosses). Some also make seeds (conifers)."
+    },
+    {
+      "front": "What are conifers, and where do their seeds grow?",
+      "back": "Non-flowering plants such as spruce, larch and pine trees. Their seeds grow inside cones instead of flowers."
+    },
+    {
+      "front": "What are spores?",
+      "back": "Similar to seeds, but with a simpler structure and much smaller."
+    },
+    {
+      "front": "In which part of a non-flowering plant are spores formed?",
+      "back": "The sporangia."
+    },
+    {
+      "front": "Name two kinds of non-flowering plant that reproduce with spores.",
+      "back": "Ferns and mosses."
+    },
+    {
+      "front": "You can’t see any flowers on a plant. Does that mean it is non-flowering?",
+      "back": "Not always. Most plants do not flower all year round. A hosta only flowers for about three weeks in the summer."
+    },
+    {
+      "front": "Name three observable characteristics of plants.",
+      "back": "For example: the shape of the leaves, whether there are flowers, whether there is fruit, the colour of the leaves or flowers, what the stem is like, whether it has thorns."
+    },
+    {
+      "front": "Is the name of a plant an observable characteristic?",
+      "back": "No. It is not something that we can see."
+    },
+    {
+      "front": "What kind of questions does a classification key use?",
+      "back": "Yes / no questions, until only one plant is left at the end of each branch."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: How and why we group plants",
+    "instructions": "Answer each question with a word, a number or a short phrase, using what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "Flowering plants reproduce by making ____ inside flowers.",
+        "answer": "seeds",
+        "accepted": [
+          "seed"
+        ],
+        "explanation": "Flowers are the part of a flowering plant where seeds are formed."
+      },
+      {
+        "prompt": "Ferns and mosses are non-flowering plants. What do they reproduce with: seeds or spores?",
+        "answer": "spores",
+        "accepted": [
+          "spore"
+        ],
+        "explanation": "Ferns and mosses are non-flowering plants that reproduce with spores."
+      },
+      {
+        "prompt": "A raspberry is a flowering plant. Does it reproduce with seeds or spores?",
+        "answer": "seeds",
+        "accepted": [
+          "seed"
+        ],
+        "explanation": "Flowering plants reproduce by making seeds."
+      },
+      {
+        "prompt": "A pine tree is a conifer, which is a non-flowering plant. Does it reproduce with seeds or spores?",
+        "answer": "seeds",
+        "accepted": [
+          "seed"
+        ],
+        "explanation": "Conifers such as pine trees have seeds that grow inside cones instead of flowers."
+      },
+      {
+        "prompt": "Peat moss is a non-flowering plant. Does it reproduce with seeds or spores?",
+        "answer": "spores",
+        "accepted": [
+          "spore"
+        ],
+        "explanation": "Mosses are non-flowering plants that reproduce with spores."
+      },
+      {
+        "prompt": "The seeds of conifers, such as spruce and pine trees, grow inside what?",
+        "answer": "cones",
+        "accepted": [
+          "cone"
+        ],
+        "explanation": "Conifers have seeds that grow inside cones instead of flowers."
+      },
+      {
+        "prompt": "Around how many species of plants have scientists discovered so far? (Write the number.)",
+        "answer": "382000",
+        "accepted": [
+          "382 000",
+          "382,000"
+        ],
+        "explanation": "Scientists have discovered around 382 000 different species of plants so far."
+      },
+      {
+        "prompt": "For about how long do hostas flower for in the summer?",
+        "answer": "three weeks",
+        "accepted": [
+          "3 weeks",
+          "about three weeks",
+          "about 3 weeks"
+        ],
+        "explanation": "Hostas only flower for about three weeks in the summer, so we may not see flowers on them all year."
+      },
+      {
+        "prompt": "Sofia’s key starts: Does the plant have flowers? No = bracken. Yes: does it have thorns on the stem? Yes = bramble. No: do the flowers have five petals? Yes = buttercup, no = dandelion. Which plant has flowers, no thorns on the stem, and flowers that do not have five petals?",
+        "answer": "dandelion",
+        "accepted": [
+          "a dandelion"
+        ],
+        "explanation": "Flowers: yes. Thorns: no. Five petals: no. That leads to dandelion."
+      },
+      {
+        "prompt": "The questions in a classification key must always be answered with either yes or ____.",
+        "answer": "no",
+        "explanation": "A classification key uses yes / no questions."
+      }
+    ]
+  }
+}

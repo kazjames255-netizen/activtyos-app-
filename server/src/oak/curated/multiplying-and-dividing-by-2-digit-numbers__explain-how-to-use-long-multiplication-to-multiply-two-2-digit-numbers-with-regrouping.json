@@ -1,0 +1,511 @@
+{
+  "agent": "w4-maths-ks2a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how to use long multiplication to multiply two 2-digit numbers with regrouping."
+        },
+        {
+          "t": "text",
+          "text": "We will use long multiplication to solve Olympic problems."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Regrouping} tens to hundreds"
+            },
+            {
+              "title": "Olympic {bingo}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "partial product",
+              "def": "Any of the multiplication results we get leading up to an overall multiplication result is a partial product."
+            },
+            {
+              "term": "regroup",
+              "def": "The process of unitising and exchanging between place values is known as regrouping. For example, 10 ones can be regrouped for one ten; one ten can be regrouped for 10 ones."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When do we regroup?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Regrouping means exchanging between place values."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "10 ones = 1 ten"
+            },
+            {
+              "title": "10 tens = 1 hundred"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We regroup when numbers bridge 10 or 100."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is known? What is unknown?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each of the 35 sections of a stadium has 48 seats. How many seats are there in total?"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Known",
+              "sub": "35 sections, 48 seats in each. These are the factors."
+            },
+            {
+              "title": "Unknown",
+              "sub": "The total number of seats. The product is missing."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "35 × 48 = ?"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 1: multiply by the ones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Long multiplication. The larger number goes first, so 48 is at the top and 35 is underneath."
+        },
+        {
+          "t": "list",
+          "items": [
+            "48 × 5 ones. 5 × 8 ones = 40 ones. Write 0 in the ones column and regroup 40 ones for 4 tens. Record the 4 at the top.",
+            "5 × 4 tens = 20 tens. Add the 4 tens: 24 tens. That is 240."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "First partial product",
+          "text": "The first partial product is **240**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Step 2: placeholder, then the tens",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Put 0 as the next placeholder, so every part we work out now is a multiple of 10.",
+            "3 tens × 8 ones = 24 tens. Write 4 in the tens column and regroup 2 hundreds.",
+            "3 tens × 4 tens = 12 hundreds. Add the 2 hundreds: 14 hundreds. That is 1,400.",
+            "So 48 × 30 = 1,440."
+          ]
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "240",
+              "add": "1,440",
+              "result": "1,680"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Sum the partial products. There are 1,680 seats altogether."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Regrouping twice",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 26 stands around a pool with 57 seats in each stand. This is 57 × 26."
+        },
+        {
+          "t": "list",
+          "items": [
+            "57 × 6: 6 × 7 ones = 42 ones. Write 2 in the ones column and regroup 40 ones for 4 tens.",
+            "6 × 5 tens = 30 tens. Add the 4 tens: 34 tens. The first partial product is 342.",
+            "Put 0 as a placeholder.",
+            "57 × 20: 2 tens × 7 ones = 14 tens (140). Write 4 in the tens column and regroup 1 hundred.",
+            "2 tens × 5 tens = 10 hundreds. Add the 1 hundred: 11 hundreds. The second partial product is 1,140.",
+            "Sum: 342 + 1,140 = 1,482."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How many times did we regroup?",
+          "text": "Twice: once when we multiplied by 6 and again when we multiplied by 20."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which equation?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the Olympic village there are 63 buildings. Each building has 28 beds. How many beds are there in total?"
+        },
+        {
+          "q": "Which multiplication finds the total number of beds?",
+          "options": [
+            "63 × 28",
+            "63 + 28",
+            "63 − 28"
+          ],
+          "answer": 0,
+          "why": "63 buildings is one factor and 28 beds is the other factor. The product is missing.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sam used long multiplication and looked at the regrouping in his working."
+        },
+        {
+          "t": "reveal",
+          "label": "Is Sam correct?",
+          "text": "No. Sam regrouped incorrectly. The digits were reversed when they were recorded as exchanges. Write the regrouped values the right way round at the top."
+        },
+        {
+          "q": "Where do we record the regrouped values?",
+          "options": [
+            "At the top, above the factors",
+            "In the answer only",
+            "We do not need to record them"
+          ],
+          "answer": 0,
+          "why": "They are included at the top of the layout as a reminder to add them on in the next calculation.",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Olympic bingo",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are 56 teams with 33 members in each team. How many athletes altogether? This is 56 × 33, with the larger factor first."
+        },
+        {
+          "t": "list",
+          "items": [
+            "56 × 3: 6 × 3 ones = 18 ones. Regroup 10 ones for 1 ten.",
+            "5 tens × 3 = 15 tens. Add the 1 ten: 16 tens. The first partial product is 168.",
+            "Put a placeholder 0. 56 × 30: 3 tens × 6 ones = 18 tens (180). Write 8 in the tens column and regroup 1 hundred.",
+            "3 tens × 5 tens = 15 hundreds. Add the 1 hundred: 16 hundreds. The second partial product is 1,680.",
+            "Sum: 168 + 1,680 = 1,848."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are 1,848 athletes altogether. Bingo!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Use the ones digit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When multiplying with long multiplication, you always begin with the ones."
+        },
+        {
+          "t": "text",
+          "text": "Andeep got 1,656. There are two problem cards. Card one: 45 countries, each awarded 62 medals. Card two: 24 countries, each sending 69 athletes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Card one has factors 45 and 62.",
+            "Card two has factors 24 and 69. 4 × 9 = 36, so the ones digit is 6.",
+            "1,656 has a ones digit of 6, so the answer belongs to card two."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Advice for Andeep",
+          "text": "Look at the ones digits of the factors. Multiply them and check the ones digit of your answer."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which one?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use the ones digits to check answers."
+        },
+        {
+          "q": "Which multiplication gives a product with a ones digit of 4?",
+          "options": [
+            "23 × 18",
+            "25 × 16",
+            "30 × 92"
+          ],
+          "answer": 0,
+          "why": "3 × 8 = 24, so the ones digit is 4. (5 × 6 = 30 and 0 × 2 = 0 give a ones digit of 0.)",
+          "t": "choice"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match problem to equation",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each problem to the multiplication equation that solves it.",
+          "pairs": [
+            {
+              "a": "47 stands, each with 62 seats",
+              "b": "47 × 62"
+            },
+            {
+              "a": "38 rows, each with 54 chairs",
+              "b": "38 × 54"
+            },
+            {
+              "a": "26 boxes, each with 73 medals",
+              "b": "26 × 73"
+            },
+            {
+              "a": "81 teams, each with 29 players",
+              "b": "81 × 29"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Work it out",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use long multiplication to answer each question.",
+          "items": [
+            {
+              "q": "What is 47 × 62?",
+              "options": [
+                "376",
+                "2,914",
+                "2,814"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "What is 68 × 35?",
+              "options": [
+                "544",
+                "2,390",
+                "2,380"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "What is 84 × 57?",
+              "options": [
+                "4,788",
+                "1,008",
+                "3,788"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "We can calculate the partial products and add the partial products to recombine when using long multiplication.",
+            "We can regroup when numbers bridge 10 or 100."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Record the regrouped values at the top and put the 0 placeholder before you multiply by the tens."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does regroup mean?",
+      "back": "The process of unitising and exchanging between place values.\n\n10 ones can be regrouped for one ten; one ten can be regrouped for 10 ones."
+    },
+    {
+      "front": "When can we regroup in long multiplication?",
+      "back": "When numbers bridge 10 or 100."
+    },
+    {
+      "front": "What is a partial product?",
+      "back": "Any of the multiplication results we get leading up to an overall multiplication result."
+    },
+    {
+      "front": "In a word problem, what are the factors and what is the product?",
+      "back": "The factors are the two known numbers. The product is the unknown (missing) total.\n\n35 sections × 48 seats: the total number of seats is the product."
+    },
+    {
+      "front": "Why do we put a 0 placeholder before the second partial product?",
+      "back": "So all the bits we work out next are multiples of 10 (all multiples of 10 have a 0 in the ones column)."
+    },
+    {
+      "front": "48 × 35: what are the two partial products and the product?",
+      "back": "240 (48 × 5) and 1,440 (48 × 30).\n240 + 1,440 = 1,680"
+    },
+    {
+      "front": "57 × 26: what are the two partial products and the product?",
+      "back": "342 (57 × 6) and 1,140 (57 × 20).\n342 + 1,140 = 1,482"
+    },
+    {
+      "front": "56 × 33: what are the two partial products and the product?",
+      "back": "168 (56 × 3) and 1,680 (56 × 30).\n168 + 1,680 = 1,848"
+    },
+    {
+      "front": "Where do we record regrouped values in these lessons?",
+      "back": "At the top, above the factors."
+    },
+    {
+      "front": "Which digits do you multiply first in long multiplication?",
+      "back": "The ones. You always begin with the ones."
+    },
+    {
+      "front": "How can the ones digits help you check an answer?",
+      "back": "Multiply the ones digits of the factors. The ones digit of the product must match.\n\n24 × 69: 4 × 9 = 36, so the ones digit is 6 (24 × 69 = 1,656)."
+    },
+    {
+      "front": "What went wrong when Sam’s regrouping was incorrect?",
+      "back": "The digits were reversed when they were recorded as exchanges."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explain how to use long multiplication to multiply two 2-digit numbers with regrouping",
+    "instructions": "Use long multiplication with the larger factor at the top. Remember to regroup and to put in the 0 placeholder. Write each answer as a number (you do not need to write units).",
+    "questions": [
+      {
+        "prompt": "Task A: There are 76 torch handlers for each leg of the relay. There are 48 legs. How many torch handlers are involved in total?",
+        "answer": "3648",
+        "accepted": [
+          "3,648"
+        ],
+        "explanation": "76 × 48 = 608 + 3,040 = 3,648."
+      },
+      {
+        "prompt": "Task A: Each of the 53 Olympic snack stands sells 67 snack boxes per day. How many snack boxes are sold each day across all the stands?",
+        "answer": "3551",
+        "accepted": [
+          "3,551"
+        ],
+        "explanation": "53 × 67: 67 × 3 = 201 and 67 × 50 = 3,350. 201 + 3,350 = 3,551."
+      },
+      {
+        "prompt": "Task A: The Olympic village has 82 flag poles, and each flag pole needs 45 feet of rope. How many feet of rope are needed in total?",
+        "answer": "3690",
+        "accepted": [
+          "3,690"
+        ],
+        "explanation": "82 × 45: 82 × 5 = 410 and 82 × 40 = 3,280. 410 + 3,280 = 3,690."
+      },
+      {
+        "prompt": "Task A: Each display case at the Olympic museum can hold 96 medals, and there are 34 display cases. How many medals can be displayed in total?",
+        "answer": "3264",
+        "accepted": [
+          "3,264"
+        ],
+        "explanation": "96 × 34: 96 × 4 = 384 and 96 × 30 = 2,880. 384 + 2,880 = 3,264."
+      },
+      {
+        "prompt": "Task A: A replica Olympic torch costs £87. 59 torches are sold on Saturday. How many pounds is spent on replica torches?",
+        "answer": "5133",
+        "accepted": [
+          "5,133",
+          "£5133",
+          "£5,133"
+        ],
+        "explanation": "87 × 59: 87 × 9 = 783 and 87 × 50 = 4,350. 783 + 4,350 = 5,133."
+      },
+      {
+        "prompt": "Task B: In an Olympic athletics team, each team has 33 members. There are 56 teams. How many athletes are participating in total?",
+        "answer": "1848",
+        "accepted": [
+          "1,848"
+        ],
+        "explanation": "56 × 33: 168 + 1,680 = 1,848."
+      },
+      {
+        "prompt": "Task B: During the marathon, there are 36 water stations. Each station is stocked with 72 bottles of water. How many bottles of water are distributed in total?",
+        "answer": "2592",
+        "accepted": [
+          "2,592"
+        ],
+        "explanation": "72 × 36: 72 × 6 = 432 and 72 × 30 = 2,160. 432 + 2,160 = 2,592."
+      },
+      {
+        "prompt": "Task B: Andeep got the answer 1,656. Which factors did his problem use: 45 and 62, or 24 and 69?",
+        "answer": "24 and 69",
+        "accepted": [
+          "24 × 69",
+          "24 x 69",
+          "69 and 24",
+          "69 × 24",
+          "69 x 24"
+        ],
+        "explanation": "4 × 9 = 36, so the ones digit is 6. 24 × 69 = 1,656."
+      }
+    ]
+  }
+}

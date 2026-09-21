@@ -1,0 +1,681 @@
+{
+  "agent": "w4-english-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can identify the correct spelling of a homophone based on its context."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{homophones}",
+              "sub": "words that sound the same"
+            },
+            {
+              "title": "{noun or verb?}",
+              "sub": "-ce and -se endings"
+            },
+            {
+              "title": "temperature and aggressive",
+              "sub": "two curriculum words"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "homophone",
+              "def": "Words that sound the same, but have different spellings and meanings."
+            },
+            {
+              "term": "word class",
+              "def": "The different types of words that are used to form sentences. Adjectives, nouns, verbs and adverbs are examples of word class."
+            },
+            {
+              "term": "context",
+              "def": "The surrounding words or sentences that help determine the meaning of a word or phrase."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same sound, different spelling",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Homophone comes from Greek: ‘homos’ means ‘one and the same’ and ‘phon’ means ‘sound’, so it means ‘same sound’. Look at these two sentences."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Walk to the end of the road and turn {right} after the traffic lights.",
+            "When we move house, you could {write} to your friends regularly."
+          ]
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{right}",
+              "sub": "r-i-g-h-t"
+            },
+            {
+              "title": "{write}",
+              "sub": "the act of writing with a pen or pencil. The w is silent."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "They sound exactly alike, but they are spelt differently and have different meanings. If we switched them around, the sentences would not make sense."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "sell or cell?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Homophones can belong to different word classes. Knowing their meaning helps us to understand and spell them."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{sell}",
+              "sub": "a verb: exchanging something for money. They sell fresh vegetables in the market."
+            },
+            {
+              "title": "{cell}",
+              "sub": "a noun: a very small room. The prisoner’s cell was grim and bare."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "‘Cell’ has other meanings too!",
+          "text": "Cell is also a homonym. All living things are made of cells, the small parts that make up a living thing. Cells are also found in spreadsheets that we use on a computer. Use the context to work out which meaning it is."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "sell or cell?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the context to choose the correct spelling.",
+          "items": [
+            {
+              "q": "We ___ tickets at the door.",
+              "options": [
+                "sell",
+                "cell"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The prisoner was locked in his ___.",
+              "options": [
+                "sell",
+                "cell"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A ___ is a tiny part that makes up a living thing.",
+              "options": [
+                "sell",
+                "cell"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I am going to ___ my old toys at the market.",
+              "options": [
+                "sell",
+                "cell"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "practice or practise?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These two sound exactly the same. The difference is -ce or -se at the end."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "practi{ce}",
+              "sub": "a noun, a place: The dental practice is always busy."
+            },
+            {
+              "title": "practi{se}",
+              "sub": "a verb, an action: You must practise your spellings before the test next week."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The noun ends in {-ce} and the verb ends in {-se}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "licence or license?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The same pattern works for licence and license. Just like practice and practise, the noun ends in -ce and the verb ends in -se."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "licen{ce}",
+              "sub": "a noun: a thing you need to have. You need to be 17 before you can get a driving licence."
+            },
+            {
+              "title": "licen{se}",
+              "sub": "a verb, a doing word. They will need to license the shop before it can sell anything."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "prophecy or prophesy?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here the noun and the verb differ at the end again: -cy for the noun, -sy for the verb."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "prophe{cy}",
+              "sub": "a noun: a prediction of what will happen. The ancient book foretold a prophecy about a hero."
+            },
+            {
+              "title": "prophe{sy}",
+              "sub": "a verb: the act of making the prediction. She could prophesy about future events."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How can knowing the word class help?",
+          "text": "Knowing the word class of a word in a sentence can sometimes help us to spell it correctly. With these word pairs, if you need a noun (a thing), use -ce or -cy. If you need a verb (a doing word), use -se or -sy."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Noun or verb?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Use the spelling of each word to work out its word class.",
+          "columns": [
+            "Noun",
+            "Verb"
+          ],
+          "items": [
+            {
+              "text": "practice",
+              "col": 0
+            },
+            {
+              "text": "licence",
+              "col": 0
+            },
+            {
+              "text": "prophecy",
+              "col": 0
+            },
+            {
+              "text": "practise",
+              "col": 1
+            },
+            {
+              "text": "license",
+              "col": 1
+            },
+            {
+              "text": "prophesy",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which spelling?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Decide if you need a noun or a verb, then choose.",
+          "items": [
+            {
+              "q": "The dentist’s ___ is opposite the park.",
+              "options": [
+                "practice",
+                "practise"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "I need to ___ my spellings every night.",
+              "options": [
+                "practice",
+                "practise"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "You need a ___ to drive a car.",
+              "options": [
+                "licence",
+                "license"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The council will ___ the new shop.",
+              "options": [
+                "licence",
+                "license"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Nobody believed the ___.",
+              "options": [
+                "prophecy",
+                "prophesy"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The wise woman could ___ what would happen.",
+              "options": [
+                "prophecy",
+                "prophesy"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "scent, sent or cent?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Three words, one sound. Look at the letters that are different."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{sc}ent",
+              "sub": "a smell"
+            },
+            {
+              "title": "{s}ent",
+              "sub": "I sent something by post."
+            },
+            {
+              "title": "{c}ent",
+              "sub": "a unit of money. I bought it for 10 cents."
+            }
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Which one fits?",
+          "items": [
+            {
+              "q": "The ___ of the roses filled the room.",
+              "options": [
+                "scent",
+                "sent",
+                "cent"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Yesterday I ___ a card to my gran.",
+              "options": [
+                "scent",
+                "sent",
+                "cent"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The sweet cost one ___.",
+              "options": [
+                "scent",
+                "sent",
+                "cent"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Make your own memory tricks",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are no patterns for homophones, so we come up with our own ideas to help us remember."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "ta{il} or ta{le}?",
+              "sub": "A tail is the last part of an animal, and ‘tail’ ends in l for last. A tale often finishes with ‘The End’, and ‘tale’ ends in e."
+            },
+            {
+              "title": "c{e}real",
+              "sub": "The c looks like a bowl on its side. The e instead of i can be something we eat early in the morning."
+            },
+            {
+              "title": "s{e}rial",
+              "sub": "A serial is part of a series, like a television serial. The word serial links to series."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Every morning, I have a bowl of cereal for breakfast. What is your favourite television serial to watch? A tale is a traditional folk tale."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "The naughty letters strategy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Spelling rules help, but we also need to practise. Practising helps you remember words more easily, notice how they are spelt and feel more confident."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Look** carefully at the word. Pay attention to any tricky parts.",
+            "**Copy** the word. Write the tricky part larger. You could even draw a ‘naughty’ face on the letter."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which is the correct order for the naughty letters strategy?",
+          "options": [
+            "Copy with a naughty letter, then look carefully",
+            "Look carefully, then copy with a naughty letter"
+          ],
+          "answer": 1,
+          "why": "We should always look carefully at spellings before we practise them."
+        },
+        {
+          "t": "lcwc",
+          "q": "Look, cover, write, check. Make the tricky part big!",
+          "words": [
+            "scent",
+            "cereal",
+            "prophecy",
+            "temperature"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Curriculum words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Now for two words to learn by heart."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "temp{e}rature",
+              "sub": "The temperature outside is very warm."
+            },
+            {
+              "title": "a{gg}re{ss}ive",
+              "sub": "She played the game aggressively."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "**temperature**: the vowel in the middle is unstressed, so it is easy to forget or misspell. Watch out for that ‘e’. The -ture at the end makes a ch sound.",
+            "**aggressive**: the double g and double s can be mistaken for single letters. It also has a silent ‘e’ at the end."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spell it!",
+      "blocks": [
+        {
+          "t": "spell",
+          "q": "Listen, then type the word.",
+          "words": [
+            "temperature",
+            "aggressive"
+          ],
+          "tips": [
+            "sound it out.",
+            "think about the tricky parts.",
+            "read the word and check."
+          ]
+        },
+        {
+          "t": "choices",
+          "q": "Which of these is spelt correctly?",
+          "items": [
+            {
+              "options": [
+                "temprature",
+                "temperature",
+                "temperiture",
+                "tempeture"
+              ],
+              "answer": 1
+            },
+            {
+              "options": [
+                "agressive",
+                "aggresive",
+                "aggressiv",
+                "aggressive"
+              ],
+              "answer": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What did you learn?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Two or more words that sound the same but have different meanings or spellings are called **homophones**.",
+            "Licence and license, practice and practise, and prophecy and prophesy are homophones. In these pairs the noun ends -ce (or -cy) and the verb ends -se (or -sy).",
+            "We can look for **naughty letters** to help us remember tricky spellings.",
+            "Curriculum words: temperature and aggressive."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a homophone?",
+      "back": "Words that sound the same, but have different spellings and meanings.\n\nExample: right / write."
+    },
+    {
+      "front": "What do ‘sell’ and ‘cell’ mean?",
+      "back": "sell (verb): to exchange something for money.\ncell (noun): a very small room. Cells are also the small parts that make up living things."
+    },
+    {
+      "front": "Is ‘practice’ (-ce) a noun or a verb? And ‘practise’ (-se)?",
+      "back": "practice (-ce) is the noun: The dental practice is always busy.\npractise (-se) is the verb: Practise your spellings."
+    },
+    {
+      "front": "Which spelling do you use for the thing you need to drive a car: licence or license?",
+      "back": "licence (-ce), the noun. The verb is license (-se): to license a shop."
+    },
+    {
+      "front": "Which spelling is the noun: prophecy or prophesy?",
+      "back": "prophecy (-cy) is the noun: a prediction.\nprophesy (-sy) is the verb: making the prediction."
+    },
+    {
+      "front": "What pattern helps with practice/practise, licence/license and prophecy/prophesy?",
+      "back": "The noun has a c (-ce or -cy) and the verb has an s (-se or -sy)."
+    },
+    {
+      "front": "What do scent, sent and cent mean?",
+      "back": "scent: a smell.\nsent: as in ‘I sent something by post’.\ncent: a unit of money."
+    },
+    {
+      "front": "How can you remember tail and tale?",
+      "back": "tail ends in l for last: the last part of an animal.\ntale ends in e for end: a tale often finishes with ‘The End’."
+    },
+    {
+      "front": "What is the difference between ‘cereal’ and ‘serial’?",
+      "back": "cereal: the food you eat for breakfast.\nserial: part of a series, like a television serial."
+    },
+    {
+      "front": "How can you remember the c and e in ‘cereal’?",
+      "back": "The c looks like a bowl on its side. The e (not i) can be remembered as something we eat early in the morning."
+    },
+    {
+      "front": "Is there a spelling rule for homophones?",
+      "back": "No. We must learn them by sight and use practice strategies, like naughty letters, to help us remember."
+    },
+    {
+      "front": "What is the naughty letters strategy?",
+      "back": "Look carefully at the word, then copy it with the tricky part written larger (you could draw a naughty face)."
+    },
+    {
+      "front": "What is tricky about the spelling of ‘temperature’?",
+      "back": "The vowel in the middle is unstressed, so it is easy to forget the ‘e’. The -ture at the end makes a ch sound."
+    },
+    {
+      "front": "What is tricky about the spelling of ‘aggressive’?",
+      "back": "It has a double g and a double s, and a silent ‘e’ at the end."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Spelling more homophones",
+    "instructions": "Use the context and the word class (noun or verb) to choose the correct homophone. Type your answer as a single word.",
+    "questions": [
+      {
+        "prompt": "Before driving a car, you need a ___ to show you are capable. (A noun. Choose licence or license.)",
+        "answer": "licence",
+        "explanation": "We need a noun here, and the noun ends in -ce."
+      },
+      {
+        "prompt": "The prisoner shared his ___ with one other person. (Choose sell or cell.)",
+        "answer": "cell",
+        "explanation": "Here it is a noun: a very small room."
+      },
+      {
+        "prompt": "I will ___ the piano for an hour after school. (A verb. Choose practice or practise.)",
+        "answer": "practise",
+        "explanation": "It is something you do, a verb, so it ends in -se."
+      },
+      {
+        "prompt": "As a hobby, I like to buy and ___ stamps. (Choose sell or cell.)",
+        "answer": "sell",
+        "explanation": "It is a verb, a doing word: to exchange something for money."
+      },
+      {
+        "prompt": "They lived in fear that the ___ would come true. (A noun. Choose prophecy or prophesy.)",
+        "answer": "prophecy",
+        "explanation": "A prophecy is a noun, a prediction, and it ends in -cy."
+      },
+      {
+        "prompt": "Which homophone of ‘right’ means to put words on paper with a pen or pencil? (The w is silent.)",
+        "answer": "write",
+        "explanation": "Write is the act of writing with a pen or pencil."
+      },
+      {
+        "prompt": "The ___ of freshly baked bread filled the kitchen. (Choose the word that means a smell: scent, sent or cent.)",
+        "answer": "scent",
+        "explanation": "A scent is a smell."
+      },
+      {
+        "prompt": "Which spelling means a traditional folk tale: tail or tale?",
+        "answer": "tale",
+        "explanation": "Tale ends in e for end. Tail ends in l for last."
+      },
+      {
+        "prompt": "Each morning, I have a bowl of ___ for breakfast. (Choose cereal or serial.)",
+        "answer": "cereal",
+        "explanation": "Cereal is the food you eat. A serial is part of a series."
+      },
+      {
+        "prompt": "The ___ outside is very warm. (Spell the curriculum word for how hot or cold it is.)",
+        "answer": "temperature",
+        "explanation": "temperature: watch out for the unstressed ‘e’ in the middle."
+      },
+      {
+        "prompt": "How many letter g’s are in the word ‘aggressive’? Write the number.",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Aggressive has a double g and a double s: a-g-g-r-e-s-s-i-v-e."
+      }
+    ]
+  }
+}

@@ -1,0 +1,603 @@
+{
+  "agent": "w4-maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can appreciate that a sequence can be generated and described using term-to-term approaches."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Using} term-to-term rules",
+              "sub": "make a sequence from a rule"
+            },
+            {
+              "title": "{Finding} term-to-term rules",
+              "sub": "work out the rule from some terms"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Term-to-term",
+              "def": "A term-to-term rule describes how to calculate the next term in the sequence from the previous term."
+            },
+            {
+              "term": "Term",
+              "def": "Each value or pattern in a sequence is called a term."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Terms and term-to-term rules",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In the sequence 1, 3, 5, … the first term is 1, the second term is 3 and the third term is 5. A later term could be the tenth term, which is 19."
+        },
+        {
+          "t": "text",
+          "text": "For efficiency we use notation. Capital T means we are talking about a specific term, and the number in subscript tells us the term number."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "T1 = first term",
+            "T2 = second term",
+            "T10 = tenth term"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "A term-to-term rule gives a relationship between the terms. Start on the first term and apply the rule again and again."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Start on 124 and add 5 each time: 124, 129, 134, 139, …",
+            "Start on 6 and add −4: 6, 2, −2, −6, …",
+            "Start on 6 and multiply by 5: 6, 30, 150, 750, …",
+            "Start on 6, multiply by 2 then add 3: 6, 15, 33, 69, …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Tip: multiplying by 5 is the same as multiplying by 10 and then halving."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Find the next terms",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use the term-to-term rule to choose the next three terms.",
+          "items": [
+            {
+              "options": [
+                "7, 4, 1",
+                "7, 4, 0",
+                "13, 16, 19",
+                "7, 5, 3"
+              ],
+              "answer": 0,
+              "q": "Start on 10 and add −3: 10, …"
+            },
+            {
+              "options": [
+                "5, 7, 9",
+                "5, 9, 17",
+                "6, 12, 24",
+                "5, 9, 16"
+              ],
+              "answer": 1,
+              "q": "Start on 3, multiply by 2 then subtract 1: 3, …"
+            },
+            {
+              "options": [
+                "7, 22, 67",
+                "6, 18, 54",
+                "7, 21, 63",
+                "7, 15, 31"
+              ],
+              "answer": 0,
+              "q": "Start on 2, multiply by 3 then add 1: 2, …"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the rule",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "All of these sequences start on 2. Match each term-to-term rule with its sequence.",
+          "pairs": [
+            {
+              "a": "Add 3",
+              "b": "2, 5, 8, 11"
+            },
+            {
+              "a": "Multiply by 3",
+              "b": "2, 6, 18, 54"
+            },
+            {
+              "a": "Multiply by 2 then add 1",
+              "b": "2, 5, 11, 23"
+            },
+            {
+              "a": "Add 3, then add 4, then add 5, …",
+              "b": "2, 5, 9, 14"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "One rule, many sequences",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Andeep’s term-to-term rule is “multiply by 0.1”. Three classmates guess his sequence:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "500, 50, 5, …",
+            "0.1, 0.01, 0.001, …",
+            "82, 8.2, 0.82, …"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "All three follow the rule “× 0.1”, so without more information we cannot know which one is Andeep’s. Sequences with different first terms are different sequences, even if they have the same rule."
+        },
+        {
+          "t": "reveal",
+          "label": "Now Andeep says T2 = 4",
+          "text": "Then his sequence is 40, 4, 0.4, 0.04, 0.004, … Multiplying 40 by 0.1 gives 4, and each term after that is 0.1 times the one before."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Working backwards",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Write the sequence with gaps for the terms you do not know. To go back to a previous term, do the inverse of the rule."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Rule ×0.1 and T2 = 4. To go back we divide by 0.1, which is the same as multiplying by 10. So T1 = 4 ÷ 0.1 = 40.",
+            "Rule add 3 and T3 = 7. Forwards: 7 + 3 = 10 and 10 + 3 = 13. Backwards (subtract 3): 7 − 3 = 4 and 4 − 3 = 1.",
+            "The first five terms are 1, 4, 7, 10, 13."
+          ]
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "options": [
+                "3",
+                "7",
+                "15",
+                "8"
+              ],
+              "answer": 0,
+              "q": "The rule is “add 4” and T3 = 11. What is T1?"
+            },
+            {
+              "options": [
+                "0.6",
+                "60",
+                "600",
+                "5.9"
+              ],
+              "answer": 1,
+              "q": "The rule is “× 0.1” and T2 = 6. What is T1?"
+            },
+            {
+              "options": [
+                "7",
+                "17",
+                "−17",
+                "60"
+              ],
+              "answer": 1,
+              "q": "The rule is “add −5” and T2 = 12. What is T1?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding higher terms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Adding again and again to reach the 10th, 20th or 100th term takes a long time, and it is easy to make a mistake. A term-to-term rule is great for seeing how a sequence develops, but it is not always the quickest way to describe it."
+        },
+        {
+          "t": "text",
+          "text": "Shortcut for a constant additive sequence: it starts on 3 and adds 4 each time. From T1 to T10 there are 9 additions of 4."
+        },
+        {
+          "t": "list",
+          "items": [
+            "9 × 4 = 36 (repeated addition is multiplication)",
+            "T10 = 3 + 36 = 39",
+            "Start on 10 and add 6: 9 × 6 = 54, so T10 = 10 + 54 = 64"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Watch out!",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura’s sequence starts at 7 and adds 5 each time. Three pupils try to work out T10."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Aisha: “10 × 5 is 50, so add 50.” (There are only nine additions between T1 and T10.)",
+            "Jacob: “9 × 5 is 45, so T10 is 45.” (He forgot to add it to the first term.)",
+            "Lucas: “T10 is 7 + 45 = 52.” This is correct."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "How many additions of 5 take you from T1 to T10?",
+          "options": [
+            "10",
+            "9",
+            "11",
+            "5"
+          ],
+          "answer": 1,
+          "why": "T1 to T2 is one addition, and T1 to T10 is nine additions."
+        },
+        {
+          "t": "callout",
+          "text": "This shortcut only works for constant additive sequences. A sequence that doubles each time is not found by 3 + 9 × 2."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Use the shortcut",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Each sequence has a constant additive rule. Find the term.",
+          "items": [
+            {
+              "options": [
+                "32",
+                "35",
+                "30",
+                "27"
+              ],
+              "answer": 0,
+              "q": "Start on 5 and add 3 each time. What is T10?"
+            },
+            {
+              "options": [
+                "58",
+                "64",
+                "54",
+                "60"
+              ],
+              "answer": 0,
+              "q": "Start on 4 and add 6 each time. What is T10?"
+            },
+            {
+              "options": [
+                "−2",
+                "−4",
+                "0",
+                "42"
+              ],
+              "answer": 0,
+              "q": "Start on 20 and add −2 each time. What is T12?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Finding the rule from missing terms",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If a sequence has a constant additive pattern, you can find the rule even with missing terms."
+        },
+        {
+          "t": "list",
+          "items": [
+            "1, __, 17: T3 − T1 = 17 − 1 = 16. There are 2 additions, so each is 16 ÷ 2 = 8. The rule is “add 8”.",
+            "23, __, __, __, 59: T5 − T1 = 36. There are 4 additions, so 36 ÷ 4 = 9. The rule is “add 9”.",
+            "T2 = 7 and T5 = 19: 19 − 7 = 12 in 3 additions, so 12 ÷ 3 = 4. The rule is “add 4”."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Count the additions (the jumps) between the two known terms, not the missing terms. T1 to T5 has 4 additions but only 3 missing terms. Then check the rule by filling in the terms."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the rule",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "These sequences have a constant additive pattern. Choose the term-to-term rule.",
+          "items": [
+            {
+              "options": [
+                "add 7",
+                "add 8",
+                "add 21",
+                "add 5"
+              ],
+              "answer": 0,
+              "q": "T1 = 4 and T4 = 25"
+            },
+            {
+              "options": [
+                "add 8",
+                "add 6",
+                "add 32",
+                "add 10"
+              ],
+              "answer": 0,
+              "q": "T2 = 10 and T6 = 42"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Other kinds of rule",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Term-to-term rules can be related additively, multiplicatively or in other ways."
+        },
+        {
+          "t": "list",
+          "items": [
+            "3, 12, 48, 192, … Multiply the previous term by 4.",
+            "−96, 48, −24, 12, −6, … Multiply the previous term by −1/2 (the same as dividing by −2).",
+            "4, 7, 10, … Add 3 to the previous term."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Other rules use two steps, like “multiply by 2 then add 3”, or steps that change, like “add 3, then add 5, then add 7, …”."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More than one rule",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex says: “My sequence starts with 1.” Is that enough to know the rule? No, many rules work. When he adds “the second term is 2”, rules such as “add 1”, “multiply by 2” or “multiply by 5 then subtract 3” all work."
+        },
+        {
+          "t": "text",
+          "text": "Even with three terms, 1, 2, 4, there can be more than one rule: “multiply by 2” works, and so does “add 1, then 2, then 3, …”."
+        },
+        {
+          "t": "text",
+          "text": "Try T1 = 5 and T2 = 15. All of these rules work:"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "add 10",
+            "multiply by 3",
+            "multiply by 2 then add 5",
+            "add 10, then 20, then 30, …"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Often three terms let us describe a rule, but it is possible that other rules also work. A rule may not be unique."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which rule works?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which term-to-term rule makes 4, 12, … ?",
+          "options": [
+            "add 4",
+            "multiply by 3",
+            "add 12",
+            "multiply by 4"
+          ],
+          "answer": 1,
+          "why": "4 × 3 = 12. The others give 8, 16 and 16."
+        },
+        {
+          "t": "choice",
+          "q": "Which term-to-term rule makes 3, 7, 15, … ?",
+          "options": [
+            "add 3",
+            "multiply by 2",
+            "multiply by 3",
+            "multiply by 2 then add 1"
+          ],
+          "answer": 3,
+          "why": "3 × 2 + 1 = 7 and 7 × 2 + 1 = 15. The other rules do not work for both steps."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Generating a sequence using a term-to-term rule",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A term-to-term rule tells us how to generate the next term based on the previous term.",
+            "Sequences can be generated from a term-to-term rule. They could be related additively, multiplicatively or in other ways.",
+            "Using a term-to-term rule to find higher term numbers can be time consuming.",
+            "It is possible to describe a sequence using a term-to-term rule when given some of the terms. The rule may not be unique.",
+            "Different first terms make different sequences, even when the rule is the same."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a term-to-term rule?",
+      "back": "A term-to-term rule describes how to calculate the next term in the sequence from the previous term."
+    },
+    {
+      "front": "What is a term in a sequence?",
+      "back": "Each value or pattern in a sequence is called a term."
+    },
+    {
+      "front": "What do the notations T1, T2 and T10 mean?",
+      "back": "The first term, the second term and the tenth term. Capital T means a specific term, and the subscript number is the term number."
+    },
+    {
+      "front": "Start on 124 and add 5. What are the next three terms?",
+      "back": "129, 134, 139"
+    },
+    {
+      "front": "Start on 6 and multiply by 2 then add 3. What are the next three terms?",
+      "back": "15, 33, 69"
+    },
+    {
+      "front": "How do you go back to the previous term in a sequence?",
+      "back": "Do the inverse of the rule.\n\nAdding 3 goes forwards, so subtract 3 to go backwards."
+    },
+    {
+      "front": "The rule is “× 0.1” and T2 = 4. What is T1?",
+      "back": "40\n\nGoing back we divide by 0.1, which is the same as multiplying by 10."
+    },
+    {
+      "front": "Why is a term-to-term rule not always the best way to find a high term such as T100?",
+      "back": "It takes a long time and we are more likely to make a mistake."
+    },
+    {
+      "front": "A sequence starts on 3 and adds 4 each time. What is T10?",
+      "back": "39\n\nThere are 9 additions of 4: 3 + 9 × 4 = 39."
+    },
+    {
+      "front": "How many additions are there between T1 and T10 in a constant additive sequence?",
+      "back": "9 (not 10)."
+    },
+    {
+      "front": "A constant additive sequence has T2 = 7 and T5 = 19. What is the term-to-term rule?",
+      "back": "Add 4\n\n19 − 7 = 12, and there are 3 additions: 12 ÷ 3 = 4."
+    },
+    {
+      "front": "Is a term-to-term rule always the only rule for some given terms?",
+      "back": "No. It is possible that other rules also work.\n\nT1 = 5, T2 = 15: add 10, or multiply by 3, or multiply by 2 then add 5, …"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Generating a sequence using a term-to-term rule",
+    "instructions": "Use the term-to-term rule to find each term. You may write the terms out to help you. Type a minus sign as - .",
+    "questions": [
+      {
+        "prompt": "Start on 2 and add 7 each time. What is T3?",
+        "answer": "16",
+        "explanation": "2, 9, 16."
+      },
+      {
+        "prompt": "Start on 1 and multiply by 3 each time. What is T4?",
+        "answer": "27",
+        "explanation": "1, 3, 9, 27."
+      },
+      {
+        "prompt": "Start on 6 and, each time, double then add 10. What is T4?",
+        "answer": "118",
+        "explanation": "6, 22, 54, 118."
+      },
+      {
+        "prompt": "Start on 5 and add −4 each time. What is T6?",
+        "answer": "-15",
+        "explanation": "5, 1, −3, −7, −11, −15.",
+        "accepted": [
+          "−15"
+        ]
+      },
+      {
+        "prompt": "Start on 10 and multiply by 2 each time. What is T7?",
+        "answer": "640",
+        "explanation": "10, 20, 40, 80, 160, 320, 640."
+      },
+      {
+        "prompt": "Start on −4 and add 5 each time. What is T10?",
+        "answer": "41",
+        "explanation": "There are 9 additions of 5, which is 45: −4 + 45 = 41."
+      },
+      {
+        "prompt": "Start on 24 and add −2 each time. What is T25?",
+        "answer": "-24",
+        "explanation": "There are 24 additions of −2, which is −48: 24 − 48 = −24.",
+        "accepted": [
+          "−24"
+        ]
+      },
+      {
+        "prompt": "A sequence has a constant additive pattern with T2 = 7 and T5 = 19. What value is added each time?",
+        "answer": "4",
+        "explanation": "19 − 7 = 12 over 3 additions: 12 ÷ 3 = 4."
+      },
+      {
+        "prompt": "A sequence has a constant additive pattern with T1 = 2 and T6 = 42. What value is added each time?",
+        "answer": "8",
+        "explanation": "42 − 2 = 40 over 5 additions: 40 ÷ 5 = 8."
+      },
+      {
+        "prompt": "A sequence has a constant additive pattern with T1 = 4 and T4 = 25. What value is added each time?",
+        "answer": "7",
+        "explanation": "25 − 4 = 21 over 3 additions: 21 ÷ 3 = 7."
+      }
+    ]
+  }
+}

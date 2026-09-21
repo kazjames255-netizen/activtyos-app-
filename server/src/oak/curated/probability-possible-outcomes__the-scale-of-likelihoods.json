@@ -1,0 +1,587 @@
+{
+  "agent": "maths-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can show the likelihood of an outcome on a scale."
+        },
+        {
+          "t": "text",
+          "text": "You will learn the words we use to describe how likely something is, and where each one goes on the scale of likelihoods."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "introducing the {scale of likelihoods}"
+            },
+            {
+              "title": "{comparing} the likelihood of events on the scale"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "impossible",
+              "def": "An outcome is impossible if there is no possibility that it can happen."
+            },
+            {
+              "term": "certain",
+              "def": "An outcome is certain if it is guaranteed to happen."
+            },
+            {
+              "term": "even chance",
+              "def": "An outcome has even chance if its likelihood of happening is the same as its likelihood of not happening."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The scale of likelihoods",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The likelihood of different events can be compared and shown on a scale. Events that are more likely go further to the right. Events that are less likely go further to the left."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "impossible",
+              "sub": "far left"
+            },
+            {
+              "title": "unlikely"
+            },
+            {
+              "title": "even chance",
+              "sub": "middle"
+            },
+            {
+              "title": "likely"
+            },
+            {
+              "title": "certain",
+              "sub": "far right"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Left = less likely. Right = {more likely}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Impossible and certain",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Think about spinners that could land on “win”, where every sector is either win or lose."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{impossible}",
+              "sub": "A spinner with only lose sectors: it is impossible for it to land on win."
+            },
+            {
+              "title": "{certain}",
+              "sub": "A spinner with only win sectors: it is certain to land on win."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Even chance, likely and unlikely",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For most events, we compare the chance of it happening with the chance of it not happening."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Even chance**: the chance of it happening is the same as the chance of it not happening. Example: a spinner with a win sector and a lose sector of the same size.",
+            "**Likely**: a greater chance of happening than not happening. Example: the win sector is bigger than the lose sector.",
+            "**Unlikely**: less chance of happening than not happening. Example: the lose sector is much bigger than the win sector."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Equal chance is not even chance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A spinner has three equal sectors labelled A, B and C. Lucas says: “The likelihood of landing on A is an even chance, because the spinner has an equal chance of landing on each letter.” Is Lucas right?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "No. There is an equal chance of landing on each letter, because the sectors are all the same size. But landing on A is less likely than not landing on A. It is less than an even chance, so it is unlikely."
+        },
+        {
+          "t": "callout",
+          "text": "{Equal chance} is not the same as {even chance}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: moving in a game",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Five players roll a regular six-sided dice to see if they can move. Where does each go on the scale?"
+        },
+        {
+          "t": "text",
+          "text": "Andeep needs an odd number: 1, 3, 5. That is 3 of the 6 numbers, the same as the number that will not work, so it is an **even chance**."
+        },
+        {
+          "t": "text",
+          "text": "Izzy needs a 7. No number on the dice is 7, so it is **impossible**."
+        },
+        {
+          "t": "text",
+          "text": "Jun needs an integer. Every number on the dice is an integer, so it is **certain**."
+        },
+        {
+          "t": "text",
+          "text": "Laura needs a multiple of 3: only 3 and 6, which is 2 of the 6 numbers. Less chance of moving than not moving, so it is **unlikely**."
+        },
+        {
+          "t": "text",
+          "text": "Sam needs a factor of 6: 1, 2, 3 and 6, which is 4 of the 6 numbers. More chance of moving than not moving, so it is **likely**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: match the term",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "A regular six-sided dice is rolled once. Match each event to the word that describes its likelihood.",
+          "pairs": [
+            {
+              "a": "rolling a number less than 7",
+              "b": "certain"
+            },
+            {
+              "a": "rolling a 0",
+              "b": "impossible"
+            },
+            {
+              "a": "rolling an even number",
+              "b": "even chance"
+            },
+            {
+              "a": "rolling a number greater than 1",
+              "b": "likely"
+            },
+            {
+              "a": "rolling a 5 or a 6",
+              "b": "unlikely"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: true or false?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A spinner has 6 equal sectors numbered 1, 2, 3, 4, 5 and 6."
+        },
+        {
+          "t": "choice",
+          "q": "There is an even chance that the spinner lands on a number greater than 3.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 0,
+          "why": "The numbers greater than 3 are 4, 5 and 6: 3 of the 6 sectors, the same as the sectors that are not. That is an even chance."
+        },
+        {
+          "t": "choice",
+          "q": "There is an even chance that the spinner lands on 5.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "Only 1 sector shows 5 and 5 sectors do not. Landing on 5 is less likely than not landing on 5, so it is unlikely."
+        },
+        {
+          "t": "choice",
+          "q": "The spinner is equally likely to land on each number, so landing on any one number is an even chance.",
+          "options": [
+            "True",
+            "False"
+          ],
+          "answer": 1,
+          "why": "Equal chance is not the same as even chance. Each number has less chance of happening than not happening."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Some events are more likely than others",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Two events can have the same word but still be different. Three spinners can all be likely to land on “win”, and some are more likely than others. It is the same with unlikely."
+        },
+        {
+          "t": "text",
+          "text": "Laura and Sofia roll a dice to move. Laura moves on a multiple of 3 (3 or 6). Sofia moves on a multiple of 4 (only 4). Both are unlikely. Which is less likely?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "Sofia. She has only 1 number that lets her move, and Laura has 2. Both are unlikely, but Sofia’s likelihood goes further to the left on the scale."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two outcomes, one scale",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Aisha and Jacob play a tennis match, so ξ = ❴Aisha wins, Jacob wins❵. Alex says they could both be likely to win, but Aisha is more likely. Why must Alex be incorrect?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "The only possible outcomes are Aisha wins or Jacob wins, and they cannot both happen in the same trial. When one happens, the other does not. The more likely it is that Aisha wins, the less likely it is that Jacob wins."
+        },
+        {
+          "t": "callout",
+          "text": "If “win” is {likely}, then “lose” is {unlikely}. If “win” is an even chance, so is “lose”."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: win and lose",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A spinner has only two outcomes: ξ = ❴win, lose❵. The likelihood of landing on win is shown. What is the likelihood of landing on lose?"
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Win is likely, so lose is...",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Win is certain, so lose is...",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Win is an even chance, so lose is...",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Win is unlikely, so lose is...",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Practice: dice games",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Each player rolls a regular six-sided dice once. How likely is it that they move?",
+          "items": [
+            {
+              "q": "Kim moves on a factor of 5 (1 or 5).",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Leo moves on a factor of 20 (1, 2, 4 or 5).",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 3
+            },
+            {
+              "q": "Mo moves on a multiple of 7.",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Nia moves on a number that is not a prime number (1, 4 or 6).",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Pat moves on a number greater than 0.",
+              "options": [
+                "impossible",
+                "unlikely",
+                "even chance",
+                "likely",
+                "certain"
+              ],
+              "answer": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The likelihood of events can be shown on a scale: impossible, unlikely, even chance, likely, certain.",
+            "An impossible event has no possibility of happening. A certain event is guaranteed to happen.",
+            "An event has even chance if its likelihood of happening is the same as its likelihood of not happening.",
+            "Events can be equally likely without having an even chance.",
+            "Some events can be more likely to happen than others."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Put the five likelihood words in order, from least likely to most likely.",
+      "back": "impossible, unlikely, even chance, likely, certain."
+    },
+    {
+      "front": "On the scale of likelihoods, which way do more likely events go?",
+      "back": "Further to the right.\n\nLess likely events go further to the left."
+    },
+    {
+      "front": "What does impossible mean?",
+      "back": "There is no possibility that the outcome can happen."
+    },
+    {
+      "front": "What does certain mean?",
+      "back": "The outcome is guaranteed to happen."
+    },
+    {
+      "front": "What does even chance mean?",
+      "back": "The likelihood of the outcome happening is the same as the likelihood of it not happening."
+    },
+    {
+      "front": "What does likely mean?",
+      "back": "The outcome has a greater chance of happening than not happening."
+    },
+    {
+      "front": "What does unlikely mean?",
+      "back": "The outcome has less chance of happening than not happening."
+    },
+    {
+      "front": "Is equal chance the same as even chance?",
+      "back": "No.\n\nA spinner with three equal sectors A, B, C has an equal chance of landing on each letter, but landing on A is unlikely (less than an even chance)."
+    },
+    {
+      "front": "A regular dice is rolled. How likely is a factor of 6?",
+      "back": "Likely.\n\nFactors of 6: 1, 2, 3, 6 (4 of the 6 numbers)."
+    },
+    {
+      "front": "A regular dice is rolled. How likely is rolling an odd number?",
+      "back": "Even chance.\n\nThe odd numbers 1, 3, 5 are 3 of the 6 numbers."
+    },
+    {
+      "front": "A regular dice is rolled. How likely is rolling a 7?",
+      "back": "Impossible.\n\nNo number on the dice is 7."
+    },
+    {
+      "front": "A spinner has only two outcomes, win and lose. If win is likely, how likely is lose?",
+      "back": "Unlikely.\n\nThe more likely one outcome is, the less likely the other."
+    },
+    {
+      "front": "Two events are both unlikely. Can one still be more likely than the other?",
+      "back": "Yes.\n\nExample: on a dice, a multiple of 3 (3, 6) is more likely than a multiple of 4 (only 4), but both are unlikely."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The scale of likelihoods",
+    "instructions": "Answer with one of these words: impossible, unlikely, even chance, likely or certain, unless the question asks for something else. All the dice are regular six-sided dice and each face is equally likely.",
+    "questions": [
+      {
+        "prompt": "Aisha can move her piece if she rolls a factor of 24 on a regular six-sided dice. How likely is it that she moves?",
+        "answer": "likely",
+        "accepted": [
+          "likely",
+          "Likely"
+        ],
+        "explanation": "The factors of 24 on the dice are 1, 2, 3, 4 and 6: 5 of the 6 numbers, so she is more likely to move than not."
+      },
+      {
+        "prompt": "Izzy can move her piece if she rolls a multiple of 1 on a regular six-sided dice. How likely is it that she moves?",
+        "answer": "certain",
+        "accepted": [
+          "certain",
+          "Certain"
+        ],
+        "explanation": "Every number is a multiple of 1, so she is guaranteed to move."
+      },
+      {
+        "prompt": "Jacob can move his piece if he rolls a factor of 25 on a regular six-sided dice. How likely is it that he moves?",
+        "answer": "unlikely",
+        "accepted": [
+          "unlikely",
+          "Unlikely"
+        ],
+        "explanation": "The factors of 25 on the dice are 1 and 5: 2 of the 6 numbers, so he has less chance of moving than not."
+      },
+      {
+        "prompt": "Sofia can move her piece if she rolls a non-integer on a regular six-sided dice. How likely is it that she moves?",
+        "answer": "impossible",
+        "accepted": [
+          "impossible",
+          "Impossible"
+        ],
+        "explanation": "Every number on the dice is an integer, so there is no possibility she moves."
+      },
+      {
+        "prompt": "Lucas can move his piece if he rolls a prime number on a regular six-sided dice. How likely is it that he moves?",
+        "answer": "even chance",
+        "accepted": [
+          "even chance",
+          "an even chance",
+          "Even chance"
+        ],
+        "explanation": "The prime numbers are 2, 3 and 5: 3 of the 6 numbers, the same chance as not moving."
+      },
+      {
+        "prompt": "Which word describes an outcome that is guaranteed to happen?",
+        "answer": "certain",
+        "accepted": [
+          "certain",
+          "Certain"
+        ],
+        "explanation": "An outcome is certain if it is guaranteed to happen."
+      },
+      {
+        "prompt": "A spinner has three equal sectors labelled A, B and C. How likely is it to land on A?",
+        "answer": "unlikely",
+        "accepted": [
+          "unlikely",
+          "Unlikely"
+        ],
+        "explanation": "Landing on A is less likely than not landing on A. Equal chance is not the same as even chance."
+      },
+      {
+        "prompt": "A spinner has two outcomes, win and lose. Landing on win is unlikely. How likely is landing on lose?",
+        "answer": "likely",
+        "accepted": [
+          "likely",
+          "Likely"
+        ],
+        "explanation": "When one of two outcomes is less likely than not, the other is more likely than not."
+      },
+      {
+        "prompt": "A spinner has two outcomes, win and lose. Landing on win is certain. How likely is landing on lose?",
+        "answer": "impossible",
+        "accepted": [
+          "impossible",
+          "Impossible"
+        ],
+        "explanation": "If win is guaranteed, lose cannot happen."
+      },
+      {
+        "prompt": "Laura moves on a multiple of 3 and Sofia moves on a multiple of 4 when a regular six-sided dice is rolled. Both are unlikely. Who is less likely to move?",
+        "answer": "Sofia",
+        "accepted": [
+          "Sofia",
+          "sofia"
+        ],
+        "explanation": "Sofia has only one number that lets her move (4) and Laura has two (3 and 6)."
+      }
+    ]
+  }
+}

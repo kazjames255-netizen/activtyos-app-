@@ -33,20 +33,54 @@ async function ensureLeadReplyToken(leadId: string): Promise<string> {
 const leadReplySender = async (leadId: string): Promise<{ replyTo: string } | undefined> =>
   inboundConfigured ? { replyTo: `lead-${await ensureLeadReplyToken(leadId)}@${inboundDomain}` } : undefined;
 
-/** A real, working video-call room for a lead's booked slot — Jitsi Meet
- * (meet.jit.si): free, no account needed to join or host, works instantly.
- * No Google/Zoom account to connect (that would need real OAuth, set up by
- * hand in that provider's own console — not something done from here), and
- * a static personal link would mean every booking shares the same room.
- * One random slug per lead, assigned once and reused for every email about
+/** A real, working video-call room for a lead's booked slot — Daily.co's REST
+ * API (dashboard.daily.co), not Jitsi's public meet.jit.si: that free public
+ * server auto-disconnects any *embedded* (iframe) call after 5 minutes —
+ * fine for a demo, useless for a real 30-minute sales call. Daily's free
+ * tier (10,000 participant-minutes/month, no embed-length cap) needs a real
+ * account, so DAILY_API_KEY/DAILY_DOMAIN must be set; `videoRoom` stores the
+ * full room URL Daily hands back (not just a slug — nothing else needs the
+ * domain). One room per lead, created once and reused for every email about
  * that lead's call (rescheduling keeps the same room) — unguessable, so
  * only people who were actually sent the link can join. */
-export async function ensureLeadVideoUrl(leadId: string): Promise<string> {
+export async function ensureLeadVideoUrl(leadId: string): Promise<string | null> {
   const ref = db.collection("leads").doc(leadId);
-  const existing = (await ref.get()).data() as { videoRoom?: string } | undefined;
-  const room = existing?.videoRoom || `Activly-${randomBytes(8).toString("hex")}`;
-  if (!existing?.videoRoom) await ref.set({ videoRoom: room }, { merge: true });
-  return `https://meet.jit.si/${room}`;
+  const existing = (await ref.get()).data() as { videoRoom?: string; business?: string } | undefined;
+  if (existing?.videoRoom) return existing.videoRoom;
+
+  const apiKey = process.env.DAILY_API_KEY;
+  if (!apiKey) {
+    console.warn("[video] DAILY_API_KEY not set — skipping room creation");
+    return null;
+  }
+  // A readable name, not a raw hex blob — shows up in Daily's own dashboard
+  // and (briefly, in the URL bar) to whoever joins. Still unique via the
+  // random suffix, just presentable.
+  const slug = (existing?.business || "Call").replace(/[^a-zA-Z0-9]+/g, "").slice(0, 24) || "Call";
+  const name = `activly-${slug.toLowerCase()}-${randomBytes(3).toString("hex")}`;
+  const res = await fetch("https://api.daily.co/v1/rooms", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      privacy: "public",
+      properties: {
+        enable_prejoin_ui: false,
+        enable_knocking: false,
+        enable_screenshare: true,
+        enable_chat: true,
+        // (No redirect_on_meeting_exit: Daily rejects it on this account's plan — the
+        // call page handles daily-js's "left-meeting" event and shows its own end screen.)
+      },
+    }),
+  });
+  if (!res.ok) {
+    console.error("[video] Daily room creation failed:", res.status, await res.text().catch(() => ""));
+    return null;
+  }
+  const { url } = (await res.json()) as { url: string };
+  await ref.set({ videoRoom: url }, { merge: true });
+  return url;
 }
 
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
@@ -718,10 +752,10 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">You're booked in, ${escapeHtml(firstName)} 🎉</h2>
         <p style="font-size:14px;line-height:1.6;margin:0 0 16px">We've pencilled you in for a free 1-on-1 walkthrough:</p>
         <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(when)} (UK time)</div>
-        <div style="text-align:center;margin:0 0 16px">
+        ${videoUrl ? `<div style="text-align:center;margin:0 0 16px">
           <a href="${videoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">🎥 Join your call</a>
-        </div>
-        <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">Same link works whenever you're ready to join, no account or download needed. Need to move it? Just reply to this email.</p>
+        </div>` : ""}
+        <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">${videoUrl ? "Same link works whenever you're ready to join, no account or download needed. " : "We'll send you the link to join before the call. "}Need to move it? Just reply to this email.</p>
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;

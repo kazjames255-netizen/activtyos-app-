@@ -1,0 +1,860 @@
+{
+  "agent": "english-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain the plot and main themes of Shakespeare’s ‘A Midsummer Night’s Dream’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Act 1",
+              "sub": "the problem in Athens"
+            },
+            {
+              "title": "Acts 2 and 3",
+              "sub": "chaos in the magical forest"
+            },
+            {
+              "title": "Acts 4 and 5",
+              "sub": "the ending"
+            },
+            {
+              "title": "Main themes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "midsummer",
+              "def": "the middle of the summer"
+            },
+            {
+              "term": "theme",
+              "def": "the main ideas in a text which are explored in a number of different ways"
+            },
+            {
+              "term": "Act",
+              "def": "the way in which a play is divided (like a book is divided into chapters); all of Shakespeare’s plays have five"
+            },
+            {
+              "term": "Shakespearean comedy",
+              "def": "a play designed to make you laugh, often involving misunderstandings and ending in marriage"
+            },
+            {
+              "term": "Athenian",
+              "def": "someone from Athens"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A Shakespearean comedy in five acts",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘A Midsummer Night’s Dream’ is a play written by William Shakespeare. It is a **Shakespearean comedy**, so we can expect misunderstandings, and an ending with marriages."
+        },
+        {
+          "t": "text",
+          "text": "A play is divided into **Acts**, like a book is divided into chapters. All of Shakespeare’s plays have five."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Act 1",
+            "Act 2",
+            "Act 3",
+            "Act 4",
+            "Act 5"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What does ‘midsummer’ mean?",
+          "text": "Midsummer means the middle of the summer."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Three sets of characters",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The play has three sets of characters. It starts and ends in Athens; in the middle, it is set in a magical forest."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Rich nobles",
+              "sub": "live in the city of Athens"
+            },
+            {
+              "title": "Poor actors",
+              "sub": "live in the city of Athens"
+            },
+            {
+              "title": "Fairies",
+              "sub": "live in a forest outside Athens"
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which set of characters lives in a forest outside Athens?",
+          "options": [
+            "The rich nobles",
+            "The poor actors",
+            "The fairies"
+          ],
+          "answer": 2,
+          "why": "The fairies live in a forest outside Athens. The nobles and the actors both live in the city of Athens."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 1: a problem in Athens",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Like all of Shakespeare’s comedies, the play begins with a problem, in the world of the rich nobles."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A father, Egeus, brings his daughter Hermia before Duke Theseus.",
+            "Egeus is angry because Hermia wants to marry Lysander.",
+            "Egeus wants Hermia to marry Demetrius instead.",
+            "Theseus advises Hermia to do as her father says. If she doesn’t, she will be killed or forced to be a nun."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Egeus begins: “Full of vexation come I, with complaint / Against my child, my daughter Hermia.” (1.1.22-23)"
+        },
+        {
+          "t": "reveal",
+          "label": "What does ‘vexation’ suggest?",
+          "text": "If someone is vexed, they are often angry. Egeus is angry with Hermia."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 1: running away",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Hermia and Lysander decide to run away from Athens and the “sharp Athenian law” to get married. They will leave via the forest.",
+            "Hermia tells her best friend, Helena.",
+            "Helena is very unhappy because she is in love with Demetrius, but Demetrius loves Hermia!",
+            "Helena decides to tell Demetrius that Hermia and Lysander are running away."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Helena knows Demetrius will follow Hermia into the forest. Helena will follow Demetrius, and this at least means she will get to spend time with him."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Act 1: who has which problem?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each character to their problem at the end of Act 1.",
+          "pairs": [
+            {
+              "a": "Egeus",
+              "b": "his daughter won’t obey him"
+            },
+            {
+              "a": "Hermia",
+              "b": "isn’t allowed to marry Lysander"
+            },
+            {
+              "a": "Lysander",
+              "b": "isn’t allowed to marry Hermia"
+            },
+            {
+              "a": "Helena",
+              "b": "the man she loves is in love with someone else"
+            },
+            {
+              "a": "Demetrius",
+              "b": "the woman he loves is in love with someone else"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 2: trouble in the forest",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The action moves to the magical forest and the world of the fairies. There is conflict here too."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Oberon is King of the fairies. Titania is Queen of the fairies.",
+            "Titania is the guardian of a young boy who Oberon wants to be his servant.",
+            "Oberon demands, “Give me that boy”. Titania replies, “Not for thy fairy kingdom” and leaves. (2.1.143-4)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Oberon is angry and wants to “torment” Titania for this insult."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 2: Oberon’s plan",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Oberon asks his servant, Puck, to get a magical potion. The potion will make Titania fall in love with the next thing she sees."
+        },
+        {
+          "t": "text",
+          "text": "While she dotes on her new love, Oberon will “make her render up her page to me.” (2.1.184) In other words, she will hand over the boy."
+        },
+        {
+          "t": "text",
+          "text": "Oberon also sees Helena in the forest. He feels sorry for her because Demetrius is so horrible to her: “I do not nor cannot love you.” (2.1.201)"
+        },
+        {
+          "t": "text",
+          "text": "So Oberon asks Puck to put the magical potion on Demetrius’s eyes, so that Demetrius falls in love with Helena."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Act 2: Puck makes a mistake",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Puck makes a mistake! He puts the magical potion on Lysander’s eyes. Lysander wakes up and immediately sees Helena."
+        },
+        {
+          "t": "choice",
+          "q": "After the potion, who does Lysander fall in love with?",
+          "options": [
+            "Hermia",
+            "Helena",
+            "Titania"
+          ],
+          "answer": 1,
+          "why": "The potion makes a person fall in love with the first thing they see when they wake. Lysander wakes up and sees Helena."
+        },
+        {
+          "t": "callout",
+          "text": "Act 2 ends with confusion and chaos for the noble Athenians."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 3: Bottom and the donkey’s head",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Act 3 adds to the confusion and chaos. Puck watches the nobles and makes fun of them."
+        },
+        {
+          "t": "list",
+          "items": [
+            "The poor actors from Athens meet in the magical forest to rehearse a play.",
+            "Puck focuses his attention on a man called Bottom, and transforms his head into the head of an ass (a donkey).",
+            "Bottom’s friends are terrified of his new appearance.",
+            "Titania, under the potion’s spell, wakes up and sees Bottom. She says: “What angel wakes me from my flowery bed?” (3.1.122)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Compare the reactions",
+          "text": "Bottom’s friends are terrified: Quince cries “O monstrous! O strange!” (3.1.99). Titania is under the potion’s spell, so she adores him."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Act 3: more chaos",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Oberon tells Puck off for making Lysander, rather than Demetrius, fall in love with Helena. Puck tries to sort out his mistake: he puts the magical potion on Demetrius."
+        },
+        {
+          "t": "text",
+          "text": "At the end of Act 3, Hermia and Helena fight. Hermia thinks Helena has stolen Lysander from her. Helena thinks the men are pretending to love her, as a joke."
+        },
+        {
+          "t": "text",
+          "text": "At the very end of Act 3, Puck removes the magical potion from Lysander’s eyes."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Puck does not remove the potion from everyone. Demetrius still has the magical potion on his eyes. This is why he is in love with Helena."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Acts 4 and 5: the ending",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "At the start of Act 4, Oberon, after getting the boy from Titania, removes the magical potion from her eyes.",
+            "Bottom is transformed back into a human and returns to Athens.",
+            "Theseus and Egeus find Lysander, Hermia, Demetrius and Helena in the forest.",
+            "Theseus, seeing that Demetrius is in love with Helena, allows the lovers to marry who they wish."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "They return to Athens and, in Act 5, watch the play put on by the poor actors. The play ends with a number of marriages, just like a Shakespearean comedy."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which Act is it?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each plot point into the Act where it happens.",
+          "columns": [
+            "Act 1",
+            "Act 2",
+            "Act 3",
+            "Acts 4 and 5"
+          ],
+          "items": [
+            {
+              "text": "Egeus complains about Hermia to Duke Theseus",
+              "col": 0
+            },
+            {
+              "text": "Hermia and Lysander decide to run away",
+              "col": 0
+            },
+            {
+              "text": "Oberon and Titania argue over the little boy",
+              "col": 1
+            },
+            {
+              "text": "Puck puts the potion on Lysander by mistake",
+              "col": 1
+            },
+            {
+              "text": "Puck turns Bottom’s head into a donkey’s head",
+              "col": 2
+            },
+            {
+              "text": "Titania wakes up and falls in love with Bottom",
+              "col": 2
+            },
+            {
+              "text": "Hermia and Helena fight",
+              "col": 2
+            },
+            {
+              "text": "Theseus lets the lovers marry who they wish",
+              "col": 3
+            },
+            {
+              "text": "The poor actors perform a play for the nobles",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Main themes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A summary of the plot helps us understand some of the play’s main themes:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Love and marriage"
+            },
+            {
+              "title": "Order and disorder"
+            },
+            {
+              "title": "Appearance versus reality"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "One pupil, Alex, says: “Act 2 introduces the character of Puck and he seems to create a lot of chaos and disorder. Maybe Shakespeare wants us to consider if he is a good or bad character.”"
+        },
+        {
+          "t": "choice",
+          "q": "Which theme is Alex talking about?",
+          "options": [
+            "Love and marriage",
+            "Order and disorder",
+            "Appearance versus reality"
+          ],
+          "answer": 1,
+          "why": "Alex talks about Puck creating chaos and disorder, so the theme is order and disorder."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "The plot of ‘A Midsummer Night’s Dream’",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "‘A Midsummer Night’s Dream’ is a Shakespearean comedy.",
+            "There are three sets of characters: rich nobles, poor actors and fairies.",
+            "The play starts and ends in Athens; in the middle, it is set in a magical forest.",
+            "The play ends with a number of marriages.",
+            "A summary of the plot helps us understand some of the play’s main themes: love and marriage, order and disorder, appearance versus reality."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What kind of play is ‘A Midsummer Night’s Dream’?",
+      "back": "A Shakespearean comedy."
+    },
+    {
+      "front": "What does ‘midsummer’ mean?",
+      "back": "The middle of the summer."
+    },
+    {
+      "front": "What are the three sets of characters in the play?",
+      "back": "Rich nobles (Athens), poor actors (Athens) and fairies (a forest outside Athens)."
+    },
+    {
+      "front": "Where is the play set?",
+      "back": "It starts and ends in Athens; in the middle it is set in a magical forest."
+    },
+    {
+      "front": "What problem starts the play in Act 1?",
+      "back": "Egeus is angry because his daughter Hermia wants to marry Lysander, but he wants her to marry Demetrius."
+    },
+    {
+      "front": "What will happen to Hermia if she refuses to obey her father?",
+      "back": "She will be killed or forced to be a nun."
+    },
+    {
+      "front": "Why is Helena unhappy at the start of the play?",
+      "back": "She loves Demetrius, but Demetrius loves Hermia."
+    },
+    {
+      "front": "Why do Oberon and Titania fight in Act 2?",
+      "back": "Oberon wants the little boy Titania is looking after to be his servant. Titania says, “Not for thy fairy kingdom.”"
+    },
+    {
+      "front": "What does the magical potion do?",
+      "back": "It makes the person fall in love with the next thing they see."
+    },
+    {
+      "front": "What mistake does Puck make in Act 2?",
+      "back": "He puts the potion on Lysander’s eyes instead of Demetrius’s. Lysander wakes up and falls in love with Helena."
+    },
+    {
+      "front": "What does Puck do to Bottom in Act 3?",
+      "back": "He turns Bottom’s head into the head of an ass (a donkey). Titania then wakes up and falls in love with him."
+    },
+    {
+      "front": "Who still has the potion on his eyes at the end of the play?",
+      "back": "Demetrius. This is why he is in love with Helena."
+    },
+    {
+      "front": "What are the three main themes of the play?",
+      "back": "Love and marriage, order and disorder, and appearance versus reality."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: The plot of William Shakespeare’s ‘A Midsummer Night’s Dream’",
+    "instructions": "Answer each question with a word, a number or a short phrase. Use what you learned about the plot in Acts 1 to 5.",
+    "questions": [
+      {
+        "prompt": "How many Acts does ‘A Midsummer Night’s Dream’ have?",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "five",
+          "Five"
+        ],
+        "explanation": "All of Shakespeare’s plays have five Acts."
+      },
+      {
+        "prompt": "Which city do the rich nobles and the poor actors live in?",
+        "answer": "Athens",
+        "accepted": [
+          "athens"
+        ],
+        "explanation": "The nobles and actors live in Athens; the fairies live in a forest outside it."
+      },
+      {
+        "prompt": "Which father brings his daughter Hermia before Duke Theseus in Act 1?",
+        "answer": "Egeus",
+        "accepted": [
+          "egeus"
+        ],
+        "explanation": "Egeus is angry because Hermia wants to marry Lysander, not the man he has chosen."
+      },
+      {
+        "prompt": "Which man does Hermia want to marry?",
+        "answer": "Lysander",
+        "accepted": [
+          "lysander"
+        ],
+        "explanation": "Egeus is angry because Hermia wants to marry Lysander rather than Demetrius."
+      },
+      {
+        "prompt": "Who is the Queen of the fairies?",
+        "answer": "Titania",
+        "accepted": [
+          "titania"
+        ],
+        "explanation": "Titania is Queen of the fairies and Oberon is King."
+      },
+      {
+        "prompt": "Which servant of Oberon puts the potion on the wrong man’s eyes?",
+        "answer": "Puck",
+        "accepted": [
+          "puck"
+        ],
+        "explanation": "Puck puts the potion on Lysander’s eyes by mistake."
+      },
+      {
+        "prompt": "Which poor actor has his head turned into a donkey’s head?",
+        "answer": "Bottom",
+        "accepted": [
+          "bottom"
+        ],
+        "explanation": "Puck transforms Bottom’s head into the head of an ass, a donkey."
+      },
+      {
+        "prompt": "Which man still has the magical potion on his eyes at the end of the play?",
+        "answer": "Demetrius",
+        "accepted": [
+          "demetrius"
+        ],
+        "explanation": "Demetrius still has the potion on his eyes, which is why he is in love with Helena."
+      },
+      {
+        "prompt": "In which Act do the Athenian nobles watch a play put on by the poor actors? (Write the number.)",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "five",
+          "Act 5",
+          "act 5",
+          "Act five"
+        ],
+        "explanation": "In Act 5 the nobles return to Athens and watch the actors’ play."
+      },
+      {
+        "prompt": "The three main themes are love and marriage, order and disorder, and appearance versus what?",
+        "answer": "reality",
+        "accepted": [
+          "Reality",
+          "reality"
+        ],
+        "explanation": "The third theme is appearance versus reality."
+      }
+    ]
+  },
+  "plan": {
+    "v": 1,
+    "source": "curated",
+    "steps": [
+      {
+        "kind": "warmup",
+        "title": "Warm-up, goal and key words",
+        "minutes": 4,
+        "doThis": [
+          "Read the goal together, then look at the five key words: midsummer, theme, Act, Shakespearean comedy and Athenian.",
+          "Ask the student what each word might mean before showing the meaning.",
+          "Recall that all of Shakespeare's plays are divided into acts, in the same way that a book is divided into chapters."
+        ],
+        "say": "I can explain the plot and main themes of Shakespeare's 'A Midsummer Night's Dream'.",
+        "keywords": [
+          {
+            "term": "midsummer",
+            "meaning": "the middle of the summer"
+          },
+          {
+            "term": "theme",
+            "meaning": "the main ideas in a text which are explored in a number of different ways"
+          },
+          {
+            "term": "Act",
+            "meaning": "the way in which a play is divided (like a book is divided into chapters); all of Shakespeare's plays have five"
+          },
+          {
+            "term": "Shakespearean comedy",
+            "meaning": "a play designed to make you laugh, often involving misunderstandings and ending in marriage"
+          },
+          {
+            "term": "Athenian",
+            "meaning": "someone from Athens"
+          }
+        ],
+        "checkFor": {
+          "ask": "How many acts do all of Shakespeare's plays have, and what is a Shakespearean comedy?",
+          "lookFor": "Five acts. A Shakespearean comedy is a play designed to make you laugh, often involving misunderstandings and ending in marriage."
+        },
+        "recap": [
+          "Our goal: I can explain the plot and main themes of Shakespeare's 'A Midsummer Night's Dream'.",
+          "Every one of Shakespeare's plays has five Acts. A Shakespearean comedy is a play designed to make you laugh, often with misunderstandings and ending in marriage."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "The play and its three sets of characters",
+        "minutes": 4,
+        "doThis": [
+          "Explain that 'A Midsummer Night's Dream' is a Shakespearean comedy with three sets of characters: rich nobles and poor actors who live in the city of Athens, and fairies who live in a forest outside Athens.",
+          "Explain that the play starts and ends in Athens and that in the middle it is set in a magical forest.",
+          "Ask the student to predict what might happen, using what a Shakespearean comedy is like and the title of the play."
+        ],
+        "keyIdeas": [
+          "'A Midsummer Night's Dream' is a Shakespearean comedy.",
+          "There are three sets of characters in the play.",
+          "The play starts and ends in Athens; in the middle, the play is set in a magical forest."
+        ],
+        "checkFor": {
+          "ask": "Which set of characters lives in a forest outside Athens?",
+          "lookFor": "The fairies. The rich nobles and the poor actors live in the city of Athens."
+        },
+        "recap": [
+          "The play has three sets of characters: rich nobles, poor actors and fairies.",
+          "It starts and ends in Athens, with a magical forest in the middle."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Act 1: a problem in Athens",
+        "minutes": 7,
+        "doThis": [
+          "Explain the problem that starts the play: Egeus is angry with his daughter Hermia because she wants to marry Lysander, and he wants her to marry Demetrius.",
+          "Explain that Duke Theseus advises Hermia to do as her father says or be killed or forced to be a nun, so Hermia and Lysander decide to run away from Athens through the forest.",
+          "Explain that Helena is unhappy because she loves Demetrius, but Demetrius loves Hermia, and Helena decides to tell Demetrius that they are running away."
+        ],
+        "say": "Full of vexation come I, with complaint against my child, my daughter Hermia.",
+        "keyIdeas": [
+          "Like all of Shakespeare's comedies, the play begins with a problem.",
+          "If someone is vexed, they are often angry.",
+          "Helena knows Demetrius will follow Hermia into the forest, so she will follow Demetrius and at least get to spend time with him."
+        ],
+        "checkFor": {
+          "ask": "Why is Egeus angry, and who does he want his daughter to marry?",
+          "lookFor": "Hermia wants to marry Lysander, but Egeus wants her to marry Demetrius."
+        },
+        "recap": [
+          "The play starts with a problem: Egeus wants Hermia to marry Demetrius, but she wants to marry Lysander.",
+          "Hermia and Lysander decide to run away through the forest, and Helena, who loves Demetrius, tells him about it."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Act 2: trouble in the magical forest",
+        "minutes": 7,
+        "doThis": [
+          "Explain that the action moves to the magical forest, where Oberon, King of the fairies, is angry with Titania, Queen of the fairies, because she will not give him the young boy she looks after.",
+          "Explain Oberon's plan: Puck fetches a magical potion that makes Titania fall in love with the next thing she sees, and Oberon asks Puck to put it on Demetrius's eyes so that Demetrius falls in love with Helena.",
+          "Explain that Puck makes a mistake: he puts the potion on Lysander's eyes, and Lysander wakes up and immediately sees Helena."
+        ],
+        "keyIdeas": [
+          "While Titania dotes on her new love, Oberon will make her hand over the boy.",
+          "Oberon feels sorry for Helena because Demetrius is so horrible to her.",
+          "Act 2 ends with confusion and chaos for the noble Athenians."
+        ],
+        "examples": [
+          "Oberon demands 'Give me that boy' and Titania replies 'Not for thy fairy kingdom' and leaves."
+        ],
+        "checkFor": {
+          "ask": "After Puck's mistake, who does Lysander fall in love with, and why?",
+          "lookFor": "Helena: the potion is on his eyes, and he wakes up and immediately sees Helena."
+        },
+        "recap": [
+          "Oberon is angry with Titania because she will not give him the little boy she looks after.",
+          "Oberon wants Puck to use a magical potion, but Puck makes a mistake and Lysander falls in love with Helena."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Act 3: more confusion",
+        "minutes": 6,
+        "doThis": [
+          "Explain that the poor actors from Athens meet in the magical forest to rehearse a play, and Puck watches and makes fun of them: he turns Bottom's head into the head of an ass (a donkey).",
+          "Explain that Bottom's friends are terrified, but Titania, who is under the potion's spell, wakes up, sees Bottom and falls in love with him.",
+          "Explain that Oberon tells Puck off, so Puck puts the potion on Demetrius too, which makes Demetrius love Helena, and then Hermia and Helena fight."
+        ],
+        "keyIdeas": [
+          "Hermia thinks Helena has stolen Lysander from her; Helena thinks the men are pretending to love her, as a joke.",
+          "At the very end of Act 3, Puck removes the magical potion from Lysander's eyes."
+        ],
+        "examples": [
+          "Quince cries 'O monstrous! O strange!' (3.1.99), but Titania says 'What angel wakes me from my flowery bed?' (3.1.122).",
+          "After the second round of potions, Demetrius and Lysander both love Helena, Helena loves Demetrius, and Hermia loves Lysander but he does not love her."
+        ],
+        "checkFor": {
+          "ask": "Why do Titania and Bottom's friends react so differently to Bottom's donkey head?",
+          "lookFor": "His friends are terrified, but Titania is under the magical potion's spell, so she falls in love with him."
+        },
+        "recap": [
+          "Puck gives Bottom the head of a donkey, and Titania, under the potion, falls in love with him.",
+          "Puck puts the potion on Demetrius too, so Demetrius and Lysander both love Helena, and Hermia loves Lysander but he does not love her."
+        ]
+      },
+      {
+        "kind": "teach",
+        "title": "Acts 4 and 5, and the main themes",
+        "minutes": 8,
+        "doThis": [
+          "Explain that at the start of Act 4, Oberon, after getting the boy from Titania, removes the potion from her eyes, and Bottom is transformed back into a human and returns to Athens.",
+          "Explain that Theseus and Egeus find the four lovers in the forest and, seeing that Demetrius is in love with Helena, Theseus allows the lovers to marry who they wish. In Act 5 they watch a play put on by the poor actors.",
+          "Explain that a summary of the plot helps us understand the main themes, then ask the student to choose one theme, say which Act shows it, and say what Shakespeare might want us to think about."
+        ],
+        "keyIdeas": [
+          "The play ends with a number of marriages.",
+          "A summary of the plot helps us understand some of the play's main themes.",
+          "The main themes include love and marriage, order and disorder, and appearance versus reality."
+        ],
+        "keywords": [
+          {
+            "term": "theme",
+            "meaning": "the main ideas in a text which are explored in a number of different ways"
+          }
+        ],
+        "examples": [
+          "Order and disorder: Act 2 introduces the character of Puck and he seems to create a lot of chaos and disorder. Maybe Shakespeare wants us to consider if he is a good or bad character.",
+          "Sentence starters: 'In Act ...' and 'Maybe Shakespeare wants us to consider ...'."
+        ],
+        "checkFor": {
+          "ask": "Choose a theme, say which Act shows it, and say what Shakespeare might want us to think about.",
+          "lookFor": "A clear theme, a specific Act, and a reason from the plot, for example order and disorder in Act 2 because Puck creates a lot of chaos."
+        },
+        "recap": [
+          "In Act 4 the potion is taken off Titania, Bottom is turned back into a human, and Theseus allows the lovers to marry who they wish.",
+          "In Act 5 the poor actors perform a play, and the play ends with marriages.",
+          "The main themes are love and marriage, order and disorder, and appearance versus reality."
+        ]
+      },
+      {
+        "kind": "guided",
+        "title": "Characters, problems and Acts",
+        "minutes": 5,
+        "doThis": [
+          "Ask the student to match each character to their problem at the end of Act 1: Egeus, Hermia, Lysander, Helena and Demetrius.",
+          "Ask how one character could be feeling at the end of Act 1 and why, giving a plot point as the reason.",
+          "Then ask the student to say which plot points belong to which Act."
+        ],
+        "keyIdeas": [
+          "Egeus: his daughter won't obey him.",
+          "Hermia: isn't allowed to marry Lysander.",
+          "Lysander: isn't allowed to marry Hermia.",
+          "Helena: the man she loves is in love with someone else.",
+          "Demetrius: the woman he loves is in love with someone else."
+        ],
+        "examples": [
+          "Act 1: Hermia and Lysander run away from Athens.",
+          "Act 2: Oberon and Titania fight, and Lysander falls in love with Helena.",
+          "Act 3: Titania falls in love with Bottom, and Demetrius falls in love with Helena.",
+          "Acts 4 and 5: the potion is removed from Titania, Bottom returns to Athens, and the poor Athenians perform a play to the rich nobles."
+        ],
+        "checkFor": {
+          "ask": "How might Helena feel at the end of Act 1, and why?",
+          "lookFor": "Unhappy because Demetrius does not love her, or happy because she can follow him into the wood. Either is fine when it is justified with a plot point."
+        },
+        "recap": [
+          "Each character has a problem at the end of Act 1: Egeus's daughter will not obey him, Hermia and Lysander are not allowed to marry each other, and Helena loves Demetrius, but he loves Hermia.",
+          "When you say how a character feels, give a plot point as the reason."
+        ]
+      },
+      {
+        "kind": "independent",
+        "title": "Try it on your own",
+        "minutes": 6,
+        "doThis": [
+          "Ask the student to do the lesson quiz on their own. It asks them where the play is set, who Egeus wants Hermia to marry, why Helena is unhappy, why Oberon is angry with Titania, what Puck does to Bottom, and to match each Act to its plot points.",
+          "Mark it together and talk through any answer they got wrong."
+        ],
+        "recap": [
+          "Do the quiz questions on your own.",
+          "Look again at any you got wrong."
+        ]
+      },
+      {
+        "kind": "plenary",
+        "title": "Recap and finish",
+        "minutes": 3,
+        "doThis": [
+          "Ask the student to retell the plot in their own words, Act by Act.",
+          "Finish with the summary: it is a Shakespearean comedy with three sets of characters; it starts and ends in Athens with a magical forest in the middle; it ends with a number of marriages; and a summary of the plot helps us understand some of the main themes."
+        ],
+        "checkFor": {
+          "ask": "Where is the play set, and how does it end?",
+          "lookFor": "In Athens and in a magical forest, and it ends with a number of marriages."
+        },
+        "recap": [
+          "Can you do it now? I can explain the plot and main themes of Shakespeare's 'A Midsummer Night's Dream'.",
+          "Remember: it is a comedy with three sets of characters, set in Athens and a magical forest, and it ends with marriages."
+        ]
+      }
+    ],
+    "commonMistakes": [
+      {
+        "mistake": "Pupils may think the magical potion is removed from everyone's eyes at the end of the play.",
+        "fix": "Demetrius still has the magical potion on his eyes. This is why he is in love with Helena."
+      }
+    ],
+    "watchOut": [
+      "Have a copy of the play to hand and read the quoted lines aloud, trying different tones: how might Egeus, or Oberon and Titania, say their lines?",
+      "Draw a diagram of who loves whom after each potion: it makes the confusion in Acts 2 and 3 easier to follow.",
+      "Accept different ideas about a character's feelings, such as Helena's, as long as the student justifies them with a plot point.",
+      "Encourage the student to give an opinion and justify it, for example about Helena's decision or whether the ending is a happy one."
+    ]
+  }
+}

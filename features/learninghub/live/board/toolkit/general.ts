@@ -1,0 +1,43 @@
+import { PASTEL, list, num, type ToolItem } from "./kit";
+
+const STICKERS: Record<string, string[]> = {
+  Stars: ["⭐", "🌟", "✨", "🏆", "🎉", "👍", "💯", "🥇"],
+  Animals: ["🐶", "🐱", "🐰", "🦁", "🐘", "🐸", "🐝", "🦋"],
+  Faces: ["😀", "🤔", "😮", "😴", "😍", "🙌", "👀", "💡"],
+  Food: ["🍎", "🍌", "🍕", "🍪", "🥕", "🍇", "🍓", "🍰"],
+  School: ["✏️", "📚", "🔬", "🌍", "🎨", "🎵", "⚽", "🚀"],
+};
+
+export const GENERAL: ToolItem[] = [
+  { id: "g-venn2", pack: "general", label: "Venn diagram (2)", sub: "compare two things", params: [{ k: "a", label: "Left label", type: "text", def: "A" }, { k: "b", label: "Right label", type: "text", def: "B" }],
+    make: (b, c, v) => { b.ellipse(-110, 0, 170, 150, { c: "#2f6bd8", w: 4 }); b.ellipse(110, 0, 170, 150, { c: "#e21d27", w: 4 }); b.tc(-190, -175, String(v.a), { size: 26, bold: true, c: "#2f6bd8" }); b.tc(190, -175, String(v.b), { size: 26, bold: true, c: "#e21d27" }); b.tc(0, -175, "Both", { size: 22, bold: true }); } },
+  { id: "g-venn3", pack: "general", label: "Venn diagram (3)", levels: ["standard", "advanced"], params: [{ k: "a", label: "Top", type: "text", def: "A" }, { k: "b", label: "Bottom left", type: "text", def: "B" }, { k: "c", label: "Bottom right", type: "text", def: "C" }],
+    make: (b, c, v) => { b.ellipse(0, -70, 140, 140, { c: "#2f6bd8", w: 4 }); b.ellipse(-85, 65, 140, 140, { c: "#15b364", w: 4 }); b.ellipse(85, 65, 140, 140, { c: "#e21d27", w: 4 }); b.tc(0, -235, String(v.a), { size: 24, bold: true }); b.tc(-215, 215, String(v.b), { size: 24, bold: true }); b.tc(215, 215, String(v.c), { size: 24, bold: true }); } },
+  { id: "g-mind", pack: "general", label: "Mind map / spider diagram", sub: "one idea, many branches", params: [{ k: "centre", label: "Centre idea", type: "text", def: "Topic" }, { k: "branches", label: "Branches (comma separated)", type: "list", def: "Idea 1, Idea 2, Idea 3, Idea 4, Idea 5, Idea 6" }],
+    make: (b, c, v) => { const br = list(v.branches, ["Idea"]); b.cell(-105, -62, 210, 124, { shape: "ellipse", c: c.brand, w: 4, fill: "#eaf0fc", text: String(v.centre), size: 26, bold: true }); br.slice(0, 10).forEach((t, i, a) => { const ang = -Math.PI / 2 + (i / a.length) * Math.PI * 2, x = Math.cos(ang) * 270, y = Math.sin(ang) * 175; b.line(Math.cos(ang) * 105, Math.sin(ang) * 62, x - Math.cos(ang) * 55, y - Math.sin(ang) * 30, { w: 3, c: c.brand }); b.cell(x - 78, y - 30, 156, 60, { c: c.brand, w: 3, fill: PASTEL[i % PASTEL.length], text: t, size: 19, bold: true }); }); } },
+  { id: "g-flow", pack: "general", label: "Flowchart", sub: "steps joined by arrows", params: [{ k: "steps", label: "Steps (comma separated)", type: "list", def: "Start, Step 1, Step 2, End" }],
+    make: (b, c, v) => { const st = list(v.steps, ["Start", "End"]); st.forEach((t, i) => { const y = i * 100, term = i === 0 || i === st.length - 1; b.cell(-120, y - 30, 240, 60, { c: c.brand, w: 3, fill: term ? "#dcfce7" : "#eaf0fc", text: t, size: 20, bold: true }); if (i < st.length - 1) b.arrow(0, y + 30, 0, y + 70, { c: c.ink, w: 3 }); }); } },
+  { id: "g-table", pack: "general", label: "Table", sub: "rows × columns, editable headings", params: [{ k: "cols", label: "Columns", type: "number", def: 3 }, { k: "rows", label: "Rows", type: "number", def: 4 }, { k: "head", label: "Headings (comma separated)", type: "list", def: "Heading 1, Heading 2, Heading 3" }],
+    make: (b, c, v) => { const cols = Math.max(1, Math.min(8, num(v.cols, 3))), rows = Math.max(1, Math.min(14, num(v.rows, 4))), head = list(v.head); b.table(0, 0, Array(cols).fill(200), [56, ...Array(rows).fill(64)], { head: Array.from({ length: cols }, (_, i) => head[i] ?? ""), headFill: "#eaf0fc", size: 21 }); } },
+  { id: "g-kwl", pack: "general", label: "KWL chart", sub: "Know · Want to know · Learned", make: (b, c) => { b.table(0, 0, [260, 260, 260], [58, 360], { head: ["K — What I know", "W — What I want to know", "L — What I learned"], headFill: "#eaf0fc", size: 22 }); } },
+  { id: "g-tchart", pack: "general", label: "T-chart", params: [{ k: "l", label: "Left heading", type: "text", def: "Pros" }, { k: "r", label: "Right heading", type: "text", def: "Cons" }], make: (b, c, v) => { b.table(0, 0, [300, 300], [58, 380], { head: [String(v.l), String(v.r)], headFill: "#eaf0fc", size: 24 }); } },
+  { id: "g-check", pack: "general", label: "Checklist", params: [{ k: "items", label: "Items (comma separated)", type: "list", def: "First thing, Second thing, Third thing" }], make: (b, c, v) => { list(v.items, ["Item"]).slice(0, 12).forEach((t, i) => { b.rect(0, i * 58, 34, 34, { c: c.ink, w: 3.5 }); b.text(52, i * 58 - 2, t, { size: 26 }); }); } },
+  { id: "g-speech", pack: "general", label: "Speech bubbles", levels: ["early", "standard"], params: [{ k: "n", label: "How many", type: "number", def: 2 }], make: (b, c, v) => { const n = Math.max(1, Math.min(4, num(v.n, 2))); for (let i = 0; i < n; i++) { const left = i % 2 === 0, y = i * 150; b.ellipse(left ? -130 : 130, y, 200, 62, { c: c.ink, w: 3.5, fill: "#ffffff" }); b.tri(left ? -80 : 60, y + 58, left ? -40 : 100, y + 108, { c: c.ink, w: 3, fill: "#ffffff" }); } } },
+  { id: "g-sticker", pack: "general", label: "Stickers", levels: ["early", "standard"], sub: "big friendly emoji stamps", params: [{ k: "set", label: "Set", type: "select", def: "Stars", options: Object.keys(STICKERS) }], make: (b, c, v) => { (STICKERS[String(v.set)] ?? STICKERS.Stars!).forEach((t, i) => b.text((i % 4) * 110, Math.floor(i / 4) * 110, t, { size: 84 })); } },
+  { id: "g-timer", pack: "general", label: "Countdown timer", sub: "everyone sees it count down", params: [{ k: "mins", label: "Minutes", type: "number", def: 5 }], make: (b, c, v) => { const s = Math.max(10, Math.min(3600, Math.round(num(v.mins, 5) * 60))); b.stamp("timer", -130, -65, 260, 130, { secs: s, endsAt: 0, left: s }); } },
+  { id: "g-dice", pack: "general", label: "Dice", sub: "click to roll — everyone sees it", params: [{ k: "n", label: "How many dice", type: "select", def: "1", options: ["1", "2"] }],
+    make: (b, c, v) => { b.stamp("dice", -125, -65, 250, 130, { n: num(v.n, 1) >= 2 ? 2 : 1, a: 4, b: 2, rolls: 0 }); void c; } },
+  { id: "g-spinner", pack: "general", label: "Spinner wheel", sub: "random name or answer picker", params: [{ k: "items", label: "Names / choices (comma separated)", type: "list", def: "Alex, Sam, Jo, Priya, Kai, Mia" }],
+    make: (b, c, v) => { b.stamp("spinner", -170, -170, 340, 340, { items: list(v.items, ["Yes", "No"]).slice(0, 12).join(","), spin: 0, pick: -1 }); void c; } },
+  { id: "g-tally", pack: "general", label: "Score counter", sub: "click to add a point", params: [{ k: "label", label: "Label", type: "text", def: "Score" }],
+    make: (b, c, v) => { b.stamp("tally", -100, -75, 200, 150, { n: 0, label: String(v.label || "Score") }); void c; } },
+  { id: "g-reward", pack: "general", label: "Reward badge", levels: ["early", "standard"], sub: "star badge with a message", params: [{ k: "msg", label: "Message", type: "text", def: "Well done!" }],
+    make: (b, c, v) => { b.shape("star", -150, -150, 150, 140, { w: 5, c: "#d99a06", fill: "#f5b81f" }); b.tc(0, 8, String(v.msg), { size: 34, bold: true, c: c.ink }); } },
+  { id: "g-cover", pack: "general", label: "Reveal cover", sub: "hide part of the board — drag it away or delete it to reveal", params: [{ k: "text", label: "Message on the cover", type: "text", def: "Think first… then reveal!" }],
+    make: (b, c, v) => { b.sticky(-320, -140, 640, 280, String(v.text), "#cfe4ff", 32); void c; } },
+  { id: "g-import", pack: "general", label: "Import worksheet / paper", sub: "photos or scans as pages to annotate (PNG, JPEG, WebP)", levels: ["early", "standard", "advanced"], action: "import" },
+  { id: "g-bg-dot", pack: "general", label: "Dot grid page", bg: "dotgrid" },
+  { id: "g-bg-lined", pack: "general", label: "Lined page", bg: "lined" },
+  { id: "g-bg-squared", pack: "general", label: "Squared page", bg: "squared" },
+  { id: "g-bg-blank", pack: "general", label: "Blank page", bg: "blank" },
+];

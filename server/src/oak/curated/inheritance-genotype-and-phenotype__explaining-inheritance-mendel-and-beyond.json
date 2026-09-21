@@ -1,0 +1,593 @@
+{
+  "agent": "science-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the role of Gregor Mendel and other scientists in the development of our understanding of inheritance and genetics."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Mendel's} discoveries",
+              "sub": "pea plants and patterns of inheritance"
+            },
+            {
+              "title": "Further {developments}",
+              "sub": "DNA, genes and genomes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "heredity",
+              "def": "The process of passing traits from parents to their offspring through reproduction."
+            },
+            {
+              "term": "trait",
+              "def": "A specific characteristic that is part of an organism's phenotype."
+            },
+            {
+              "term": "dominant",
+              "def": "One or two alleles must be present in the genotype for the characteristic to be expressed in the phenotype."
+            },
+            {
+              "term": "recessive",
+              "def": "Two alleles must be present in the genotype for the characteristic to be expressed in the phenotype."
+            },
+            {
+              "term": "DNA",
+              "def": "A chemical molecule made of nucleotides, which contains the genetic code for making proteins in all living organisms."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Who was Gregor Mendel?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Gregor Mendel was born in Austria in 1822.",
+            "As a monk, he carried out experiments to discover the basic principles of heredity, using pea plants in the monastery garden.",
+            "He was a scientist interested in the production of new varieties of plants.",
+            "He is known to have studied the work of past and contemporary scientists such as Charles Darwin."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why pea plants?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A trait is a specific characteristic. Mendel studied pea plants because they had distinctive traits that could be easily identified. Pea plants:"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "are easily grown"
+            },
+            {
+              "title": "can be hand pollinated"
+            },
+            {
+              "title": "are sown each year"
+            },
+            {
+              "title": "had been used in similar studies by other scientists"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Mendel studied seven traits, including smooth or wrinkled seeds, yellow or green seed pods, tall or dwarf plants, and purple or white flowers."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mendel's method",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mendel's experiments (1856 - 1863) involved thousands of plants over eight years. This made his conclusions more valid."
+        },
+        {
+          "t": "text",
+          "text": "They showed that the inheritance of these traits followed a predictable pattern. This mathematical approach to the study of heredity was new. He is now known as the father of genetics."
+        },
+        {
+          "t": "callout",
+          "text": "Before Mendel's studies, it was incorrectly believed that the traits of offspring were due to blending of the traits of their parents."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mendel's crosses: F1 and F2",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mendel bred together plants with the two versions of the trait he was investigating. Example: purple-flowered plants and white-flowered plants."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Parents: purple × white",
+            "First generation (F1): all purple flowers"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Next he bred together plants from the F1 generation."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Second generation (F2): purple and white flowers",
+            "Purple : white = 3 : 1"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How sure was he?",
+          "text": "Mendel repeated the experiment many times and found that the ratio was always the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mendel's conclusion",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mendel concluded that traits must be passed on by a 'factor' of inheritance. These factors are passed on, but not always observed in the trait."
+        },
+        {
+          "t": "list",
+          "items": [
+            "If the trait is not observed after the first cross, it is recessive.",
+            "If the trait is observed after the first cross, it is dominant.",
+            "He described these factors with a capital and a lowercase letter."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "At the time of Mendel's discovery he had no knowledge of genes and alleles."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Explaining Mendel with alleles",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Modern scientists use alleles to explain Mendel's observations. Purple is the dominant allele (P), white is the recessive allele (p)."
+        },
+        {
+          "t": "text",
+          "text": "First cross: PP × pp. Every box of the Punnett square is Pp, so all F1 plants are heterozygous with purple flowers."
+        },
+        {
+          "t": "text",
+          "text": "Second cross: two F1 plants (Pp × Pp). The four boxes are PP, Pp, Pp and pp. Three contain a dominant allele, so the ratio of purple : white is 3 : 1, just as Mendel found."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "P",
+              "add": "P",
+              "result": "PP"
+            },
+            {
+              "root": "P",
+              "add": "p",
+              "result": "Pp"
+            },
+            {
+              "root": "p",
+              "add": "P",
+              "result": "Pp"
+            },
+            {
+              "root": "p",
+              "add": "p",
+              "result": "pp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Try a Mendel cross",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tall (T) and dwarf (t) pea plants are controlled by a single gene. Smooth (R) and wrinkled (r) pea seeds are controlled by a single gene. Work out each Punnett square."
+        },
+        {
+          "t": "choices",
+          "q": "Choose the answer.",
+          "items": [
+            {
+              "q": "A tall plant TT is crossed with a dwarf plant tt. What are the offspring?",
+              "options": [
+                "All tall (Tt)",
+                "Half tall, half dwarf",
+                "All dwarf"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Two smooth-seeded plants Rr are crossed. What fraction of their offspring have wrinkled seeds (rr)?",
+              "options": [
+                "1/4",
+                "1/2",
+                "3/4"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Two smooth-seeded plants Rr are crossed. What is the ratio of smooth to wrinkled offspring?",
+              "options": [
+                "1 : 1",
+                "3 : 1",
+                "1 : 3"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How can two smooth-seed plants produce a wrinkled seed?",
+          "text": "Both parents carry a recessive allele (Rr). An offspring could inherit a recessive allele from each parent (rr) and so produce wrinkled seeds."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "What did Mendel know?",
+      "blocks": [
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Genes were discovered long after Mendel's work. Mendel suggested that traits might be linked to heritable 'factors', which were later discovered and called genes. He did suggest that some factors were dominant and some were recessive, which we now know is true for alleles of genes."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about Mendel is correct?",
+          "options": [
+            "Mendel discovered genes and alleles",
+            "Mendel suggested that heritable 'factors' cause traits",
+            "Mendel discovered DNA"
+          ],
+          "answer": 1,
+          "why": "Mendel had no knowledge of genes and alleles. He suggested 'factors' of inheritance, and DNA was discovered in 1869 by Miescher."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why was Mendel ignored?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mendel's theories were not widely known or accepted by other scientists in his lifetime because:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "his work was published in a journal that was not well known",
+            "he did not have a theory for what the 'factors' of inheritance might be",
+            "his findings seemed to counter theories that parents' traits were blended in their offspring"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Many years later, Mendel's research informed the work of other scientists studying heredity. His findings began to be referred to as Mendel's Laws."
+        },
+        {
+          "t": "choice",
+          "q": "Which is true about how Mendel's work was received?",
+          "options": [
+            "It immediately changed the way most scientists explained heredity",
+            "It took many years to become widely known and accepted",
+            "It gave a complete explanation of heredity"
+          ],
+          "answer": 1,
+          "why": "It took many years for Mendel's work to become widely known and accepted."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The discovery of DNA",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In 1869 the chemical molecule DNA was discovered by the Swiss biochemist Friedrich Miescher. He extracted DNA from the nucleus and worked out the chemical groups it was made of."
+        },
+        {
+          "t": "text",
+          "text": "His research was disputed at the time, but was built upon by many other scientists in the years following."
+        },
+        {
+          "t": "text",
+          "text": "During the 20th century many scientists researched different aspects of DNA, including its chemical structure, chromosome structure and replication, and the presence of genes on chromosomes."
+        },
+        {
+          "t": "callout",
+          "text": "In 1943, scientists concluded that DNA was the genetic material in cells that made up genes (Mendel's 'factors') and controlled heredity."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The structure of DNA",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Rosalind Franklin and Maurice Wilkins were among a team using a new technique called X-ray crystallography to find the structure of DNA.",
+            "In 1952 Rosalind Franklin made an image of DNA using X-rays, and showed that DNA had a helix shape.",
+            "In 1953 Francis Crick and James Watson used the image to help produce the first 3D model of the structure of DNA.",
+            "Watson, Crick and Wilkins received the Nobel prize in 1962. Rosalind Franklin was not included or credited for her crucial research."
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "Which statement about the discovery of the structure of DNA is correct?",
+          "options": [
+            "Watson and Crick were the only scientists involved",
+            "Some scientists worked collaboratively to discover the structure and function of DNA",
+            "Nobody knew the chemical composition of DNA before Watson and Crick started"
+          ],
+          "answer": 1,
+          "why": "Many scientists were involved. The chemical composition of DNA was known before Watson and Crick started their research."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Genes, genomes and beyond",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Around 120 years after Mendel's experiments, in 1988, Professor Alison Smith identified the gene and alleles associated with smooth and wrinkled peas."
+        },
+        {
+          "t": "text",
+          "text": "Over recent decades scientists have discovered the importance of studying all the DNA in the genome, not just individual genes. Mapping the entire human genome began in 1990 and was completed in 2003. Since then scientists have investigated the proteins each gene codes for, and the roles of the non-coding DNA between genes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "genetic testing for alleles associated with non-communicable diseases",
+            "vaccinating against communicable diseases using genetic material from pathogens",
+            "healthcare that is personalised using the patient's genetic information"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Build the timeline",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each discovery to its year.",
+          "pairs": [
+            {
+              "a": "Miescher discovers DNA",
+              "b": "1869"
+            },
+            {
+              "a": "Franklin makes an X-ray image of DNA",
+              "b": "1952"
+            },
+            {
+              "a": "Watson and Crick produce the first 3D model of DNA",
+              "b": "1953"
+            },
+            {
+              "a": "Alison Smith identifies the gene and alleles for smooth and wrinkled peas",
+              "b": "1988"
+            },
+            {
+              "a": "The human genome is completed",
+              "b": "2003"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Mendel investigated the inheritance of traits (e.g. flower colour and seed texture) in pea plants in the 1850s-60s.",
+            "Earlier scientists thought traits blended during sexual reproduction. Mendel showed that traits were dominant and recessive.",
+            "Mendel suggested that heritable 'factors' caused traits. Other scientists discovered DNA in 1869 and genes in the 1900s.",
+            "In 1943 DNA was linked with inheritance and in 1953 the 3D structure of DNA was worked out.",
+            "Over recent decades scientists have discovered the importance of studying whole genomes, not just individual genes.",
+            "Scientists build on the work of other scientists to improve explanations and theories over time."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Who investigated the inheritance of traits in pea plants in the 1850s-60s?",
+      "back": "Gregor Mendel, a monk who worked in his monastery garden."
+    },
+    {
+      "front": "Why did Mendel use pea plants?",
+      "back": "They had distinctive traits that were easy to identify, are easily grown, can be hand pollinated, are sown each year, and had been used in similar studies."
+    },
+    {
+      "front": "What did scientists believe about inheritance before Mendel?",
+      "back": "That the traits of parents were blended in their offspring."
+    },
+    {
+      "front": "What happened when Mendel crossed purple-flowered and white-flowered pea plants?",
+      "back": "The F1 generation were all purple. Crossing F1 plants gave purple : white in a 3 : 1 ratio in the F2 generation."
+    },
+    {
+      "front": "What did Mendel call the things that pass traits from parents to offspring?",
+      "back": "'Factors' of inheritance. He had no knowledge of genes and alleles."
+    },
+    {
+      "front": "How did Mendel decide if a trait was dominant or recessive?",
+      "back": "If it is observed after the first cross it is dominant. If it is not observed after the first cross it is recessive."
+    },
+    {
+      "front": "Why was Mendel's work not widely accepted in his lifetime?",
+      "back": "It was published in a little-known journal, he had no theory for what the factors were, and his findings seemed to counter theories of blending."
+    },
+    {
+      "front": "What is a trait?",
+      "back": "A specific characteristic that is part of an organism's phenotype."
+    },
+    {
+      "front": "What is heredity?",
+      "back": "The process of passing traits from parents to their offspring through reproduction."
+    },
+    {
+      "front": "Who discovered DNA in 1869?",
+      "back": "Friedrich Miescher, who extracted DNA from the nucleus."
+    },
+    {
+      "front": "What did scientists conclude in 1943?",
+      "back": "That DNA was the genetic material in cells that made up genes and controlled heredity."
+    },
+    {
+      "front": "Who made an X-ray image of DNA in 1952, and what did it show?",
+      "back": "Rosalind Franklin. It showed that DNA had a helix shape."
+    },
+    {
+      "front": "What happened in 1953?",
+      "back": "Watson and Crick used the image to help them produce the first 3D model of the structure of DNA."
+    },
+    {
+      "front": "Why do scientists now study whole genomes, not just single genes?",
+      "back": "Over recent decades they discovered that all the DNA in the genome matters, including the non-coding DNA between genes."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Explaining inheritance: Mendel and beyond",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "Which type of plant did Mendel use for his experiments on inheritance?",
+        "answer": "pea plants",
+        "accepted": [
+          "pea plant",
+          "peas",
+          "pea"
+        ],
+        "explanation": "Mendel investigated inheritance of traits in pea plants in the monastery garden."
+      },
+      {
+        "prompt": "What did Mendel call the heritable things he suggested caused traits?",
+        "answer": "factors",
+        "accepted": [
+          "factor",
+          "heritable factors"
+        ],
+        "explanation": "Mendel suggested heritable 'factors' caused traits. They were later discovered and called genes."
+      },
+      {
+        "prompt": "Before Mendel, scientists thought the traits of parents did what in their offspring?",
+        "answer": "blended",
+        "accepted": [
+          "blend",
+          "blending",
+          "they blended"
+        ],
+        "explanation": "It was believed that the traits of offspring were due to blending of the traits of their parents."
+      },
+      {
+        "prompt": "Mendel crossed a PP purple-flowered plant with a pp white-flowered plant. Are the F1 offspring homozygous or heterozygous?",
+        "answer": "heterozygous",
+        "accepted": [
+          "heterozygote"
+        ],
+        "explanation": "Every box of the Punnett square is Pp (one dominant and one recessive allele), so all F1 plants are heterozygous with purple flowers."
+      },
+      {
+        "prompt": "Two Pp plants from the F1 generation are crossed and produce 400 offspring. About how many of the F2 plants would be expected to have white flowers?",
+        "answer": "100",
+        "accepted": [
+          "one hundred"
+        ],
+        "explanation": "The purple : white ratio is 3 : 1, so 1 in 4 is white: 400 ÷ 4 = 100."
+      },
+      {
+        "prompt": "Which Swiss biochemist discovered DNA in 1869?",
+        "answer": "Friedrich Miescher",
+        "accepted": [
+          "Miescher"
+        ],
+        "explanation": "In 1869 Friedrich Miescher extracted DNA from the nucleus."
+      },
+      {
+        "prompt": "In which year did scientists conclude that DNA was the genetic material that controlled heredity?",
+        "answer": "1943",
+        "accepted": [],
+        "explanation": "In 1943 scientists concluded that DNA was the genetic material in cells that made up genes."
+      },
+      {
+        "prompt": "Which scientist made an X-ray image of DNA in 1952 that showed DNA had a helix shape?",
+        "answer": "Rosalind Franklin",
+        "accepted": [
+          "Franklin"
+        ],
+        "explanation": "In 1952 Rosalind Franklin made an image of DNA using X-rays."
+      },
+      {
+        "prompt": "In which year was the mapping of the entire human genome completed?",
+        "answer": "2003",
+        "accepted": [],
+        "explanation": "Mapping the human genome began in 1990 and was completed in 2003."
+      },
+      {
+        "prompt": "In 1988, which professor identified the gene and alleles associated with smooth and wrinkled peas?",
+        "answer": "Alison Smith",
+        "accepted": [
+          "Professor Alison Smith",
+          "Smith"
+        ],
+        "explanation": "Around 120 years after Mendel's experiments, Professor Alison Smith identified the gene and alleles for smooth and wrinkled peas."
+      }
+    ]
+  }
+}

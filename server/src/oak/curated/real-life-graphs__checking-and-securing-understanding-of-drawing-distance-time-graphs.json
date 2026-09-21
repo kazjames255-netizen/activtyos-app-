@@ -1,0 +1,584 @@
+{
+  "agent": "maths-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can draw a distance-time graph to model a journey."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Drawing distance-time graphs",
+              "sub": "from a description"
+            },
+            {
+              "title": "Choosing scales",
+              "sub": "sensible steps on the axes"
+            },
+            {
+              "title": "Sketching",
+              "sub": "with the key information"
+            },
+            {
+              "title": "Displacement-time graphs",
+              "sub": "distance from the start"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key word and key ideas",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the key word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "displacement",
+              "def": "Displacement is the distance from the starting point when measured in a straight line."
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "You can sketch a graph based on the information you have been given.",
+            "Important given values should be marked on your sketch.",
+            "A horizontal line means no distance was travelled for that time.",
+            "A slanted line means the distance from the start is changing over time."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Drawing Alex’s walk",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex says: “I walk 12 minutes up the hill to the shops which are 500 metres away. It takes me 10 minutes to buy what I need in the shop. Then I walk the same distance home but it only takes me 8 minutes.”"
+        },
+        {
+          "t": "text",
+          "text": "First check the units: time in **minutes** on the x-axis and distance in **metres** on the y-axis. Then plot each stage."
+        },
+        {
+          "t": "list",
+          "items": [
+            "At 0 minutes he has travelled 0 metres, so the graph starts at the origin (0, 0).",
+            "12 minutes to walk 500 m: plot (12, 500).",
+            "10 minutes in the shop: no distance is travelled, so draw a horizontal line to (22, 500).",
+            "Another 500 m in 8 minutes: the total distance keeps increasing, so plot (30, 1000)."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "The fact that the journey is up a hill does not affect the graph. It is not a map of how the journey looks: it shows distance travelled over time. The return journey adds another 500 m to the total distance."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Checking the graph",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can check our graph is correct using key features."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Overall distance should be 500 + 500 = 1000 m.",
+            "Overall time should be 12 + 10 + 8 = 30 minutes.",
+            "A horizontal line shows he stopped for 10 minutes.",
+            "He walked quicker on the way home, so the final line segment should be steeper than the first."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Our model assumes Alex walked at a {constant speed}. We show this by drawing straight lines. Unless told otherwise, it is fair to assume that movement is at a constant speed when drawing distance-time graphs."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Choosing a scale",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If you draw a graph from scratch, think about a sensible scale for each axis. A cyclist rides to a friend’s house 18 km away. It takes 45 minutes in total. The graph needs to go up to 18 km and 45 minutes."
+        },
+        {
+          "t": "text",
+          "text": "Suppose the axis has 10 major gridlines."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Steps of 1 will not reach 18.",
+            "Steps of 5 would reach 18 before halfway, so the graph would be really tiny and would not make use of the space.",
+            "18 ÷ 10 = 1.8, which is not a sensible value to plot. Use steps of **2** instead: 10 gridlines then reach 20, which fits.",
+            "For time, 45 ÷ 10 = 4.5 is not sensible either. Use steps of **5**: 10 gridlines reach 50, which fits."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Pick a sensible step",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In both questions the axis has 10 major gridlines."
+        },
+        {
+          "t": "choice",
+          "q": "A journey covers 70 km in total. Which step would you use for the distance axis?",
+          "options": [
+            "5 km, because it is easy to plot",
+            "10 km, because 10 gridlines reach 100 km and fit the graph",
+            "25 km, because 10 gridlines reach 250 km"
+          ],
+          "answer": 1,
+          "why": "Steps of 5 km do not reach 70 km. Steps of 25 km would fit but make a tiny graph that does not use the space."
+        },
+        {
+          "t": "choice",
+          "q": "A journey takes 160 minutes in total. Which step would you use for the time axis?",
+          "options": [
+            "10 minutes",
+            "20 minutes",
+            "50 minutes"
+          ],
+          "answer": 1,
+          "why": "Steps of 10 minutes do not reach 160 minutes, so the journey would not fit. Steps of 50 minutes would make a small graph that wastes most of the space. Steps of 20 minutes reach 200 minutes."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sketching a journey",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes a sketch of the model is enough. A sketch does not need to be to scale, but it must contain all the key information. It is still useful to total the distance and time first."
+        },
+        {
+          "t": "text",
+          "text": "Example: “I walk to my friend’s house 400 m away. That takes 5 minutes. I wait 5 minutes when picking them up. Then we walk together to the cinema 600 m further away, it takes us 10 minutes.”"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Total time: 5 + 5 + 10 = 20 minutes.",
+            "Total distance: 400 + 600 = 1000 m.",
+            "Mark the axes up to 20 minutes and 1000 m.",
+            "Key points as coordinates: (5, 400), (10, 400), (20, 1000)."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "400 m is less than halfway to 1000 m, and 5 minutes is about halfway to 10 minutes, so the first point sits about there. Then a horizontal line for the wait, and a final segment to the top right."
+        },
+        {
+          "t": "callout",
+          "text": "You can mark key information on the axes, or write it on as {coordinate pairs}, which is often the clearest way."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the coordinates",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A cyclist rides 6 km in 10 minutes, rests for 5 minutes, then rides another 4 km in 15 minutes. Use (time in minutes, distance in km)."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Coordinates at the end of the first ride",
+              "options": [
+                "(10, 6)",
+                "(6, 10)",
+                "(15, 6)"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Coordinates at the end of the rest",
+              "options": [
+                "(5, 6)",
+                "(15, 6)",
+                "(15, 10)"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Coordinates at the end of the whole journey",
+              "options": [
+                "(30, 10)",
+                "(25, 10)",
+                "(30, 6)"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "First ride: (10, 6). Rest: 10 + 5 = 15 minutes with no distance, so (15, 6). Second ride: 15 + 15 = 30 minutes and 6 + 4 = 10 km, so (30, 10)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Displacement-time graphs",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Displacement is the distance from a fixed starting point (often called home), measured in a straight line. Here is Alex’s walk as a displacement-time graph, assuming he walks in a straight line."
+        },
+        {
+          "t": "list",
+          "items": [
+            "First part: his displacement from home is the same as the distance travelled, so (0, 0) to (12, 500).",
+            "A horizontal line shows his displacement is not changing while he is in the shop: (12, 500) to (22, 500).",
+            "Returning home, his displacement decreases. He arrives home 8 minutes after leaving the shop, so his displacement is then zero: (30, 0)."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "When is Alex 250 m from his house?",
+          "text": "On the displacement-time graph it is at 6 minutes and again at 26 minutes, because he is coming back towards the house. Without the scenario, the distance-time graph cannot tell us the direction of the final part, so only the first answer is possible to find on it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Negative displacement",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Although it does not make sense for a distance travelled to be negative, **displacement can be negative**. If you travel in the opposite direction in a straight line, your displacement from the start is negative."
+        },
+        {
+          "t": "text",
+          "text": "A toy car pushed along the ground could show these stages on a displacement-time graph:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "moving in a straight line away from the start",
+            "moving in a straight line back to the start",
+            "moving past the start in the other direction",
+            "turning round again and moving back to the start from the other direction"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Vertical lines and lines going backwards in time are still impossible on displacement-time graphs."
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which graph do I use?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Displacement-time graphs can sometimes give us more information about a journey. Distance-time graphs are best for another kind of information."
+        },
+        {
+          "t": "match",
+          "q": "Match each graph to what it is best at showing.",
+          "pairs": [
+            {
+              "a": "Distance-time graph",
+              "b": "the total distance travelled at any given time"
+            },
+            {
+              "a": "Displacement-time graph",
+              "b": "when you were moving away from and towards the start point"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A distance-time graph always tells you how far has been travelled, regardless of any change in direction."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Distance or displacement?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is an advantage of a displacement-time graph?",
+          "options": [
+            "You can easily see the distance travelled at any time",
+            "You can see at which points of the journey you were the same distance from the start",
+            "You can see whether the journey was uphill or downhill"
+          ],
+          "answer": 1,
+          "why": "Displacement is the distance from the start point, so you can see the points where you were the same distance from the start. The distance travelled at any time is easier to see on a distance-time graph."
+        },
+        {
+          "t": "text",
+          "text": "Izzy walks 3 km away from home in 30 minutes, stays there for 20 minutes, then walks home in 25 minutes."
+        },
+        {
+          "t": "choices",
+          "items": [
+            {
+              "q": "Her displacement (km) when she gets home is",
+              "options": [
+                "0",
+                "3",
+                "6"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "The total distance (km) at the end on a distance-time graph is",
+              "options": [
+                "0",
+                "3",
+                "6"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "The total time (minutes) is",
+              "options": [
+                "50",
+                "75",
+                "55"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "Displacement: she is back at the start, so 0 km. Total distance: 3 km out + 3 km back = 6 km. Total time: 30 + 20 + 25 = 75 minutes."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Distance-time and displacement-time graphs can be drawn if there is sufficient information.",
+            "Distance-time graphs show the total distance travelled over time.",
+            "Displacement-time graphs show the distance from a start point at any given time.",
+            "Sensible scales for our axes can be decided by looking at the overall distance or displacement and the total time.",
+            "Mark the important given values on your sketch, for example as coordinates."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "distance-time-graph"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is displacement?",
+      "back": "The distance from the starting point, measured in a straight line."
+    },
+    {
+      "front": "What does a horizontal line on a distance-time graph mean?",
+      "back": "No distance was travelled for that time (the object was stationary)."
+    },
+    {
+      "front": "What does a slanted line on a distance-time graph mean?",
+      "back": "The distance from the start is changing over time."
+    },
+    {
+      "front": "What should you always do when you sketch a graph?",
+      "back": "Mark the important given values (for example as coordinates) so the sketch is useful."
+    },
+    {
+      "front": "Unless told otherwise, what speed do we assume when drawing a distance-time graph?",
+      "back": "A constant speed, shown by drawing straight lines."
+    },
+    {
+      "front": "Does a hill in the journey change the shape of a distance-time graph?",
+      "back": "No. It is not a map of the journey. It shows the distance travelled over time."
+    },
+    {
+      "front": "Alex walks 12 min to a shop 500 m away, stays 10 min, then walks home in 8 min. What is the overall time?",
+      "back": "12 + 10 + 8 = 30 minutes."
+    },
+    {
+      "front": "How do you choose a sensible scale for an axis?",
+      "back": "Look at the overall distance (or displacement) and total time, then choose steps that fit on the axes, use the space, and are easy to plot."
+    },
+    {
+      "front": "Why is 4.5 minutes not a sensible step, when 45 minutes must fit on 10 major gridlines?",
+      "back": "It is difficult to plot accurately. Use a step of 5 minutes instead."
+    },
+    {
+      "front": "On a displacement-time graph, what happens to the line as someone returns home?",
+      "back": "Displacement decreases, so the line slopes downwards until it reaches zero at home."
+    },
+    {
+      "front": "Can displacement be negative?",
+      "back": "Yes. If you travel in the opposite direction in a straight line, your displacement from the start is negative. Distance travelled can never be negative."
+    },
+    {
+      "front": "What is easier to see on a distance-time graph than on a displacement-time graph?",
+      "back": "The total distance travelled at any given time."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Checking and securing understanding of drawing distance-time graphs",
+    "instructions": "Answer each question with a number or a short phrase. Include units where they are needed.",
+    "questions": [
+      {
+        "prompt": "Alex walks for 12 minutes to a shop 500 m away, spends 10 minutes in the shop, then walks home the same distance in 8 minutes. What is the overall time of the journey, in minutes?",
+        "answer": "30",
+        "accepted": [
+          "30",
+          "30 minutes",
+          "30 mins",
+          "30 min"
+        ],
+        "explanation": "12 + 10 + 8 = 30 minutes."
+      },
+      {
+        "prompt": "Alex walks for 12 minutes to a shop 500 m away, spends 10 minutes in the shop, then walks home the same distance in 8 minutes. He plots his walk on a distance-time graph. What is the y-coordinate (in metres) of the end of the final line segment?",
+        "answer": "1000",
+        "accepted": [
+          "1000",
+          "1000 m",
+          "1000m",
+          "1000 metres",
+          "1 km"
+        ],
+        "explanation": "The graph shows total distance, so the return journey adds another 500 m: 500 + 500 = 1000 m."
+      },
+      {
+        "prompt": "Alex walks for 12 minutes to a shop 500 m away, spends 10 minutes in the shop, then walks straight home in 8 minutes. He plots his walk on a displacement-time graph. What is his displacement, in metres, when he gets home?",
+        "answer": "0",
+        "accepted": [
+          "0",
+          "0 m",
+          "0m",
+          "0 metres",
+          "zero"
+        ],
+        "explanation": "He is back at the start point, so his displacement is zero."
+      },
+      {
+        "prompt": "At what time, in minutes after setting off, does Alex leave the shop? (12 minutes to reach the shop, then 10 minutes inside.)",
+        "answer": "22",
+        "accepted": [
+          "22",
+          "22 minutes",
+          "22 mins",
+          "22 min"
+        ],
+        "explanation": "12 + 10 = 22 minutes."
+      },
+      {
+        "prompt": "The x-axis has 10 major gridlines and must reach 45 minutes. What is the smallest whole-number step, in minutes, that works?",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "5 minutes",
+          "5 mins",
+          "5 min"
+        ],
+        "explanation": "Steps of 4 do not reach 45 minutes, but steps of 5 reach 50 minutes, which fits 45."
+      },
+      {
+        "prompt": "The y-axis has 10 major gridlines and must reach 18 km. What is the smallest whole-number step, in km, that works?",
+        "answer": "2",
+        "accepted": [
+          "2",
+          "2 km",
+          "2 kilometres"
+        ],
+        "explanation": "Steps of 1 do not reach 18 km, but steps of 2 reach 20 km, which fits 18 km."
+      },
+      {
+        "prompt": "A cyclist rides 6 km in 10 minutes, rests for 5 minutes, then rides another 4 km in 15 minutes. What is the total distance, in km?",
+        "answer": "10",
+        "accepted": [
+          "10",
+          "10 km",
+          "10km",
+          "10 kilometres"
+        ],
+        "explanation": "6 + 4 = 10 km."
+      },
+      {
+        "prompt": "Izzy walks 3 km away from home in 30 minutes, stays 20 minutes, then walks straight home in 25 minutes. What is the total distance she walks, in km?",
+        "answer": "6",
+        "accepted": [
+          "6",
+          "6 km",
+          "6km",
+          "6 kilometres"
+        ],
+        "explanation": "3 km out and 3 km back is 6 km in total."
+      },
+      {
+        "prompt": "Which type of graph can have negative values on its vertical axis: a distance-time graph or a displacement-time graph?",
+        "answer": "displacement-time graph",
+        "accepted": [
+          "displacement-time graph",
+          "displacement-time",
+          "displacement",
+          "a displacement-time graph",
+          "displacement time graph"
+        ],
+        "explanation": "Distance travelled cannot be negative, but displacement can be, if you travel in the opposite direction."
+      },
+      {
+        "prompt": "Unless told otherwise, what do we assume about the speed when we draw straight lines on a distance-time graph?",
+        "answer": "constant speed",
+        "accepted": [
+          "constant speed",
+          "constant",
+          "a constant speed",
+          "the speed is constant",
+          "it is constant"
+        ],
+        "explanation": "Straight line segments model movement at a constant speed."
+      }
+    ]
+  }
+}

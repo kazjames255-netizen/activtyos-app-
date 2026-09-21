@@ -1,0 +1,543 @@
+{
+  "agent": "w4-maths-ks4a",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can write a composite function both numerically and algebraically."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Substitution and notation"
+            },
+            {
+              "title": "Writing composite functions algebraically"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "composition",
+              "def": "The composition of functions is the process of combining two or more functions into a single function."
+            },
+            {
+              "term": "composite function",
+              "def": "The composite function gf(x) is the combination of f(x) and g(x). The output from f(x) is the input for g(x)."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Substitution first",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "f(x) = 4x and g(x) = 6x + 3. We can evaluate lots of things:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(5) = 4(5) = 20",
+            "g(8) = 6(8) + 3 = 51",
+            "2f(5) = 2 × f(5) = 2 × 20 = 40",
+            "3g(8) = 3 × g(8) = 3 × 51 = 153"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "For 2f(5), the output of f(5) was multiplied by 2."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A composite function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can also evaluate gf(5). This is called a composite function: it is composed of two functions. The output of one function is the input of the other function."
+        },
+        {
+          "t": "callout",
+          "text": "For gf(5), the output of f(5) is substituted into the function g(x)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "gf(5) = g(f(5)) = g(20)",
+            "g(20) = 6(20) + 3 = 123"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It works the other way too. For fg(8), the output of g(8) is substituted into the function f(x): fg(8) = f(g(8)) = f(51) = 4(51) = 204."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "fg is not the same as gf",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In algebra ab means a × b, which is the same as b × a. But fg(x) and gf(x) are function notation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "fg(x) is the function f(x) happening to the output of g(x).",
+            "gf(x) is the function g(x) happening to the output of f(x)."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "You cannot work from left to right. Each function needs an input, and in a composite function the input has to be worked out first. For fg(x) you evaluate g first, then f."
+        },
+        {
+          "t": "reveal",
+          "label": "Are fg(x) and gf(x) ever the same?",
+          "text": "They are typically not the same thing, but there are exceptions: when the two functions are identical, f(x) = g(x), or when one function is the inverse of the other."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Read the notation",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the notation to the correct language.",
+          "pairs": [
+            {
+              "a": "fg(4)",
+              "b": "The output of g(4) being input into f(x)"
+            },
+            {
+              "a": "gf(4)",
+              "b": "The output of f(4) being input into g(x)"
+            },
+            {
+              "a": "hg(4)",
+              "b": "The output of g(4) being input into h(x)"
+            },
+            {
+              "a": "gh(4)",
+              "b": "The output of h(4) being input into g(x)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "f(x) = 7x and g(x) = 2x − 6."
+        },
+        {
+          "t": "list",
+          "items": [
+            "g(3) = 2(3) − 6 = 0, so fg(3) = f(g(3)) = f(0) = 7(0) = 0",
+            "f(3) = 7(3) = 21, so gf(3) = g(f(3)) = g(21) = 2(21) − 6 = 36",
+            "g(9) = 2(9) − 6 = 12, so fg(9) = f(12) = 7(12) = 84",
+            "f(9) = 7(9) = 63, so gf(9) = g(63) = 2(63) − 6 = 120"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Notice that fg(3) = 0 but gf(3) = 36. The order matters."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Your turn: numbers",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "f(x) = 5x and g(x) = x + 8. Evaluate each composite function.",
+          "items": [
+            {
+              "q": "fg(2)",
+              "options": [
+                "50",
+                "18",
+                "10"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "gf(2)",
+              "options": [
+                "50",
+                "18",
+                "20"
+              ],
+              "answer": 1
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "fg(2) = f(g(2)) = f(2 + 8) = f(10) = 50. gf(2) = g(f(2)) = g(10) = 18."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More than two functions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes a function is composed of more than two functions. f(x) = 2x, g(x) = 5x and h(x) = 3x − 7. Evaluate fgh(4)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "h(4) = 3(4) − 7 = 5, so fgh(4) = fg(h(4)) = fg(5)",
+            "g(5) = 5(5) = 25, so fg(5) = f(25)",
+            "f(25) = 2(25) = 50"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The output of h(4) is the input of g(x), and then the output of g(5) is the input of f(x)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Repeated functions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We also see composite functions that use the same function again. f(x) = 5x + 3. The output of f(2) goes back into the same function f(x)."
+        },
+        {
+          "t": "list",
+          "items": [
+            "f(2) = 5(2) + 3 = 13",
+            "ff(2) = f(f(2)) = f(13) = 5(13) + 3 = 68",
+            "fff(2) = f(ff(2)) = f(68) = 5(68) + 3 = 343"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Three or more functions",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "f(x) = x + 4, g(x) = 2x and h(x) = 3x − 5.",
+          "items": [
+            {
+              "q": "Evaluate hgf(1).",
+              "options": [
+                "25",
+                "0",
+                "13"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Evaluate gg(3).",
+              "options": [
+                "12",
+                "18",
+                "9"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Show the working",
+          "text": "hgf(1): f(1) = 5, the output goes into g: g(5) = 10, then into h: h(10) = 3(10) − 5 = 25. gg(3) = g(g(3)) = g(6) = 12."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Writing fg(x) as one function",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Mathematicians are always seeking efficiency. If f(x) = 6x and g(x) = x − 5, working out fg(1), fg(2), fg(4) and so on means substituting into two functions each time."
+        },
+        {
+          "t": "callout",
+          "text": "We can write the algebraic form for the combined function: fg(x) = f(g(x)) = f(x − 5) = 6(x − 5)."
+        },
+        {
+          "t": "text",
+          "text": "Now we only substitute into one function: fg(1) = 6(1 − 5) = −24 and fg(4) = 6(4 − 5) = −6."
+        },
+        {
+          "t": "text",
+          "text": "For gf(x) the output of f(x) goes into g(x): gf(x) = g(f(x)) = g(6x) = 6x − 5."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Expanding and simplifying",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "f(x) = x² + x and g(x) = x + 3. Then fg(x) = f(x + 3) = (x + 3)² + (x + 3) = (x² + 6x + 9) + (x + 3) = x² + 7x + 12."
+        },
+        {
+          "t": "text",
+          "text": "Now f(x) = x² − x and g(x) = x + 5. Then fg(x) = f(x + 5) = (x + 5)² − (x + 5)."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out for the minus!",
+          "text": "We have to subtract both terms inside the bracket (x + 5): (x² + 10x + 25) − x − 5 = x² + 9x + 20."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Your turn: algebra",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "f(x) = 3x and g(x) = x + 4. Which is the correct expression?",
+          "items": [
+            {
+              "q": "fg(x)",
+              "options": [
+                "3x + 4",
+                "3(x + 4)",
+                "3x + 12x"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "gf(x)",
+              "options": [
+                "3x + 4",
+                "3(x + 4)",
+                "3x + 12"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "ff(x)",
+              "options": [
+                "6x",
+                "3x²",
+                "9x"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "gg(x)",
+              "options": [
+                "x + 8",
+                "2x + 4",
+                "x² + 8"
+              ],
+              "answer": 0
+            }
+          ]
+        },
+        {
+          "t": "choice",
+          "q": "f(x) = x² + 2x and g(x) = x − 1. What is fg(x) after expanding and simplifying?",
+          "options": [
+            "x² + 2x − 1",
+            "x² − 1",
+            "x² − 2"
+          ],
+          "answer": 1,
+          "why": "fg(x) = f(x − 1) = (x − 1)² + 2(x − 1) = x² − 2x + 1 + 2x − 2 = x² − 1."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Writing composite functions",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "A composite function combines two or more functions: in gf(x), the output from f(x) is the input for g(x).",
+            "fg(x) and gf(x) are not necessarily the same thing.",
+            "A composite function can be evaluated numerically, for example fg(1), as well as expressed algebraically.",
+            "For example, if f(x) = 9x and g(x) = x − 8 we can evaluate fg(1) or fg(2) or any other numerical input, and we can also write an expression for fg(x)."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a composite function?",
+      "back": "The combination of two functions. In gf(x), the output from f(x) is the input for g(x)."
+    },
+    {
+      "front": "What is composition of functions?",
+      "back": "The process of combining two or more functions into a single function."
+    },
+    {
+      "front": "In fg(x), which function happens first?",
+      "back": "g. The function f happens to the output of g(x): fg(x) = f(g(x))."
+    },
+    {
+      "front": "f(x) = 4x and g(x) = 6x + 3. Evaluate gf(5).",
+      "back": "f(5) = 20, then g(20) = 6(20) + 3 = 123."
+    },
+    {
+      "front": "f(x) = 4x and g(x) = 6x + 3. Evaluate fg(8).",
+      "back": "g(8) = 51, then f(51) = 4(51) = 204."
+    },
+    {
+      "front": "Are fg(x) and gf(x) usually the same?",
+      "back": "No, not in most cases.\n\nThey are the same if f(x) = g(x), or if one function is the inverse of the other."
+    },
+    {
+      "front": "Why can’t you work a composite function from left to right?",
+      "back": "Each function needs an input, and in a composite function the input has to be worked out first."
+    },
+    {
+      "front": "In fgh(4), in which order are the functions used?",
+      "back": "h first, then g, then f: fgh(4) = f(g(h(4)))."
+    },
+    {
+      "front": "f(x) = 5x + 3. Evaluate ff(2).",
+      "back": "f(2) = 13, then f(13) = 5(13) + 3 = 68."
+    },
+    {
+      "front": "f(x) = 6x and g(x) = x − 5. Write fg(x) as one function.",
+      "back": "fg(x) = f(x − 5) = 6(x − 5)"
+    },
+    {
+      "front": "f(x) = 6x and g(x) = x − 5. Write gf(x) as one function.",
+      "back": "gf(x) = g(6x) = 6x − 5"
+    },
+    {
+      "front": "Why write a composite function as one algebraic function?",
+      "back": "It is more efficient: you only have to substitute into one function."
+    },
+    {
+      "front": "f(x) = x² − x and g(x) = x + 5. What is fg(x)?",
+      "back": "(x + 5)² − (x + 5) = x² + 10x + 25 − x − 5 = x² + 9x + 20\n\nSubtract both terms inside the bracket."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Writing composite functions",
+    "instructions": "Work out each value. Remember that in a composite function the function nearest the input is used first. Answer with a number.",
+    "questions": [
+      {
+        "prompt": "f(x) = x − 12 and g(x) = 6x. Evaluate gf(15).",
+        "answer": "18",
+        "accepted": [
+          "18"
+        ],
+        "explanation": "f(15) = 3, then g(3) = 18."
+      },
+      {
+        "prompt": "f(x) = x − 12 and h(x) = 3x + 4 and g(x) = 6x. Evaluate hg(5).",
+        "answer": "94",
+        "accepted": [
+          "94"
+        ],
+        "explanation": "g(5) = 30, then h(30) = 3(30) + 4 = 94."
+      },
+      {
+        "prompt": "f(x) = x − 12. Evaluate ff(15).",
+        "answer": "-9",
+        "accepted": [
+          "-9",
+          "−9",
+          "minus 9",
+          "negative 9"
+        ],
+        "explanation": "f(15) = 3, then f(3) = 3 − 12 = −9."
+      },
+      {
+        "prompt": "g(x) = 6x. Evaluate gg(5).",
+        "answer": "180",
+        "accepted": [
+          "180"
+        ],
+        "explanation": "g(5) = 30, then g(30) = 180."
+      },
+      {
+        "prompt": "f(x) = 4x and g(x) = 2x − 5. Evaluate gf(8).",
+        "answer": "59",
+        "accepted": [
+          "59"
+        ],
+        "explanation": "f(8) = 32, then g(32) = 2(32) − 5 = 59."
+      },
+      {
+        "prompt": "h(x) = x² + 1. Evaluate hhh(2).",
+        "answer": "677",
+        "accepted": [
+          "677"
+        ],
+        "explanation": "h(2) = 5, h(5) = 26, h(26) = 677."
+      },
+      {
+        "prompt": "f(x) = 4x, g(x) = 2x − 5 and h(x) = x² + 1. Evaluate hgf(8).",
+        "answer": "3482",
+        "accepted": [
+          "3482"
+        ],
+        "explanation": "f(8) = 32, g(32) = 59, h(59) = 59² + 1 = 3482."
+      },
+      {
+        "prompt": "f(x) = 4x, g(x) = 2x − 5 and h(x) = x² + 1. Evaluate fhg(4).",
+        "answer": "40",
+        "accepted": [
+          "40"
+        ],
+        "explanation": "g(4) = 3, h(3) = 10, f(10) = 40."
+      },
+      {
+        "prompt": "f(x) = 8x and g(x) = x − 3, so fg(x) = 8(x − 3). What is fg(5)?",
+        "answer": "16",
+        "accepted": [
+          "16"
+        ],
+        "explanation": "fg(5) = 8(5 − 3) = 8 × 2 = 16."
+      },
+      {
+        "prompt": "f(x) = x² − x and g(x) = x + 4. Evaluate fg(1).",
+        "answer": "20",
+        "accepted": [
+          "20"
+        ],
+        "explanation": "g(1) = 5, then f(5) = 25 − 5 = 20."
+      }
+    ]
+  }
+}

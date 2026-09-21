@@ -1,0 +1,576 @@
+{
+  "agent": "w4-french-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand, ask and answer questions about my own and others’ future family plans in the future and conditional."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Using conditional -er verbs"
+            },
+            {
+              "title": "Talking about family plans",
+              "emoji": "👨‍👩‍👧"
+            }
+          ]
+        }
+      ],
+      "art": [
+        "👨‍👩‍👧"
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap the word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "conditional",
+              "def": "a form of verb used to express what would happen"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The conditional means ‘would’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The conditional expresses the idea of **would**. In French it is often followed by a second verb in the infinitive."
+        },
+        {
+          "t": "list",
+          "items": [
+            "J’aimerais habiter en Suisse = I would like to live in Switzerland.",
+            "À sa place, je brulerais les lettres = In his/her place, I would burn the letters."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There is no separate French word for ‘would’. The spelling of the verb carries the meaning."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Building the conditional",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Regular -er verbs in the conditional use the **infinitive** as the stem. Add the imperfect tense endings: {-ais}, {-ais}, {-ait}. Tap a row to build the word."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "je parlerais",
+              "note": "I would speak"
+            },
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "tu parlerais",
+              "note": "you (singular) would speak"
+            },
+            {
+              "root": "parler",
+              "add": "ait",
+              "result": "il, elle parlerait",
+              "note": "he, she would speak"
+            },
+            {
+              "root": "parler",
+              "add": "ait",
+              "result": "on parlerait",
+              "note": "we would speak"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which endings?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "The conditional of an -er verb is the infinitive plus the endings of which tense?",
+          "options": [
+            "the present",
+            "the imperfect",
+            "the perfect"
+          ],
+          "answer": 1,
+          "why": "The conditional is formed by adding the imperfect tense endings to the infinitive stem, e.g. j’aimerais."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Same stem, different endings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The conditional looks quite similar to the 1-verb future. Both have the same stem (the infinitive), but their **endings** are different."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "parler",
+              "add": "ai",
+              "result": "je parlerai",
+              "note": "1-verb future: I will speak"
+            },
+            {
+              "root": "parler",
+              "add": "ais",
+              "result": "je parlerais",
+              "note": "conditional: I would speak"
+            },
+            {
+              "root": "parler",
+              "add": "a",
+              "result": "il, elle parlera",
+              "note": "1-verb future: he, she will speak"
+            },
+            {
+              "root": "parler",
+              "add": "ait",
+              "result": "il, elle parlerait",
+              "note": "conditional: he, she would speak"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the correct form",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct form for the English meaning.",
+          "items": [
+            {
+              "q": "she will dance",
+              "options": [
+                "elle dansera",
+                "elle danserait"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "you would imagine",
+              "options": [
+                "tu imagineras",
+                "tu imaginerais"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "he would give",
+              "options": [
+                "il donnerait",
+                "il donnera"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "you will give",
+              "options": [
+                "tu donnerais",
+                "tu donneras"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "we would distribute",
+              "options": [
+                "on distribuera",
+                "on distribuerait"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two verbs with two spellings",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘Préférer’ (to prefer) and ‘tolérer’ (to tolerate) have two conditional spellings. The second spellings are newer and reflect better how these verbs are currently pronounced."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "je préférerais / préfèrerais"
+            },
+            {
+              "title": "je tolérerais / tolèrerais"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Where there is a choice, use the more modern spelling."
+        },
+        {
+          "t": "text",
+          "text": "The verb ‘acheter’ is spelled with **è** in both the conditional (j’achèterais) and the 1-verb future (j’achèterai)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Spot the right spelling",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct spelling.",
+          "items": [
+            {
+              "q": "The newer spelling of ‘je préférerais’",
+              "options": [
+                "je préférerais",
+                "je préfèrerais"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "The newer spelling of ‘tu tolérerais’",
+              "options": [
+                "tu tolèrerais",
+                "tu tolérerais"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "you would buy (acheter)",
+              "options": [
+                "tu acheterais",
+                "tu achèterais"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "I will buy (acheter)",
+              "options": [
+                "j’achèterai",
+                "j’acheterai"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How it sounds",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The stem is the infinitive, so the sound [r], as in ‘rue’, comes before the endings in both the conditional and the 1-verb future, e.g. mangerai, mangerais. The endings have [a] as in ‘animal’ and [ai] as in ‘vrai’."
+        },
+        {
+          "t": "callout",
+          "text": "-s and -t are silent at the end of a word. So all the singular conditional forms sound the same, and so do the tu and il, elle forms of the future."
+        },
+        {
+          "t": "text",
+          "text": "Listen out for the pronouns: they tell you who is doing the action."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "‘I will’ or ‘I would’?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At the end of a verb, [ai] in the ‘je’ future form sounds like [é], like the [é] in ‘écrire’. This is an exception! Usually [ai] is pronounced as in ‘vrai’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "je commencerai",
+              "sub": "I will start: sounds like the [é] in écrire"
+            },
+            {
+              "title": "je commencerais",
+              "sub": "I would start: sounds like the [ai] in vrai"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "The conditional endings all have the usual [ai] sound as in ‘vrai’, so you can hear the difference between je mangerais (I would eat) and je mangerai (I will eat)."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Listen for the ending",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which one ends with the [é] sound?",
+          "options": [
+            "je mangerai (I will eat)",
+            "je mangerais (I would eat)"
+          ],
+          "answer": 0,
+          "why": "The ‘je’ future ending -ai is pronounced [é]. The conditional ending -ais has the usual [ai] sound as in ‘vrai’."
+        },
+        {
+          "t": "choice",
+          "q": "Which one ends with the [ai] sound of ‘vrai’?",
+          "options": [
+            "je parlerai (I will speak)",
+            "je parlerais (I would speak)"
+          ],
+          "answer": 1,
+          "why": "Conditional endings all have the usual [ai] sound. The ‘je’ future ending is the exception, pronounced [é]."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Saying what you would like to do",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use the conditional of ‘vouloir’ or ‘aimer’ + an infinitive to say what you would **like** to do. So ‘je voudrais’ and ‘j’aimerais’ both mean ‘I would like’."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Je voudrais jouer avec un frère ou une sœur = I would like to play with a brother or a sister.",
+            "Tu voudrais trouver un partenaire sympa = You would like to find a nice partner.",
+            "À l’avenir, il voudrait avoir deux enfants = In the future, he would like to have two children."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Questions about the future",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each question about starting a family to its meaning.",
+          "pairs": [
+            {
+              "a": "Vas-tu fonder une famille ?",
+              "b": "Are you going to start a family?"
+            },
+            {
+              "a": "Fonderas-tu une famille ?",
+              "b": "Will you start a family?"
+            },
+            {
+              "a": "Voudrais-tu fonder une famille ?",
+              "b": "Would you like to start a family?"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "‘Aimerais-tu fonder une famille ?’ also means ‘Would you like to start a family?’"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Family plans vocabulary",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the new words to their meanings.",
+          "pairs": [
+            {
+              "a": "se marier (avec)",
+              "b": "to get married (to)"
+            },
+            {
+              "a": "(se) séparer",
+              "b": "to separate, break up"
+            },
+            {
+              "a": "le mariage",
+              "b": "marriage"
+            },
+            {
+              "a": "adopter",
+              "b": "to adopt"
+            },
+            {
+              "a": "même",
+              "b": "even"
+            },
+            {
+              "a": "civil",
+              "b": "civil"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "When do you use ‘se séparer’?",
+          "text": "Use ‘se séparer’ to talk about a couple breaking up."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The conditional is a verb form that expresses the idea ‘would’. It is often followed by a second verb in the infinitive.",
+            "The conditional of -er verbs is the infinitive stem + the imperfect endings, e.g. j’aimerais.",
+            "The sound [r] as in ‘rue’ is in all conditional and 1-verb future forms. The ‘je’ future ending -ai is pronounced [é].",
+            "Use the conditional of ‘vouloir’ or ‘aimer’ + an infinitive to say what you would like to do."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does the conditional express?",
+      "back": "The idea of ‘would’. It is often followed by a second verb in the infinitive."
+    },
+    {
+      "front": "How do you form the conditional of a regular -er verb?",
+      "back": "Infinitive stem + the imperfect tense endings.\n\nj’aimerais"
+    },
+    {
+      "front": "Give the singular conditional forms of parler.",
+      "back": "je parlerais, tu parlerais, il/elle/on parlerait"
+    },
+    {
+      "front": "How can you tell the conditional from the 1-verb future when they have the same stem?",
+      "back": "The endings are different.\n\nfuture: je parlerai, tu parleras, il parlera\nconditional: je parlerais, tu parlerais, il parlerait"
+    },
+    {
+      "front": "Say ‘I would like to live in Switzerland’ in French.",
+      "back": "J’aimerais habiter en Suisse."
+    },
+    {
+      "front": "The verb ‘préférer’ has two conditional spellings. Which one should you use?",
+      "back": "The more modern one: je préfèrerais (rather than je préférerais)."
+    },
+    {
+      "front": "Which accent does ‘acheter’ have in the conditional and the 1-verb future?",
+      "back": "è\n\nj’achèterais, j’achèterai"
+    },
+    {
+      "front": "Which sound comes before the endings in the conditional and the 1-verb future?",
+      "back": "[r], as in ‘rue’. The stem is the infinitive, so the [r] is in all their forms."
+    },
+    {
+      "front": "Do the singular conditional forms sound different from each other?",
+      "back": "No. -s and -t are silent, so je mangerais, tu mangerais and il mangerait all sound the same."
+    },
+    {
+      "front": "How is the ‘je’ ending of the 1-verb future pronounced?",
+      "back": "[é], like the [é] in ‘écrire’. It is an exception: je mangerai (I will eat) sounds different from je mangerais (I would eat)."
+    },
+    {
+      "front": "Which two verbs can you use in the conditional + an infinitive to say what you would like to do?",
+      "back": "vouloir and aimer.\n\nje voudrais / j’aimerais"
+    },
+    {
+      "front": "What does ‘Fonderas-tu une famille ?’ mean?",
+      "back": "Will you start a family?"
+    },
+    {
+      "front": "Which verb do you use to talk about a couple breaking up?",
+      "back": "se séparer"
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Tu aimerais ? Future and conditional with -er verbs (singular)",
+    "instructions": "Write your answers in French unless the question asks for English. Include the pronoun when the question shows one, and check your accents.",
+    "questions": [
+      {
+        "prompt": "Write in French, using the conditional of parler: ‘you (singular) would speak’.",
+        "answer": "tu parlerais",
+        "explanation": "Infinitive parler + imperfect ending -ais = tu parlerais."
+      },
+      {
+        "prompt": "Write in French, using the conditional of parler: ‘he would speak’.",
+        "answer": "il parlerait",
+        "explanation": "For il, elle, on the imperfect ending is -ait: parlerait."
+      },
+      {
+        "prompt": "Write in French, using the 1-verb future of parler: ‘you (singular) will speak’.",
+        "answer": "tu parleras",
+        "explanation": "The 1-verb future of tu is the infinitive + -as: tu parleras."
+      },
+      {
+        "prompt": "Write in French, using the conditional of aimer: ‘I would like’. Start with the short form of ‘je’ (j + apostrophe).",
+        "answer": "j’aimerais",
+        "accepted": [
+          "j'aimerais"
+        ],
+        "explanation": "aimer + -ais with je gives j’aimerais."
+      },
+      {
+        "prompt": "Fill the gap with the conditional of aimer: ______-tu fonder une famille ? (Would you like to start a family?)",
+        "answer": "aimerais",
+        "explanation": "With tu, the conditional of aimer is aimerais."
+      },
+      {
+        "prompt": "The conditional of -er verbs is the infinitive plus the endings of which tense? Answer with one word.",
+        "answer": "imperfect",
+        "explanation": "The conditional endings are the same as the imperfect tense endings."
+      },
+      {
+        "prompt": "‘Préférer’ has two conditional spellings for je. Write the newer spelling, starting with je.",
+        "answer": "je préfèrerais",
+        "explanation": "The second spelling, préfèrerais, is newer and reflects how the verb is currently pronounced."
+      },
+      {
+        "prompt": "Write in French, using the conditional of acheter: ‘you (singular) would buy’.",
+        "answer": "tu achèterais",
+        "explanation": "‘Acheter’ is spelled with è in the conditional: tu achèterais."
+      },
+      {
+        "prompt": "Which of these ends with the [é] sound: ‘je mangerai’ or ‘je mangerais’? Write the one that does.",
+        "answer": "je mangerai",
+        "explanation": "The ‘je’ ending of the 1-verb future, -ai, is pronounced [é]."
+      },
+      {
+        "prompt": "Write in French: ‘to adopt’.",
+        "answer": "adopter",
+        "explanation": "‘Adopter’ means to adopt."
+      }
+    ]
+  }
+}

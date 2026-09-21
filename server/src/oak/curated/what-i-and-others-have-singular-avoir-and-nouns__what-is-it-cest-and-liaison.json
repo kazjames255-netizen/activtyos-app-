@@ -1,0 +1,526 @@
+{
+  "agent": "french-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use ‘c’est’ to identify things when I speak and write."
+        },
+        {
+          "t": "text",
+          "text": "I know to pronounce the ‘t’ in ‘c’est’ when it comes before ‘un’ or ‘une’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{c’est} = it is"
+            },
+            {
+              "title": "c’est + un / une"
+            },
+            {
+              "title": "{liaison}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "c’est",
+              "def": "Two words, ce (c’) and est, meaning ‘it is’ or ‘it’s’ in French."
+            },
+            {
+              "term": "liaison",
+              "def": "Pronouncing a usually silent final consonant because a word starting with a vowel follows."
+            },
+            {
+              "term": "silent final consonant (SFC)",
+              "def": "A silent letter at the end of a word."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "C’est means ‘it is’",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The word {c’est} means ‘it is’ or ‘it’s’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{C’est} drôle.",
+              "sub": "It’s funny."
+            },
+            {
+              "title": "{C’est} lundi.",
+              "sub": "It’s Monday."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is the last letter of c’est?",
+          "text": "The ‘t’. In c’est the ‘t’ is normally a silent final consonant (SFC), so you do not say it."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "C’est + a noun",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use c’est with a noun to say what something is. After c’est use {une} for a feminine noun and {un} for a masculine noun."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "C’est {une} peluche.",
+              "sub": "It’s a cuddly toy."
+            },
+            {
+              "title": "C’est {un} stylo.",
+              "sub": "It’s a pen."
+            },
+            {
+              "title": "C’est {une} orange.",
+              "sub": "It’s an orange."
+            },
+            {
+              "title": "C’est {un} sac.",
+              "sub": "It’s a bag."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Remember to use the correct indefinite article!"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which is the correct way to say ‘It’s a bag’?",
+          "options": [
+            "C’est sac.",
+            "Est un sac.",
+            "C’est un sac."
+          ],
+          "answer": 2,
+          "why": "Use c’est for ‘it’s’ and un before the masculine noun sac."
+        },
+        {
+          "t": "choice",
+          "q": "Which is the correct way to say ‘It’s a bottle’?",
+          "options": [
+            "C’est une bouteille.",
+            "C’est un bouteille.",
+            "C’est bouteille."
+          ],
+          "answer": 0,
+          "why": "Bouteille is feminine, so we use une after c’est."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Un or une after c’est?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose un or une to finish each sentence.",
+          "items": [
+            {
+              "q": "C’est ___ cahier.",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "C’est ___ banane.",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "C’est ___ ballon.",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "C’est ___ bouteille.",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "C’est ___ jeu.",
+              "options": [
+                "un",
+                "une"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Answering questions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can use c’est to answer a question about what something is."
+        },
+        {
+          "t": "list",
+          "items": [
+            "C’est un cahier ? Oui, c’est un cahier.",
+            "C’est un sac ? Non, c’est un ballon.",
+            "C’est un stylo ? Non, c’est un cahier."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Did you see a capital letter?",
+          "text": "In French, the days of the week do not start with a capital letter: c’est lundi, non, c’est vendredi."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Liaison",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The ‘t’ in c’est is normally a silent final consonant."
+        },
+        {
+          "t": "text",
+          "text": "However, the ‘t’ is pronounced when the next word starts with a vowel sound. This is called {liaison}."
+        },
+        {
+          "t": "callout",
+          "text": "Liaison means ‘link’ in French, and it helps you sound more French!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Vowel or not?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You pronounce the ‘t’ in c’est if the next word starts with a vowel. Un and une start with a vowel (u)."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "C’es{t} un cahier.",
+              "sub": "say the t: liaison"
+            },
+            {
+              "title": "C’es{t} une bouteille.",
+              "sub": "say the t: liaison"
+            },
+            {
+              "title": "C’est lundi.",
+              "sub": "silent t"
+            },
+            {
+              "title": "C’est drôle.",
+              "sub": "silent t"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "After c’est, un and une start with a vowel, so the ‘t’ is pronounced. Lundi and drôle start with a consonant, so the ‘t’ is silent."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Quick check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "When do you pronounce the ‘t’ in ‘c’est’?",
+          "options": [
+            "Always",
+            "Never",
+            "When the next word starts with a vowel"
+          ],
+          "answer": 2,
+          "why": "The usually silent ‘t’ is pronounced when a word starting with a vowel follows. This is liaison."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these do you say WITHOUT the ‘t’ sound in c’est?",
+          "options": [
+            "C’est un ballon.",
+            "C’est lundi.",
+            "C’est une banane."
+          ],
+          "answer": 1,
+          "why": "Lundi starts with a consonant, so the ‘t’ stays silent."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Say the t or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Sort the sentences: do you say the ‘t’ of c’est?",
+          "columns": [
+            "Say the ‘t’ (liaison)",
+            "Silent ‘t’"
+          ],
+          "items": [
+            {
+              "text": "C’est un ballon.",
+              "col": 0
+            },
+            {
+              "text": "C’est lundi.",
+              "col": 1
+            },
+            {
+              "text": "C’est une banane.",
+              "col": 0
+            },
+            {
+              "text": "C’est drôle.",
+              "col": 1
+            },
+            {
+              "text": "C’est un sac.",
+              "col": 0
+            },
+            {
+              "text": "C’est grand.",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "French and English",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the French to the English.",
+          "pairs": [
+            {
+              "a": "C’est une orange.",
+              "b": "It’s an orange."
+            },
+            {
+              "a": "C’est un jeu.",
+              "b": "It’s a game."
+            },
+            {
+              "a": "C’est drôle.",
+              "b": "It’s funny."
+            },
+            {
+              "a": "C’est curieux.",
+              "b": "It’s curious."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "C’est means ‘it is’ or ‘it’s’ in French.",
+            "It can be used with any singular noun to say what something is: c’est un stylo, c’est une peluche.",
+            "Normally the ‘t’ in c’est is a silent final consonant.",
+            "When c’est is followed by a word that starts with a vowel sound, like un or une, the ‘t’ is pronounced.",
+            "This is called liaison, and it is important for correct pronunciation in French."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does ‘c’est’ mean in English?",
+      "back": "it is / it’s\n\nC’est lundi. = It’s Monday."
+    },
+    {
+      "front": "How do you say ‘It’s funny’ in French?",
+      "back": "C’est drôle."
+    },
+    {
+      "front": "How do you say ‘It’s a pen’ in French?",
+      "back": "C’est un stylo."
+    },
+    {
+      "front": "How do you say ‘It’s a cuddly toy’ in French?",
+      "back": "C’est une peluche."
+    },
+    {
+      "front": "Which indefinite article do you use after c’est with a feminine noun?",
+      "back": "une\n\nC’est une bouteille."
+    },
+    {
+      "front": "Which indefinite article do you use after c’est with a masculine noun?",
+      "back": "un\n\nC’est un cahier."
+    },
+    {
+      "front": "What is a silent final consonant (SFC)?",
+      "back": "A silent letter at the end of a word."
+    },
+    {
+      "front": "Which letter of c’est is normally silent?",
+      "back": "The ‘t’."
+    },
+    {
+      "front": "What is liaison?",
+      "back": "Pronouncing a usually silent final consonant because a word starting with a vowel follows."
+    },
+    {
+      "front": "What does the word ‘liaison’ mean in French?",
+      "back": "Link. It helps you sound more French!"
+    },
+    {
+      "front": "When is the ‘t’ in c’est pronounced?",
+      "back": "When the next word starts with a vowel sound, like un or une.\n\nC’est un sac."
+    },
+    {
+      "front": "Do French days of the week start with a capital letter?",
+      "back": "No.\n\nC’est lundi."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: What is it? C’est and liaison",
+    "instructions": "Answer with one word or a short phrase. Remember: un goes before masculine nouns and une before feminine nouns.",
+    "questions": [
+      {
+        "prompt": "What does ‘c’est’ mean in English?",
+        "answer": "it is",
+        "accepted": [
+          "it’s",
+          "it's"
+        ],
+        "explanation": "C’est means ‘it is’ or ‘it’s’."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ peluche.",
+        "answer": "une",
+        "explanation": "Peluche is feminine, so we use une."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ stylo.",
+        "answer": "un",
+        "explanation": "Stylo is masculine, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ jeu.",
+        "answer": "un",
+        "explanation": "Jeu is masculine, so we use un."
+      },
+      {
+        "prompt": "Fill the gap with un or une: C’est ___ ballon.",
+        "answer": "un",
+        "explanation": "Ballon is masculine, so we use un."
+      },
+      {
+        "prompt": "Write the French for ‘It’s an exercise book.’",
+        "answer": "c’est un cahier",
+        "accepted": [
+          "c'est un cahier",
+          "c’est un cahier.",
+          "c'est un cahier."
+        ],
+        "explanation": "C’est means it’s and cahier is masculine, so we use un."
+      },
+      {
+        "prompt": "Write the French for ‘It’s a bottle.’",
+        "answer": "c’est une bouteille",
+        "accepted": [
+          "c'est une bouteille",
+          "c’est une bouteille.",
+          "c'est une bouteille."
+        ],
+        "explanation": "C’est means it’s and bouteille is feminine, so we use une."
+      },
+      {
+        "prompt": "Which letter of ‘c’est’ is normally a silent final consonant?",
+        "answer": "t",
+        "accepted": [
+          "the t"
+        ],
+        "explanation": "The ‘t’ at the end of c’est is normally not pronounced."
+      },
+      {
+        "prompt": "What is the word for pronouncing a usually silent final consonant because a word starting with a vowel follows?",
+        "answer": "liaison",
+        "explanation": "This is called liaison."
+      },
+      {
+        "prompt": "Do you pronounce the ‘t’ in “C’est lundi.”? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "no."
+        ],
+        "explanation": "Lundi starts with a consonant, so the ‘t’ stays silent."
+      },
+      {
+        "prompt": "Do you pronounce the ‘t’ in “C’est une orange.”? Answer yes or no.",
+        "answer": "yes",
+        "accepted": [
+          "yes."
+        ],
+        "explanation": "Une starts with a vowel, so the ‘t’ is pronounced: liaison."
+      }
+    ]
+  }
+}

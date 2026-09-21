@@ -1,0 +1,546 @@
+{
+  "agent": "english-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can understand the significance of the four ghosts’ entrances and exits."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at how each ghost arrives and how each one leaves Scrooge."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "The ghosts’ {entrances}"
+            },
+            {
+              "title": "The ghosts’ {exits}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "rational",
+              "def": "If someone is rational, they are sensible and explain things using logic or reason."
+            },
+            {
+              "term": "superstitious",
+              "def": "Someone superstitious would believe wholeheartedly in the existence of the supernatural."
+            },
+            {
+              "term": "purgatory",
+              "def": "A mid-ground between heaven and hell, where sinners are sent to repent for their sins."
+            },
+            {
+              "term": "intervention",
+              "def": "An intervention is action taken to help somebody."
+            },
+            {
+              "term": "to resolve",
+              "def": "If you resolve to do something, you decide to do it."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Marley’s face in the knocker",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before Marley’s Ghost physically presents himself to Scrooge in Stave 1, Marley’s face appears in Scrooge’s door knocker."
+        },
+        {
+          "t": "callout",
+          "text": "Dickens tells us “there was nothing at all particular about the knocker on the door” and that Scrooge “had as little of what is called fancy about him as any man in the city of London”."
+        },
+        {
+          "t": "text",
+          "text": "Scrooge has his key in the lock and sees, “not a knocker, but Marley’s face”."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why the knocker?",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "It creates a mysterious and supernatural atmosphere to **foreshadow** the appearance of Marley’s Ghost.",
+            "It leaves the reader confused and bewildered, just like Scrooge. We only realise why it happened after Marley’s Ghost enters.",
+            "It sets us up to accept the unbelievable.",
+            "Dickens characterises Scrooge as very {rational}, so we don’t think Scrooge is hallucinating. This is something that logic can’t explain, so it must be supernatural."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why must we believe it is really happening?",
+          "text": "Victorian readers were deeply {superstitious}. If they believed Scrooge was genuinely being visited by a ghost for his sins in life, they would believe it could happen to them, so they would be more likely to behave better."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Marley’s Ghost: the entrance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before Marley’s Ghost enters, strange things happen:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“A disused bell began to swing… it rang out loudly, and so did every bell in the house.”",
+            "The bells stop together and are followed by a clanking noise, deep down below, as if someone were dragging a heavy chain over the casks in the wine-merchant’s cellar.",
+            "The cellar-door flies open, the noise comes up the stairs, and the ghost comes on through the heavy door and into the room."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Marley’s forced entry",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Why is the forced entry so significant?"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "From below",
+              "sub": "Symbolic of him rising from hell or {purgatory}, where he is punished for his sins"
+            },
+            {
+              "title": "A bell announces him",
+              "sub": "Bells are symbolic of moral awakening: the start of Scrooge’s rebirth"
+            },
+            {
+              "title": "Scrooge knows the sound",
+              "sub": "It links to Marley’s question “Is its pattern strange to you?”: Scrooge is in store for the same fate"
+            },
+            {
+              "title": "He forces his way in",
+              "sub": "Scrooge wouldn’t help himself, so he needs this {intervention}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ghost of Christmas Past: the entrance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Stave 2 “Light flashed up in the room upon the instant, and the curtains of his bed were drawn.” They are drawn aside by a hand, and Scrooge finds himself “face to face with the unearthly visitor”."
+        },
+        {
+          "t": "reveal",
+          "label": "What could the light represent?",
+          "text": "Judgement (Scrooge’s immorality has a light shone on it), enlightenment (he will see the error of his ways), guidance (the spirit will guide him to rediscover his empathy) and the light of God entering his life (he will learn Christian values of kindness, equality and charity)."
+        },
+        {
+          "t": "reveal",
+          "label": "Why does the spirit draw the curtains itself?",
+          "text": "Scrooge is not yet receptive to the spirits’ teachings, so he needs to be forced to engage with them. The curtains also bring him “face to face” with his past actions."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ghost of Christmas Present: the entrance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scrooge lies on his bed “the very core and centre of a blaze of ruddy light”. He thinks the source of this light might be in the adjoining room, gets up “softly” and shuffles in his slippers to the door."
+        },
+        {
+          "t": "text",
+          "text": "As his hand is on the lock, a strange voice calls him by name and bids him enter. **He obeyed.**"
+        },
+        {
+          "t": "callout",
+          "text": "Scrooge finding the spirit for himself shows his willingness to learn. It also reflects his growing ability to be **introspective** (to look inside himself and recognise his flaws). He still needs instruction from the spirits, but he is receptive to their lessons."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ghost of Christmas Yet to Come: the entrance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "“The bell struck twelve.” Scrooge “looked about him for the Ghost” and then sees “a solemn Phantom, draped and hooded, coming, like a mist along the ground, towards him”."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Scrooge looking for the last spirit shows his eagerness and willingness to learn his final lesson. He has already {resolved} to change.",
+            "This spirit arrives at the end of Stave 3 (not the beginning of the next stave like the others). The spirit represents death and judgement, which are neither avoidable nor escapable. Arriving slightly early catches the reader off guard too."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Forced or sought out?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Was the ghost’s entrance forced on Scrooge, or did Scrooge seek the ghost out?",
+          "columns": [
+            "Forced entrance",
+            "Sought out by Scrooge"
+          ],
+          "items": [
+            {
+              "text": "Marley’s Ghost comes through Scrooge’s door into his room",
+              "col": 0
+            },
+            {
+              "text": "The Ghost of Christmas Past draws Scrooge’s bed curtains itself",
+              "col": 0
+            },
+            {
+              "text": "Scrooge goes to the door of the adjoining room to find the source of the light",
+              "col": 1
+            },
+            {
+              "text": "Scrooge looks about him for the last Ghost",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Key words in action",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the keyword that fits.",
+          "items": [
+            {
+              "q": "Marley’s Ghost forces his way into Scrooge’s life because Scrooge wouldn’t help himself. This is an…",
+              "options": [
+                "invitation",
+                "intervention",
+                "interruption"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Dickens makes Scrooge sensible and logical, so readers trust that the ghost is real. Scrooge is…",
+              "options": [
+                "rational",
+                "superstitious",
+                "egotistical"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Marley’s Ghost rising from below could show he comes from a mid-ground between heaven and hell, where sinners repent. It is called…",
+              "options": [
+                "purgatory",
+                "liminality",
+                "genre"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "By the last ghost, Scrooge has already decided to change. He has…",
+              "options": [
+                "resolved to change",
+                "refused to change",
+                "resisted the ghost"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Marley’s Ghost: the exit",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Marley’s Ghost walks backward from Scrooge and the window raises itself. He beckons Scrooge, then holds up his hand to warn him to come no nearer. Scrooge hears sounds of lamentation and regret. The spectre joins in the mournful dirge and floats out upon the bleak, dark night."
+        },
+        {
+          "t": "text",
+          "text": "Scrooge follows to the window and sees the air filled with phantoms wandering in restless haste, moaning, each wearing chains like Marley’s. They wanted to interfere, for good, in human matters, and had lost the power for ever."
+        },
+        {
+          "t": "callout",
+          "text": "Marley rejoins the wandering phantoms: he has been allowed to help Scrooge, but he has not been granted freedom and will wander the earth for ever. Not being allowed to help others is part of their punishment."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "There are more than four ghosts in the novella. Remember the numerous ghosts Scrooge sees when he looks out of the window at the end of Stave 1."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The other exits",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Ghost of Christmas Past",
+              "sub": "Scrooge extinguishes the spirit’s light with its cap. It collapses onto the floor and disappears."
+            },
+            {
+              "title": "Ghost of Christmas Present",
+              "sub": "The spirit gradually ages over the stave. When the clock strikes 12, the spirit vanishes."
+            },
+            {
+              "title": "Ghost of Christmas Yet to Come",
+              "sub": "Scrooge grabs the spirit’s arms but it resists. He raises his hands in prayer and the spirit morphs into his bedpost."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the exit",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each ghost to the way it leaves.",
+          "pairs": [
+            {
+              "a": "Ghost of Christmas Past",
+              "b": "Scrooge puts out its light with its cap and it collapses and disappears"
+            },
+            {
+              "a": "Ghost of Christmas Present",
+              "b": "It ages gradually, then vanishes as the clock strikes 12"
+            },
+            {
+              "a": "Ghost of Christmas Yet to Come",
+              "b": "It resists Scrooge’s grip, then morphs into his bedpost"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why do the exits matter?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The exits reflect the purposes and the characters of the ghosts, and each exit confirms Scrooge’s progress in his transformation."
+        },
+        {
+          "t": "list",
+          "items": [
+            "**Past:** Scrooge rids himself of the ghost through force. This shows the pain Scrooge feels, but also that he is not yet ready to take accountability.",
+            "**Present:** the spirit represents Christmas, an embodiment of Christmas, which is why it vanishes at 12. Scrooge learns how precious time is.",
+            "**Yet to Come:** the morph into a bedpost makes the experience seem more dreamlike and nightmarish, making us question the ghost’s existence for a moment. It also makes for a smooth transition to Christmas morning, where Scrooge can make changes."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Each of the ghosts’ entrances is symbolic of the stage Scrooge is at in his transformation.",
+            "The earlier ghosts (Marley’s Ghost and the Ghost of Christmas Past) enter Scrooge’s world forcefully, because Scrooge wouldn’t help himself: he needs this intervention.",
+            "The later ghosts are sought out by Scrooge, which shows his newfound willingness to learn and be introspective.",
+            "The ghosts’ exits also reflect the purposes and the characters of the ghosts, and confirm Scrooge’s progress in his transformation."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “rational” mean?",
+      "back": "Sensible, and explaining things using logic or reason."
+    },
+    {
+      "front": "What does “superstitious” mean?",
+      "back": "Believing wholeheartedly in the existence of the supernatural."
+    },
+    {
+      "front": "What is purgatory?",
+      "back": "A mid-ground between heaven and hell, where sinners are sent to repent for their sins."
+    },
+    {
+      "front": "What is an intervention?",
+      "back": "Action taken to help somebody."
+    },
+    {
+      "front": "What does “to resolve” mean?",
+      "back": "To decide to do something."
+    },
+    {
+      "front": "Where does Marley’s face appear before his ghost enters in Stave 1?",
+      "back": "In Scrooge’s door knocker."
+    },
+    {
+      "front": "Why does Dickens describe Scrooge as having “as little of what is called fancy about him as any man in the city of London”?",
+      "back": "It shows Scrooge is very rational, so we don’t think he is hallucinating: it prepares us to accept the visit from Marley’s Ghost."
+    },
+    {
+      "front": "What could Marley’s Ghost entering from below (the wine cellar) symbolise?",
+      "back": "That he has risen from hell or purgatory, where he is punished for his sins."
+    },
+    {
+      "front": "Why do the earlier ghosts have to enter Scrooge’s world forcefully?",
+      "back": "Scrooge wouldn’t help himself, so he needs this intervention."
+    },
+    {
+      "front": "What does it show that Scrooge goes to find the Ghost of Christmas Present in the adjoining room?",
+      "back": "His willingness to learn and his growing ability to be introspective."
+    },
+    {
+      "front": "Why might the Ghost of Christmas Yet to Come arrive at the end of Stave 3?",
+      "back": "The spirit represents death and judgement, which are inescapable. Arriving slightly early catches the reader off guard."
+    },
+    {
+      "front": "How does the Ghost of Christmas Yet to Come exit?",
+      "back": "Scrooge grabs its arms but it resists. He raises his hands in prayer and it morphs into his bedpost."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘A Christmas Carol’: the entrances and exits of the four ghosts",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "Which keyword means “sensible, explaining things using logic or reason”?",
+        "answer": "rational",
+        "accepted": [
+          "rational"
+        ],
+        "explanation": "Dickens characterises Scrooge as rational so readers believe the ghost is real."
+      },
+      {
+        "prompt": "Which keyword describes someone who believes wholeheartedly in the existence of the supernatural?",
+        "answer": "superstitious",
+        "accepted": [
+          "superstitious"
+        ],
+        "explanation": "Victorian readers were deeply superstitious, so they could believe it might happen to them."
+      },
+      {
+        "prompt": "Which keyword means a mid-ground between heaven and hell, where sinners are sent to repent for their sins?",
+        "answer": "purgatory",
+        "accepted": [
+          "purgatory"
+        ],
+        "explanation": "Marley’s Ghost entering from below could symbolise him rising from hell or purgatory."
+      },
+      {
+        "prompt": "Which keyword means “action taken to help somebody”?",
+        "answer": "intervention",
+        "accepted": [
+          "intervention",
+          "an intervention"
+        ],
+        "explanation": "The earlier ghosts’ forced entrances are an intervention because Scrooge wouldn’t help himself."
+      },
+      {
+        "prompt": "In which stave does Marley’s face appear in Scrooge’s door knocker?",
+        "answer": "Stave 1",
+        "accepted": [
+          "Stave 1",
+          "stave one",
+          "Stave one",
+          "1",
+          "one",
+          "stave 1"
+        ],
+        "explanation": "Marley’s face appears in the knocker before his arrival in Stave 1."
+      },
+      {
+        "prompt": "Marley’s Ghost’s arrival is announced by a clanking noise as if someone were dragging a heavy chain over the casks in the wine-merchant’s ___. Fill in the missing word.",
+        "answer": "cellar",
+        "accepted": [
+          "cellar",
+          "the cellar"
+        ],
+        "explanation": "The noise comes from deep down below, then comes up the stairs towards Scrooge’s door."
+      },
+      {
+        "prompt": "What does Scrooge use to extinguish the Ghost of Christmas Past’s light?",
+        "answer": "its cap",
+        "accepted": [
+          "its cap",
+          "cap",
+          "the cap",
+          "the spirit’s cap",
+          "the spirit's cap"
+        ],
+        "explanation": "Scrooge extinguishes the spirit’s light with its cap and it collapses and disappears."
+      },
+      {
+        "prompt": "The Ghost of Christmas Present gradually ages and then vanishes when the clock strikes which number?",
+        "answer": "12",
+        "accepted": [
+          "12",
+          "twelve"
+        ],
+        "explanation": "The spirit vanishes as the clock strikes 12."
+      },
+      {
+        "prompt": "What does the Ghost of Christmas Yet to Come morph into when Scrooge raises his hands in prayer?",
+        "answer": "his bedpost",
+        "accepted": [
+          "his bedpost",
+          "bedpost",
+          "a bedpost",
+          "Scrooge’s bedpost",
+          "Scrooge's bedpost"
+        ],
+        "explanation": "The spirit morphs into Scrooge’s bedpost."
+      },
+      {
+        "prompt": "Which ghost arrives at the end of Stave 3, instead of at the beginning of the next stave?",
+        "answer": "The Ghost of Christmas Yet to Come",
+        "accepted": [
+          "The Ghost of Christmas Yet to Come",
+          "Ghost of Christmas Yet to Come",
+          "Christmas Yet to Come",
+          "Yet to Come",
+          "the last ghost"
+        ],
+        "explanation": "The last spirit arrives at the end of Stave 3, which represents death and judgement being inescapable."
+      }
+    ]
+  }
+}

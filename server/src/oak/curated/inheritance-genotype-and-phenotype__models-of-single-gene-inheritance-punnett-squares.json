@@ -1,0 +1,681 @@
+{
+  "agent": "science-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today's learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can interpret and construct Punnett squares to show the inheritance of alleles of a single gene."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Constructing {Punnett squares}",
+              "sub": "how to build them"
+            },
+            {
+              "title": "Predictions of {inheritance}",
+              "sub": "proportions, ratios and probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "Punnett square",
+              "def": "A model used to show the inheritance of alleles from parents to offspring."
+            },
+            {
+              "term": "gamete",
+              "def": "A sex cell (sperm or egg) that carries half the genetic information required for an individual organism."
+            },
+            {
+              "term": "genotype",
+              "def": "The combination of alleles that an individual has for each gene."
+            },
+            {
+              "term": "ratio",
+              "def": "Shows how much of one value there is compared to another."
+            },
+            {
+              "term": "probability",
+              "def": "A measure of the chance or likelihood of an event occurring."
+            },
+            {
+              "term": "homozygous",
+              "def": "Having two identical alleles for a gene."
+            },
+            {
+              "term": "heterozygous",
+              "def": "Having two different alleles for a gene."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Two alleles for each gene",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Gametes contain half of the chromosomes of the parent. The resulting zygote has two copies of each chromosome, so it has two copies of each gene, which form a pair."
+        },
+        {
+          "t": "text",
+          "text": "An individual always has **two alleles for each gene**: one from each parent. Dominant alleles have a capital letter and recessive alleles a lowercase letter."
+        },
+        {
+          "t": "callout",
+          "text": "Most characteristics are influenced by many genes, but some are determined by just one. Punnett squares model a single gene."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Homozygous or heterozygous?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The genotype for one gene could be two of the same allele or two different alleles."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{BB}",
+              "sub": "homozygous dominant"
+            },
+            {
+              "title": "{bb}",
+              "sub": "homozygous recessive"
+            },
+            {
+              "title": "{Bb}",
+              "sub": "heterozygous"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Hetero means different. Homo means the same."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the genotypes",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each genotype homozygous or heterozygous?",
+          "columns": [
+            "Homozygous",
+            "Heterozygous"
+          ],
+          "items": [
+            {
+              "text": "RR",
+              "col": 0
+            },
+            {
+              "text": "Rr",
+              "col": 1
+            },
+            {
+              "text": "rr",
+              "col": 0
+            },
+            {
+              "text": "Ww",
+              "col": 1
+            },
+            {
+              "text": "Kk",
+              "col": 1
+            },
+            {
+              "text": "KK",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gametes get one allele each",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When gametes are made, each gamete receives one of each pair of chromosomes, so it receives one allele of each gene."
+        },
+        {
+          "t": "text",
+          "text": "Mother genotype **ee**: every egg receives an e allele."
+        },
+        {
+          "t": "text",
+          "text": "Father genotype **Ee**: half of the sperm receive E and half receive e."
+        },
+        {
+          "t": "callout",
+          "text": "A gamete has only ONE allele for the gene, never two."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "How to build a Punnett square",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A Punnett square shows all the possible combinations of genotypes in the offspring, from the alleles in the parents' gametes."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Write down each parent's genotype.",
+            "Put one parent's two alleles across the top and the other parent's two alleles down the side.",
+            "Cross them: in each box, combine the allele from the top with the allele from the side.",
+            "Read the possible offspring genotypes from the four boxes."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "It does not matter which parent goes on which side."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example 1: Ee × ee",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One parent is heterozygous (Ee) and the other is homozygous recessive (ee). Tap to build each box: allele from the top + allele from the side."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "E",
+              "add": "e",
+              "result": "Ee"
+            },
+            {
+              "root": "e",
+              "add": "e",
+              "result": "ee"
+            },
+            {
+              "root": "E",
+              "add": "e",
+              "result": "Ee"
+            },
+            {
+              "root": "e",
+              "add": "e",
+              "result": "ee"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The four boxes are Ee, ee, Ee, ee. So there are two possible genotypes: 2 boxes Ee (heterozygous) and 2 boxes ee (homozygous recessive)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example 2: AA × aa",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A single gene A codes for a colour pigment in a flower. One parent is homozygous dominant (AA) and the other is homozygous recessive (aa)."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "A",
+              "add": "a",
+              "result": "Aa"
+            },
+            {
+              "root": "A",
+              "add": "a",
+              "result": "Aa"
+            },
+            {
+              "root": "A",
+              "add": "a",
+              "result": "Aa"
+            },
+            {
+              "root": "A",
+              "add": "a",
+              "result": "Aa"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "Every box is Aa, so all of the possible offspring are heterozygous."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example 3: Ee × Ee",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Two heterozygous parents. Each has E and e to pass on."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "E",
+              "add": "E",
+              "result": "EE"
+            },
+            {
+              "root": "E",
+              "add": "e",
+              "result": "Ee"
+            },
+            {
+              "root": "e",
+              "add": "E",
+              "result": "Ee"
+            },
+            {
+              "root": "e",
+              "add": "e",
+              "result": "ee"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Out of four boxes: one EE (homozygous dominant), two Ee (heterozygous) and one ee (homozygous recessive). That is three possible genotypes."
+        },
+        {
+          "t": "callout",
+          "text": "This does NOT mean the parents will have exactly four offspring. The boxes show the possible combinations and the proportions they occur in."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the error",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "A student draws a Punnett square for Ee × ee and one box says EE. Why must this be an error?",
+          "options": [
+            "Because the ee parent has no E allele to pass on, so no offspring can get two E alleles",
+            "Because EE is not a real genotype",
+            "Because a Punnett square never has more than one genotype in it"
+          ],
+          "answer": 0,
+          "why": "Gametes carry only the alleles their parent has. An ee parent can only pass on e, so an offspring cannot be EE."
+        },
+        {
+          "t": "choice",
+          "q": "Which set of boxes is correct for Aa × Aa?",
+          "options": [
+            "One AA, two Aa and one aa",
+            "Two AA and two aa",
+            "Four Aa"
+          ],
+          "answer": 0,
+          "why": "Each parent passes on A or a, giving AA, Aa, Aa and aa."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the parents",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each cross to the offspring genotypes it can produce.",
+          "pairs": [
+            {
+              "a": "BB × bb",
+              "b": "all Bb"
+            },
+            {
+              "a": "Cc × Cc",
+              "b": "CC, Cc and cc"
+            },
+            {
+              "a": "Dd × dd",
+              "b": "Dd and dd only"
+            },
+            {
+              "a": "Ee × EE",
+              "b": "EE and Ee only"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Predicting proportions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A Punnett square can be used to predict the likely proportion of each genotype and phenotype in the offspring."
+        },
+        {
+          "t": "text",
+          "text": "Back to Ee × ee (E = wet earwax is dominant). Ee has a dominant allele so it shows the dominant phenotype. ee has two recessive alleles so it shows the recessive phenotype."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "½ or 50% Ee → dominant phenotype",
+            "½ or 50% ee → recessive phenotype"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "As a ratio: Ee : ee = 2 : 2, which simplifies to **1 : 1**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Pea plants: 1 : 2 : 1 and 3 : 1",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Purple (P) is dominant and white (p) is recessive. A PP plant crossed with a pp plant gives 100% Pp, all with purple flowers."
+        },
+        {
+          "t": "text",
+          "text": "Now cross two heterozygous purple plants, Pp × Pp: the boxes are PP, Pp, Pp and pp."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Genotype ratio PP : Pp : pp = 1 : 2 : 1",
+            "Phenotype ratio purple : white = 3 : 1"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Why 3 : 1?",
+          "text": "Three of the four boxes (PP, Pp and Pp) contain a dominant allele, so they are purple. Only pp is white. As a percentage that is 75% purple and 25% white."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Predict the offspring",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In pea plants, round peas are produced by a dominant allele (R) and wrinkled peas by a recessive allele (r)."
+        },
+        {
+          "t": "choices",
+          "q": "Work out each Punnett square, then choose the answer.",
+          "items": [
+            {
+              "q": "Rr × Rr: what fraction of the offspring are rr (wrinkled)?",
+              "options": [
+                "1/4",
+                "1/2",
+                "3/4"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Rr × rr: what percentage of the offspring are wrinkled?",
+              "options": [
+                "25%",
+                "50%",
+                "100%"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "RR × rr: what percentage of the offspring are round?",
+              "options": [
+                "50%",
+                "75%",
+                "100%"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Rr × Rr: what is the ratio of round : wrinkled offspring?",
+              "options": [
+                "1 : 3",
+                "3 : 1",
+                "1 : 1"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "RR × Rr: what percentage of the offspring are RR?",
+              "options": [
+                "25%",
+                "50%",
+                "100%"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Every time is a new chance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Each instance of sexual reproduction is independent, so it does not affect the probability for the next offspring. The ratio and probability stay the same every time fertilisation takes place."
+        },
+        {
+          "t": "choice",
+          "q": "Two Rr pea plants are crossed and their first three offspring are all round. What is the probability that the fourth offspring is wrinkled?",
+          "options": [
+            "0%, because they have had three round",
+            "25%, the same as every time",
+            "100%, because it is now wrinkled's turn"
+          ],
+          "answer": 1,
+          "why": "Each fertilisation is independent, so the probability of rr stays at 1 in 4 (25%) every time."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "An individual inherits two alleles for each gene. The alleles may be dominant or recessive.",
+            "A Punnett square models the inheritance of alleles from the parents' gametes. It shows all the possible offspring genotypes: homozygous dominant, homozygous recessive or heterozygous.",
+            "Punnett squares are used to predict the proportion of genotypes and phenotypes, and the probability of each occurring in the offspring.",
+            "Each instance of sexual reproduction is independent, so it does not affect the probability for the next offspring."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is a Punnett square?",
+      "back": "A model used to show the inheritance of alleles from parents to offspring."
+    },
+    {
+      "front": "What is a gamete?",
+      "back": "A sex cell (sperm or egg) that carries half the genetic information required for an individual organism."
+    },
+    {
+      "front": "How many alleles of a gene does one gamete carry?",
+      "back": "One."
+    },
+    {
+      "front": "What does homozygous mean?",
+      "back": "Two of the same allele for a gene, e.g. BB (homozygous dominant) or bb (homozygous recessive)."
+    },
+    {
+      "front": "What does heterozygous mean?",
+      "back": "Two different alleles for a gene, e.g. Bb."
+    },
+    {
+      "front": "What does a Punnett square show?",
+      "back": "All the possible combinations of genotypes in the offspring, from the alleles in the parents' gametes."
+    },
+    {
+      "front": "What offspring do AA × aa parents produce?",
+      "back": "All Aa (100% heterozygous)."
+    },
+    {
+      "front": "What are the possible offspring of Ee × ee, and in what proportions?",
+      "back": "Half Ee and half ee: a 1 : 1 ratio (50% each)."
+    },
+    {
+      "front": "What is the genotype ratio from two heterozygous parents (Pp × Pp)?",
+      "back": "PP : Pp : pp = 1 : 2 : 1."
+    },
+    {
+      "front": "What is the phenotype ratio from two heterozygous parents when one allele is dominant?",
+      "back": "3 : 1, dominant to recessive, because three of the four boxes contain a dominant allele."
+    },
+    {
+      "front": "What is a ratio?",
+      "back": "It shows how much of one value there is compared to another."
+    },
+    {
+      "front": "Do the ratios change each time a pair of parents has an offspring?",
+      "back": "No. Each instance of sexual reproduction is independent, so the probability stays the same each time."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Models of single-gene inheritance: Punnett squares",
+    "instructions": "Work out each Punnett square, then write a short answer.",
+    "questions": [
+      {
+        "prompt": "Wet earwax (E) is dominant to dry earwax (e). A heterozygous parent (Ee) and a homozygous recessive parent (ee) have offspring. What percentage of their possible offspring are ee?",
+        "answer": "50%",
+        "accepted": [
+          "50",
+          "50 %",
+          "50 percent"
+        ],
+        "explanation": "Ee × ee gives two Ee boxes and two ee boxes, so 2 out of 4 is 50%."
+      },
+      {
+        "prompt": "Two heterozygous pea plants (Pp) are crossed. What percentage of the possible offspring have the genotype pp?",
+        "answer": "25%",
+        "accepted": [
+          "25",
+          "25 %",
+          "25 percent"
+        ],
+        "explanation": "Pp × Pp gives PP, Pp, Pp and pp, so 1 out of 4 is 25%."
+      },
+      {
+        "prompt": "A homozygous dominant plant (AA) is crossed with a homozygous recessive plant (aa). What percentage of the possible offspring are heterozygous?",
+        "answer": "100%",
+        "accepted": [
+          "100",
+          "100 %",
+          "100 percent",
+          "all"
+        ],
+        "explanation": "Every box of the Punnett square is Aa, so all of the possible offspring are heterozygous."
+      },
+      {
+        "prompt": "Two heterozygous parents (Ee × Ee) are crossed. How many of the four Punnett square boxes show a heterozygous genotype?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "The boxes are EE, Ee, Ee and ee, so two of them are Ee."
+      },
+      {
+        "prompt": "Round peas (R) are dominant to wrinkled peas (r). Two Rr plants are crossed. Write the ratio of round : wrinkled offspring in the form ? : ?",
+        "answer": "3:1",
+        "accepted": [
+          "3 : 1",
+          "3 to 1",
+          "three to one"
+        ],
+        "explanation": "RR, Rr and Rr are round and rr is wrinkled, so the ratio is 3 : 1."
+      },
+      {
+        "prompt": "Two Ff parents are crossed. Write the genotype ratio FF : Ff : ff in the form ? : ? : ?",
+        "answer": "1:2:1",
+        "accepted": [
+          "1 : 2 : 1",
+          "1 to 2 to 1"
+        ],
+        "explanation": "The boxes are FF, Ff, Ff and ff, so the ratio is 1 : 2 : 1."
+      },
+      {
+        "prompt": "What word describes a genotype that has two different alleles for a gene?",
+        "answer": "heterozygous",
+        "accepted": [
+          "a heterozygous genotype"
+        ],
+        "explanation": "Hetero means different, so two different alleles is heterozygous."
+      },
+      {
+        "prompt": "Two Rr pea plants are crossed and their first four offspring are all round. What is the percentage probability that the fifth offspring is wrinkled?",
+        "answer": "25%",
+        "accepted": [
+          "25",
+          "25 %",
+          "25 percent"
+        ],
+        "explanation": "Each fertilisation is independent, so the chance of rr is always 1 in 4, which is 25%."
+      },
+      {
+        "prompt": "An organism's body cells contain 36 chromosomes. How many chromosomes does one of its gametes carry?",
+        "answer": "18",
+        "accepted": [
+          "eighteen"
+        ],
+        "explanation": "Gametes carry half the chromosomes of the parent's body cells: 36 ÷ 2 = 18."
+      },
+      {
+        "prompt": "Round peas (R) are dominant to wrinkled peas (r). A round pea plant (Rr) is crossed with a wrinkled pea plant. What percentage of the possible offspring are wrinkled?",
+        "answer": "50%",
+        "accepted": [
+          "50",
+          "50 %",
+          "50 percent"
+        ],
+        "explanation": "Rr × rr gives two Rr boxes and two rr boxes, so half are wrinkled (rr)."
+      }
+    ]
+  }
+}

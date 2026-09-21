@@ -1,0 +1,589 @@
+{
+  "agent": "w4-comb-chem",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain why there is a difference in melting and boiling points between simple and giant covalent structures, and use models to show the shapes and structures of covalent substances."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Simple molecular} substances"
+            },
+            {
+              "title": "{Giant covalent} substances"
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "changes-of-state"
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "simple molecular",
+              "def": "Simple molecular substances are made up of two or more atoms covalently bonded together to form a distinct unit."
+            },
+            {
+              "term": "model",
+              "def": "Scientists use models to represent parts of the natural world that are too difficult to observe or explain directly."
+            },
+            {
+              "term": "intermolecular force",
+              "def": "Intermolecular forces are weak forces of attraction between molecules and molecular substances."
+            },
+            {
+              "term": "giant covalent",
+              "def": "A giant covalent substance has a large regular arrangement of atoms all joined together by covalent bonds."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Simple molecular substances",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are two types of covalent substance: simple molecular and giant covalent. Simple molecular substances are made up of distinct, separate units."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "water, H₂O",
+              "sub": "two hydrogen atoms and one oxygen atom"
+            },
+            {
+              "title": "carbon dioxide, CO₂",
+              "sub": "one carbon atom and two oxygen atoms"
+            },
+            {
+              "title": "nitrogen, N₂",
+              "sub": "two nitrogen atoms"
+            },
+            {
+              "title": "glucose, C₆H₁₂O₆",
+              "sub": "6 carbon, 12 hydrogen and 6 oxygen atoms in one molecule"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How many atoms in one glucose molecule?",
+          "text": "6 + 12 + 6 = 24 atoms, all in one distinct molecule."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Models of molecules",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists use models to represent parts of the natural world that are too difficult to observe or explain directly. In chemistry we often model things at the sub-microscopic level, such as atoms and molecules."
+        },
+        {
+          "t": "text",
+          "text": "A molecule of water can be shown as a physical 3D model, a digital 3D model (ball-and-stick), a 2D displayed formula or a dot-and-cross diagram."
+        },
+        {
+          "t": "match",
+          "q": "Match each model to what represents the covalent bond in it.",
+          "pairs": [
+            {
+              "a": "space-filling model",
+              "b": "overlap of atoms"
+            },
+            {
+              "a": "ball-and-stick model",
+              "b": "sticks between atoms"
+            },
+            {
+              "a": "dot-and-cross diagram",
+              "b": "a dot and a cross in a shared overlap"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Strengths and limits of models",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Every model has good points and limitations."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Physical 3D model",
+              "sub": "good: it is 3D, like real atoms. Limit: real atoms are held by forces of attraction, not physical connectors"
+            },
+            {
+              "title": "Sticks and lines",
+              "sub": "the sticks are not really there. They stand for the shared pair of electrons. No electrons are shown"
+            },
+            {
+              "title": "Dot-and-cross",
+              "sub": "a much better picture of the bond itself. Limit: it is a 2D drawing and loses the 3D shape"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Choose a model",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which model shows the shared pair of electrons in a covalent bond most clearly?",
+          "options": [
+            "ball-and-stick model",
+            "dot-and-cross diagram",
+            "2D displayed formula"
+          ],
+          "answer": 1,
+          "why": "In a dot-and-cross diagram the dot and cross together are the bonding pair of electrons, sitting in the overlap between the atoms."
+        },
+        {
+          "t": "choice",
+          "q": "What is a limitation of a dot-and-cross diagram?",
+          "options": [
+            "It shows no electrons.",
+            "It is a 2D drawing, so it loses the 3D shape.",
+            "It uses physical connectors that are not really there."
+          ],
+          "answer": 1,
+          "why": "Dot-and-cross diagrams do show electrons, but they are flat 2D drawings."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why simple molecular substances melt and boil easily",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Simple molecular substances have low melting and boiling points. This means most are gases or liquids at room temperature."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Inside each molecule the atoms are held together by strong covalent bonds.",
+            "Between molecules there are only weak intermolecular forces of attraction.",
+            "To melt or boil, the weak forces between molecules need to be overcome.",
+            "The strong covalent bonds inside the molecules do not break."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Relatively low energy is needed to overcome the weak forces between molecules, so simple molecular substances melt and boil at low temperatures."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which force?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is each description about a strong covalent bond or a weak intermolecular force?",
+          "columns": [
+            "Strong covalent bond",
+            "Weak intermolecular force"
+          ],
+          "items": [
+            {
+              "text": "holds the two atoms together inside a hydrogen molecule",
+              "col": 0
+            },
+            {
+              "text": "acts between separate hydrogen molecules",
+              "col": 1
+            },
+            {
+              "text": "does not break when a simple molecular substance melts",
+              "col": 0
+            },
+            {
+              "text": "is overcome when a simple molecular substance boils",
+              "col": 1
+            },
+            {
+              "text": "is between the atoms of different molecules",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Physical change or chemical change?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Melting, boiling, condensing and freezing are all **physical changes**. You end up with the same chemical substance, just in a different state."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Going from solid to liquid to gas, particles vibrate and move more and push away from each other. They overcome the forces of attraction.",
+            "When a gas condenses or a liquid freezes, the intermolecular forces reform and bring the molecules closer together."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Chemical changes are different. They need bonds to be broken and made. Large amounts of energy are needed to break covalent bonds."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "2H₂ + O₂",
+              "add": "bonds break and new bonds form",
+              "result": "2H₂O",
+              "note": "The H–H and O–O bonds in the reactants are not in the water molecules, so they must have broken."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Boiling water and methane",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Methane has a lower boiling point than water. What is the correct reason?",
+          "options": [
+            "Water has stronger intermolecular forces.",
+            "Water is lighter than methane.",
+            "Methane is already a gas, so it needs less energy."
+          ],
+          "answer": 0,
+          "why": "Boiling point depends on the strength of the intermolecular forces, not on density or on which state the substance is in now."
+        },
+        {
+          "t": "choice",
+          "q": "Which statement correctly describes what happens when a simple molecular substance melts?",
+          "options": [
+            "The covalent bonds inside the molecules break.",
+            "The intermolecular forces between the molecules are overcome.",
+            "New chemical bonds form between the molecules."
+          ],
+          "answer": 1,
+          "why": "Only the weak forces between molecules are overcome. Melting is a physical change, so no new chemicals form."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "It is a classic mistake to say that more energy is needed to break the bonds in water. The bonds are not broken. It is the intermolecular forces between molecules that must be overcome."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Giant covalent substances",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Giant covalent substances include diamond, graphite and silicon dioxide. Every atom is held in place by strong covalent bonds in a giant network with a repeating structure."
+        },
+        {
+          "t": "text",
+          "text": "There are no individual units like in simple molecular substances."
+        },
+        {
+          "t": "text",
+          "text": "Silicon dioxide has a similar structure to diamond, but with silicon and oxygen atoms instead of only carbon. For every one silicon atom there are two oxygen atoms."
+        },
+        {
+          "t": "text",
+          "text": "In physical models of these structures, one colour of connector can show the strong covalent bonds and another colour the weak forces of attraction between the layers of graphite."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Melting a giant covalent substance",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For a giant covalent substance to melt or boil, **all the strong covalent bonds** need to be broken. All the atoms are connected in one giant network."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Simple molecular",
+              "sub": "weak forces between molecules overcome: low melting and boiling points"
+            },
+            {
+              "title": "Giant covalent",
+              "sub": "strong covalent bonds broken: incredibly high melting and boiling points"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Relatively large amounts of energy are needed to break the strong covalent bonds. This is much more than for simple molecules."
+        }
+      ],
+      "pics": [
+        {
+          "id": "changes-of-state"
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Explain the melting points",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "Why does diamond have a very high melting point?",
+              "options": [
+                "All the atoms are held together by strong covalent bonds.",
+                "It has weak forces of attraction between its layers.",
+                "It is a poor conductor of electricity."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Graphite has weak forces between its layers. Why is its melting point still very high?",
+              "options": [
+                "Because it is a simple molecule.",
+                "Because all the strong covalent bonds must be broken for it to melt.",
+                "Because it is a good conductor."
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Which needs more energy to change state?",
+              "options": [
+                "a simple molecular substance",
+                "a giant covalent substance"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Explaining diamond and graphite",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Diamond",
+              "sub": "a rigid structure, every carbon bonded to four others. It is very hard. Large energy is needed to break the bonds, so it has a high melting point. No delocalised electrons, so it cannot conduct electricity"
+            },
+            {
+              "title": "Graphite",
+              "sub": "layers of hexagonal rings, each carbon bonded to three others. Weak forces between the layers, so it is quite soft. All strong bonds must break to melt it, so a high melting point. Free delocalised electrons carry charge, so it conducts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Final check",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which sentence is correct?",
+          "options": [
+            "Simple molecular substances have high melting points because of strong covalent bonds between molecules.",
+            "Giant covalent substances have high melting points because strong covalent bonds must be broken.",
+            "Giant covalent substances have low melting points because of weak forces between molecules."
+          ],
+          "answer": 1,
+          "why": "In giant covalent substances every atom is joined by strong covalent bonds, and they all need to be broken to melt or boil."
+        },
+        {
+          "t": "choice",
+          "q": "Which is a physical change?",
+          "options": [
+            "2H₂ + O₂ → 2H₂O",
+            "a liquid freezing",
+            "a covalent bond breaking during a reaction"
+          ],
+          "answer": 1,
+          "why": "Freezing gives the same substance in a different state. Reactions break and make bonds and form new substances."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Using models to explain state changes",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Molecular modelling represents the bonding and structure of substances.",
+            "Separate simple molecules are held to each other by intermolecular forces. No chemical bonds hold the molecules together.",
+            "The way giant covalent structures melt and boil is very different to simple molecules.",
+            "Diamond is very hard, has a very high melting point and does not conduct electricity. Every atom is bonded to another.",
+            "In graphite each atom is bonded to three others to form layers of hexagonal rings. Each atom contributes a free electron."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Give four examples of simple molecular substances.",
+      "back": "Water (H₂O), carbon dioxide (CO₂), nitrogen (N₂) and glucose (C₆H₁₂O₆)."
+    },
+    {
+      "front": "Why do scientists use models?",
+      "back": "To represent parts of the natural world that are too difficult to observe or explain directly, such as atoms and molecules."
+    },
+    {
+      "front": "In a ball-and-stick model, what do the sticks represent?",
+      "back": "The covalent bonds (the shared pair of electrons)."
+    },
+    {
+      "front": "In a dot-and-cross diagram, what represents the covalent bond?",
+      "back": "A dot and a cross together in the overlap between the atoms."
+    },
+    {
+      "front": "Name one limitation of a dot-and-cross diagram.",
+      "back": "It is a 2D drawing, so the 3D shape is lost."
+    },
+    {
+      "front": "What type of forces hold simple molecules to each other?",
+      "back": "Weak intermolecular forces of attraction."
+    },
+    {
+      "front": "What is overcome when a simple molecular substance melts or boils?",
+      "back": "The weak intermolecular forces between the molecules. The covalent bonds inside the molecules do not break."
+    },
+    {
+      "front": "Why are most simple molecular substances gases or liquids at room temperature?",
+      "back": "They have low melting and boiling points, because only weak forces between molecules need to be overcome."
+    },
+    {
+      "front": "Is melting a physical change or a chemical change?",
+      "back": "A physical change. It gives the same substance in a different state."
+    },
+    {
+      "front": "Why does water have a higher boiling point than methane?",
+      "back": "Water has stronger intermolecular forces, so more energy is needed to overcome them. It is not about density, and the bonds inside the molecules do not break."
+    },
+    {
+      "front": "What must happen for a giant covalent substance to melt or boil?",
+      "back": "All the strong covalent bonds need to be broken, which needs large amounts of energy."
+    },
+    {
+      "front": "Which is higher: the melting point of a giant covalent substance or a simple molecular one?",
+      "back": "Giant covalent. Strong covalent bonds must be broken, not just weak forces between molecules."
+    },
+    {
+      "front": "What is silicon dioxide?",
+      "back": "A giant covalent substance with a structure similar to diamond. It has one silicon atom for every two oxygen atoms."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Using models to explain state changes",
+    "instructions": "Answer each question with a word or a number.",
+    "questions": [
+      {
+        "prompt": "Giant covalent structures need much ___ temperatures to melt or boil than simple molecular substances. Answer with the word higher or lower.",
+        "answer": "higher",
+        "explanation": "Giant covalent structures have very high melting and boiling points compared with simple molecules."
+      },
+      {
+        "prompt": "To melt or boil a giant covalent structure, all the ___ covalent bonds need to be broken. Answer with the word strong or weak.",
+        "answer": "strong",
+        "explanation": "Covalent bonds are strong, and all of them must be broken in a giant covalent structure."
+      },
+      {
+        "prompt": "In simple molecules, melting and boiling involve overcoming ___ intermolecular forces. Answer with the word stronger or weaker.",
+        "answer": "weaker",
+        "explanation": "Only the weak forces between molecules need to be overcome, so much less energy is needed."
+      },
+      {
+        "prompt": "What is the name of the weak forces of attraction between molecules?",
+        "answer": "intermolecular forces",
+        "accepted": [
+          "intermolecular",
+          "intermolecular force"
+        ],
+        "explanation": "Intermolecular forces are weak forces of attraction between molecules."
+      },
+      {
+        "prompt": "When a simple molecular substance melts, do the covalent bonds inside the molecules break? Answer yes or no.",
+        "answer": "no",
+        "explanation": "Only the intermolecular forces between the molecules are overcome."
+      },
+      {
+        "prompt": "Is melting a physical change or a chemical change? Answer with the word physical or chemical.",
+        "answer": "physical",
+        "explanation": "You end up with the same chemical substance, just in a different state."
+      },
+      {
+        "prompt": "Water has a higher boiling point than methane because water has ___ intermolecular forces. Answer with the word stronger or weaker.",
+        "answer": "stronger",
+        "explanation": "More energy is needed to overcome the intermolecular forces between water molecules than between methane molecules."
+      },
+      {
+        "prompt": "In a ball-and-stick model, what represents the covalent bond?",
+        "answer": "sticks",
+        "accepted": [
+          "the sticks",
+          "sticks between atoms"
+        ],
+        "explanation": "The sticks between the balls stand for the covalent bond (the shared pair of electrons)."
+      },
+      {
+        "prompt": "A glucose molecule, C₆H₁₂O₆, has 6 carbon atoms, 12 hydrogen atoms and 6 oxygen atoms. How many atoms are there in one molecule in total? Write a number.",
+        "answer": "24",
+        "accepted": [
+          "twenty four",
+          "twenty-four"
+        ],
+        "explanation": "6 + 12 + 6 = 24 atoms."
+      },
+      {
+        "prompt": "Graphite conducts electricity because it has free-moving ___ electrons. Write the missing word.",
+        "answer": "delocalised",
+        "accepted": [
+          "delocalized"
+        ],
+        "explanation": "Each carbon atom in graphite contributes one free, delocalised electron that can carry charge."
+      }
+    ]
+  }
+}

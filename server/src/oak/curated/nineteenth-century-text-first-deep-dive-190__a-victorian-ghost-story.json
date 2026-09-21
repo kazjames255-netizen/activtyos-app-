@@ -1,0 +1,508 @@
+{
+  "agent": "english-ks4",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain why Dickens used the ‘ghost story’ genre to underpin his didactic message."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at two big questions about ‘A Christmas Carol’."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Dickens’ use of the ghost story {genre}"
+            },
+            {
+              "title": "Dickens’ {supernatural} messengers"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "genre",
+              "def": "A style or category of literature."
+            },
+            {
+              "term": "supernatural",
+              "def": "A phenomenon that cannot be explained by science or constrained within the laws of nature."
+            },
+            {
+              "term": "Victorian respectability",
+              "def": "The Victorian belief that people should act, dress and behave in a certain, socially-acceptable way."
+            },
+            {
+              "term": "deviant",
+              "def": "Anything deviant goes against the accepted norm or standard of behaviour."
+            },
+            {
+              "term": "conservative",
+              "def": "Conservative means very traditional and established - resistant to change."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Victorian respectability",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Many Victorians held very traditional and strict views about how life should be lived."
+        },
+        {
+          "t": "text",
+          "text": "They were very preoccupied with {respectability}. It was tied to a certain kind of morality, to public forms of behaviour, and to clothing, appearance and other signs of class or social position."
+        },
+        {
+          "t": "callout",
+          "text": "Some Victorians were very dismissive of any behaviour they felt was **deviant**. Deviant behaviour or interests were often condemned, sometimes harshly."
+        },
+        {
+          "t": "reveal",
+          "label": "What counted as deviant?",
+          "text": "For example: strong displays of emotion, or non-binary preferences (such as in relationships or in appearance)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Key words: match up",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each keyword to its meaning.",
+          "pairs": [
+            {
+              "a": "genre",
+              "b": "A style or category of literature"
+            },
+            {
+              "a": "conservative",
+              "b": "Very traditional and established, resistant to change"
+            },
+            {
+              "a": "deviant",
+              "b": "Going against the accepted norm or standard of behaviour"
+            },
+            {
+              "a": "supernatural",
+              "b": "Cannot be explained by science or the laws of nature"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Gothic in the Victorian era",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Gothic literature is generally considered to have been ‘birthed’ in the 18th century. It was hugely popularised in the Victorian era."
+        },
+        {
+          "t": "text",
+          "text": "Many of the very famous Gothic novels were written in the Victorian era, because the Victorians loved Gothic literature and anything horrifying or supernatural."
+        },
+        {
+          "t": "callout",
+          "text": "Ghost stories are part of Gothic literature. Gothic literature was already increasing in the Victorian era before Dickens wrote his ghost story."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A puzzle: why did they love ghost stories?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Hang on a second… if the Victorians were so traditional and judgemental, why on earth did they like horrifying and supernatural stories?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for the answer",
+          "text": "It was a form of **escapism**. It wasn’t deemed acceptable to be interested in deviant things, so they could indulge in them through books."
+        },
+        {
+          "t": "reveal",
+          "label": "One more reason",
+          "text": "Frightening stories felt exciting and thrilling in such a conservative society. They didn’t have films or rollercoasters to get their adrenaline fix."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Dickens wants social change",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Before he wrote the novella, Dickens had already tried to get more support for the poor."
+        },
+        {
+          "t": "list",
+          "items": [
+            "He started to write a pamphlet titled “An Appeal to the People of England, on Behalf of the Poor Man’s Child”.",
+            "He gave a speech in Manchester in 1843 in which he condemned the rich for their “brutal ignorance” and “years of wicked action”."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "He later scrapped the pamphlet in favour of the novella, feeling a story would be more of a “sledgehammer blow” and that people could relate to a story more than a political pamphlet."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why a ghost story?",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "Dickens deliberately made ‘A Christmas Carol’ a ghost story."
+        },
+        {
+          "t": "list",
+          "items": [
+            "He knew his readers would love a ghost story.",
+            "He wanted the novella to be widely read and discussed, so there was a greater audience for his message of social responsibility.",
+            "He wanted it to be a **bestseller**. Society could only change if lots of people read it and made positive changes.",
+            "He hoped that if more people read and enjoyed it, more people would want to make society fairer and more equal."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The preface",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The preface is the section right at the beginning of a text that introduces the writer’s aims. In Dickens’ preface we find: “May it haunt their houses pleasantly.”"
+        },
+        {
+          "t": "reveal",
+          "label": "What is he doing here?",
+          "text": "It is a play on words. He knows he has written a ghost story, but there is also a more serious undertone: he hopes people will take time after putting the book down to reflect on their own actions and behaviour."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: Dickens and the genre",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which statement about Dickens and the ghost story genre is correct?",
+          "options": [
+            "Dickens invented the Gothic ghost story",
+            "Dickens did not invent the genre, but he had a profound impact on its popularity",
+            "Ghost stories were unpopular, so Dickens tried to make them popular"
+          ],
+          "answer": 1,
+          "why": "Gothic literature, including ghost stories, was already increasing in prevalence in the Victorian era, but Dickens was influential in making the ghost story a popular genre."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Ghosts in the natural world",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The ghosts in earlier Gothic fiction exist in their own supernatural worlds."
+        },
+        {
+          "t": "text",
+          "text": "Dickens makes his ghosts an **extension of the natural world**. They exist alongside human beings in our world."
+        },
+        {
+          "t": "list",
+          "items": [
+            "It makes the ghosts more believable and feel real, so readers are more likely to heed their messages.",
+            "It makes the spiritual judgement inescapable. Readers can’t think “that won’t happen to me because I don’t live in that world”.",
+            "Dickens is using his readers’ fears to motivate them to change."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Sort the ghosts",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each idea in the correct column.",
+          "columns": [
+            "Ghosts of early Gothic fiction",
+            "Dickens’ ghosts in ‘A Christmas Carol’"
+          ],
+          "items": [
+            {
+              "text": "Exist in their own supernatural worlds",
+              "col": 0
+            },
+            {
+              "text": "Exist alongside human beings in our world",
+              "col": 1
+            },
+            {
+              "text": "An extension of the natural world",
+              "col": 1
+            },
+            {
+              "text": "Feel more believable and real to readers",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Opening: “Marley was dead”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "The novella opens: “Marley was dead: to begin with. There is no doubt whatever about that.” The register of his burial was signed by the clergyman, the clerk, the undertaker and the chief mourner. “Old Marley was as dead as a door-nail.”"
+        },
+        {
+          "t": "reveal",
+          "label": "Why make it so clear?",
+          "text": "So that when his ghost visits Scrooge, we are in no doubt that this is the ghost of Jacob Marley. For readers to change, they have to really believe in the reality of the supernatural in this story."
+        },
+        {
+          "t": "reveal",
+          "label": "Scrooge’s explanation",
+          "text": "Dickens characterises Scrooge as a very rational man in Stave 1. Scrooge tries to explain Marley’s ghost as hallucinations from “a slight disorder of the stomach”. But it is really happening to him… and it could happen to us too."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What are the ghosts for?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Three pupils gave views on the purpose of the ghosts. All raise valid points."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Moral guides",
+              "sub": "Each ghost teaches Scrooge a unique lesson"
+            },
+            {
+              "title": "Voice of Dickens",
+              "sub": "Conveying his message of social responsibility"
+            },
+            {
+              "title": "Plot device",
+              "sub": "Gives the narrative structure and counts down to Stave 5"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Their primary purpose is probably to be Scrooge’s spiritual and moral guides and the voice of Dickens. They also serve a secondary purpose: moving the plot forward."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the purpose",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each view of the ghosts to what it says.",
+          "pairs": [
+            {
+              "a": "Spiritual and moral guides",
+              "b": "Each ghost teaches Scrooge a unique lesson"
+            },
+            {
+              "a": "The voice of Dickens",
+              "b": "They convey his message of social responsibility"
+            },
+            {
+              "a": "A plot device",
+              "b": "They give the narrative structure and act as a countdown to Scrooge’s transformation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "The Victorians were very conservative and deeply concerned with respectability.",
+            "Dickens was influential in establishing the ghost story as a popular genre in the Victorian period.",
+            "He capitalised on its popularity to spread his social message: he wanted the novella to be a bestseller.",
+            "Unlike the ghosts of early Gothic fiction, Dickens made the supernatural a natural extension of the real world, so the ghosts feel more real and believable.",
+            "He uses the ghosts to explore moral and social issues: they represent his ideas and opinions.",
+            "The apparitions structure the narrative and move it towards Stave 5, where we see Scrooge’s impressive transformation."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does “genre” mean?",
+      "back": "A style or category of literature."
+    },
+    {
+      "front": "What does “supernatural” mean?",
+      "back": "A phenomenon that cannot be explained by science or constrained within the laws of nature."
+    },
+    {
+      "front": "What was Victorian respectability?",
+      "back": "The Victorian belief that people should act, dress and behave in a certain, socially-acceptable way."
+    },
+    {
+      "front": "What does “deviant” mean?",
+      "back": "Going against the accepted norm or standard of behaviour."
+    },
+    {
+      "front": "What does “conservative” mean?",
+      "back": "Very traditional and established, and resistant to change."
+    },
+    {
+      "front": "Why did the Victorians enjoy horrifying and supernatural stories even though their society was conservative?",
+      "back": "It was a form of escapism: they could indulge in deviant interests through books, and the stories felt exciting and thrilling."
+    },
+    {
+      "front": "Why did Dickens make ‘A Christmas Carol’ a ghost story?",
+      "back": "He knew readers loved ghost stories and wanted the novella to be widely read and discussed, so more people would hear his message of social responsibility."
+    },
+    {
+      "front": "Did Dickens invent the ghost story genre?",
+      "back": "No. Gothic literature, including ghost stories, was already increasing in the Victorian era, but Dickens had a profound impact on its popularity."
+    },
+    {
+      "front": "How are Dickens’ ghosts different from the ghosts of early Gothic fiction?",
+      "back": "Early Gothic ghosts exist in their own supernatural worlds. Dickens’ ghosts are an extension of the natural world and exist alongside human beings."
+    },
+    {
+      "front": "Why did Dickens make the ghosts an extension of the natural world?",
+      "back": "To make them believable and real, and to show that spiritual judgement is inescapable."
+    },
+    {
+      "front": "Which line in Dickens’ preface plays on the ghost story genre?",
+      "back": "“May it haunt their houses pleasantly.”"
+    },
+    {
+      "front": "What is the secondary purpose of the ghosts in the novella?",
+      "back": "To move the plot forward: they give the narrative structure and count down to Scrooge’s transformation in Stave 5."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘A Christmas Carol’: a Victorian ghost story",
+    "instructions": "Write a short answer to each question.",
+    "questions": [
+      {
+        "prompt": "What is the word for a style or category of literature?",
+        "answer": "genre",
+        "accepted": [
+          "genre",
+          "a genre"
+        ],
+        "explanation": "A genre is a style or category of literature; Dickens chose the ghost story genre."
+      },
+      {
+        "prompt": "Which keyword means “very traditional and established, and resistant to change”?",
+        "answer": "conservative",
+        "accepted": [
+          "conservative"
+        ],
+        "explanation": "Conservative means very traditional and established, and resistant to change."
+      },
+      {
+        "prompt": "Which keyword means “going against the accepted norm or standard of behaviour”?",
+        "answer": "deviant",
+        "accepted": [
+          "deviant"
+        ],
+        "explanation": "Anything deviant goes against the accepted norm or standard of behaviour."
+      },
+      {
+        "prompt": "In 1843 Dickens gave a speech condemning the rich in which English city?",
+        "answer": "Manchester",
+        "accepted": [
+          "Manchester"
+        ],
+        "explanation": "Dickens gave a speech in Manchester in 1843 condemning the rich for their “brutal ignorance” and “years of wicked action”."
+      },
+      {
+        "prompt": "What is the section right at the beginning of a text that introduces the writer’s aims called?",
+        "answer": "preface",
+        "accepted": [
+          "preface",
+          "the preface"
+        ],
+        "explanation": "The preface is the section at the beginning that introduces the writer’s aims."
+      },
+      {
+        "prompt": "The ghosts in earlier Gothic fiction exist in their own ___ worlds. Fill in the missing word.",
+        "answer": "supernatural",
+        "accepted": [
+          "supernatural"
+        ],
+        "explanation": "Early Gothic ghosts exist in their own supernatural worlds, unlike Dickens’ ghosts."
+      },
+      {
+        "prompt": "Dickens makes his ghosts an extension of the ___ world. Fill in the missing word.",
+        "answer": "natural",
+        "accepted": [
+          "natural"
+        ],
+        "explanation": "Dickens’ ghosts exist alongside human beings in our world, so they are an extension of the natural world."
+      },
+      {
+        "prompt": "Scrooge explains Marley’s ghost as hallucinations from “a slight disorder of the ___”. Fill in the missing word.",
+        "answer": "stomach",
+        "accepted": [
+          "stomach",
+          "the stomach"
+        ],
+        "explanation": "In Stave 1 Scrooge rationally blames “a slight disorder of the stomach”."
+      },
+      {
+        "prompt": "The ghosts structure the narrative and move it towards Scrooge’s impressive transformation in which stave? Give the number.",
+        "answer": "5",
+        "accepted": [
+          "5",
+          "five",
+          "Stave 5",
+          "stave five",
+          "Stave five",
+          "stave 5"
+        ],
+        "explanation": "The apparitions move the narrative towards Stave 5, where we see Scrooge’s transformation."
+      }
+    ]
+  }
+}

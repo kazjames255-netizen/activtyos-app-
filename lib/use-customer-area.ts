@@ -5,7 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_SETTINGS, withDefaults, type TenantSettings } from "@/lib/settings";
 import type { PortalKey } from "@/lib/nav/config";
-import { CA_FEATURES, firstOff } from "@/lib/accessMap";
+import { CA_FEATURES, firstOff, isFeatureOff } from "@/lib/accessMap";
 
 export type CustomerArea = TenantSettings["customerArea"];
 export type Features = TenantSettings["features"]; // { [navView]: boolean } — absent/true = shown
@@ -19,8 +19,9 @@ export const CORE_VIEWS = new Set([
   "customers", "finance", "setup", "account", "privacy", "auth",
 ]);
 
-// A view is hidden only when explicitly false.
-export const featureOff = (features: Features | undefined, view: string) => features?.[view] === false;
+// A view is hidden only when explicitly false — except opt-in modules (the
+// Learning Hub), which are hidden until explicitly switched on.
+export const featureOff = (features: Features | undefined, view: string) => isFeatureOff(features, view);
 
 // The only custdash views kept when the provider turns on Simple mode — the
 // booking essentials: home, view/book activities, bookings, child profiles,
@@ -49,6 +50,14 @@ export function fetchCustomerArea(): Promise<CustomerArea> {
         && !!full.memberships?.enabled && (full.memberships?.tiers ?? []).some((t) => t.enabled);
       ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
       return ca;
+    })
+    // The Learning Hub is reached through an ENROLMENT (a tutor enrolling the
+    // child), not through the family's first provider — so ask the hub which
+    // providers have it on for this family. Empty (or a failure) = hidden.
+    .then(async (ca) => {
+      try { ca.learninghub = ((await apiGet<unknown[]>("/api/learning-hub/providers")) ?? []).length > 0; }
+      catch { ca.learninghub = false; }
+      return ca;
     });
 }
 
@@ -60,7 +69,8 @@ export function fetchCustomerArea(): Promise<CustomerArea> {
 // zero network calls for them. For a family it makes exactly one providers read
 // and one public-library read. Everything defaults to shown until it loads.
 export function useCustomerArea(portal?: PortalKey): CustomerArea {
-  const [ca, setCa] = useState<CustomerArea>(DEFAULT_SETTINGS.customerArea);
+  // The Learning Hub starts hidden until the provider's switch is read.
+  const [ca, setCa] = useState<CustomerArea>({ ...DEFAULT_SETTINGS.customerArea, learninghub: false });
   const load = useCallback(() => {
     if (portal && portal !== "custdash") return;
     void fetchCustomerArea().then(setCa).catch(() => {});
@@ -68,7 +78,7 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
   useEffect(() => { load(); }, [load]);
   // Live: the provider's library streams to families (see events.ts parent
   // branch), so switching a module off updates their nav without a refresh.
-  useRealtime(["library"], load);
+  useRealtime(["library", "hubEnrolments"], load);
   return ca;
 }
 

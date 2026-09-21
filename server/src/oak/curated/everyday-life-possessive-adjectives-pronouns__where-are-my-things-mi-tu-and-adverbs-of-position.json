@@ -1,0 +1,694 @@
+{
+  "agent": "spanish-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use possessive adjectives and adverbs of position to ask and answer questions about where my and your things are."
+        },
+        {
+          "t": "text",
+          "text": "You will also practise saying and spotting words with final syllable stress."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "final syllable {stress}"
+            },
+            {
+              "title": "adverbs of {position}"
+            },
+            {
+              "title": "{mi}, {tu}, {mis}, {tus}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "possessive adjective",
+              "def": "a word that goes before a noun to show ownership or belonging"
+            },
+            {
+              "term": "mi",
+              "def": "possessive adjective 'my' (m/f)"
+            },
+            {
+              "term": "mis",
+              "def": "possessive adjective 'my' (mpl/fpl)"
+            },
+            {
+              "term": "tu",
+              "def": "possessive adjective 'your' (m/f)"
+            },
+            {
+              "term": "tus",
+              "def": "possessive adjective 'your' (mpl/fpl)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Final syllable stress",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Say these words aloud. Each one has its stress on the last syllable."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "come{r}",
+            "bebe{r}",
+            "Madri{d}",
+            "feli{z}",
+            "colo{r}",
+            "españo{l}",
+            "socieda{d}",
+            "igua{l}",
+            "relo{j}"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Spanish words ending in consonants other than {-n} and {-s} naturally have final syllable stress. These words don’t need an accent to show the stress."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Final stress and the accent",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These words all have final syllable stress too, but they end in a vowel, -n or -s. Say them aloud."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "jardí{n}",
+            "est{á}",
+            "pantaló{n}",
+            "despué{s}",
+            "habitació{n}",
+            "qued{é}",
+            "levant{é}",
+            "pas{é}",
+            "com{í}",
+            "le{í}",
+            "beb{í}"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If a word has final syllable stress and ends in {-n} or {-s} or a vowel, there will be an accent on the final vowel."
+        },
+        {
+          "t": "reveal",
+          "label": "Why does jardín have an accent but color does not?",
+          "text": "‘Color’ ends in -r, so it doesn’t need an accent to show the final syllable stress. ‘Jardín’ ends in -n, so it does."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Accent or no accent?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "All of these words have final syllable stress. Which column does each word belong in?",
+          "columns": [
+            "No accent needed (ends in a consonant other than -n or -s)",
+            "Accent needed (ends in -n, -s or a vowel)"
+          ],
+          "items": [
+            {
+              "text": "Madrid",
+              "col": 0
+            },
+            {
+              "text": "feliz",
+              "col": 0
+            },
+            {
+              "text": "español",
+              "col": 0
+            },
+            {
+              "text": "sociedad",
+              "col": 0
+            },
+            {
+              "text": "jardín",
+              "col": 1
+            },
+            {
+              "text": "pantalón",
+              "col": 1
+            },
+            {
+              "text": "después",
+              "col": 1
+            },
+            {
+              "text": "levanté",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Things at home",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here are some nouns for things you might look for."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "el libro",
+              "sub": "book",
+              "emoji": "📖"
+            },
+            {
+              "title": "la revista",
+              "sub": "magazine"
+            },
+            {
+              "title": "la ventana",
+              "sub": "window"
+            },
+            {
+              "title": "la cama",
+              "sub": "bed",
+              "emoji": "🛏️"
+            },
+            {
+              "title": "la mesa",
+              "sub": "table"
+            },
+            {
+              "title": "la puerta",
+              "sub": "door",
+              "emoji": "🚪"
+            },
+            {
+              "title": "la botella",
+              "sub": "bottle"
+            },
+            {
+              "title": "el espejo",
+              "sub": "mirror"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More nouns",
+      "blocks": [
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "el vestido",
+              "sub": "dress",
+              "emoji": "👗"
+            },
+            {
+              "title": "el periódico",
+              "sub": "newspaper"
+            },
+            {
+              "title": "el jardín",
+              "sub": "garden"
+            },
+            {
+              "title": "el pantalón",
+              "sub": "trousers"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "‘A pair of trousers’ is **un pantalón**: singular!"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adverbs of position",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "These adverbs tell you where something is."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "debajo",
+              "sub": "under"
+            },
+            {
+              "title": "encima",
+              "sub": "on top"
+            },
+            {
+              "title": "delante",
+              "sub": "in front"
+            },
+            {
+              "title": "detrás",
+              "sub": "behind"
+            },
+            {
+              "title": "dentro",
+              "sub": "inside"
+            },
+            {
+              "title": "fuera",
+              "sub": "outside"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Two more you will meet: **cerca** (near) and **al lado de** (next to)."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the adverbs",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each Spanish adverb of position to its English meaning.",
+          "pairs": [
+            {
+              "a": "debajo",
+              "b": "under"
+            },
+            {
+              "a": "encima",
+              "b": "on top"
+            },
+            {
+              "a": "delante",
+              "b": "in front"
+            },
+            {
+              "a": "detrás",
+              "b": "behind"
+            },
+            {
+              "a": "dentro",
+              "b": "inside"
+            },
+            {
+              "a": "fuera",
+              "b": "outside"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Saying ‘my’: mi and mis",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Possessive adjectives go before nouns to show belonging and ownership."
+        },
+        {
+          "t": "list",
+          "items": [
+            "{mi} before a singular noun: mi revista (my magazine)",
+            "{mis} before a plural noun: mis zapatos (my shoes)",
+            "Mi hermana está en casa. (My sister is at home.)",
+            "Dejé mis cosas en la escuela. (I left my things at school.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can use {mi(s)} with masculine and feminine nouns."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Saying ‘your’: tu and tus",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "{tu} before a singular noun: tu familia (your family)",
+            "{tus} before a plural noun: tus amigos (your friends)",
+            "Tu botella está en la mesa. (Your bottle is on the table.)",
+            "Tus amigas están en clase. (Your friends are in class.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "You can use {tu(s)} with masculine and feminine nouns too."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "There are two ways of saying ‘my’: mi is for singular nouns, mis is for plural nouns. It is the same for ‘your’: tu and tus."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "mi, mis, tu or tus?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct word to complete each sentence.",
+          "items": [
+            {
+              "q": "___ revista está encima de la mesa. (My magazine is on top of the table.)",
+              "options": [
+                "mi",
+                "mis"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ zapatos están debajo de la cama. (My shoes are under the bed.)",
+              "options": [
+                "mi",
+                "mis"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ botellas están cerca de la ventana. (Your bottles are near the window.)",
+              "options": [
+                "tu",
+                "tus"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "___ amigo está fuera de la tienda. (Your friend is outside the shop.)",
+              "options": [
+                "tu",
+                "tus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "___ libros están en clase. (My books are in class.)",
+              "options": [
+                "mi",
+                "mis"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Adverbs + de, and del",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Adverbs of location are often followed by **de**. Use de + the (el / la) to link to a noun."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Mi móvil está debajo de la cama. (My phone is under the bed.)",
+            "Tu amigo está fuera de la tienda. (Your friend is outside the shop.)",
+            "Mis fotos están encima del periódico. (My photos are on top of the newspaper.)"
+          ]
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "de",
+              "add": "el",
+              "result": "del",
+              "note": "For a singular masculine noun, de + el changes to del. De + el is always del."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "de la or del?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose de la or del to complete each sentence.",
+          "items": [
+            {
+              "q": "El libro está encima ___ mesa.",
+              "options": [
+                "de la",
+                "del"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "El perro está detrás ___ jardín.",
+              "options": [
+                "de la",
+                "del"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "La revista está debajo ___ periódico.",
+              "options": [
+                "de la",
+                "del"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Tus llaves están dentro ___ bolsa.",
+              "options": [
+                "de la",
+                "del"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Mi móvil está cerca ___ ventana.",
+              "options": [
+                "de la",
+                "del"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Where are the things?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘My papers are inside the box’?",
+          "options": [
+            "Mis papeles están dentro de la caja.",
+            "Mi papel está dentro de la caja.",
+            "Mis papeles están fuera de la caja."
+          ],
+          "answer": 0,
+          "why": "Papers is plural, so mis. Dentro means inside."
+        },
+        {
+          "t": "choice",
+          "q": "Tus revistas están cerca del teléfono. What does it mean?",
+          "options": [
+            "Your magazine is near the phone.",
+            "Your magazines are near the phone.",
+            "My magazines are near the phone."
+          ],
+          "answer": 1,
+          "why": "Tus is ‘your’ before a plural noun, and cerca means near."
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence means ‘My money is behind the book’?",
+          "options": [
+            "Mi dinero está detrás del libro.",
+            "Mi dinero está delante del libro.",
+            "Mis dinero está detrás del libro."
+          ],
+          "answer": 0,
+          "why": "Detrás means behind, and de + el becomes del before el libro."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Spanish words ending in consonants other than -n and -s naturally have final syllable stress.",
+            "If a word has final syllable stress and ends in -n, -s or a vowel, it has an accent on the final vowel, e.g. habitación.",
+            "‘My’: mi before a singular noun, mis before a plural noun. ‘Your’: tu before a singular noun, tus before a plural noun.",
+            "Adverbs of location are often followed by de. For a singular masculine noun, de + el changes to del."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Now you can say where your things are, and ask where mine are!"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "Which Spanish words naturally have final syllable stress?",
+      "back": "Words ending in consonants other than -n and -s.\n\ncolor, Madrid, reloj"
+    },
+    {
+      "front": "Does “color” need an accent?",
+      "back": "No. It ends in -r, so it naturally has final syllable stress."
+    },
+    {
+      "front": "When does a word with final syllable stress need an accent?",
+      "back": "When it ends in -n, -s or a vowel: the accent goes on the final vowel.\n\njardín, pantalón, habitación"
+    },
+    {
+      "front": "How do you say ‘my’ before a singular noun?",
+      "back": "mi\n\nmi revista"
+    },
+    {
+      "front": "How do you say ‘my’ before a plural noun?",
+      "back": "mis\n\nmis zapatos"
+    },
+    {
+      "front": "How do you say ‘your’ before a singular noun?",
+      "back": "tu\n\ntu familia"
+    },
+    {
+      "front": "How do you say ‘your’ before a plural noun?",
+      "back": "tus\n\ntus amigos"
+    },
+    {
+      "front": "What is a possessive adjective?",
+      "back": "A word that goes before a noun to show ownership or belonging."
+    },
+    {
+      "front": "What does “debajo” mean?",
+      "back": "under\n\nMi móvil está debajo de la cama."
+    },
+    {
+      "front": "What does “fuera” mean?",
+      "back": "outside\n\nTu amigo está fuera de la tienda."
+    },
+    {
+      "front": "What does “de + el” become before a singular masculine noun?",
+      "back": "del\n\nMis fotos están encima del periódico."
+    },
+    {
+      "front": "Is “un pantalón” (trousers) singular or plural in Spanish?",
+      "back": "Singular: ‘a pair of trousers’ is un pantalón."
+    },
+    {
+      "front": "Say in Spanish: “Your bottle is next to the window.”",
+      "back": "Tu botella está al lado de la ventana."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Where are my things? ‘mi’, ‘tu’ and adverbs of position",
+    "instructions": "Answer each question with a short answer. Some answers are in Spanish and some are in English. Use the rules from the lesson.",
+    "questions": [
+      {
+        "prompt": "Complete with mi, mis, tu or tus: Busco ___ llaves. (I am looking for my keys.)",
+        "answer": "mis",
+        "explanation": "Keys is plural and it is ‘my’, so we use mis."
+      },
+      {
+        "prompt": "Complete with mi, mis, tu or tus: ___ padre está delante del bar. (Your father is in front of the bar.)",
+        "answer": "tu",
+        "explanation": "Father is singular and it is ‘your’, so we use tu."
+      },
+      {
+        "prompt": "Complete with de la or del: Tus botellas están cerca ___ jardín.",
+        "answer": "del",
+        "explanation": "El jardín is a singular masculine noun, so de + el becomes del."
+      },
+      {
+        "prompt": "Complete with de la or del: Mi reloj está fuera ___ casa.",
+        "answer": "de la",
+        "explanation": "La casa is feminine, so we keep de la."
+      },
+      {
+        "prompt": "The word “pantalon” has final syllable stress and ends in -n. Write it with its accent.",
+        "answer": "pantalón",
+        "explanation": "A word with final syllable stress that ends in -n needs an accent on the final vowel."
+      },
+      {
+        "prompt": "Lucía says: “Está debajo de la mesa.” Where is the book? Answer in English.",
+        "answer": "under the table",
+        "explanation": "Debajo de means under and la mesa is the table."
+      },
+      {
+        "prompt": "Lucía says: “Están cerca del teléfono.” Where are the magazines? Answer in English.",
+        "answer": "near the phone",
+        "accepted": [
+          "near the telephone"
+        ],
+        "explanation": "Cerca de means near and el teléfono is the phone."
+      },
+      {
+        "prompt": "Write in Spanish: “under” (an adverb of position).",
+        "answer": "debajo",
+        "explanation": "Debajo means under."
+      },
+      {
+        "prompt": "Write in Spanish: “on top” (an adverb of position).",
+        "answer": "encima",
+        "explanation": "Encima means on top."
+      },
+      {
+        "prompt": "Write in Spanish: “My money is behind the book.”",
+        "answer": "Mi dinero está detrás del libro.",
+        "accepted": [
+          "Mi dinero está detrás del libro"
+        ],
+        "explanation": "Mi (singular noun), detrás (behind) and de + el = del."
+      }
+    ]
+  }
+}

@@ -476,6 +476,7 @@ export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?:
   { key: "staff", label: "Staff", group: "Team & learning" },
   { key: "schedule", label: "Staff schedule", group: "Team & learning", note: "Non-managers see their own only" },
   { key: "learning", label: "Learning Centre", group: "Team & learning", note: "Non-managers see their own only" },
+  { key: "learninghub", label: "Teaching Hub (tutoring)", group: "Team & learning", note: "Topics, lessons, quizzes & marking. View can read; Edit can author and mark" },
   { key: "documents", label: "Documents", group: "Team & learning" },
   { key: "finances", label: "Finances & analytics", group: "Money", sensitive: true },
   { key: "moneyops", label: "Money in / out, invoices", group: "Money", sensitive: true },
@@ -557,7 +558,7 @@ export const DEFAULT_ROLES: StaffRole[] = [
       dashboard: "view", listings: "view", bookings: "view", customers: "view",
       registers: "edit", ratios: "edit", meals: "view", trips: "view", timetable: "view", calendar: "view", tasks: "edit",
       medical: "view", incidents: "edit", medication: "edit", moments: "edit",
-      schedule: "view", learning: "view", documents: "view",
+      schedule: "view", learning: "view", documents: "view", learninghub: "edit",
       messaging: "edit", email: "edit", support: "edit",
     },
   },
@@ -568,7 +569,7 @@ export const DEFAULT_ROLES: StaffRole[] = [
       dashboard: "view", listings: "view", bookings: "view", customers: "view",
       registers: "edit", ratios: "view", meals: "view", trips: "view", timetable: "view", calendar: "view", tasks: "edit",
       medical: "view", incidents: "edit", medication: "view", moments: "edit",
-      schedule: "view", learning: "view", documents: "view",
+      schedule: "view", learning: "view", documents: "view", learninghub: "edit",
       messaging: "edit", email: "edit", support: "edit",
     },
   },
@@ -631,6 +632,9 @@ export const HO_DEFAULT_ROLES: StaffRole[] = [
     },
   },
 ];
+
+import { HUB_DEFAULTS, mergeHub, type HubSettings } from "@/lib/hubConfig";
+export { HUB_DEFAULTS, mergeHub, type HubSettings };
 
 export interface TenantSettings {
   // ── Public identity ──
@@ -759,6 +763,15 @@ export interface TenantSettings {
     defaultAudience?: "all" | "listing"; // default "Who gets it" in the composer
     defaultImportant?: boolean;   // new notices start flagged Important
   };
+
+  /**
+   * Learning Hub (tutoring) — everything a tenant can shape about how its hub
+   * behaves. Nothing about WHAT is taught is hardcoded: subjects/topics are the
+   * tenant's own rows (hubTopics), and the fields below decide how questions are
+   * offered, marked and banded. The hub itself is switched on in Setup →
+   * Features (settings.features.learninghub, opt-in). See docs/learning-hub.md.
+   */
+  hub?: HubSettings;
 
   /** Learning & development. */
   learning?: {
@@ -985,6 +998,9 @@ export interface TenantSettings {
      * it overrides every individual toggle below and hides everything else.
      */
     simpleMode: boolean;
+    /** The Learning Hub (tutoring). Derived from Setup → Features, not set
+     *  here — a provider switches the module on there. */
+    learninghub?: boolean;
     codesBanner: boolean; // the scrolling discount-codes ticker
     coupons: boolean;     // the Coupons & discount codes page
     newsfeed: boolean;    // your posts to families
@@ -1412,6 +1428,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     social: { ...DEFAULT_SETTINGS.social, ...(s.social ?? {}) },
     staff: { ...DEFAULT_SETTINGS.staff, ...(s.staff ?? {}) },
     announcements: { ...DEFAULT_SETTINGS.announcements, ...(s.announcements ?? {}) },
+    hub: mergeHub(s.hub),
     learning: { ...DEFAULT_SETTINGS.learning, ...(s.learning ?? {}) },
     meals: { ...DEFAULT_SETTINGS.meals, ...(s.meals ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },

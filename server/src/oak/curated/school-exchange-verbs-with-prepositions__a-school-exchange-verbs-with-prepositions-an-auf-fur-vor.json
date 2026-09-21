@@ -1,0 +1,644 @@
+{
+  "agent": "german-ks3",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use verbs with prepositions, in the context of a school exchange."
+        },
+        {
+          "t": "text",
+          "text": "You will also learn to pronounce [-ig] correctly."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Pronouncing {[-ig]}"
+            },
+            {
+              "title": "Verbs with prepositions"
+            },
+            {
+              "title": "{an}, {auf}, {für}, {vor}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "[-ig]",
+              "def": "Pronounced as in ‘richtig’."
+            },
+            {
+              "term": "preposition",
+              "def": "A word that is used before a noun, a noun phrase, or a pronoun, connecting it to another word."
+            },
+            {
+              "term": "prepositional verb",
+              "def": "A verb followed by a preposition which links it to a noun."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Pronouncing [-ig]",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "At the end of a word, [-ig] sounds like a soft [ch], as in ‘ich’. In Austria, it sounds like ‘k’!"
+        },
+        {
+          "t": "text",
+          "text": "Tap a word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "richtig",
+              "def": "correct"
+            },
+            {
+              "term": "wichtig",
+              "def": "important"
+            },
+            {
+              "term": "notwendig",
+              "def": "necessary"
+            },
+            {
+              "term": "wenig",
+              "def": "little, not very much"
+            },
+            {
+              "term": "fertig",
+              "def": "ready, finished"
+            },
+            {
+              "term": "lustig",
+              "def": "funny"
+            },
+            {
+              "term": "freiwillig",
+              "def": "voluntarily"
+            },
+            {
+              "term": "langweilig",
+              "def": "boring"
+            },
+            {
+              "term": "schwierig",
+              "def": "difficult"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "When [ig] is followed by a vowel",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When [ig] is followed by a vowel, the g becomes vocal, making a hard sound, like in ‘egg’."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "Das ist richti{g}!",
+            "Das ist die richti{ge} Antwort!"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "In ‘richtig’ the g is a soft sound, as in ‘ich’. In ‘richtige’ the g changes to a hard g, as in ‘egg’."
+        },
+        {
+          "t": "choice",
+          "q": "In which word is the g a hard sound, like in ‘egg’?",
+          "options": [
+            "wichtig",
+            "wichtiges",
+            "lustig"
+          ],
+          "answer": 1,
+          "why": "In ‘wichtiges’ the g is followed by a vowel (e), so it is a hard g. In ‘wichtig’ and ‘lustig’ it is at the end of the word, so it is a soft [ch] sound."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Verbs and prepositions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes verbs are followed by prepositions which link them to a noun. We call them prepositional verbs."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Meine Freunde warnen mich vor dem Wetter. (My friends are warning me about the weather.)",
+            "Ich interessiere mich für dieses Schulfach. (I’m interested in this school subject.)"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Prepositions used with some verbs in German may not be the same as those used with the same verbs in English."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Learn the verb with its preposition",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We often use different prepositions after verbs in English and German, so the verb and preposition combinations need to be learnt. Tap each one."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "hoffen auf",
+              "def": "to hope for"
+            },
+            {
+              "term": "warten auf",
+              "def": "to wait for"
+            },
+            {
+              "term": "warnen vor",
+              "def": "to warn about"
+            },
+            {
+              "term": "teilnehmen an",
+              "def": "to take part in"
+            },
+            {
+              "term": "sich interessieren für",
+              "def": "to be interested in"
+            },
+            {
+              "term": "sich freuen auf",
+              "def": "to look forward to"
+            },
+            {
+              "term": "fragen nach",
+              "def": "to ask for"
+            },
+            {
+              "term": "Angst haben vor",
+              "def": "to be afraid of"
+            },
+            {
+              "term": "erzählen von",
+              "def": "to tell of, about"
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "‘To hope for’ and ‘to wait for’ both use ‘for’ in English, and both use auf in German. But ‘to take part in’ uses an in German, not ‘in’."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Match the verb phrases",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the German to the English.",
+          "pairs": [
+            {
+              "a": "warten auf",
+              "b": "to wait for"
+            },
+            {
+              "a": "Angst haben vor",
+              "b": "to be afraid of"
+            },
+            {
+              "a": "sich freuen auf",
+              "b": "to look forward to"
+            },
+            {
+              "a": "fragen nach",
+              "b": "to ask for"
+            },
+            {
+              "a": "sich interessieren für",
+              "b": "to be interested in"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Für and vor: fixed cases",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Prepositions may change the form of the article that follows, as they are used with specific cases."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{für}",
+              "sub": "always the accusative"
+            },
+            {
+              "title": "{vor}",
+              "sub": "always the dative (with prepositional verbs)"
+            }
+          ]
+        },
+        {
+          "t": "list",
+          "items": [
+            "Ich interessiere mich für dieses Schulfach. (accusative)",
+            "Meine Freunde warnen mich vor dem Wetter. (dative)"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Auf and an: learn each verb",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Verbs with {auf} are often followed by the accusative: Alastair freut sich auf unseren Besuch.",
+            "Verbs with {an} are often followed by the dative: Meine Freunde nehmen an einem Austausch teil."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "We must learn which case is used with an or auf when we learn each verb."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Vor, like an and auf, can be used with the accusative sometimes, but after prepositional verbs vor always takes the dative."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which preposition?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the preposition that goes with the verb.",
+          "items": [
+            {
+              "q": "Ich nehme ___ der Aktivität teil.",
+              "options": [
+                "an",
+                "für",
+                "vor"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Interessierst du dich ___ Geschichte?",
+              "options": [
+                "auf",
+                "für",
+                "an"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ich habe Angst ___ dem Monster.",
+              "options": [
+                "auf",
+                "vor",
+                "für"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ich freue mich ___ die Reise.",
+              "options": [
+                "auf",
+                "an",
+                "vor"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which article?",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the correct article. Check the case the preposition needs.",
+          "items": [
+            {
+              "q": "Ich interessiere mich für ___ Landschaft.",
+              "options": [
+                "die",
+                "der",
+                "dem"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Hast du Angst vor ___ Lehrer?",
+              "options": [
+                "den",
+                "dem",
+                "der"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ich nehme an ___ Aktivität teil.",
+              "options": [
+                "die",
+                "der",
+                "den"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Ich hoffe auf ___ tolle Reise.",
+              "options": [
+                "eine",
+                "einer",
+                "einem"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Accusative or dative?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Is the noun phrase after the preposition in the accusative or the dative?",
+          "columns": [
+            "Accusative",
+            "Dative"
+          ],
+          "items": [
+            {
+              "text": "Ich freue mich auf den Austausch.",
+              "col": 0
+            },
+            {
+              "text": "Wir haben ein Geschenk für die Familie.",
+              "col": 0
+            },
+            {
+              "text": "Ich habe Angst vor der Party.",
+              "col": 1
+            },
+            {
+              "text": "Alastair warnt vor dem Wetter.",
+              "col": 1
+            },
+            {
+              "text": "Die Lehrerin hofft auf ein schönes Wochenende.",
+              "col": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Questions for exchange students",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match the start of each question to its ending.",
+          "pairs": [
+            {
+              "a": "Interessierst du dich …",
+              "b": "für Geschichte?"
+            },
+            {
+              "a": "Freust du dich …",
+              "b": "auf die Party?"
+            },
+            {
+              "a": "Nimmst du …",
+              "b": "an der Aktivität teil?"
+            },
+            {
+              "a": "Hast du Angst …",
+              "b": "vor dem Monster?"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Wolfgang’s letter",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Wolfgang writes to Alastair: ‘Ich hoffe trotzdem auf gutes Wetter für den Austausch!’"
+        },
+        {
+          "t": "choice",
+          "q": "Which is the best English translation of ‘Wolfgang hofft trotzdem auf gutes Wetter’?",
+          "options": [
+            "Wolfgang nevertheless hopes for good weather.",
+            "Wolfgang nevertheless hopes on good weather.",
+            "Wolfgang is afraid of good weather."
+          ],
+          "answer": 0,
+          "why": "‘Hoffen auf’ means ‘to hope for’. German uses auf where English uses ‘for’."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "At the end of a word, [-ig] is a soft [ch], as in ‘richtig’. In Austria, it sounds like [k].",
+            "Prepositions used with some verbs in German may not be the same as in English.",
+            "Prepositions may change the form of the article that follows, because they are used with specific cases.",
+            "Verbs with ‘für’ are always followed by the accusative; verbs with ‘vor’ by the dative.",
+            "Verbs with ‘auf’ usually take the accusative; verbs with ‘an’ are often followed by the dative."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "How is [-ig] pronounced at the end of a word, as in ‘richtig’?",
+      "back": "As a soft [ch], as in ‘ich’. (In Austria it sounds like [k].)"
+    },
+    {
+      "front": "What happens to the g in ‘richtig’ when a vowel follows, as in ‘richtige’?",
+      "back": "The g becomes vocal and hard, like in ‘egg’."
+    },
+    {
+      "front": "What is a preposition?",
+      "back": "A word used before a noun, a noun phrase or a pronoun, connecting it to another word."
+    },
+    {
+      "front": "Do German and English always use the same preposition with a verb?",
+      "back": "No. Prepositions used with some verbs in German may not be the same as in English. Learn each verb with its preposition."
+    },
+    {
+      "front": "Which case do verbs with ‘für’ always take?",
+      "back": "The accusative.\n\nIch interessiere mich für dieses Schulfach."
+    },
+    {
+      "front": "Which case do verbs with ‘vor’ always take?",
+      "back": "The dative.\n\nMeine Freunde warnen mich vor dem Wetter."
+    },
+    {
+      "front": "Which case do verbs with ‘auf’ usually take?",
+      "back": "The accusative.\n\nAlastair freut sich auf unseren Besuch."
+    },
+    {
+      "front": "Which case are verbs with ‘an’ often followed by?",
+      "back": "The dative.\n\nMeine Freunde nehmen an einem Austausch teil."
+    },
+    {
+      "front": "Say in German: ‘to take part in’",
+      "back": "teilnehmen an"
+    },
+    {
+      "front": "Say in German: ‘to look forward to’",
+      "back": "sich freuen auf"
+    },
+    {
+      "front": "Say in German: ‘to be afraid of’",
+      "back": "Angst haben vor"
+    },
+    {
+      "front": "Say in German: ‘to be interested in’",
+      "back": "sich interessieren für"
+    },
+    {
+      "front": "What do ‘hoffen auf’ and ‘warten auf’ mean?",
+      "back": "hoffen auf = to hope for; warten auf = to wait for. Both use auf."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: A school exchange: verbs with prepositions ‘an’, ‘auf’, ‘für’, ‘vor’",
+    "instructions": "Fill the gap with one word, or answer the question. Use what you learnt about verbs with prepositions.",
+    "questions": [
+      {
+        "prompt": "Task B: Hast du Angst ___ dem Monster? Write the missing preposition.",
+        "answer": "vor",
+        "explanation": "‘Angst haben vor’ means ‘to be afraid of’."
+      },
+      {
+        "prompt": "Task B: Nimmst du ___ der Aktivität teil? Write the missing preposition.",
+        "answer": "an",
+        "explanation": "‘Teilnehmen an’ means ‘to take part in’."
+      },
+      {
+        "prompt": "Task B: Interessierst du dich ___ Geschichte? Write the missing preposition.",
+        "answer": "für",
+        "explanation": "‘Sich interessieren für’ means ‘to be interested in’."
+      },
+      {
+        "prompt": "Task B: Freust du dich ___ die Party? Write the missing preposition.",
+        "answer": "auf",
+        "explanation": "‘Sich freuen auf’ means ‘to look forward to’."
+      },
+      {
+        "prompt": "Task B: Ich habe Angst vor ___ Party. Write the correct definite article (‘Party’ is feminine and must be in the dative here).",
+        "answer": "der",
+        "explanation": "‘Vor’ takes the dative, and the feminine dative article is ‘der’."
+      },
+      {
+        "prompt": "Task B: Wir haben ein Geschenk für ___ Familie. Write the correct definite article.",
+        "answer": "die",
+        "explanation": "‘Für’ always takes the accusative, and the feminine accusative article is ‘die’."
+      },
+      {
+        "prompt": "Task B: Ich freue mich schon auf ___ nächsten Austausch. Write the correct definite article.",
+        "answer": "den",
+        "explanation": "‘Sich freuen auf’ takes the accusative, and the masculine accusative article is ‘den’."
+      },
+      {
+        "prompt": "Task B: Alastair interessiert sich für ___ Wandern. Write the correct definite article.",
+        "answer": "das",
+        "explanation": "‘Sich interessieren für’ takes the accusative, and ‘das Wandern’ stays ‘das’."
+      },
+      {
+        "prompt": "Which case do verbs with the preposition ‘für’ always take?",
+        "answer": "accusative",
+        "accepted": [
+          "the accusative",
+          "accusative case",
+          "the accusative case"
+        ],
+        "explanation": "Verbs with ‘für’ are always followed by the accusative."
+      },
+      {
+        "prompt": "Which case do verbs with the preposition ‘vor’ always take?",
+        "answer": "dative",
+        "accepted": [
+          "the dative",
+          "dative case",
+          "the dative case"
+        ],
+        "explanation": "Verbs with ‘vor’ are always followed by the dative."
+      },
+      {
+        "prompt": "Give the English for ‘sich freuen auf’.",
+        "answer": "to look forward to",
+        "accepted": [
+          "look forward to"
+        ],
+        "explanation": "‘Sich freuen auf’ means ‘to look forward to’."
+      },
+      {
+        "prompt": "Give the English for ‘fragen nach’.",
+        "answer": "to ask for",
+        "accepted": [
+          "ask for",
+          "to ask about",
+          "ask about"
+        ],
+        "explanation": "‘Fragen nach’ means ‘to ask for’."
+      }
+    ]
+  }
+}

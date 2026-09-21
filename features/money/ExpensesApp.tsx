@@ -72,7 +72,7 @@ function compressImage(dataUrl: string): Promise<string> {
       const ctx = c.getContext("2d"); if (!ctx) { resolve(dataUrl); return; }
       ctx.drawImage(img, 0, 0, w, h);
       let q = 0.82, out = c.toDataURL("image/jpeg", q);
-      while (out.length > 1_100_000 && q > 0.4) { q -= 0.12; out = c.toDataURL("image/jpeg", q); }
+      while (out.length > 1_000_000 && q > 0.4) { q -= 0.12; out = c.toDataURL("image/jpeg", q); }
       resolve(out);
     };
     img.onerror = () => resolve(dataUrl);

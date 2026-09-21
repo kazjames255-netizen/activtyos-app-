@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { db } from "../firebase";
 import { requireAuth } from "../middleware/auth";
+import { hubPingRef } from "../lib/hubPing";
 
 // Realtime invalidation stream (SSE) — the first slice of the product
 // spec's realtime layer. Each connected client gets Firestore listeners
@@ -20,6 +21,22 @@ import { requireAuth } from "../middleware/auth";
 //
 // Scale note: one set of listeners per connection is fine for now; at real
 // scale this becomes shared listeners + fan-out.
+// Learning Hub realtime channels. Each is a tenant-scoped collection; the client
+// asks for the ones its mounted views read (lib/realtime.ts). Later milestones
+// append their collections HERE (content a family reads) so both sides pick them up.
+//
+// Two kinds of channel. SMALL collections (homework, lessons, submissions, groups, enrolments) keep a real Firestore
+// listener. The BIG ones — a seeded provider has ~700 topics, ~450 notes, ~5,000 questions, ~500 assessments,
+// ~4,500 flashcards and thousands of attempts — must never be streamed tenant-wide (attaching a listener reads the whole
+// result set, per connection): they are PING channels, fed by one tiny per-tenant document that the hub's write routes
+// stamp (lib/hubPing.ts). The client still receives {collection} and refetches through the normal authorized endpoints.
+const HUB_DIRECT_CHANNELS = ["hubHomework", "hubSubmissions", "hubLessons", "hubGroups"];
+const HUB_PING_CHANNELS = ["hubTopics", "hubNotes", "hubQuestions", "hubAssessments", "hubFlashcards", "hubAttempts"];
+// What a FAMILY may watch tenant-wide (shared content, not per-family rows).
+const HUB_FAMILY_DIRECT = ["hubHomework"];
+const HUB_FAMILY_PING = ["hubTopics", "hubNotes"];
+const HUB_CHANNELS = new Set(["hubEnrolments", ...HUB_DIRECT_CHANNELS, ...HUB_PING_CHANNELS]);
+
 export const events = Router();
 
 const TICKET_TTL_MS = 20_000;
@@ -101,10 +118,30 @@ events.get("/", async (req, res) => {
     );
   };
 
+  /** A ping channel: one listener on the tenant's `hubPings` doc; a changed field fires that collection's event. */
+  const listenPing = (tid: string, names: string[]) => {
+    const want = names.filter((n) => !wanted || wanted.has(n));
+    if (!want.length) return;
+    let last: Record<string, unknown> = {};
+    let first = true;
+    unsubs.push(
+      hubPingRef(tid).onSnapshot(
+        (snap) => {
+          const d = (snap.data() ?? {}) as Record<string, unknown>;
+          if (!first) for (const n of want) if (d[n] !== last[n]) send(n);
+          first = false;
+          last = d;
+        },
+        (err) => console.error("[events] hub ping listener error:", err.message),
+      ),
+    );
+  };
+
   if (role === "parent") {
     if (decoded.email)
       listen(db.collection("bookings").where("email", "==", decoded.email), "bookings");
     listen(db.collection("children").where("parentUid", "==", decoded.uid), "children");
+    listen(db.collection("hubAttempts").where("parentUid", "==", decoded.uid), "hubAttempts"); // Learning Hub: their own children's results (a tutor's marking arrives live)
     listen(db.collection("listings"), "listings"); // the browse marketplace
     listen(db.collection("blocks"), "blocks"); // availability changes
     listen(db.collection("posts"), "posts"); // providers' newsfeed
@@ -127,6 +164,25 @@ events.get("/", async (req, res) => {
           listen(db.collection("timetables").where("tenantId", "==", tid), "timetables");
         }
       }
+    }
+    // Learning Hub: a family's hub content comes from the providers where one of
+    // their children is ENROLLED (not merely booked) — see lib/hubCore.ts.
+    if (wanted === null || [...HUB_CHANNELS].some((c) => wanted.has(c))) {
+      const enrolQ = db.collection("hubEnrolments").where("parentUid", "==", decoded.uid);
+      listen(enrolQ, "hubEnrolments");
+      const enr = await enrolQ.get();
+      const tids = [...new Set(enr.docs.filter((d) => d.get("active") !== false).map((d) => d.get("tenantId") as string))].slice(0, 10);
+      for (const tid of tids) {
+        listen(db.collection("libraries").where("tenantId", "==", tid), "library"); // the on/off switch
+        // Shared content only (per-family rows are filtered below); the big collections arrive as pings.
+        for (const c of HUB_FAMILY_DIRECT) listen(db.collection(c).where("tenantId", "==", tid), c);
+        listenPing(tid, HUB_FAMILY_PING);
+      }
+      // A family's OWN submissions and lessons only — never a whole tenant collection, so
+      // another family's hand-in or lesson can't ping (or be read by) this connection.
+      listen(db.collection("hubSubmissions").where("parentUid", "==", decoded.uid), "hubSubmissions");
+      const kidIds = [...new Set(enr.docs.filter((d) => d.get("active") !== false).map((d) => d.get("childId") as string))].slice(0, 10);
+      if (kidIds.length) listen(db.collection("hubLessons").where("childIds", "array-contains-any", kidIds), "hubLessons");
     }
     listen(db.collection("mealOptions"), "mealOptions"); // a booked provider's menu
   } else if (role === "platform") {
@@ -162,6 +218,9 @@ events.get("/", async (req, res) => {
     listen(db.collection("menus").where("tenantId", "==", tenantId), "menus");
     listen(db.collection("moments").where("tenantId", "==", tenantId), "moments");
     listen(db.collection("tasks").where("tenantId", "==", tenantId), "tasks");
+    for (const c of ["hubEnrolments", ...HUB_DIRECT_CHANNELS]) listen(db.collection(c).where("tenantId", "==", tenantId), c);
+    // Learning Hub big collections: pings, not streams. The marking queue (hubAttempts) is for tenant-level accounts only.
+    listenPing(tenantId, franchiseId ? HUB_PING_CHANNELS.filter((c) => c !== "hubAttempts") : HUB_PING_CHANNELS);
     listen(db.collection("trips").where("tenantId", "==", tenantId), "trips");
     listen(db.collection("shifts").where("tenantId", "==", tenantId), "shifts");
     listen(db.collection("timetables").where("tenantId", "==", tenantId), "timetables");

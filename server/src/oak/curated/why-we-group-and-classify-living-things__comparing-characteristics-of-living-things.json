@@ -1,0 +1,527 @@
+{
+  "agent": "w4-science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can compare the characteristics of living things and describe their similarities and differences."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Observable} characteristics"
+            },
+            {
+              "title": "Comparing living things"
+            },
+            {
+              "title": "Identifying living things"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "observable",
+              "def": "Something observable is something that we can see or describe using our senses."
+            },
+            {
+              "term": "characteristic",
+              "def": "A characteristic is a feature or quality of something that we can use to help identify it."
+            },
+            {
+              "term": "compare",
+              "def": "We compare things by looking at what is the same and what is different."
+            },
+            {
+              "term": "similarity",
+              "def": "A similarity is something two or more objects have in common."
+            },
+            {
+              "term": "difference",
+              "def": "A difference between two objects or things is something that is not similar or the same about them."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Observable characteristics",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia wants to practise putting things into groups, using her friends. What could she use to divide them up?"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Hair colour",
+            "Eye colour",
+            "Boys and girls"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "These are all {observable characteristics}."
+        },
+        {
+          "t": "text",
+          "text": "An observable characteristic is a feature or property of a living thing that we can see or use our other senses to observe. It can be about **colour**, **size**, **shape** or **structure**."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Describing what we observe",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some observable characteristics of Alex’s mum are that she has ginger hair, straight hair, blue eyes and freckles."
+        },
+        {
+          "t": "text",
+          "text": "Some observable characteristics of Alex’s older sister are that she has ginger hair, curly hair, green eyes and freckles."
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "You can compare them. They are **similar** because both have ginger hair and freckles. They are **different** because one has straight hair and blue eyes and the other has curly hair and green eyes."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Observable or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Can we observe it? Put each one in the right column.",
+          "columns": [
+            "Observable characteristic",
+            "Not an observable characteristic"
+          ],
+          "items": [
+            {
+              "text": "his hair is dark",
+              "col": 0
+            },
+            {
+              "text": "the shape of its tail",
+              "col": 0
+            },
+            {
+              "text": "its body covering",
+              "col": 0
+            },
+            {
+              "text": "the date it was born",
+              "col": 1
+            },
+            {
+              "text": "how much it costs",
+              "col": 1
+            },
+            {
+              "text": "he likes cheese sandwiches",
+              "col": 1
+            },
+            {
+              "text": "his name is Jun",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Sorting into groups",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sofia sorted herself and her friends into groups using an observable characteristic: children with curly hair and children with straight hair."
+        },
+        {
+          "t": "text",
+          "text": "Alex had been put in the wrong group. He has curly hair, so he belongs in the curly hair group."
+        },
+        {
+          "t": "callout",
+          "text": "When sorting things into groups, the groups do not need to be equal in size."
+        },
+        {
+          "t": "choice",
+          "q": "When you sort things into groups, can one group have more things in it than another?",
+          "options": [
+            "No, the groups must be the same size",
+            "Yes, the groups do not need to be equal in size"
+          ],
+          "answer": 1,
+          "why": "When sorting things into groups, the groups do not need to be equal in size."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Comparing living things",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When we compare things, we look at their similarities and differences."
+        },
+        {
+          "t": "callout",
+          "text": "Scientists use observable characteristics to compare living things. This helps them to sort living things into groups and work out what they are."
+        },
+        {
+          "t": "text",
+          "text": "Sam compared a holly bush with a bramble. Both have green leaves and berries."
+        },
+        {
+          "t": "reveal",
+          "label": "What are the differences?",
+          "text": "The berries are different colours and shapes. The holly has spiky, waxy leaves and the bramble doesn’t."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Similar or different?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the tulips and buttercups in the lesson’s pictures. Aisha says their flowers are different. Izzy says their flowers are similar. Both children are correct!"
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Similar",
+              "sub": "Both sit at the top of long, green stems and both have yellow petals."
+            },
+            {
+              "title": "Different",
+              "sub": "The flowers have differences in their shapes and sizes."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Similar or different?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Think about Alex’s mum (ginger hair, straight hair, blue eyes, freckles) and Alex’s older sister (ginger hair, curly hair, green eyes, freckles)."
+        },
+        {
+          "t": "sort",
+          "q": "Is each characteristic a similarity or a difference between them?",
+          "columns": [
+            "Similarity",
+            "Difference"
+          ],
+          "items": [
+            {
+              "text": "they both have ginger hair",
+              "col": 0
+            },
+            {
+              "text": "they both have freckles",
+              "col": 0
+            },
+            {
+              "text": "one has straight hair, one has curly hair",
+              "col": 1
+            },
+            {
+              "text": "one has blue eyes, one has green eyes",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The odd one out",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Which is the odd one out: a penguin, a butterfly or a macaw? Think about what is the same and what is different about each one."
+        },
+        {
+          "t": "reveal",
+          "label": "Two ideas",
+          "text": "The butterfly is the only one that is not a bird. The penguin can’t fly."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Which can we observe?",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these is an observable characteristic we could use to compare animals?",
+          "options": [
+            "the date they were born",
+            "their body covering",
+            "how much they cost"
+          ],
+          "answer": 1,
+          "why": "We can see or describe a body covering (such as fur or feathers). The date an animal was born is not an observable characteristic."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A comparison table",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Lucas compared a fly, a blue tit and a tiger. He chose these observable characteristics to compare."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Colour: the fly is green, the blue tit is blue, black, yellow and white, the tiger is black, white and orange.",
+            "How it moves: the fly walks and flies, the blue tit walks and flies, the tiger walks, runs and climbs.",
+            "Number of legs: fly 6, blue tit 2, tiger 4."
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Body coverings",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "In Lucas’s table, match each animal to its body covering.",
+          "pairs": [
+            {
+              "a": "fly",
+              "b": "very short hairs"
+            },
+            {
+              "a": "blue tit",
+              "b": "feathers"
+            },
+            {
+              "a": "tiger",
+              "b": "fur"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Identifying living things",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Scientists can compare similarities and differences between living things to help work out whether they belong in certain groups."
+        },
+        {
+          "t": "text",
+          "text": "Alex found an animal in his backyard. It has six legs and a pair of antennae, so he thinks it must be an insect. He compares it with bees, butterflies and moths."
+        },
+        {
+          "t": "reveal",
+          "label": "What did he decide?",
+          "text": "The shape of his insect’s body and wings is most similar to the moths, so he thinks it must be a type of moth. Now he can research using secondary sources to identify which type of moth it is."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Laura’s garden bird",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Laura compared a bird in her garden with pigeons, finches and wagtails. She looked for the group it had most observable characteristics in common with."
+        },
+        {
+          "t": "reveal",
+          "label": "Her reasoning",
+          "text": "It is a type of finch. It has a similar body shape, a very similarly shaped beak and a short tail made of feathers like the finches. Pigeons have longer necks, and wagtails have a longer tail and beak."
+        },
+        {
+          "t": "choice",
+          "q": "How can we decide which group an unknown animal belongs to?",
+          "options": [
+            "Pick the group it has the fewest things in common with",
+            "Pick the group it has the most observable characteristics in common with",
+            "Pick the group with the most animals"
+          ],
+          "answer": 1,
+          "why": "Alex and Laura both chose the group their animal had most in common with."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Observable characteristics are properties about things that we can describe using our five senses.",
+            "Living things have many observable characteristics we can use to compare similarities and differences between them.",
+            "Comparing and grouping living things can help us to identify them."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does observable mean?",
+      "back": "Something we can see or describe using our senses."
+    },
+    {
+      "front": "What is a characteristic?",
+      "back": "A feature or quality of something that we can use to help identify it."
+    },
+    {
+      "front": "What do we do when we compare things?",
+      "back": "We look at what is the same and what is different."
+    },
+    {
+      "front": "What is a similarity?",
+      "back": "Something two or more objects have in common."
+    },
+    {
+      "front": "What is a difference?",
+      "back": "Something that is not similar or the same about two objects or things."
+    },
+    {
+      "front": "Colour, size, shape and structure are examples of which kind of characteristics?",
+      "back": "Observable characteristics."
+    },
+    {
+      "front": "Give an example of something that is NOT an observable characteristic of an animal.",
+      "back": "The date it was born."
+    },
+    {
+      "front": "When sorting things into groups, do the groups need to be equal in size?",
+      "back": "No. The groups do not need to be equal in size."
+    },
+    {
+      "front": "Why do scientists use observable characteristics to compare living things?",
+      "back": "It helps them sort living things into groups and work out what they are."
+    },
+    {
+      "front": "Alex’s animal has six legs and a pair of antennae. What does he think it is?",
+      "back": "An insect."
+    },
+    {
+      "front": "How did Alex decide which group of insects his animal belonged to?",
+      "back": "He looked for the group it was most similar to. The shape of its body and wings was most similar to the moths."
+    },
+    {
+      "front": "How did Laura decide which group her garden bird belonged to?",
+      "back": "She chose the group it had most observable characteristics in common with. It was a finch."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Comparing characteristics of living things",
+    "instructions": "Answer each question with a word, a number or a short phrase, using what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "What word means “something two or more objects have in common”?",
+        "answer": "similarity",
+        "explanation": "A similarity is something two or more objects have in common."
+      },
+      {
+        "prompt": "What word means “something that is not similar or the same about two things”?",
+        "answer": "difference",
+        "explanation": "A difference is something that is not similar or the same about two objects or things."
+      },
+      {
+        "prompt": "What word means “a feature or quality of something that we can use to help identify it”?",
+        "answer": "characteristic",
+        "explanation": "A characteristic is a feature or quality of something that we can use to help identify it."
+      },
+      {
+        "prompt": "We compare things by looking at what is the same and what is ____.",
+        "answer": "different",
+        "explanation": "Comparing means looking at what is the same and what is different."
+      },
+      {
+        "prompt": "Scientists use observable characteristics to compare living things. This helps them sort living things into ____.",
+        "answer": "groups",
+        "explanation": "Comparing helps scientists sort living things into groups and work out what they are."
+      },
+      {
+        "prompt": "In Lucas’s comparison table, how many legs does the blue tit have?",
+        "answer": "2",
+        "accepted": [
+          "two"
+        ],
+        "explanation": "Lucas’s table showed a fly with 6 legs, a blue tit with 2 legs and a tiger with 4 legs."
+      },
+      {
+        "prompt": "In Lucas’s comparison table, what covers the body of the blue tit?",
+        "answer": "feathers",
+        "explanation": "The blue tit has feathers. The fly has very short hairs and the tiger has fur."
+      },
+      {
+        "prompt": "A holly bush and a bramble were compared. Which one has spiky, waxy leaves?",
+        "answer": "holly",
+        "accepted": [
+          "holly bush",
+          "the holly bush",
+          "the holly"
+        ],
+        "explanation": "The holly has spiky, waxy leaves and the bramble doesn’t."
+      },
+      {
+        "prompt": "Alex’s animal has six legs and a pair of antennae. Which group of animals does he think it must belong to?",
+        "answer": "insect",
+        "accepted": [
+          "insects",
+          "an insect"
+        ],
+        "explanation": "Alex looked at its observable characteristics: six legs and a pair of antennae. So he thinks it must be an insect."
+      },
+      {
+        "prompt": "Alex compared his insect with bees, butterflies and moths. Which group was its body and wing shape most similar to?",
+        "answer": "moths",
+        "accepted": [
+          "moth",
+          "a moth"
+        ],
+        "explanation": "The shape of its body and wings was most similar to the moths."
+      },
+      {
+        "prompt": "Laura compared her garden bird with pigeons, finches and wagtails. Which group did she decide it belonged to?",
+        "answer": "finches",
+        "accepted": [
+          "finch",
+          "a finch"
+        ],
+        "explanation": "It had a similar body shape, beak and short tail made of feathers, like the finches."
+      }
+    ]
+  }
+}

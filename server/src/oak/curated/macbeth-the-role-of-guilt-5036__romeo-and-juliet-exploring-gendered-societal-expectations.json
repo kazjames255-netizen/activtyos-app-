@@ -1,0 +1,544 @@
+{
+  "agent": "english-ks4b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how Romeo and Juliet both subvert and conform to gendered societal expectations in ‘Romeo and Juliet’."
+        },
+        {
+          "t": "text",
+          "text": "You will look at what men and women were expected to be like in Elizabethan England, and how Romeo and Juliet match those expectations at some moments and go against them at others."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Romeo and {masculinity}"
+            },
+            {
+              "title": "Juliet and {femininity}"
+            },
+            {
+              "title": "Links to the tragedy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "societal expectations",
+              "def": "the beliefs and norms that a society holds about how individuals should behave and act"
+            },
+            {
+              "term": "conform",
+              "def": "behave in line with socially acceptable conventions or standards"
+            },
+            {
+              "term": "subvert",
+              "def": "behave or act in the opposite way to socially acceptable conventions or standards"
+            },
+            {
+              "term": "masculinity",
+              "def": "a set of behaviours, qualities and roles associated with men and boys"
+            },
+            {
+              "term": "femininity",
+              "def": "a set of behaviours, qualities and roles associated with women and girls"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Expectations of masculinity",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Elizabethan England, there were specific societal expectations of how men should behave and act. Expectations of {masculinity} included:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "that men should defend their honour",
+            "that violence was an acceptable means of defending their honour",
+            "that men should be dominant and powerful"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In Elizabethan England, violence and honour were arguably seen as integral to {masculinity}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The opening street fight",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "‘Romeo and Juliet’ opens with a street fight in Act 1, Scene 1 between the Montagues and the Capulets. The fight begins because a servant of the house of Capulet asserts that his master is “better” than Lord Montague."
+        },
+        {
+          "t": "text",
+          "text": "How is Shakespeare creating characters that **conform** to societal expectations of masculinity here? Have a think, then tap to see some ideas."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for ideas",
+          "text": "It shows violence is a solution. It specifically shows honour being defended through violence. And because it is the opening scene, it creates the standard and expectation."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Meeting Romeo",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, the audience’s introduction to Romeo shows him as separate from the stereotypes of masculinity. In Act 1, Scene 1, Romeo is wandering alone and thinking of his unrequited love for Rosaline."
+        },
+        {
+          "t": "chips",
+          "items": [
+            "being vulnerable",
+            "showing emotions",
+            "separate from the violence and fighting"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Our introduction to Romeo shows him as separate from the violence of the street fight and as someone who is vulnerable and emotional. This {subverts} masculine stereotypes."
+        },
+        {
+          "t": "choice",
+          "q": "Does Shakespeare first present Romeo as conforming to, or subverting, masculine stereotypes?",
+          "options": [
+            "Conforming to them",
+            "Subverting them"
+          ],
+          "answer": 1,
+          "why": "He is shown as separate from the street fight, and as vulnerable and emotional, so he subverts the stereotypes."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Mercutio’s reaction",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Arguably, we see the societal expectations of masculinity demonstrated most clearly in Act 3, Scene 1. Romeo tries to make peace with Tybalt and avoid a duel. Mercutio declares that Romeo’s actions are:"
+        },
+        {
+          "t": "callout",
+          "text": "“O calm, dishonorable, vile submission!” (Act 3, Scene 1, line 74)"
+        },
+        {
+          "t": "text",
+          "text": "Calling Romeo’s call for peace dishonourable adheres to the idea that men should be dominant and should defend their honour through force."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Romeo changes",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Romeo begins Act 3, Scene 1 by {subverting} expectations of masculinity by calling for peace. After Tybalt kills Mercutio, Romeo declares:"
+        },
+        {
+          "t": "callout",
+          "text": "“Away to heaven, respective lenity, / And fire-eyed fury be my conduct now.” (Act 3, Scene 1, lines 128-9)"
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "lenity",
+              "def": "the quality of being kind or gentle"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "By choosing anger and violence over his previous gentle approach, Romeo’s actions suggest he now sees violence as the solution to his problems. This is a trait previously shown by other male characters in the play."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: Romeo",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "By killing Tybalt in anger, is Romeo arguably conforming to, or subverting, masculine stereotypes?",
+          "options": [
+            "Conforming to them",
+            "Subverting them"
+          ],
+          "answer": 0,
+          "why": "He chooses anger and violence over his previous gentle approach, so he arguably conforms to masculine stereotypes."
+        },
+        {
+          "t": "choice",
+          "q": "What does “fire-eyed fury” suggest about Romeo’s reaction?",
+          "options": [
+            "It is one of anger with violent undertones",
+            "It is one of gentleness and kindness"
+          ],
+          "answer": 0,
+          "why": "By saying that “fire-eyed fury” will be his conduct, Romeo is saying that his reaction is one of anger with violent undertones."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Tragedy and the tragic hero",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Act 3, Scene 1 is the climax of the play where it arguably turns from a comedy to a tragedy, with the deaths of Mercutio and Tybalt."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "tragedy",
+              "def": "a play dealing with tragic events that usually ends with death"
+            },
+            {
+              "term": "tragic hero",
+              "def": "the central character who experiences a tragic downfall due to their hamartia"
+            },
+            {
+              "term": "hamartia",
+              "def": "a fatal flaw"
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Typically, Romeo’s hamartia is said to be his impulsiveness."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Masculinity and the tragedy",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "How might Romeo’s shift to conforming to expectations of masculinity create the play’s tragedy? Follow the chain of events."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Romeo chooses violence and anger, and kills Tybalt.",
+            "Because he killed Tybalt, Romeo was banished from Verona.",
+            "Being banished, he was unaware that Juliet had faked her own death to avoid marrying Count Paris."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What might Shakespeare be suggesting?",
+          "text": "Perhaps that conforming to societal expectations of masculinity can be damaging to both men and society. Seeing violence as a solution to problems might mean an endless circle of violence and repercussions that men cannot escape from."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Expectations of femininity",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "As well as set expectations for men in Elizabethan England, there were also societal expectations of {femininity}. These included:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "being obedient to one’s father and then one’s husband",
+            "being submissive",
+            "being faithful to one’s husband"
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In Elizabethan England, obedience was arguably seen as integral to {femininity}."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Juliet the daughter",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Consider Juliet’s actions in the play:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "marrying Romeo without her father’s permission",
+            "faking her own death to avoid marrying Paris, the man her father wishes her to marry"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Is Juliet meeting the societal expectations of femininity through these actions? Think, then tap."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap for an idea",
+          "text": "She is arguably subverting societal expectations of femininity because she is not being obedient to her father and she is trying to control her own life. By marrying Romeo, Juliet subverts the expectations of how a daughter should behave."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Juliet the wife",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "However, we might see Juliet as conforming to societal expectations of how a wife should behave. Look at these two ideas:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "Juliet states she cannot “speak ill of him that is my husband” (Act 3, Scene 2, line 106)",
+            "Juliet wishes to “live an unstained wife” to Romeo (Act 4, Scene 1, line 90)"
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "How is she conforming?",
+          "text": "By not “speak[ing] ill” of Romeo and wanting to remain “unstained” for him, Juliet is arguably showing loyalty and obedience to Romeo. This conforms to societal expectations of how a wife should behave."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A faithful wife",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "In Act 5, Scene 3, Juliet is referred to as:"
+        },
+        {
+          "t": "list",
+          "items": [
+            "“Romeo’s faithful wife” (Friar Lawrence, line 241)",
+            "“true and faithful” (Lord Montague, line 313)"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "By repeating “faithful”, Shakespeare enhances our perception of Juliet’s actions as part of being loyal to Romeo, her husband. Since these come in the final act, they are our lasting impression of Juliet: a loyal wife."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Conform or subvert?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Does each moment conform to, or subvert, gendered societal expectations?",
+          "columns": [
+            "Conforms",
+            "Subverts"
+          ],
+          "items": [
+            {
+              "text": "Romeo wanders alone thinking of Rosaline (Act 1, Scene 1)",
+              "col": 1
+            },
+            {
+              "text": "Romeo says “fire-eyed fury” will be his conduct",
+              "col": 0
+            },
+            {
+              "text": "Juliet marries Romeo without her father’s permission",
+              "col": 1
+            },
+            {
+              "text": "Juliet says she cannot “speak ill of him that is my husband”",
+              "col": 0
+            },
+            {
+              "text": "Friar Lawrence calls Juliet “Romeo’s faithful wife”",
+              "col": 0
+            },
+            {
+              "text": "Romeo tries to make peace with Tybalt (start of Act 3, Scene 1)",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learnt",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "In Elizabethan England, violence and honour were arguably seen as integral to masculinity.",
+            "We might see Romeo’s killing of Tybalt as conforming to masculine expectations and leading to his downfall.",
+            "In Elizabethan England, obedience was arguably seen as integral to femininity.",
+            "By marrying Romeo, Juliet subverts the expectations of how a daughter should behave.",
+            "However, we might see Juliet as conforming to societal expectations of how a wife should behave."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "A character can conform to expectations at some moments and subvert them at others."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does masculinity mean?",
+      "back": "A set of behaviours, qualities and roles associated with men and boys."
+    },
+    {
+      "front": "What does femininity mean?",
+      "back": "A set of behaviours, qualities and roles associated with women and girls."
+    },
+    {
+      "front": "What does it mean to subvert societal expectations?",
+      "back": "To behave or act in the opposite way to socially acceptable conventions or standards."
+    },
+    {
+      "front": "What does it mean to conform?",
+      "back": "To behave in line with socially acceptable conventions or standards."
+    },
+    {
+      "front": "Name the three Elizabethan expectations of masculinity in this lesson.",
+      "back": "That men should defend their honour, that violence was an acceptable means of defending it, and that men should be dominant and powerful."
+    },
+    {
+      "front": "Why does the fight in Act 1, Scene 1 begin?",
+      "back": "A servant of the house of Capulet asserts that his master is “better” than Lord Montague."
+    },
+    {
+      "front": "Why does Romeo’s first appearance subvert masculine stereotypes?",
+      "back": "He is wandering alone thinking of his unrequited love for Rosaline, so he is vulnerable and emotional, and separate from the violence."
+    },
+    {
+      "front": "Which line of Romeo’s suggests he now conforms to masculine stereotypes?",
+      "back": "“Away to heaven, respective lenity, / And fire-eyed fury be my conduct now.”"
+    },
+    {
+      "front": "What is a hamartia, and what is Romeo’s said to be?",
+      "back": "A fatal flaw. Romeo’s hamartia is typically said to be his impulsiveness."
+    },
+    {
+      "front": "Name the three Elizabethan expectations of femininity in this lesson.",
+      "back": "Being obedient to one’s father and then one’s husband, being submissive, and being faithful to one’s husband."
+    },
+    {
+      "front": "How does Juliet subvert the expectations of how a daughter should behave?",
+      "back": "By marrying Romeo without her father’s permission."
+    },
+    {
+      "front": "How might we see Juliet as conforming to the expectations of a wife?",
+      "back": "She will not “speak ill of him that is my husband” and wishes to “live an unstained wife”, showing loyalty and obedience to Romeo."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: ‘Romeo and Juliet’: exploring gendered societal expectations",
+    "instructions": "Answer each question with a word or a short phrase.",
+    "questions": [
+      {
+        "prompt": "Juliet marries Romeo without her father’s permission. In one word, is she conforming to or subverting the expectations of how a daughter should behave?",
+        "answer": "subverting",
+        "accepted": [
+          "subvert",
+          "subverts",
+          "she is subverting",
+          "subverting them"
+        ],
+        "explanation": "A daughter was expected to be obedient to her father, so marrying without his permission subverts the expectations."
+      },
+      {
+        "prompt": "In which act and scene does Mercutio call Romeo’s call for peace “O calm, dishonorable, vile submission!”? (Give the act number and scene number.)",
+        "answer": "act 3, scene 1",
+        "accepted": [
+          "act 3 scene 1",
+          "act three scene one",
+          "act 3, scene one",
+          "act three, scene one",
+          "3.1"
+        ],
+        "explanation": "Romeo tries to make peace with Tybalt in Act 3, Scene 1 and Mercutio declares his actions dishonorable."
+      },
+      {
+        "prompt": "Which word means “the quality of being kind or gentle”? It is used in the line “Away to heaven, respective ______”.",
+        "answer": "lenity",
+        "accepted": [],
+        "explanation": "Romeo says “respective lenity” before he chooses “fire-eyed fury”."
+      },
+      {
+        "prompt": "What word do we use for a tragic hero’s fatal flaw?",
+        "answer": "hamartia",
+        "accepted": [],
+        "explanation": "A tragic hero experiences a tragic downfall due to their hamartia."
+      },
+      {
+        "prompt": "Romeo’s hamartia is typically said to be which quality (one word, beginning with ‘i’)?",
+        "answer": "impulsiveness",
+        "accepted": [],
+        "explanation": "Romeo’s decisions throughout the play are said to be quick and impulsive."
+      },
+      {
+        "prompt": "Complete Friar Lawrence’s description of Juliet in Act 5, Scene 3: “Romeo’s faithful ______”.",
+        "answer": "wife",
+        "accepted": [],
+        "explanation": "It supports the idea of Juliet as a loyal wife who conforms to societal expectations."
+      },
+      {
+        "prompt": "Juliet says she cannot “speak ill of him that is my ______”. Which word is missing?",
+        "answer": "husband",
+        "accepted": [],
+        "explanation": "Her language switches: she calls him husband rather than Romeo."
+      },
+      {
+        "prompt": "In Elizabethan England, women were expected to be ______ to their fathers and their husbands. Which word is missing?",
+        "answer": "obedient",
+        "accepted": [],
+        "explanation": "Obedience was arguably seen as integral to femininity."
+      },
+      {
+        "prompt": "What did Romeo do in Act 3, Scene 1 that led to him being banished from Verona? (Answer in a short phrase.)",
+        "answer": "kills tybalt",
+        "accepted": [
+          "killed tybalt",
+          "he kills tybalt",
+          "he killed tybalt",
+          "killing tybalt",
+          "kill tybalt"
+        ],
+        "explanation": "Because Romeo killed Tybalt he was banished, and so was unaware that Juliet had faked her own death."
+      }
+    ]
+  }
+}

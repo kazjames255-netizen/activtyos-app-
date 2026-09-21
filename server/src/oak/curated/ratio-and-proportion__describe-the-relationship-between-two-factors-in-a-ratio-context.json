@@ -1,0 +1,567 @@
+{
+  "agent": "w4-maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can describe the relationship between two factors in a ratio context."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will look at parts in a whole and describe how the parts are related, using the words {for every}."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Say it with {for every}"
+            },
+            {
+              "title": "Make and describe patterns"
+            },
+            {
+              "title": "Work out the total"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "ratio",
+              "def": "A ratio shows the relative sizes of 2 or more values and allows you to compare a part with another part in a whole."
+            },
+            {
+              "term": "for every",
+              "def": "For every allows you to talk about the relative sizes of the values, e.g. for every 2 squares there is 1 triangle."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Parts in a whole",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a whole made of 3 shapes:  🟦🟦🔺"
+        },
+        {
+          "t": "text",
+          "text": "Inside the whole there are two parts, or two factors: 2 squares and 1 triangle."
+        },
+        {
+          "t": "callout",
+          "text": "**For every** 2 squares there is 1 triangle."
+        },
+        {
+          "t": "reveal",
+          "label": "Can we say it the other way round?",
+          "text": "Yes. For every 1 triangle there are 2 squares. We said the squares first because that is the order we can see them in."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Using “for every”",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Use this stem sentence: **For every** something there are something. Sometimes it is “there is” and sometimes it is “there are”."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "1 beetle, 6 legs",
+              "sub": "For every 1 beetle there are 6 legs."
+            },
+            {
+              "title": "1 pack, 10 pens",
+              "sub": "For every 1 pack there are 10 pens."
+            },
+            {
+              "title": "1 girl, 2 boys",
+              "sub": "For every 1 girl there are 2 boys."
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Each time we start with the one thing first."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Equal parts and other numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sometimes the parts are equal."
+        },
+        {
+          "t": "text",
+          "text": "For every 2 balloons there are 2 party hats. We can make the numbers smaller: for every 1 balloon there is 1 party hat."
+        },
+        {
+          "t": "text",
+          "text": "Sometimes we cannot get to a 1."
+        },
+        {
+          "t": "text",
+          "text": "For every 2 bikes there are 3 cars. We cannot split this up any other way, so we say it just like that."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Try it: describe the whole",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a whole:  🍎🍎🍎🍌"
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence describes it?",
+          "options": [
+            "For every 3 apples there is 1 banana.",
+            "For every 1 apple there are 3 bananas.",
+            "For every 3 bananas there is 1 apple."
+          ],
+          "answer": 0,
+          "why": "There are 3 apples and 1 banana, so for every 3 apples there is 1 banana."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Choose the sentence",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Pick the sentence that matches each picture.",
+          "items": [
+            {
+              "q": "🐶🐶🐱🐱🐱",
+              "options": [
+                "For every 2 dogs there are 3 cats.",
+                "For every 3 dogs there are 2 cats."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "🧁🧁🧁🧁🧁🥤",
+              "options": [
+                "For every 5 cupcakes there is 1 drink.",
+                "For every 1 cupcake there are 5 drinks."
+              ],
+              "answer": 0
+            },
+            {
+              "q": "🍦🍪",
+              "options": [
+                "For every 1 ice cream there are 2 cookies.",
+                "For every 1 ice cream there is 1 cookie."
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Repeating patterns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is a pattern that repeats:"
+        },
+        {
+          "t": "text",
+          "text": "🔵🔵🟥  🔵🔵🟥  🔵🔵🟥"
+        },
+        {
+          "t": "text",
+          "text": "It is still true that for every 2 circles there is 1 square. We can see where the pattern starts and stops: 🔵🔵🟥 is the **basic pattern**, and it is repeated."
+        },
+        {
+          "t": "reveal",
+          "label": "Is there another way to say it?",
+          "text": "We could say for every 6 circles there are 3 squares. That is true too, but the simplest way is to look at the basic pattern: for every 2 circles there is 1 square."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Find the basic pattern",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A pattern is made like this:  ⭐⭐🔺🔺🔺  ⭐⭐🔺🔺🔺"
+        },
+        {
+          "t": "choice",
+          "q": "Which sentence uses the basic pattern?",
+          "options": [
+            "For every 2 stars there are 3 triangles.",
+            "For every 3 stars there are 2 triangles.",
+            "For every 4 stars there are 3 triangles."
+          ],
+          "answer": 0,
+          "why": "The basic pattern that repeats is 2 stars and 3 triangles."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Working out the total",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 2 triangles there is 1 circle. The basic pattern is  🔺🔺⚪  and it has 3 shapes."
+        },
+        {
+          "t": "text",
+          "text": "Repeat it 5 times and you get 5 lots of 3 shapes, which is 15 shapes in total."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "3",
+              "add": "× 5",
+              "result": "15",
+              "note": "3 shapes in the basic pattern, repeated 5 times, gives 15 shapes in total."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "In 3 × 5 = 15, the **3** is the number of shapes in the basic pattern, the **5** is the number of times the pattern is repeated and the **15** is the total number of shapes."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Which totals are possible?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 2 triangles there is 1 circle. Could there be 14 shapes? 21 shapes? 99 shapes?"
+        },
+        {
+          "t": "text",
+          "text": "Each basic pattern has 3 shapes, so the total has to be made of whole lots of 3."
+        },
+        {
+          "t": "callout",
+          "text": "It is possible if the total number of shapes is a **multiple of 3**."
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to check the three totals",
+          "text": "21 is a multiple of 3 (7 lots of 3), so it is possible. 99 is a multiple of 3 (33 lots of 3), so it is possible. 14 is not a multiple of 3, so it is not possible."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "A different pattern",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A pattern is made from 2 squares and 3 circles. The basic pattern has 5 shapes, so the total must be a multiple of 5."
+        },
+        {
+          "t": "choices",
+          "q": "Could the pattern have this many shapes in total?",
+          "items": [
+            {
+              "q": "20 shapes",
+              "options": [
+                "Yes, possible",
+                "No, not possible"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "35 shapes",
+              "options": [
+                "Yes, possible",
+                "No, not possible"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "42 shapes",
+              "options": [
+                "Yes, possible",
+                "No, not possible"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "45 shapes",
+              "options": [
+                "Yes, possible",
+                "No, not possible"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Possible or not?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "For every 3 red counters there is 1 blue counter. The basic pattern has 4 counters. Sort the totals.",
+          "columns": [
+            "Possible",
+            "Not possible"
+          ],
+          "items": [
+            {
+              "text": "12 counters",
+              "col": 0
+            },
+            {
+              "text": "18 counters",
+              "col": 1
+            },
+            {
+              "text": "20 counters",
+              "col": 0
+            },
+            {
+              "text": "30 counters",
+              "col": 1
+            },
+            {
+              "text": "32 counters",
+              "col": 0
+            },
+            {
+              "text": "26 counters",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Repeat, don’t add on",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "For every 2 squares there is 1 triangle. What if we repeat the pattern 2 times?"
+        },
+        {
+          "t": "text",
+          "text": "🟦🟦🔺  🟦🟦🔺  gives 4 squares and 2 triangles."
+        },
+        {
+          "t": "reveal",
+          "label": "Watch out!",
+          "text": "Do not add on to link the parts. To keep the same ratio, repeat the whole basic pattern: 2 repeats means 2 × 2 = 4 squares and 2 × 1 = 2 triangles."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "24 shapes in total",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "You can use two shapes or two colours of cubes and 24 in total. Which ratios will work?"
+        },
+        {
+          "t": "callout",
+          "text": "The ratio will work if the number of shapes in the basic pattern is a **factor of 24**."
+        },
+        {
+          "t": "reveal",
+          "label": "Try an example",
+          "text": "A basic pattern of 6 shapes works: 6 × 4 = 24, so the pattern is repeated 4 times. A basic pattern of 5 shapes does not work, because 24 is not a multiple of 5."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Describe the relationship between two factors in a ratio context",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Ratios describe the relationship between parts in a whole.",
+            "Repeating patterns can be described using the language of ratio: **for every** …",
+            "Look for the basic pattern that repeats and describe it simply.",
+            "If you know the ratio, you can work out how many parts there are in the whole."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What does a ratio show?",
+      "back": "The relative sizes of 2 or more values. It lets you compare a part with another part in a whole."
+    },
+    {
+      "front": "What do the words “for every” help you do?",
+      "back": "Talk about the relative sizes of the values.\n\nFor every 2 squares there is 1 triangle."
+    },
+    {
+      "front": "Describe this whole using “for every”: 🟦🟦🔺",
+      "back": "For every 2 squares there is 1 triangle."
+    },
+    {
+      "front": "A beetle has 6 legs. Describe 1 beetle and its legs using “for every”.",
+      "back": "For every 1 beetle there are 6 legs."
+    },
+    {
+      "front": "A pack contains 10 pens. Describe 1 pack and its pens using “for every”.",
+      "back": "For every 1 pack there are 10 pens."
+    },
+    {
+      "front": "For every 2 balloons there are 2 party hats. How can you make the numbers smaller?",
+      "back": "For every 1 balloon there is 1 party hat."
+    },
+    {
+      "front": "What is the basic pattern of a repeating pattern?",
+      "back": "The simplest part that is repeated."
+    },
+    {
+      "front": "A basic pattern has 3 shapes and is repeated 5 times. How many shapes in total?",
+      "back": "15 shapes (3 × 5 = 15)."
+    },
+    {
+      "front": "In 3 × 5 = 15 for a repeating pattern, what does the 5 stand for?",
+      "back": "The number of times the pattern is repeated."
+    },
+    {
+      "front": "For every 2 triangles there is 1 circle. When is a total number of shapes possible?",
+      "back": "When the total is a multiple of 3, because the basic pattern has 3 shapes."
+    },
+    {
+      "front": "You use 24 shapes in total. When will a ratio work?",
+      "back": "When the number of shapes in the basic pattern is a factor of 24."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Describe the relationship between two factors in a ratio context",
+    "instructions": "Answer each question with a number or a short word. Think about the basic pattern and how many times it is repeated.",
+    "questions": [
+      {
+        "prompt": "A basic pattern has 3 shapes. It is repeated 5 times. How many shapes are there in total?",
+        "answer": "15",
+        "accepted": [
+          "15 shapes",
+          "fifteen"
+        ],
+        "explanation": "5 lots of 3 shapes is 3 × 5 = 15."
+      },
+      {
+        "prompt": "A pattern is made from 2 squares and 3 circles. How many shapes are in the basic pattern?",
+        "answer": "5",
+        "accepted": [
+          "5 shapes",
+          "five"
+        ],
+        "explanation": "2 squares and 3 circles make 2 + 3 = 5 shapes."
+      },
+      {
+        "prompt": "The basic pattern is 2 squares and 3 circles. It is repeated 4 times. How many shapes are there in total?",
+        "answer": "20",
+        "accepted": [
+          "20 shapes",
+          "twenty"
+        ],
+        "explanation": "The basic pattern has 5 shapes and 5 × 4 = 20."
+      },
+      {
+        "prompt": "The basic pattern is 2 squares and 3 circles. It is repeated 4 times. How many circles are there in total?",
+        "answer": "12",
+        "accepted": [
+          "12 circles",
+          "twelve"
+        ],
+        "explanation": "There are 3 circles in each basic pattern and 3 × 4 = 12."
+      },
+      {
+        "prompt": "For every 3 squares there is 1 hexagon. How many hexagons go with 9 squares?",
+        "answer": "3",
+        "accepted": [
+          "3 hexagons",
+          "three"
+        ],
+        "explanation": "9 squares is 3 lots of 3 squares, so there are 3 hexagons."
+      },
+      {
+        "prompt": "For every 3 boys there are 4 girls. How many children are in the basic pattern?",
+        "answer": "7",
+        "accepted": [
+          "7 children",
+          "seven"
+        ],
+        "explanation": "3 boys and 4 girls make 3 + 4 = 7 children."
+      },
+      {
+        "prompt": "For every 2 triangles there is 1 circle. Could there be 21 shapes in total? Answer yes or no.",
+        "answer": "yes",
+        "accepted": [
+          "yes it is possible",
+          "possible"
+        ],
+        "explanation": "The basic pattern has 3 shapes and 21 is a multiple of 3 (7 × 3 = 21)."
+      },
+      {
+        "prompt": "For every 2 triangles there is 1 circle. Could there be 14 shapes in total? Answer yes or no.",
+        "answer": "no",
+        "accepted": [
+          "no it is not possible",
+          "not possible"
+        ],
+        "explanation": "The basic pattern has 3 shapes and 14 is not a multiple of 3."
+      },
+      {
+        "prompt": "You use 24 shapes in total. The basic pattern has 6 shapes. How many times is it repeated?",
+        "answer": "4",
+        "accepted": [
+          "4 times",
+          "four"
+        ],
+        "explanation": "6 × 4 = 24, so the pattern is repeated 4 times."
+      },
+      {
+        "prompt": "For every 2 balloons there are 2 party hats. Complete the simplest sentence: for every 1 balloon there is ___ party hat.",
+        "answer": "1",
+        "accepted": [
+          "one"
+        ],
+        "explanation": "The parts are equal, so for every 1 balloon there is 1 party hat."
+      }
+    ]
+  }
+}

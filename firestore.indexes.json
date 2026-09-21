@@ -15,6 +15,35 @@
         { "fieldPath": "tenantId", "order": "ASCENDING" },
         { "fieldPath": "at", "order": "DESCENDING" }
       ]
+    },
+    {
+      "comment": "Learning Hub: a student's attempts, newest first (docs/learning-hub.md). The API currently sorts in memory, so this only matters once a child has many attempts.",
+      "collectionGroup": "hubAttempts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "childId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "comment": "Learning Hub: a student's flashcard schedule, soonest due first. The API currently reads a child's reviews and splits due/new in memory.",
+      "collectionGroup": "hubFlashcardReviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "childId", "order": "ASCENDING" },
+        { "fieldPath": "nextDueAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "comment": "Learning Hub: a provider's live lessons in time order. The API currently reads a tenant's lessons and filters in memory.",
+      "collectionGroup": "hubLessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "startsAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

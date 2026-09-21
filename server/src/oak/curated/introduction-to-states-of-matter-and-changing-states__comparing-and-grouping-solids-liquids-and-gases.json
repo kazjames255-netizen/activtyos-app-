@@ -1,0 +1,618 @@
+{
+  "agent": "science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can compare and group materials according to whether they are in {solid}, {liquid} or {gas} state."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will use properties to sort materials into groups."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{observe} properties"
+            },
+            {
+              "title": "{classify} materials"
+            },
+            {
+              "title": "use a {Venn diagram}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "solid",
+              "def": "A solid has a fixed shape and volume but some solids can change shape when a force is applied."
+            },
+            {
+              "term": "liquid",
+              "def": "A liquid can flow, has a fixed volume and takes the shape of the bottom of its container."
+            },
+            {
+              "term": "gas",
+              "def": "A gas can flow, has no fixed volume and takes the shape of the whole of its container."
+            },
+            {
+              "term": "classify",
+              "def": "To classify is to sort objects into groups."
+            },
+            {
+              "term": "Venn diagram",
+              "def": "A Venn diagram is a way of displaying how you group items. It is made up of overlapping circles."
+            }
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "venn-diagram"
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is matter?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Matter** is the “stuff” that physical things are made from."
+        },
+        {
+          "t": "text",
+          "text": "Matter can exist in different states. The common states of matter are solid, liquid and gas."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "a rock",
+              "sub": "solid state"
+            },
+            {
+              "title": "milk",
+              "sub": "liquid state",
+              "emoji": "🥛"
+            },
+            {
+              "title": "oxygen in the air",
+              "sub": "gas state"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of liquids",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Materials have different properties when they are in different states of matter. They behave in different ways depending on what state they are in."
+        },
+        {
+          "t": "text",
+          "text": "Materials in the liquid state can flow, have a fixed volume and take the shape of the bottom of their container."
+        },
+        {
+          "t": "text",
+          "text": "Even when a liquid changes its shape, it always takes up the same amount of space. Liquids have a {fixed volume}."
+        },
+        {
+          "t": "reveal",
+          "label": "Are all liquids drinks?",
+          "text": "No. There are lots of types of liquids that are not safe to drink, including hand sanitiser, cleaning products, petrol and diesel."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Properties of solids and gases",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "**Solids** have a fixed shape and volume, but some solids can change shape when a force is applied. They always take up the same amount of space and they do not flow like liquids."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "brick"
+            },
+            {
+              "title": "marble"
+            },
+            {
+              "title": "iron pan"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "**Gases** are often invisible, but they do have properties. A gas escapes from an unsealed container and has no fixed shape or volume. It spreads out and changes its shape and volume to fill up whatever container it is in."
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Check: properties",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Choose the best answer.",
+          "items": [
+            {
+              "q": "A marble and an iron pan are both …",
+              "options": [
+                "gases",
+                "liquids",
+                "solids"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Petrol is a liquid. Which of these is a property of petrol?",
+              "options": [
+                "it has no fixed volume",
+                "it can flow and has a fixed volume",
+                "it keeps its shape"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "A gas is moved into a bigger container. What does the gas do?",
+              "options": [
+                "It stays in a small lump at the bottom",
+                "It stays exactly the same shape",
+                "It spreads out to fill the whole container"
+              ],
+              "answer": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Observe and classify",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can observe the properties of different materials and use them to group, or **classify**, them according to their state."
+        },
+        {
+          "t": "list",
+          "items": [
+            "If a material has a fixed shape, it is in the solid state.",
+            "If a material flows and takes the shape of the bottom of a container, it is in the liquid state."
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Example: shampoo can be poured and takes the shape of the bottom of the bottle, so it must be in the liquid state."
+        },
+        {
+          "t": "text",
+          "text": "We could use three separate sorting circles: one for the solid state, one for the liquid state and one for the gas state."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Classify the materials",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Use the properties to classify each one as solid, liquid or gas.",
+          "columns": [
+            "Solid",
+            "Liquid",
+            "Gas"
+          ],
+          "items": [
+            {
+              "text": "wooden ruler",
+              "col": 0
+            },
+            {
+              "text": "slate roof",
+              "col": 0
+            },
+            {
+              "text": "rain drops",
+              "col": 1
+            },
+            {
+              "text": "apple juice",
+              "col": 1
+            },
+            {
+              "text": "helium in a balloon",
+              "col": 2
+            },
+            {
+              "text": "oxygen in the air",
+              "col": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "More than one state",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some objects are made of different materials, so they can have properties of more than one state."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "helium balloon",
+              "sub": "foil (solid) + helium (gas)",
+              "emoji": "🎈"
+            },
+            {
+              "title": "football",
+              "sub": "rubber outer layer (solid) + air (gas)",
+              "emoji": "⚽"
+            },
+            {
+              "title": "glass of apple juice",
+              "sub": "glass (solid) + apple juice (liquid)",
+              "emoji": "🍎"
+            }
+          ]
+        },
+        {
+          "t": "text",
+          "text": "Helium is invisible and it has taken the shape of the whole container, which is the balloon."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Venn diagrams",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "A **Venn diagram** can be used to group solids, liquids and gases. It has one circle for each state of matter, and the circles are arranged so that they overlap."
+        },
+        {
+          "t": "callout",
+          "text": "The spaces where the circles overlap are used for objects which have properties of {more than one state}."
+        },
+        {
+          "t": "list",
+          "items": [
+            "A wooden ruler is in the solid state because it has a fixed shape and volume, so it goes in the solid circle.",
+            "A helium balloon goes where the solid and gas circles overlap.",
+            "A glass of apple juice goes where the solid and liquid circles overlap."
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What is the overlap of the liquid and gas circles for?",
+          "text": "It is for objects which have some properties of the gas state and some of the liquid state."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Where does it go?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each item to its place in the Venn diagram.",
+          "pairs": [
+            {
+              "a": "wooden ruler",
+              "b": "in the solid circle only"
+            },
+            {
+              "a": "helium balloon",
+              "b": "where the solid and gas circles overlap"
+            },
+            {
+              "a": "glass of apple juice",
+              "b": "where the solid and liquid circles overlap"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The sand puzzle",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some materials, like sand, are difficult to classify because they appear to have properties of both solids and liquids."
+        },
+        {
+          "t": "text",
+          "text": "Andeep says: sand flows when I pour it into my bucket, then it fills the shape of the bottom of the bucket, so I will classify sand as a liquid. Do you agree?"
+        },
+        {
+          "t": "reveal",
+          "label": "Tap to find out",
+          "text": "Andeep is incorrect. Each individual part of sand is a tiny grain in the solid state. If you separate out one grain of sand, it has a fixed volume and shape, unless a force changes it."
+        },
+        {
+          "t": "reveal",
+          "label": "So why can we pour sand?",
+          "text": "When there are lots of solid grains together, they can slide over each other and move like a flowing liquid. If there are enough tiny parts of solid, they take the shape of the bottom of the container, even though they are in the solid state."
+        },
+        {
+          "t": "reveal",
+          "label": "How is pouring sand different from pouring a liquid?",
+          "text": "When a liquid is poured into a container, it spreads out to fill it to the corners, even if there is only a small volume. When a solid like sand is poured into a container, it often forms a pile, rather than spreading to the corners."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Other solids that can be poured",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Sugar, salt and rice also appear to have some properties of a liquid, because they fill the bottom of a container and can be poured."
+        },
+        {
+          "t": "callout",
+          "text": "Solids which are made up of many small grains can be poured or take the shape of the bottom of their container."
+        },
+        {
+          "t": "choices",
+          "q": "Check yourself.",
+          "items": [
+            {
+              "q": "One single grain of sand is in which state?",
+              "options": [
+                "liquid",
+                "gas",
+                "solid"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Which of these is a solid that can be poured because it is made of many small grains?",
+              "options": [
+                "a brick",
+                "salt",
+                "a marble"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "The biscuit investigation",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Imagine you classify a digestive biscuit in three different ways."
+        },
+        {
+          "t": "reveal",
+          "label": "A whole biscuit",
+          "text": "It has the properties of a solid because it did not flow, could be cut or shaped, kept its shape, and always took the same amount of space."
+        },
+        {
+          "t": "reveal",
+          "label": "A crushed biscuit",
+          "text": "It has some properties of a liquid because the pile of crumbs could be poured between containers. The crumbs spread out in the bottom of the container but formed a pile, like a volcano shape. They did not flow to the edges."
+        },
+        {
+          "t": "reveal",
+          "label": "One crumb",
+          "text": "It has the properties of a solid because it did not flow, kept its shape, and always took the same amount of space."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "Summary",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "We can observe and classify materials as being in the solid, liquid or gas state.",
+            "Some materials used to make objects can have properties of more than one state.",
+            "Some materials are difficult to classify because they appear to have properties of both solids and liquids.",
+            "A Venn diagram can be used to group solids, liquids and gases."
+          ]
+        }
+      ],
+      "pics": [
+        {
+          "id": "states-of-matter"
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is matter?",
+      "back": "The “stuff” that physical things are made from."
+    },
+    {
+      "front": "What does it mean to classify?",
+      "back": "To sort objects into groups."
+    },
+    {
+      "front": "What is a Venn diagram?",
+      "back": "A way of displaying how you group items. It is made up of overlapping circles."
+    },
+    {
+      "front": "What are the overlapping parts of a Venn diagram of solids, liquids and gases used for?",
+      "back": "Objects which have properties of more than one state.\n\nExample: a helium balloon (foil is solid, helium is gas)."
+    },
+    {
+      "front": "How can we tell that shampoo is in the liquid state?",
+      "back": "It can be poured and takes the shape of the bottom of the bottle."
+    },
+    {
+      "front": "Are all liquids drinks?",
+      "back": "No. Hand sanitiser, cleaning products, petrol and diesel are liquids that are not safe to drink."
+    },
+    {
+      "front": "Which material is a football’s outer layer made of, and in which state is it?",
+      "back": "Rubber, in the solid state. It is filled with air, which is in the gas state."
+    },
+    {
+      "front": "In which state is the foil of a helium balloon, and in which state is the helium?",
+      "back": "The foil is in the solid state. The helium is in the gas state."
+    },
+    {
+      "front": "Why is sand difficult to classify?",
+      "back": "It appears to have properties of both solids and liquids."
+    },
+    {
+      "front": "What state is a single grain of sand in?",
+      "back": "The solid state. It has a fixed volume and shape, unless a force changes it."
+    },
+    {
+      "front": "Why can sand be poured even though its grains are solid?",
+      "back": "Lots of solid grains together can slide over each other and move like a flowing liquid."
+    },
+    {
+      "front": "How is pouring sand different from pouring a liquid?",
+      "back": "A liquid spreads out to fill the container to the corners. Sand often forms a pile."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Comparing and grouping solids, liquids and gases",
+    "instructions": "Answer each question with a short answer. Use the properties of solids, liquids and gases to classify each material.",
+    "questions": [
+      {
+        "prompt": "Is a wooden ruler in the solid, liquid or gas state?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solid state",
+          "a solid"
+        ],
+        "explanation": "A wooden ruler has a fixed shape and volume, so it is in the solid state."
+      },
+      {
+        "prompt": "Are rain drops in the solid, liquid or gas state?",
+        "answer": "liquid",
+        "accepted": [
+          "liquid",
+          "liquid state",
+          "a liquid"
+        ],
+        "explanation": "Rain drops flow and take the shape of the bottom of a container, so they are liquid."
+      },
+      {
+        "prompt": "Is helium in a balloon in the solid, liquid or gas state?",
+        "answer": "gas",
+        "accepted": [
+          "gas",
+          "gas state",
+          "a gas"
+        ],
+        "explanation": "Helium is invisible and takes the shape of the whole container, which is the balloon."
+      },
+      {
+        "prompt": "Is a whole digestive biscuit in the solid or the liquid state?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solid state",
+          "a solid"
+        ],
+        "explanation": "A whole biscuit does not flow, can be cut or shaped, keeps its shape and always takes the same amount of space."
+      },
+      {
+        "prompt": "Is one single crumb of a crushed biscuit in the solid or the liquid state?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solid state",
+          "a solid"
+        ],
+        "explanation": "One crumb does not flow, keeps its shape and always takes the same amount of space."
+      },
+      {
+        "prompt": "What word means ‘to sort objects into groups’?",
+        "answer": "classify",
+        "accepted": [
+          "classify",
+          "to classify",
+          "classifying"
+        ],
+        "explanation": "To classify is to sort objects into groups."
+      },
+      {
+        "prompt": "What is the name of the type of diagram, made of overlapping circles, that can be used to group solids, liquids and gases?",
+        "answer": "Venn diagram",
+        "accepted": [
+          "venn diagram",
+          "venn",
+          "a venn diagram"
+        ],
+        "explanation": "A Venn diagram has one circle for each state, and the circles overlap."
+      },
+      {
+        "prompt": "The outer layer of a football is made of rubber. In which state is the rubber?",
+        "answer": "solid",
+        "accepted": [
+          "solid",
+          "solid state",
+          "a solid"
+        ],
+        "explanation": "The rubber outer layer of a football is in the solid state."
+      },
+      {
+        "prompt": "A football is filled with air. In which state is the air?",
+        "answer": "gas",
+        "accepted": [
+          "gas",
+          "gas state",
+          "a gas"
+        ],
+        "explanation": "Air is a mixture of gases, so it is in the gas state."
+      },
+      {
+        "prompt": "A Venn diagram for solids, liquids and gases has one circle for each state of matter. How many circles is that?",
+        "answer": "3",
+        "accepted": [
+          "3",
+          "three"
+        ],
+        "explanation": "There is one circle each for the solid, liquid and gas states."
+      }
+    ]
+  }
+}

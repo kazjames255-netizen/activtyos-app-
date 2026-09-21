@@ -1,0 +1,682 @@
+{
+  "agent": "w4-science-ks2",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can explain how animals can be grouped using observable characteristics."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Vertebrates} and {invertebrates}"
+            },
+            {
+              "title": "Groups within vertebrates and invertebrates"
+            },
+            {
+              "title": "Creating {classification keys}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "classify",
+              "def": "To classify is to sort into groups."
+            },
+            {
+              "term": "identify",
+              "def": "To identify something is to be able to name it correctly."
+            },
+            {
+              "term": "vertebrate",
+              "def": "A vertebrate is an animal with an internal skeleton, including a spine."
+            },
+            {
+              "term": "invertebrate",
+              "def": "Animals that do not have bones, including a spine, on the inside of their bodies are invertebrates."
+            },
+            {
+              "term": "classification key",
+              "def": "Classification keys are diagrams which help us sort things into different groups."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Why do we group animals?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "There are millions of species of animals living on planet Earth, and scientists are discovering new ones all the time."
+        },
+        {
+          "t": "callout",
+          "text": "Scientists {classify}, or group, animals to make it easier to identify, name and learn more about them."
+        },
+        {
+          "t": "text",
+          "text": "Scientists who specialise in identifying and classifying animals are called **taxonomists**. When a new animal is discovered, taxonomists look at the similarities and differences between it and other animals to decide which group it belongs in."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Vertebrates and invertebrates",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "One way taxonomists classify animals is by sorting them into two main groups."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "{Vertebrates}",
+              "sub": "Have a spine (or backbone) and an internal skeleton."
+            },
+            {
+              "title": "{Invertebrates}",
+              "sub": "Do not have a spine or internal skeleton."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "Think about an X-ray",
+          "text": "An X-ray shows bones. Humans are vertebrates. An X-ray of an invertebrate will show no bones."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Skeletons without bones",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "If invertebrates don’t have skeletons, how are their bodies supported and their organs protected?"
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "exoskeleton",
+              "def": "A hard outer covering that protects the body of some invertebrates. As the animal grows, it moults its exoskeleton, and its fresh outer layer hardens to form a new, larger exoskeleton."
+            },
+            {
+              "term": "hydrostatic skeleton",
+              "def": "A body filled with fluid that supports the body and helps some invertebrates to move. A slug and an octopus have hydrostatic skeletons."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Watch out! Tricky animals",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Some animals can be difficult to classify because of the way they look. Tap to find out about each pair."
+        },
+        {
+          "t": "reveal",
+          "label": "Tortoise and crab",
+          "text": "Both have hard shells on their backs. The tortoise is a reptile. It has a spine and an internal skeleton, so it is a **vertebrate**. The crab’s shell is part of its exoskeleton. It has no internal skeleton, so it is an **invertebrate**."
+        },
+        {
+          "t": "reveal",
+          "label": "Earthworm and snake",
+          "text": "Both are very bendy and have no arms or legs. The snake is a reptile. It has a spine and an internal skeleton, so it is a **vertebrate**. The earthworm has no internal skeleton, so it is an **invertebrate**."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Vertebrate or invertebrate?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each animal in the right group.",
+          "columns": [
+            "Vertebrate",
+            "Invertebrate"
+          ],
+          "items": [
+            {
+              "text": "eel",
+              "col": 0
+            },
+            {
+              "text": "snake",
+              "col": 0
+            },
+            {
+              "text": "tortoise",
+              "col": 0
+            },
+            {
+              "text": "human",
+              "col": 0
+            },
+            {
+              "text": "lobster",
+              "col": 1
+            },
+            {
+              "text": "earthworm",
+              "col": 1
+            },
+            {
+              "text": "crab",
+              "col": 1
+            },
+            {
+              "text": "caterpillar",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Groups of vertebrates",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Vertebrates can be divided further into these groups."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Mammals",
+              "sub": "rabbit, rhinoceros, orca, bat"
+            },
+            {
+              "title": "Birds",
+              "sub": "chaffinch, penguin, kingfisher, swan",
+              "emoji": "🐦"
+            },
+            {
+              "title": "Fish",
+              "sub": "tang, shark, eel, salmon",
+              "emoji": "🐟"
+            },
+            {
+              "title": "Amphibians",
+              "sub": "newt, frog, axolotl, toad"
+            },
+            {
+              "title": "Reptiles",
+              "sub": "turtle, crocodile, chameleon, lizard"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which vertebrate group?",
+      "blocks": [
+        {
+          "t": "sort",
+          "q": "Put each animal in its vertebrate group.",
+          "columns": [
+            "Mammal",
+            "Bird",
+            "Fish"
+          ],
+          "items": [
+            {
+              "text": "bat",
+              "col": 0
+            },
+            {
+              "text": "orca",
+              "col": 0
+            },
+            {
+              "text": "penguin",
+              "col": 1
+            },
+            {
+              "text": "kingfisher",
+              "col": 1
+            },
+            {
+              "text": "shark",
+              "col": 2
+            },
+            {
+              "text": "tang",
+              "col": 2
+            }
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Now these ones: amphibian or reptile?",
+          "columns": [
+            "Amphibian",
+            "Reptile"
+          ],
+          "items": [
+            {
+              "text": "axolotl",
+              "col": 0
+            },
+            {
+              "text": "newt",
+              "col": 0
+            },
+            {
+              "text": "turtle",
+              "col": 1
+            },
+            {
+              "text": "chameleon",
+              "col": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Groups of invertebrates",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Invertebrates can be classified into further groups, including these four."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Insects",
+              "sub": "Six legs, a body divided into three segments and a pair of antennae. Beetles, bees, butterflies, ants."
+            },
+            {
+              "title": "Arachnids",
+              "sub": "Eight legs and a body divided into two sections. Spiders, harvestmen, scorpions, ticks."
+            },
+            {
+              "title": "Crustaceans",
+              "sub": "A hard exoskeleton and two pairs of antennae. Crabs, lobsters, shrimp, barnacles."
+            },
+            {
+              "title": "Molluscs",
+              "sub": "A very soft body and hydrostatic skeletons. Some also have shells. Slugs, snails, squid, octopuses."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Which invertebrate group?",
+      "blocks": [
+        {
+          "t": "match",
+          "q": "Match each invertebrate group to what it is like.",
+          "pairs": [
+            {
+              "a": "insects",
+              "b": "six legs and a body divided into three segments"
+            },
+            {
+              "a": "arachnids",
+              "b": "eight legs and a body in two sections"
+            },
+            {
+              "a": "crustaceans",
+              "b": "a hard exoskeleton and two pairs of antennae"
+            },
+            {
+              "a": "molluscs",
+              "b": "a very soft body and hydrostatic skeletons"
+            }
+          ]
+        },
+        {
+          "t": "sort",
+          "q": "Now sort these invertebrates into their groups.",
+          "columns": [
+            "Insect",
+            "Arachnid",
+            "Crustacean",
+            "Mollusc"
+          ],
+          "items": [
+            {
+              "text": "butterfly",
+              "col": 0
+            },
+            {
+              "text": "beetle",
+              "col": 0
+            },
+            {
+              "text": "scorpion",
+              "col": 1
+            },
+            {
+              "text": "harvestman",
+              "col": 1
+            },
+            {
+              "text": "lobster",
+              "col": 2
+            },
+            {
+              "text": "barnacle",
+              "col": 2
+            },
+            {
+              "text": "squid",
+              "col": 3
+            },
+            {
+              "text": "snail",
+              "col": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Classification keys",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use classification keys to help us identify unfamiliar animals. A key has a series of yes / no questions about the observable characteristics of living things. Each question leads you to a new question until you identify the living thing."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Does it have wings? Yes: Does it have feathers? Yes: robin. No: butterfly.",
+            "Does it have wings? No: Does it have a shell? Yes: snail. No: slug."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "There are always just two answers to a question in a key: {yes} or {no}."
+        },
+        {
+          "t": "choice",
+          "q": "Which of these could NOT be a question in a classification key?",
+          "options": [
+            "Does it have wings?",
+            "What colour is it?",
+            "Does it have a shell?"
+          ],
+          "answer": 1,
+          "why": "Questions in a classification key must always be answered with either yes or no. “What colour is it?” has many possible answers."
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Use Alex’s key",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex made a key. Does the animal have wings? If yes: does it have antennae? Yes = red admiral butterfly, no = kingfisher. If no: does it have an exoskeleton? Yes = red ghost crab, no = octopus."
+        },
+        {
+          "t": "choices",
+          "q": "Which animal does the key give for each set of answers?",
+          "items": [
+            {
+              "q": "Wings: yes. Antennae: no.",
+              "options": [
+                "kingfisher",
+                "red admiral butterfly",
+                "octopus"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "Wings: no. Exoskeleton: yes.",
+              "options": [
+                "octopus",
+                "red ghost crab",
+                "kingfisher"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "Wings: no. Exoskeleton: no.",
+              "options": [
+                "red ghost crab",
+                "red admiral butterfly",
+                "octopus"
+              ],
+              "answer": 2
+            },
+            {
+              "q": "Wings: yes. Antennae: yes.",
+              "options": [
+                "red admiral butterfly",
+                "red ghost crab",
+                "kingfisher"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Creating a key",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "We can use what we know about similarities and differences to create a classification key. Sofia found a bee, a spider, a snail, an ant and a slug in the school grounds."
+        },
+        {
+          "t": "text",
+          "text": "First, ask a yes / no question that divides the animals into two groups. Keep asking questions until there is only one animal left at the end of each branch."
+        },
+        {
+          "t": "reveal",
+          "label": "Sofia’s key",
+          "text": "Does it have legs? Yes: bee, spider, ant. No: snail, slug. For the no branch she asks: does it have a shell? Yes: snail. No: slug. For the yes branch she asks: does it have wings? Yes: bee. No: spider, ant, so she asks: is the body divided into two sections? Yes: spider. No: ant."
+        },
+        {
+          "t": "choice",
+          "q": "Sofia wants to split the snail and the slug. Which question works?",
+          "options": [
+            "Does it have a shell?",
+            "How many legs does it have?"
+          ],
+          "answer": 0,
+          "why": "The snail has a shell and the slug does not, and it is a yes / no question."
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What you have learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "Scientists classify animals to make it easier to identify, name and learn about them.",
+            "Animals can be classified by looking at similarities and differences in their observable characteristics.",
+            "Animals can be divided into vertebrates and invertebrates, then grouped again within these categories.",
+            "We can create classification keys for animals by asking a series of yes / no questions about their observable characteristics."
+          ]
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What do we do when we classify animals?",
+      "back": "We sort them into groups."
+    },
+    {
+      "front": "Why do scientists group animals?",
+      "back": "To make it easier to identify, name and learn more about them."
+    },
+    {
+      "front": "What are scientists who specialise in identifying and classifying animals called?",
+      "back": "Taxonomists."
+    },
+    {
+      "front": "What is a vertebrate?",
+      "back": "An animal with an internal skeleton, including a spine (or backbone)."
+    },
+    {
+      "front": "What is an invertebrate?",
+      "back": "An animal that does not have bones, including a spine, on the inside of its body."
+    },
+    {
+      "front": "What is an exoskeleton?",
+      "back": "A hard outer covering that protects the body of some invertebrates. The animal moults it as it grows, and a new, larger one hardens."
+    },
+    {
+      "front": "What is a hydrostatic skeleton?",
+      "back": "A body filled with fluid that supports the body and helps an invertebrate to move.\n\nExamples: a slug and an octopus."
+    },
+    {
+      "front": "Name the five groups of vertebrates in this lesson.",
+      "back": "Mammals, birds, fish, amphibians and reptiles."
+    },
+    {
+      "front": "Name four groups of invertebrates.",
+      "back": "Insects, arachnids, crustaceans and molluscs."
+    },
+    {
+      "front": "What are insects like?",
+      "back": "Six legs, a body divided into three segments and a pair of antennae.\n\nExamples: beetles, bees, butterflies, ants."
+    },
+    {
+      "front": "What are arachnids like?",
+      "back": "Eight legs and a body divided into two sections.\n\nExamples: spiders, harvestmen, scorpions, ticks."
+    },
+    {
+      "front": "What are crustaceans like?",
+      "back": "A hard exoskeleton and two pairs of antennae.\n\nExamples: crabs, lobsters, shrimp, barnacles."
+    },
+    {
+      "front": "What are molluscs like?",
+      "back": "A very soft body and hydrostatic skeletons. Some also have shells.\n\nExamples: slugs, snails, squid, octopuses."
+    },
+    {
+      "front": "What kind of questions are used in a classification key?",
+      "back": "Yes / no questions about observable characteristics. Each question leads to a new question until you identify the living thing."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: How and why we group animals",
+    "instructions": "Answer each question with a word, a number or a short phrase, using what you learned in the lesson.",
+    "questions": [
+      {
+        "prompt": "Animals that have a spine are called what? (one word)",
+        "answer": "vertebrates",
+        "accepted": [
+          "vertebrate"
+        ],
+        "explanation": "A vertebrate is an animal with an internal skeleton, including a spine."
+      },
+      {
+        "prompt": "Is a lobster a vertebrate or an invertebrate?",
+        "answer": "invertebrate",
+        "accepted": [
+          "an invertebrate"
+        ],
+        "explanation": "Its hard covering is an exoskeleton. It has no spine or internal skeleton."
+      },
+      {
+        "prompt": "Is an eel a vertebrate or an invertebrate?",
+        "answer": "vertebrate",
+        "accepted": [
+          "a vertebrate"
+        ],
+        "explanation": "An eel is a fish, so it is a vertebrate with a spine, even though it is very bendy."
+      },
+      {
+        "prompt": "What is the name for the hard outer covering that protects the body of some invertebrates?",
+        "answer": "exoskeleton",
+        "accepted": [
+          "an exoskeleton"
+        ],
+        "explanation": "A hard outer covering on the outside of the body is an exoskeleton."
+      },
+      {
+        "prompt": "What are scientists who specialise in identifying and classifying animals called?",
+        "answer": "taxonomists",
+        "accepted": [
+          "taxonomist"
+        ],
+        "explanation": "Taxonomists identify and classify animals."
+      },
+      {
+        "prompt": "Which group of invertebrates has eight legs and a body divided into two sections?",
+        "answer": "arachnids",
+        "accepted": [
+          "arachnid"
+        ],
+        "explanation": "Arachnids, such as spiders and scorpions, have eight legs and a body in two sections."
+      },
+      {
+        "prompt": "Which group of invertebrates has a very soft body and hydrostatic skeletons, and includes slugs and snails?",
+        "answer": "molluscs",
+        "accepted": [
+          "mollusc",
+          "mollusks",
+          "mollusk"
+        ],
+        "explanation": "Molluscs have a very soft body and hydrostatic skeletons. Some also have shells."
+      },
+      {
+        "prompt": "How many legs does an insect have?",
+        "answer": "6",
+        "accepted": [
+          "six"
+        ],
+        "explanation": "Insects have six legs, a body divided into three segments and a pair of antennae."
+      },
+      {
+        "prompt": "A frog, a newt and an axolotl all belong to which group of vertebrates?",
+        "answer": "amphibians",
+        "accepted": [
+          "amphibian"
+        ],
+        "explanation": "Newts, frogs and axolotls are amphibians."
+      },
+      {
+        "prompt": "Which group of invertebrates has a hard exoskeleton and two pairs of antennae, and includes crabs and lobsters?",
+        "answer": "crustaceans",
+        "accepted": [
+          "crustacean"
+        ],
+        "explanation": "Crustaceans have a hard exoskeleton and two pairs of antennae."
+      }
+    ]
+  }
+}

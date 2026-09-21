@@ -1,0 +1,546 @@
+{
+  "agent": "maths-ks2b",
+  "slides": [
+    {
+      "kind": "intro",
+      "title": "Today’s learning",
+      "blocks": [
+        {
+          "t": "lead",
+          "text": "I can use constant difference to balance equations and find unknowns."
+        },
+        {
+          "t": "text",
+          "text": "In this lesson you will meet Alex and Sofia. They will help you find missing numbers by comparing parts of equations."
+        },
+        {
+          "t": "cards",
+          "items": [
+            {
+              "title": "Balancing equations"
+            },
+            {
+              "title": "Finding {unknowns}"
+            },
+            {
+              "title": "Larger numbers and decimal fractions"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "intro",
+      "title": "Key words",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Tap each word to see what it means."
+        },
+        {
+          "t": "define",
+          "items": [
+            {
+              "term": "minuend",
+              "def": "The minuend is the number being subtracted from."
+            },
+            {
+              "term": "subtrahend",
+              "def": "A subtrahend is a number subtracted from another."
+            },
+            {
+              "term": "difference",
+              "def": "The difference is the result after subtracting one number from another."
+            },
+            {
+              "term": "constant",
+              "def": "A constant is a quantity that has a fixed value that does not change or vary, such as a number."
+            },
+            {
+              "term": "unknown",
+              "def": "An unknown is a quantity that has a set value but it is represented by a symbol or letter. In this lesson, it is often represented by an empty box."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "What is an unknown?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here is 7 − 3 = 4 again. What if we cover the minuend with a box?"
+        },
+        {
+          "t": "chips",
+          "items": [
+            "□ − 3 = 4"
+          ]
+        },
+        {
+          "t": "text",
+          "text": "The box is an {unknown}. It still has a value. You may be able to work out that it is 7."
+        },
+        {
+          "t": "callout",
+          "text": "Sofia is trying to find an unknown minuend in a harder one: ? − 0.45 = 1.01 − 0.51. “This is tricky!” Let’s explore constant difference to help."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Balancing the scales",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Imagine balance scales with 10 on one side and 5 on the other. The side with 10 is heavier."
+        },
+        {
+          "t": "text",
+          "text": "Sofia subtracts 6 from the 10 side: 10 − 6 is now less than 5, so the other side is heavier. She subtracts 1 from the 5 side."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "10 − 6",
+              "add": "= 5 − 1",
+              "result": "both are 4",
+              "note": "Now the scales balance, so we can write an equals sign between the two expressions."
+            }
+          ]
+        },
+        {
+          "t": "reveal",
+          "label": "What do you notice?",
+          "text": "The difference is constant: both expressions have a value of 4. The minuend and subtrahend decreased by the same amount: the minuend went from 10 to 5 (subtract 5) and the subtrahend went from 6 to 1 (subtract 5)."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "A method for unknowns",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "When two subtractions are equal, follow these steps."
+        },
+        {
+          "t": "list",
+          "items": [
+            "Compare the two minuends, or the two subtrahends. Choose the pair where you already know both numbers.",
+            "Work out the adjustment: how much more or less is one than the other?",
+            "Make the same adjustment to the other numbers so the difference stays the same."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Compare the parts first. You do not need to calculate the whole expression."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: 25 − 13 = 32 − ?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Look at the minuends: 25 and 32. The minuend has increased by 7."
+        },
+        {
+          "t": "text",
+          "text": "The difference is the same, so the unknown subtrahend must also be 7 more than 13."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "13",
+              "add": "+ 7",
+              "result": "20",
+              "note": "25 − 13 = 32 − 20. Both sides equal 12."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Swapping sides",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "What about **32 − ? = 25 − 13**? Alex says, “Hang on! These are the same as last time, but they’ve swapped!”"
+        },
+        {
+          "t": "reveal",
+          "label": "So what is the unknown?",
+          "text": "It is still **20**. The two expressions can be swapped to either side of the equals symbol."
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Find the unknown",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Compare the minuends or subtrahends and find the unknown.",
+          "items": [
+            {
+              "q": "48 − 20 = 60 − ?",
+              "options": [
+                "28",
+                "32",
+                "8"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "90 − 35 = 75 − ?",
+              "options": [
+                "15",
+                "20",
+                "50"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "56 − 21 = 40 − ?",
+              "options": [
+                "5",
+                "16",
+                "21"
+              ],
+              "answer": 0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Using the inverse",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Here the unknown is a minuend: **? − 31 = 45 − 20**. Compare the subtrahends. Going from 31 to 20 is a decrease of 11."
+        },
+        {
+          "t": "text",
+          "text": "You could make use of the inverse here by changing the direction and the operation. Going back from 20 to 31, the subtrahend increases by 11, so the unknown minuend will also be 11 more."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "45",
+              "add": "+ 11",
+              "result": "56",
+              "note": "56 − 31 = 25 and 45 − 20 = 25."
+            }
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "If you change the direction of the arrow, you must use the {inverse} operation too."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Worked example: 123 − 41 = 101 − ?",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Compare the minuends: 123 and 101. The minuend has decreased by 22."
+        },
+        {
+          "t": "text",
+          "text": "The difference is the same, so the unknown subtrahend will also be 22 less than 41."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "41",
+              "add": "− 22",
+              "result": "19",
+              "note": "123 − 41 = 82 and 101 − 19 = 82."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "check",
+      "title": "Spot the mistake",
+      "blocks": [
+        {
+          "t": "choice",
+          "q": "Which of these equations is incorrect?",
+          "options": [
+            "80 − 30 = 90 − 40",
+            "75 − 25 = 65 − 15",
+            "60 − 20 = 55 − 10"
+          ],
+          "answer": 2,
+          "why": "60 − 20 = 40 but 55 − 10 = 45. The minuend went down by 5 but the subtrahend went down by 10, so the difference did not stay the same."
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Larger numbers",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Try not to be put off by all the digits. We can reason this out: **? − 291,235 = 334,450 − 301,235**."
+        },
+        {
+          "t": "text",
+          "text": "Compare the subtrahends. From 291,235 to 301,235 is an increase of 10,000. Using the inverse, going back from the second to the first, the minuend decreases by 10,000."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "334,450",
+              "add": "− 10,000",
+              "result": "324,450",
+              "note": "324,450 − 291,235 = 334,450 − 301,235."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "Decimal fractions",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Back to Sofia’s tricky one: **? − 0.45 = 1.01 − 0.51**."
+        },
+        {
+          "t": "text",
+          "text": "The subtrahend in the first expression is 0.06 less (0.45 compared with 0.51), so the unknown minuend will also be 0.06 less than 1.01."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "1.01",
+              "add": "− 0.06",
+              "result": "0.95",
+              "note": "0.95 − 0.45 = 1.01 − 0.51."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "explain",
+      "title": "In context: the cinema",
+      "blocks": [
+        {
+          "t": "text",
+          "text": "Alex has £12.80 and Sofia has £6.50. They each buy a cinema ticket for £5.00. Alex has £7.80 left. How much does Sofia have left?"
+        },
+        {
+          "t": "text",
+          "text": "They spent the same, so we can write equivalent expressions: **£12.80 − £7.80 = £6.50 − ?**"
+        },
+        {
+          "t": "text",
+          "text": "The minuend went from £12.80 to £6.50: that is £6.30 less. So the unknown is £6.30 less than £7.80."
+        },
+        {
+          "t": "formula",
+          "rows": [
+            {
+              "root": "£7.80",
+              "add": "− £6.30",
+              "result": "£1.50",
+              "note": "Sofia has £1.50 left."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "practice",
+      "title": "Big numbers and decimals",
+      "blocks": [
+        {
+          "t": "choices",
+          "q": "Use constant difference to find the unknown.",
+          "items": [
+            {
+              "q": "0.90 − 0.35 = ? − 0.05",
+              "options": [
+                "0.55",
+                "0.60",
+                "0.65"
+              ],
+              "answer": 1
+            },
+            {
+              "q": "578,000 − 320,000 = 528,000 − ?",
+              "options": [
+                "270,000",
+                "370,000",
+                "250,000"
+              ],
+              "answer": 0
+            },
+            {
+              "q": "12.5 − ? = 9.5 − 4",
+              "options": [
+                "1",
+                "7",
+                "10"
+              ],
+              "answer": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "summary",
+      "title": "What we learned",
+      "blocks": [
+        {
+          "t": "list",
+          "items": [
+            "If the minuend and subtrahend are changed by the same amount, the difference stays the same or remains constant.",
+            "Constant difference helps us find unknown minuends or subtrahends in equivalent subtraction expressions.",
+            "Analyse the minuends and subtrahends, work out the adjustment, and sometimes use the inverse."
+          ]
+        },
+        {
+          "t": "callout",
+          "text": "Compare, find the {adjustment}, make the same adjustment."
+        }
+      ]
+    }
+  ],
+  "flashcards": [
+    {
+      "front": "What is an unknown?",
+      "back": "A quantity that has a set value but is represented by a symbol or letter. In this lesson it is often an empty box."
+    },
+    {
+      "front": "What must be true about two expressions on either side of an equals sign?",
+      "back": "They have the same value.\n\n10 − 6 = 5 − 1 (both are 4)"
+    },
+    {
+      "front": "10 − 6 = 5 − 1. What was done to the minuend and the subtrahend?",
+      "back": "Both decreased by 5. The difference stayed constant at 4."
+    },
+    {
+      "front": "What is the first step to find an unknown using constant difference?",
+      "back": "Compare the two minuends, or the two subtrahends, where you already know both numbers."
+    },
+    {
+      "front": "25 − 13 = 32 − ? What is the unknown?",
+      "back": "20. The minuend increased by 7, so the subtrahend also increases by 7."
+    },
+    {
+      "front": "32 − ? = 25 − 13. Does swapping the sides change the unknown?",
+      "back": "No, it is still 20. The expressions can be swapped to either side of the equals symbol."
+    },
+    {
+      "front": "? − 31 = 45 − 20. What is the unknown?",
+      "back": "56. The subtrahend went from 31 to 20 (11 less), so going back the minuend is 11 more: 45 + 11."
+    },
+    {
+      "front": "When you change the direction of the arrow to work backwards, what must you also do?",
+      "back": "Use the inverse operation."
+    },
+    {
+      "front": "123 − 41 = 101 − ? What is the unknown?",
+      "back": "19. The minuend decreased by 22, so the subtrahend decreases by 22: 41 − 22."
+    },
+    {
+      "front": "? − 0.45 = 1.01 − 0.51. What is the unknown?",
+      "back": "0.95. The subtrahend is 0.06 less, so the minuend is 0.06 less: 1.01 − 0.06."
+    },
+    {
+      "front": "? − 291,235 = 334,450 − 301,235. What is the unknown?",
+      "back": "324,450. The subtrahend went up 10,000 from left to right, so going back the minuend is 10,000 less."
+    },
+    {
+      "front": "Complete: constant difference is a useful strategy when trying to find unknown ___ or ___ in equivalent subtraction expressions.",
+      "back": "minuends or subtrahends."
+    }
+  ],
+  "worksheet": {
+    "title": "Worksheet: Use constant difference to balance equations and find unknowns",
+    "instructions": "Use constant difference to find each unknown. Compare the minuends or the subtrahends, then make the same adjustment. Write each answer as a number.",
+    "questions": [
+      {
+        "prompt": "Find the unknown: ? − 45 = 65 − 10",
+        "answer": "100",
+        "explanation": "Compare the subtrahends: 45 is 35 more than 10. So the unknown minuend is 35 more than 65, which is 100. Check: 100 − 45 = 55 = 65 − 10."
+      },
+      {
+        "prompt": "Find the unknown: 75 − 22 = ? − 50",
+        "answer": "103",
+        "explanation": "Compare the subtrahends: 50 is 28 more than 22. So the unknown minuend is 28 more than 75, which is 103."
+      },
+      {
+        "prompt": "Find the unknown: 65 − 26 = 150 − ?",
+        "answer": "111",
+        "explanation": "The minuend went up 85 (65 to 150), so the subtrahend goes up 85: 26 + 85 = 111."
+      },
+      {
+        "prompt": "Find the unknown: 0.84 − ? = 0.32 − 0.04",
+        "answer": "0.56",
+        "explanation": "Compare the minuends: 0.84 is 0.52 more than 0.32. So the unknown subtrahend is 0.52 more than 0.04, which is 0.56."
+      },
+      {
+        "prompt": "Find the unknown: 0.75 − 0.62 = ? − 1.01",
+        "answer": "1.14",
+        "explanation": "The subtrahend went up 0.39 (0.62 to 1.01), so the minuend goes up 0.39: 0.75 + 0.39 = 1.14."
+      },
+      {
+        "prompt": "Find the unknown: ? − 1.5 = 5.04 − 4.2",
+        "answer": "2.34",
+        "explanation": "Compare the subtrahends: 1.5 is 2.7 less than 4.2. So the unknown minuend is 2.7 less than 5.04, which is 2.34."
+      },
+      {
+        "prompt": "Find the unknown: 4.78 − 2.41 = 2.41 − ?",
+        "answer": "0.04",
+        "explanation": "The minuend went down 2.37 (4.78 to 2.41), so the subtrahend goes down 2.37: 2.41 − 2.37 = 0.04."
+      },
+      {
+        "prompt": "Find the unknown: 745,289 − 200,001 = 745,279 − ?",
+        "answer": "199991",
+        "accepted": [
+          "199,991"
+        ],
+        "explanation": "The minuend went down 10, so the subtrahend goes down 10: 200,001 − 10 = 199,991."
+      },
+      {
+        "prompt": "Alex has £11.85 and Sofia has £7.35. They each buy a fridge magnet costing the same. Sofia now has £3.36 left. How much does Alex have left, in pounds?",
+        "answer": "7.86",
+        "accepted": [
+          "£7.86"
+        ],
+        "explanation": "Alex started with £4.50 more than Sofia, so he has £4.50 more left: 3.36 + 4.50 = 7.86. (£7.35 − £3.36 = £11.85 − £7.86.)"
+      },
+      {
+        "prompt": "Zed has £15.40 and Amy has £9.15. They each spend the same amount on a snack. Amy has £4.25 left. How much does Zed have left, in pounds?",
+        "answer": "10.5",
+        "accepted": [
+          "10.50",
+          "£10.50"
+        ],
+        "explanation": "They spent the same, so the difference stays £6.25: 4.25 + 6.25 = 10.50. (9.15 − 4.25 = 15.40 − 10.50.)"
+      }
+    ]
+  }
+}
