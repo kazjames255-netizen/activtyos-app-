@@ -7,6 +7,7 @@ import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseS
 import { checkCode, normaliseCode, type DiscountCodeDoc } from "../lib/discountCodes";
 import { emailNewMessage } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
+import { ukToday } from "../lib/ukDate";
 
 // Discount codes (Marketing) — operators create/manage promo codes; a parent
 // validates one against their basket before checkout (the actual apply happens
@@ -346,7 +347,7 @@ discounts.post("/validate", async (req, res) => {
     const prior = await db.collection("bookings").where("email", "==", email.toLowerCase()).where("tenantId", "==", parsed.data.tenantId).limit(1).get();
     if (!prior.empty) { res.json({ valid: false, reason: "This code is for new customers only" }); return; }
   }
-  const check = checkCode(data, parsed.data.subtotal, new Date().toISOString().slice(0, 10), { email, listingId: parsed.data.listingId, attendees: parsed.data.attendees });
+  const check = checkCode(data, parsed.data.subtotal, ukToday(), { email, listingId: parsed.data.listingId, attendees: parsed.data.attendees });
   if (!check.ok) { res.json({ valid: false, reason: check.reason }); return; }
   res.json({ valid: true, code: normaliseCode(parsed.data.code), off: check.off, exclusive: !!data.exclusive });
 });

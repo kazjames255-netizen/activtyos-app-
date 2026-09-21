@@ -169,7 +169,7 @@ memberships.post("/join", async (req, res) => {
   // successful Stripe charge (call deliverMembershipBenefit from the webhook).
   if (tier.benefitType === "percent" || creditNow) await deliverMembershipBenefit(tenantId, email, tier);
 
-  const renewTxt = renews.toLocaleDateString("en-GB");
+  const renewTxt = renews.toLocaleDateString("en-GB", { timeZone: "Europe/London" });
   void notify({
     tenantId, to: { kind: "parent", email }, category: "billing", bellOnly: true,
     title: `You’re a ${tier.name} member 🎉`,

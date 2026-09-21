@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, ukTodayPlus } from "../lib/ukDate";
 
 // Compliance (Documents & Compliance) — staff certifications and their expiry:
 // DBS, safeguarding, paediatric first aid, insurance… The whole point is the
@@ -49,7 +49,7 @@ compliance.get("/", async (req, res) => {
   const tenantId = readScope(req, res);
   if (!tenantId) return;
   const today = ukToday();
-  const soon = new Date(Date.now() + EXPIRING_DAYS * 86_400_000).toISOString().slice(0, 10);
+  const soon = ukTodayPlus(EXPIRING_DAYS);
   const snap = await col.where("tenantId", "==", tenantId).get();
   let items = snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { expiry?: string; staffName?: string })

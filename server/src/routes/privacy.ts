@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../firebase";
 import { notify } from "../lib/notify";
+import { ukTodayPlus } from "../lib/ukDate";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -197,6 +198,9 @@ privacy.post("/delete-request", async (req, res) => {
   if (!existing.empty) { res.json({ ok: true, alreadyRequested: true }); return; }
   const reason = typeof (req.body as { reason?: unknown })?.reason === "string" ? (req.body as { reason: string }).reason.slice(0, 1000) : null;
   const requestedAt = new Date().toISOString();
+  // UK GDPR: one month to respond, from receipt. Counted in UK days — a UTC
+  // day is yesterday's until 1am BST, which would shorten the clock by a day.
+  const dueBy = ukTodayPlus(30);
   const reqRef = await db.collection("deletionRequests").add({
     uid,
     email: req.user?.email ?? null,
@@ -204,8 +208,7 @@ privacy.post("/delete-request", async (req, res) => {
     reason,
     status: "pending",
     requestedAt,
-    // UK GDPR: one month to respond, from receipt.
-    dueBy: new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10),
+    dueBy,
   });
   res.status(201).json({ ok: true });
 
@@ -228,7 +231,7 @@ privacy.post("/delete-request", async (req, res) => {
         to: { kind: "tenant" },
         category: "message",
         title: `Data deletion request from ${req.user?.name ?? email}`,
-        body: `${email} has asked for their personal data to be deleted. You must respond within one month (by ${new Date(Date.now() + 30 * 86_400_000).toLocaleDateString("en-GB")}). Safeguarding and legally required records are kept — decide what can go, and reply to the family.`,
+        body: `${email} has asked for their personal data to be deleted. You must respond within one month (by ${new Date(`${dueBy}T00:00:00Z`).toLocaleDateString("en-GB", { timeZone: "UTC" })}). Safeguarding and legally required records are kept — decide what can go, and reply to the family.`,
         href: "/company/customers",
         ref: reqRef.id,
       });

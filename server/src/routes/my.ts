@@ -53,7 +53,7 @@ import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../.
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, ukTodayPlus } from "../lib/ukDate";
 import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
@@ -256,10 +256,12 @@ function ageFromDob(dob?: string): number | undefined {
   if (!dob) return undefined;
   const d = new Date(dob);
   if (isNaN(d.getTime())) return undefined;
-  const now = new Date();
-  let a = now.getFullYear() - d.getFullYear();
-  const m = now.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  // Both sides read as UK calendar dates: a birthday turns on the UK day it
+  // falls on, not on a UTC day that is still yesterday's until 1am BST.
+  const [by, bm, bd] = ukToday(d).split("-").map(Number);
+  const [ny, nm, nd] = ukToday().split("-").map(Number);
+  let a = ny - by;
+  if (nm < bm || (nm === bm && nd < bd)) a--;
   return a >= 0 && a <= 25 ? a : undefined;
 }
 
@@ -782,7 +784,7 @@ my.post("/bookings", async (req, res) => {
   }
   if (!onBehalf && listing.opensAt && Date.now() < new Date(listing.opensAt).getTime()) {
     res.status(409).json({
-      error: `Booking hasn't opened yet — it opens ${new Date(listing.opensAt).toLocaleString("en-GB")}`,
+      error: `Booking hasn't opened yet — it opens ${new Date(listing.opensAt).toLocaleString("en-GB", { timeZone: "Europe/London" })}`,
       opensAt: listing.opensAt,
     });
     return;
@@ -1217,6 +1219,9 @@ my.post("/bookings", async (req, res) => {
     listing.discounts ?? [],
     [...grouped.values()].map((g) => ({ name: g.pass, price: g.base, days: g.days, heads: g.heads })),
     attendees,
+    // The UK day, not the default UTC one: an "early bird, before <date>" rule
+    // that expired yesterday would otherwise still apply until 1am BST.
+    ukToday(),
   );
   const passGross = round2(priced.reduce((s, p) => s + p.base, 0));
   const discountOff = Math.max(0, round2(passGross - discounted));
@@ -2251,7 +2256,7 @@ async function partialCancel(
       (b.refundLog = b.refundLog ?? []).push({
         label: `${label} released — wallet credit`,
         amount: value,
-        on: new Date().toISOString().slice(0, 10),
+        on: ukToday(),
         by: "Booker",
         source: "Wallet",
       });
@@ -2261,7 +2266,7 @@ async function partialCancel(
       // A request: the money only moves when the provider approves it, exactly
       // like a whole-booking cancel.
       b.cancel = {
-        on: new Date().toISOString().slice(0, 10),
+        on: ukToday(),
         by: "Booker",
         refund: value > 0 ? "pending" : "none",
         amount: value,
@@ -2494,7 +2499,7 @@ my.get("/trips", async (req, res) => {
     ),
   );
   const seen = new Set<string>();
-  const cutoff = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const cutoff = ukTodayPlus(-30);
   const rows: Record<string, unknown>[] = [];
   const tenantIds = new Set<string>();
   for (const snap of snaps) {

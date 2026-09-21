@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { ukToday } from "../lib/ukDate";
 import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
@@ -697,7 +698,7 @@ bookings.post("/:ref/actions", async (req, res) => {
       (updated.refundLog = updated.refundLog ?? []).push({
         label: refundLabel,
         amount: moved.owed,
-        on: new Date().toISOString().slice(0, 10),
+        on: ukToday(),
         by: "Provider",
         source: moved.via === "wallet" ? "Wallet" : moved.via === "offline" ? "Offline" : "Card",
       });

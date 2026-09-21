@@ -1,6 +1,7 @@
 import { db } from "../firebase";
 import { esc } from "./html";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
+import { addDays } from "./ukDate";
 import { notify, parentEmailForChild, channelFor, notifyTenantMember} from "./notify";
 import { expireOffers } from "./waitlist";
 import { stripe } from "./stripe";
@@ -273,12 +274,6 @@ async function tripConsentChase(): Promise<void> {
 // reminders, review requests, and the day-of register alerts. Every one
 // checks the tenant's flag first and delivers exactly once via fireOnce.
 
-const addDaysIso = (iso: string, n: number): string => {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-
 /** UK wall-clock instants compared on one axis: dates parse as UTC midnight
  *  on both sides, so the timezone offset cancels out of every comparison. */
 const atAbs = (date: string, minutes: number): number => Date.parse(`${date}T00:00:00Z`) + minutes * 60_000;
@@ -353,7 +348,7 @@ const kidNames = (b: SweepBooking): string =>
 async function sessionReminders(): Promise<void> {
   const { date: today, minutes } = ukNow();
   const nowAbs = atAbs(today, minutes);
-  const horizon = addDaysIso(today, 3); // timings top out at 72h
+  const horizon = addDays(today, 3); // timings top out at 72h
   const blocks = await upcomingBlocks(today);
   if (!blocks.length) return;
   const libFor = libraryLoader();
@@ -423,7 +418,7 @@ async function sessionReminders(): Promise<void> {
 async function paymentDueReminders(): Promise<void> {
   const { date: today, minutes } = ukNow();
   const nowAbs = atAbs(today, minutes);
-  const horizon = addDaysIso(today, 4);
+  const horizon = addDays(today, 4);
   const libFor = libraryLoader();
   const wants = async (tenantId: string) => {
     const prefs = autoEmailsOf(await libFor(tenantId));
