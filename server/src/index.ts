@@ -91,6 +91,7 @@ import { enforceSubscription } from "./middleware/subscription";
 import { enforceAccess } from "./middleware/access";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
+import { tfc, tfcCallback } from "./routes/tfc";
 
 const app = express();
 // Behind the host's proxy (Railway/Vercel: one hop) req.ip must be the real
@@ -193,6 +194,13 @@ app.use("/api/demo-slots", demoSlotsPublic);
 // yet, so this must sit above requireAuth. Name + rough location only.
 app.use("/api/providers", rateLimit("providers", 120), providersPublic);
 
+// HMRC's OAuth redirect after a parent signs in at GOV.UK to link their
+// Tax-Free Childcare account. It arrives as a plain browser navigation with
+// no Authorization header, so it must sit above requireAuth; the unguessable,
+// single-use `state` is what ties it to the parent who started it
+// (routes/tfc.ts).
+app.use("/api/tfc/callback", rateLimit("tfc-callback", 30), tfcCallback);
+
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
 // its cancel date) gets 402 on everything except the endpoints that let them
@@ -270,6 +278,10 @@ app.use("/api/messages", messages);
 app.use("/api/geo", geo);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
+// Tax-Free Childcare (parent side) — mounted before /api/my so its own
+// routes win. Parent-only; falls back to the manual reference when HMRC
+// isn't configured (routes/tfc.ts).
+app.use("/api/my/tfc", tfc);
 app.use("/api/my/feedback", feedback);
 app.use("/api/my/files", childFiles);
 app.use("/api/my/referral", referral);

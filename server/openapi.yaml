@@ -753,6 +753,12 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: reconciliation
     description: Outstanding money matched to bookings (vouchers / TFC / bank / cash)
+  - name: tfc
+    description: >
+      Tax-Free Childcare — the parent links their HMRC account, reads its
+      balance and pays the provider from it (HMRC Payments API v1.2). Entirely
+      env-gated: with no HMRC credentials every route says "not connected" and
+      the parent falls back to paying inside HMRC and giving us the reference.
   - name: expenses
     description: The provider's outgoings (operators only)
   - name: purchasing
@@ -1335,6 +1341,181 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /api/my/tfc/config:
+    get:
+      tags: [tfc]
+      summary: Is the HMRC integration configured on this deployment?
+      description: >
+        `configured: false` means no HMRC credentials are set, and the parent
+        flow stays exactly as it was before the integration: a simulated link
+        in the browser and a manually typed payment reference. The web app
+        also has its own build-time switch (`NEXT_PUBLIC_HMRC_TFC`); this
+        route is the authority and overrides it.
+      responses:
+        "200":
+          description: Whether HMRC is wired up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { configured: { type: boolean } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/my/tfc/link/start:
+    post:
+      tags: [tfc]
+      summary: Begin linking one child's Tax-Free Childcare account
+      description: >
+        Returns the GOV.UK authorisation URL to open (plus the `state` to poll
+        with). A family that has linked before skips the hand-off entirely and
+        comes back `linked: true` immediately. The child must belong to the
+        caller. HMRC needs the parent's own 12-character TFC reference (4
+        letters + 5 digits + `TFC`) and the child's date of birth; without
+        both, the answer is `failure: "connection-failed"` and the parent pays
+        from HMRC manually.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                childName: { type: string, description: "Used when no childId is known; resolved among the caller's own children" }
+                reference: { type: string, example: READ97040TFC }
+      responses:
+        "200":
+          description: Either a hand-off to start, or a link that is already done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured: { type: boolean }
+                  url: { type: string, description: "GOV.UK authorise URL — open it, then poll /link/status" }
+                  state: { type: string }
+                  linked: { type: boolean }
+                  reference: { type: string }
+                  childFullName: { type: string, description: "The child's name as HMRC holds it — the confirmation the link worked" }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/my/tfc/link/status:
+    get:
+      tags: [tfc]
+      summary: Has the GOV.UK hand-off finished?
+      parameters:
+        - in: query
+          name: state
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Pending, linked, or failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  done: { type: boolean }
+                  linked: { type: boolean }
+                  reference: { type: string, nullable: true }
+                  childFullName: { type: string, nullable: true }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/my/tfc/balance:
+    post:
+      tags: [tfc]
+      summary: The live TFC balance for one linked child
+      description: >
+        `amount` is HMRC's `cleared_funds` in pounds — what may actually be
+        spent today (a payment may not exceed it). Anything other than a clean
+        read answers `ok: false`, and the checkout shows no balance line at all
+        rather than a figure that isn't the family's.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference]
+              properties: { reference: { type: string, example: READ97040TFC } }
+      responses:
+        "200":
+          description: The balance, or the failure that stopped it
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  amount: { type: number, description: "Cleared funds, in pounds" }
+                  status: { type: string, enum: [ACTIVE, INACTIVE] }
+                  totalBalance: { type: number }
+                  paidInByYou: { type: number }
+                  governmentTopUp: { type: number }
+                  topUpAllowance: { type: number }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/my/tfc/pay:
+    post:
+      tags: [tfc]
+      summary: Ask HMRC to pay the provider from the child's TFC account
+      description: >
+        The provider identity HMRC pays (`ccp_reg_reference` / `ccp_postcode`)
+        comes from the tenant's own `settings.childcare`, never from the
+        browser. Every attempt is recorded. Never a 5xx for a documented
+        failure — the failure comes back in the body so the checkout can show
+        the matching screen, and every one of them falls back to paying inside
+        HMRC and giving us the reference.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference, amount]
+              properties:
+                reference: { type: string, example: READ97040TFC }
+                amount: { type: number, description: "Pounds; converted to whole pence on the wire" }
+                tenantId: { type: string }
+      responses:
+        "200":
+          description: The payment request's outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  paymentReference: { type: string }
+                  estimatedPaymentDate: { type: string, format: date }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/tfc/callback:
+    get:
+      tags: [tfc]
+      summary: HMRC's OAuth redirect after the parent signs in at GOV.UK
+      description: >
+        PUBLIC — it is a browser navigation from HMRC with no Authorization
+        header. The unguessable, single-use, 15-minute `state` is what ties it
+        to the parent and child who started the hand-off. Responds with a small
+        HTML page that tells the opener and closes itself.
+      security: []
+      parameters:
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: state, required: true, schema: { type: string } }
+        - { in: query, name: error, schema: { type: string }, description: "OAuth error name when the parent declined" }
+      responses:
+        "200": { description: An HTML page — linked, or the reason it wasn't }
+        "400": { description: The state is unknown, used or expired (HTML) }
+        "503": { description: HMRC isn't configured on this deployment (HTML) }
+
   /api/my/children:
     get:
       tags: [my]
@@ -1788,8 +1969,63 @@ paths:
       summary: Outstanding money + a by-method summary
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
-        "200": { description: "{items[], summary}" }
+        "200": { description: "{items[], summary}. Each item also carries the childcare fields: `childcareRoute` (\"Tax-Free Childcare\" | \"Childcare vouchers\" | null), `childcare` (the booking's childcare block), `bankMatched`, `referenceProblem`; `summary.childcare` is the unfiltered roll-up." }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/reconciliation/childcare:
+    get:
+      tags: [reconciliation]
+      summary: Childcare tick-off table + analytics over a date range (docs/tfc-build-spec.md §B3/§B4)
+      description: >
+        Manager/owner only; a franchise sees only its own bookings. Returns the
+        provider identity a parent must add in their HMRC account
+        (`settings` = settings.childcare, blanks filled from providerName /
+        voucherProviders), the tick-off `rows` in the spec's column order, the
+        gross-bookings `series` for the line chart, `byScheme`, and `summary`.
+        The summary keeps the two axes apart: `confirmed`/`unconfirmed` is the
+        BOOKER's promise, `reconciled`/`unreconciled` is OUR bank match.
+        A junk or missing reference is flagged (`referenceProblem`) and never
+        filters a row out.
+      parameters:
+        - { name: from, in: query, required: false, description: "Inclusive ISO day, on the booking's date", schema: { type: string } }
+        - { name: to, in: query, required: false, schema: { type: string } }
+        - { name: route, in: query, required: false, schema: { type: string, enum: ["Tax-Free Childcare", "Childcare vouchers"] } }
+        - { name: scheme, in: query, required: false, description: One voucher company, schema: { type: string } }
+        - { name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }
+      responses:
+        "200": { description: "{range, settings, settingsComplete, rows[], series[], byScheme, summary}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/reconciliation/{ref}/bank-match:
+    post:
+      tags: [reconciliation]
+      summary: Tick a childcare booking off against the bank statement
+      description: >
+        The manual tick from the spec's last column. NOT the same as
+        POST /api/bookings/{ref}/reconcile — that one says "the money is in"
+        and settles the booking (Paid, family emailed); this one records only
+        that an operator found the line on their statement. It moves no money,
+        sends nothing to the family, and is reversible with `matched: false`.
+        Matching keys on nothing: the parent's own reference may be junk, so
+        an optional `statementRef` is stored as a note rather than used to
+        match. Writes `childcare.reconciledAt` + `childcare.reconciledBy` and
+        appends an attributed line to `reconNotes`.
+      parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                matched: { type: boolean, default: true }
+                statementRef: { type: string, description: The reference on YOUR bank line (optional, never used to match) }
+                note: { type: string }
+      responses:
+        "200": { description: "{ref, childcare, bankMatched, reconNotes}" }
+        "400": { description: Not a childcare booking }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/bookings/{ref}/record-payment:
     post:
@@ -4199,6 +4435,17 @@ components:
     Role:
       type: string
       enum: [platform, company, franchise, freelancer, staff, parent]
+
+    TfcFailure:
+      type: string
+      description: >
+        The five Tax-Free Childcare failure states the checkout has a designed
+        screen for (features/listings/tfc.ts). HMRC's documented error codes
+        map onto these in server/src/lib/tfc.ts: E0033 → insufficient-funds,
+        E0027 → provider-not-added, E0030 → not-connected, ETFC2/E0401/401 →
+        connection-expired, everything else → connection-failed. All five end
+        at the same manual fallback.
+      enum: [not-connected, insufficient-funds, provider-not-added, connection-failed, connection-expired]
 
     Error:
       type: object
