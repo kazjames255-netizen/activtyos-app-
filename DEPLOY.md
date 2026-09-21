@@ -87,7 +87,7 @@ and start only the server, so you don't set build/start commands by hand.
 
    The four `NEXT_PUBLIC_FIREBASE_*` values (sign-in won't work without them)
    and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (no card form mounts without it)
-   are needed too — see section 6.8.
+   are needed too — see section 6.9.
 
 3. Add the custom domain `app.activityos.uk` (Vercel gives you the DNS record to
    add in Namecheap).
@@ -219,7 +219,48 @@ Resolution order is: emulator → `FIREBASE_SERVICE_ACCOUNT` → `GOOGLE_APPLICA
 > **Not read by any code:** `OS_API_SECRET` appears in some local `server/.env`
 > files. Nothing reads it — it is a leftover and can be deleted.
 
-### 6.8 Web app (Next.js) — `.env.local` / Vercel
+### 6.8 API — HMRC Tax-Free Childcare
+
+The parent journey (link an HMRC account → read its balance → pay the provider
+from it) against HMRC's **Tax-Free Childcare Payments API v1.2**. Off by
+default, and off is a complete, working state: the checkout takes the parent's
+payment reference by hand and the provider matches it on their bank statement,
+which is what HMRC's own flow falls back to anyway.
+
+**The four required vars come from two different places, in this order:**
+
+1. **HMRC Developer Hub** (`developer.service.hmrc.gov.uk`) — create an
+   application, subscribe it to *Tax-Free Childcare Payments* v1.2, register
+   the redirect URI. This gives the **client id / secret** and sandbox access.
+   The sandbox is enough to test everything except real money.
+2. **NS&I / HMRC**, after approval as an **External Payment Provider (EPP)**
+   and sign-up on the TFC Portal — they issue the **two EPP identifiers**. In
+   the sandbox any 11-digit customer id and any alphanumeric reference (≤20
+   chars) is accepted, so testing needn't wait for the real ones.
+
+| Var | What it's for | Required? | If unset |
+|---|---|---|---|
+| `HMRC_TFC_CLIENT_ID` | OAuth client id of the Developer Hub application (user-restricted, scope `tax-free-childcare-payments`). | Only for live TFC | The whole integration is off: `GET /api/my/tfc/config` says `configured: false`, every TFC route answers `not-connected`, and the browser keeps its simulated link + manual reference. |
+| `HMRC_TFC_CLIENT_SECRET` | The matching secret; used only in the server-to-server token exchange and refresh. | Only for live TFC | As above. |
+| `HMRC_TFC_EPP_UNIQUE_CUSTOMER_ID` | `epp_unique_customer_id` — NS&I-issued, numeric, starts with `1`. Identifies **us** as the payment provider on every call. | Only for live TFC | As above. |
+| `HMRC_TFC_EPP_REG_REFERENCE` | `epp_reg_reference` — HMRC-issued, `HMRC` + 6 digits + `A`. | Only for live TFC | As above. |
+| `HMRC_TFC_REDIRECT_URI` | Where GOV.UK sends the parent back. **Must match the Developer Hub application exactly**, and must be this API's own `/api/tfc/callback` (the route is public by necessity — it's a browser redirect; the unguessable single-use `state` is the proof). | Optional | `<API_URL>/api/tfc/callback`. If `API_URL` is wrong, the hand-off returns to the wrong host and never completes. |
+| `HMRC_TFC_BASE_URL` | Which HMRC to talk to: `https://test-api.service.hmrc.gov.uk` (sandbox) or `https://api.service.hmrc.gov.uk` (production). Also where the authorise and token endpoints are derived from. | Optional | **Sandbox.** Going live is a deliberate edit — real family money never moves by accident. |
+
+> **The provider's own identity is not an env var.** `ccp_reg_reference` and
+> `ccp_postcode` (the regulator registration number and the postcode registered
+> with it) are per tenant, from Setup → `settings.childcare`. A tenant that
+> hasn't filled them in cannot take a TFC payment: the API declines it as
+> `not-connected` and logs which tenant, rather than sending HMRC a payment
+> request with a provider it can't identify.
+
+> **Tokens.** A successful link stores an HMRC access + refresh token per child
+> in Firestore (`tfcLinks`). A refresh token is a long-lived key to a family's
+> TFC account and there is no field-level encryption in this codebase yet —
+> see the note at the top of `server/src/routes/tfc.ts` for exactly what is
+> owed before this runs with production credentials.
+
+### 6.9 Web app (Next.js) — `.env.local` / Vercel
 
 All are inlined into the client bundle at **build** time; changing one needs a redeploy.
 
@@ -231,9 +272,10 @@ All are inlined into the client bundle at **build** time; changing one needs a r
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | As above. | **Yes** | As above. |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | As above. | **Yes** | As above. |
 | `NEXT_PUBLIC_FIREBASE_EMULATOR` | `1` = point the web SDK at the local Auth emulator on `127.0.0.1:9099`. | Optional | Real Firebase Auth. |
+| `NEXT_PUBLIC_HMRC_TFC` | `1` = the checkout's Tax-Free Childcare step uses the real GOV.UK hand-off instead of its simulated link. Set it only alongside the API's `HMRC_TFC_*` credentials (§6.8) — the API is the authority and tells the browser to fall back when it isn't configured. | Optional | No HMRC call is made from the browser at all: a simulated link, an example balance (labelled as one) and a payment reference typed by hand. |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Publishable key for Stripe Elements: the parent pay modal, the invoice pay page and the subscription-billing gate. Must be from the same Stripe account as `STRIPE_SECRET_KEY`. | **Yes** (for any payments) | The card forms don't mount — the pay modal shows its "payments aren't configured" state and the subscription gate cannot collect a card. |
 
-### 6.9 Read only by scripts and the test harness
+### 6.10 Read only by scripts and the test harness
 
 Not needed to run or deploy the app.
 
