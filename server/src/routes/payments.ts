@@ -6,6 +6,7 @@ import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
 import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { bookingDocId } from "./bookings";
+import { settlePaymentRecord } from "../lib/settlePayment";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Payments — Stripe Connect (build item 7).
@@ -393,37 +394,13 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
     res.json({ status: intent.status, paid: false });
     return;
   }
-  // Meal-order payment — flip those orders to Paid.
+  // One shared settle path with the Stripe webhook — idempotent, so the
+  // browser callback and a webhook delivery for the same payment are safe
+  // in either order (backlog b7).
+  await settlePaymentRecord(snap.id, { auto: false, by: req.user?.name ?? email ?? "payer" });
   if (rec.mealOrderIds?.length) {
-    if (rec.status !== "succeeded") {
-      const batch = db.batch();
-      for (const id of rec.mealOrderIds) {
-        const oSnap = await db.collection("mealOrders").doc(id).get();
-        if (!oSnap.exists) continue;
-        batch.set(oSnap.ref, { pay: "Paid", amountPaid: oSnap.data()!.total ?? 0, paidAt: new Date().toISOString(), paymentIntentId: rec.paymentIntentId }, { merge: true });
-      }
-      batch.update(snap.ref, { status: "succeeded", paidAt: new Date().toISOString() });
-      await batch.commit();
-    }
     res.json({ status: "succeeded", paid: true });
     return;
-  }
-  if (rec.status !== "succeeded") {
-    const batch = db.batch();
-    for (const bookingRef of rec.refs ?? []) {
-      const bSnap = await db.collection("bookings").doc(bookingDocId(rec.tenantId, bookingRef)).get();
-      if (!bSnap.exists) continue;
-      const b = fromDoc(bSnap.data() as BookingDoc);
-      b.pay = "Paid";
-      // Record what was taken, so a later part-refund or cancel works from
-      // real money rather than inferring it from the status word.
-      b.amountPaid = b.amount;
-      b.paymentIntentId = rec.paymentIntentId;
-      b.stripeAccount = rec.stripeAccount;
-      batch.set(bSnap.ref, toDoc(b));
-    }
-    batch.update(snap.ref, { status: "succeeded", paidAt: new Date().toISOString() });
-    await batch.commit();
   }
   res.json({ status: "succeeded", paid: true, refs: rec.refs ?? [] });
 });

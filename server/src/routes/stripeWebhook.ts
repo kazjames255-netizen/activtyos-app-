@@ -2,14 +2,27 @@ import { Router, raw } from "express";
 import type Stripe from "stripe";
 import { stripe } from "../lib/stripe";
 import { markPastDue, notifyBilling, syncFromStripe, tenantForCustomer } from "../lib/billing";
+import { markCardFailed, paymentForIntent, settleInvoicePayment, settlePaymentRecord } from "../lib/settlePayment";
 import { clearSubscriptionCache } from "../middleware/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Stripe Billing webhook — keeps tenants' subscription records in lock-step
-// with Stripe: trial → charged → active, payment failed → past_due, cancel
-// at period end → canceled. Mounted BEFORE express.json (signature
-// verification needs the raw body). The subscription-sync sweep backstops
-// this for dev (no public URL) and missed deliveries.
+// Stripe webhook — two jobs.
+//
+// 1. BILLING (platform account): keeps tenants' subscription records in
+//    lock-step with Stripe — trial → charged → active, payment failed →
+//    past_due, cancel at period end → canceled.
+// 2. CONNECT (providers' connected accounts): settles parents' card payments
+//    server-side. Direct charges live on the provider's account, so these
+//    events arrive with `event.account` set — the endpoint must have "listen
+//    to events on connected accounts" enabled in the Stripe dashboard.
+//    Without this, a payment was only recorded if the payer's browser came
+//    back from the card confirmation (backlog b7): close the tab at the wrong
+//    moment and the money was taken with nothing marked paid.
+//
+// Mounted BEFORE express.json (signature verification needs the raw body).
+// The subscription-sync sweep backstops billing for dev (no public URL) and
+// missed deliveries; the Connect half has no such backstop, so the endpoint
+// must be reachable in production.
 //
 // Local setup: stripe listen --forward-to localhost:4000/api/stripe/webhook
 // and put the printed whsec_… in server/.env as STRIPE_WEBHOOK_SECRET.
@@ -21,13 +34,20 @@ function tenantOf(obj: { metadata?: Record<string, string> | null }): string | n
 }
 
 stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!stripe || !secret) { res.status(503).json({ error: "Webhook not configured" }); return; }
+  // One endpoint may carry both sets of events. If Connect events are
+  // configured as their OWN endpoint in Stripe they get their own secret, so
+  // try both before rejecting.
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter(Boolean) as string[];
+  if (!stripe || !secrets.length) { res.status(503).json({ error: "Webhook not configured" }); return; }
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"] as string, secret);
-  } catch {
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"] as string, secret);
+      break;
+    } catch { /* try the next secret */ }
+  }
+  if (!event) {
     res.status(400).json({ error: "Bad signature" });
     return;
   }
@@ -42,6 +62,16 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           const before = event.data.previous_attributes as { status?: string } | undefined;
           const status = await syncFromStripe(tenantId, s);
           clearSubscriptionCache(tenantId);
+          // Every retry failed and Stripe is set to "mark unpaid": the tenant
+          // is locked but RECOVERABLE — updating the card settles the open
+          // invoice straight away (lib/billing.ts settleOpenInvoice).
+          if (status === "unpaid" && before?.status !== "unpaid") {
+            await notifyBilling(
+              tenantId,
+              "Your ActivityOS account is paused",
+              "Every retry on your card has failed, so saving is paused — registers, incidents, first aid and medication still work. Update your card in Money → Subscription and we'll settle the outstanding invoice straight away.",
+            );
+          }
           if (status === "canceled" && before?.status !== "canceled") {
             await notifyBilling(tenantId, "Your ActivityOS subscription has ended", "Reactivate any time from Money → Subscription — your data is all still here.");
           }
@@ -87,6 +117,28 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
             "We couldn't charge your card. Update it in Money → Subscription within 14 days to keep full access — after that ActivityOS goes read-only (registers, incidents, first aid and medication keep working).",
           );
         }
+        break;
+      }
+      // ── Connect: a parent's card payment on a provider's account ────────
+      case "payment_intent.succeeded": {
+        const pi = event.data.object;
+        const found = await paymentForIntent(pi.id);
+        // Not one of ours (a charge made outside ActivityOS) — nothing to do.
+        if (!found) break;
+        const { id, rec } = found;
+        // Settled without the payer's browser: stamped auto, so Reconciliation
+        // reads "Auto-reconciled" rather than naming a person (backlog cc5).
+        const by = { auto: true, by: "Stripe" };
+        const result = rec.invoiceId
+          ? await settleInvoicePayment(id, rec.invoiceId, pi.id, by)
+          : await settlePaymentRecord(id, by);
+        if (result === "settled") console.log(`[stripe-webhook] settled payment ${id} (${pi.id}) from the webhook — the payer's browser never confirmed`);
+        break;
+      }
+      case "payment_intent.payment_failed": {
+        // The `cardFailed` banner had nothing to set it: a failure the payer's
+        // browser never reported was invisible to the provider.
+        await markCardFailed(event.data.object.id, true);
         break;
       }
       default:
