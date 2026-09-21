@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
 import { forgetSettings } from "../middleware/access";
 import { geocodeAddress } from "./geo";
+import { normaliseChildcareSettings } from "../lib/childcare";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
 
@@ -111,6 +112,26 @@ library.put("/", async (req, res) => {
     else if (req.user?.uid) name = String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim();
     if (name) doc.settings = { ...nextS, providerName: name };
   }
+  // `settings.childcare` is the provider identity a parent types into their
+  // HMRC Tax-Free Childcare account (docs/tfc-build-spec.md §B1). It has to
+  // match what HMRC holds or the payment fails with "provider not added to
+  // your HMRC account" — so it is the one part of this bag that is stored
+  // canonically rather than exactly as sent: postcode upper-cased and spaced,
+  // registration number stripped of spaces, schemes trimmed and de-duped.
+  // Everything else in `settings` remains operator content with no behaviour.
+  if ("settings" in body) {
+    const s = (doc.settings ?? {}) as Record<string, unknown>;
+    if ("childcare" in s) {
+      try {
+        const cc = normaliseChildcareSettings(s.childcare);
+        const { childcare: _drop, ...rest } = s;
+        doc.settings = cc ? { ...rest, childcare: cc } : rest;
+      } catch (e) {
+        res.status(400).json({ error: (e as Error).message });
+        return;
+      }
+    }
+  }
   const size = JSON.stringify(doc).length;
   if (size > MAX_BYTES) {
     res.status(413).json({
@@ -210,6 +231,14 @@ const PUBLIC_SETTINGS_KEYS = [
   "partialAllowWallet",
   "partialAllowChangeDate",
   "voucherProviders",
+  // The provider identity a parent searches for inside their HMRC Tax-Free
+  // Childcare account — setting name, registration number, postcode. It is
+  // published ON PURPOSE: the parent cannot pay us until they have added us,
+  // and the checkout's TFC panel already reads `settings.childcare` to show
+  // them exactly what to type. Nothing here is private — the registration
+  // number is on the public Ofsted register. (Without this key the panel
+  // rendered blank for every signed-out booker, which is the whole audience.)
+  "childcare",
   "voucherHoldDays",
   "voucherClearDays",
   "voucherDueByDays",
