@@ -72,11 +72,14 @@ export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace
 // So: unless this is production, transmit ONLY to allowlisted addresses and
 // log-and-skip everything else.
 //
-// A skipped send deliberately reports SUCCESS. Callers read the boolean as
-// "the transport accepted it", which is exactly what the Ethereal dev inbox
-// reported while never delivering anything either — so history counts, the
-// `delivered` column and the e2e assertions stay meaningful about the code
-// path, without a single message leaving the building.
+// A skipped send used to report SUCCESS, which made every "the parent was
+// emailed" and "the DSL was alerted" claim unfalsifiable (backlog b33):
+// history counted a delivery that never happened. Now the outcome is
+// reported honestly — `sendMailDetailed` distinguishes sent / suppressed /
+// failed, and what records a delivery (campaign history, notifications)
+// stores which of the three it was. `sendMail` keeps the old boolean for the
+// fire-and-forget callers that only care whether something went wrong: a
+// suppressed send is still "not an error", but it is no longer a delivery.
 // Opt-in ONLY — deliberately not implied by NODE_ENV. Every host sets
 // NODE_ENV=production, so the old rule meant the first staging deploy would
 // start mailing real parents from the scheduler sweeps and hard-bouncing the
@@ -110,17 +113,33 @@ export interface MailAttachment {
   cid?: string;
 }
 
-/** Returns true when the transport accepted the message — the campaign
- *  history uses it as the "delivered" count. Callers that don't care can
- *  keep treating this as fire-and-forget.
+/** Fire-and-forget send: true unless the transport REJECTED the message.
+ *  A suppressed send (not live, address not allowlisted) also returns true —
+ *  nothing went wrong, but nothing was delivered either, so anything that
+ *  records a delivery must use `sendMailDetailed` instead (backlog b33).
  *
  *  `sender` brands the mail for one provider: their name on the From line and
  *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
  *  adds files (or inline `cid:` images). */
 export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<boolean> {
+  return (await sendMailDetailed(to, subject, html, sender, opts)).status !== "failed";
+}
+
+/** What actually happened to one message.
+ *   - "sent"       the transport accepted it (Ethereal in dev = accepted, not delivered)
+ *   - "suppressed" MAIL_LIVE is off and this address isn't allowlisted — nothing left the building
+ *   - "failed"     the transport rejected it; `error` says why */
+export interface MailOutcome {
+  status: "sent" | "suppressed" | "failed";
+  /** True when the transport is the Ethereal dev inbox: accepted, never delivered. */
+  ethereal?: boolean;
+  error?: string;
+}
+
+export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<MailOutcome> {
   if (!maySend(to)) {
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
-    return true;
+    return { status: "suppressed" };
   }
   try {
     const { t, ethereal } = await getTransport();
@@ -142,9 +161,9 @@ export async function sendMail(to: string, subject: string, html: string, sender
         (sender?.replyTo ? ` (reply-to: ${sender.replyTo})` : "") +
         (ethereal ? ` (preview: ${nodemailer.getTestMessageUrl(info)})` : ""),
     );
-    return true;
+    return { status: "sent", ethereal };
   } catch (e) {
     console.error(`[mail] failed to send "${subject}" to ${to}:`, e);
-    return false;
+    return { status: "failed", error: e instanceof Error ? e.message : String(e) };
   }
 }

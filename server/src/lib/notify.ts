@@ -16,7 +16,7 @@
 
 import { db } from "../firebase";
 import { loadSettings } from "./tenantLibrary";
-import { sendMail, type MailAttachment } from "./mailer";
+import { sendMail, sendMailDetailed, type MailAttachment } from "./mailer";
 import { webUrl } from "./stripe";
 
 const col = () => db.collection("notifications");
@@ -64,6 +64,12 @@ export interface NotificationDoc {
   /** The record this is about, so a client can jump straight to it. */
   ref?: string;
   readAt: string | null;
+  /** What happened to the EMAIL half of this alert: "sent" (transport took
+   *  it), "suppressed" (mail isn't live for that address — nothing left the
+   *  building), "failed", "muted" (family opted out), or absent for a
+   *  bell-only alert. Without this, "the DSL was alerted" was unfalsifiable
+   *  (backlog b33). */
+  emailStatus?: "sent" | "suppressed" | "failed" | "muted";
   /** Per-person read state for everyone but the account owner (staff,
    *  franchises). One shared readAt meant a coach opening the bell marked
    *  the owner's alerts read too. */
@@ -308,7 +314,7 @@ export async function notify(input: NotifyInput): Promise<void> {
         ? input.href.replace(/^\/(company|franchise|freelancer|staff)\//, `/${provider.portal}/`)
         : input.href;
 
-    await col().add({
+    const bell = await col().add({
       tenantId: input.tenantId,
       audience: input.to.kind,
       ...(franchiseId ? { franchiseId } : {}),
@@ -327,7 +333,10 @@ export async function notify(input: NotifyInput): Promise<void> {
     let to: string | undefined;
     let footer: string | undefined;
     if (parentEmail) {
-      if (!input.ignoreMute && (await isMuted(parentEmail, input.category))) return; // bell yes, email no
+      if (!input.ignoreMute && (await isMuted(parentEmail, input.category))) {
+        await bell.set({ emailStatus: "muted" }, { merge: true });
+        return; // bell yes, email no
+      }
       to = parentEmail;
       footer = `You're receiving this because your child attends with ${provider.name}. You can turn these off in your account.`;
     } else {
@@ -349,7 +358,7 @@ export async function notify(input: NotifyInput): Promise<void> {
           parentEmail ? { branded: true, logoCid: logo?.cid } : undefined);
 
     const attachments = [...(input.attachments ?? []), ...(logo ? [logo] : [])];
-    await sendMail(
+    const outcome = await sendMailDetailed(
       to,
       input.subject ?? input.title,
       html,
@@ -359,6 +368,7 @@ export async function notify(input: NotifyInput): Promise<void> {
       { name: provider.name, ...(parentEmail && provider.email ? { replyTo: provider.email } : {}) },
       attachments.length ? { attachments } : undefined,
     );
+    await bell.set({ emailStatus: outcome.status }, { merge: true });
   } catch (e) {
     console.error("[notify] failed:", (e as Error).message);
   }

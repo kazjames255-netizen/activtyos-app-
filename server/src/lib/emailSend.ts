@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
-import { sendMail } from "./mailer";
+import { sendMailDetailed } from "./mailer";
 import { tenantSender } from "./sender";
 
 // The one-to-many send engine behind the Email page: POST /api/emails/send
@@ -13,6 +13,7 @@ import { tenantSender } from "./sender";
 /** Where the API itself is reachable from an email client (the open pixel
  *  must resolve from the recipient's inbox, not from the web app). */
 import { sign, verify } from "./signing";
+import { ukToday } from "./ukDate";
 
 export const apiUrl = process.env.API_URL || "http://localhost:4000";
 
@@ -46,7 +47,7 @@ export const readUnsubToken = (tok: string): { tenantId: string; email: string; 
     if (i < 0) return null;
     const out = { tenantId: s.slice(0, i), email: s.slice(i + 1) };
     if (sig) return verify(`unsub:${s}`, sig) ? out : null;
-    return new Date().toISOString().slice(0, 10) < LEGACY_UNSUB_UNTIL ? { ...out, legacy: true } : null;
+    return ukToday() < LEGACY_UNSUB_UNTIL ? { ...out, legacy: true } : null;
   } catch { return null; }
 };
 // Every MARKETING email carries a one-click unsubscribe. Transactional mail (audience "one") doesn't.
@@ -88,7 +89,9 @@ const applyTokens = (s: string, ctx: Record<string, string>, html = false): stri
 
 /** email → merge context, from each family's most relevant booking. */
 async function mergeContexts(tenantId: string, recipients: string[]): Promise<Map<string, Record<string, string>>> {
-  const today = new Date().toISOString().slice(0, 10);
+  // UK wall clock: in BST a UTC "today" is yesterday until 01:00, which put a
+  // session happening TODAY in the "upcoming" bucket for {SessionDate}.
+  const today = ukToday();
   const wanted = new Set(recipients);
   const [tenant, lib, bookings] = await Promise.all([
     db.collection("tenants").doc(tenantId).get(),
@@ -167,6 +170,10 @@ export interface EmailHistoryDoc {
   /** "sending" until every recipient's transport hand-off settles. */
   status: "sending" | "sent";
   delivered: number;
+  /** Not sent because mail isn't live for that address (MAIL_LIVE/MAIL_ALLOWLIST). */
+  suppressed?: number;
+  /** The transport rejected these. */
+  failed?: number;
   /** Recipients whose client fetched the open pixel. */
   openedBy: string[];
   scheduledId?: string;
@@ -206,14 +213,21 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
     const needsMerge = TOKEN_RE.test(`${input.subject} ${input.body} ${input.html ?? ""}`);
     const ctxs = needsMerge ? await mergeContexts(input.tenantId, input.recipients) : null;
     let delivered = 0;
+    // Suppressed ≠ delivered: with MAIL_LIVE off the message never left the
+    // building, and the history must not claim it did (backlog b33).
+    let suppressed = 0;
+    let failed = 0;
     for (const to of input.recipients) {
       const ctx = ctxs?.get(to) ?? {};
       const subj = ctxs ? applyTokens(input.subject, ctx) : input.subject;
       const content = ctxs ? applyTokens(html, ctx, true) : html;
       const footer = input.audience === "all" ? unsubFooter(input.tenantId, to) : "";
-      if (await sendMail(to, subj, content + footer + pixel(ref.id, to), sender)) delivered++;
+      const outcome = await sendMailDetailed(to, subj, content + footer + pixel(ref.id, to), sender);
+      if (outcome.status === "sent") delivered++;
+      else if (outcome.status === "suppressed") suppressed++;
+      else failed++;
     }
-    await ref.set({ delivered, status: "sent" }, { merge: true });
+    await ref.set({ delivered, suppressed, failed, status: "sent" }, { merge: true });
   })().catch((e) => console.error(`[email] delivery recording failed for ${ref.id}:`, (e as Error).message));
 
   return { id: ref.id, ...doc };
