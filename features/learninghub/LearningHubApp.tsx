@@ -21,6 +21,7 @@ import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
 import { useRealtime } from "@/lib/realtime";
 import { listDoubts } from "./lesson/doubts/api";
 import { useOnBrand } from "./onBrand";
+import { resolveTab } from "./tabAlias";
 
 // Learning Hub — the tutoring vertical's page. One shell, two audiences: a
 // family sees their tutor's hub read-only for the chosen child; the tutor sees
@@ -41,7 +42,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const { providers, provider, tenantId, qs, childQs, ready, topics, noteStats, notesVersion, students, groups, config, error, setError, refresh } = hub;
   const [filter, setFilter] = useState<HubFilter>(NONE);
   // The active tab lives in the URL (?tab=quizzes) so a reload or Back doesn't drop you on Home mid-task.
-  const [picked, setPicked] = useState<TabKey | null>(() => (typeof window === "undefined" ? null : (new URLSearchParams(window.location.search).get("tab") as TabKey | null)));
+  const [picked, setPicked] = useState<TabKey | null>(() => (typeof window === "undefined" ? null : resolveTab(new URLSearchParams(window.location.search).get("tab"))));
   const [dirty, setDirty] = useState(false);
   const [addSignal, setAddSignal] = useState(0);
   // Focus mode is stored AS the tab that asked for it, so it can never outlive
@@ -128,7 +129,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   }, [setError]);
   // Back / a link that names a tab (a notification, "Start the lesson" from a homework) moves the tab too.
   useEffect(() => {
-    const t = new URLSearchParams(linkSearch).get("tab") as TabKey | null;
+    const t = resolveTab(new URLSearchParams(linkSearch).get("tab"));
     if (t) setPicked((cur) => (cur === t ? cur : t));
   }, [linkSearch]);
   const onFilter = useCallback((f: HubFilter) => { setError(null); setFilter(f); }, [setError]);
@@ -197,8 +198,8 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     onError: setError, mode, providerName: provider.name, child: hub.child, refreshStudents: refresh, goTo: go, childQs, setFocus, groups, refreshGroups: refresh,
   };
   const tabs: HubTab[] = modules.filter((m) => !kid || ((KID_TABS as readonly string[]).includes(m.meta.key) && !KID_STRIP_HIDDEN.includes(m.meta.key))).map((m) => ({
-    // Families see "Messages" (it's their own inbox); the tutor keeps "Student message centre" (kid label wins when both apply).
-    meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : !tutor && m.meta.key === "questions" ? { ...m.meta, label: "Messages" } : m.meta,
+    // One vocabulary: "Messages" and "Starting quizzes" for everyone; a child's own words (KID_TAB_LABEL) win on their screens.
+    meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : m.meta,
     badge: m.meta.key === "notes" && dirty ? "Unsaved" : m.meta.key === "questions" && unreadQuestions > 0 ? String(unreadQuestions) : undefined,
   }));
   // The roster is about people, not topics — give it the full width. Quizzes,

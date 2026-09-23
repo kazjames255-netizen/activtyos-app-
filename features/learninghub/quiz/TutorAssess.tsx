@@ -64,7 +64,7 @@ export function TutorAssess({ p, type }: { p: PanelProps; type: AssessType }) {
     <div className="grid gap-4">
       <div className="overflow-x-auto pb-0.5">
         <Segmented<Tab> label="Section" value={tab} onChange={setTab} options={[
-          { id: "list", label: diag ? "Placement tests" : "Quizzes" },
+          { id: "list", label: diag ? "Starting quizzes" : "Quizzes" },
           { id: "bank", label: "Question bank" },
           { id: "marking", label: "Marking", count: pending.length },
           { id: "results", label: "Results" },

@@ -153,7 +153,7 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
           </div>
         </div>
       )}
-      {!p.topics.length && <Notice tone="info">Create a subject and topic in the sidebar first. {diag ? "Placement tests" : "Quizzes"} are built from questions filed under topics.</Notice>}
+      {!p.topics.length && <Notice tone="info">Create a subject and topic in the sidebar first. {diag ? "Starting quizzes" : "Quizzes"} are built from questions filed under topics.</Notice>}
 
       {total > 0 && (
         <dl className="m-0 grid grid-cols-2 divide-x divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)] sm:grid-cols-4 sm:divide-y-0">

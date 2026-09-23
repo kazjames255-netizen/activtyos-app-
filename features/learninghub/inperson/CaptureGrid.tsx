@@ -60,7 +60,7 @@ export function CaptureGrid({ qs, sessionId, assessmentId, roster, store, hideNa
   return (
     <StepCard>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <Tag>{paper.assessment.type === "diagnostic" ? "Placement test" : "Quiz"} · {idx + 1} of {qs_.length}</Tag>
+        <Tag>{paper.assessment.type === "diagnostic" ? "Starting quiz" : "Quiz"} · {idx + 1} of {qs_.length}</Tag>
         <span className="text-[12px] font-semibold text-[var(--ink-3)]" data-testid="ip-answered">{answeredFor(q.id)} of {ids.length} recorded for this question</span>
       </div>
       <nav aria-label="Questions" className="mb-4 flex flex-wrap gap-1.5">

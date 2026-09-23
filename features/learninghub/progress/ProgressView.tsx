@@ -57,11 +57,11 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
     return (
       tutor ? (
         <EmptyState icon="sparkle" title={`${name} hasn't taken a quiz yet`}
-          body={<>Each quiz {first} finishes fills in a bar here, topic by topic. Open the <b>Quizzes</b>{p.config.requireDiagnostic ? <> (or the <b>Placement test</b> first)</> : null} tab and use <b>Set for children</b> to give {first} one.</>}
+          body={<>Each quiz {first} finishes fills in a bar here, topic by topic. Open the <b>Quizzes</b>{p.config.requireDiagnostic ? <> (or the <b>Starting quiz</b> first)</> : null} tab and use <b>Set for children</b> to give {first} one.</>}
           action={p.readOnly ? undefined : <button type="button" onClick={() => p.goTo?.("quizzes")} className={`min-h-[44px] rounded-full px-4 text-[13px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>Go to Quizzes</button>} />
       ) : (
       <EmptyState icon="sparkle" title="Your progress starts with the first quiz"
-        body={<>Every quiz you finish fills in a bar here, topic by topic, so you can see what&apos;s solid and what needs another go. Open the <b>Quizzes</b>{p.config.requireDiagnostic ? <> (or the <b>Placement test</b> first)</> : null} tab to begin.</>} />
+        body={<>Every quiz you finish fills in a bar here, topic by topic, so you can see what&apos;s solid and what needs another go. Open the <b>Quizzes</b>{p.config.requireDiagnostic ? <> (or the <b>Starting quiz</b> first)</> : null} tab to begin.</>} />
       )
     );
   }
@@ -93,7 +93,7 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
       {data.trend.length > 0 && (
         <Card className="p-4 sm:p-5">
           <h3 className="m-0 text-[15px] font-extrabold text-[var(--ink)]" style={display}>Most recent progress</h3>
-          <p className="m-0 mb-1 mt-0.5 text-[12.5px] text-[var(--ink-3)]">{tutor ? `${first}'s` : "Your"} last {Math.min(20, data.trend.length)} quiz {data.trend.length === 1 ? "score" : "scores"}. Placement tests set {tutor ? "the" : "your"} starting point and don&apos;t appear here.</p>
+          <p className="m-0 mb-1 mt-0.5 text-[12.5px] text-[var(--ink-3)]">{tutor ? `${first}'s` : "Your"} last {Math.min(20, data.trend.length)} quiz {data.trend.length === 1 ? "score" : "scores"}. Starting quizzes set {tutor ? "the" : "your"} starting point and don&apos;t appear here.</p>
           <TrendChart points={data.trend} bands={bands} passMark={p.config.passMarkPct} />
         </Card>
       )}

@@ -18,7 +18,7 @@ import { errMsg } from "./types";
 //    exactly the same place as one they come back to later. A bell notification for either side deep-links
 //    straight to the thread (?open=doubt:<id>).
 
-export const meta: PanelMeta = { key: "questions", label: "Student message centre", icon: "help", status: "live", blurb: "Messages between you and students — reply here." };
+export const meta: PanelMeta = { key: "questions", label: "Messages", icon: "help", status: "live", blurb: "Messages between you and students — reply here." };
 
 const POLL_MS = 15_000;
 const STEP_LABEL: Record<string, string> = { start: "Start", learn: "Learn", slides: "Slide", words: "Key words", warm: "Warm-up", quiz: "Quiz", done: "Done" };

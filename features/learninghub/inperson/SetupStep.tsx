@@ -147,7 +147,7 @@ export function SetupStep({ qs, students, groups, preset, live, onStart, onResum
               row={(n) => <><span className="block truncate text-[14px] font-extrabold text-[var(--ink)]">{n.title}</span><span className="block truncate text-[12px] text-[var(--ink-3)]">{n.lessonYear ? `Year ${n.lessonYear}` : "Lesson"}</span></>} />
           ) : (
             <PickList<PaperRow> key="papers" id="ip-quiz" filterKey={filterKey} label="quizzes" load={loadPapers} value={paper?.id ?? null} onPick={(p) => setPaper({ id: p.id, title: p.title })} empty="No published quizzes found."
-              row={(p) => <><span className="block truncate text-[14px] font-extrabold text-[var(--ink)]">{p.title}</span><span className="block truncate text-[12px] text-[var(--ink-3)]">{p.type === "diagnostic" ? "Placement test" : "Quiz"} · {p.subject} · {p.questionCount} questions</span></>} />
+              row={(p) => <><span className="block truncate text-[14px] font-extrabold text-[var(--ink)]">{p.title}</span><span className="block truncate text-[12px] text-[var(--ink-3)]">{p.type === "diagnostic" ? "Starting quiz" : "Quiz"} · {p.subject} · {p.questionCount} questions</span></>} />
           )}
           {chosen && <p className="m-0 mt-2 text-[13px] text-[var(--ink-2)]" data-testid="ip-chosen">Chosen: <b className="text-[var(--ink)]">{chosen.title}</b></p>}
         </div>

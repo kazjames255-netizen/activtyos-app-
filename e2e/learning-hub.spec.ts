@@ -141,7 +141,7 @@ test.describe("tutor builds topics and notes", () => {
     // Roving tabindex + arrow keys.
     await tabs.first().focus();
     await page.keyboard.press("End");
-    await expect(tabOf(page, /Flashcards/)).toHaveAttribute("aria-selected", "true");
+    await expect(tabOf(page, /Messages/)).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Home");
     await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
   });

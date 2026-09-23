@@ -47,7 +47,7 @@ function Attention({ icon, tone, count, label, hint, onClick }: { icon: IconName
 const ACTIONS: { key: "notes" | "quizzes" | "homework" | "live" | "students"; label: string; hint: string; icon: IconName; tone: Tone }[] = [
   { key: "notes", label: "New lesson", hint: "Share a lesson or worksheet", icon: "notes", tone: "brand" },
   { key: "quizzes", label: "New quiz", hint: "Build a test", icon: "quiz", tone: "violet" },
-  { key: "homework", label: "Assign homework", hint: "Set the next task", icon: "homework", tone: "gold" },
+  { key: "homework", label: "Set homework", hint: "Set the next task", icon: "homework", tone: "gold" },
   { key: "live", label: "Schedule video lesson", hint: "Pick a time", icon: "video", tone: "green" },
   { key: "students", label: "Enrol student", hint: "Add to your roster", icon: "users", tone: "red" },
 ];
@@ -103,7 +103,7 @@ export function TutorHome(props: PanelProps) {
     const toMark = inbox.filter((r) => r.status === "submitted");
     const overdue = inbox.filter((r) => r.status === "assigned" && new Date(r.dueAt).getTime() < now);
     const written = attempts.filter((a) => a.status === "pending_marking");
-    // Placement papers are marked under the Placement test tab, quizzes under Quizzes: count them apart and send each to its own tab.
+    // Placement papers are marked under the Starting quiz tab, quizzes under Quizzes: count them apart and send each to its own tab.
     const writtenPlacement = written.filter((a) => a.assessmentType === "diagnostic");
     const writtenQuiz = written.length - writtenPlacement.length;
 
@@ -171,7 +171,7 @@ export function TutorHome(props: PanelProps) {
           <div className="grid gap-2">
             <Attention icon="homework" tone="brand" count={d.toMark.length} label="Homework to mark" hint={`${plural(d.toMark.length, "hand-in")} waiting`} onClick={() => go("homework")} />
             <Attention icon="quiz" tone="violet" count={d.writtenQuiz} label="Written answers to mark" hint="Quiz answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("quizzes"); }} />
-            {d.writtenPlacement > 0 && <Attention icon="compass" tone="violet" count={d.writtenPlacement} label="Placement tests to mark" hint="Placement test answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("diagnostic"); }} />}
+            {d.writtenPlacement > 0 && <Attention icon="compass" tone="violet" count={d.writtenPlacement} label="Starting quizzes to mark" hint="Starting quiz answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("diagnostic"); }} />}
             <Attention icon="warning" tone="red" count={d.overdue.length} label="Overdue homework" hint="Past due and not handed in" onClick={() => { requestHomeworkFilter("assigned"); go("homework"); }} />
             <Attention icon="users" tone="gold" count={d.quiet.length} label="Quiet for 14+ days" hint={d.quiet.slice(0, 2).map((s) => s.childName.split(" ")[0]).join(", ") || "No recent activity"} onClick={() => go("students")} />
           </div>

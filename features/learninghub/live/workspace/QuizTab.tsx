@@ -52,7 +52,7 @@ export function QuizTab({ p, lesson, attendees, data }: { p: PanelProps; lesson:
               <span className={`grid h-9 w-9 flex-none place-items-center rounded-xl ${x.type === "diagnostic" ? "bg-[var(--violet-soft)] text-[var(--violet)]" : "bg-[var(--brand-soft)] text-[var(--brand)]"}`} aria-hidden><Ico name={x.type === "diagnostic" ? "compass" : "quiz"} size={17} /></span>
               <div className="min-w-0 flex-1">
                 <div className={`truncate font-extrabold text-[var(--ink)] ${big ? "text-[16px]" : "text-[13.5px]"}`}>{x.title}</div>
-                <div className="text-[11.5px] text-[var(--ink-3)]">{x.type === "diagnostic" ? "Placement test" : "Quiz"} · {x.questionCount ?? qs.length} questions{x.timeLimitMins ? ` · ${x.timeLimitMins} min` : ""} · pass {x.passMarkPct}%</div>
+                <div className="text-[11.5px] text-[var(--ink-3)]">{x.type === "diagnostic" ? "Starting quiz" : "Quiz"} · {x.questionCount ?? qs.length} questions{x.timeLimitMins ? ` · ${x.timeLimitMins} min` : ""} · pass {x.passMarkPct}%</div>
               </div>
               {results.length > 0 && <Pill tone="green">{results.length} taken</Pill>}
             </div>

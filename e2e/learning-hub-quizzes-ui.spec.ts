@@ -335,7 +335,7 @@ test.describe("the family sees the outcome", () => {
     test.setTimeout(180_000);
     const ctx = await ctxFor(browser, "parent");
     const page = await ctx.newPage();
-    await openParentHub(page, /Placement test/);
+    await openParentHub(page, /Starting quizzes/);
     await expect(page.getByText("Find your starting point")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
   });

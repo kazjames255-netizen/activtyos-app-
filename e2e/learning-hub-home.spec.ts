@@ -141,7 +141,7 @@ test("tutor: Home is the first, default tab and reflects this run's work", async
   await expect(page.getByRole("table").filter({ hasText: "Count" })).toBeVisible();
 
   // Quick actions jump to the right tab.
-  await page.getByRole("button", { name: /Assign homework Set the next task/ }).click();
+  await page.getByRole("button", { name: /Set homework Set the next task/ }).click();
   await expect(tabOf(page, /^Homework$/)).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Home", exact: true }).click();
   await expect(page.locator("#hub-home-tutor")).toBeVisible();
