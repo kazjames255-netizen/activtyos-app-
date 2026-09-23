@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
 import { errMsg } from "../types";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
+import { LIGHT_SCOPE } from "../tools/lightScope";
 import { clearTag, getCellLessons, setTag, type CellLesson } from "./api";
 import { GROUP_LABEL, yearLabel, type MapArea } from "./cells";
 
@@ -75,7 +76,7 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
   // Drawn on <body> above the portal's own top bar and any impersonation banner (a z-50 child of the hub sat underneath them).
   if (typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-stretch sm:justify-end" role="presentation">
+    <div className="aos-light fixed inset-0 z-[3000] flex items-end justify-center sm:items-stretch sm:justify-end" role="presentation" style={LIGHT_SCOPE}>
       <div aria-hidden className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
       <aside ref={panelRef} role="dialog" aria-modal="true" aria-label={`${area.area} lessons`} className="hub-rise motion-reduce:animate-none relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl">
         <header className="flex items-start gap-3 border-b border-[var(--line)] p-4">

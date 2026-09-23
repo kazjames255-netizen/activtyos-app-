@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { DrawerToolView } from "../remotesync/HelpTools";
 import { getWidget } from "../lesson/widgets";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
+import { LIGHT_SCOPE } from "./lightScope";
 import type { ToolMeta, ToolMode } from "./types";
 
 // Runs ONE tool in a full-screen layer, whatever kind it is: an existing drawer tool, an existing lesson widget, or (from Phase 2 on) a
@@ -49,7 +50,7 @@ export function ToolHost({ tool, mode = "practise", qs, onClose }: { tool: ToolM
   }, [onClose]);
   if (typeof document === "undefined") return null;
   return createPortal(
-    <div className="fixed inset-0 z-[3000] flex items-end justify-center p-0 sm:items-center sm:p-6" role="presentation">
+    <div className="aos-light fixed inset-0 z-[3000] flex items-end justify-center p-0 sm:items-center sm:p-6" role="presentation" style={LIGHT_SCOPE}>
       <div aria-hidden className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
       <div ref={panelRef} role="dialog" aria-modal="true" aria-label={tool.title} className="hub-rise motion-reduce:animate-none relative flex max-h-[92vh] w-full max-w-[980px] flex-col overflow-hidden rounded-t-3xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl sm:rounded-3xl">
         <header className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">

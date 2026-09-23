@@ -119,6 +119,20 @@
   --line: #ece6f1;
 }
 
+/* A layer that must read on a LIGHT page whatever portal it opens from (the Tools pop-up, the curriculum lesson panel). Those layers are portalled to
+   <body>, outside the portal's own theme scope, and the tools inside (lesson widgets, drawer tools) are designed for light backgrounds. */
+.aos-light {
+  --bg: #f5f8fd;
+  --surface: #ffffff;
+  --panel: #f4f7fc;
+  --ink: #171534;
+  --ink-2: #4a4763;
+  --ink-3: #6b6885;
+  --line: #e3e8f3;
+  color: var(--ink);
+  color-scheme: light;
+}
+
 html,
 body {
   margin: 0;
