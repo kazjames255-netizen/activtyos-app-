@@ -4,6 +4,8 @@ import { useId, useState } from "react";
 import { Icon } from "../kit";
 import type { KindRule, MatchAnswer, Option, OrderAnswer, Piece, Pic } from "./api";
 import { MatchInput, OrderInput } from "./MatchOrder";
+import { ToolQuestion, type ToolAnswerValue } from "../tools/ToolQuestion";
+import type { PublicProblem } from "../tools/problems";
 import { Lightbox, QImage } from "./QuestionImage";
 import { display } from "./ui";
 
@@ -11,9 +13,9 @@ import { display } from "./ui";
 // tutor's live preview in the question editor — so what a tutor previews is
 // exactly what a child gets. Rendering only: marking is the server's job.
 
-export type Answer = string | string[] | MatchAnswer | OrderAnswer;
+export type Answer = string | string[] | MatchAnswer | OrderAnswer | ToolAnswerValue;
 
-export interface QView { id: string; prompt: string; options?: Option[]; marks: number; image?: Pic | null; /** match */ terms?: Piece[]; definitions?: Piece[]; /** order */ items?: string[] }
+export interface QView { id: string; prompt: string; options?: Option[]; marks: number; image?: Pic | null; /** match */ terms?: Piece[]; definitions?: Piece[]; /** order */ items?: string[]; /** tool */ toolProblem?: PublicProblem }
 
 const LETTERS = "ABCDEFGHIJ";
 
@@ -38,6 +40,7 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
           {multi && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-[var(--brand-strong)]">Choose all that apply</span>}
           {rule === "match" && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-[var(--brand-strong)]">Match each pair</span>}
           {rule === "order" && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-[var(--brand-strong)]">Put in order</span>}
+          {rule === "tool" && <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-[var(--brand-strong)]">Use the tools</span>}
         </span>
       </legend>
 
@@ -119,6 +122,8 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
         </div>
       )}
 
+      {rule === "tool" && <ToolQuestion problem={q.toolProblem} value={value && typeof value === "object" && !Array.isArray(value) && value.kind === "tool" ? value : undefined} onChange={onChange} disabled={disabled} />}
+
       {rule === "manual" && (
         <div>
           <label htmlFor={`${gid}-w`} className="sr-only">Your written answer</label>
@@ -133,7 +138,7 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
 /** Has the student put anything in for this question? */
 export function isAnswered(v: Answer | undefined): boolean {
   if (Array.isArray(v)) return v.length > 0;
-  if (v && typeof v === "object") return v.kind === "match" ? v.pairs.length > 0 : v.kind === "order" ? v.items.length > 0 : false;
+  if (v && typeof v === "object") return v.kind === "match" ? v.pairs.length > 0 : v.kind === "order" ? v.items.length > 0 : v.kind === "tool" ? ((v.marks?.length ?? 0) > 0 || (v.points?.length ?? 0) > 0 || (v.number !== undefined && v.number !== null)) : false;
   return typeof v === "string" && v.trim() !== "";
 }
 

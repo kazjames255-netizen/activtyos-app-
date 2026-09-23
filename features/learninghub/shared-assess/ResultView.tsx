@@ -48,6 +48,18 @@ function AnswerText({ options, value, rule }: { options: Option[] | undefined; v
   );
 }
 
+/** A tool answer in words ("68°", "3 lines, 2 arcs", "3 points plotted") — the drawing itself isn't replayed here. */
+const toolText = (v: unknown): string => {
+  const o = (v && typeof v === "object" ? v : {}) as { number?: number | null; marks?: { k?: string }[]; points?: unknown[] };
+  const parts: string[] = [];
+  if (typeof o.number === "number") parts.push(String(o.number));
+  const lines = o.marks?.filter((m) => m.k === "seg" || m.k === "free").length ?? 0, arcs = o.marks?.filter((m) => m.k === "arc").length ?? 0;
+  if (lines) parts.push(`${lines} ${lines === 1 ? "line" : "lines"}`);
+  if (arcs) parts.push(`${arcs} ${arcs === 1 ? "arc" : "arcs"}`);
+  if (o.points?.length) parts.push(`${o.points.length} ${o.points.length === 1 ? "point" : "points"} plotted`);
+  return parts.join(", ") || "Nothing handed in";
+};
+
 const textOf = (opts: Option[] | undefined, v: unknown): string => {
   if (v == null || v === "") return "";
   if (typeof v === "object" && !Array.isArray(v)) return pairRows(v).length ? pairRows(v).map(([t, d]) => `${t} → ${d}`).join("; ") : itemRows(v).join(", ");
@@ -180,7 +192,7 @@ function ReviewItem({ a, q, i, config, attemptPending, keyHeld, onRefresh }: { a
       : a.correct === true || full ? { label: "Correct", icon: "✓", tone: OK }
         : a.marksAwarded > 0 ? { label: "Partly right", icon: "◐", tone: GOLD }
           : { label: "Not quite", icon: "✗", tone: RED };
-  const yours = textOf(options, a.response);
+  const yours = rule === "tool" ? toolText(a.response) : textOf(options, a.response);
   const hasKey = a.correctAnswer !== undefined && a.correctAnswer !== null && a.correctAnswer !== "";
   const showKey = hasKey && a.correct !== true && !full;
 
@@ -197,6 +209,7 @@ function ReviewItem({ a, q, i, config, attemptPending, keyHeld, onRefresh }: { a
             {waiting && <span className="text-[11.5px] font-bold tabular-nums text-[var(--ink-3)]">{a.marksMax} {a.marksMax === 1 ? "mark" : "marks"} available</span>}
           </div>
 
+          {a.checkerFeedback?.length ? <ul className="m-0 mt-2 grid list-none gap-0.5 p-0 text-[12.5px] font-semibold text-[var(--ink-2)]" data-testid="hub-tool-feedback">{a.checkerFeedback.map((f, k) => <li key={k}>{f}</li>)}</ul> : null}
           <dl className="m-0 mt-3 grid gap-2 text-[13px]">
             <div className="rounded-lg bg-[var(--panel)] px-3 py-2">
               <dt className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{rule === "manual" ? "Your written answer" : "Your answer"}</dt>

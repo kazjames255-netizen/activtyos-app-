@@ -10,6 +10,7 @@ import type { CheckResult } from "../../engine/marking";
 import { loadToolState, saveToolState } from "../../api";
 import type { ToolMode } from "../../types";
 import { GENERATORS, markProblem, type Problem } from "./generators";
+import type { PublicProblem } from "../../problems";
 import { Paper, PaperDefs } from "./papers";
 import { CompassArt, InstrumentArt } from "./InstrumentArt";
 import { arcFromSweep, barLen, bodyOf, compassPen, drawAlongEdge, edgesOf, isProtractor, makeInstrument, nearestEdge, nearestPoint, protractorReading, snapCompass, snapEdgeToPoints, snapPoints, snapProtractor, snapSetSquare, SIZE, withRadius } from "./instruments";
@@ -51,8 +52,12 @@ export interface GeometryBoardProps {
   /** Instruments the pupil may add from the bar (default: all eight). */
   offer?: InstrKind[];
   paper?: PaperKind;
-  /** A question to work on (assess/practise). */
-  problem?: Problem | null;
+  /** A question to work on (assess/practise). A `PublicProblem` (from the server, no answer key) can be worked on but not self-checked. */
+  problem?: Problem | PublicProblem | null;
+  /** Where the pupil left off (resuming a quiz): their marks and typed number. */
+  initialAnswer?: { number?: number | null; marks?: Mark[] };
+  /** Called whenever the answer changes — the quiz runner holds it until hand-in (which is why there is no Check button when this is set). */
+  onAnswer?: (a: { number?: number | null; marks: Mark[] }) => void;
   /** Generators offered under "New question" (practise mode). */
   generatorIds?: string[];
   tol?: Tol;
@@ -70,10 +75,10 @@ const newInstr = (k: InstrKind, at: Pt): Instrument => makeInstrument(k, uid("i"
 const inPoly = (poly: readonly Pt[], p: Pt) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i]!, b = poly[j]!; if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
 const stateFrom = (paper: PaperKind, preset: InstrKind[], given: Mark[] = []): GeoState => ({ paper, instruments: preset.map((k, i) => newInstr(k, homeFor(k, i))), marks: given });
 
-export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit }: GeometryBoardProps) {
+export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit, initialAnswer, onAnswer }: GeometryBoardProps) {
   const assess = mode === "assess";
-  const [problem, setProblem] = useState<Problem | null>(problemProp);
-  const [hist, setHist] = useState<History<GeoState>>(() => newHistory(stateFrom(problemProp?.paper ?? paper, preset, problemProp?.given ?? [])));
+  const [problem, setProblem] = useState<Problem | PublicProblem | null>(problemProp);
+  const [hist, setHist] = useState<History<GeoState>>(() => newHistory(stateFrom(problemProp?.paper ?? paper, preset, [...(problemProp?.given ?? []), ...(initialAnswer?.marks ?? [])])));
   const [live, setLive] = useState<GeoState | null>(null);
   const [tool, setTool] = useState<Tool>("move");
   const [sel, setSel] = useState<string | null>(null);
@@ -83,7 +88,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
   const [view, setView] = useState({ x: -AB[0], y: -AB[1], w: VIEW_W });
   const [readouts, setReadouts] = useState(!assess);
   const [result, setResult] = useState<CheckResult | null>(null);
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(initialAnswer?.number != null ? String(initialAnswer.number) : "");
   const [say, setSay] = useState("");
   const [genId, setGenId] = useState(generatorIds[0] ?? "");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -282,9 +287,21 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
   const check = () => {
     if (!problem) return;
     const num = answer.trim() === "" ? null : Number(answer);
+    if (!("checkerId" in problem)) return; // a server-dealt problem is marked by the server on hand-in
     const r = markProblem(problem, { number: num, marks: studentMarks }, tol);
     setResult(r); onSubmit?.({ number: num, marks: studentMarks }, r);
   };
+
+  // A quiz runner holds the answer until hand-in: tell it about every change.
+  const lastEmit = useRef("");
+  useEffect(() => {
+    if (!onAnswer) return;
+    const num = answer.trim() === "" || Number.isNaN(Number(answer)) ? null : Number(answer);
+    const j = JSON.stringify([num, studentMarks]);
+    if (j === lastEmit.current) return;
+    lastEmit.current = j; onAnswer({ number: num, marks: studentMarks });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answer, state.marks, onAnswer]);
 
   // ── rendering helpers ──
   const arcPath = (m: Extract<Mark, { k: "arc" }>) => { const s = polarPt(m.c, m.r, m.a0), e2 = polarPt(m.c, m.r, m.a1), large = m.a1 - m.a0 > 180 ? 1 : 0; return `M${s[0]} ${s[1]}A${m.r} ${m.r} 0 ${large} 0 ${e2[0]} ${e2[1]}`; };
@@ -306,7 +323,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
               <input inputMode="decimal" value={answer} onChange={(e) => setAnswer(e.target.value)} className={`min-h-[44px] w-28 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[15px] font-bold ${FOCUS}`} /> {problem.unit}
             </label>
           )}
-          <div className="mt-2 flex flex-wrap gap-2"><Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>{!assess && generatorIds.length > 0 && <Button onClick={newQuestion}>Try another</Button>}</div>
+          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>}{!assess && generatorIds.length > 0 && <Button onClick={newQuestion}>Try another</Button>}</div>
           {result && !assess && (
             <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b className="text-[14px]">{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{f}</span>)}</div>
           )}

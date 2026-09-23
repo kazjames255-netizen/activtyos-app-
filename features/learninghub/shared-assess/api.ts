@@ -2,6 +2,7 @@
 // (milestones 3–5). Everything here mirrors the contract; nothing is marked or
 // scored in the browser — the server does that and these types just carry it.
 import type { HubSettings } from "@/lib/hubConfig";
+import type { PublicProblem } from "../tools/problems";
 
 export type KindRule = HubSettings["questionKinds"][number]["mark"];
 export type QuestionKind = HubSettings["questionKinds"][number];
@@ -45,6 +46,8 @@ export interface Question {
   /** match → the correct pairs (3–8) · order → the items in the CORRECT order (2–8). Their `answer` is null. */
   pairs?: Pair[];
   items?: string[];
+  /** tool → which generator builds the problem (plus an optional pinned seed / own tolerances). Their `answer` is null: marking re-generates the problem. */
+  tool?: { generatorId: string; seed?: number | null; tol?: { mm?: number; deg?: number } };
   acceptedAnswers: string[];
   tolerance: number;
   marks: number;
@@ -83,6 +86,8 @@ export interface TakeQuestion {
   terms?: Piece[]; definitions?: Piece[];
   /** order: the items, shuffled by the server. */
   items?: string[];
+  /** tool: the problem this attempt was dealt (prompt, given marks, what to answer) — never its model answer. */
+  toolProblem?: PublicProblem;
 }
 
 export interface LastAttempt { id: string; pct: number; status: AttemptStatus; submittedAt: string | null }
@@ -142,6 +147,8 @@ export interface ResultAnswer {
   acceptedAnswers?: string[];
   explanation?: string;
   feedback?: string;
+  /** Tool questions: the auto-checker's lines ("✓ …", "✗ …") — only sent when the answers may be revealed. */
+  checkerFeedback?: string[];
   /** Tutor views only: a written answer still waiting for marks. */
   pending?: boolean;
   // Present on GET /attempts/:id ("Result + prompts"); tolerated if absent.

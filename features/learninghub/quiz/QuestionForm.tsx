@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GENERATOR_LABEL, publicProblem, PROBLEM_GENERATORS } from "../tools/problems";
 import { Button, FieldLabel, Input } from "@/components/ui";
 import { post, put } from "@/lib/api";
 import type { PanelProps } from "../panelTypes";
@@ -39,6 +40,9 @@ interface Draft {
   pairs: PairRow[];
   /** order: the items, in the CORRECT order, top to bottom. */
   items: { id: string; text: string }[];
+  /** tool: which problem generator, and an optional pinned seed (blank = a fresh problem every attempt). */
+  toolGen: string;
+  toolSeed: string;
 }
 
 interface PairRow { id: string; term: string; definition: string; termImage?: PairImage | null; definitionImage?: PairImage | null }
@@ -63,6 +67,7 @@ function fromQuestion(q: Question): Draft {
     yearGroups: q.yearGroups ?? [],
     pairs: q.pairs?.length ? q.pairs.map((x) => ({ id: newOptionId(), ...x })) : blankPairs(),
     items: q.items?.length ? q.items.map((text) => ({ id: newOptionId(), text })) : blankItems(),
+    toolGen: q.tool?.generatorId ?? "", toolSeed: q.tool?.seed ? String(q.tool.seed) : "",
   };
 }
 
@@ -74,6 +79,7 @@ const KIND_LOOK: Record<string, { icon: string; hint: string }> = {
   numeric: { icon: "🔢", hint: "A number, with a tolerance" },
   match: { icon: "🔗", hint: "Pair each item with its match" },
   order: { icon: "↕️", hint: "Put the items in order" },
+  tool: { icon: "📐", hint: "Ruler, protractor, grid… marked automatically" },
   manual: { icon: "📝", hint: "Written, you mark it by hand" },
 };
 
@@ -81,7 +87,7 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
   const kinds = p.config.questionKinds;
   const [d, setD] = useState<Draft>(() => question ? fromQuestion(question) : {
     id: null, topicId: defaultTopicId ?? p.topics.find((t) => p.covered.has(t.id))?.id ?? p.topics[0]?.id ?? "",
-    kind: kinds[0]?.id ?? "single", prompt: "", options: blankOptions(), correct: [], exact: "", accepted: [], numeric: "", tolerance: "0", marks: "1", explanation: "", published: true, image: null, imageAlt: "", yearGroups: [], pairs: blankPairs(), items: blankItems(),
+    kind: kinds[0]?.id ?? "single", prompt: "", options: blankOptions(), correct: [], exact: "", accepted: [], numeric: "", tolerance: "0", marks: "1", explanation: "", published: true, image: null, imageAlt: "", yearGroups: [], pairs: blankPairs(), items: blankItems(), toolGen: "", toolSeed: "",
   });
   const [acc, setAcc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -113,6 +119,8 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
     if (new Set(keys).size !== keys.length) problems.push("The same pair is in twice.");
   }
   if (rule === "order" && fullItems.length < ORDER_MIN) problems.push(`Add at least ${ORDER_MIN} items.`);
+  if (rule === "tool" && !PROBLEM_GENERATORS[d.toolGen]) problems.push("Choose what the pupil has to do with the tool.");
+  if (rule === "tool" && d.toolSeed.trim() !== "" && !(Number.isInteger(Number(d.toolSeed)) && Number(d.toolSeed) >= 1)) problems.push("A fixed problem number must be a whole number, 1 or more (or leave it blank).");
   if (rule === "exact" && !d.exact.trim()) problems.push("Enter the correct answer.");
   if (rule === "numeric" && (d.numeric.trim() === "" || !Number.isFinite(Number(d.numeric)))) problems.push("Enter the correct number.");
   if (!(Number(d.marks) >= 1)) problems.push("Marks must be at least 1.");
@@ -135,6 +143,7 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
         topicId: d.topicId, kind: d.kind, prompt: d.prompt.trim(), options, answer,
         ...(rule === "match" ? { pairs: fullPairs.map((x) => ({ term: x.term.trim(), definition: x.definition.trim(), ...(x.termImage ? { termImage: x.termImage } : {}), ...(x.definitionImage ? { definitionImage: x.definitionImage } : {}) })) } : {}),
         ...(rule === "order" ? { items: fullItems.map((x) => x.text.trim()) } : {}),
+        ...(rule === "tool" ? { tool: { generatorId: d.toolGen, ...(d.toolSeed.trim() ? { seed: Number(d.toolSeed) } : {}) } } : {}),
         acceptedAnswers: rule === "exact" ? d.accepted : [], tolerance: rule === "numeric" ? Number(d.tolerance) || 0 : 0,
         marks: Math.round(Number(d.marks)), explanation: d.explanation.trim(), published: d.published, yearGroups: d.yearGroups,
         // An Oak picture (a link, no upload id) is left out so the server keeps it; removing it sends null.
@@ -152,7 +161,11 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
   const setOptPic = (id: string, image: Pic | null) => set({ options: d.options.map((o) => (o.id === id ? { ...o, image } : o)) });
   // The preview shows the arrangement a child would get: the key nudged out of place (the server does the real shuffle per attempt).
   const rot = <T,>(a: T[]) => (a.length > 1 ? [...a.slice(1), a[0]] : a);
+  // What a child would be dealt: one sample problem for the chosen generator (a fixed number pins it; otherwise "Try another" isn't needed — each attempt gets its own).
+  const [sample, setSample] = useState(1);
+  const toolProblem = rule === "tool" && PROBLEM_GENERATORS[d.toolGen] ? publicProblem(PROBLEM_GENERATORS[d.toolGen]!(d.toolSeed.trim() && Number(d.toolSeed) >= 1 ? Number(d.toolSeed) : sample)) : undefined;
   const previewQ = {
+    toolProblem,
     id: "preview", prompt: d.prompt, marks: Math.max(1, Math.round(Number(d.marks) || 1)), options: filled, image: d.image?.url ? { url: d.image.url, alt: d.imageAlt } : null,
     terms: fullPairs.map((x) => ({ text: x.term.trim(), ...(x.termImage ? { image: x.termImage } : {}) })),
     definitions: rot(fullPairs).map((x) => ({ text: x.definition.trim(), ...(x.definitionImage ? { image: x.definitionImage } : {}) })),
@@ -317,6 +330,27 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
                 <FieldLabel htmlFor="hq-tol">Allowed error ±</FieldLabel>
                 <Input id="hq-tol" inputMode="decimal" value={d.tolerance} onChange={(e) => set({ tolerance: e.target.value })} placeholder="0" className="min-h-[44px] w-full tabular-nums" />
               </div>
+            </div>
+          )}
+
+          {rule === "tool" && (
+            <div className="grid gap-3">
+              <Notice tone="info"><b>Marked automatically.</b> The child works with real instruments (ruler, protractor, compasses, coordinate grid) and the answer is checked in millimetres and degrees. Unless you fix the problem, every child — and every retake — gets fresh numbers.</Notice>
+              <div>
+                <FieldLabel htmlFor="hq-toolgen">What does the pupil have to do?</FieldLabel>
+                <select id="hq-toolgen" value={d.toolGen} onChange={(e) => set({ toolGen: e.target.value })} className={`min-h-[44px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[14px] font-semibold text-[var(--ink)] ${FOCUS}`}>
+                  <option value="">Choose…</option>
+                  {Object.entries(GENERATOR_LABEL).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <FieldLabel htmlFor="hq-toolseed">Same problem every time <span className="normal-case tracking-normal">(optional — a number pins one exact problem)</span></FieldLabel>
+                  <Input id="hq-toolseed" inputMode="numeric" value={d.toolSeed} onChange={(e) => set({ toolSeed: e.target.value.replace(/\D/g, "") })} placeholder="blank = new numbers each attempt" className="min-h-[44px] w-64 tabular-nums" />
+                </div>
+                {!d.toolSeed.trim() && d.toolGen && <Button onClick={() => setSample((x) => x + 1)}>Show another example</Button>}
+              </div>
+              {d.toolGen && <p className="m-0 text-[12.5px] font-semibold text-[var(--ink-2)]">The question wording is generated from the problem. Anything you write above appears first as extra instructions.</p>}
             </div>
           )}
 

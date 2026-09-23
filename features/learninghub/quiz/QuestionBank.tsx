@@ -20,6 +20,8 @@ import { toQuestionBody } from "./questionBody";
 const BRAND_T: Tone = { fill: "var(--brand)", soft: "var(--brand-soft)", ink: "var(--brand-strong)" };
 const GOLD: Tone = { fill: "var(--gold)", soft: "var(--gold-soft)", ink: "color-mix(in srgb, var(--gold) 30%, var(--ink))" };
 
+import { GENERATOR_LABEL } from "../tools/problems";
+
 export function answerSummary(q: Question, p: PanelProps): string {
   const rule = ruleOf(p.config.questionKinds, q.kind);
   const text = (id: unknown) => q.options?.find((o) => o.id === id)?.text ?? String(id);
@@ -29,6 +31,7 @@ export function answerSummary(q: Question, p: PanelProps): string {
   if (rule === "match") return (q.pairs ?? []).map((x) => `${x.term} ↔ ${x.definition}`).join(" · ");
   if (rule === "order") return (q.items ?? []).map((x, i) => `${i + 1}. ${x}`).join("  ");
   if (rule === "exact") return [q.answer, ...(q.acceptedAnswers ?? [])].filter(Boolean).join(" / ");
+  if (rule === "tool") return `${(q.tool && GENERATOR_LABEL[q.tool.generatorId]) || "Tool question"} · marked automatically${q.tool?.seed ? ` · fixed problem ${q.tool.seed}` : " · new numbers each attempt"}`;
   return "Marked by hand";
 }
 

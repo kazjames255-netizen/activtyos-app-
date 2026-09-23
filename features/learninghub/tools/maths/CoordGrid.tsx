@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { FOCUS } from "../../kit";
 import { round, type Pt } from "../engine/geometry";
@@ -9,6 +9,7 @@ import { newSeed } from "../engine/rng";
 import type { CheckResult } from "../engine/marking";
 import type { ToolProps } from "../types";
 import { GENERATORS, markProblem, type Problem } from "./geometry/generators";
+import type { PublicProblem } from "../problems";
 import { DEFAULT_TOL } from "./geometry/model";
 
 // Coordinate grid (plan M-21): four quadrants, click to plot (snaps to whole numbers; half-steps optional), drag to move, join the points,
@@ -18,15 +19,15 @@ interface GridState { pts: Pt[]; join: boolean }
 const R = 10;
 const clampR = (n: number) => Math.max(-R, Math.min(R, n));
 
-export default function CoordGrid({ mode = "practise", compact = false }: Partial<ToolProps> & { compact?: boolean }) {
+export default function CoordGrid({ mode = "practise", compact = false, problem: problemProp = null, initialPoints, onAnswer }: Partial<ToolProps> & { compact?: boolean; problem?: Problem | PublicProblem | null; initialPoints?: Pt[]; onAnswer?: (a: { points: Pt[] }) => void }) {
   const assess = mode === "assess";
-  const [h, setH] = useState<History<GridState>>(() => newHistory({ pts: [], join: false }));
+  const [h, setH] = useState<History<GridState>>(() => newHistory({ pts: initialPoints ?? [], join: false }));
   const [half, setHalf] = useState(false);
   const [erase, setErase] = useState(false);
   const [readout, setReadout] = useState(!assess);
   const [hover, setHover] = useState<Pt | null>(null);
   const [dragI, setDragI] = useState<number | null>(null);
-  const [problem, setProblem] = useState<Problem | null>(null);
+  const [problem, setProblem] = useState<Problem | PublicProblem | null>(problemProp);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [tx, setTx] = useState(""), [ty, setTy] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -54,7 +55,9 @@ export default function CoordGrid({ mode = "practise", compact = false }: Partia
 
   const addTyped = () => { const x = Number(tx), y = Number(ty); if (tx.trim() === "" || ty.trim() === "" || Number.isNaN(x) || Number.isNaN(y)) return; setPts([...pts, [clampR(x), clampR(y)]]); setTx(""); setTy(""); setResult(null); };
   const newQ = () => { const p = GENERATORS["M-G03.plot"]!(newSeed()); setProblem(p); setH(newHistory({ pts: [], join: false })); setResult(null); };
-  const check = () => { if (problem) setResult(markProblem(problem, { points: pts }, DEFAULT_TOL)); };
+  const check = () => { if (problem && "checkerId" in problem) setResult(markProblem(problem, { points: pts }, DEFAULT_TOL)); };
+  const lastEmit = useRef("");
+  useEffect(() => { if (!onAnswer) return; const j = JSON.stringify(state.pts); if (j === lastEmit.current) return; lastEmit.current = j; onAnswer({ points: state.pts }); }, [state.pts, onAnswer]);
 
   const ticks = useMemo(() => Array.from({ length: 2 * R + 1 }, (_, i) => i - R), []);
   const V = R + 1.8;
@@ -63,7 +66,7 @@ export default function CoordGrid({ mode = "practise", compact = false }: Partia
       {problem ? (
         <div role="region" aria-label="Question" className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{problem.prompt}</p>
-          <div className="mt-2 flex flex-wrap gap-2"><Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>{!assess && <Button onClick={newQ}>Try another</Button>}</div>
+          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>}{!assess && <Button onClick={newQ}>Try another</Button>}</div>
           {result && !assess && <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b>{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{f}</span>)}</div>}
         </div>
       ) : !assess && <div><Button variant="primary" onClick={newQ}>Practise: plot the points</Button></div>}
