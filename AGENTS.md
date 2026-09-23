@@ -85,4 +85,7 @@ Non-negotiables shared by all views:
   operator sees it live).
 - Playwright note: pages hold an open SSE connection — `networkidle` never
   fires; wait for `load` or specific elements instead.
-- `npx tsc --noEmit` and `npm run build` must stay clean.
+- `npx tsc --noEmit` and `npm run build` must stay clean. The root tsconfig
+  EXCLUDES `server/` (its deps aren't installed on a web build host, so
+  `next build` was type-checking server code it couldn't resolve) — check the
+  API separately with `npm --prefix server run typecheck`.
