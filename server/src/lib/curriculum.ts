@@ -11,7 +11,7 @@ export const OAK_PREFIX = "https://www.thenational.academy/teachers/programmes/"
 /** The key a lesson's Oak URL maps to ("english-primary-ks1/units/…/lessons/…"), or null for anything that isn't an Oak URL. */
 export const oakKey = (url: unknown): string | null => (typeof url === "string" && url.startsWith(OAK_PREFIX) ? url.slice(OAK_PREFIX.length) : null);
 
-export interface CurArea { id: string; subject: string; strand: string; area: string; code?: string }
+export interface CurArea { id: string; subject: string; /** The tab it sits under: maths · english · science · languages (GCSE splits science/languages into their own subjects). */ group?: string; strand: string; area: string; code?: string }
 export interface CurFramework {
   id: string; label: string; version: string; note: string;
   areas: CurArea[];
@@ -19,6 +19,8 @@ export interface CurFramework {
   expected: [number, number, number][];
   /** oakKey → [areaIndex, year, confidence (0 High · 1 Medium · 2 Low), status (0 statutory · 1 beyond the NC · 2 non-statutory)] */
   lessons: Record<string, [number, number, number, number]>;
+  /** oakKey → further area indexes a lesson also touches (GCSE units that span two spec areas). */
+  secondary?: Record<string, number[]>;
 }
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +36,7 @@ export function framework(id: string): CurFramework | null {
   if (file) {
     try {
       const raw = JSON.parse(readFileSync(path.join(here, "../data/curriculum", file), "utf8")) as { framework: Pick<CurFramework, "id" | "label" | "version" | "note"> } & Omit<CurFramework, "id" | "label" | "version" | "note">;
-      v = { ...raw.framework, areas: raw.areas, expected: raw.expected, lessons: raw.lessons };
+      v = { ...raw.framework, areas: raw.areas.map((a) => ({ ...a, group: a.group ?? a.subject })), expected: raw.expected, lessons: raw.lessons, secondary: raw.secondary };
     } catch { v = null; }
   }
   loaded.set(id, v);

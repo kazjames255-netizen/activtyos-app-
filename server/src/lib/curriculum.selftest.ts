@@ -17,5 +17,12 @@ ok(t.summary.covered === 172 && t.summary.thin === 4 && t.summary.gaps === 9, `1
 ok(statusOf(0) === "gap" && statusOf(4) === "thin" && statusOf(5) === "covered", "thresholds");
 ok(oakKey("https://www.thenational.academy/teachers/programmes/x/units/y/lessons/z") === "x/units/y/lessons/z" && oakKey("https://example.com") === null && oakKey(null) === null, "oakKey");
 ok(framework("nope") === null, "unknown framework → null");
+const gc = framework("gcse-aqa")!;
+ok(!!gc, "gcse-aqa loads");
+ok(gc.areas.length === 70 && new Set(gc.areas.map((a) => a.id)).size === 70, `70 unique GCSE areas (got ${gc.areas.length})`);
+ok(Object.keys(gc.lessons).length === 2414, `2414 KS4 lessons mapped (got ${Object.keys(gc.lessons).length})`);
+ok(Object.keys(gc.lessons).every((k) => k in fw.lessons && fw.lessons[k]![1] >= 10), "every GCSE lesson is a Year 10/11 library lesson");
+ok(Object.values(gc.lessons).every(([a, y, c]) => a >= 0 && a < 70 && (y === 10 || y === 11) && c >= 0 && c <= 2), "GCSE tuples in range");
+ok(gc.areas.every((a) => ["maths", "english", "science", "languages"].includes(a.group!)), "every GCSE area has a tab group");
 console.log(`${n} checks, ${bad} failed`);
 process.exit(bad ? 1 : 0);
