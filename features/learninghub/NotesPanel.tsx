@@ -23,6 +23,7 @@ import { RemoteSyncApp } from "./remotesync/RemoteSyncApp";
 import { JoinRemoteSyncBanner } from "./remotesync/JoinRemoteSyncBanner";
 import { TutorLiveBanner } from "./remotesync/TutorLiveBanner";
 import { closeLink, openLink, useLinkOpen } from "./family/link";
+import { CurriculumCard } from "./curriculum/CurriculumCard";
 import { LessonTutorPanel } from "./lesson/LessonTutorPanel";
 import { FlashcardsForLesson } from "./lesson/FlashcardsForLesson";
 import { HomeworkForLesson } from "./lesson/HomeworkForLesson";
@@ -641,6 +642,8 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     <div id="hub-notes">
       {!canEdit && <JoinRemoteSyncBanner qs={listQs} childId={childId} config={config} />}
       {canEdit && <TutorLiveBanner qs={listQs} />}
+      {/* The first thing on the Lessons tab: where the lessons fit the national curriculum / GCSE (tutor: coverage; child: what they've covered). */}
+      <CurriculumCard qs={listQs} canEdit={canEdit} mayAuthor={mayAuthor} onOpenLesson={openReading} />
       <div ref={scrollTop} className="mb-4 flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[200px] flex-1 sm:max-w-[340px]">
           <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
