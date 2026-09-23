@@ -2,6 +2,7 @@ import type { Field, Overrides, Rule, RuleSet, Signal, Suggestion } from "./type
 
 // selectTools(signal, rules, isAvailable, overrides) — see types.ts. Pure: no React, no fetch.
 
+const KNOWN = ["maths", "english", "science", "languages"];
 const FIELD_WEIGHT: Record<Field, number> = { title: 1, unit: 0.8, objective: 0.7 };
 const ALL_FIELDS: Field[] = ["title", "unit", "objective"];
 const cache = new Map<string, RegExp>();
@@ -28,7 +29,7 @@ interface Hit { rule: Rule; field: Field; match: string; score: number }
 
 function fire(rule: Rule, sig: Signal, subject: string): Hit | null {
   if (rule.subject && !rule.subject.includes(subject)) return null;
-  if (rule.years && (sig.year == null || sig.year < rule.years[0] || sig.year > rule.years[1])) return null;
+  if (rule.years && sig.year != null && (sig.year < rule.years[0] || sig.year > rule.years[1])) return null; // year unknown → don't filter on it
   if (rule.programme && !(sig.programme && rx(rule.programme).test(sig.programme))) return null;
   const fields = rule.fields ?? ALL_FIELDS;
   const text: Record<Field, string> = { title: sig.title, unit: sig.unit, objective: sig.objective };
@@ -50,10 +51,13 @@ export interface SelectOptions { max?: number; overrides?: Overrides }
 export function selectTools(sig: Signal, rules: RuleSet, isAvailable: (toolId: string) => boolean = () => true, opts: SelectOptions = {}): Suggestion[] {
   const max = opts.max ?? 3, subject = subjectOf(sig.subject), hide = new Set(opts.overrides?.hide ?? []);
   const per = new Map<string, Hit[]>();
+  // Subject unknown (e.g. only a lesson title is to hand): let every subject's rules have a go — a title like "Balancing equations" still finds its tool.
+  const subjects = KNOWN.includes(subject) ? [subject] : KNOWN;
   for (const r of rules.rules) {
     if (hide.has(r.tool) || !isAvailable(r.tool)) continue;
-    const h = fire(r, sig, subject);
-    if (h) { const l = per.get(r.tool); if (l) l.push(h); else per.set(r.tool, [h]); }
+    let best: Hit | null = null;
+    for (const sub of subjects) { const h = fire(r, sig, sub); if (h && (!best || h.score > best.score)) best = h; }
+    if (best) { const l = per.get(r.tool); if (l) l.push(best); else per.set(r.tool, [best]); }
   }
   // One entry per tool: its best hit, plus a small bonus when several independent rules agree (capped so it can't beat a strong single rule).
   const ranked: Suggestion[] = [...per.entries()].map(([tool, hits]) => {

@@ -11,6 +11,7 @@ import { LessonStyles } from "../lesson/lessonUi";
 import { errMsg, type Note } from "../types";
 import { activeRemoteSync, heartbeat, patchLiveAnswer, type LiveAnswerReport, type RsActive } from "./api";
 import { HelpToolsPanel } from "./HelpTools";
+import { suggestDrawerTools } from "../tools/suggest";
 import { listDoubts, type Doubt } from "../lesson/doubts/api";
 import { MessagesCard } from "../lesson/doubts/MessagesCard";
 import { MiniScreenCard } from "./MiniScreenCard";
@@ -207,7 +208,7 @@ function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string
                     <h3 className="m-0 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Tools</h3>
                     <Icon name="chevronDown" size={14} className={`text-[var(--ink-3)] transition-transform ${toolsOpen ? "" : "-rotate-90"}`} />
                   </button>
-                  <HelpToolsPanel tools={live.tools} lessonCardRef={lessonCardRef} hideList={!toolsOpen} />
+                  <HelpToolsPanel tools={live.tools} suggested={suggestDrawerTools({ subject: "", year: null, title: live.title, unit: "", objective: "" }, live.tools)} lessonCardRef={lessonCardRef} hideList={!toolsOpen} />
                 </div>
               )}
             </div>

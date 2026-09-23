@@ -65,7 +65,6 @@
     "required practical",
     "\\bpractical\\b",
     "\\binvestigat\\w+",
-    "\\bmeasur\\w+",
     "\\brate of (a )?reaction",
     "\\bstretching\\b",
     "\\bspecific heat capacity\\b"
@@ -77,6 +76,18 @@
   },
   {
    "id": "science.S-02.3",
+   "tool": "S-02",
+   "weight": 0.5,
+   "any": [
+    "\\bmeasur\\w+"
+   ],
+   "programme": "^physics|combined|^chemistry|^biology",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-02.4",
    "tool": "S-02",
    "weight": 0.3,
    "any": [
@@ -306,7 +317,7 @@
     "\\bpush(es|ing)?\\b|\\bpull(s|ing)?\\b",
     "\\bterminal velocity\\b",
     "\\bnormal contact",
-    "\\bbalanced|unbalanced",
+    "\\b(un)?balanced (forces?|and unbalanced)",
     "\\bstretching\\b|\\bspring\\b|\\bhooke",
     "\\bmoments?\\b|\\blevers?\\b",
     "\\bmagnetic (force|attraction)",
@@ -392,31 +403,33 @@
     "\\bpopulations?\\b",
     "\\bcarnivores?|herbivores?|omnivores?\\b",
     "\\bbiodiversity\\b",
-    "\\benvironment\\b.{0,30}\\b(living|organisms|animals|plants)",
     "\\bmicrohabitat",
     "\\bcompetition\\b",
-    "\\bpyramids? of (biomass|numbers)",
-    "\\bbiomass\\b",
-    "\\bdependen\\w+\\b.{0,20}\\b(organisms|species)",
+    "\\bpyramids? of (biomass|numbers)|\\bbiomass\\b",
     "\\bcarbon cycle|water cycle|nitrogen cycle",
-    "\\bdecomposers?|decay\\b",
-    "\\bfeeding relationships",
-    "\\btrophic",
-    "\\bspecies\\b",
-    "\\bextinct\\w*",
-    "\\bpollut\\w+",
-    "\\bsustainab\\w+",
-    "\\bconservation\\b",
-    "\\bliving things and (their|the)\\b",
-    "\\bdeforestation|global warming|climate change",
-    "\\banimals\\b.{0,30}\\b(live|eat|feed)",
-    "\\badaptations?\\b",
-    "\\bfood\\b.{0,20}\\b(animals|plants|source)",
-    "\\bsampling\\b|\\bquadrat|\\btransect"
+    "\\bdecompos\\w+|\\bdetritus|\\bdecay\\b",
+    "\\bfeeding relationships|\\btrophic|\\bbioaccumulat\\w+",
+    "\\bquadrat|\\btransect|\\bsampling\\b"
    ],
    "none": [
-    "\\bfood (tests?|groups?|labels?)",
-    "\\bdigest\\w+"
+    "\\bfood (tests?|groups?|labels?)"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-08.2",
+   "tool": "S-08",
+   "weight": 0.55,
+   "any": [
+    "\\bspecies\\b|\\bextinct\\w*",
+    "\\bpollut\\w+|\\bsustainab\\w+|\\bconservation\\b",
+    "\\bdeforestation|global warming|climate change|greenhouse",
+    "\\banimals\\b.{0,30}\\b(live|eat|feed)",
+    "\\badaptations?\\b",
+    "\\benvironment\\b"
    ],
    "programme": "^biology|combined|science-",
    "subject": [
@@ -435,20 +448,11 @@
     "\\bdiffusion\\b",
     "\\bdensity\\b",
     "\\bgas(es)? pressure",
-    "\\bdissolv\\w+|\\bsolutions?\\b|solubility",
-    "\\bgases\\b|\\bliquids?\\b",
-    "\\bthermal energy\\b|\\btemperature\\b",
     "\\bkinetic (theory|model)",
-    "\\bevaporation\\b",
     "\\bchanges? of state|state changes?",
     "\\bbrownian",
-    "\\bcondensation|water cycle",
-    "\\bexpansion\\b|\\bcontraction\\b",
-    "\\bgas\\b.{0,20}\\b(volume|pressure|temperature)",
-    "\\bconduction|convection\\b",
-    "\\bspecific latent",
-    "\\bpure substances?|mixtures?\\b",
-    "\\bfiltration|distillation|chromatography|crystallisation|separat\\w+"
+    "\\bheating curve|cooling curve",
+    "\\bsolids?\\b.{0,15}\\bliquids?|\\bgases\\b"
    ],
    "none": [
     "\\bdiffusion of (oxygen|glucose|nutrients)",
@@ -469,10 +473,26 @@
     "\\bosmosis\\b",
     "\\bactive transport\\b"
    ],
-   "none": [
-    "xxxx"
-   ],
    "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-09.3",
+   "tool": "S-09",
+   "weight": 0.55,
+   "any": [
+    "\\bdissolv\\w+|\\bsolutions?\\b|\\bsolubility",
+    "\\btemperature\\b",
+    "\\bexpansion\\b|\\bcontraction\\b",
+    "\\bconduction|convection\\b",
+    "\\bpure substances?|mixtures?\\b",
+    "\\bfiltration|distillation|chromatography|crystallisation|separat\\w+",
+    "\\bthermal\\b",
+    "\\bpressure\\b"
+   ],
+   "programme": "^chemistry|^physics|combined|science-",
    "subject": [
     "science"
    ]
@@ -488,22 +508,17 @@
     "\\benergy (stores?|transfers?)",
     "\\bconservation of energy\\b",
     "\\bwasted energy|dissipat\\w+",
-    "\\bpower\\b",
     "\\brenewable|non-renewable|fossil fuels?",
     "\\bkinetic energy|potential energy|thermal energy\\b",
     "\\binsulat\\w+",
-    "\\bheating and cooling|thermal (conduct|insulat)",
-    "\\bfuels?\\b",
-    "\\benergy\\b",
-    "\\bwork done\\b",
     "\\bnational grid\\b",
     "\\belectricity generation|power stations?",
-    "\\bspecific heat capacity\\b|\\bthermal\\b"
+    "\\bwork done\\b",
+    "\\bgravitational potential|\\bmgh\\b|\\bEP\\s?="
    ],
    "none": [
     "\\benergy (from|in) food",
     "\\bfood\\b",
-    "\\benergy (level|profile|change).{0,15}(reaction|bond)",
     "\\bactivation energy",
     "\\bexothermic|endothermic"
    ],
@@ -514,6 +529,37 @@
   },
   {
    "id": "science.S-10.2",
+   "tool": "S-10",
+   "weight": 0.7,
+   "any": [
+    "\\benergy\\b",
+    "\\bpower\\b",
+    "\\bfuels?\\b",
+    "\\bheating and cooling|thermal (conduct|insulat)",
+    "\\bspecific heat capacity\\b|\\bthermal\\b"
+   ],
+   "none": [
+    "\\bfood\\b"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-10.3",
+   "tool": "S-10",
+   "weight": 0.97,
+   "any": [
+    "\\benergy changes?\\b"
+   ],
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-10.4",
    "tool": "S-10",
    "weight": 0.75,
    "any": [
@@ -529,12 +575,11 @@
    ]
   },
   {
-   "id": "science.S-10.3",
+   "id": "science.S-10.5",
    "tool": "S-10",
    "weight": 0.7,
    "any": [
     "\\benergy transfers?\\b",
-    "\\benergy\\b.{0,20}\\b(food|respiration|ecosystem)",
     "\\bbiomass\\b.{0,20}\\b(transfer|efficien)",
     "\\befficien\\w+"
    ],
@@ -585,7 +630,7 @@
     "\\blenses?|\\bconvex|\\bconcave",
     "\\bmirrors?\\b",
     "\\bshadows?\\b",
-    "\\bopaque|transparent|translucent\\b",
+    "\\bsight\\b|\\bopaque|transparent|translucent\\b",
     "\\bluminous|light sources?",
     "\\bcolours? of light|spectrum of light|prism|dispersion",
     "\\bsee(ing)? (objects|things)|\\bvision\\b",
@@ -610,6 +655,10 @@
     "\\blight-emitting|light emitting",
     "\\bbiology"
    ],
+   "fields": [
+    "title",
+    "objective"
+   ],
    "programme": "^physics|combined|science-",
    "subject": [
     "science"
@@ -621,24 +670,34 @@
    "weight": 1,
    "any": [
     "\\bperiodic table\\b",
-    "\\bgroup [0-9]\\b|\\bgroups?\\b.{0,20}\\b(elements|metals|halogens|noble)",
+    "\\bgroups? [0-9]\\b|\\bgroup 0\\b",
     "\\bhalogens?\\b|\\bnoble gas\\w*|\\balkali metals?\\b",
     "\\btransition metals?\\b",
     "\\belements?\\b",
-    "\\bmetals?\\b|\\bnon-?metals?\\b",
-    "\\bmendeleev|\\bperiods?\\b.{0,15}\\b(table|group)",
-    "\\breactivity series|reactivity\\b",
+    "\\bnon-?metals?\\b",
+    "\\bmendeleev",
+    "\\breactivity series",
     "\\bmetalloids?",
-    "\\bcompounds?\\b",
     "\\bproperties of (metals|elements)",
     "\\balloys?\\b",
-    "\\bfirst 20|electronic (structure|configuration)",
-    "\\bcarbon\\b",
+    "\\belectronic (structure|configuration)|\\bfirst 20",
     "\\bextract\\w+ (of )?(metals?|iron|aluminium)",
-    "\\bthe atmosphere|noble"
+    "\\bmetals?\\b.{0,20}\\b(reactiv|reacts?|acids?|water)"
    ],
-   "none": [
-    "\\bmetals? (in|for) (rocks)"
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-13.2",
+   "tool": "S-13",
+   "weight": 0.5,
+   "any": [
+    "\\bcompounds?\\b|\\bmetals?\\b",
+    "\\breactivity\\b",
+    "\\bcarbon\\b",
+    "\\bthe atmosphere"
    ],
    "programme": "^chemistry|combined|science-",
    "subject": [
@@ -652,7 +711,7 @@
    "any": [
     "\\batoms?\\b|\\batomic\\b",
     "\\belectrons?\\b",
-    "\\bbond(s|ing)?\\b",
+    "\\bbond(s|ing)\\b",
     "\\bionic|covalent|metallic bonding",
     "\\bisotopes?\\b",
     "\\bprotons?|neutrons?|nucle\\w+",
@@ -662,19 +721,30 @@
     "\\bdot.and.cross|electronic structure",
     "\\bdiamond|graphite|graphene|fullerene|nanoparticle",
     "\\bstructure and (bonding|properties)",
-    "\\bradioactiv\\w+|\\bradiation\\b|\\bhalf-life|\\bdecay\\b",
+    "\\bradioactiv\\w+|\\bhalf-life",
     "\\bnuclear (fission|fusion|equations?|power|radiation)",
     "\\bplum pudding|rutherford|bohr|model of the atom",
-    "\\balpha|beta|gamma\\b",
+    "\\balpha|beta|gamma\\b|\\bionising"
+   ],
+   "none": [
+    "\\bion channel"
+   ],
+   "programme": "^chemistry|^physics|combined|science-secondary",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-14.2",
+   "tool": "S-14",
+   "weight": 0.55,
+   "any": [
     "\\bcompounds?\\b",
     "\\bstructures? (of|and)\\b.{0,30}\\b(substances?|materials?|solids?)",
     "\\belectrolysis\\b",
     "\\bpolymers?\\b",
-    "\\bnanoscience|\\bnano"
-   ],
-   "none": [
-    "\\bion channel",
-    "\\bcation\\b.{0,5}exchange"
+    "\\bnano\\w*",
+    "\\bradiation\\b|\\bdecay\\b"
    ],
    "programme": "^chemistry|^physics|combined|science-secondary",
    "subject": [
@@ -684,38 +754,31 @@
   {
    "id": "science.S-15.1",
    "tool": "S-15",
-   "weight": 1,
+   "weight": 0.95,
    "any": [
     "\\bclassif\\w+",
-    "\\bkeys?\\b.{0,20}\\b(identify|classif|use)|\\bidentification key|\\bbranching",
-    "\\bsort(ing)?\\b|\\bgroup(ing)?\\b.{0,20}\\b(materials|animals|living|objects|things|plants|rocks)",
-    "\\bmaterials?\\b",
-    "\\bproperties\\b",
+    "\\bidentification key|\\bkeys?\\b.{0,20}\\b(identify|classif|use|group)|\\bbranching",
+    "\\bsort(ing)?\\b.{0,20}\\b(materials|animals|living|objects|things|plants|rocks)",
+    "\\bgroup(ing)?\\b.{0,20}\\b(materials|animals|living|objects|things|plants|rocks)",
     "\\bconductors?|insulators?\\b",
     "\\brocks?\\b|\\bsoils?\\b|\\bfossils?\\b|\\bminerals?\\b|\\bigneous|sedimentary|metamorphic",
-    "\\bvertebrates?|invertebrates?|mammals?|reptiles?|amphibians?|birds?|fish\\b",
+    "\\bvertebrates?|invertebrates?|mammals?|reptiles?|amphibians?|\\bbirds?\\b|\\bfish\\b|\\binsects?\\b",
     "\\bliving (and|or) non-living|\\bliving things\\b",
-    "\\bidentify\\w*",
-    "\\bcompar\\w+ (and|or)? ?(group|sort|classif)",
-    "\\bhard|soft|flexible|rigid|waterproof|absorbent|transparent|magnetic\\b",
-    "\\bchromatography|separating|filtering|sieving|evaporating\\b",
-    "\\banimals\\b|\\bplants\\b",
+    "\\bmaterials?\\b",
+    "\\bproperties of\\b",
+    "\\bwaterproof|absorbent|flexible|rigid|transparent\\b",
     "\\breversible|irreversible",
-    "\\bmixtures?\\b|\\bsolutions?\\b|\\bdissolv\\w+",
-    "\\bwood|metal|plastic|glass|fabric|paper\\b",
-    "\\bgroups? of (animals|plants|organisms)",
-    "\\bmagnets?\\b.{0,30}\\b(materials|attract)",
-    "\\bsimilarit\\w+|\\bdifferences?\\b",
-    "\\bnaming|name (the|and)",
-    "\\bcharacteristics\\b",
-    "\\bfeatures?\\b",
-    "\\bfood groups?|\\bnutrients?\\b|\\bdiet\\b",
-    "\\bseasons?\\b|\\bweather\\b"
+    "\\bmixtures?\\b|\\bdissolv\\w+|\\bsolubl\\w+",
+    "\\bseparat\\w+|\\bfiltering|sieving|evaporating|\\bchromatography",
+    "\\bsimple (physical )?properties",
+    "\\bmetals? and non-?metals?|\\balloys?\\b|\\bpolymers?|\\bceramics|\\bcomposites",
+    "\\bfood groups?|\\bbalanced diet",
+    "\\bnutrients?\\b"
    ],
    "none": [
-    "\\bsort(ing)? out\\b"
+    "\\bnon-?statutory.{0,5}$"
    ],
-   "programme": "^science-",
+   "programme": "^science-|^chemistry|combined",
    "subject": [
     "science"
    ]
@@ -723,13 +786,29 @@
   {
    "id": "science.S-15.2",
    "tool": "S-15",
-   "weight": 0.8,
+   "weight": 0.5,
+   "any": [
+    "\\bidentify\\w*",
+    "\\bcompar\\w+",
+    "\\bcharacteristics\\b|\\bfeatures?\\b",
+    "\\bsimilarit\\w+|\\bdifferences?\\b",
+    "\\banimals\\b|\\bplants\\b"
+   ],
+   "programme": "^science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-15.3",
+   "tool": "S-15",
+   "weight": 0.85,
    "any": [
     "\\bclassif\\w+",
-    "\\bbinomial|\\btaxonom\\w+|\\bkingdoms?|\\bspecies\\b",
-    "\\bevolution\\b.{0,20}\\bclassif",
+    "\\bbinomial|\\btaxonom\\w+|\\bkingdoms?",
     "\\bidentify\\b.{0,20}\\b(unknown|substances?|ions?)",
-    "\\bcompar\\w+ .{0,25}(properties|types)"
+    "\\bprokaryot\\w+|eukaryot\\w+",
+    "\\bspecies\\b"
    ],
    "programme": "^biology|combined|^chemistry",
    "subject": [
@@ -743,31 +822,42 @@
    "any": [
     "\\blife cycles?\\b",
     "\\bstages\\b",
-    "\\bsequence\\b",
+    "\\bsequenc\\w+",
     "\\bmitosis|meiosis|cell cycle\\b",
-    "\\bdigest\\w+",
-    "\\bgrowth|develop\\w+|\\bgerminat\\w+",
     "\\bmetamorpho\\w+",
-    "\\breproduc\\w+|\\bpollinat\\w+|\\bfertilis\\w+|\\bseed (dispersal|formation)",
-    "\\bmoon\\b|\\bday and night|\\bseasons?\\b|\\bearth.{0,10}\\bsun\\b|orbit",
+    "\\bgerminat\\w+",
+    "\\bmoon\\b|\\bday and night|\\bseasons?\\b|\\bearth.{0,10}\\bsun\\b|\\borbit",
     "\\bwater cycle|\\bcarbon cycle|\\bnitrogen cycle|\\brock cycle",
-    "\\bmenstrual|puberty|pregnan\\w+|gestation|\\bfoetus|\\bfetus|embryo",
-    "\\bhumans? (grow|change)|\\bageing|\\bbaby|\\byoung\\b|\\badult\\b",
-    "\\bprocess(es)?\\b",
-    "\\bfood (journey|through)",
-    "\\bstarts?\\b.{0,15}\\bfinishes\\b",
-    "\\btimeline|\\bhistory of\\b",
-    "\\bnervous|reflex arc|\\bpathway",
-    "\\bhormone|endocrin\\w+|homeostasis|negative feedback",
-    "\\bdefen[cs]e|\\binfect\\w+|\\bvaccin\\w+|\\bimmune\\b",
-    "\\bphotosynthesis|respiration|\\btranspir\\w+",
-    "\\bdna\\b.{0,20}\\b(replicat|protein)|\\bprotein synthesis|\\btranscription|\\btranslation",
-    "\\bformation|\\bformed\\b",
-    "\\bevolution|\\bnatural selection|\\bselective breeding",
-    "\\bdevelopment of|\\bhow (a|the) .{0,20} (works|form)",
-    "\\bcycle\\b|\\bcycles\\b"
+    "\\bmenstrual|\\bpuberty|\\bpregnan\\w+|\\bgestation|\\bfoetus|\\bfetus|\\bembryo",
+    "\\breflex arc|\\bnerve pathway|\\bnervous pathway",
+    "\\bhomeostasis|negative feedback",
+    "\\bdigestive|\\bdigestion",
+    "\\bprotein synthesis|\\btranscription|\\btranslation",
+    "\\bpollinat\\w+|\\bfertilis\\w+|\\bseed dispersal",
+    "\\bgrowing (up|old)|\\bageing|\\bbabies|\\bbaby\\b|\\bstages of (life|human)",
+    "\\bcycles?\\b",
+    "\\btimeline\\b|\\bhistory of\\b",
+    "\\binfect\\w+ (cycle|pathway)|\\bimmune response"
    ],
    "programme": "^biology|combined|science-|^physics",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-16.2",
+   "tool": "S-16",
+   "weight": 0.5,
+   "any": [
+    "\\bgrowth\\b|\\bdevelop\\w+",
+    "\\breproduc\\w+",
+    "\\bphotosynthesis|\\brespiration|\\btranspir\\w+",
+    "\\bprocess(es)?\\b",
+    "\\bformation|\\bformed\\b",
+    "\\bdefen[cs]e|\\bvaccin\\w+|\\bimmune\\b",
+    "\\bhormones?\\b|\\bendocrin\\w+"
+   ],
+   "programme": "^biology|combined|science-",
    "subject": [
     "science"
    ]
@@ -835,7 +925,6 @@
     "\\bdistillation|chromatography|crystallis\\w+|filtration",
     "\\bmicroscop\\w+",
     "\\bcore practical",
-    "\\bmeasur\\w+",
     "\\bspecific heat|\\bdensity\\b.{0,30}\\b(practical|measure|investigat)",
     "\\bmaking (a )?(soluble )?salts?",
     "\\belectrolysis\\b",
@@ -873,21 +962,32 @@
    "any": [
     "\\bheart rate|\\bpulse\\b",
     "\\bbreath\\w*|\\brespirat\\w+|ventilat\\w+",
-    "\\bexercis\\w+|\\bfitness\\b|\\bfit\\b",
+    "\\bexercis\\w+|\\bfitness\\b",
     "\\bblood\\b",
     "\\bcirculat\\w+",
     "\\bcardiac|\\bcardiovascular",
-    "\\bmuscles?\\b|\\bjoints?\\b|\\bbones?\\b|\\bskeleton",
-    "\\bhealthy\\b|\\bhealth\\b|\\bdiet\\b|\\bnutri\\w+|\\bvitamins?|\\bminerals? and",
-    "\\bdrugs?\\b|\\balcohol|\\bsmok\\w+|\\bcaffeine|\\btobacco|\\bnicotine",
-    "\\bdisease\\b|\\bcommunicable|\\bpathogen|\\bbacteria|\\bviruses?\\b",
-    "\\bnervous system|\\bneurones?|\\bneurons?|\\breflex|\\bbrain\\b|\\bsenses?\\b|\\bhormones?\\b|\\bhomeostasis",
-    "\\bhuman body\\b|\\bbody systems?|\\borgan systems?",
-    "\\bwashing hands|\\bteeth|\\bsleep|\\bhygiene",
-    "\\bkidney|\\bdialysis|\\bglucose (level|regulation)|\\bdiabet\\w+|\\binsulin",
+    "\\bmuscles?\\b|\\bjoints?\\b",
+    "\\bnervous system|\\bneurones?|\\bneurons?|\\breflex|\\bbrain\\b|\\bhormones?\\b|\\bhomeostasis",
+    "\\bglucose (level|regulation)|\\bdiabet\\w+|\\binsulin",
     "\\bthermoregulation|\\bsweat",
-    "\\bcontracepti\\w+|\\bmenstrual|\\bpuberty|\\bpregnan\\w+",
-    "\\bimmune\\b|\\bvaccin\\w+|\\bantibiotic\\w*|\\bwhite blood"
+    "\\bkidney|\\bdialysis|\\baerobic|\\banaerobic",
+    "\\bcontracepti\\w+|\\bmenstrual|\\bpuberty|\\bpregnan\\w+"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-20.2",
+   "tool": "S-20",
+   "weight": 0.55,
+   "any": [
+    "\\bhealthy\\b|\\bhealth\\b|\\bdiet\\b|\\bnutri\\w+|\\bvitamins?",
+    "\\bdrugs?\\b|\\balcohol|\\bsmok\\w+|\\bcaffeine|\\btobacco",
+    "\\bdisease\\b|\\bpathogen|\\bbacteria|\\bviruses?\\b|\\bvaccin\\w+|\\bantibiotic\\w*|\\bimmune\\b",
+    "\\bwashing hands|\\bteeth|\\bsleep|\\bhygiene",
+    "\\bsenses?\\b|\\bskeleton|\\bbones?"
    ],
    "programme": "^biology|combined|science-",
    "subject": [
@@ -900,25 +1000,35 @@
    "weight": 1,
    "any": [
     "\\bdistance.time",
-    "\\bvelocity.time|\\bspeed.time",
-    "\\bmotion\\b",
+    "\\bvelocity.time|\\bspeed.time|\\bdisplacement.time",
     "\\bacceleration\\b",
-    "\\bspeed\\b",
-    "\\bvelocity\\b",
     "\\bterminal velocity\\b",
     "\\bstopping distances?\\b",
     "\\bgraphs? of\\b.{0,30}\\b(motion|speed|distance)",
-    "\\bmoving\\b|\\bmovement of objects",
-    "\\bjourney",
     "\\bdisplacement\\b",
     "\\bfree fall|\\bfalling\\b",
     "\\bmeasuring and calculating motion|\\bchanging speed",
-    "\\bkinematic|suvat|\\bv\\s?=\\s?u",
-    "\\bfast\\w*|\\bslow\\w*"
+    "\\bsuvat|\\bv\\s?=\\s?u",
+    "\\bspeed\\b",
+    "\\bvelocity\\b",
+    "\\bmotion\\b"
    ],
    "none": [
-    "\\bblood|\\bwave speed|\\brate of reaction",
-    "\\bspeed of (reaction|sound|light)|\\bspeed of the (wave|water)"
+    "\\bblood|\\brate of reaction|\\bspeed of (reaction|sound|light)|\\bspeed of the (wave|water)|\\bwave speed"
+   ],
+   "programme": "^physics|combined|science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-21.2",
+   "tool": "S-21",
+   "weight": 0.5,
+   "any": [
+    "\\bmoving\\b|\\bmovement of objects",
+    "\\bjourney",
+    "\\bfast\\w*|\\bslow\\w*"
    ],
    "programme": "^physics|combined|science-secondary-ks3",
    "subject": [
@@ -960,8 +1070,8 @@
     "\\bmoon\\b|\\blunar|\\beclipse",
     "\\bsun\\b.{0,25}\\b(moves?|position|sky|apparent)|\\bsunrise|\\bsunset",
     "\\bsatellites?|\\bcomets?|\\basteroids?|\\bmercury|venus|mars|jupiter|saturn|neptune|uranus\\b",
-    "\\bgravitational field|\\bgravity\\b.{0,30}\\b(planets?|orbit|moon|earth|mass)|\\bweight on (the )?(moon|earth|planets)",
-    "\\blife cycle of a star|\\bnuclear fusion\\b.{0,30}\\bstars?|\\bblack hole|\\bsupernova"
+    "\\bgravitational field.{0,30}\\b(planets?|orbit|moon)|\\bgravity\\b.{0,30}\\b(planets?|orbit|moon|earth|mass)|\\bweight on (the )?(moon|earth|planets)",
+    "\\bstellar|\\blife cycle of a star|\\bnuclear fusion\\b.{0,30}\\bstars?|\\bblack hole|\\bsupernova"
    ],
    "none": [
     "\\borbital\\b.{0,15}\\belectron",
@@ -1005,17 +1115,28 @@
    "any": [
     "\\bbody systems?|\\borgan systems?",
     "\\borgans?\\b",
-    "\\bdigest\\w+|\\bcirculat\\w+|\\brespirat\\w+|\\bbreath\\w*|\\bexcret\\w+|\\bnervous\\b",
-    "\\bheart|\\blungs?|\\bstomach|\\bintestine|\\bliver|\\bkidney|\\bbrain",
+    "\\bdigest\\w+|\\bexcret\\w+",
+    "\\bheart\\b|\\blungs?\\b|\\bstomach|\\bintestine|\\bliver|\\bkidneys?\\b|\\bbrain\\b",
     "\\bhuman body",
-    "\\bskeleton|\\bmuscles?|\\bjoints?|\\bbones?",
-    "\\bhealth\\w*|\\bdiet\\b|\\bnutri\\w+|\\bfood\\b.{0,25}\\bbody",
+    "\\bskeleton|\\bmuscles?\\b|\\bjoints?\\b|\\bbones?\\b",
     "\\bexchange surfaces|\\bgas exchange|\\balveoli|\\bvilli",
-    "\\btissues?|\\bcells,? tissues",
+    "\\btissues?\\b",
     "\\breproductive (system|organs)",
-    "\\bhormon\\w+|\\bendocrine|\\bhomeostasis",
-    "\\btransport in|\\bxylem|\\bphloem|\\bplant (organs|tissues|systems)",
-    "\\bhow (our|the) bod\\w+"
+    "\\bplant (organs|tissues|systems)|\\bxylem|\\bphloem|\\btransport in"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-25.2",
+   "tool": "S-25",
+   "weight": 0.45,
+   "any": [
+    "\\bnervous|\\bcirculat\\w+|\\bbreath\\w*|\\brespirat\\w+",
+    "\\bhealth\\w*|\\bnutri\\w+|\\bdiet\\b",
+    "\\bhormon\\w+|\\bendocrine|\\bhomeostasis"
    ],
    "programme": "^biology|combined|science-",
    "subject": [
@@ -1064,9 +1185,9 @@
     "\\binstrumental|\\bspectroscop\\w+|\\bspectrometry",
     "\\bcarbon dioxide.{0,30}(limewater|test)|limewater",
     "\\bion (test|identification)|\\bsulfate|\\bhalide|\\bcarbonate\\b.{0,20}\\btest",
-    "\\bbenedict|\\biodine|\\bbiuret|\\bfood tests?"
+    "\\bbiological molecules|\\bgases\\b.{0,40}\\btest|\\btests?\\b.{0,25}\\bgas(es)?\\b|\\bbenedict|\\biodine|\\bbiuret|\\bfood tests?"
    ],
-   "programme": "^chemistry|combined|^biology",
+   "programme": "^chemistry|combined|^biology|science-secondary",
    "subject": [
     "science"
    ]
@@ -1078,15 +1199,12 @@
    "any": [
     "\\bconclu\\w+",
     "\\bevaluat\\w+",
-    "\\banalys\\w+",
-    "\\bimprove\\w*.{0,20}\\b(method|investigation|experiment|practical)",
-    "\\baccura\\w+|\\bprecis\\w+|\\brepeatab\\w+|\\bvalidity|\\breproducib\\w+|\\buncertaint\\w+|\\banomal\\w+|\\bcompar\\w+ (results|data)",
-    "\\bpractical\\b",
-    "\\binvestigat\\w+",
+    "\\banalys\\w+ (of )?(data|results)",
+    "\\bimprov\\w*.{0,20}\\b(method|investigation|experiment|practical)",
+    "\\baccura\\w+|\\bprecis\\w+|\\brepeatab\\w+|\\bvalidity|\\breproducib\\w+|\\buncertaint\\w+|\\banomal\\w+",
     "\\bexplain\\b.{0,30}\\b(results|findings|pattern|trend)",
     "\\bpatterns? in\\b.{0,20}\\b(data|results)",
-    "\\brequired practical",
-    "\\bmethod\\b"
+    "\\bcompar\\w+ (results|data|findings)"
    ],
    "programme": "^physics|combined|^chemistry|^biology|^science-secondary-ks3",
    "subject": [
@@ -1098,7 +1216,22 @@
    "tool": "S-28",
    "weight": 0.6,
    "any": [
-    "\\bfindings\\b|\\bresults\\b|\\bpatterns?\\b|\\bwhat (we|you) found"
+    "\\bpractical\\b",
+    "\\binvestigat\\w+",
+    "\\bmethod\\b",
+    "\\bfindings\\b|\\bresults\\b"
+   ],
+   "programme": "^physics|combined|^chemistry|^biology|^science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-28.3",
+   "tool": "S-28",
+   "weight": 0.5,
+   "any": [
+    "\\bfindings\\b|\\bwhat (we|you) found|\\bpatterns?\\b"
    ],
    "subject": [
     "science"
@@ -1135,13 +1268,10 @@
   {
    "id": "science.X-11.1",
    "tool": "X-11",
-   "weight": 0.55,
+   "weight": 0.35,
    "any": [
     "\\bexplain\\b",
-    "\\bdescribe\\b",
-    "\\bevaluate\\b",
-    "\\bcompare\\b",
-    "\\bjustify\\b|\\bsuggest\\b|\\bdiscuss\\b|\\bassess\\b|\\bpredict\\b|\\bdesign\\b"
+    "\\bdescribe\\b|\\bevaluate\\b|\\bcompare\\b|\\bjustify\\b|\\bsuggest\\b|\\bdiscuss\\b|\\bassess\\b|\\bpredict\\b|\\bdesign\\b"
    ],
    "years": [
     9,
@@ -1166,11 +1296,11 @@
   {
    "id": "science.X-16.1",
    "tool": "X-16",
-   "weight": 0.5,
+   "weight": 0.3,
    "any": [
-    "\\bkey (words?|vocabulary|terms?)",
-    "\\bvocabulary\\b|\\bterminology|\\bdefin\\w+|\\bnaming|\\bname (the|and)|\\bidentify (and name)",
-    "\\bdescribe\\b|\\bexplain\\b|\\bwhat is\\b|\\bwhat are\\b|\\bknow\\b|\\bunderstand\\b"
+    "\\bkey (words?|vocabulary|terms?)|\\bvocabulary|\\bterminology|\\bdefin\\w+",
+    "\\bnaming|\\bname (the|and)",
+    "\\bdescribe\\b|\\bexplain\\b|\\bwhat is\\b|\\bwhat are\\b|\\bunderstand\\b"
    ],
    "subject": [
     "science"
@@ -1179,10 +1309,9 @@
   {
    "id": "science.X-12.1",
    "tool": "X-12",
-   "weight": 0.4,
+   "weight": 0.25,
    "any": [
-    "\\bexplain\\b",
-    "\\bdescribe\\b|\\bcompare\\b|\\bevaluate\\b|\\bsuggest\\b|\\bunderstand\\b|\\bidentify\\b|\\bknow\\b|\\bbeneficial|\\bimpact\\b|\\bimportan\\w+|\\bwhy\\b|\\bhow\\b"
+    "\\bexplain\\b|\\bdescribe\\b|\\bcompare\\b|\\bevaluate\\b|\\bsuggest\\b|\\bunderstand\\b|\\bidentify\\b|\\bimpact\\b|\\bimportan\\w+|\\bwhy\\b|\\bhow\\b"
    ],
    "subject": [
     "science"

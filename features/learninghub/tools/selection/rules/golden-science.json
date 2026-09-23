@@ -1,1 +1,1781 @@
-[]
+[
+ {
+  "t": "The structure of DNA: including nucleotides",
+  "s": "science",
+  "y": 10,
+  "u": "cell division mitosis and meiosis",
+  "o": "I can describe the structure of DNA and how DNA is copied during mitosis.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-17",
+   "S-26"
+  ],
+  "not": []
+ },
+ {
+  "t": "Efficiency (in terms of energy and power)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can calculate the efficiency of an energy transfer and describe ways in which energy is dissipated.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-10",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Concentration and rate: practical using gas collection method",
+  "s": "science",
+  "y": 11,
+  "u": "rate of reaction",
+  "o": "I can carry out a fair test to investigate how the rate of reaction depends on the concentration of a reacting solution.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-19",
+   "S-07",
+   "S-02"
+  ],
+  "not": []
+ },
+ {
+  "t": "Common defects of the human eye",
+  "s": "science",
+  "y": 10,
+  "u": "coordination and control the human nervous system",
+  "o": "I can describe common defects of the eye and how we treat them.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-01",
+   "S-12",
+   "S-25"
+  ],
+  "not": []
+ },
+ {
+  "t": "Cells",
+  "s": "science",
+  "y": 10,
+  "u": "eukaryotic and prokaryotic cells",
+  "o": "I can identify that all cells have some structures in common and I can explain that all organisms are unicellular or multicellular.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-26",
+   "S-01"
+  ],
+  "not": [
+   "S-04",
+   "S-06",
+   "S-11",
+   "S-12",
+   "S-21",
+   "S-22"
+  ]
+ },
+ {
+  "t": "The size and scale of cells: including standard form",
+  "s": "science",
+  "y": 10,
+  "u": "eukaryotic and prokaryotic cells",
+  "o": "You can describe numbers and sizes of cells using appropriate units and standard form.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-26",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Conservation of mass",
+  "s": "science",
+  "y": 10,
+  "u": "calculations involving masses",
+  "o": "I can describe what happens to the atoms of reactants as they form products in a chemical reaction.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Changing shape: plan and do",
+  "s": "science",
+  "y": 2,
+  "u": "uses of everyday materials",
+  "o": "I can plan and carry out a test to try to change the shape of different materials in different ways.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-07",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Adaptations of plants for photosynthesis: absorbing light",
+  "s": "science",
+  "y": 9,
+  "u": "plant nutrition and photosynthesis",
+  "o": "You can describe how plants are adapted to absorb light for photosynthesis.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-01",
+   "S-16"
+  ],
+  "not": [
+   "S-12"
+  ]
+ },
+ {
+  "t": "Work done (W = F × s)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can describe how energy is transferred by a force and calculate the amount.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Titrations: analytical technique",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can accurately measure the volume of an acid of an unknown concentration that neutralises an alkali of a known concentration.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-18",
+   "S-19"
+  ],
+  "not": []
+ },
+ {
+  "t": "The human skeleton",
+  "s": "science",
+  "y": 7,
+  "u": "human skeleton and muscles",
+  "o": "I can describe the role of the human skeleton in support, protection and making blood cells.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-25",
+   "S-01",
+   "S-20"
+  ],
+  "not": []
+ },
+ {
+  "t": "Factors affecting the rate of photosynthesis",
+  "s": "science",
+  "y": 11,
+  "u": "photosynthesis factors affecting the rate",
+  "o": "I can describe and explain the effects of various factors on the rate of photosynthesis.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-02",
+   "S-19",
+   "S-16"
+  ],
+  "not": [
+   "S-12"
+  ]
+ },
+ {
+  "t": "Displacement and velocity as vectors (v=s/t)",
+  "s": "science",
+  "y": 10,
+  "u": "measuring and calculating motion",
+  "o": "I can represent and calculate the velocity of moving objects.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-21"
+  ],
+  "not": []
+ },
+ {
+  "t": "Animals are adapted for their environment",
+  "s": "science",
+  "y": 8,
+  "u": "biodiversity",
+  "o": "I can describe how some animals are adapted to help them survive, and how environmental conditions affect animal biodiversity.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Resistance of a wire at a constant temperature",
+  "s": "science",
+  "y": 10,
+  "u": "electric fields and circuit calculations",
+  "o": "I can describe how to investigate the resistance of a wire at a constant temperature and make scientific conclusions.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-04",
+   "S-02",
+   "S-19"
+  ],
+  "not": []
+ },
+ {
+  "t": "The importance of exchange surfaces and transport systems in humans",
+  "s": "science",
+  "y": 10,
+  "u": "transport and exchange surfaces in humans",
+  "o": "I can explain how exchange surfaces and transport systems enable cells in multicellular organisms to be quickly supplied with substances they need to stay alive.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-25",
+   "S-01",
+   "S-09"
+  ],
+  "not": []
+ },
+ {
+  "t": "Current through an electromagnet",
+  "s": "science",
+  "y": 9,
+  "u": "magnets and electromagnets",
+  "o": "I can plan an experiment to test the strength of an electromagnet and explain how different factors affect the strength of an electromagnet.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-22",
+   "S-07",
+   "S-04"
+  ],
+  "not": []
+ },
+ {
+  "t": "Electrical sensors: design (non-statutory)",
+  "s": "science",
+  "y": 6,
+  "u": "changing circuits",
+  "o": "I can design a simple electrical circuit to detect water levels.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-04"
+  ],
+  "not": []
+ },
+ {
+  "t": "Conservation of mass and balanced symbol equations",
+  "s": "science",
+  "y": 8,
+  "u": "understanding chemical reactions",
+  "o": "I can explain the conservation of mass and write balanced chemical equations to show how the atoms of reactants in a chemical reaction are rearranged to form products.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Ionising radiation",
+  "s": "science",
+  "y": 11,
+  "u": "nuclear physics",
+  "o": "I can describe the properties of alpha, beta and gamma radiation.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": [
+   "S-22"
+  ]
+ },
+ {
+  "t": "Muscle strength: do and review (non-statutory)",
+  "s": "science",
+  "y": 3,
+  "u": "introduction to the human skeleton and muscles",
+  "o": "I can carry out and review an investigation into muscle strength.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-07",
+   "S-20"
+  ],
+  "not": []
+ },
+ {
+  "t": "Classification into kingdoms and domains: sub-cellular evidence",
+  "s": "science",
+  "y": 11,
+  "u": "classification in modern biology",
+  "o": "I can describe the classification of organisms based on evidence from their phenotype and cells.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Chemical reactions: displacement of metals",
+  "s": "science",
+  "y": 9,
+  "u": "materials",
+  "o": "I can explain what happens when one metal displaces another metal from a salt, in solution as well as how carbon can be used to extract metals from ores.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-05",
+   "S-13"
+  ],
+  "not": []
+ },
+ {
+  "t": "Why chemical reactions happen",
+  "s": "science",
+  "y": 10,
+  "u": "structure and bonding",
+  "o": "I can explain chemical bonding in terms of the transfer or sharing of electrons.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring temperature",
+  "s": "science",
+  "y": 7,
+  "u": "heating and cooling",
+  "o": "I can safely and accurately measure the temperature of different objects using a thermometer.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-02",
+   "S-07",
+   "S-24"
+  ],
+  "not": []
+ },
+ {
+  "t": "The role of the skin in thermoregulation",
+  "s": "science",
+  "y": 11,
+  "u": "coordination and control maintaining a constant internal environment",
+  "o": "I can describe the roles of various parts of the skin in controlling human body temperature.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-20",
+   "S-25",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Analysing series circuits: including complex calculations",
+  "s": "science",
+  "y": 10,
+  "u": "electric fields and circuit calculations",
+  "o": "I can use circuit rules and the equation I = V ÷ R to analyse series circuits.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-04",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "More about plant adaptations",
+  "s": "science",
+  "y": 6,
+  "u": "evolution and inheritance",
+  "o": "I can describe the key features of a plant adapted to suit its habitat.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-08",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Stretchy materials",
+  "s": "science",
+  "y": 2,
+  "u": "uses of everyday materials",
+  "o": "I can investigate which materials are stretchy and explain how suitable they are for different uses.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-15",
+   "S-07",
+   "S-06"
+  ],
+  "not": []
+ },
+ {
+  "t": "Stretching a spring analysis (F=ke)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can describe and calculate the properties of a spring using Hooke’s law.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-06",
+   "S-02"
+  ],
+  "not": []
+ },
+ {
+  "t": "The energy of an object in a gravitational field (EP=mgh)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can calculate the change in energy of an object because of its movement in a gravitational field.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": [
+   "S-23"
+  ]
+ },
+ {
+  "t": "Predicting states of matter",
+  "s": "science",
+  "y": 10,
+  "u": "states of matter",
+  "o": "I can predict the state of matter of a substance at different temperatures using the particle model.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-09"
+  ],
+  "not": []
+ },
+ {
+  "t": "How fossils are formed",
+  "s": "science",
+  "y": 3,
+  "u": "rocks and soils",
+  "o": "I can describe in simple terms how fossils are formed.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-16",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Variables",
+  "s": "science",
+  "y": 7,
+  "u": "solutions",
+  "o": "I can identify independent, dependent, and control variables and describe the differences between them.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-07"
+  ],
+  "not": []
+ },
+ {
+  "t": "pH scale and indicators",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can explain the pH scale and appropriately use universal indicator, phenolphthalein, methyl orange, and litmus and pH meters to identify different solutions.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-18"
+  ],
+  "not": []
+ },
+ {
+  "t": "Type 1 and type 2 diabetes",
+  "s": "science",
+  "y": 10,
+  "u": "coordination and control hormones and the human endocrine system",
+  "o": "I can describe the causes and treatments for type 1 and type 2 diabetes.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-20",
+   "S-25"
+  ],
+  "not": []
+ },
+ {
+  "t": "Waterproof materials: plan and do",
+  "s": "science",
+  "y": 1,
+  "u": "everyday materials",
+  "o": "I can plan and do an investigation to find out about waterproof materials.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-07",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Specialised cells are adapted for their functions",
+  "s": "science",
+  "y": 7,
+  "u": "cells",
+  "o": "I can describe how specialised cells in animals and plants are adapted for specific functions.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-26",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Diffusion through a permeable material: practical",
+  "s": "science",
+  "y": 7,
+  "u": "diffusion",
+  "o": "I can explain observations of diffusion through jelly cubes (a permeable material).",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-09",
+   "S-19"
+  ],
+  "not": []
+ },
+ {
+  "t": "Metallic structure and properties",
+  "s": "science",
+  "y": 10,
+  "u": "structure and bonding",
+  "o": "I can describe the properties of metals and relate these to a model of the structure of metals.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Moving into and out of the blood: diffusion, osmosis and active transport",
+  "s": "science",
+  "y": 10,
+  "u": "transport and exchange surfaces in humans",
+  "o": "I can explain how particles of substances move into and out of the blood by diffusion, osmosis and active transport.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-09",
+   "S-26",
+   "S-25"
+  ],
+  "not": []
+ },
+ {
+  "t": "Factors affecting the rate of photosynthesis",
+  "s": "science",
+  "y": 11,
+  "u": "photosynthesis factors affecting the rate",
+  "o": "I can describe and explain the effects of various factors on the rate of photosynthesis.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-02",
+   "S-19",
+   "S-16"
+  ],
+  "not": [
+   "S-12",
+   "S-11"
+  ]
+ },
+ {
+  "t": "Light sources",
+  "s": "science",
+  "y": 3,
+  "u": "introduction to light and shadows",
+  "o": "I can identify and name natural and human-made light sources.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "Force, mass and acceleration  (a = Δv/t)",
+  "s": "science",
+  "y": 11,
+  "u": "forces make things change",
+  "o": "I can explain how to investigate the effect of force or mass on the acceleration of an object.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-06",
+   "S-21"
+  ],
+  "not": []
+ },
+ {
+  "t": "Gases in the atmosphere",
+  "s": "science",
+  "y": 9,
+  "u": "carbon cycle and climate change",
+  "o": "I am able to name the main gases in the atmosphere and describe the test and some uses for each one.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-27",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Heating and cooling curves",
+  "s": "science",
+  "y": 10,
+  "u": "states of matter",
+  "o": "I can explain the shape of a heating/cooling curve by describing the energy changes through the heating/cooling of a substance.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-09",
+   "S-02",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Energy changes: displacement practical",
+  "s": "science",
+  "y": 10,
+  "u": "energy changes in reactions",
+  "o": "I can complete a practical to measure the temperature change in a displacement reaction, record results, analyse data, and write a conclusion.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-19",
+   "S-10",
+   "S-28"
+  ],
+  "not": []
+ },
+ {
+  "t": "Polymer structures",
+  "s": "science",
+  "y": 11,
+  "u": "using earths resources",
+  "o": "I can describe the structure and properties of a polymer.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Ionising radiation",
+  "s": "science",
+  "y": 11,
+  "u": "nuclear physics",
+  "o": "I can describe the properties of alpha, beta and gamma radiation.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": [
+   "S-22"
+  ]
+ },
+ {
+  "t": "Virtual images from convex and concave lenses (including magnification)",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can describe the formation of virtual images by convex and concave lenses and draw ray diagrams to find the position and magnification of the image.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "Three types of chemical reaction",
+  "s": "science",
+  "y": 10,
+  "u": "calculations involving masses",
+  "o": "I can use chemical equations to identify and describe oxidation, decomposition and precipitation reactions.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Activity and half-life calculations (including complex ones)",
+  "s": "science",
+  "y": 11,
+  "u": "nuclear physics",
+  "o": "I can interpret radioactive half-life graphs and make calculations using values of half-life.",
+  "p": "physics-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-03",
+   "S-14",
+   "S-02"
+  ],
+  "not": []
+ },
+ {
+  "t": "Transverse waves",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "I can label the parts of a rope or water wave that can be measured, and I can interpret and sketch scale drawings of transverse waves.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "Electrolysis: extracting aluminium",
+  "s": "science",
+  "y": 11,
+  "u": "electrolysis",
+  "o": "I can explain why electrolysis is required for the extraction of aluminium from its ore and describe the process.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05",
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "The spectrum of electromagnetic radiation",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can explain what is meant by the spectrum of electromagnetic waves.",
+  "p": "physics-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": [
+   "S-22"
+  ]
+ },
+ {
+  "t": "Forming covalent bonds",
+  "s": "science",
+  "y": 10,
+  "u": "structure and bonding",
+  "o": "I can use dot and cross diagrams to explain how electrons are shared to form a covalent bond.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Oscilloscope",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "You can interpret and explain sound waves shown on an oscilloscope.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "Modern periodic table and electron configuration",
+  "s": "science",
+  "y": 10,
+  "u": "atomic structure and the periodic table",
+  "o": "I can describe the way the modern periodic table is organised and draw the electronic configuration of the first twenty elements.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-13",
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "pH scale and universal indicator solution",
+  "s": "science",
+  "y": 9,
+  "u": "acids and bases",
+  "o": "I can measure the pH of an acid or alkali using the pH scale.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-18"
+  ],
+  "not": []
+ },
+ {
+  "t": "Non-ionising electromagnetic radiation",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can explain the properties, uses and dangers of non–ionising electromagnetic radiation.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": [
+   "S-22"
+  ]
+ },
+ {
+  "t": "Material cycles: the carbon cycle",
+  "s": "science",
+  "y": 10,
+  "u": "living organisms and their environments",
+  "o": "I can describe the processes in the carbon cycle.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-16",
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Observing the structure and distribution of stomata: practical",
+  "s": "science",
+  "y": 11,
+  "u": "transport and exchange surfaces in plants",
+  "o": "I can use a light microscope to observe imprints of stomata and investigate their distribution on leaves.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-26",
+   "S-19",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Calculating the energy of a moving object (Ek=½mv²)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can calculate the energy an object has because it is moving.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring acceleration practical (v=s/t, a = Δv/t)",
+  "s": "science",
+  "y": 10,
+  "u": "measuring and calculating motion",
+  "o": "I can accurately measure the acceleration of a dynamics trolley.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-19",
+   "S-21",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring speed accurately",
+  "s": "science",
+  "y": 8,
+  "u": "moving by force",
+  "o": "I can clearly describe how to measure speed and explain how I can do this accurately.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-21",
+   "S-07",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Tests for biological molecules",
+  "s": "science",
+  "y": 10,
+  "u": "biological molecules and enzymes",
+  "o": "I can carry out tests for biological molecules, including sugars, starch, proteins and lipids.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-27",
+   "S-19"
+  ],
+  "not": []
+ },
+ {
+  "t": "Hormonal control of the menstrual cycle",
+  "s": "science",
+  "y": 11,
+  "u": "hormones and human reproduction",
+  "o": "I can explain the roles of FSH, LH, oestrogen and progesterone in controlling the menstrual cycle in human females.",
+  "p": "biology-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-16",
+   "S-20"
+  ],
+  "not": []
+ },
+ {
+  "t": "Reflections in mirrors",
+  "s": "science",
+  "y": 7,
+  "u": "sound light and vision",
+  "o": "I can explain why reflections (images) are seen in mirrors and describe the properties of mirror images.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "How light travels",
+  "s": "science",
+  "y": 6,
+  "u": "light and how it travels",
+  "o": "I can explain that light travels in straight lines.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "What plants need: plan",
+  "s": "science",
+  "y": 3,
+  "u": "what plants do and what they need",
+  "o": "I can ask relevant questions about what plants need and plan a comparative test to answer them.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-07"
+  ],
+  "not": []
+ },
+ {
+  "t": "Pure substances",
+  "s": "science",
+  "y": 7,
+  "u": "solutions",
+  "o": "I can describe the difference between a pure substance and a mixture.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-15",
+   "S-09"
+  ],
+  "not": []
+ },
+ {
+  "t": "Animal life cycles",
+  "s": "science",
+  "y": 2,
+  "u": "new life",
+  "o": "I can make observations and describe how an animal grows and changes in its life cycle.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-16"
+  ],
+  "not": []
+ },
+ {
+  "t": "Models of photosynthesis",
+  "s": "science",
+  "y": 10,
+  "u": "photosynthesis requirements and products",
+  "o": "I can use simple models to explain what happens during photosynthesis, including a model of the two main stages.",
+  "p": "biology-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-16",
+   "S-01",
+   "S-19"
+  ],
+  "not": [
+   "S-12"
+  ]
+ },
+ {
+  "t": "Distance from sounds: do and review",
+  "s": "science",
+  "y": 4,
+  "u": "introduction to sound",
+  "o": "I can carry out and evaluate a fair test about the volume of sounds.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-11",
+   "S-07"
+  ],
+  "not": []
+ },
+ {
+  "t": "Higher and lower sounds",
+  "s": "science",
+  "y": 4,
+  "u": "introduction to sound",
+  "o": "I can identify high and low pitched sounds.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "Energy changes: neutralisation practical",
+  "s": "science",
+  "y": 10,
+  "u": "energy changes in reactions",
+  "o": "I can perform a practical to measure the temperature change in a neutralisation reaction, record results, analyse data, and conclude if the reaction is exothermic or endothermic.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-19",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Calculating the energy of springs (Ee = 1/2 ke²)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can calculate the energy a spring has because it is stretched.",
+  "p": "physics-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Adrenaline, thyroxine and negative feedback",
+  "s": "science",
+  "y": 10,
+  "u": "coordination and control hormones and the human endocrine system",
+  "o": "I can describe the roles of the hormones adrenaline and thyroxine in the human body, and explain what is meant by negative feedback.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-20",
+   "S-16"
+  ],
+  "not": []
+ },
+ {
+  "t": "The cell cycle and cell division: mitosis",
+  "s": "science",
+  "y": 10,
+  "u": "cell division mitosis and meiosis",
+  "o": "I can describe the phases of the cell cycle including mitosis.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-16",
+   "S-26"
+  ],
+  "not": []
+ },
+ {
+  "t": "Mixtures: equipment diagrams",
+  "s": "science",
+  "y": 7,
+  "u": "solutions",
+  "o": "I can create scientific diagrams of common laboratory equipment, showing how they are used together.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Animal habitats",
+  "s": "science",
+  "y": 2,
+  "u": "living things and where they live",
+  "o": "I can explain why different animals live in different habitats.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-08",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Grouping micro-organisms",
+  "s": "science",
+  "y": 6,
+  "u": "why we group and classify living things",
+  "o": "I can group micro-organisms based on similarities and differences.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "The role of microorganisms in decomposition",
+  "s": "science",
+  "y": 10,
+  "u": "living organisms and their environments",
+  "o": "I can explain the role of microorganisms and detritus feeders in decomposition.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Diamond and graphite",
+  "s": "science",
+  "y": 10,
+  "u": "chemistry of carbon",
+  "o": "I can describe the properties of diamond and graphite and explain how they result from their giant covalent structures, as well as relate them to their uses.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Refraction through a semicircular block",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can describe and explain when refraction happens and when total internal reflection happens at boundaries between media.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "Ionic diagrams for binary ionic substances",
+  "s": "science",
+  "y": 10,
+  "u": "structure and bonding",
+  "o": "I can draw dot and cross diagrams for binary ionic compounds.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Potable water",
+  "s": "science",
+  "y": 10,
+  "u": "separating substances",
+  "o": "I can explain what potable water is and describe how it can be obtained from groundwater and sea water.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-27",
+   "S-09"
+  ],
+  "not": []
+ },
+ {
+  "t": "Limiting reactants",
+  "s": "science",
+  "y": 10,
+  "u": "calculations involving masses",
+  "o": "I can identify a reactant as being in excess or the limiting reactant and use that information to calculate a theoretical yield.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-03",
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "What plants need to grow and stay healthy",
+  "s": "science",
+  "y": 2,
+  "u": "growing plants",
+  "o": "You can set up an investigation to find out what happens to plants when they do not get what they need.",
+  "p": "science-primary-ks1",
+  "expect": [
+   "S-07"
+  ],
+  "not": [
+   "S-12"
+  ]
+ },
+ {
+  "t": "Measuring reflected light: plan",
+  "s": "science",
+  "y": 6,
+  "u": "light and how it travels",
+  "o": "I can plan an investigation to see how changing the angle of a mirror affects the angle of reflected light.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-12",
+   "S-07"
+  ],
+  "not": []
+ },
+ {
+  "t": "The inheritance of biological sex in humans",
+  "s": "science",
+  "y": 10,
+  "u": "inheritance genotype and phenotype",
+  "o": "I can explain how the inheritance of chromosomes determines biological sex in humans.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-17"
+  ],
+  "not": []
+ },
+ {
+  "t": "Applications of electromagnets",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetism",
+  "o": "I can describe how electromagnets are used in a range of practical applications.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-22"
+  ],
+  "not": []
+ },
+ {
+  "t": "Balanced and unbalanced forces",
+  "s": "science",
+  "y": 7,
+  "u": "forces",
+  "o": "I can use the idea of resultant force to explain whether a change of speed occurs or not.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-06"
+  ],
+  "not": []
+ },
+ {
+  "t": "Heating different substances",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving particles",
+  "o": "I can explain how a material’s specific heat capacity describes how easily it is heated or how much energy it transfers as it cools.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-10",
+   "S-03",
+   "S-02"
+  ],
+  "not": []
+ },
+ {
+  "t": "Representing transverse waves",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "I can interpret and sketch displacement-time graphs of transverse waves.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "The force of a floor",
+  "s": "science",
+  "y": 9,
+  "u": "hidden forces",
+  "o": "I can explain how a floor can support a range of objects with very different weights.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-06"
+  ],
+  "not": []
+ },
+ {
+  "t": "Ecological sampling of living organisms",
+  "s": "science",
+  "y": 8,
+  "u": "biodiversity",
+  "o": "I can describe and choose suitable methods to sample populations of plants or animals.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-08",
+   "S-07"
+  ],
+  "not": []
+ },
+ {
+  "t": "Healthy heart rate",
+  "s": "science",
+  "y": 6,
+  "u": "keeping healthy",
+  "o": "I can describe the impact of exercise on the human body.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-20",
+   "S-25"
+  ],
+  "not": []
+ },
+ {
+  "t": "Reactions of the halogens: including displacement practical",
+  "s": "science",
+  "y": 11,
+  "u": "groups of the periodic table",
+  "o": "I can write word and symbol equations to show how Group 7 elements react.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-13",
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring the resistance of a diode",
+  "s": "science",
+  "y": 10,
+  "u": "circuit components",
+  "o": "I can interpret an I–V graph of a diode in order to describe its properties.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-04",
+   "S-02"
+  ],
+  "not": []
+ },
+ {
+  "t": "Chemical reactions of acids with metals and metal carbonates",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can write balanced equations for acid – metal reactions, as well as acid - metal carbonate reactions, and predict the names and states of products.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Specific latent heat (E = m L)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving particles",
+  "o": "I can make calculations using the equation E = m × L",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Material cycles: the water cycle",
+  "s": "science",
+  "y": 10,
+  "u": "living organisms and their environments",
+  "o": "I can describe the processes in the water cycle.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-16",
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Human reproductive organs",
+  "s": "science",
+  "y": 8,
+  "u": "reproduction in humans",
+  "o": "I can identify the organs of the human male and female reproductive system and describe the roles of the parts.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-25",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "Light intensity and the inverse square law",
+  "s": "science",
+  "y": 11,
+  "u": "photosynthesis factors affecting the rate",
+  "o": "I can explain why light intensity decreases further from a light source.",
+  "p": "biology-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-19",
+   "S-02",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Atomic number and mass number",
+  "s": "science",
+  "y": 10,
+  "u": "atomic structure and the periodic table",
+  "o": "I can relate the atomic number and mass number to the structure of atoms of each element.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14",
+   "S-13"
+  ],
+  "not": []
+ },
+ {
+  "t": "How sounds are made",
+  "s": "science",
+  "y": 4,
+  "u": "introduction to sound",
+  "o": "I can identify that sounds are made when something vibrates.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "Acid-base reactions (carbonates as bases)",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can identify bases, predict the names and states of products from a neutralisation reaction and compare the properties of metal and non-metal oxides.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05",
+   "S-18"
+  ],
+  "not": []
+ },
+ {
+  "t": "Seed dispersal: practical",
+  "s": "science",
+  "y": 9,
+  "u": "reproduction in plants",
+  "o": "I can explain why it is important for a plant that its seeds are dispersed over a wide area, and carry out an experiment to measure seed dispersal.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-07",
+   "S-16"
+  ],
+  "not": []
+ },
+ {
+  "t": "The mole",
+  "s": "science",
+  "y": 10,
+  "u": "calculations involving masses",
+  "o": "I can describe what a mole is and its link with the Avogadro constant.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Models of single-gene inheritance: family tree diagrams",
+  "s": "science",
+  "y": 10,
+  "u": "inheritance genotype and phenotype",
+  "o": "I can construct and interpret family tree diagrams showing information about inheritance of a feature.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-17"
+  ],
+  "not": []
+ },
+ {
+  "t": "Preparing and observing a microscope slide",
+  "s": "science",
+  "y": 7,
+  "u": "cells",
+  "o": "I can prepare a microscope slide with a specimen of tissue, observe it using a microscope, and record my observations in a scientific line drawing.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-26",
+   "S-01"
+  ],
+  "not": []
+ },
+ {
+  "t": "How shadows form",
+  "s": "science",
+  "y": 6,
+  "u": "light and how it travels",
+  "o": "I can explore the size, colour and features of a shadow, and compare shadows to reflections of objects.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-12"
+  ],
+  "not": []
+ },
+ {
+  "t": "Developing a reactivity series for metals",
+  "s": "science",
+  "y": 11,
+  "u": "using earths resources",
+  "o": "I can compare the reactions of different metals with water and dilute acids in order to work out the reactivity series for metals.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-13",
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Diffusion through the cell membrane",
+  "s": "science",
+  "y": 7,
+  "u": "diffusion",
+  "o": "I can explain why some substances can diffuse through the cell membrane and others cannot.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-09",
+   "S-26"
+  ],
+  "not": []
+ },
+ {
+  "t": "Simple food chains",
+  "s": "science",
+  "y": 4,
+  "u": "more about food chains",
+  "o": "I can use a simple food chain to show how animals and plants depend on each other for food.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Static electricity",
+  "s": "science",
+  "y": 8,
+  "u": "series circuits",
+  "o": "I can describe how objects with a positive or negative charge attract or repel other charged objects.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-04",
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Speed of sound",
+  "s": "science",
+  "y": 9,
+  "u": "waves",
+  "o": "I can measure the speed of sound waves in air using an echo method.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-11",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Graphene and fullerenes",
+  "s": "science",
+  "y": 10,
+  "u": "chemistry of carbon",
+  "o": "I can describe the properties of graphene and fullerenes, relating them back to their structures.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring waves in a ripple tank",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "I can accurately measure the wavelength, frequency and wave speed of water waves in a ripple tank.",
+  "p": "physics-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-11",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Reversible changes of state",
+  "s": "science",
+  "y": 5,
+  "u": "properties changes and separating materials",
+  "o": "I know that changes of state are reversible changes.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-09",
+   "S-16"
+  ],
+  "not": []
+ },
+ {
+  "t": "Producers, photosynthesis and consumers",
+  "s": "science",
+  "y": 10,
+  "u": "photosynthesis requirements and products",
+  "o": "I can explain why the survival of consumers depends upon photosynthesis in producers.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Calculating density and measuring volume",
+  "s": "science",
+  "y": 10,
+  "u": "particle explanations of density and pressure",
+  "o": "I can define density, calculate its value, and describe how to measure volume.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-09"
+  ],
+  "not": []
+ },
+ {
+  "t": "More irreversible changes",
+  "s": "science",
+  "y": 5,
+  "u": "properties changes and separating materials",
+  "o": "I can describe the action of acid with bicarbonate of soda as an irreversible change, where a new material is formed.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-05",
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Modern periodic table and electron configuration",
+  "s": "science",
+  "y": 10,
+  "u": "atomic structure and the periodic table",
+  "o": "I can describe the way the modern periodic table is organised and draw the electronic configuration of the first twenty elements.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-13"
+  ],
+  "not": []
+ },
+ {
+  "t": "Ionic equations: reactions of Group 1 and Group 7",
+  "s": "science",
+  "y": 11,
+  "u": "groups of the periodic table",
+  "o": "I can write balanced ionic equations and half equations for the reactions of Group 1 and 7 elements.",
+  "p": "chemistry-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": []
+ },
+ {
+  "t": "Nuclear fission and fusion",
+  "s": "science",
+  "y": 11,
+  "u": "nuclear physics",
+  "o": "I can explain how energy can be transferred from the nuclei of atoms to cause heating.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14",
+   "S-10"
+  ],
+  "not": []
+ },
+ {
+  "t": "Gravitational force and weight",
+  "s": "science",
+  "y": 9,
+  "u": "hidden forces",
+  "o": "I can describe and apply the relationship between mass and gravitational force.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-06",
+   "S-03"
+  ],
+  "not": []
+ },
+ {
+  "t": "Changing the speed of a parachute",
+  "s": "science",
+  "y": 8,
+  "u": "moving by force",
+  "o": "I can clearly describe how drag forces affect the motion of falling objects.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-06",
+   "S-21"
+  ],
+  "not": []
+ },
+ {
+  "t": "Greenhouse gases",
+  "s": "science",
+  "y": 11,
+  "u": "atmosphere and changing climate",
+  "o": "I can explain the effect of greenhouse gases on the temperature of Earth’s atmosphere.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-10",
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Making parallel circuits",
+  "s": "science",
+  "y": 9,
+  "u": "resistance and parallel circuits",
+  "o": "I can use circuit diagrams to build parallel circuits and draw circuit diagrams of parallel circuits.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-04"
+  ],
+  "not": []
+ },
+ {
+  "t": "Measuring the size and distribution of populations of organisms",
+  "s": "science",
+  "y": 10,
+  "u": "living organisms and their environments",
+  "o": "I can describe how to identify species, estimate the population size of a species and how to investigate the effect of a factor on the distribution of this species.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-08"
+  ],
+  "not": []
+ },
+ {
+  "t": "Igneous rock",
+  "s": "science",
+  "y": 8,
+  "u": "earths resources",
+  "o": "I can explain how igneous rocks form and describe features of different types.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-15"
+  ],
+  "not": []
+ },
+ {
+  "t": "Representing longitudinal waves",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "I can interpret and sketch graphs of longitudinal waves.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": []
+ },
+ {
+  "t": "Switches",
+  "s": "science",
+  "y": 4,
+  "u": "simple electrical circuits",
+  "o": "I can explain how a switch is used to open and close a circuit.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-04"
+  ],
+  "not": []
+ },
+ {
+  "t": "The movement of the Moon",
+  "s": "science",
+  "y": 5,
+  "u": "earth sun and moon",
+  "o": "You can use the idea of the Moon's movement to begin to explain why the Moon appears to change shape.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-23",
+   "S-16"
+  ],
+  "not": []
+ }
+]

@@ -1,0 +1,2762 @@
+[
+ {
+  "t": "Solve problems involving multiples of ten in a range of contexts",
+  "s": "maths",
+  "y": 2,
+  "u": "composition of multiples of",
+  "o": "I can solve problems involving multiples of ten in a range of contexts.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-45",
+   "M-42"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Represent counting in sixes as the 6 times table",
+  "s": "maths",
+  "y": 4,
+  "u": "represent counting in threes and sixes as the 3 and 6 times tables",
+  "o": "I can represent counting in sixes as the 6 times table.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-46",
+   "M-45"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explain how to solve problems where the percentage part and size is known but the whole is unknown",
+  "s": "maths",
+  "y": 6,
+  "u": "understanding percentages",
+  "o": "I can solve problems where a percentage part is known but the whole is unknown.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-89",
+   "M-43"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explain and represent constant difference for subtraction",
+  "s": "maths",
+  "y": 6,
+  "u": "use equivalence and compensation to simplify and solve subtraction problems",
+  "o": "I can explain and represent constant difference for subtraction.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Finding the nth  term",
+  "s": "maths",
+  "y": 8,
+  "u": "sequences",
+  "o": "I can find the nᵗʰ term rule by investigating the common difference.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-90"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Combining speeds",
+  "s": "maths",
+  "y": 11,
+  "u": "compound measures",
+  "o": "I can combine compound measures, calculating overall speed.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-86",
+   "M-80"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Solve problems involving subtraction when bridging 10",
+  "s": "maths",
+  "y": 2,
+  "u": "addition and subtraction of two 2 digit numbers",
+  "o": "I can solve problems involving subtraction of two-digit numbers that cross the tens boundary.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-40",
+   "M-42"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Problem solving with loci and constructions",
+  "s": "maths",
+  "y": 11,
+  "u": "loci and construction",
+  "o": "I can use my knowledge of loci and constructions to solve problems.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-04",
+   "M-24",
+   "M-07"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03",
+   "M-01"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Review comparing unit fractions",
+  "s": "maths",
+  "y": 3,
+  "u": "non unit fractions",
+  "o": "I can compare unit fractions.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Changing the subject with multiple algebraic fractions",
+  "s": "maths",
+  "y": 11,
+  "u": "algebraic fractions",
+  "o": "I can change the subject of a formula involving multiple algebraic fractions.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-55"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Degrees of accuracy",
+  "s": "maths",
+  "y": 8,
+  "u": "estimation and rounding",
+  "o": "I can appreciate what is meant by a suitable degree of accuracy.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-88"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Checking and securing understanding of plotting coordinates",
+  "s": "maths",
+  "y": 8,
+  "u": "graphical representations of linear equations",
+  "o": "I can plot coordinates in any of the four quadrants.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-21"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Calculating missing side lengths from the area of composite rectilinear shapes",
+  "s": "maths",
+  "y": 7,
+  "u": "perimeter and area",
+  "o": "I can calculate a missing side length from the area of a composite rectilinear shape.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-85"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Use knowledge of positive and negative numbers to interpret graphs",
+  "s": "maths",
+  "y": 5,
+  "u": "negative numbers",
+  "o": "I can use knowledge of positive and negative numbers to interpret graphs.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Simple interest calculations with technology",
+  "s": "maths",
+  "y": 10,
+  "u": "percentages",
+  "o": "I can carry out simple interest calculations with a calculator.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-89",
+   "M-80"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "HCF or LCM",
+  "s": "maths",
+  "y": 7,
+  "u": "properties of number factors multiples squares and cubes",
+  "o": "I can use the prime factorisation of two or more positive integers to efficiently find either the highest common factor or lowest common multiple, depending on the context of the question.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-51"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Generalised algebraic statements",
+  "s": "maths",
+  "y": 7,
+  "u": "expressions and equations",
+  "o": "I can use relationships that have been generalised using algebraic statements.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-55",
+   "M-50"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using the scale factor for enlarging a volume",
+  "s": "maths",
+  "y": 10,
+  "u": "similarity",
+  "o": "I can calculate the scale factor used to enlarge a volume and use it to find missing lengths.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-52"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using the cosine ratio",
+  "s": "maths",
+  "y": 9,
+  "u": "trigonometry",
+  "o": "I can use the cosine ratio to find the missing side or angle in a right-angled triangle.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-12",
+   "M-80"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Checking and securing understanding of drawing quadratic graphs",
+  "s": "maths",
+  "y": 10,
+  "u": "non linear graphs",
+  "o": "I can generate coordinate pairs for a quadratic graph from its equation and then draw the graph.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-22",
+   "M-80"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Problem solving with further transformations",
+  "s": "maths",
+  "y": 10,
+  "u": "further transformations",
+  "o": "I can use my enhanced knowledge of transformations to solve problems.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-23"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Checking and securing understanding of prime factorisation",
+  "s": "maths",
+  "y": 10,
+  "u": "arithmetic procedures index laws",
+  "o": "I can write any positive integer uniquely as a product of its prime factors.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-51"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Checking and securing understanding of drawing vertical and horizontal graphs",
+  "s": "maths",
+  "y": 10,
+  "u": "linear graphs",
+  "o": "I can draw graphs of the form y = a; x = a and interpret linear graphs in context.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-22",
+   "M-21"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Checking and securing finding a fraction of a given amount",
+  "s": "maths",
+  "y": 7,
+  "u": "understanding multiplicative relationships fractions and ratio",
+  "o": "I can find a fraction of a given amount.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-44",
+   "M-43"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explain how to add related unit fractions with a representation or image",
+  "s": "maths",
+  "y": 6,
+  "u": "addition and subtraction of fractions",
+  "o": "I can solve problems involving adding and simplifying fractions with different denominators.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Solving problems involving addition and subtraction",
+  "s": "maths",
+  "y": 3,
+  "u": "review strategies for adding and subtracting across",
+  "o": "I can solve problems using addition and subtraction, including bridging through ten.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-43",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Double numbers and explain what doubling means",
+  "s": "maths",
+  "y": 1,
+  "u": "addition and subtraction facts within",
+  "o": "I can double numbers and explain what doubling means.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Securing understanding of angles from KS2",
+  "s": "maths",
+  "y": 8,
+  "u": "geometrical properties polygons",
+  "o": "I can confidently state the sums of the angles around a point and on a straight line.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-09",
+   "M-02"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Calculate amounts up to 20 p",
+  "s": "maths",
+  "y": 1,
+  "u": "unitising and coin recognition value of a set of coins",
+  "o": "I can calculate amounts within 20 p",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-83"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explain what the difference is between consecutive numbers",
+  "s": "maths",
+  "y": 2,
+  "u": "calculating within",
+  "o": "I can explain what the difference is between consecutive numbers.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-40",
+   "M-45"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Convert a number of quarters from an improper fraction to a mixed number",
+  "s": "maths",
+  "y": 4,
+  "u": "convert improper fractions to mixed numbers and vice versa",
+  "o": "I can convert a quantity from an improper fraction to a mixed number using quarters.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Solving quadratic equations by completing the square",
+  "s": "maths",
+  "y": 10,
+  "u": "algebraic manipulation",
+  "o": "I can solve quadratic equations algebraically by completing the square.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-48",
+   "M-55"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Add 2-digit numbers when crossing the tens boundary",
+  "s": "maths",
+  "y": 2,
+  "u": "addition and subtraction of two 2 digit numbers",
+  "o": "I can add two-digit numbers when the sum crosses the tens boundary",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-40",
+   "M-42",
+   "M-41"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Use the area of a parallelogram formula to calculate unknown measurements",
+  "s": "maths",
+  "y": 6,
+  "u": "area perimeter position and direction",
+  "o": "I can use the area of a parallelogram formula to calculate unknown measurements.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-85"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Understanding part-part-whole relationships",
+  "s": "maths",
+  "y": 1,
+  "u": "additive structures addition",
+  "o": "I can understand the relationship between equations, part-part-whole models and problems they represent.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-43",
+   "M-54"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Shapes within shapes",
+  "s": "maths",
+  "y": 10,
+  "u": "2d and 3d shape compound shapes",
+  "o": "I can express percentage shaded from shapes within shapes.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-89",
+   "M-85"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Efficiently drawing linear graphs",
+  "s": "maths",
+  "y": 9,
+  "u": "graphical representations",
+  "o": "I can draw a linear graph efficiently and accurately.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-22",
+   "M-21"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Rounding seven-digit numbers to any power of 10",
+  "s": "maths",
+  "y": 6,
+  "u": "rounding and solving problems with numbers up to 7 digits",
+  "o": "I can round seven-digit numbers to any power of 10",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-88",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using the suffixes -cian, -sion and -ssion to represent /shun/",
+  "s": "english",
+  "y": 5,
+  "u": "verb adjective and noun suffixes",
+  "o": "I can spell words using all the / shun / suffixes.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Introduction to ‘Cosmic Disco’ by Grace Nichols",
+  "s": "english",
+  "y": 4,
+  "u": "poetry inspired by weather",
+  "o": "I can read the poem and can share my personal response.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Investigating Julia’s death in ‘The Speckled Band’",
+  "s": "english",
+  "y": 7,
+  "u": "sherlock holmes short stories",
+  "o": "I can make a plausible explanation for Julia Stoner's death based on relevant evidence from 'The Adventure of the Speckled Band'.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-03",
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using hyphens to join prefixes to root words",
+  "s": "english",
+  "y": 6,
+  "u": "letter strings etymology and curriculum words",
+  "o": "I can identify when to use a hyphen to join a prefix to a root word.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-11",
+   "E-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Writing the second paragraph of a persuasive letter to Sherlock Holmes",
+  "s": "english",
+  "y": 6,
+  "u": "sherlock holmes descriptive and letter writing",
+  "o": "I can write the second persuasive paragraph of a persuasive letter, giving reasons and evidence and using a range of persuasive techniques.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08",
+   "E-04"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Writing analytically about Shakespeare's presentation of Romeo and love",
+  "s": "english",
+  "y": 10,
+  "u": "macbeth lady macbeth as a machiavellian villain",
+  "o": "I can create a thesis statement and topic sentences to explain how Shakespeare presents Romeo’s feelings about love in ‘Romeo and Juliet’.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-05",
+   "E-04",
+   "E-03"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Analysing extended responses to power and authority in Shelley and Femi's poetry",
+  "s": "english",
+  "y": 11,
+  "u": "poetry anthology continued study",
+  "o": "I can analyse a model answer against a success criteria.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-04",
+   "E-01",
+   "E-03"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Reviewing further common exception words, using lead ins",
+  "s": "english",
+  "y": 2,
+  "u": "review using lead ins or no lead ins",
+  "o": "I can write common exception words using cursive handwriting.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02",
+   "E-09"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Spelling words with the comparative suffix -er",
+  "s": "english",
+  "y": 6,
+  "u": "homophones and tense",
+  "o": "I can apply spelling rules to spell words with the comparative suffix -er.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "The first join: ag, ac, na and to with no lead in",
+  "s": "english",
+  "y": 2,
+  "u": "the four joins",
+  "o": "I can correctly form the first join.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Conceptualising letter-writing and understanding the letter form",
+  "s": "english",
+  "y": 10,
+  "u": "non fiction letter writing v3731",
+  "o": "I can explain why people might use letter writing and understand how to structure a letter.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "'Jekyll and Hyde' Chapter 1: Meeting Mr Utterson",
+  "s": "english",
+  "y": 10,
+  "u": "nineteenth century text first study",
+  "o": "I can explain how Stevenson presents Mr. Utterson in the opening of the novella.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-01",
+   "E-04"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Planning and writing the first main paragraph of an essay",
+  "s": "english",
+  "y": 5,
+  "u": "the amazon rainforest essay writing",
+  "o": "I can write the first main paragraph of an essay, including a range of linguistic features.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-04",
+   "E-05"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Parenthesis: brackets",
+  "s": "english",
+  "y": 5,
+  "u": "speech punctuation parenthesis and apostrophes",
+  "o": "I can use brackets to add extra, factual information.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "The use of a motif in Hillary Clinton's speech",
+  "s": "english",
+  "y": 8,
+  "u": "taking a stand",
+  "o": "I can identify and explain how Hillary Clinton uses a motif in her speech about women’s rights.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-02",
+   "E-01"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Developing understanding of 'Swallow's Kiss' through rich discussions",
+  "s": "english",
+  "y": 3,
+  "u": "swallows kiss book club",
+  "o": "I can discuss the main ideas of ‘Swallow’s Kiss’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-12",
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Analysing extended responses to ideas of transience in unseen poetry",
+  "s": "english",
+  "y": 11,
+  "u": "unseen poetry",
+  "o": "I can consider and explain the effectiveness of model responses and how they present ideas of transience in a comparative answer.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-01",
+   "E-13",
+   "E-04"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Analysing the poem 'Mother, any distance' by Simon Armitage",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can analyse how Armitage uses literary methods to portray the complexities of a mother-son relationship.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-01",
+   "E-13",
+   "E-03"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Planning the build-up of 'The Viewer'",
+  "s": "english",
+  "y": 5,
+  "u": "the viewer narrative writing",
+  "o": "I can plan the build-up of 'The Viewer'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Describing the troll in 'The Three Billy Goats Gruff'",
+  "s": "english",
+  "y": 1,
+  "u": "the three billy goats gruff reading and writing",
+  "o": "I can write a sentence with an adjective to describe the troll in 'The Three Billy Goats Gruff'.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-07"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Building comprehension of 'Shackleton’s Journey' through rich discussion",
+  "s": "english",
+  "y": 6,
+  "u": "shackletons journey reading",
+  "o": "I can answer a range of comprehension questions on 'Shackleton's Journey'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Revising spelling patterns linked to sounds",
+  "s": "english",
+  "y": 6,
+  "u": "review and revision of all taught spelling",
+  "o": "I can spell words containing the same and different sounds.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Comparing views in ‘The Soldier’, ‘In Flanders Fields’ and ‘The Gift of India’",
+  "s": "english",
+  "y": 9,
+  "u": "a world at war poetry",
+  "o": "I can make detailed comparisons between how Brooke, Naidu and McCrae present ideas around war and the experience of dying at war.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-14",
+   "E-01",
+   "E-13"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Reading 'The Twisted Tree': the theme of fate",
+  "s": "english",
+  "y": 7,
+  "u": "the twisted tree fiction reading",
+  "o": "I can understand the plot and Martha's consideration of the idea of fate.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-03",
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "The fourth join: rl, rk and rt with no lead in",
+  "s": "english",
+  "y": 2,
+  "u": "the four joins",
+  "o": "I can correctly form the fourth join.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Reading and summarising the conclusion of ‘The Speckled Band’ mystery",
+  "s": "english",
+  "y": 7,
+  "u": "sherlock holmes short stories",
+  "o": "I can summarise Holmes’ conclusion to the case of ‘The Speckled Band’.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-16"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using non-verbal features to present a speech effectively",
+  "s": "english",
+  "y": 10,
+  "u": "spoken language the language of change",
+  "o": "I can understand how non-verbal features contribute to the  effective presentation of a speech.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-12"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Comparing texts about drug misuse: ‘Confessions’ (1821) and ‘A letter to’ (2014)",
+  "s": "english",
+  "y": 10,
+  "u": "non fiction crime and punishment",
+  "o": "I can read two texts about the same topic - drug misuse - and begin to compare the perspectives of the writers who wrote them.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-14",
+   "E-01"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Exploring historical perspectives of men",
+  "s": "english",
+  "y": 9,
+  "u": "womens rights across the ages non fiction reading and writing",
+  "o": "I can explore the historical expectations of men and use modal verbs to create meaning.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-07"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Identifying features of a non-chronological report in preparation for writing",
+  "s": "english",
+  "y": 3,
+  "u": "king tut or healthy lifestyle non chronological report",
+  "o": "I can identify important features of a non-chronological report.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Planning a persuasive speech about a new word",
+  "s": "english",
+  "y": 8,
+  "u": "a history of language",
+  "o": "I can plan a persuasive speech about my new word.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08",
+   "E-05"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using onomatopoeia and alliteration to craft interesting sound imagery",
+  "s": "english",
+  "y": 10,
+  "u": "fiction read around the world",
+  "o": "I can create effective sound imagery in my writing.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-02"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "'Romeo and Juliet': exploring the perception of sin and societal expectations",
+  "s": "english",
+  "y": 11,
+  "u": "macbeth the role of guilt",
+  "o": "I can explore the perception of sin in ‘Romeo and Juliet’ and how it relates to societal expectations.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "N-10"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Planning a newspaper article about the solved  case of ‘The Speckled Band’",
+  "s": "english",
+  "y": 7,
+  "u": "sherlock holmes short stories",
+  "o": "I can create a detailed plan to support my own writing.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using context effectively in 'Leave Taking' essays",
+  "s": "english",
+  "y": 10,
+  "u": "modern text first study",
+  "o": "I can understand what context is and how to weave it into my analytical essay responses on 'Leave Taking'.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-04",
+   "E-05"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "'The Twisted Tree': writing an article about Mormor's death",
+  "s": "english",
+  "y": 7,
+  "u": "the twisted tree fiction reading",
+  "o": "I can write an article about Mormor’s death that includes a variety of sentence types for different effects.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Upthrust",
+  "s": "science",
+  "y": 10,
+  "u": "particle explanations of density and pressure",
+  "o": "I can describe how pressure changes with depth and causes upthrust.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-06"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Describing salts",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can describe salts and work out their empirical chemical formulae from diagrams, as well as give ionic descriptions of acids and alkalis.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14",
+   "S-13"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Properties of covalent substances",
+  "s": "science",
+  "y": 10,
+  "u": "structure and bonding",
+  "o": "I can describe some different structures that non-metal atoms can form using covalent bonding and describe the properties of covalent compounds.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-14"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explaining effects of substrate concentration and temperature on enzyme rate",
+  "s": "science",
+  "y": 10,
+  "u": "biological molecules and enzymes",
+  "o": "I can explain how and why the rate of an enzyme reaction is affected by substrate concentration and temperature.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-02"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Aerobic cellular respiration in humans and other organisms",
+  "s": "science",
+  "y": 11,
+  "u": "aerobic and anaerobic cellular respiration",
+  "o": "I can describe the reactants and products of aerobic cellular respiration, and explain where, why and when it takes place.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Stars, galaxies and the universe",
+  "s": "science",
+  "y": 7,
+  "u": "solar system and beyond",
+  "o": "I can describe what stars and galaxies are and explain how they look when seen from Earth.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-23"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Representing data about human height",
+  "s": "science",
+  "y": 5,
+  "u": "human development",
+  "o": "I can use mean average heights to create a line graph that shows how human height varies with age.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-02",
+   "M-60"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Animal skeletons",
+  "s": "science",
+  "y": 3,
+  "u": "introduction to the human skeleton and muscles",
+  "o": "I can compare and group vertebrate animals based on their skeleton.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-15",
+   "S-01"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Refraction through a semicircular block",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can describe and explain when refraction happens and when total internal reflection happens at boundaries between media.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-12"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Insulin, glucagon and the control of blood sugar level",
+  "s": "science",
+  "y": 10,
+  "u": "coordination and control hormones and the human endocrine system",
+  "o": "I can describe the role of the hormones insulin and glucagon in controlling blood sugar level.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-25"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "The National Grid",
+  "s": "science",
+  "y": 11,
+  "u": "mains electricity",
+  "o": "I can describe the National Grid and explain why transmission lines use a very high transmission voltage.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-04"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Changes in food chains (non-statutory Climate Change & Sustainability)",
+  "s": "science",
+  "y": 4,
+  "u": "more about food chains",
+  "o": "I can explain why a change to the population of one living thing can affect the population of other living things in the same food chain.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-08"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Power of an appliance or electric circuit",
+  "s": "science",
+  "y": 11,
+  "u": "mains electricity",
+  "o": "I can describe how the power of an appliance or electric circuit depends on current and potential difference.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-04"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Introduction to reversible chemical reactions",
+  "s": "science",
+  "y": 11,
+  "u": "industrial chemistry",
+  "o": "I can describe reversible chemical reactions, represent them using chemical equations, and give examples.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Comparing the life cycles of mammals and birds",
+  "s": "science",
+  "y": 5,
+  "u": "reproduction and life cycles animals",
+  "o": "I can describe the differences in the life cycles of mammals and birds.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-16",
+   "X-07"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Calculating from displacement-time graphs (v = s ÷ t)",
+  "s": "science",
+  "y": 10,
+  "u": "measuring and calculating motion",
+  "o": "I can take readings from displacement-time graphs to find distance, displacement, speed and velocity.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-21",
+   "S-03"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Diffusion",
+  "s": "science",
+  "y": 7,
+  "u": "solutions",
+  "o": "I can explain how particles spread through a fluid.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-09"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "How pulleys can help us",
+  "s": "science",
+  "y": 5,
+  "u": "forces including simple machines",
+  "o": "I can describe how pulleys can make difficult work easier.",
+  "p": "science-primary-ks2",
+  "expect": [
+   "S-06"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Chemical tests involving alkanes, alkenes and alcohols",
+  "s": "science",
+  "y": 11,
+  "u": "organic chemistry",
+  "o": "I can use data to identify the functional group and predict the chain length for an alkane, alkene or alcohol.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-27"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Absorbing infrared radiation practical",
+  "s": "science",
+  "y": 11,
+  "u": "electromagnetic waves",
+  "o": "I can investigate how the intensity of black ink affects the infrared radiation absorbed by a surface.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-07",
+   "S-02",
+   "D.apparatus"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "The energy of an object in a gravitational field (EP=mgh)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can calculate the change in energy of an object because of its movement in a gravitational field.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Stellar evolution",
+  "s": "science",
+  "y": 11,
+  "u": "gravity in space",
+  "o": "I can describe life cycles of stars and the variations that depend on the mass of a star.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-23",
+   "S-16"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Stretching a spring analysis (F=ke)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving objects",
+  "o": "I can describe and calculate the properties of a spring using Hooke’s law.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-02",
+   "S-06"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Representing transverse waves",
+  "s": "science",
+  "y": 10,
+  "u": "measuring waves",
+  "o": "I can interpret and sketch displacement-time graphs of transverse waves.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-11"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Distillation: simple distillation",
+  "s": "science",
+  "y": 10,
+  "u": "separating substances",
+  "o": "I can identify equipment needed to carry out simple distillation and explain how the process works.",
+  "p": "chemistry-secondary-ks4-foundation-aqa",
+  "expect": [
+   "D.apparatus",
+   "S-09"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Power of an appliance or electric circuit",
+  "s": "science",
+  "y": 11,
+  "u": "mains electricity",
+  "o": "I can describe how the power of an appliance or electric circuit depends on current and potential difference.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-04"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Gravitational force and weight",
+  "s": "science",
+  "y": 9,
+  "u": "hidden forces",
+  "o": "I can describe and apply the relationship between mass and gravitational force.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-06",
+   "S-03"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Calculating specific heat capacity (∆E  = m c ∆θ)",
+  "s": "science",
+  "y": 10,
+  "u": "energy of moving particles",
+  "o": "I can make calculations using the equation ΔE = m c Δθ.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03",
+   "S-10"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Effect of osmosis and sugar concentration on the mass of plant tissue: practical",
+  "s": "science",
+  "y": 11,
+  "u": "coordination and control maintaining a constant internal environment",
+  "o": "I can carry out an investigation into the effect of sugar solution concentration on the mass of fresh potato tissue.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-07",
+   "S-02",
+   "D.apparatus"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Activity and half-life calculations (including complex ones)",
+  "s": "science",
+  "y": 11,
+  "u": "nuclear physics",
+  "o": "I can interpret radioactive half-life graphs and make calculations using values of half-life.",
+  "p": "combined-science-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-02",
+   "S-03"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Concentration of solutions",
+  "s": "science",
+  "y": 10,
+  "u": "making salts",
+  "o": "I can explain what is meant by the concentration of a solution and calculate the concentration of various solutions.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-03"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Mass in a chemical reaction",
+  "s": "science",
+  "y": 10,
+  "u": "calculations involving masses",
+  "o": "I can use conservation of mass and relative formula masses to predict the mass of unknown products or reactants.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05",
+   "S-03"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Predator-prey relationships",
+  "s": "science",
+  "y": 7,
+  "u": "ecosystems",
+  "o": "I can describe and explain the relationship between predator and prey populations.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-08",
+   "S-02"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Birthday celebrations: indirect object pronouns 'me', 'te' and 'le'",
+  "s": "languages",
+  "y": 8,
+  "u": "friendships and birthday celebrations pronouns gustar type verbs",
+  "o": "I can use indirect object pronouns to indicate who receives what from whom at a birthday.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-23",
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Where I went: singular perfect tense 'sein' vs 'haben', 'mit' + dative",
+  "s": "languages",
+  "y": 8,
+  "u": "past journeys perfect tense with sein",
+  "o": "I can say where I went and how I got there, using the perfect tense with ‘sein’.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-22",
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "A birthday: -er verbs 'she, he'",
+  "s": "languages",
+  "y": 3,
+  "u": "what i and others do singular regular er verbs",
+  "o": "I can use a range of singular verbs and definite articles to talk about birthday activities.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-03",
+   "L-05"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "What you have: intonation questions, 'tienes'",
+  "s": "languages",
+  "y": 3,
+  "u": "what i and others have tener and singular nouns",
+  "o": "I can use ‘tienes’ to understand and ask questions about things in the classroom. I can read aloud words with [ci] and [ce].",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-07",
+   "L-05"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Christmas: 'Es gibt' with plurals, the song 'O Tannenbaum'",
+  "s": "languages",
+  "y": 7,
+  "u": "christmas singular and plural nouns",
+  "o": "I can apply masculine and neuter plural rules 1 and 2 to build sentences with ‘es gibt’ and ‘viele’.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-10",
+   "L-05"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Experiencias del colegio: read aloud, reading practice (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "studying and my future repaso el colegio y el trabajo",
+  "o": "I can apply my vocabulary knowledge and reading strategies to successfully complete exam-style reading tasks.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-24",
+   "L-08"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Gesundheit: read and respond to texts",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us die weite welt",
+  "o": "I can read and understand a variety of texts, identifying and eliminating distractors, and write an extended text about health and lifestyle.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-24"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Düsseldorf: past participles of strong and irregular verbs, questions",
+  "s": "languages",
+  "y": 10,
+  "u": "communication and the world around us reiseziele",
+  "o": "I understand how to form the past participles of strong and irregular verbs, and can ask and answer questions in the perfect tense about a past trip.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-22",
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Experiencias de racismo: negative pronouns 'nada', 'nadie', 'nunca'",
+  "s": "languages",
+  "y": 10,
+  "u": "my neighbourhood la vida en mexico",
+  "o": "I can understand and use 'nada', 'nunca' and 'nadie' in the context of people’s experiences of racism in Mexico.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-21"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Familie: direct object pronouns, singular and plural",
+  "s": "languages",
+  "y": 10,
+  "u": "popular culture beziehungen und feste",
+  "o": "I can use direct object pronouns to talk about family, famous people and things.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-23",
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Childhood experiences: imperfect plural forms of 'sein' and 'haben'",
+  "s": "languages",
+  "y": 9,
+  "u": "past lives and experiences imperfect modal verbs",
+  "o": "I can form the imperfect tense plural forms of the verbs 'haben' and 'sein', and use them in the context of childhood experiences.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Describe cities: 'ser' 3rd person plural 'son'",
+  "s": "languages",
+  "y": 7,
+  "u": "places definite articles plural adjective agreement",
+  "o": "I can use 'es', 'son', 'hay' and 'tiene' to say what places there are around me and describe them.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-20",
+   "L-12",
+   "L-10"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Who is supposed to do what? Modal verbs, two-verb structures, question words",
+  "s": "languages",
+  "y": 8,
+  "u": "making plans present and future tenses",
+  "o": "I can emphasise different parts of sentences by using inversion (word order two), and understand how to form sentences that use two verbs.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-04",
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Identität: language and gender, plurals, weak masculine nouns, 'seit'",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle wer sind wir",
+  "o": "I can use adjectival nouns and seit with the present tense.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-10",
+   "L-23"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Pläne: word order with 'sobald', 'solange' and 'wenn'",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle aufwachsen altersgrenzen und zukunftsplane",
+  "o": "I can use the word order 3 conjunctions 'sobald', 'solange' and 'wenn' to discuss conditions for future plans.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Situaciones: role play",
+  "s": "languages",
+  "y": 10,
+  "u": "lifestyle and wellbeing situaciones diarias",
+  "o": "I can prepare and perform a role-play in a service setting.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-25",
+   "L-15"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Meine Freizeit: present tense for future meaning, extended writing",
+  "s": "languages",
+  "y": 10,
+  "u": "popular culture sport und freizeit",
+  "o": "I can use the present tense with adverbs of time for future meaning and I can use the BORDER acronym to respond fully and accurately in writing.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-14",
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Que faisais-tu quand ... ? The imperfect tense with regular verbs ('be' + ing)",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle mes amis",
+  "o": "I can describe what I and others were doing and what was happening using the imperfect tense.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Un ado francophone : perfect tense, dictation, listening (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us revisions la vie en francophonie",
+  "o": "I can use regular and irregular verbs in the perfect tense to describe past events in the life of a teenager.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-22",
+   "L-06",
+   "L-09"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "¿Adónde fuiste? Extended writing",
+  "s": "languages",
+  "y": 11,
+  "u": "travel and tourism lugares y personas famosos",
+  "o": "I can produce a detailed piece of writing that uses the correct tense to respond directly to each bullet point.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-14"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Family activities: singular regular -er verbs",
+  "s": "languages",
+  "y": 4,
+  "u": "activities singular regular er verbs",
+  "o": "I can use singular -er verbs to say what I do at the weekend.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "How people feel: idiomatic uses of 'dar' + noun",
+  "s": "languages",
+  "y": 8,
+  "u": "describing how people feel tener and dar plus noun",
+  "o": "I can use the irregular verb 'dar' to say how something makes people feel.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-05"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Future goals - Taïs Vinolo: 'aller' + infinitive, negation",
+  "s": "languages",
+  "y": 9,
+  "u": "future plans and work experience 2 verb phrases with aller modals il faut",
+  "o": "I can use 'aller' with infinitives to say what I'm going to and not going to do in the future.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-21"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Die Wuppertaler Schwebebahn: past tense, past participles, time-manner-place",
+  "s": "languages",
+  "y": 10,
+  "u": "communication and the world around us reiseziele",
+  "o": "I can form the perfect tense of different types of verbs and describe a past trip using adverbs of time, manner and place.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-22",
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Luis' trip to Iquique: 'al' and 'a la'",
+  "s": "languages",
+  "y": 6,
+  "u": "cities and festivals to go to have present tense",
+  "o": "I can understand information about a trip.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-09",
+   "L-13"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Mes études : 'aller' + infinitive, future tense singular -er verbs",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle mes projets",
+  "o": "I can use 'aller + infinitive' and the simple future of -er verbs to say what I or someone else will do in the context of studying.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "¿Es más interesante? Regular superlative and comparatives",
+  "s": "languages",
+  "y": 10,
+  "u": "media and technology conversaciones",
+  "o": "I can compare TV programmes and viewing habits using comparatives and superlatives.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-12",
+   "L-04"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Plans for this weekend: present tense (future meaning), 'nach' vs 'zu' (dative)",
+  "s": "languages",
+  "y": 8,
+  "u": "making plans present and future tenses",
+  "o": "I can use the present tense plus a future time phrase to discuss plans for the weekend, and can correctly use 'nach' or 'zu' to say where I plan to go.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-11",
+   "L-03"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Kommunikation online: extended writing",
+  "s": "languages",
+  "y": 10,
+  "u": "communication and the world around us mein leben online",
+  "o": "I can use the BORDER acronym to develop and extend my writing about technology and life online.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-14"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "What people have: 'tener' singular persons, alphabet",
+  "s": "languages",
+  "y": 7,
+  "u": "belongings tener and articles un and una",
+  "o": "I can understand what I, you and someone else has in Spanish.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-07"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Compare mixed numbers when the denominators of fractional parts are different",
+  "s": "maths",
+  "y": 4,
+  "u": "compare and order mixed numbers and position on a number line",
+  "o": "I can compare and order mixed numbers when the whole and the numerator of the fractional part is the same.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Interpret numbers greater than and less than zero in different contexts",
+  "s": "maths",
+  "y": 5,
+  "u": "negative numbers",
+  "o": "I can interpret numbers greater than and less than zero in different contexts.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Deutsch lernen: compound nouns, 'Lieblings-' and 'Haupt-', translation",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle sprichst du deutsch",
+  "o": "I can use compound nouns, 'Lieblings-' and 'Haupt-' to add greater detail to nouns in the context of learning German.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-13",
+   "L-05"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Construct line graphs representing two variables in familiar contexts",
+  "s": "maths",
+  "y": 6,
+  "u": "statistics",
+  "o": "I can construct line graphs representing two variables.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-60"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Solve problems using a bar model to represent a whole partitioned into two parts",
+  "s": "maths",
+  "y": 1,
+  "u": "composition of numbers 0 to",
+  "o": "I can solve problems using a bar model to partition a number into two parts.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-43",
+   "M-54"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "New subordinating conjunctions and relative pronouns",
+  "s": "english",
+  "y": 6,
+  "u": "using five sentence types",
+  "o": "I can identify subordinating conjunctions and relative pronouns and select the ones that are appropriate to use in different sentence contexts.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-03",
+   "E-07"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "A mystery: perfect and imperfect tenses together",
+  "s": "languages",
+  "y": 9,
+  "u": "ongoing past events imperfect tense",
+  "o": "I can use the perfect and imperfect tenses together to describe simultaneous events in the context of a mystery.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-22"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Construct a whole when given a part and the number of parts",
+  "s": "maths",
+  "y": 3,
+  "u": "unit fractions as part of a whole",
+  "o": "I can construct a whole when given a part and the number of parts.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-43"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Using context in a 'Leave Taking' essay about intergenerational conflict",
+  "s": "english",
+  "y": 11,
+  "u": "modern text second deep dive",
+  "o": "I can use context to support my analysis of intergenerational conflict in Winsome Pinnock's 'Leave Taking'.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-04",
+   "E-03"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Secure identifying a whole and the parts that make it up",
+  "s": "maths",
+  "y": 4,
+  "u": "review of fractions",
+  "o": "I can identify a whole and the parts that make it up.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-43"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Reviewing handwriting using another poem",
+  "s": "english",
+  "y": 3,
+  "u": "building fluency in silent letters homophones and common exception words",
+  "o": "I can  correctly copy out a poem in cursive handwriting.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-02"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Reviewing common exception words, using lead ins",
+  "s": "english",
+  "y": 2,
+  "u": "review using lead ins or no lead ins",
+  "o": "I can write common exception words using cursive handwriting.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02",
+   "E-09"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Explain the removal of placeholders when dividing whole numbers by 100",
+  "s": "maths",
+  "y": 4,
+  "u": "understand what happens when a number is multiplied or divided by 10 and",
+  "o": "I can use place value to explain removing the final 2 zeros from a multiple of 100 when we divide by 100",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-41",
+   "M-40"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Solving simultaneous equations via any method",
+  "s": "maths",
+  "y": 10,
+  "u": "simultaneous equations 2 variables",
+  "o": "I can determine which method of solving is most appropriate and interpret the solutions (in context).",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-55",
+   "M-22"
+  ],
+  "not": [
+   "E-01",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Colons, semi-colons, hyphens and bullet points revision",
+  "s": "english",
+  "y": 6,
+  "u": "review including word class sentence types tense commas and colons",
+  "o": "I can practise colons, semi-colons, hyphens and bullet points test questions.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-08"
+  ],
+  "not": [
+   "M-40",
+   "S-01",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "Animal cells: common structures and specialised cells",
+  "s": "science",
+  "y": 10,
+  "u": "eukaryotic and prokaryotic cells",
+  "o": "You can identify common structures of animal cells and describe how some specialised cells in animals are adapted for the jobs the cells do.",
+  "p": "combined-science-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-01",
+   "S-25"
+  ],
+  "not": [
+   "E-04",
+   "M-44",
+   "L-03"
+  ],
+  "note": "blind label"
+ },
+ {
+  "t": "What is important in life: infinitive uses, verbs capitalised as nouns",
+  "s": "languages",
+  "y": 9,
+  "u": "desires plans and priorities mocht future and use of infinitive",
+  "o": "I can use infinitives as nouns and know when to use 'zu' with infinitives in the context of important relationships with others.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-23"
+  ],
+  "not": [
+   "E-07",
+   "E-12",
+   "N-04",
+   "M-40"
+  ],
+  "note": "blind label"
+ }
+]

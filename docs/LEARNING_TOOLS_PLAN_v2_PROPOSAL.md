@@ -1,4 +1,8 @@
-# LEARNING TOOLS — v2 PROPOSAL (for Kaz to approve — nothing here is built yet)
+# LEARNING TOOLS — v2 PLAN (approved by Kaz 23 Sep 2026)
+
+> **DECISION (Kaz, 23 Sep 2026): EVERY tool in the catalogue will be built — P1 ("In build") AND P2 ("Coming soon"), including humanities — regardless of click demand.** The Coming-soon click counts (`hubToolEvents`) only decide the ORDER within a phase, never whether a tool is built. Progress is committed and pushed to GitHub as it goes; independent review agents check each milestone.
+
+(Original proposal text follows.)
 Merged from six independent read-only reviews (maths, English, science, languages, humanities/other, architecture), each tested against the real 7,470-lesson library. Full reports: scratchpad/agent-*.md.
 
 ## 1. What the real library says

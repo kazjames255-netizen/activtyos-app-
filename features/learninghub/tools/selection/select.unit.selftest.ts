@@ -39,5 +39,7 @@ const s1 = JSON.stringify(top({ title: "Measuring angles with a protractor and a
 ok(s1 === s2, "deterministic");
 ok(unitFromKey("english-primary-ks1/units/a-superhero-like-you-12/lessons/x") === "a superhero like you" && unitFromKey(null) === "" && programmeFromKey("maths-secondary-ks4-higher-aqa/units/u/lessons/l") === "maths-secondary-ks4-higher-aqa", "unit/programme parsing");
 ok(mergeRules([set, { version: "x", rules: [], fallback: { english: ["E-01"] } }], "m").fallback.english?.[0] === "E-01", "merge fallbacks");
+ok(top({ title: "Using a number line", year: null })[0]?.tool === "M-40", "unknown year is not filtered out");
+ok(selectTools(sig({ subject: "", title: "Measuring with a protractor" }), set, () => true)[0]?.tool === "M-02", "unknown subject: every subject's rules get a go");
 console.log(`${n} checks, ${bad} failed`);
 process.exit(bad ? 1 : 0);

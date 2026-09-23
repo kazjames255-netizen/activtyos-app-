@@ -209,8 +209,10 @@ const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
  *  open tool as its own floating window over the lesson card (never over the sidebar) — see FloatingPanel.tsx
  *  for the window mechanics and the comment at the top of this file for why that's a new component rather than
  *  a forced reuse of the board or the video tile. */
-export function HelpToolsPanel({ tools, lessonCardRef, hideList }: {
+export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
   tools: HelpToolId[];
+  /** Tools to put under "Suggested for this lesson", best first (tools/suggest.ts works them out from the lesson). Absent/empty = the fixed default six. */
+  suggested?: HelpToolId[];
   /** The left-column lesson card — new windows spawn from its top-right corner; the minimised tray docks at its
    *  bottom-left. Drag itself still clamps to the VIEWPORT, not this box, once a window is open. */
   lessonCardRef: RefObject<HTMLDivElement | null>;
@@ -274,7 +276,7 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList }: {
     const activeId = cards[0]?.id ?? null;
     return (
       <>
-        <ToolsListCard tools={tools} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
+        <ToolsListCard tools={tools} suggested={suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
           onPick={(id, el) => { if (isOpen(id)) closeTool(id); else { setCards([]); openTool(id, el); } }} />
         {activeId && (
           <MobileToolSheet id={activeId} label={HELP_TOOLS.find((t) => t.id === activeId)!.label} icon={HELP_TOOLS.find((t) => t.id === activeId)!.icon}
@@ -292,7 +294,7 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList }: {
 
   return (
     <>
-      <ToolsListCard tools={tools} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
+      <ToolsListCard tools={tools} suggested={suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
         onPick={(id, el) => openTool(id, el)} />
       {floating.map((c) => {
         const t = HELP_TOOLS.find((x) => x.id === c.id)!;
@@ -337,15 +339,17 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList }: {
 /** The sidebar card itself — same chrome as the Homework/Flashcards cards. "Suggested for this lesson" is
  *  always expanded; every other subject group is a collapsible section, closed by default except the one
  *  matching this lesson's own subject. */
-function ToolsListCard({ tools, isOpen, openGroups, setOpenGroups, hidden, onPick }: {
-  tools: HelpToolId[]; isOpen: (id: HelpToolId) => boolean;
+function ToolsListCard({ tools, suggested: suggestedProp, isOpen, openGroups, setOpenGroups, hidden, onPick }: {
+  tools: HelpToolId[]; suggested?: HelpToolId[]; isOpen: (id: HelpToolId) => boolean;
   openGroups: Set<string>; setOpenGroups: (s: Set<string>) => void; hidden: boolean;
   onPick: (id: HelpToolId, el: HTMLElement | null) => void;
 }) {
   if (hidden) return null;
   const ready = new Set(HELP_TOOLS.filter((t) => t.ready !== false).map((t) => t.id));
   const enabled = new Set(tools.filter((id) => ready.has(id)));
-  const suggested = DEFAULT_SUGGESTED.filter((id) => enabled.has(id));
+  const picked = (suggestedProp ?? []).filter((id) => enabled.has(id));
+  // Lesson-specific picks first; top up from the default six so the row never looks bare.
+  const suggested = picked.length ? [...picked, ...DEFAULT_SUGGESTED.filter((id) => enabled.has(id) && !picked.includes(id))].slice(0, 6) : DEFAULT_SUGGESTED.filter((id) => enabled.has(id));
   const toggleGroup = (key: string) => setOpenGroups(new Set(openGroups.has(key) ? [...openGroups].filter((k) => k !== key) : [...openGroups, key]));
 
   const pill = (id: HelpToolId) => {

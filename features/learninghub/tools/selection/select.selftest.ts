@@ -45,6 +45,12 @@ for (const l of lessons) {
   c.n++;
   if (selectTools(sig(l), rules, () => true, { max: 3 }).some((x) => x.source === "rule")) c.hit++;
 }
+// The honest number: how many lessons get a SPECIFIC suggestion (a rule of weight ≥ 0.5) rather than only a low-priority catch-all.
+const spec: Record<string, number> = {};
+const ruleWeight = new Map(rules.rules.map((r) => [r.id, r.weight]));
+for (const l of lessons) if (selectTools(sig(l), rules, () => true, { max: 3 }).some((x) => x.source === "rule" && (ruleWeight.get(x.why.rule) ?? 0) >= 0.5)) spec[l.s] = (spec[l.s] ?? 0) + 1;
+console.log(`specific-tool coverage (weight ≥ 0.5): ${Object.entries(cov).map(([s, c]) => `${s} ${Math.round(((spec[s] ?? 0) / c.n) * 100)}%`).join(" · ")}`);
+for (const [s, c] of Object.entries(cov)) ok((spec[s] ?? 0) / c.n >= 0.7, `specific coverage for ${s} is ${Math.round(((spec[s] ?? 0) / c.n) * 100)}% (< 70%)`);
 const report = Object.entries(cov).map(([s, c]) => `${s} ${Math.round((c.hit / c.n) * 100)}% (${c.hit}/${c.n})`).join(" · ");
 console.log(`coverage on ${lessons.length} lessons: ${report}`);
 for (const [s, c] of Object.entries(cov)) ok(c.hit / c.n >= 0.85, `coverage for ${s} is ${Math.round((c.hit / c.n) * 100)}% (< 85%)`);

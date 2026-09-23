@@ -31,7 +31,7 @@ const fits = (p: Pt) => p[0] >= MARGIN && p[0] <= PAPER_W - MARGIN && p[1] >= MA
 const gid = (i: number) => `g${i}`;
 const pt = (i: number, p: Pt, label: string): Mark => ({ id: gid(i), k: "pt", p, label, given: true });
 const sg = (i: number, a: Pt, b: Pt): Mark => ({ id: gid(i), k: "seg", a, b, ruled: true, given: true });
-const own = (id: string, m: Omit<Mark, "id">): Mark => ({ id, ...m } as Mark);
+const own = (id: string, m: Record<string, unknown>): Mark => ({ id, ...m }) as Mark;
 const cm = (mm: number) => `${round(mm / 10, 1)} cm`;
 const r1 = (p: Pt): Pt => [round(p[0], 1), round(p[1], 1)];
 
