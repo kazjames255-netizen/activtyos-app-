@@ -17,7 +17,7 @@ import { attemptsCol, nowIso } from "./teachingCommon";
 export const hubCurriculumApi = Router();
 const tagsCol = db.collection("hubNcTags");
 
-interface TagDoc { tenantId: string; franchiseId: string | null; framework: string; noteId: string; areaId: string; year: number | null; byUid: string; byName: string; at: string }
+interface TagDoc { tenantId: string; franchiseId: string | null; framework: string; noteId: string; areaId: string; year: number; byUid: string; byName: string; at: string }
 
 // A tenant's corrections are tiny (a few hundred rows at most), so they're cached whole for a minute and dropped on every write.
 const tagCache = new Map<string, { at: number; v: Promise<Map<string, TagDoc>> }>();
@@ -37,10 +37,23 @@ function place(fw: CurFramework, row: NoteRow, tags: Map<string, TagDoc>): Place
   const t = tags.get(row.id);
   if (t) {
     const areaIdx = fw.areas.findIndex((a) => a.id === t.areaId);
-    if (areaIdx >= 0) return { areaIdx, year: t.year ?? row.lessonYear ?? 0, confidence: 0, status: 0, corrected: true };
+    if (areaIdx >= 0) return { areaIdx, year: t.year ?? 0, confidence: 0, status: 0, corrected: true };
   }
   const ref = row.oakKey ? fw.lessons[row.oakKey] : undefined;
   return ref ? { areaIdx: ref[0], year: ref[1], confidence: ref[2], status: ref[3], corrected: false } : null;
+}
+
+// A child's handed-in quiz ids, cached ~15 s (the drawer re-asks on every year toggle; a fresh hand-in shows within seconds).
+const finishedCache = new Map<string, { at: number; v: Promise<Set<string>> }>();
+function finishedQuizzes(tenantId: string, childId: string): Promise<Set<string>> {
+  const key = `${tenantId}|${childId}`, hit = finishedCache.get(key);
+  if (hit && Date.now() - hit.at < 15_000) return hit.v;
+  if (finishedCache.size > 500) finishedCache.clear();
+  const v = attemptsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).select("assessmentId", "status").get()
+    .then((snap) => new Set(snap.docs.filter((d) => d.get("status") !== "in_progress").map((d) => d.get("assessmentId") as string)));
+  finishedCache.set(key, { at: Date.now(), v });
+  v.catch(() => finishedCache.delete(key));
+  return v;
 }
 
 interface Scope { rows: NoteRow[]; mode: "tutor" | "child"; done: Set<string>; childId: string | null }
@@ -49,13 +62,13 @@ async function scopeFor(ctx: HubCtx): Promise<Scope | { error: string; status: n
   const all = await noteIndex(ctx.tenantId);
   const usable = (r: NoteRow) => r.published && r.kind !== "board" && (r.isLesson || !!r.oakKey);
   if (ctx.role === "parent" && !ctx.canEdit) {
+    if (!ctx.childId && ctx.children.length > 1) return { error: "Which child? Pass ?childId=", status: 400 };
     const kid = scopedChildren(ctx)[0];
     if (!kid) return { error: "Which child? Pass ?childId=", status: 400 };
     const assigned = await childAssignedNoteIds(ctx.tenantId, kid.childId);
     const rows = [...assigned].map((id) => all.get(id)).filter((r): r is NoteRow => !!r && usable(r) && canSee(ctx, r.franchiseId));
     // "Done" = the lesson's exit quiz has been handed in for THIS child.
-    const snap = await attemptsCol.where("tenantId", "==", ctx.tenantId).where("childId", "==", kid.childId).select("assessmentId", "status").get();
-    const finished = new Set(snap.docs.filter((d) => d.get("status") !== "in_progress").map((d) => d.get("assessmentId") as string));
+    const finished = await finishedQuizzes(ctx.tenantId, kid.childId);
     const done = new Set(rows.filter((r) => r.lessonQuizId && finished.has(r.lessonQuizId)).map((r) => r.id));
     return { rows, mode: "child", done, childId: kid.childId };
   }
@@ -84,7 +97,7 @@ hubCurriculumApi.get("/curriculum", async (req, res) => {
     if (scope.done.has(r.id)) doneP.push(p);
     // A GCSE unit that spans two spec areas counts in both.
     const extra = r.oakKey && !p.corrected ? fw.secondary?.[r.oakKey] : undefined;
-    for (const a of extra ?? []) { const q = { ...p, areaIdx: a }; placed.push(q); if (scope.done.has(r.id)) doneP.push(q); }
+    for (const a of (extra ?? []).filter((x) => x !== p.areaIdx)) { const q = { ...p, areaIdx: a }; placed.push(q); if (scope.done.has(r.id)) doneP.push(q); }
   }
   const t = tally(fw, placed), d = scope.mode === "child" ? tally(fw, doneP) : null;
   res.json({
@@ -113,7 +126,7 @@ hubCurriculumApi.get("/curriculum/lessons", async (req, res) => {
   const out: { id: string; title: string; year: number; confidence: number; corrected: boolean; done: boolean; canCorrect: boolean }[] = [];
   for (const r of scope.rows) {
     const p = place(fw, r, tags);
-    const hits = p && (p.areaIdx === areaIdx || (!p.corrected && r.oakKey && fw.secondary?.[r.oakKey]?.includes(areaIdx)));
+    const hits = p && (p.areaIdx === areaIdx || (!p.corrected && r.oakKey && p.areaIdx !== areaIdx && fw.secondary?.[r.oakKey]?.includes(areaIdx)));
     if (!hits || (yearQ && p!.year !== yearQ)) continue;
     out.push({ id: r.id, title: r.title, year: p!.year, confidence: p!.confidence, corrected: p!.corrected, done: scope.done.has(r.id), canCorrect: ctx.canEdit && canWriteRow(ctx, r.franchiseId) });
   }
@@ -136,7 +149,11 @@ hubCurriculumApi.put("/curriculum/tags/:noteId", async (req, res) => {
   if (!fw || !row || !canSee(ctx, row.franchiseId)) { res.status(404).json({ error: "Lesson not found" }); return; }
   if (!canWriteRow(ctx, row.franchiseId)) { res.status(403).json({ error: "This lesson belongs to head office — you can't change where it sits." }); return; }
   if (!fw.areas.some((a) => a.id === parsed.data.areaId)) { res.status(400).json({ error: "Unknown curriculum area" }); return; }
-  const doc: TagDoc = { tenantId: ctx.tenantId, franchiseId: row.franchiseId, framework: fw.id, noteId, areaId: parsed.data.areaId, year: parsed.data.year ?? row.lessonYear ?? null, byUid: ctx.uid, byName: ctx.name, at: nowIso() };
+  // A placement needs a year the map can draw (1–11): the tutor's pick, else the lesson's own year if it has one in range.
+  const ownYear = row.lessonYear && row.lessonYear >= 1 && row.lessonYear <= 11 ? row.lessonYear : null;
+  const year = parsed.data.year ?? ownYear;
+  if (!year) { res.status(400).json({ error: "Which year is this lesson for? Pick a year (1–11) so it can be shown on the map." }); return; }
+  const doc: TagDoc = { tenantId: ctx.tenantId, franchiseId: row.franchiseId, framework: fw.id, noteId, areaId: parsed.data.areaId, year, byUid: ctx.uid, byName: ctx.name, at: nowIso() };
   await tagsCol.doc(`${ctx.tenantId}__${fw.id}__${noteId}`).set(doc);
   forgetTags(ctx.tenantId);
   res.json({ ok: true, tag: { areaId: doc.areaId, year: doc.year } });
@@ -147,7 +164,7 @@ hubCurriculumApi.delete("/curriculum/tags/:noteId", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
   const noteId = req.params.noteId, fwId = fwParam(req.query.framework);
-  if (!okId(noteId)) { res.status(400).json({ error: "Bad lesson id" }); return; }
+  if (!okId(noteId) || (req.query.framework !== undefined && req.query.framework !== fwId)) { res.status(400).json({ error: "Bad lesson id" }); return; }
   const ref = tagsCol.doc(`${ctx.tenantId}__${fwId}__${noteId}`), snap = await ref.get();
   if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canWriteRow(ctx, (snap.get("franchiseId") as string | null) ?? null)) { res.status(404).json({ error: "No correction to remove" }); return; }
   await ref.delete();

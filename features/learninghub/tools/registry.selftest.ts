@@ -1,0 +1,22 @@
+// Run: server/node_modules/.bin/tsx features/learninghub/tools/registry.selftest.ts
+import { parseCatalogue, widgetSubject } from "./registryData";
+let n = 0, bad = 0;
+const ok = (c: boolean, m: string) => { n++; if (!c) { bad++; console.error("FAIL:", m); } };
+const rows = parseCatalogue();
+ok(new Set(rows.map((r) => r.id)).size === rows.length, "ids are unique");
+const by = (s: string) => rows.filter((r) => r.subject === s);
+ok(rows.filter((r) => /^M-/.test(r.id)).length >= 49, `all 49 plan maths tools present (+ additions) — got ${rows.filter((r) => /^M-/.test(r.id)).length}`);
+ok(rows.filter((r) => /^E-/.test(r.id)).length === 17, "E-01..E-17");
+ok(rows.filter((r) => /^L-/.test(r.id)).length >= 19, "L-01..L-19 present");
+ok(rows.filter((r) => /^H-/.test(r.id)).length >= 23, "23 plan humanities tools present");
+ok(rows.filter((r) => /^X-/.test(r.id)).length >= 10, "X-01..X-10 present");
+ok(rows.filter((r) => /^S-/.test(r.id)).length === 28, "28 science tools");
+ok(rows.filter((r) => /^N-/.test(r.id)).length === 12, "12 new English tools");
+ok(rows.every((r) => r.tags.length > 0 && r.keyStages.length > 0 && r.keyStages.every((k) => k >= 1 && k <= 5)), "every tool has tags and key stages");
+const drawer = rows.filter((r) => r.impl?.kind === "drawer").map((r) => (r.impl as { id: string }).id).sort();
+ok(["calculator", "numberline", "timestable", "fractions", "grid", "plot", "ruler", "protractor", "periodic", "bohr", "apparatus", "lens", "map", "timeline", "symbol", "timer", "dice", "spinner", "tally"].every((d) => drawer.includes(d)), `every working drawer tool is registered (${drawer.join(",")})`);
+ok(new Set(drawer).size === drawer.length, "no drawer tool is registered twice");
+ok(["maths", "english", "science", "languages", "humanities", "cross"].every((s) => by(s).length > 0), "every subject has tools");
+ok(widgetSubject("langVerbs") === "languages" && widgetSubject("cellExplorer") === "science" && widgetSubject("numberLine") === "maths" && widgetSubject("wordClass") === "english" && widgetSubject("zzz") === "cross", "widget subject guesses");
+console.log(`${rows.length} tools, ${n} checks, ${bad} failed`);
+process.exit(bad ? 1 : 0);

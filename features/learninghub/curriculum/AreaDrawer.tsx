@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
 import { errMsg } from "../types";
@@ -23,10 +23,31 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
   const [yr, setYr] = useState<number | null>(year);
   const [data, setData] = useState<{ total: number; lessons: CellLesson[] } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [moveErr, setMoveErr] = useState<string | null>(null);
   const [moving, setMoving] = useState<CellLesson | null>(null);
   const [target, setTarget] = useState(area.id);
   const [targetYear, setTargetYear] = useState<number | "">("");
   const [busy, setBusy] = useState(false);
+  const panelRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  // Accessibility: move focus in on open, keep Tab inside, lock the page scroll, and give focus back to whatever opened it.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    const trap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const f = [...panelRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), select, a[href], input")].filter((x) => x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0]!, last = f[f.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", trap);
+    return () => { window.removeEventListener("keydown", trap); document.body.style.overflow = prev; if (opener && document.contains(opener)) opener.focus(); };
+  }, []);
 
   const load = useCallback(() => {
     let live = true;
@@ -40,9 +61,9 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
   const years = area.y.map((n, i) => ({ y: i + 1, n })).filter((x) => x.n > 0);
   async function move() {
     if (!moving) return;
-    setBusy(true); setErr(null);
+    setBusy(true); setMoveErr(null);
     try { await setTag(qs, moving.id, { framework, areaId: target, year: targetYear === "" ? null : targetYear }); setMoving(null); onChanged(); load(); }
-    catch (e) { setErr(errMsg(e, "Couldn't move that lesson")); }
+    catch (e) { setMoveErr(errMsg(e, "Couldn't move that lesson")); }
     finally { setBusy(false); }
   }
   async function reset(l: CellLesson) {
@@ -55,14 +76,14 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
   if (typeof document === "undefined") return null;
   return createPortal(
     <div className="fixed inset-0 z-[3000] flex items-end justify-center sm:items-stretch sm:justify-end" role="presentation">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-      <aside role="dialog" aria-modal="true" aria-label={`${area.area} lessons`} className="hub-rise relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl">
+      <div aria-hidden className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
+      <aside ref={panelRef} role="dialog" aria-modal="true" aria-label={`${area.area} lessons`} className="hub-rise motion-reduce:animate-none relative flex max-h-[88vh] w-full flex-col overflow-hidden rounded-t-3xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl">
         <header className="flex items-start gap-3 border-b border-[var(--line)] p-4">
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{GROUP_LABEL[area.group] ?? area.group} · {area.strand}</p>
             <h3 className="m-0 mt-0.5 text-[18px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{area.area}{area.code ? <span className="ml-2 text-[12px] font-bold text-[var(--ink-2)]">{area.code}</span> : null}</h3>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={`grid h-11 w-11 flex-none place-items-center rounded-full border border-[var(--line)] text-[var(--ink)] ${FOCUS}`}><Icon name="close" size={16} /></button>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="Close" className={`grid h-11 w-11 flex-none place-items-center rounded-full border border-[var(--line)] text-[var(--ink)] ${FOCUS}`}><Icon name="close" size={16} /></button>
         </header>
 
         {years.length > 1 && (
@@ -121,10 +142,11 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
             </label>
             <label className="mb-3 block text-[12px] font-bold text-[var(--ink-2)]">Year
               <select value={targetYear} onChange={(e) => setTargetYear(e.target.value ? Number(e.target.value) : "")} className={`mt-1 min-h-[44px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[14px] font-semibold text-[var(--ink)] ${FOCUS}`}>
-                <option value="">Keep its own year</option>
+                <option value="">Keep its own year (if it has one)</option>
                 {Array.from({ length: 11 }, (_, i) => i + 1).map((y) => <option key={y} value={y}>{yearLabel(y)}</option>)}
               </select>
             </label>
+            {moveErr && <p role="alert" className="m-0 mb-2 text-[12.5px] font-bold text-[var(--sem-crit)]">{moveErr}</p>}
             <div className="flex gap-2">
               <Button variant="primary" onClick={move} disabled={busy}>{busy ? "Saving…" : "Move it here"}</Button>
               <Button onClick={() => setMoving(null)} disabled={busy}>Cancel</Button>

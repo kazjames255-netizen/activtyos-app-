@@ -32,7 +32,9 @@ const MAX_ENTRIES = 600;
 
 // Map values (all the disk-eligible kinds are `Map<id, row>`) don't survive JSON.stringify as-is; tag them so
 // the reader knows to rebuild a Map instead of handing back a plain array.
-const diskPath = (kind: HubKind, tenantId: string) => join(tmpdir(), `aos-hub-cache.${kind}.${tenantId}.json`);
+// The notes index gained `oakKey` (curriculum map): bump its snapshot version so an OLD snapshot (no oakKey) is never served as if current.
+const SNAPSHOT_VERSION: Partial<Record<HubKind, string>> = { notes: ".v2" };
+const diskPath = (kind: HubKind, tenantId: string) => join(tmpdir(), `aos-hub-cache.${kind}${SNAPSHOT_VERSION[kind] ?? ""}.${tenantId}.json`);
 function diskWrite(kind: HubKind, tenantId: string, v: unknown) {
   try {
     const payload = JSON.stringify(v instanceof Map ? { __map: true, entries: [...v.entries()] } : { __map: false, v });

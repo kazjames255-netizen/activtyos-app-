@@ -27,6 +27,11 @@ const KIND_STYLE: Record<CellKind, { bg: string; fg: string; ring: string }> = {
   assigned: { bg: TINT("--brand-2", 22), fg: "var(--ink)", ring: TINT("--brand-2", 55) },
   todo: { bg: "transparent", fg: "var(--ink-2)", ring: "var(--line)" },
 };
+/** Not colour alone: a gap is striped, a thin spot is dotted. */
+const PATTERN: Partial<Record<CellKind, string>> = {
+  gap: "repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--sem-crit) 28%, transparent) 5px 7px)",
+  thin: "radial-gradient(color-mix(in srgb, var(--sem-warn) 55%, transparent) 1.2px, transparent 1.6px) 0 0 / 6px 6px",
+};
 
 function Ring({ pct, label, size = 92 }: { pct: number; label: string; size?: number }) {
   const r = (size - 12) / 2, c = 2 * Math.PI * r;
@@ -56,9 +61,11 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const [cell, setCell] = useState<{ area: MapArea; year: number | null } | null>(null);
   const mode: "tutor" | "child" = canEdit ? "tutor" : "child";
 
+  const [fwList, setFwList] = useState<{ id: string; label: string }[]>([]);
+  useEffect(() => { setData(null); setErr(null); setCell(null); }, [qs]); // a different child / provider: never show the previous one's grid
   const load = useCallback(() => {
     let live = true;
-    getMap(qs, fw).then((d) => { if (live) { setData(d); setErr(null); } }).catch((e) => { if (live) setErr(errMsg(e, "Couldn't load the curriculum map")); });
+    getMap(qs, fw).then((d) => { if (live) { setData(d); setFwList(d.frameworks); setErr(null); } }).catch((e) => { if (live) setErr(errMsg(e, "Couldn't load the curriculum map")); });
     return () => { live = false; };
   }, [qs, fw]);
   useEffect(() => { if (open) return load(); }, [load, open]);
@@ -90,9 +97,9 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
       {open && (
         <div className="border-t border-[var(--line)] px-4 pb-4 pt-3">
           {/* framework switch */}
-          {(data?.frameworks.length ?? 0) > 1 && (
+          {fwList.length > 1 && (
             <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] p-1" role="group" aria-label="Curriculum">
-              {data!.frameworks.map((f) => (
+              {fwList.map((f) => (
                 <button key={f.id} type="button" onClick={() => pickFw(f.id)} aria-pressed={fw === f.id} className={`min-h-[36px] rounded-full px-3.5 text-[13px] font-extrabold ${FOCUS} ${fw === f.id ? "bg-[var(--brand)] text-white shadow" : "text-[var(--ink)]"}`}>{f.label}</button>
               ))}
             </div>
@@ -140,7 +147,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
 
               {/* grid */}
               <div className="-mx-1 overflow-x-auto px-1 pb-1">
-                <table className="w-full border-separate border-spacing-y-1 text-left" style={{ minWidth: 300 + years.length * 46 }}>
+                <table className="w-full border-separate border-spacing-y-1 text-left" style={{ minWidth: 150 + years.length * 46 }}>
                   <thead>
                     <tr>
                       <th scope="col" className="sticky left-0 z-10 bg-[var(--surface)] pr-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Topic</th>
@@ -159,12 +166,12 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
               {/* legend + honesty */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-semibold text-[var(--ink-2)]">
                 {(mode === "tutor" ? [["covered", "5+ lessons"], ["thin", "1–4"], ["gap", "none"], ["extra", "beyond the curriculum"]] as const : [["done", "finished"], ["assigned", "given"], ["todo", "not started"]] as const).map(([k, t]) => (
-                  <span key={k} className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3.5 w-3.5 rounded-[5px]" style={{ background: KIND_STYLE[k].bg, boxShadow: `inset 0 0 0 1.5px ${KIND_STYLE[k].ring}` }} />{t}</span>
+                  <span key={k} className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3.5 w-3.5 rounded-[5px]" style={{ background: PATTERN[k] ? `${PATTERN[k]}, ${KIND_STYLE[k].bg}` : KIND_STYLE[k].bg, boxShadow: `inset 0 0 0 1.5px ${KIND_STYLE[k].ring}` }} />{t}</span>
                 ))}
               </div>
               <p className="m-0 mt-2 text-[11.5px] font-semibold leading-snug text-[var(--ink-3)]">
                 {data.framework.label} · {data.framework.version}. {mode === "tutor" && data.lessons > 0 ? `About ${autoPct}% of these placements are automatic best guesses — open a cell and use “Wrong place?” to correct any. ` : ""}
-                “Covered” only means lessons exist, not how deep they go.{mode === "tutor" && data.unplaced > 0 ? ` ${data.unplaced} of your lessons aren’t on this map yet.` : ""}
+                {mode === "tutor" ? "“Covered” only means lessons exist, not how deep they go." : "A lesson counts as finished once its quiz is handed in."}{mode === "tutor" && data.unplaced > 0 ? ` ${data.unplaced} of your lessons aren’t on this map yet.` : ""}
               </p>
             </>
           )}
@@ -188,17 +195,17 @@ function StrandBlock({ strand, list, years, mode, byArea, onPick }: { strand: st
       <tr><th scope="colgroup" colSpan={years.length + 1} className="pt-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-2)]">{strand}</th></tr>
       {list.map((a) => (
         <tr key={a.id}>
-          <th scope="row" className="sticky left-0 z-10 max-w-[220px] bg-[var(--surface)] py-0.5 pr-2 text-[13px] font-bold leading-tight text-[var(--ink)]">
+          <th scope="row" className="sticky left-0 z-10 w-[124px] max-w-[124px] bg-[var(--surface)] py-0.5 pr-2 text-[12.5px] font-bold leading-tight text-[var(--ink)] sm:w-[220px] sm:max-w-[220px] sm:text-[13px]">
             <button type="button" onClick={() => onPick(a, null)} className={`text-left hover:underline ${FOCUS}`}>{shortArea(a.area)}</button>
           </th>
           {years.map((y) => {
             const c = cellKind(mode, a, y, byArea), st = KIND_STYLE[c.kind];
-            const shownN = mode === "child" ? (c.count ? `${c.done}/${c.count}` : "") : c.count || (c.kind === "gap" ? "0" : "");
+            const shownN = mode === "child" ? (c.count ? `${c.done}/${c.count}` : "") : c.count || (c.kind === "gap" ? "0" : c.span && c.span.to > c.span.from ? "·" : "");
             return (
               <td key={y} className="p-0 text-center">
                 <button type="button" disabled={c.kind === "na"} onClick={() => onPick(a, y)} aria-label={cellLabel(a, y, c, mode)} title={cellLabel(a, y, c, mode)}
                   className={`mx-auto grid h-[38px] w-[38px] place-items-center rounded-[10px] text-[12px] font-extrabold tabular-nums transition-transform hover:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100 disabled:cursor-default disabled:hover:scale-100 ${FOCUS}`}
-                  style={{ background: st.bg, color: st.fg, boxShadow: `inset 0 0 0 1.5px ${st.ring}`, borderStyle: c.kind === "todo" ? "dashed" : undefined }}>{c.kind === "na" ? "" : shownN}</button>
+                  style={{ background: PATTERN[c.kind] ? `${PATTERN[c.kind]}, ${st.bg}` : st.bg, color: st.fg, boxShadow: `inset 0 0 0 1.5px ${st.ring}` }}>{c.kind === "na" ? "" : shownN}</button>
               </td>
             );
           })}
