@@ -74,7 +74,7 @@ export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: { n
   );
 }
 /** The tab icon for each hub panel (PanelMeta.key). */
-export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards", questions: "help" };
+export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards", questions: "help", tools: "layers" };
 
 // ── responsive hook ────────────────────────────────────────────────────────
 /** True at the `lg` breakpoint and up (server / first paint: false). */
@@ -378,13 +378,29 @@ export function ConfirmButton({ label, confirmLabel = "Confirm", onConfirm, disa
   );
 }
 
-/** Error banner: dismissible, tokens only. */
-export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+/** Developer wording from lib/api ("Couldn't reach the server at http://…", "didn't respond within 15s", "Is the API running?"). */
+const OFFLINE_RE = /reach the server|didn't respond within|Is the API running/i;
+/** Turns a network failure into one plain sentence a parent or child can act on; any other (already human) message passes through. Pure. */
+export function friendlyError(msg: string, hub: string = "the Teaching Hub", kid = false): string {
+  if (!OFFLINE_RE.test(msg)) return msg;
+  return kid ? "Oops! Let's try again." : `We can't reach ${hub} right now. Check your connection and try again.`;
+}
+export const isOfflineError = (msg: string | null | undefined): boolean => !!msg && OFFLINE_RE.test(msg);
+
+/** Error banner: dismissible, tokens only. Network failures read as one friendly line plus a "Try again" button (child: bigger, warmer). */
+export function ErrorBanner({ message, onDismiss, onRetry, hub, kid }: { message: string; onDismiss: () => void; onRetry?: () => void; hub?: string; kid?: boolean }) {
+  const offline = isOfflineError(message);
+  const text = friendlyError(message, hub, kid);
+  const retry = !!onRetry && offline;
   return (
-    <div role="alert" className="mb-3 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-[12.5px] font-semibold" style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
+    <div role="alert" className="mb-3 flex flex-wrap items-start gap-2.5 rounded-xl border px-4 py-3 text-[12.5px] font-semibold" style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
       <Icon name="warning" size={16} className="mt-px" />
-      <span className="min-w-0 flex-1 break-words text-[var(--ink)]">{message}</span>
-      <button type="button" onClick={onDismiss} aria-label="Dismiss error" className={`-my-1 -mr-1.5 grid h-8 w-8 flex-none place-items-center rounded-full hover:bg-black/5 ${FOCUS}`} style={{ color: "var(--red)" }}><Icon name="close" size={15} /></button>
+      <span className={`min-w-0 flex-1 break-words text-[var(--ink)] ${kid && offline ? "text-[18px] font-extrabold" : ""}`}>{text}</span>
+      {retry && (
+        <button type="button" onClick={() => { onDismiss(); onRetry?.(); }}
+          className={`inline-flex ${kid ? "min-h-[56px] px-6 text-[16px]" : "min-h-[44px] px-4 text-[13px]"} flex-none items-center rounded-full font-extrabold ${FOCUS}`} style={{ background: "var(--hub-red-ink, var(--red))", color: "#fff" }}>Try again</button>
+      )}
+      <button type="button" onClick={onDismiss} aria-label="Dismiss error" className={`-my-1 -mr-1.5 grid h-11 w-11 flex-none place-items-center rounded-full hover:bg-black/5 ${FOCUS}`} style={{ color: "var(--hub-red-ink, var(--red))" }}><Icon name="close" size={15} /></button>
     </div>
   );
 }

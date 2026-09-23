@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { HubHero } from "./HubHero";
 import { CallProvider } from "./live/CallProvider";
 import { HubTabs, type HubTab } from "./HubTabs";
-import { ComingSoon, EmptyState, ErrorBanner, FOCUS, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
+import { ComingSoon, EmptyState, ErrorBanner, FOCUS, isOfflineError, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
 import { NotesPanel } from "./NotesPanel";
 import { NOTES_META, PANEL_MODULES, STUDENTS_MODULE, TAB_ORDER } from "./panels";
 import type { PanelMeta, PanelProps } from "./panelTypes";
@@ -155,7 +155,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     const portal = pathname.split("/")[1] ?? "";
     // A network blip (lib/api's "Couldn't reach the server at http://…" / "didn't respond within 15s") is developer wording: a parent
     // or child sees a plain sentence and a Try again button instead.
-    const offline = !!error && /reach the server|didn't respond within/i.test(error);
+    const offline = isOfflineError(error);
     const tryAgain = <button type="button" onClick={refresh} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-5 text-[13px] font-extrabold text-white ${FOCUS}`} style={{ background: "linear-gradient(180deg, var(--brand-2), var(--brand))" }}>Try again</button>;
     return (
       <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={{ background: "var(--bg)", color: "var(--ink)" }}>
@@ -233,7 +233,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
             topics={topics} noteStats={noteStats} activeStudents={activeStudents} ready={ready} compact={active !== "home"} />
         )}
 
-        {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
+        {error && <ErrorBanner message={error} onDismiss={() => setError(null)} onRetry={refresh} hub={hubName(mode)} kid={kid} />}
 
         {tutor && !provider.canEdit && (
           <div role="status" id="hub-view-only" className="mb-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-[13px] font-semibold text-[var(--ink-2)]">
