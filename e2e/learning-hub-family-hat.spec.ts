@@ -215,8 +215,8 @@ test.describe("kid mode", () => {
     expect(await page.evaluate(() => { const el = document.elementFromPoint(24, 300); return !!el?.closest("#learning-hub"); })).toBe(true);
     expect(await page.evaluate(() => { const el = document.elementFromPoint(window.innerWidth - 24, 24); return !!el?.closest("#learning-hub"); })).toBe(true);
     const tabs = (await page.getByRole("tab").allInnerTexts()).map((x) => x.trim());
-    // Kid tabs: Home · Lessons · Quizzes · Starting quiz (the placement test, in a child's words; it unlocks a locked quiz) · Homework · Flashcards.
-    expect(tabs.length).toBe(6);
+    // Kid tabs: Home · Lessons · Quizzes · Starting quiz (the placement test, in a child's words; it unlocks a locked quiz) · Homework · Flashcards · Messages.
+    expect(tabs.length).toBe(7); // + Messages: the kid strip has always carried it, so the old count of 6 was stale
     expect(tabs.join("|")).toMatch(/Starting quiz/);
     expect(tabs.join("|")).not.toMatch(/Progress|Live lessons|Placement/);
     // The hub is forced onto Ava even though Ben was the child in the URL a moment ago.

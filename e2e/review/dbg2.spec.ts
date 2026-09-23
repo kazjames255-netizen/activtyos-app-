@@ -1,0 +1,24 @@
+import { test } from "@playwright/test";
+import { loadAccounts, statePath } from "../helpers/env";
+import { setHub } from "./fixture";
+import { apiFetch, fbSignIn } from "../helpers/accounts";
+test("dbg2", async ({ browser }) => {
+  test.setTimeout(120000);
+  const a = loadAccounts().accounts;
+  const t = (await fbSignIn(a.freelancer.email)).idToken;
+  await apiFetch("/api/learning-hub/config", t, { method: "PUT", body: JSON.stringify({ hub: { requireDiagnostic: true } }) });
+  await setHub(a.freelancer, true);
+  const st: any[] = await apiFetch("/api/learning-hub/students", t);
+  const kid = st.find((s) => (s.subjects || []).some((x: string) => /G2 Kid/.test(x)));
+  const ctx = await browser.newContext({ storageState: statePath("parent") });
+  const page = await ctx.newPage();
+  page.on("response", async (r) => { if (/assessments\?/.test(r.url())) { const b = await r.json().catch(() => null); console.log(r.url().replace(/.*learning-hub/, ""), JSON.stringify((b || []).map((x: any) => [x.title.slice(0, 14), x.locked]))); } });
+  await page.goto(`/custdash/learninghub?tab=quizzes&child=${kid.childId}`);
+  await page.waitForTimeout(6000);
+  await page.locator(`[data-testid="hub-hand-over"][data-child-id="${kid.childId}"]`).click().catch((e) => console.log("handover", String(e).slice(0, 100)));
+  await page.waitForTimeout(3000);
+  await page.getByRole("tab", { name: /^Quizzes/ }).click().catch((e) => console.log("tab", String(e).slice(0, 100)));
+  await page.waitForTimeout(6000);
+  await page.screenshot({ path: "/private/tmp/claude-501/scratch/dbg2.png" });
+  await apiFetch("/api/learning-hub/config", t, { method: "PUT", body: JSON.stringify({ hub: { requireDiagnostic: false } }) });
+});

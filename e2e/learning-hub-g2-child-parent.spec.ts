@@ -63,7 +63,7 @@ test.beforeAll(async () => {
   for (const c of [avaId, benId]) await post(`${HUB}/students`, t, { childId: c, subjects: [subject, subject2] });
   const topic2 = (await apiFetch<{ id: string; subject: string }[]>(`${HUB}/topics`, t)).find((x) => x.subject === subject2)!.id;
   const q2 = (await post<{ id: string }>(`${HUB}/questions`, t, { topicId: topic2, kind: "short", prompt: `Kid Q (${stamp}) type right`, answer: "right", marks: 1 })).id;
-  diagId = (await post<{ id: string }>(`${HUB}/assessments`, t, { type: "diagnostic", title: `G2 kid placement ${stamp}`, subject: subject2, topicIds: [topic2], questionIds: [q2], timeLimitMins: null, passMarkPct: 50, published: true })).id;
+  diagId = (await post<{ id: string }>(`${HUB}/assessments`, t, { type: "diagnostic", title: `G2 kid starter ${stamp}`, subject: subject2, topicIds: [topic2], questionIds: [q2], timeLimitMins: null, passMarkPct: 50, published: true })).id;
   lockedQuiz = (await post<{ id: string }>(`${HUB}/assessments`, t, { type: "quiz", title: `G2 kid locked quiz ${stamp}`, subject: subject2, topicIds: [topic2], questionIds: [q2], timeLimitMins: null, passMarkPct: 50, published: true, retakePolicy: "unlimited" })).id;
   topicId = (await apiFetch<{ id: string; subject: string }[]>(`${HUB}/topics`, t)).find((x) => x.subject === subject)!.id;
   for (const k of ["a", "b"]) qIds[k] = (await post<{ id: string }>(`${HUB}/questions`, t, { topicId, kind: "short", prompt: `Type "right" (${k} ${stamp})`, answer: "right", marks: 1, explanation: `Because ${k}.` })).id;

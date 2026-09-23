@@ -32,7 +32,8 @@ for (const [vpName, vp] of [["390", { width: 390, height: 844 }], ["768", { widt
     await shot("kid", "home");
     await page.getByRole("tab", { name: /Homework/ }).click();
     await settle(page);
-    await expect(page.locator("body")).not.toContainText(/overdue|handed in late/i);
+    // the fixture's own homework is titled "Overdue reading <stamp>": strip that title, then no overdue / late wording may remain
+    expect((await page.locator("body").innerText()).replace(/Overdue reading \w+/g, "")).not.toMatch(/overdue|handed in late/i);
     await shot("kid", "homework");
     await page.goto(`/custdash/learninghub?tab=dashboard&child=${fx.kids[0].id}`);
     await settle(page);

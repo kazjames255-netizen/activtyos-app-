@@ -208,7 +208,7 @@ export async function tabStrip(page: Page) {
   const labels: string[] = [];
   const keys: string[] = [];
   for (let i = 0; i < n; i++) { labels.push((await tabs.nth(i).innerText()).trim().replace(/\s+/g, " ")); keys.push(((await tabs.nth(i).getAttribute("id")) ?? "").replace(/^hub-tab-/, "") || `tab${i}`); }
-  const overflow = await list.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth, doc: document.documentElement.scrollWidth, win: window.innerWidth }));
+  const overflow = await list.evaluate((el) => ({ scroll: Math.max(el.scrollWidth, el.parentElement?.scrollWidth ?? 0), client: el.parentElement?.clientWidth ?? el.clientWidth, doc: document.documentElement.scrollWidth, win: window.innerWidth }));
   return { tabs, labels, keys, overflow: overflow.scroll > overflow.client + 1, pageOverflow: overflow.doc > overflow.win + 1, ...overflow };
 }
 
@@ -239,3 +239,19 @@ export async function handOver(page: Page, childId: string) {
   await page.locator("#learning-hub[data-kid='1']").waitFor({ timeout: 30_000 });
 }
 export const tabKey = (page: Page, label: string) => { try { return new URL(page.url()).searchParams.get("tab") || label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); } catch { return label; } };
+
+/** The hub app scrolls inside its own container, so Playwright's fullPage shot is only one viewport tall. Grow the viewport to the
+ *  tallest scroll container (capped), shoot, restore. Returns the content height. */
+export async function shootFull(page: Page, file: string): Promise<number> {
+  const vp = page.viewportSize()!;
+  const m = await page.evaluate(() => {
+    let best = document.documentElement.scrollHeight, chrome = 0;
+    document.querySelectorAll("*").forEach((e) => { const el = e as HTMLElement; const o = getComputedStyle(el).overflowY; if ((o === "auto" || o === "scroll") && el.scrollHeight > el.clientHeight + 4 && el.scrollHeight > best) { best = el.scrollHeight; chrome = window.innerHeight - el.clientHeight; } });
+    return { best, chrome };
+  }).catch(() => ({ best: vp.height, chrome: 0 }));
+  const h = Math.min(Math.max(vp.height, m.best + m.chrome), 7000);
+  if (h > vp.height) { await page.setViewportSize({ width: vp.width, height: h }); await page.waitForTimeout(400); }
+  await page.screenshot({ path: file }).catch(() => undefined);
+  if (h > vp.height) await page.setViewportSize(vp);
+  return m.best;
+}

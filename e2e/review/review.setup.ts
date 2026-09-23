@@ -3,6 +3,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { test as setup, expect, type Browser } from "@playwright/test";
 import { ACCOUNTS_PATH, AUTH_DIR, ROOT, WEB_URL, statePath, type AccountManifest, type Role, type TestAccount } from "../helpers/env";
+import { provisionLiveListing, markParentWelcomed } from "../helpers/tenantData";
 import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp, fbTrySignIn } from "../helpers/accounts";
 
 // Minimal setup for the Teaching Hub review: freelancer tutor, company (+ staff via invite) and a parent.
@@ -37,6 +38,9 @@ setup("provision review accounts (no platform)", async ({ browser }) => {
     accounts[role] = { role, email: email(role), uid: s.uid, tenantId: r.tenantId, tenantName };
   }
   execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", accounts.freelancer!.tenantId!, accounts.company!.tenantId!], { stdio: "pipe" });
+  // Hub specs assume the tutor is a live, followable provider whose family is linked (other specs did this implicitly in the full suite).
+  await provisionLiveListing(accounts.freelancer!, { title: `E2E Review Base ${runId}`, price: 0 });
+  await apiPost("/api/my/providers/follow", p.idToken, { tenantId: accounts.freelancer!.tenantId });
   const company = await fbTrySignIn(accounts.company!.email);
   expect(company).toBeTruthy();
   const inv = await apiPost<{ token: string }>("/api/invites", company!.idToken, { role: "staff" });
