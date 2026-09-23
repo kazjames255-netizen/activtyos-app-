@@ -112,7 +112,7 @@ export function ResultView({ result, questions, topics, config, type, passMarkPc
     : pending
     ? tutor ? "Waiting to be marked" : "Handed in. Your tutor is marking it"
     : diag
-      ? tutor ? "Placement test result" : "Your starting point is set"
+      ? tutor ? "Starting quiz result" : "Your starting point is set"
       : passed
         ? tutor ? "Passed" : "Brilliant, you passed!"
         : tutor ? "Not passed" : kind ? KID_COPY.nearlyThere.split(".")[0]! : (pass != null && pass - result.pct > 30) ? "Not there yet" : "Nearly there";

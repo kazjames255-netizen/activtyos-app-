@@ -57,7 +57,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
   const topRef = useRef<HTMLDivElement>(null);
   const diag = a.type === "diagnostic";
   const kidNoun = useFamily().kid;
-  const noun = diag ? (kidNoun ? "starting quiz" : "placement test") : "quiz";
+  const noun = diag ? "starting quiz" : "quiz";
   const again = effectivePolicy(a, p.config);
   // The child this paper is recorded for is exactly `childId` (the same id every request below sends and the chip shows).
   // A family with 2+ children must have said who is learning before anything starts.
@@ -84,7 +84,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
       const blocked = e instanceof ApiError && e.status === 409 && (body?.code === "retake_blocked" || body?.code === "not_for_this_child" || needsDiag);
       setSoft(blocked);
       if (e instanceof ApiError && e.status === 409 && body?.code === "retake_blocked") setErr(retakeBlockedFor(body.reason, body.nextAvailableAt));
-      else if (needsDiag) setErr(kidNoun ? "Do the starting quiz for this subject first. It unlocks the rest." : "Take the placement test for this subject first. It unlocks the quizzes.");
+      else if (needsDiag) setErr(kidNoun ? "Do the starting quiz for this subject first. It unlocks the rest." : "Take the starting quiz for this subject first. It unlocks the quizzes.");
       else if (blocked) setErr("This one isn't set up for your year group. Ask your tutor if you think that's a mistake.");
       else setErr(errMsg(e, "Couldn't start"));
       setPhase("intro");
@@ -197,7 +197,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
             <div className="px-5 pb-4 pt-5 sm:px-8">
               <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-2)]">
                 <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--surface)]/80 text-[var(--ink)]"><SubjectGlyph subject={a.subject} size={16} /></span>
-                {a.subject}{diag ? (kidNoun ? " · Starting quiz" : " · Placement test") : ""}
+                {a.subject}{diag ? " · Starting quiz" : ""}
               </div>
               <h3 className="m-0 mt-2.5 text-[24px] font-extrabold leading-tight text-[var(--ink)] sm:text-[26px]" style={display}>{welcome?.title ?? a.title}</h3>
               {welcome && <div className="mt-1 text-[13px] font-semibold text-[var(--ink-2)]">{a.title}</div>}
@@ -227,7 +227,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
             <div className="mt-5"><WhoIsLearning childId={childId} /></div>
             <div className="flex justify-center">
               <Button variant="solid" className={`${TAP} w-full !px-8 text-[14px] sm:w-auto`} disabled={phase === "starting" || !gate.ok} onClick={start} data-testid="hub-start">
-                {phase === "starting" ? (resuming ? "Finding your answers…" : "Getting your questions…") : a.lastAttempt && !diag ? "Retake" : diag ? (kidNoun ? "Start" : "Start the placement test") : "Start"}
+                {phase === "starting" ? (resuming ? "Finding your answers…" : "Getting your questions…") : a.lastAttempt && !diag ? "Retake" : "Start"}
               </Button>
             </div>
           </div>
@@ -243,7 +243,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
         <div className="mb-2 flex items-center gap-2" data-testid="hub-result-for"><ChildChip childId={childId} /><span className="text-[12.5px] font-semibold text-[var(--ink-3)]">result saved</span></div>
         <ResultView kidYear={p.students.find((s) => s.childId === childId)?.yearGroup} result={result} questions={qs} topics={p.topics} config={p.config} type={a.type} passMarkPct={a.passMarkPct} title={a.title}
           actions={<>
-            <Button variant="solid" className={TAP} onClick={onExit}>Back to {diag ? (kidNoun ? "starting quizzes" : "placement tests") : "quizzes"}</Button>
+            <Button variant="solid" className={TAP} onClick={onExit}>Back to {diag ? "starting quizzes" : "quizzes"}</Button>
             {!diag && (again.policy === "once"
               ? <span className="inline-flex min-h-[44px] flex-wrap items-center gap-x-1.5 rounded-full bg-[var(--panel)] px-4 text-[12.5px] font-bold text-[var(--ink-2)]">One attempt only. Ask your tutor if you need another go.<AskTutorLink subject={a.title} /></span>
               : again.policy === "cooldown"
