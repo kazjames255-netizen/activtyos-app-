@@ -134,6 +134,27 @@ Each lens attacked the first draft. Every finding below changed the plan.
 | 6 | "Written answers to mark" flow, quizzes, homework, in-person, mastery | all | Marking + attempt pipeline | No `tool` question kind | EXTEND in Phase 3 |
 | 7 | `katex` | maths | Installed | — | reuse |
 
+**THE TOOLS DRAWER — the tools Kaz wants rebuilt first** (`features/learninghub/remotesync/HelpTools.tsx`, 836 lines; the "Tools" drawer students and tutors see inside a lesson: "Suggested for this lesson" chips + groups Maths 7 · Geometry & measure 3 · Science 4 · Humanities 1 · Classroom 4; up to 3 floating panels, mobile bottom-sheet). Registry `HELP_TOOLS`, per-tool state via `ToolStateFor`, defaults in `TOOL_DEFAULTS`, tutor picks per lesson with `HelpToolsPicker`. Verdict per tool against this plan:
+
+| Drawer tool (`HelpToolId`) | Today | Plan ID | Verdict |
+|---|---|---|---|
+| ruler | **static picture** of 24 cm ticks; can't move, rotate or draw | M-01 | **REBUILD** (Phase 2) |
+| protractor | **static arc** with ticks; can't place, snap, rotate, read | M-02 (+M-03) | **REBUILD** (Phase 2) |
+| map ("Compass") | fixed compass rose, no interaction | M-10/H-G05 (bearings) — and the *drawing compass* M-04 is missing entirely | **REBUILD** (Phase 2) |
+| clock (`ready:false`) | live wall-clock only, hidden | M-82 | **REBUILD** (Phase 7) — draggable hands, 12/24 h |
+| grid (Coordinate grid) | plot points, last-point readout | M-21 | **REBUILD onto engine** (Phase 2); keep behaviour |
+| numberline | 291-line tool (`NumberLineTool.tsx`) | M-40 | UPGRADE (Phase 7): jumps/arcs, hide labels, checker |
+| fractions | fraction bar/circle | M-44 | UPGRADE (Phase 7) |
+| plot (Bar chart) | simple bar chart | M-60 | UPGRADE (Phase 7): student draws chart from data, checker |
+| timestable | table | M-46 | UPGRADE (Phase 7): timed drill |
+| calculator | basic | M-80/M-81 | REBUILD (Phase 7): scientific + four-function, disable-per-item |
+| periodic · bohr · apparatus · lens | static science pictures | (science not in v1.1 scope) | KEEP; move to Tools tab as `legacy`; revisit after Phase 8 |
+| timeline | editable list | H-H01 | REBUILD (Phase 8): zoomable BC/AD, assess mode |
+| symbol | palette of 16 text symbols | E-10/L-01 accent + maths symbols | REBUILD as the shared accent/symbol bar (Phase 5) |
+| timer · dice · spinner · tally | working | X-03 / M-64 | KEEP; wrap as engine tools (Phase 7) |
+
+Consequences for the phases: (a) **Phase 1's engine must first host these existing 20 tools unchanged** (so nothing regresses) — `ToolHost` mounts a drawer tool by id and the drawer becomes a *consumer of the registry*, not a second list; (b) **Phase 2 = the geometry rebuild that fixes ruler, protractor, compass and grid** — these four are the visible weakness; (c) `HELP_TOOLS`, `TOOL_RENDER`, `TOOL_SIZE`, `TOOL_DEFAULTS` are replaced by registry entries only after each rebuilt tool passes its tests; (d) per-lesson tutor picks (`HelpToolsPicker`, stored on the lesson) must keep working — tool ids stay stable, new registry ids are aliases (`ruler` → `maths.ruler`).
+
 **Genuinely missing:** Tools tab · shared engine (stage/state/undo/registry/host) · tool-as-question item + checkers · seeded regenerating generators · compass, set square, straight edge, construction checker · accent input + marking policies · dictation/SSC/TTS · annotator/source tools · maps.
 
 ## 4. ARCHITECTURE — THE TOOL ENGINE
@@ -465,8 +486,8 @@ Existing Learning Hub tabs: Home, Live lessons, Students, Progress, Placement te
 | Phase | Scope | Why this order |
 |---|---|---|
 | **0** | ✅ DONE 23 Sep 2026 — audit is section 3 | Nothing is built on unknowns. |
-| **1** | Engine core: Stage (pan/zoom/layers), versioned state + undo/redo, `ToolHost`, registry of all 118 tools (existing widgets registered as `legacy`, live), theme via CSS vars, keyboard/a11y framework, `hubToolStates` + `hubToolEvents` API, the **Tools tab** (P1 not yet built = "In build" placeholder, P2 = greyed "Coming soon", clicks logged) | Everything else depends on it. |
-| **2** | Maths geometry set: M-01 → M-07, M-09, M-10, M-20, M-21; generators M-G01, M-G02, M-G03, M-G09 | Kaz's stated pain point; hardest instruments; proves the engine. |
+| **1** | Engine core (must first host the 20 existing drawer tools from `HelpTools.tsx` unchanged): Stage (pan/zoom/layers), versioned state + undo/redo, `ToolHost`, registry of all 118 tools (existing widgets registered as `legacy`, live), theme via CSS vars, keyboard/a11y framework, `hubToolStates` + `hubToolEvents` API, the **Tools tab** (P1 not yet built = "In build" placeholder, P2 = greyed "Coming soon", clicks logged) | Everything else depends on it. |
+| **2** | Maths geometry set (rebuilds the drawer's static ruler/protractor/compass/grid): M-01 → M-07, M-09, M-10, M-20, M-21; generators M-G01, M-G02, M-G03, M-G09 | Kaz's stated pain point; hardest instruments; proves the engine. |
 | **3** | Assess mode end-to-end: `hubToolItems`, `hubToolAttempts`, "Tool question" item type in Quizzes/Homework, checker framework, seeded regeneration, Progress traffic light | Turns tools into the MyMaths-style homework loop. |
 | **4** | Live sync: extend the Daily op protocol so a tool's state syncs tutor↔students; X-02 live controls (push tool, freeze, spotlight, curtain); X-01 gaps only (tool dock, PDF export/import) — the whiteboard itself exists | Tutoring is the core product. |
 | **5** | MFL core: L-01, L-02, L-03, L-05, L-06, L-07, L-09, L-10, L-16 + TTS cache + three language packs | GCSE 2026 dictation/SSC urgency; high reuse across 3 languages. |
