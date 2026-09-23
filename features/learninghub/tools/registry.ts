@@ -39,6 +39,10 @@ const NATIVE: Record<string, ToolImpl> = {
   // languages
   "L-03": nat(() => import("./languages/verbs/VerbTrainer")),
   "L-04": nat(() => import("./languages/verbs/SentenceBuilder")),
+  "L-10": nat(() => import("./languages/grammar/GenderTrainer")),
+  "L-16": nat(() => import("./languages/grammar/NumbersTrainer")),
+  "L-12": nat(() => import("./languages/grammar/AgreementTrainer"), { view: "agree" }),
+  "L-11": nat(() => import("./languages/grammar/AgreementTrainer"), { view: "cases" }),
   "M-01": geo(["ruler15"], []),
   "M-02": geo(["protractor180", "ruler15"], ["M-G01.measure", "M-G01.draw", "M-G09.measure"]),
   "M-03": geo(["protractor360", "ruler15"], ["M-G01.measure", "M-G01.draw"]),
