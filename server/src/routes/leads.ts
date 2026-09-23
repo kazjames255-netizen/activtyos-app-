@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
@@ -157,6 +157,9 @@ const FRESH_MS = 3 * 60_000;
 // reads every time it goes stale. The board shows the newest first anyway.
 // Raise it where there's memory to spare; the response says when it's capped.
 const CACHE_MAX = Number(process.env.LEADS_CACHE_MAX ?? 5000);
+// Roughly what CACHE_MAX rows serialise to, with headroom. Bigger than this and
+// the saved copy predates the cap — parsing it is what we're avoiding.
+const DISK_MAX_BYTES = Number(process.env.LEADS_DISK_MAX_MB ?? 24) * 1024 * 1024;
 let truncated = false;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
@@ -201,7 +204,21 @@ function refresh(): Promise<Row[]> {
  *  is capped (LEADS_CACHE_MAX). Nothing warms on a cold start in production:
  *  the first HQ request fills the cache instead. */
 export function warmLeads() {
-  readFile(DISK, "utf8").then((t) => { if (!cache) cache = JSON.parse(t); }).catch(() => {})
+  // The saved copy is only a shortcut. An older build wrote all 71k leads into
+  // it, and parsing THAT is its own out-of-memory crash — so check the size
+  // first, drop it if it's from the uncapped era, and cap whatever we load.
+  stat(DISK)
+    .then(({ size }) => {
+      if (size > DISK_MAX_BYTES) return rm(DISK, { force: true }).then(() => null);
+      return readFile(DISK, "utf8");
+    })
+    .then((t) => {
+      if (!t || cache) return;
+      const saved = JSON.parse(t) as { at: number; items: Row[] };
+      if (saved.items.length > CACHE_MAX) saved.items = saved.items.slice(0, CACHE_MAX);
+      cache = saved;
+    })
+    .catch(() => {})
     .finally(() => {
       if (process.env.LEADS_WARM !== "1") return;
       if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
