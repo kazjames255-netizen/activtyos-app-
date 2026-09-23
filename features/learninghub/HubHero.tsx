@@ -85,6 +85,7 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
           {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
         </Select>
       )}
+      {!tutor && kids.length > 1 && <span role="status" aria-live="polite" className="sr-only">{`Showing ${kids.find((c) => c.childId === childId)?.childName ?? "your child"}`}</span>}
       {!tutor && kids.length > 1 && (
         kids.length <= 4 ? (
           <div role="radiogroup" aria-label="Child" className="inline-flex rounded-full border border-white/25 bg-white/15 p-0.5 backdrop-blur-sm">
