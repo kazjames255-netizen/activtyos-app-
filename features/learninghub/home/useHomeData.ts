@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import type { InboxRow, StudentHomework } from "../homework/hwTypes";
 import type { Lesson } from "../live/lessonTypes";
 import { errMsg } from "../types";
+import { getShared } from "../homework/homeworkFeed";
 import { asArray, hubUrl, type AssessmentLite, type AttemptRow, type DueLite, type MasteryLite, type OverviewStudent } from "./homeLib";
 
 // Home reads from several endpoints at once and must survive any of them
@@ -21,7 +22,7 @@ export type Failed<T> = Partial<Record<keyof T, string>>;
 
 interface Loaded<T> { key: string; parts: T; failed: Failed<T> }
 
-type Spec<T> = { [K in keyof T]: { path: string; pick: (r: unknown) => T[K]; empty: T[K] } };
+type Spec<T> = { [K in keyof T]: { path: string; pick: (r: unknown) => T[K]; empty: T[K]; /** Read through the shared homework fetch (one call for Home and the Homework tab). */ shared?: boolean } };
 
 function useParts<T>(key: string, make: () => Spec<T>, onError: (m: string) => void) {
   const [state, setState] = useState<Loaded<T> | null>(null);
@@ -32,12 +33,12 @@ function useParts<T>(key: string, make: () => Spec<T>, onError: (m: string) => v
   const lastShown = useRef("");
   useEffect(() => { keyRef.current = key; specRef.current = make; errRef.current = onError; });
 
-  const load = useCallback(() => {
+  const load = useCallback((force = false) => {
     const mine = keyRef.current;
     const my = ++seq.current;
     const spec = specRef.current();
     const names = Object.keys(spec) as (keyof T)[];
-    void Promise.allSettled(names.map((n) => get<unknown>(spec[n].path))).then((results) => {
+    void Promise.allSettled(names.map((n) => (spec[n].shared ? getShared<unknown>(spec[n].path, force) : get<unknown>(spec[n].path)))).then((results) => {
       if (my !== seq.current || keyRef.current !== mine) return; // a newer request (or another child) superseded this one
       const parts = {} as T;
       const failed: Failed<T> = {};
@@ -61,13 +62,13 @@ function useParts<T>(key: string, make: () => Spec<T>, onError: (m: string) => v
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const soon = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(load, 350);
+    timer.current = setTimeout(() => load(true), 350);
   }, [load]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   useRealtime(CHANNELS, soon);
 
   const ready = state?.key === key;
-  return { ready, parts: ready ? state!.parts : null, failed: ready ? state!.failed : ({} as Failed<T>), reload: load };
+  return { ready, parts: ready ? state!.parts : null, failed: ready ? state!.failed : ({} as Failed<T>), reload: () => load(true) };
 }
 
 export function useTutorHome(qs: string, onError: (m: string) => void) {
@@ -84,7 +85,7 @@ export function useStudentHome(qs: string, childId: string | null, onError: (m: 
   const c = useMemo(() => ({ childId }), [childId]);
   const make = useCallback((): Spec<StudentParts> => ({
     lessons: { path: hubUrl(qs, "/lessons", c), pick: (r) => asArray<Lesson>(r, "lessons"), empty: [] },
-    homework: { path: hubUrl(qs, "/homework", c), pick: (r) => asArray<StudentHomework>(r), empty: [] },
+    homework: { path: hubUrl(qs, "/homework", c), pick: (r) => asArray<StudentHomework>(r), empty: [], shared: true },
     due: { path: hubUrl(qs, "/flashcards/due", c), pick: (r) => { const d = r as Partial<DueLite> | null; return { dueCount: d?.dueCount ?? 0, newCount: d?.newCount ?? 0, upcoming: d?.upcoming ?? 0 }; }, empty: null as DueLite | null },
     attempts: { path: hubUrl(qs, "/attempts", c), pick: (r) => asArray<AttemptRow>(r), empty: [] },
     mastery: { path: hubUrl(qs, "/mastery", c), pick: (r) => (r && typeof r === "object" ? (r as MasteryLite) : null), empty: null as MasteryLite | null },

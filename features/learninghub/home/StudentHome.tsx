@@ -9,6 +9,7 @@ import { lessonTiming } from "../live/lessonTypes";
 import type { PanelProps } from "../panelTypes";
 import { topicLabel } from "../types";
 import { HERO_BG, useNow } from "../teachKit";
+import { RetryFace } from "../homework/RetryFace";
 import { BigButton, Card, DISPLAY, Flame, FOCUS, HomeSkeleton, Icon, IconTile, PartError, Person, ScoreRing, TONES, WeekDots, plural, rise } from "./homeKit";
 import { activeDays, bandTone, firstName, greeting, relTime, streakOf, weekDots, type AssessmentLite, type AttemptRow } from "./homeLib";
 import { NextLessonHero, over } from "./NextLesson";
@@ -17,6 +18,7 @@ import { useStudentHome } from "./useHomeData";
 import { AskTutorLink, useFamily } from "../family/FamilyContext";
 import { openLink } from "../family/link";
 import { kidBand } from "../family/KidMode";
+import { KID_COPY, useKidCopy } from "../family/kidCopy";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
 
 // Student / parent Home — a warm "today" for the chosen child: what's next, what
@@ -38,6 +40,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const { ready, parts, failed, reload } = useStudentHome(qs, childId, onError);
   const now = useNow(30_000);
   const kidMode = useFamily().kid;
+  const { kind } = useKidCopy(props.students.find((s) => s.childId === childId)?.yearGroup);
   const kid = props.child ?? props.students.find((s) => s.childId === childId) ?? null;
   const name = kid?.childName ?? "there";
 
@@ -49,9 +52,11 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
 
     const todo: (StudentHomework & { st: ReturnType<typeof dueState> })[] = homework
       .filter((h) => h.childId === childId && h.submission.status === "assigned")
-      .map((h) => ({ ...h, st: dueState(h.dueAt, h.submission.status, now) }))
+      .map((h) => ({ ...h, st: dueState(h.dueAt, h.submission.status, now, kind) }))
       .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
     const urgent = todo.filter((h) => h.st.overdue || h.st.soon);
+    const overdueN = todo.filter((h) => h.st.overdue).length;
+    const soonN = todo.filter((h) => h.st.soon && !h.st.overdue).length;
 
     const activity: number[] = [];
     for (const a of attempts) if (a.submittedAt) activity.push(new Date(a.submittedAt).getTime());
@@ -86,8 +91,8 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
     const weekInClass = attempts.filter((a) => a.inPerson === true && a.assessmentType !== "diagnostic" && a.status !== "in_progress" && !!a.submittedAt && new Date(a.submittedAt).getTime() >= weekAgo).length;
     const waitingMark = attempts.filter((a) => a.status === "pending_marking").length + homework.filter((h) => h.childId === childId && h.submission.status === "submitted").length;
     const focusTopic = topics.length > 1 ? topics[topics.length - 1] : null;
-    return { upcoming, todo, urgent, streak, days14, week, results, subjects, topics, step, due, weekQuizzes, weekInClass, weekHomework, waitingMark, focusTopic, allDone: av.some((a) => a.type === "quiz" && !a.lessonNoteId) && !step };
-  }, [parts, now, childId, kidMode]);
+    return { upcoming, todo, urgent, overdueN, soonN, streak, days14, week, results, subjects, topics, step, due, weekQuizzes, weekInClass, weekHomework, waitingMark, focusTopic, allDone: av.some((a) => a.type === "quiz" && !a.lessonNoteId) && !step };
+  }, [parts, now, childId, kidMode, kind]);
 
   if (!ready || !parts || !d) return <HomeSkeleton label={`Loading ${firstName(name)}'s day`} />;
 
@@ -95,7 +100,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const topicById = new Map(props.topics.map((t) => [t.id, t]));
   const dueCards = d.due?.dueCount ?? 0;
   const newCards = d.due?.newCount ?? 0;
-  const lead = [dueCards + newCards > 0 ? `${plural(dueCards + newCards, "flashcard")} to review` : "", d.urgent.length ? `${plural(d.urgent.length, "homework task")} due soon` : ""].filter(Boolean);
+  const lead = [dueCards + newCards > 0 ? `${plural(dueCards + newCards, "flashcard")} to review` : "", !kind && d.overdueN ? `${d.overdueN} overdue` : "", !kind && d.soonN ? `${plural(d.soonN, "homework task")} due soon` : "", kind && d.urgent.length ? KID_COPY.homeworkWaiting(d.urgent.length) : ""].filter(Boolean);
   const partial = (Object.keys(failed) as (keyof typeof failed)[]);
   const partLabel = { lessons: "lessons", homework: "homework", due: "flashcards", attempts: "quiz results", mastery: kidMode ? "your level" : "mastery", assessments: "quizzes" } as const;
 
@@ -131,7 +136,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
             </div>
             <h2 className="mt-3 text-[28px] font-extrabold leading-[1.1] sm:text-[34px]" style={DISPLAY}>{greeting(now)}, {firstName(name)}.</h2>
             <p className="mt-2.5 max-w-[380px] text-[14px] leading-relaxed text-white/88">
-              {lead.length ? `You have ${lead.join(" and ")}. A few minutes today keeps it all fresh.` : "You're all caught up. Take a look at your progress or get ahead with a quiz."}
+              {lead.length ? `You have ${lead.join(" and ")}. A few minutes today keeps it all fresh.` : failed.homework ? "We couldn't check your homework just now. Try again below." : "You're all caught up. Take a look at your progress or get ahead with a quiz."}
             </p>
             <div className="mt-4 max-w-[400px]" data-chip="attainment"><Attainment variant="hero" overall={parts.mastery?.overall} bands={config.masteryBands} subjects={parts.mastery?.subjects} maxSubjects={3} onEmptyAction={() => go("quizzes")} /></div>
             <div className="mt-auto pt-4">
@@ -176,9 +181,11 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           </div>
         </Card>
 
-        <Card title="Homework" icon="homework" tone={d.urgent.some((h) => h.st.overdue) ? "red" : "gold"} style={rise(2)}
+        <Card title="Homework" icon="homework" tone={d.urgent.some((h) => h.st.overdue) && !kind ? "red" : "gold"} style={rise(2)}
           aside={d.todo.length > 0 ? <button type="button" onClick={() => go("homework")} className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>All homework <Icon name="chevronRight" size={14} /></button> : undefined}>
-          {d.todo.length === 0 ? (
+          {failed.homework ? (
+            <RetryFace what="homework" kid={kidMode} onRetry={reload} />
+          ) : d.todo.length === 0 ? (
             <div className="flex items-center gap-3 rounded-2xl bg-[var(--panel)] px-4 py-5">
               <IconTile icon="check" tone="green" size={44} />
               <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Nothing to hand in</div><div className="text-[12.5px] text-[var(--ink-2)]">New homework from your tutor will show up here.</div></div>
@@ -186,12 +193,12 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           ) : (
             <ul className="space-y-2">
               {d.todo.slice(0, 3).map((h) => {
-                const tone = h.st.overdue ? TONES.red : h.st.soon ? TONES.gold : TONES.neutral;
+                const tone = h.st.overdue && !kind ? TONES.red : h.st.soon || h.st.overdue ? TONES.gold : TONES.neutral;
                 return (
                   <li key={h.id + h.submission.id}>
                     <button type="button" onClick={() => go("homework")} aria-label={`${h.title}. ${h.st.label}. Open homework.`}
                       className={`home-lift flex min-h-[56px] w-full items-center gap-3 rounded-2xl border p-2.5 text-left ${FOCUS}`} style={{ background: tone.bg, borderColor: tone.line }}>
-                      <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--surface)]" style={{ color: tone.fg }}><Icon name={h.st.overdue ? "warning" : "homework"} size={19} /></span>
+                      <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--surface)]" style={{ color: tone.fg }}><Icon name={h.st.overdue && !kind ? "warning" : "homework"} size={19} /></span>
                       <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{h.title}</span><span className="block text-[12px] font-bold" style={{ color: tone.fg }}>{h.st.label}</span></span>
                       <Icon name="chevronRight" size={16} className="text-[var(--ink-3)]" />
                     </button>
@@ -212,7 +219,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
             <EmptyState icon="quiz" title="No results yet" body={`${firstName(name)}'s first quiz score will appear here as a ring — pass or not yet, it all counts.`} action={<BigButton icon="quiz" onClick={() => go("quizzes")}>Browse quizzes</BigButton>} />
           ) : (
             <ul className={`grid gap-3 ${d.results.length === 1 ? "sm:grid-cols-1" : d.results.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-              {d.results.map((a) => <ResultTile key={a.id} a={a} now={now} kid={kidMode} onOpen={() => go("quizzes")} />)}
+              {d.results.map((a) => <ResultTile key={a.id} a={a} now={now} kid={kidMode} kind={kind} onOpen={() => go("quizzes")} />)}
             </ul>
           )}
         </Card>
@@ -299,11 +306,11 @@ function TopicLine({ label, t, bands }: { label: string; t: { topic: string; sub
   );
 }
 
-function ResultTile({ a, now, onOpen, kid }: { a: AttemptRow; now: number; onOpen: () => void; kid: boolean }) {
+function ResultTile({ a, now, onOpen, kid, kind }: { a: AttemptRow; now: number; onOpen: () => void; kid: boolean; kind: boolean }) {
   const pending = a.status === "pending_marking";
   const passed = a.passed === true, failedQ = a.passed === false;
-  const color = pending ? "var(--gold)" : passed ? "var(--green)" : failedQ ? "var(--red)" : "var(--brand-2)";
-  const chip: Chip = pending ? { tone: "gold", text: kid ? "Being marked" : "Awaiting marking" } : passed ? { tone: "green", text: "Passed" } : failedQ ? { tone: "red", text: "Not yet" } : { tone: "neutral", text: "Done" };
+  const color = pending ? "var(--gold)" : passed ? "var(--green)" : failedQ ? (kind ? "var(--gold)" : "var(--red)") : "var(--brand-2)";
+  const chip: Chip = pending ? { tone: "gold", text: kid ? "Being marked" : "Awaiting marking" } : passed ? { tone: "green", text: "Passed" } : failedQ ? (kind ? { tone: "gold", text: "Nearly there" } : { tone: "red", text: "Not yet" }) : { tone: "neutral", text: "Done" };
   const t = TONES[chip.tone];
   const title = a.assessmentTitle ?? "Quiz";
   const sr = `${title}: ${pending ? "waiting to be marked" : `${Math.round(a.pct ?? 0)} percent, ${chip.text}`}`;
@@ -314,7 +321,7 @@ function ResultTile({ a, now, onOpen, kid }: { a: AttemptRow; now: number; onOpe
         <span className="row-span-3 sm:row-auto"><ScoreRing pct={pending ? null : (a.pct ?? 0)} size={84} color={color} sub={pending ? "marking" : undefined} sr={sr} /></span>
         <span className="line-clamp-2 sm:min-h-[2.4em] text-[12.5px] font-extrabold leading-tight text-[var(--ink)]">{title}</span>
         <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: t.bg, color: t.fg, borderColor: t.line }}>
-          <Icon name={passed ? "check" : failedQ ? "warning" : "sparkle"} size={11} strokeWidth={2.6} />{chip.text}
+          <Icon name={passed ? "check" : failedQ && !kind ? "warning" : "sparkle"} size={11} strokeWidth={2.6} />{chip.text}
         </span>
         <span className="text-[11px] font-semibold text-[var(--ink-3)]">{a.subject ? `${a.subject} · ` : ""}{relTime(a.submittedAt, now)}</span>
       </button>
