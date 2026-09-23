@@ -156,7 +156,7 @@ function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string
         {tutorLeft && (
           <div className="fixed inset-0 z-[310] flex items-center justify-center bg-[color-mix(in_srgb,var(--ink)_45%,transparent)] p-6">
             <div role="alertdialog" aria-modal="true" data-testid="remote-sync-tutor-left" className="w-full max-w-[380px] rounded-2xl bg-[var(--surface)] p-5 text-center shadow-[var(--shadow-pop)]">
-              <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{session.tutorName || "Your tutor"} has left the lesson.</p>
+              <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">Your tutor has finished the lesson.</p>
               <button type="button" onClick={onLeft} data-testid="remote-sync-tutor-left-ok"
                 className="mt-4 min-h-[44px] w-full rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 text-[13.5px] font-extrabold text-white hover:brightness-110">OK</button>
             </div>

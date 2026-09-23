@@ -63,7 +63,11 @@ const CONNECTED_MS = 30_000;
 // "live" forever, and "you're broadcasting — Rejoin" / the family's "Resume" banner would never go away — for one
 // stale row today, but unboundedly many after enough abandoned sessions pile up. Lazily flipping it to "ended" the
 // next time anyone asks "what's live" keeps both banners bounded to genuinely recent, real classes, no cron needed.
-const STALE_MS = 6 * 60 * 60_000;
+// P-01: 90 min (was 6 h). Only tutor actions and real child answer writes (live-answer) bump `updatedAt`; child
+// heartbeats deliberately do NOT, so a tutor who forgot to press End cannot be kept "live" by an open child tab.
+// The tutor can now end explicitly (End lesson on the banner). 90 min chosen over 45 so a long lesson with a quiet
+// spell is not cut off; revisit as a tenant setting.
+const STALE_MS = 90 * 60_000;
 const digest = (...parts: string[]) => createHash("sha256").update(parts.join("\u0000")).digest("hex").slice(0, 40);
 
 /** Flips a stale "live" row to "ended" (fire-and-forget — callers never wait on this) and reports whether it did,
@@ -325,7 +329,7 @@ hubRemoteSyncApi.post("/remote-sync/sessions/:id/heartbeat", async (req, res) =>
   if (!s.childIds.includes(child.childId)) { res.status(404).json({ error: "Session not found" }); return; }
   if (s.status !== "live") { res.status(409).json({ error: "Your tutor has ended this lesson", code: "lesson_closed" }); return; }
   const now = nowIso();
-  await lessonsCol.doc(s.id).update({ [`attendance.${child.childId}`]: now, updatedAt: now });
+  await lessonsCol.doc(s.id).update({ [`attendance.${child.childId}`]: now });
   // Without this, the tutor's screen only learns a child (re)connected on its own 10s poll — a real but needless
   // delay on top of what should be a near-live "X of Y connected" (progress/live-answer writes already ping).
   pingHub(ctx.tenantId, "hubLessons");
