@@ -34,7 +34,7 @@ export function CurriculumRings({ qs, canEdit, onOpenMap }: { qs: string; canEdi
         return [s.checked === 0 ? { g, pct: 0, count: lessons, line: "lessons placed" } : { g, pct: s.pct, count: undefined, line: `${s.covered} of ${s.checked} areas` }];
       }
       const c = childSummary(areas, rows);
-      return [{ g, pct: c.pct, count: undefined, line: `${c.done} of ${c.total} lessons finished` }];
+      return [{ g, pct: c.pct, count: undefined, line: "★".repeat(Math.round(c.pct / 20)) + "☆".repeat(5 - Math.round(c.pct / 20)) }];
     });
   }, [data, canEdit]);
 
@@ -54,7 +54,7 @@ export function CurriculumRings({ qs, canEdit, onOpenMap }: { qs: string; canEdi
             <li key={r.g} className="grid justify-items-center gap-1 rounded-2xl bg-[var(--panel)] p-3 text-center">
               <Ring pct={r.pct} count={r.count} label={canEdit ? `of ${GROUP_LABEL[r.g]} areas covered` : `of ${GROUP_LABEL[r.g]} started`} size={78} />
               <b className="text-[13.5px] text-[var(--ink)]">{GROUP_LABEL[r.g]}</b>
-              <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">{r.line}</span>
+              <span className="text-[11.5px] font-semibold text-[var(--ink-2)]" aria-hidden={!canEdit || undefined}>{r.line}</span>
             </li>
           ))}
         </ul>

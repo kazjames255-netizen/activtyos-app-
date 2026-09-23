@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui";
 import { errMsg } from "../types";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
+import { useEscapeLayer } from "../escapeLayer";
 import { LIGHT_SCOPE } from "../tools/lightScope";
 import { clearTag, getCellLessons, setTag, type CellLesson } from "./api";
 import { GROUP_LABEL, yearLabel, type MapArea } from "./cells";
@@ -57,7 +58,7 @@ export function AreaDrawer({ qs, framework, area, year, areas, mode, canCorrect,
     return () => { live = false; };
   }, [qs, framework, area.id, yr]);
   useEffect(load, [load]);
-  useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
+  useEscapeLayer(true, onClose);
 
   const years = area.y.map((n, i) => ({ y: i + 1, n })).filter((x) => x.n > 0);
   async function move() {

@@ -11,3 +11,5 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 7. Set MAIL_ALLOWLIST before any marking tests (dev mail is live).
 8. P-01 expiry chosen as 90 min (brief said 45): long lessons with quiet spells must not be cut off; End lesson button gives the tutor an explicit exit. Read from a tenant setting later.
 9. P-11 gaps: multi-child family notifications (name several kids) are not erased on one child's deletion; `/api/privacy` summary counts only the older keys; board image docs are deleted only for elements carrying the child's `cid`. Owner to review.
+10. P-09 tenant-level off switch for the curriculum map NOT built: no cheap tenant settings hook exists for hub blocks (only `settings.features.learninghub`). Roadmap with the tenant settings work (show/hide blocks).
+11. P-08/P-09 leftovers: `ComingSoon` (kit.tsx) and its call at LearningHubApp.tsx:191 are still reachable for any non-live panel meta, and both are Builder A's files, so not deleted. Child Progress tab still shows the curriculum ring overlay (kept per brief), with stars instead of "N of M".

@@ -28,7 +28,7 @@ export function Panel(p: PanelProps) {
     return <><CurriculumRings qs={p.childQs ?? p.qs} canEdit={false} onOpenMap={() => p.goTo?.("notes")} /><ProgressView p={p} childId={p.childId} /></>;
   }
 
-  if (!open) return <><CurriculumRings qs={p.qs} canEdit onOpenMap={() => p.goTo?.("notes")} /><Overview p={p} onOpen={(id, name) => setOpen({ id, name })} /></>;
+  if (!open) return <Overview p={p} onOpen={(id, name) => setOpen({ id, name })} />;
 
   const recompute = async () => {
     setBusy(true);

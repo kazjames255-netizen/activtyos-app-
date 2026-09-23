@@ -7,12 +7,12 @@ import { getMap, type CurriculumMap } from "./api";
 import { AreaDrawer } from "./AreaDrawer";
 import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, cellLabel, childSummary, rowsByArea, summarise, visibleYears, type CellKind, type MapArea } from "./cells";
 
-// "Where do these lessons fit the curriculum?" — the first thing on the Lessons tab.
+// "Where do these lessons fit the curriculum?" — the first line on the Lessons tab (grid closed until opened).
 //  Tutor: a heat-map of every curriculum area × year, coloured by how many lessons cover it (gaps and thin spots stand out).
 //  Child: the same grid recoloured by what THIS child has been given and finished.
 // Tap a cell → the lessons behind it (open one; a tutor can also move a lesson that was auto-mapped wrongly).
 
-const LS = "hub.curriculum.v1";
+const LS = "hub.curriculum.v2"; // v2: the grid starts closed (P-09); the summary line is what shows first
 const readPref = (): { open?: boolean; fw?: string; group?: string; onlyGaps?: boolean } => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
 const writePref = (p: object) => { try { localStorage.setItem(LS, JSON.stringify({ ...readPref(), ...p })); } catch { /* a nicety */ } };
 
@@ -58,7 +58,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   qs: string; canEdit: boolean; mayAuthor: boolean; onOpenLesson: (id: string) => void;
 }) {
   const pref = useMemo(readPref, []);
-  const [open, setOpen] = useState(pref.open !== false);
+  const [open, setOpen] = useState(pref.open === true);
   const [fw, setFw] = useState(pref.fw ?? "nc2014");
   const [group, setGroup] = useState<string | null>(pref.group ?? null);
   const [onlyGaps, setOnlyGaps] = useState(!!pref.onlyGaps);
@@ -74,7 +74,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
     getMap(qs, fw).then((d) => { if (live) { setData(d); setFwList(d.frameworks); setErr(null); } }).catch((e) => { if (live) setErr(errMsg(e, "Couldn't load the curriculum map")); });
     return () => { live = false; };
   }, [qs, fw]);
-  useEffect(() => { if (open) return load(); }, [load, open]);
+  useEffect(() => load(), [load]); // load while closed too: the summary line needs it
 
   const groups = useMemo(() => GROUP_ORDER.filter((g) => data?.areas.some((a) => a.group === g && (a.y.some((n) => n > 0) || data.rows.some((r) => r.areaId === a.id)))), [data]);
   const g = group && groups.includes(group as never) ? group : groups[0] ?? null;
@@ -89,6 +89,8 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const kid = useMemo(() => childSummary(inGroup, (data?.rows ?? []).filter((r) => inGroup.some((a) => a.id === r.areaId))), [data, inGroup]);
   const autoPct = data && data.lessons ? Math.round(((data.autoMapped.medium + data.autoMapped.low) / Math.max(1, data.autoMapped.high + data.autoMapped.medium + data.autoMapped.low)) * 100) : 0;
 
+  const all = useMemo(() => childSummary(data?.areas ?? [], data?.rows ?? []), [data]);
+  const starsOn = all.expected > 0 ? Math.round((5 * all.touched) / all.expected) : 0;
   const title = mode === "tutor" ? "Where our lessons fit the curriculum" : "What I’ve covered";
   const pickFw = (id: string) => { setFw(id); setData(null); setCell(null); writePref({ fw: id }); };
 
@@ -98,7 +100,13 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
         <span className="grid h-10 w-10 flex-none place-items-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}><Icon name="layers" size={19} /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</span>
-          <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{data ? (mode === "tutor" ? `${data.summary.covered} of ${data.summary.checked} curriculum areas covered · ${data.summary.thin} thin · ${data.summary.gaps} gaps` : `${kid.total} ${kid.total === 1 ? "lesson" : "lessons"} given · ${kid.done} finished`) : "National curriculum & GCSE, at a glance"}</span>
+          {mode === "child" ? (
+            <span className="flex items-center gap-0.5 text-[20px] leading-none" role="img" aria-label={data ? `${starsOn} out of 5 stars` : "Loading"} data-testid="curriculum-stars">
+              {[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden style={{ color: i < starsOn ? "var(--sem-warn)" : "var(--ink-3)" }}>{i < starsOn ? "★" : "☆"}</span>)}
+            </span>
+          ) : (
+            <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{data ? `${data.summary.covered} of ${data.summary.checked} curriculum areas covered · ${data.summary.thin} thin · ${data.summary.gaps} gaps` : "National curriculum & GCSE, at a glance"}</span>
+          )}
         </span>
         <Icon name={open ? "chevronDown" : "chevronRight"} size={18} className="flex-none text-[var(--ink-2)]" />
       </button>
@@ -124,12 +132,20 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
           {data && groups.length > 0 && g && (
             <>
               {/* subject tabs */}
-              <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Subject">
+              <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Subject"
+                onKeyDown={(e) => {
+                  const i = groups.indexOf(g as never);
+                  const n = e.key === "ArrowRight" ? (i + 1) % groups.length : e.key === "ArrowLeft" ? (i - 1 + groups.length) % groups.length : e.key === "Home" ? 0 : e.key === "End" ? groups.length - 1 : -1;
+                  if (n < 0) return;
+                  e.preventDefault(); setGroup(groups[n]); writePref({ group: groups[n] });
+                  requestAnimationFrame(() => document.getElementById(`hub-cur-tab-${groups[n]}`)?.focus());
+                }}>
                 {groups.map((x) => (
-                  <button key={x} type="button" role="tab" aria-selected={g === x} onClick={() => { setGroup(x); writePref({ group: x }); }} className={`min-h-[40px] rounded-full border px-4 text-[13.5px] font-extrabold ${FOCUS} ${g === x ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`}>{GROUP_LABEL[x]}</button>
+                  <button key={x} type="button" role="tab" id={`hub-cur-tab-${x}`} aria-selected={g === x} aria-controls={g === x ? "hub-cur-panel" : undefined} tabIndex={g === x ? 0 : -1} onClick={() => { setGroup(x); writePref({ group: x }); }} className={`min-h-[40px] rounded-full border px-4 text-[13.5px] font-extrabold ${FOCUS} ${g === x ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`}>{GROUP_LABEL[x]}</button>
                 ))}
               </div>
 
+              <div role="tabpanel" id="hub-cur-panel" aria-labelledby={`hub-cur-tab-${g}`}>
               {/* headline */}
               <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl bg-[var(--panel)] p-3.5">
                 <Ring pct={mode === "tutor" ? sum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
@@ -146,7 +162,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                     </>
                   ) : (
                     <>
-                      <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{kid.touched} of {kid.expected} topics started in {GROUP_LABEL[g]}</p>
+                      <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]" aria-label={`${GROUP_LABEL[g]}: ${kid.touched} of ${kid.expected} topics started`}>{GROUP_LABEL[g]}: <span aria-hidden>{[0, 1, 2, 3, 4].map((i) => (i < Math.round((5 * kid.touched) / Math.max(1, kid.expected)) ? "★" : "☆"))}</span></p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1"><Stat n={kid.done} label="lessons finished" dot="var(--sem-ok)" /><Stat n={Math.max(0, kid.total - kid.done)} label="to go" dot="var(--brand-2)" /></div>
                     </>
                   )}
@@ -187,6 +203,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                 {data.framework.label} · {data.framework.version}. {mode === "tutor" && data.lessons > 0 ? `About ${autoPct}% of these placements are automatic best guesses — open a cell and use “Wrong place?” to correct any. ` : ""}
                 {mode === "tutor" ? "“Covered” only means lessons exist, not how deep they go." : "A lesson counts as finished once its quiz is handed in."}{mode === "tutor" && data.unplaced > 0 ? ` ${data.unplaced} of your lessons aren’t on this map yet.` : ""}
               </p>
+              </div>
             </>
           )}
         </div>
