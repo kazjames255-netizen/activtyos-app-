@@ -8,6 +8,7 @@ import { hubInPersonApi } from "./inPersonApi";
 import { hubRemoteSyncApi } from "./remoteSyncApi";
 import { hubFamilyInvitesApi } from "./familyInvitesApi";
 import { hubDoubtsApi } from "./doubtsApi";
+import { hubCurriculumApi } from "./curriculumApi";
 
 // Learning Hub — homework & submissions (milestone 6), flashcards & spaced
 // repetition (milestone 7), live lessons (Daily video). Mounted by
@@ -24,3 +25,4 @@ hubTeachingApi.use(hubInPersonApi); // a tutor running a lesson/quiz with childr
 hubTeachingApi.use(hubRemoteSyncApi); // "Start lesson now (remote)": tutor broadcasts a lesson; remote students' screens follow, no video call
 hubTeachingApi.use(hubFamilyInvitesApi); // a tutor's invite link for a family who never booked → the parent enrols their own child
 hubTeachingApi.use(hubDoubtsApi); // "Ask my teacher": a per-slide/question doubt from inside a lesson, and the tutor's replies
+hubTeachingApi.use(hubCurriculumApi); // "where do these lessons fit the national curriculum / GCSE?" — the map, a cell's lessons, a provider's own corrections

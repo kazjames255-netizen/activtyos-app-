@@ -31,7 +31,7 @@ const TENANT_SCOPED = [
   "calendarEvents", "inventory",
   // Learning Hub (docs/learning-hub.md) — every hub collection carries tenantId.
   "hubTopics", "hubNotes", "hubEnrolments", "hubQuestions", "hubAssessments", "hubAttempts",
-  "hubPings", "hubMastery", "hubHomework", "hubSubmissions", "hubFlashcards", "hubFlashcardReviews", "hubLessons", "hubGroups", "hubBoards", "hubBoardTemplates", "hubFamilyInvites",
+  "hubPings", "hubMastery", "hubHomework", "hubSubmissions", "hubFlashcards", "hubFlashcardReviews", "hubLessons", "hubGroups", "hubBoards", "hubBoardTemplates", "hubFamilyInvites", "hubNcTags",
   "emailMessages", "scheduledEmails", "emailSuppressions",
 ];
 

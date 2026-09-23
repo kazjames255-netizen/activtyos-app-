@@ -1,4 +1,5 @@
 import { FieldPath } from "firebase-admin/firestore";
+import { oakKey } from "./curriculum";
 import { db } from "../firebase";
 import { hubCached, patchHub } from "./hubCache";
 import { mdExcerpt, readMinutes } from "./hubText";
@@ -118,8 +119,10 @@ export interface NoteRow {
   lessonQuizId: string | null;
   /** The school year (1–13) the lesson is for, when its `lesson.year` says ("6", 6 or "Year 6"); null otherwise. */
   lessonYear: number | null;
+  /** The lesson's Oak URL minus its host — the key into the curriculum maps (lib/curriculum.ts); null for a tutor's own lesson. */
+  oakKey: string | null;
 }
-interface NoteDocLike { topicId?: string; franchiseId?: string | null; published?: boolean; title?: string; body?: string; attachments?: NoteRow["attachments"]; videos?: unknown[]; createdByName?: string; createdAt?: string; updatedAt?: string; kind?: string; lesson?: { widget?: string | null; quizId?: string | null; year?: unknown } | null; excerpt?: string; readMinutes?: number; hasBody?: boolean }
+interface NoteDocLike { topicId?: string; franchiseId?: string | null; published?: boolean; title?: string; body?: string; attachments?: NoteRow["attachments"]; videos?: unknown[]; createdByName?: string; createdAt?: string; updatedAt?: string; kind?: string; lesson?: { widget?: string | null; quizId?: string | null; year?: unknown; source?: { url?: unknown } | null } | null; excerpt?: string; readMinutes?: number; hasBody?: boolean }
 const yearOf = (v: unknown): number | null => {
   const m = /^\s*(?:year\s*)?(\d{1,2})\s*$/i.exec(String(v ?? ""));
   const y = m ? Number(m[1]) : NaN;
@@ -138,6 +141,7 @@ export const noteRow = (id: string, n: NoteDocLike): NoteRow => {
     isLesson: !!n.lesson && typeof n.lesson === "object", lessonWidget: typeof n.lesson?.widget === "string" ? n.lesson.widget : null,
     lessonQuizId: typeof n.lesson?.quizId === "string" && n.lesson.quizId ? n.lesson.quizId : null,
     lessonYear: yearOf(n.lesson?.year),
+    oakKey: oakKey(n.lesson?.source?.url),
   };
 };
 export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> =>
@@ -145,7 +149,7 @@ export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> =>
     // Only the fields a list row needs. An imported Oak lesson doc carries its whole slide deck + transcript + keywords inside `lesson`
     // (~40KB each): reading every note in full made this query time out (HTTP 500 after ~130 s) once a tenant held ~7,500 lessons.
     const docs = await shardedTenantRead(notesCol, tenantId,
-      ["topicId", "franchiseId", "published", "title", "excerpt", "readMinutes", "hasBody", "attachments", "videos", "createdByName", "createdAt", "updatedAt", "lesson.widget", "lesson.quizId", "lesson.year", "lesson.outcome", "lesson.lessonSlug"]);
+      ["topicId", "franchiseId", "published", "title", "excerpt", "readMinutes", "hasBody", "attachments", "videos", "createdByName", "createdAt", "updatedAt", "lesson.widget", "lesson.quizId", "lesson.year", "lesson.outcome", "lesson.lessonSlug", "lesson.source.url"]);
     // Notes written through the API have no stored excerpt: read just their body (a few docs, in chunks).
     const bodies = new Map<string, string>();
     const bare = docs.filter((d) => typeof d.get("excerpt") !== "string");
