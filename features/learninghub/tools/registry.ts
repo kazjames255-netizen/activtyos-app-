@@ -12,7 +12,33 @@ import type { ToolImpl, ToolMeta } from "./types";
 
 // Tools built on the engine (replacing the old static drawer pictures). Each geometry tool is the same board with its own starting desk.
 const geo = (preset: InstrKind[], generators: string[], paper?: string): ToolImpl => ({ kind: "native", load: () => import("./maths/geometry/GeometryTool"), params: { preset, offer: undefined, generators, ...(paper ? { paper } : {}) } });
+const nat = (load: () => Promise<{ default: React.ComponentType<never> }>, params?: Record<string, unknown>): ToolImpl => ({ kind: "native", load: load as never, ...(params ? { params } : {}) });
 const NATIVE: Record<string, ToolImpl> = {
+  // science
+  "S-01": nat(() => import("./science/labels/LabelDiagram")),
+  "S-25": nat(() => import("./science/labels/LabelDiagram"), { group: "body-systems" }),
+  "S-02": nat(() => import("./science/data/DataGraph")),
+  "M-60": nat(() => import("./science/data/DataGraph")),
+  "M-61": nat(() => import("./science/data/DataGraph")),
+  "S-03": nat(() => import("./science/formulae/FormulaCalculator")),
+  "S-05": nat(() => import("./science/equations/EquationBalancer")),
+  // sorting / sequencing / Venn — every subject
+  "S-15": nat(() => import("./common/CardSort"), { subject: "science" }),
+  "X-05": nat(() => import("./common/CardSort")),
+  "X-07": nat(() => import("./common/VennSort")),
+  "S-16": nat(() => import("./common/Sequencer"), { subject: "science" }),
+  "H-H02": nat(() => import("./common/Sequencer"), { subject: "humanities" }),
+  // English writing frames
+  "N-06": nat(() => import("./english/FrameWriter"), { frameId: "story-mountain" }),
+  "N-07": nat(() => import("./english/FrameWriter"), { frameId: "character-setting" }),
+  "N-08": nat(() => import("./english/FrameWriter")),
+  "E-04": nat(() => import("./english/FrameWriter"), { frameId: "pee" }),
+  "E-05": nat(() => import("./english/FrameWriter"), { frameId: "essay-planner" }),
+  "E-06": nat(() => import("./english/TimedWriting")),
+  "X-15": nat(() => import("./english/FrameWriter")),
+  // languages
+  "L-03": nat(() => import("./languages/verbs/VerbTrainer")),
+  "L-04": nat(() => import("./languages/verbs/SentenceBuilder")),
   "M-01": geo(["ruler15"], []),
   "M-02": geo(["protractor180", "ruler15"], ["M-G01.measure", "M-G01.draw", "M-G09.measure"]),
   "M-03": geo(["protractor360", "ruler15"], ["M-G01.measure", "M-G01.draw"]),
