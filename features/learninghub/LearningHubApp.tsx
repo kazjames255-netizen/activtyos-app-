@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { HubHero } from "./HubHero";
 import { CallProvider } from "./live/CallProvider";
 import { HubTabs, type HubTab } from "./HubTabs";
-import { ComingSoon, EmptyState, ErrorBanner, FOCUS, isOfflineError, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
+import { EmptyState, ErrorBanner, FOCUS, isOfflineError, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
 import { NotesPanel } from "./NotesPanel";
 import { NOTES_META, PANEL_MODULES, STUDENTS_MODULE, TAB_ORDER } from "./panels";
 import type { PanelMeta, PanelProps } from "./panelTypes";
@@ -211,7 +211,6 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const settled = ready && (!kid || hub.childId === kidChildId);
   const body = (() => {
     if (!settled) return <SkeletonRows rows={4} label="Loading" variant={active === "students" ? "roster" : "row"} grid={active === "students"} />;
-    if (current.meta.status !== "live") return <ComingSoon meta={current.meta} />;
     if (current.Panel) { const P = current.Panel; return <P {...panelProps} />; }
     return null;
   })();

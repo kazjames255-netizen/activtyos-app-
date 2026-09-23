@@ -238,41 +238,6 @@ export function EmptyState({ icon, title, body, action, color = "var(--brand)", 
   );
 }
 
-/** A panel that isn't built yet: honest, tinted, never hidden. */
-export function ComingSoon({ meta }: { meta: PanelMeta }) {
-  const icon = PANEL_ICON[meta.key] ?? "sparkle";
-  const ghost = [["w-[72%]", "w-[40%]"], ["w-[58%]", "w-[52%]"], ["w-[66%]", "w-[30%]"]];
-  return (
-    <div id={`hub-soon-${meta.key}`} data-ui="card" className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
-      <div className="relative px-6 pb-6 pt-7 sm:px-8" style={{ background: "linear-gradient(180deg, var(--brand-soft), var(--surface))" }}>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-2xl text-white shadow-[var(--shadow-sm)]" style={{ background: "linear-gradient(135deg, var(--brand-2), var(--brand))" }}>
-            <Icon name={icon} size={24} />
-          </span>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-[19px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{meta.label}</h3>
-              <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wide" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)", color: "#7a5300" }}>
-                <Icon name="sparkle" size={11} /> Coming soon
-              </span>
-            </div>
-            <p className="mt-1 max-w-[520px] text-[13px] leading-relaxed text-[var(--ink-2)]">{meta.blurb}</p>
-          </div>
-        </div>
-      </div>
-      <div className="grid gap-2.5 px-6 pb-7 pt-1 sm:px-8" aria-hidden="true">
-        {ghost.map(([a, b], i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] px-3.5 py-3">
-            <span className="h-8 w-8 flex-none rounded-lg" style={{ background: tint("var(--brand)", 14) }} />
-            <div className="flex-1 space-y-2"><div className={`h-2.5 rounded-full bg-[var(--line)] ${a}`} /><div className={`h-2 rounded-full bg-[var(--line)] opacity-70 ${b}`} /></div>
-            <span className="h-6 w-14 flex-none rounded-full bg-[var(--line)] opacity-70" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── small atoms ────────────────────────────────────────────────────────────
 /** A tinted pill in a subject's colour. */
 export function SubjectChip({ subject, children, className = "" }: { subject: string; children?: ReactNode; className?: string }) {
