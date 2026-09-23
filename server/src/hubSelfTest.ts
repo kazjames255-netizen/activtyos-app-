@@ -199,7 +199,7 @@ t("trend: last 20 marked quiz attempts, oldest → newest", () => {
 
 console.log("config");
 t("hub defaults are complete and mergeHub keeps tenant lists whole", () => {
-  assert.equal(HUB_DEFAULTS.questionKinds.length, 7); // + match, order
+  assert.equal(HUB_DEFAULTS.questionKinds.length, 8); // + match, order, tool
   assert.deepEqual(mergeHub({ questionKinds: [{ id: "x", label: "X", mark: "exact" }] }).questionKinds.map((k) => k.id), ["x"]);
   assert.equal(mergeHub(undefined).revealAnswers, "after_pass"); // default: keep the key back until the quiz is passed (docs/learning-hub.md)
   assert.equal(mergeHub(undefined).retakeBreakAfter, 3);

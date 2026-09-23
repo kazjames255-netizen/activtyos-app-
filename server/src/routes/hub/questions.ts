@@ -8,6 +8,7 @@ import { assessmentUseCached, collate, patchQuestion, questionIndex, topicRank }
 import { forgetHub } from "../../lib/hubCache";
 import { pingHub } from "../../lib/hubPing";
 import type { HubSettings } from "../../../../lib/hubConfig";
+import { GENERATOR_LABEL, isGenerator } from "../../../../features/learninghub/tools/problems";
 import { cleanItems, cleanPairs } from "../../lib/hubKinds";
 import { claimQuestionImages, dropQuestionImages, imageBase, pictureOf, questionImageIds, signedImage } from "../../lib/hubMedia";
 import { assessmentsCol, loadTopics, nowIso, questionsCol, type AssessmentDoc, type QuestionDoc } from "./shared";
@@ -33,6 +34,12 @@ const questionBody = z.object({
     definitionImage: z.object({ url: z.string().max(1000), alt: z.string().max(300) }).nullable().optional(),
   })).max(20).optional(),
   items: z.array(z.string().max(2000)).max(20).optional(),
+  // tool → which generator builds the problem (a fixed seed pins one exact problem; absent = a fresh one every attempt) and optional own tolerances. Checked in questionFields.
+  tool: z.object({
+    generatorId: z.string().min(1).max(60),
+    seed: z.number().int().min(1).max(4294967295).nullable().optional(),
+    tol: z.object({ mm: z.number().min(0.1).max(10).optional(), deg: z.number().min(0.1).max(10).optional() }).optional(),
+  }).optional(),
   acceptedAnswers: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
   tolerance: z.number().finite().min(0).max(1e9).default(0),
   marks: z.number().int().min(1).max(100).default(1),
@@ -45,7 +52,7 @@ const questionBody = z.object({
 });
 type QuestionBody = z.infer<typeof questionBody>;
 
-type Fields = Pick<QuestionDoc, "topicId" | "kind" | "prompt" | "options" | "answer" | "acceptedAnswers" | "tolerance" | "marks" | "explanation" | "published" | "yearGroups"> & { pairs?: QuestionDoc["pairs"]; items?: string[] } & { image: { id: string; alt: string } | null };
+type Fields = Pick<QuestionDoc, "topicId" | "kind" | "prompt" | "options" | "answer" | "acceptedAnswers" | "tolerance" | "marks" | "explanation" | "published" | "yearGroups"> & { tool?: QuestionDoc["tool"]; pairs?: QuestionDoc["pairs"]; items?: string[] } & { image: { id: string; alt: string } | null };
 
 /** Check the body against the marking rule of its kind (settings.hub.questionKinds)
  *  and shape what is stored: option ids, the answer key, accepted answers. Returns
@@ -95,6 +102,12 @@ export function questionFields(cfg: HubSettings, b: QuestionBody): Fields | stri
       if (typeof items === "string") return items;
       return { ...base, options: [], answer: null, items, acceptedAnswers: [], tolerance: 0 };
     }
+    case "tool": {
+      const t = b.tool;
+      if (!t || !isGenerator(t.generatorId)) return `Pick a tool question type (${Object.values(GENERATOR_LABEL).slice(0, 3).join(", ")}…)`;
+      // No answer key is stored: marking re-generates the problem from the attempt's seed (lib/hubScoring.ts → features/learninghub/tools/problems.ts).
+      return { ...base, options: [], answer: null, acceptedAnswers: [], tolerance: 0, tool: { generatorId: t.generatorId, ...(t.seed ? { seed: t.seed } : {}), ...(t.tol && (t.tol.mm || t.tol.deg) ? { tol: t.tol } : {}) } };
+    }
     default: // manual — a tutor marks it, so there is no key
       return { ...base, options: [], answer: null, acceptedAnswers: [], tolerance: 0 };
   }
@@ -106,7 +119,7 @@ export const questionOut = (base: string, id: string, q: QuestionDoc, usedBy = 0
   image: q.image?.id ? { id: q.image.id, alt: q.image.alt ?? "", url: signedImage(base, q.image.id) } : pictureOf(base, q.image),
   options: (q.options ?? []).map((o) => ({ id: o.id, text: o.text, ...(o.image?.id ? { image: { id: o.image.id, url: signedImage(base, o.image.id) } } : pictureOf(base, o.image) ? { image: { url: pictureOf(base, o.image)!.url } } : {}) })),
   answer: q.answer ?? null,
-  ...(q.pairs?.length ? { pairs: q.pairs } : {}), ...(q.items?.length ? { items: q.items } : {}),
+  ...(q.pairs?.length ? { pairs: q.pairs } : {}), ...(q.items?.length ? { items: q.items } : {}), ...(q.tool ? { tool: q.tool } : {}),
   acceptedAnswers: q.acceptedAnswers ?? [], tolerance: q.tolerance ?? 0, marks: q.marks, explanation: q.explanation ?? "",
   published: q.published !== false, yearGroups: q.yearGroups ?? [], franchiseId: q.franchiseId ?? null, usedBy, updatedAt: q.updatedAt,
 });
@@ -291,10 +304,11 @@ hubQuestionsApi.put("/questions/:id", async (req, res) => {
   }
   const patch = { ...fields, updatedAt: nowIso() };
   // Changing a question's type must not leave the old key behind (a match's pairs, an order's items).
-  await snap.ref.update({ ...patch, ...(fields.pairs ? {} : { pairs: FieldValue.delete() }), ...(fields.items ? {} : { items: FieldValue.delete() }) });
+  await snap.ref.update({ ...patch, ...(fields.pairs ? {} : { pairs: FieldValue.delete() }), ...(fields.items ? {} : { items: FieldValue.delete() }), ...(fields.tool ? {} : { tool: FieldValue.delete() }) });
   const next: QuestionDoc = { ...before, ...patch };
   if (!fields.pairs) delete next.pairs;
   if (!fields.items) delete next.items;
+  if (!fields.tool) delete next.tool;
   patchQuestion(ctx.tenantId, snap.id, next); pingHub(ctx.tenantId, "hubQuestions");
   const keep = new Set(questionImageIds(fields));
   void dropQuestionImages(ctx.tenantId, questionImageIds(before).filter((id) => !keep.has(id))); // pictures this edit replaced or removed

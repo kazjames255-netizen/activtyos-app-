@@ -11,7 +11,7 @@ export interface HubSettings {
    *  match (trimmed, case-insensitive), numeric = within tolerance, match = every
    *  term paired with its definition, order = items in the exact sequence,
    *  manual = a tutor marks it. Tenants may rename, reorder or drop kinds. */
-  questionKinds: { id: string; label: string; mark: "choice" | "multi" | "exact" | "numeric" | "match" | "order" | "manual" }[];
+  questionKinds: { id: string; label: string; mark: "choice" | "multi" | "exact" | "numeric" | "match" | "order" | "tool" | "manual" }[];
   /** Default pass mark (%) for a new quiz. */
   passMarkPct: number;
   /** When true, a child must sit (or be waived from) the placement test for a
@@ -67,6 +67,7 @@ export const HUB_DEFAULTS: HubSettings = {
     { id: "number", label: "Number", mark: "numeric" },
     { id: "match", label: "Matching pairs", mark: "match" },
     { id: "order", label: "Put in order", mark: "order" },
+    { id: "tool", label: "Tool question (ruler, protractor, grid…)", mark: "tool" },
     { id: "written", label: "Written answer (tutor marks)", mark: "manual" },
   ],
   passMarkPct: 70,
@@ -92,7 +93,7 @@ const LEGACY_KIND_IDS = ["single", "multi", "short", "number", "written"];
 function withNewKinds(list: HubSettings["questionKinds"]): HubSettings["questionKinds"] {
   if (!LEGACY_KIND_IDS.every((id) => list.some((k) => k.id === id))) return list;
   const has = (m: string, id: string) => list.some((k) => k.mark === m || k.id === id);
-  const add = HUB_DEFAULTS.questionKinds.filter((k) => (k.mark === "match" || k.mark === "order") && !has(k.mark, k.id));
+  const add = HUB_DEFAULTS.questionKinds.filter((k) => (k.mark === "match" || k.mark === "order" || k.mark === "tool") && !has(k.mark, k.id));
   if (!add.length) return list;
   const at = list.findIndex((k) => k.mark === "manual");
   return at < 0 ? [...list, ...add] : [...list.slice(0, at), ...add, ...list.slice(at)];

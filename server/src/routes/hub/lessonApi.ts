@@ -68,6 +68,7 @@ async function warmupDocs(c: Ctxed, fromQuiz = false) {
     if (q.tenantId !== c.ctx.tenantId || q.published === false) continue;
     if (c.child ? !fitsChild(q.franchiseId, c.child) : !canSee(c.ctx, q.franchiseId)) continue;
     const mark = cfg.questionKinds.find((k) => k.id === q.kind)?.mark ?? inferRule(q);
+    if (mark === "tool") continue; // a warm-up is instant-feedback practice with no drawing surface — tool questions belong in a real quiz
     out.push({ id: s.id, q, mark });
   }
   return out;

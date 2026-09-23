@@ -1,4 +1,5 @@
 import { Router, type Response } from "express";
+import { cleanToolAnswer, isBlankToolAnswer, isGenerator, publicProblem, PROBLEM_GENERATORS } from "../../../../features/learninghub/tools/problems";
 import { z } from "zod";
 import { db } from "../../firebase";
 import { FieldValue } from "firebase-admin/firestore";
@@ -52,6 +53,8 @@ export const questionOut = (q: QuestionSnap, base: string, attemptId: string) =>
   ...(q.mark === "choice" || q.mark === "multi" ? { options: optionsOut(base, q) } : {}),
   ...(q.mark === "match" && Array.isArray(q.answer) ? presentMatch(q.answer as Pair[], `${attemptId}:${q.id}`) : {}),
   ...(q.mark === "order" && Array.isArray(q.answer) ? { items: presentOrder(q.answer as string[], `${attemptId}:${q.id}`) } : {}),
+  // A tool question: the problem this attempt was dealt, WITHOUT its model answer or checker (those are re-generated from the seed only when marking).
+  ...(q.mark === "tool" && q.tool && isGenerator(q.tool.generatorId) ? { toolProblem: publicProblem(PROBLEM_GENERATORS[q.tool.generatorId]!(q.tool.seed)) } : {}),
 });
 
 const passedOf = (a: Pick<AttemptDoc, "status" | "pct" | "passMarkPct">) => (a.status === "marked" ? (a.pct ?? 0) >= a.passMarkPct : null);
@@ -86,8 +89,10 @@ function resultOut(id: string, a: AttemptDoc, cfg: HubSettings, canEdit: boolean
     return {
       questionId: x.questionId, correct: x.correct, marksAwarded: x.marksAwarded, marksMax: x.marksMax, response: x.response ?? null,
       ...(x.feedback ? { feedback: x.feedback } : {}),
+      // A tool question's auto-checker lines ("✗ Perpendicular — 4° off square") only when answers may be shown, like the key itself.
+      ...(reveal && x.checkerFeedback?.length ? { checkerFeedback: x.checkerFeedback } : {}),
       ...(canEdit ? { pending: x.pending === true } : {}),
-      ...(detail && q ? { topicId: q.topicId, kind: q.kind, prompt: q.prompt, image: pictureOut(imgBase, q), ...(q.mark === "choice" || q.mark === "multi" ? { options: optionsOut(imgBase, q) } : {}) } : {}),
+      ...(detail && q ? { topicId: q.topicId, kind: q.kind, prompt: q.prompt, image: pictureOut(imgBase, q), ...(q.mark === "choice" || q.mark === "multi" ? { options: optionsOut(imgBase, q) } : {}), ...(q.mark === "tool" && q.tool && isGenerator(q.tool.generatorId) ? { toolProblem: publicProblem(PROBLEM_GENERATORS[q.tool.generatorId]!(q.tool.seed)) } : {}) } : {}),
       ...(reveal && q ? { correctAnswer: q.answer ?? null, ...(q.mark === "exact" && q.acceptedAnswers.length ? { acceptedAnswers: q.acceptedAnswers } : {}), ...(q.explanation ? { explanation: q.explanation } : {}) } : {}),
     };
   });
@@ -136,6 +141,8 @@ export function snapshotQuestions(tenantId: string, asm: AssessmentDoc, cfg: Hub
       // match / order keep their key in `pairs` / `items`; the snapshot's `answer` carries it so marking and the reveal read one place.
       answer: mark === "match" ? q.pairs ?? null : mark === "order" ? q.items ?? null : q.answer ?? null,
       acceptedAnswers: q.acceptedAnswers ?? [], tolerance: q.tolerance ?? 0, explanation: q.explanation ?? "",
+      // Tool question: a fixed seed if the tutor pinned one, else a fresh random one — stored on the attempt so a refresh shows the same problem and marking replays it.
+      ...(mark === "tool" && q.tool && isGenerator(q.tool.generatorId) ? { tool: { generatorId: q.tool.generatorId, seed: q.tool.seed || 1 + Math.floor(Math.random() * 4294967294), ...(q.tool.tol ? { tol: q.tool.tol } : {}) } } : {}),
       ...(q.image?.id ? { image: { id: q.image.id, alt: q.image.alt ?? "" } } : q.image?.url ? { image: { id: "", url: q.image.url, alt: q.image.alt ?? "" } } : {}),
     });
   }
@@ -277,6 +284,8 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
 export function cleanResponse(r: unknown): unknown {
   const kindResp = cleanKindResponse(r); // match {kind, pairs} / order {kind, items}
   if (kindResp !== undefined) return kindResp;
+  // tool {kind:"tool", number?, marks?, points?}: sanitised and size-capped (lib: features/learninghub/tools/problems.ts)
+  if (r && typeof r === "object" && !Array.isArray(r) && (r as { kind?: unknown }).kind === "tool") { const a = cleanToolAnswer(r); return isBlankToolAnswer(a) ? null : { kind: "tool", ...a }; }
   if (typeof r === "string") return r.slice(0, 10_000);
   if (typeof r === "number") return Number.isFinite(r) ? r : null;
   if (Array.isArray(r)) return r.filter((x): x is string => typeof x === "string").slice(0, 50).map((x) => x.slice(0, 200));
@@ -308,8 +317,8 @@ hubAttemptsApi.post("/attempts/:id/submit", async (req, res) => {
       const now = nowIso();
       const answers: AnswerDoc[] = a.questions.map((q) => {
         const response = given.has(q.id) ? given.get(q.id) : null;
-        const o = markResponse({ mark: q.mark, answer: q.answer, acceptedAnswers: q.acceptedAnswers, tolerance: q.tolerance, marks: q.marks }, response);
-        return { questionId: q.id, topicId: q.topicId, response: response ?? null, correct: o.correct, marksAwarded: o.marksAwarded, marksMax: q.marks, feedback: "", pending: o.pending };
+        const o = markResponse({ mark: q.mark, answer: q.answer, acceptedAnswers: q.acceptedAnswers, tolerance: q.tolerance, marks: q.marks, tool: q.tool }, response);
+        return { questionId: q.id, topicId: q.topicId, response: response ?? null, correct: o.correct, marksAwarded: o.marksAwarded, marksMax: q.marks, feedback: "", pending: o.pending, ...(o.feedback ? { checkerFeedback: o.feedback } : {}) };
       });
       const score = scoreAttempt(answers as ScoredAnswer[], a.passMarkPct);
       const late = !!a.timeLimitMins && Date.parse(now) > Date.parse(a.startedAt) + a.timeLimitMins * 60_000 + GRACE_MS;

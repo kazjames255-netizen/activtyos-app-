@@ -47,6 +47,8 @@ export interface QuestionDoc {
   tolerance: number;
   marks: number;
   explanation: string;
+  /** Tool questions (mark rule "tool"): which generator builds the problem, an optional FIXED seed (absent = a fresh one each attempt), optional own tolerances. */
+  tool?: { generatorId: string; seed?: number | null; tol?: { mm?: number; deg?: number } };
   published: boolean;
   createdBy: string;
   createdAt: string;
@@ -90,6 +92,8 @@ export interface QuestionSnap {
   acceptedAnswers: string[];
   tolerance: number;
   explanation: string;
+  /** Tool questions: the generator and the seed this attempt was dealt (fixed for the attempt, so a refresh shows the same problem and marking replays it). */
+  tool?: { generatorId: string; seed: number; tol?: { mm?: number; deg?: number } };
 }
 
 export interface AnswerDoc {
@@ -102,6 +106,8 @@ export interface AnswerDoc {
   feedback: string;
   /** Manual answer waiting for a tutor. */
   pending: boolean;
+  /** Tool questions: the auto-checker's lines. Only sent to a pupil when the answers may be revealed. */
+  checkerFeedback?: string[];
 }
 
 export interface AttemptDoc {

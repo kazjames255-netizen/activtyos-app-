@@ -165,12 +165,12 @@ t("presentOrder returns only the item strings", () => {
 });
 
 console.log("settings");
-t("defaults carry match + order; an old five-kind tenant list gains them; a customised list is left alone", () => {
+t("defaults carry match + order + tool; an old five-kind tenant list gains them; a customised list is left alone", () => {
   assert.deepEqual(HUB_DEFAULTS.questionKinds.filter((k) => k.mark === "match" || k.mark === "order").map((k) => k.id), ["match", "order"]);
   const legacy = [{ id: "single", label: "Single", mark: "choice" as const }, { id: "multi", label: "Multi", mark: "multi" as const }, { id: "short", label: "Short", mark: "exact" as const }, { id: "number", label: "Num", mark: "numeric" as const }, { id: "written", label: "Written", mark: "manual" as const }];
-  assert.deepEqual(mergeHub({ questionKinds: legacy }).questionKinds.map((k) => k.id), ["single", "multi", "short", "number", "match", "order", "written"]);
+  assert.deepEqual(mergeHub({ questionKinds: legacy }).questionKinds.map((k) => k.id), ["single", "multi", "short", "number", "match", "order", "tool", "written"]);
   // a kind the tenant already has (here "match", renamed) is not added twice; only the missing one is
-  assert.deepEqual(mergeHub({ questionKinds: [...legacy.slice(0, 4), { id: "match", label: "Pairs", mark: "match" }, legacy[4]] }).questionKinds.map((k) => k.id), ["single", "multi", "short", "number", "match", "order", "written"]);
+  assert.deepEqual(mergeHub({ questionKinds: [...legacy.slice(0, 4), { id: "match", label: "Pairs", mark: "match" }, legacy[4]] }).questionKinds.map((k) => k.id), ["single", "multi", "short", "number", "match", "order", "tool", "written"]);
   assert.deepEqual(mergeHub({ questionKinds: [{ id: "x", label: "X", mark: "exact" }] }).questionKinds.map((k) => k.id), ["x"]);
 });
 

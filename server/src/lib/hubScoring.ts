@@ -3,7 +3,9 @@
 // Which rule a question uses comes from settings.hub.questionKinds[kind].mark
 // (lib/hubConfig.ts) — nothing about *what* is taught is hardcoded here.
 
-export type MarkRule = "choice" | "multi" | "exact" | "numeric" | "match" | "order" | "manual";
+import { cleanToolAnswer, isBlankToolAnswer, markTool, type ToolSpec } from "../../../features/learninghub/tools/problems";
+
+export type MarkRule = "choice" | "multi" | "exact" | "numeric" | "match" | "order" | "tool" | "manual";
 
 /** Everything marking needs about a question (the snapshot taken at attempt start). */
 export interface MarkableQuestion {
@@ -12,6 +14,8 @@ export interface MarkableQuestion {
   acceptedAnswers?: string[];
   tolerance?: number;
   marks: number;
+  /** Tool questions: which generator + seed built this attempt's problem (marking re-generates it; the key never travels). */
+  tool?: ToolSpec;
 }
 
 export interface MarkOutcome {
@@ -20,6 +24,8 @@ export interface MarkOutcome {
   marksAwarded: number;
   /** Manual question with a real response: waits for a tutor. */
   pending: boolean;
+  /** Tool questions: the checker's plain-English lines ("✓ Perpendicular within 2°…"). Shown to the pupil only when answers may be revealed. */
+  feedback?: string[];
 }
 
 /** No answer given (null, "", whitespace, empty list). */
@@ -30,6 +36,7 @@ export function isBlank(r: unknown): boolean {
   if (typeof r === "object") {
     // match / order responses: blank when there are no pairs / items in them.
     const o = r as Record<string, unknown>;
+    if (o.kind === "tool") return isBlankToolAnswer(cleanToolAnswer(o)); // nothing drawn / typed / plotted
     if ("pairs" in o) return !Array.isArray(o.pairs) || o.pairs.length === 0;
     if ("items" in o) return !Array.isArray(o.items) || o.items.length === 0;
   }
@@ -112,6 +119,12 @@ export function markResponse(q: MarkableQuestion, response: unknown): MarkOutcom
     return isBlank(response) ? wrong : { correct: null, marksAwarded: 0, pending: true };
   }
   if (isBlank(response)) return wrong;
+
+  if (q.mark === "tool") {
+    if (!q.tool) return wrong;
+    const m = markTool(q.tool, response, q.marks);
+    return m ? { correct: m.correct, marksAwarded: m.marksAwarded, pending: false, feedback: m.feedback } : wrong;
+  }
 
   switch (q.mark) {
     case "choice":

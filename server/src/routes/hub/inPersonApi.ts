@@ -250,7 +250,7 @@ hubInPersonApi.get("/in-person/sessions/:id/questions", async (req, res) => {
   const cfg = await hubConfig(ctx.tenantId, s.franchiseId);
   // One snapshot for the whole class (head-office scope), shuffled with a SESSION seed — every child gets the same arrangement,
   // so one projected screen matches everyone's answers. (The seed only changes what is shown; marking reads the canonical key.)
-  const questions = snapshotQuestions(ctx.tenantId, paper.asm, cfg, { franchiseId: s.franchiseId }, paper.qDocs);
+  const questions = snapshotQuestions(ctx.tenantId, paper.asm, cfg, { franchiseId: s.franchiseId }, paper.qDocs).filter((q) => q.mark !== "tool"); // tool questions need each child at a screen — not used when the tutor taps in answers
   const base = imageBase(req);
   res.json({
     assessment: { id: paper.asm.id, title: paper.asm.title, type: paper.asm.type, subject: paper.asm.subject, passMarkPct: paper.asm.passMarkPct },
@@ -363,7 +363,7 @@ hubInPersonApi.post("/in-person/sessions/:id/submit", async (req, res) => {
     const gate = await gateFor(ctx, child, asm, cfg);
     if (gate.skip && !(b.override && OVERRIDABLE.has(gate.skip.code))) { rows.push({ childId: child.childId, childName: child.childName, status: "skipped", code: gate.skip.code, message: gate.skip.message }); continue; }
 
-    const questions = snapshotQuestions(ctx.tenantId, asm, cfg, child, qDocs);
+    const questions = snapshotQuestions(ctx.tenantId, asm, cfg, child, qDocs).filter((q) => q.mark !== "tool");
     if (!questions.length) { rows.push({ childId: child.childId, childName: child.childName, status: "skipped", code: "no_questions", message: "This has no questions yet." }); continue; }
     const given = new Map(entry.answers.map((x) => [x.questionId, x] as const));
     let judged = false;
