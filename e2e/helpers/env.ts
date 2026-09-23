@@ -27,7 +27,7 @@ if (!FIREBASE_API_KEY) {
 
 // Where the signed-in browser states + the account manifest live between the
 // setup project and the tests. Gitignored.
-export const AUTH_DIR = path.join(ROOT, "e2e/.auth");
+export const AUTH_DIR = process.env.E2E_AUTH_DIR ? path.resolve(process.env.E2E_AUTH_DIR) : path.join(ROOT, "e2e/.auth");
 export const ACCOUNTS_PATH = path.join(AUTH_DIR, "accounts.json");
 
 export type Role = "freelancer" | "company" | "franchise" | "staff" | "parent" | "platform";

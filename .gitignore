@@ -54,3 +54,4 @@ server/serviceAccountKey.json
 !.env.example
 !.env.local.example
 !server/.env.example
+/e2e/review/.auth-suite
