@@ -152,6 +152,12 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   // email/phone fields above.
   "roleContacts"];
 const FRESH_MS = 3 * 60_000;
+// The newest N leads, not all 71k: the whole collection doesn't fit in a normal
+// container's memory, and re-reading it is a five-figure Firestore bill in
+// reads every time it goes stale. The board shows the newest first anyway.
+// Raise it where there's memory to spare; the response says when it's capped.
+const CACHE_MAX = Number(process.env.LEADS_CACHE_MAX ?? 5000);
+let truncated = false;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
 let inflight: Promise<Row[]> | null = null;
@@ -163,8 +169,9 @@ let zipped: { key: string; buf: Buffer } | null = null;
 // instead of making the page wait a minute for thousands of reads.
 const DISK = join(tmpdir(), "aos-leads-list-cache.json");
 function refresh(): Promise<Row[]> {
-  inflight ??= db.collection("leads").select(...LIST_FIELDS).get()
+  inflight ??= db.collection("leads").select(...LIST_FIELDS).orderBy("createdAt", "desc").limit(CACHE_MAX).get()
     .then((snap) => {
+      truncated = snap.size >= CACHE_MAX;
       const items = snap.docs
         .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Row)
         // The card shows two lines of the description; a long Ofsted site list
@@ -183,18 +190,28 @@ function refresh(): Promise<Row[]> {
     .finally(() => { inflight = null; });
   return inflight;
 }
-/** At start-up: serve the saved copy straight away, then read the latest. */
+/** At start-up: serve the saved copy if there is one.
+ *
+ *  It used to also READ THE WHOLE COLLECTION on every boot. At 71k leads that
+ *  is ~200 MB of live objects plus a JSON string plus the gzip buffer, which
+ *  killed the container on Railway — and because the container then restarted,
+ *  it did it again, burning ~71k Firestore reads a go against a 50k/day cap.
+ *
+ *  So the boot read is opt-in (LEADS_WARM=1, for a big dev box) and the cache
+ *  is capped (LEADS_CACHE_MAX). Nothing warms on a cold start in production:
+ *  the first HQ request fills the cache instead. */
 export function warmLeads() {
-  // Only re-read Firestore if the saved copy is stale — the API restarts on every
-  // code change in dev, and 26k reads per restart kept the page from loading.
   readFile(DISK, "utf8").then((t) => { if (!cache) cache = JSON.parse(t); }).catch(() => {})
-    .finally(() => { if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {}); });
+    .finally(() => {
+      if (process.env.LEADS_WARM !== "1") return;
+      if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
+    });
 }
 
 leads.get("/", async (req, res) => {
   if (cache) {
     if (req.query.fresh === "1" || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
-    const body = () => JSON.stringify({ leads: cache!.items, asOf: new Date(cache!.at).toISOString(), refreshing: !!inflight });
+    const body = () => JSON.stringify({ leads: cache!.items, asOf: new Date(cache!.at).toISOString(), refreshing: !!inflight, truncated, cap: CACHE_MAX });
     if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""))) { res.type("json").send(body()); return; }
     const key = `${cache.at}|${!!inflight}|${rev}`;
     if (zipped?.key !== key) zipped = { key, buf: gzipSync(body()) };
