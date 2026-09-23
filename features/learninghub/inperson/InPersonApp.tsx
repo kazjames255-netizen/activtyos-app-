@@ -11,7 +11,7 @@ import { setHubIntent } from "../hubIntent";
 import { Dialog, FOCUS, FullscreenPortal, StudentPicker } from "../teachKit";
 import { errMsg, type HubGroup, type Note, type Student } from "../types";
 import { CaptureGrid } from "./CaptureGrid";
-import { createSession, endSession, sendToPortals, listLiveSessions, setAttendance, submitClass, type IpSession } from "./api";
+import { createSession, endSession, listLiveSessions, setAttendance, submitClass, type IpSession } from "./api";
 import { newKey } from "./inKit";
 import { ResultsPanel, warmTally } from "./ResultsPanel";
 import { SetupStep, type SetupChoice } from "./SetupStep";
@@ -38,7 +38,6 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const key = useRef(newKey());
-  const hwMade = useRef<{ key: string; id: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -51,12 +50,6 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
   const start = async (c: SetupChoice) => {
     setBusy(true); setErr(null);
     try {
-      // "Also send to the children's portals": the ordinary homework API, BEFORE the session so a refusal (e.g. a child who can't open that quiz)
-      // is shown here and nothing half-starts. Once made it is reused on a retry of the same choice, never duplicated.
-      if (c.sendToPortals) {
-        const hk = JSON.stringify([c.noteId, c.assessmentId, [...c.childIds].sort(), [...c.groupIds].sort()]);
-        if (hwMade.current?.key !== hk) hwMade.current = { key: hk, id: await sendToPortals(qs, c) };
-      }
       const s = await createSession(qs, { childIds: c.childIds, groupIds: c.groupIds.length ? c.groupIds : undefined, noteId: c.noteId, assessmentId: c.assessmentId, title: c.title, key: key.current });
       key.current = newKey();
       setSession(s);

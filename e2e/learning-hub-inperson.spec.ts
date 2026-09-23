@@ -418,12 +418,9 @@ test.describe("setup: year filter + send to the children's portals", () => {
     await app.locator(`[data-pick="${L.noteId}"]`).click();
     await expect(app.getByTestId("ip-chosen")).toContainText(L.title);
 
-    // The choice defaults to No.
-    const choice = app.getByTestId("ip-portal-choice");
-    await expect(choice.getByRole("tab", { name: /^No/ })).toHaveAttribute("aria-selected", "true");
-    await expect(app.getByTestId("ip-portal-hint")).toContainText("nothing is sent");
-    await choice.getByRole("tab", { name: /^Yes/ }).click();
-    await expect(app.getByTestId("ip-portal-hint")).toContainText("My Classroom");
+    // P-hub: no direct-post to the portals any more; the step is a pointer to the one Set homework form.
+    await expect(app.getByTestId("ip-portal-hint")).toContainText("Set homework");
+    await expect(app.getByTestId("ip-portal-choice")).toHaveCount(0);
 
     await app.getByRole("button", { name: nameB, exact: true }).click();
     await app.getByTestId("ip-start").click();
@@ -431,24 +428,16 @@ test.describe("setup: year filter + send to the children's portals", () => {
     await expect(run).toBeVisible({ timeout: 30_000 });
     const sid = (await run.getAttribute("data-session"))!;
 
-    // The child's (parent's) portal has this run's homework: the lesson attached, its quiz, and the parent was notified.
+    // Starting a session no longer creates homework behind the tutor's back.
     const rows = (await raw(`${HUB}/homework?childId=${childB}&tenantId=${tenantId}`, parent)).body as unknown as J[];
-    const hw = rows.find((h) => h.title === L.title);
-    expect(hw, "homework for the lesson on the child's portal").toBeTruthy();
-    expect(hw!.assessmentId).toBe(L.quizId);
-    expect((hw!.notes as J[]).map((n) => n.id)).toContain(L.noteId);
-    expect(hw!.submission.status).toBe("assigned");
-    await expect.poll(async () => (await bell(parent)).some((n) => n.title === "New homework" && n.body.includes(L.title)), { timeout: 30_000 }).toBe(true);
-    // Only the ticked child got it.
-    const other = (await raw(`${HUB}/homework?childId=${childA}&tenantId=${tenantId}`, parent)).body as unknown as J[];
-    expect(other.some((h) => h.title === L.title)).toBe(false);
+    expect(rows.some((h) => h.title === L.title)).toBe(false);
 
     expect((await send("POST", `${HUB}/in-person/sessions/${sid}/end`, tutor, {})).status).toBe(200);
 
     await ctx.close();
   });
 
-  test("a quiz / placement test: Yes sends the quiz on its own", async ({ browser }) => {
+  test("a quiz / placement test: starts a session without creating homework", async ({ browser }) => {
     test.setTimeout(360_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
@@ -460,17 +449,13 @@ test.describe("setup: year filter + send to the children's portals", () => {
     await app.getByRole("tab", { name: "A quiz or placement test" }).click();
     await app.getByLabel("Search quizzes").fill(L.quizTitle);
     await app.getByRole("radio", { name: new RegExp(esc(L.quizTitle)) }).first().click();
-    await app.getByTestId("ip-portal-choice").getByRole("tab", { name: /^Yes/ }).click();
     await app.getByRole("button", { name: nameB, exact: true }).click();
     await app.getByTestId("ip-start").click();
     const run = page.getByTestId("inperson-run");
     await expect(run).toBeVisible({ timeout: 30_000 });
     const sid = (await run.getAttribute("data-session"))!;
     const rows = (await raw(`${HUB}/homework?childId=${childB}&tenantId=${tenantId}`, parent)).body as unknown as J[];
-    const hw = rows.find((h) => h.title === L.quizTitle);
-    expect(hw, "quiz homework on the child's portal").toBeTruthy();
-    expect(hw!.assessmentId).toBe(L.quizId);
-    expect(hw!.notes).toEqual([]);
+    expect(rows.some((h) => h.title === L.quizTitle)).toBe(false);
     expect((await send("POST", `${HUB}/in-person/sessions/${sid}/end`, tutor, {})).status).toBe(200);
     await ctx.close();
   });

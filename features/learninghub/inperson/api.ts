@@ -1,6 +1,5 @@
 import { get, post, put } from "@/lib/api";
 import { hubPath, type KindRule, type TakeQuestion } from "../shared-assess/api";
-import { lessonHomeworkDraft } from "../hubIntent";
 
 // In-person lessons — the tutor's calls (server/src/routes/hub/inPersonApi.ts, docs/learning-hub.md → "In-person lessons").
 // A session is a hubLessons row with mode "in_person"; results are ordinary hubAttempts (mode "in_person"), so a parent sees them
@@ -44,20 +43,3 @@ export const submitClass = (qs: string, id: string, body: { assessmentId: string
   post<{ sessionId: string; assessmentId: string; results: IpResult[] }>(hubPath(qs, `${base}/${id}/submit`), body);
 export const endSession = (qs: string, id: string, warmup: IpWarm[]) => post<IpSession & { results: IpStored[] }>(hubPath(qs, `${base}/${id}/end`), warmup.length ? { warmup } : {});
 
-/** "Also send this to the children's portals": the ordinary Homework API (server/src/routes/hub/homeworkApi.ts) — the same call the Homework form
- *  and a lesson's "Set for children" make — so each child gets a homework row (the lesson + its quiz in My Classroom) and the parent the usual
- *  notification. The due date is left to the server (the provider's default). Returns the homework id. */
-export async function sendToPortals(qs: string, c: { noteId: string | null; assessmentId: string | null; childIds: string[]; groupIds: string[]; title: string }): Promise<string> {
-  let draft: { assessmentId?: string; noteIds: string[]; title: string; instructions: string };
-  if (c.noteId) {
-    const note = await get<{ id: string; title: string; lesson?: unknown }>(hubPath(qs, `/notes/${c.noteId}`));
-    draft = lessonHomeworkDraft(note);
-  } else {
-    draft = { assessmentId: c.assessmentId ?? undefined, noteIds: [], title: c.title, instructions: `Complete the quiz “${c.title}”. Hand this in when you're done.` };
-  }
-  const hw = await post<{ id: string }>(hubPath(qs, "/homework"), {
-    title: draft.title, instructions: draft.instructions, assessmentId: draft.assessmentId ?? null, noteIds: draft.noteIds,
-    assignedChildIds: c.childIds, ...(c.groupIds.length ? { assignedGroupIds: c.groupIds } : {}),
-  });
-  return hw.id;
-}

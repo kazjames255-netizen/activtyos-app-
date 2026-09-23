@@ -26,7 +26,6 @@ import { closeLink, openLink, useLinkOpen } from "./family/link";
 import { CurriculumCard } from "./curriculum/CurriculumCard";
 import { LessonTutorPanel } from "./lesson/LessonTutorPanel";
 import { FlashcardsForLesson } from "./lesson/FlashcardsForLesson";
-import { HomeworkForLesson } from "./lesson/HomeworkForLesson";
 import { stripPlanSection } from "./lesson/plan";
 import { SubjectCover, SubjectTile } from "./subjectArt";
 import { canChangeRow, errMsg, fmtDate, fmtSize, readMins, topicLabel, type Attachment, type HubFilter, type Note, type NoteLite, type Student, type Topic, type VideoInput } from "./types";
@@ -277,10 +276,6 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     catch (e) { onError(errMsg(e, "Couldn't open that lesson")); }
   };
   const setForChildren = (n: { id: string; title: string; lesson?: unknown }) => { lessonHomeworkIntent(n); goTo?.("homework"); };
-  const setForChildrenFromList = async (n: NoteLite) => {
-    try { setForChildren(await get<Note>(openPath(n.id))); }
-    catch (e) { onError(errMsg(e, "Couldn't open that lesson")); }
-  };
   const leaveEditor = () => { setDraft(null); setDiscard(false); setInitial(""); setPicking(false); setConfirmNew(false); };
   const cancelEditor = () => { if (dirty && !discard) setDiscard(true); else leaveEditor(); };
 
@@ -614,9 +609,8 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
               {(openNote.videos?.length ?? 0) > 0 && <VideoEmbeds videos={openNote.videos} className="mt-6" />}
               {openNote.lesson && config && <LessonTutorPanel note={openNote} qs={qs} canEdit={mayAuthor} goTo={goTo} onPreview={() => setPreviewing(true)} onSaved={(n) => setOpened(n)} onError={onError} />}
               {mayAuthor && (
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="mt-5 grid gap-3">
                   {t && <FlashcardsForLesson qs={qs} topicId={t.id} />}
-                  <HomeworkForLesson qs={qs} note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} />
                 </div>
               )}
               <div className="mt-6 space-y-3 text-[15.5px] leading-[1.75] text-[var(--ink)]">
@@ -701,8 +695,6 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
                           {fromHeadOffice(n) && <span className="rounded-full bg-white/70 px-2 py-px text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]" data-testid="from-head-office">From head office</span>}
                           {mayAuthor && (
                             <span className="relative z-10 ml-auto flex flex-none items-center gap-0.5">
-                              {goTo && <button type="button" onClick={() => void setForChildrenFromList(n)} aria-label={`Set ${n.title} for children`} title="Set for children"
-                                className={`grid h-11 w-11 place-items-center rounded-full text-[var(--ink)] transition hover:bg-white/70 ${FOCUS}`}><Icon name="homework" size={16} /></button>}
                               {canChange(n) && <button type="button" onClick={() => void editFromList(n)} aria-label={`Edit ${n.title}`} title="Edit"
                                 className={`grid h-11 w-11 place-items-center rounded-full text-[var(--ink)] transition hover:bg-white/70 ${FOCUS}`}><Icon name="edit" size={16} /></button>}
                               {canChange(n) && <ConfirmButton roomy ariaLabel={`Delete ${n.title}`} confirmLabel="Confirm delete" disabled={busy} onConfirm={() => remove(n.id)} />}

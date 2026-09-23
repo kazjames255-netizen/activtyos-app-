@@ -12,7 +12,7 @@ import type { IpSession } from "./api";
 // Also lists a session still open from earlier ("Resume") so a refresh or a closed tab never loses a class.
 
 interface PaperRow { id: string; title: string; subject: string; type: "quiz" | "diagnostic"; questionCount: number }
-export interface SetupChoice { noteId: string | null; assessmentId: string | null; childIds: string[]; groupIds: string[]; title: string; /** "Also send this lesson to the children's portals" */ sendToPortals: boolean }
+export interface SetupChoice { noteId: string | null; assessmentId: string | null; childIds: string[]; groupIds: string[]; title: string }
 
 function useDebounced<T>(v: T, ms = 250) {
   const [d, setD] = useState(v);
@@ -78,7 +78,6 @@ export function SetupStep({ qs, students, groups, preset, live, onStart, onResum
   const [year, setYear] = useState<string>("all");
   const [subject, setSubject] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
-  const [sendToPortals, setSendToPortals] = useState<"no" | "yes">("no");
   useEffect(() => {
     let live = true;
     get<{ subject: string }[]>(`/api/learning-hub/topics${qs}`).then((r) => { if (live && Array.isArray(r)) setSubjects([...new Set(r.map((t) => t.subject).filter(Boolean))].sort((a, b) => a.localeCompare(b))); }).catch(() => undefined);
@@ -106,7 +105,7 @@ export function SetupStep({ qs, students, groups, preset, live, onStart, onResum
   const ready = !!chosen && childIds.length > 0;
   const start = () => {
     if (!ready || !chosen) return;
-    onStart({ noteId: what === "lesson" ? chosen.id : null, assessmentId: what === "quiz" ? chosen.id : null, childIds, groupIds, title: chosen.title, sendToPortals: sendToPortals === "yes" });
+    onStart({ noteId: what === "lesson" ? chosen.id : null, assessmentId: what === "quiz" ? chosen.id : null, childIds, groupIds, title: chosen.title });
   };
 
   return (
@@ -163,17 +162,7 @@ export function SetupStep({ qs, students, groups, preset, live, onStart, onResum
         <p className="m-0 mt-2 text-[12.5px] text-[var(--ink-3)]">{childIds.length} {childIds.length === 1 ? "child" : "children"} here. You can change this during the lesson.</p>
       </section>
 
-      <section className="mt-5" aria-labelledby="ip-portal">
-        <h3 id="ip-portal" className="m-0 mb-2 text-[13px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">3 · Also send this to the children&apos;s portals?</h3>
-        <div data-testid="ip-portal-choice">
-          <Segmented label="Also send this lesson to the children's portals" value={sendToPortals} onChange={setSendToPortals} options={[{ v: "no", label: "No — just teach it here" }, { v: "yes", label: "Yes — send it to their portals" }]} />
-        </div>
-        <p className="m-0 mt-2 text-[12.5px] text-[var(--ink-3)]" data-testid="ip-portal-hint">
-          {sendToPortals === "yes"
-            ? `Each child ${what === "lesson" ? "gets this lesson (and its quiz)" : "gets this quiz"} in My Classroom and their parent is notified, the same as homework you set. Recording their answers here ticks it off.`
-            : "It runs on this device only; nothing is sent to the children's portals."}
-        </p>
-      </section>
+      <p className="m-0 mt-5 text-[12.5px] text-[var(--ink-3)]" data-testid="ip-portal-hint">This runs on this device only. To give the children this as homework, use Set homework from Home.</p>
 
       {error && <p role="alert" className="mt-4 rounded-xl bg-[var(--red-soft)] px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--red)]">{error}</p>}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

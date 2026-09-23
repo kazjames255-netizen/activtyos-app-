@@ -16,7 +16,6 @@ import { getRemoteSync, listLiveRemoteSync, patchProgress, startRemoteSync, upda
 import { listDoubts, type Doubt } from "../lesson/doubts/api";
 import { MessagesCard } from "../lesson/doubts/MessagesCard";
 import { FlashcardsForLesson } from "../lesson/FlashcardsForLesson";
-import { HomeworkForLesson } from "../lesson/HomeworkForLesson";
 import { HelpToolsPicker, type HelpToolId } from "./HelpTools";
 import { MiniScreenCard, MINI_STEPS } from "./MiniScreenCard";
 
@@ -337,7 +336,6 @@ function TutorRunner({ qs, config, initial, onClose }: { qs: string; config: Hub
               <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Send to class</h3>
               <div className="grid gap-3">
                 <FlashcardsForLesson qs={qs} topicId={note.topicId} />
-                <HomeworkForLesson qs={qs} note={{ id: note.id, title: note.title, lesson: note.lesson }} />
               </div>
             </>
           )}
