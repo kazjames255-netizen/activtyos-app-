@@ -76,7 +76,8 @@ export function AssessmentBuilder({ p, type: initialType, assessment, all, onClo
   const [poolBusy, setPoolBusy] = useState(false);
   const [dSearch, setDSearch] = useState("");
   // A quiz for Year 5 draws on Year 5 questions: while the quiz has year groups the bank is narrowed to them (switch off to see every year).
-  const [yearOnly, setYearOnly] = useState(true);
+  // Off by default: a freshly-written question has no year yet, so narrowing by default would hide it from its own quiz.
+  const [yearOnly, setYearOnly] = useState(false);
   const yearKey = yearOnly ? aud.yearGroups.join(",") : "";
   const poolSeq = useRef(0);
   const [poolTick, setPoolTick] = useState(0);

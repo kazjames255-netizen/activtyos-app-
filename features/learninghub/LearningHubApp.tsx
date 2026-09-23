@@ -241,7 +241,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
               <div role="tabpanel" id="hub-tabpanel-notes" aria-labelledby="hub-tab-notes" hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
                 <NotesPanel topics={topics} version={notesVersion} listQs={childQs} covered={covered} filter={filter} canEdit={canEdit} readOnly={readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError}
                   onAddTopic={() => setAddSignal((n) => n + 1)} onDirtyChange={setDirty} onClearFilter={() => onFilter(NONE)} active={active === "notes"}
-                  childId={hub.childId} config={config} setFocus={setFocus} goTo={go as (k: "flashcards" | "homework") => void} />
+                  childId={hub.childId} config={config} setFocus={setFocus} goTo={go as (k: "flashcards" | "homework") => void} years={hub.years} onYearsChange={hub.setYears} />
               </div>
             )}
             {active !== "notes" && (

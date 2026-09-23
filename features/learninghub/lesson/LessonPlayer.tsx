@@ -41,6 +41,19 @@ export interface InPersonSlots {
   done: (p: { onExit: () => void }) => ReactNode;
 }
 
+/** Remote-sync "I answer, they watch" (pace "driven", features/learninghub/remotesync): the TUTOR taps in warm-up/quiz
+ *  answers for the connected class (same tag-a-child-onto-an-option idea as in-person, different data underneath — a
+ *  real per-child attempt via the ordinary /assessments/:id/attempts + /attempts/:id/submit routes, the tutor calling on
+ *  each child's behalf). Pair with `readOnly` and `onProgress`; students' own screens just broadcast-follow. */
+export interface DrivenSlots {
+  /** Replaces the "Preview — nothing is saved" note (answers here ARE real, so that note would be wrong). */
+  banner: ReactNode;
+  /** The exit quiz step: the tutor's per-child tagging grid. `onFinish` moves on to Done once every child's real attempt is submitted. */
+  quiz: (p: { quiz: { id: string; title: string; questionCount: number }; onFinish: () => void; onBack: () => void }) => ReactNode;
+  /** Under each warm-up question: tag which connected child said what. */
+  warmupExtra?: (q: WarmupQuestion) => ReactNode;
+}
+
 export interface LessonPlayerProps {
   note: { id: string; title: string; lesson: unknown };
   /** "?tenantId=…" — appended to attempt calls (the child rides along as ?childId=). */
@@ -62,10 +75,30 @@ export interface LessonPlayerProps {
   onProgress?: (p: { step: string; slide: number }) => void;
   /** Live lessons: follow this step/slide (the tutor's). Ignored while the pupil is in the exit quiz or on the result, so a real attempt is never yanked away. */
   follow?: { step: string; slide: number } | null;
+  /** How `follow` behaves — only meaningful alongside it. Left out (video-call lessons, and remote-sync's "driven"): the
+   *  screen is forcibly teleported to the tutor's step, same as always. "lockstep": no forced teleport, but this pupil's
+   *  own Next/Continue/Finish can never move them PAST the tutor's current top-level step (they can still fully answer
+   *  within it). "own_pace": `follow` is ignored outright — no gating at all. */
+  pace?: "driven" | "lockstep" | "own_pace";
+  /** Remote-sync "own_pace" mini-screens: fired (debounced by the caller, not here) whenever this pupil's current
+   *  warm-up/quiz answer changes, so a tutor elsewhere can see it live. Never affects marking. */
+  onLiveAnswer?: (p: { step: "warm" | "quiz"; questionId: string; response: unknown }) => void;
   /** Tutor-led class mode — see InPersonSlots. */
   inPerson?: InPersonSlots;
+  /** Remote-sync "I answer, they watch" mode — see DrivenSlots. */
+  driven?: DrivenSlots;
   /** Opened from a homework: the exit quiz is recorded against it. */
   homeworkId?: string | null;
+  /** Hides the Start step's button entirely — NotesPanel's tutor preview shows the lesson info card as pure
+   *  information; the "One room" / "Share with children" choice cards below it are the only way to actually start. */
+  hideStartButton?: boolean;
+  /** Extra classes on the Start step's card — NotesPanel uses this to flatten its bottom corners/shadow so the
+   *  choice cards below can sit flush underneath it, as one continuous card. */
+  startCardClassName?: string;
+  /** Hides the "Preview" banner, the progress header (close/streak/XP) and the step tracker — for NotesPanel's
+   *  tutor decision screen, where nothing has started yet so none of that means anything. Exiting is via the
+   *  page's own Back button instead. */
+  hideHeader?: boolean;
 }
 
 // A pupil's place in a lesson survives a refresh / Back (this tab only): the step, XP and streak. Dropped when they leave on purpose or finish.
@@ -74,7 +107,7 @@ const loadProg = (k: string): { step?: string; xp?: number; streak?: number } | 
 const saveProg = (k: string, v: { step: string; xp: number; streak: number }) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 const dropProg = (k: string) => { try { sessionStorage.removeItem(k); } catch { /* ignore */ } };
 
-export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, inPerson, homeworkId }: LessonPlayerProps) {
+export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, pace, onLiveAnswer, inPerson, driven, homeworkId, hideStartButton, startCardClassName, hideHeader }: LessonPlayerProps) {
   const lesson = useMemo(() => normalizeLesson(note.lesson, note.title), [note.lesson, note.title]);
   const widget = useMemo(() => getWidget(lesson.widget), [lesson.widget]);
 
@@ -120,26 +153,64 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
   [hasSlides, lesson.points.length, lesson.keywords.length, widget, hasWarm, hasQuiz]);
   // A restored step this lesson doesn't have (its shape changed) falls back to the start.
   useEffect(() => { if (data && !steps.includes(step)) setStep("start"); }, [data, steps, step]);
+  // In-person, remote-sync or a driven video call: the tutor already picked who's here / went live to get to this
+  // screen — an extra "Start the lesson" click on top of that is a pointless step, so any already-live session
+  // (`inPerson`, or broadcasting position via `onProgress`) skips straight past it once the questions have loaded.
+  const live = !!inPerson || !!onProgress;
+  useEffect(() => { if (live && data && step === "start" && steps.length > 1) setStep(steps[1]!); }, [live, data, step, steps]);
   useEffect(() => {
     if (readOnly) return;
     if (step === "start" || step === "done") { dropProg(pk); return; }
     saveProg(pk, { step, xp, streak });
   }, [readOnly, pk, step, xp, streak]);
   const at = Math.max(0, steps.indexOf(step));
-  const go = useCallback((s: StepId) => { setStep(s); }, []);
+  const followStep = follow?.step ?? null;
+  // "lockstep": this pupil moves themselves, but Next/Continue/Finish (all routed through `go`) can never carry them
+  // past the tutor's current top-level step — they can still fully answer within whichever step that is.
+  // "driven": the tutor captures one REAL per-child attempt for the whole class from their own device
+  // (RemoteDrivenQuizGrid) — this pupil's own screen must never itself reach the real quiz/result (that would be a
+  // second, independent real attempt for the same child). Cap one step short of "quiz" so Start/Next/Continue can
+  // still carry them anywhere up to it (matches "renders completely normally"), never into it.
+  const capIndex = useMemo(() => {
+    if ((pace !== "lockstep" && pace !== "driven") || !followStep) return null;
+    const i = steps.indexOf(followStep as StepId);
+    if (i < 0) return null;
+    if (pace === "driven") {
+      const quizIdx = steps.indexOf("quiz" as StepId);
+      return quizIdx >= 0 ? Math.min(i, quizIdx - 1) : i;
+    }
+    return i;
+  }, [pace, followStep, steps]);
+  const go = useCallback((s: StepId) => {
+    if (capIndex !== null && steps.indexOf(s) > capIndex) return;
+    setStep(s);
+  }, [capIndex, steps]);
+  // A step restored from sessionStorage (or otherwise already set) can predate this cap — e.g. this child played the
+  // same lesson solo earlier and got further than the tutor now is, then joined a lockstep/driven session. Snap back
+  // down rather than trusting the stale value; this only ever moves `step` backward, never forward on its own.
+  useEffect(() => {
+    if (capIndex === null) return;
+    setStep((s) => (steps.indexOf(s) > capIndex ? (steps[capIndex] as StepId) : s));
+  }, [capIndex, steps]);
 
   // Live lessons: report where we are, and follow the tutor (never out of the quiz / the result, never into them).
   const [slide, setSlide] = useState(0);
   const progressRef = useRef(onProgress);
   progressRef.current = onProgress;
   useEffect(() => { progressRef.current?.({ step, slide: step === "slides" ? slide : 0 }); }, [step, slide]);
-  const followStep = follow?.step ?? null;
   useEffect(() => {
+    // "lockstep" / "own_pace": this pupil's own screen moves itself (see `go`'s cap, or nothing at all) — it is never
+    // teleported. Anything else (video-call lessons, remote-sync "driven") keeps the original forced-follow.
+    if (pace === "lockstep" || pace === "own_pace") return;
     if (!followStep || step === "quiz" || step === "done") return;
     if (followStep === "quiz" || followStep === "done") return;
     if ((steps as string[]).includes(followStep)) setStep(followStep as StepId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [followStep, steps]);
+  }, [followStep, steps, pace]);
+  // Same exemption for the slide index *within* the "slides" step: lockstep/own_pace pupils move their own slides
+  // freely (that's the "fully answer within the current step" half of the contract) — only non-gated paces (driven,
+  // video-call lessons) get forcibly carried to the tutor's exact slide.
+  const slideFollowIndex = pace !== "lockstep" && pace !== "own_pace" && followStep === "slides" ? follow?.slide ?? null : null;
   const next = () => go(steps[Math.min(steps.length - 1, at + 1)]);
   const back = () => go(steps[Math.max(0, at - 1)]);
 
@@ -183,34 +254,36 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
     <div ref={top} className="mx-auto w-full max-w-[820px] scroll-mt-2" data-testid="lesson-player" data-step={step}>
       <LessonStyles />
       <Confetti fire={burst.n} scale={burst.scale} />
-      {readOnly && inPerson?.banner}
-      {readOnly && !inPerson && <div role="note" className="mb-3 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">Preview — this is what students see. Nothing you do here is saved or counted.</div>}
+      {readOnly && (inPerson?.banner ?? driven?.banner)}
+      {readOnly && !inPerson && !driven && !hideHeader && <div role="note" className="mb-3 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">Preview — this is what students see. Nothing you do here is saved or counted.</div>}
 
-      <header className="sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-3 pb-2.5 pt-2 shadow-[var(--shadow-sm)] backdrop-blur sm:px-4">
-        <div className="flex items-center gap-2.5">
-          <button type="button" onClick={exit} aria-label={readOnly ? "Close preview" : "Leave this lesson"} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
-          {!readOnly && <span className="hidden flex-none sm:block"><ChildChip childId={childId} /></span>}
-          <div className="min-w-0 flex-1 truncate text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{[lesson.subject, lesson.year && (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year), lesson.title].filter(Boolean).join(" · ")}</div>
-          {!inPerson && <span className="rounded-full px-3 py-1 text-[13px] font-extrabold" style={{ background: "var(--gold-soft)", color: "color-mix(in srgb, var(--gold) 40%, #000)" }} title="Correct in a row" aria-label={`${streak} correct in a row`} data-testid="lesson-streak">🔥 {streak}</span>}
-          {!inPerson && <span key={xpKey} className={`rounded-full px-3 py-1 text-[13px] font-extrabold ${xpKey ? "ls-pulse" : ""}`} style={{ background: "var(--brand-soft)", color: "var(--brand)" }} aria-label={`${xp} experience points`} data-testid="lesson-xp">⭐ {xp} XP</span>}
-        </div>
-        <nav aria-label="Lesson progress" className="mt-2">
-          <ol className="m-0 flex list-none gap-1.5 p-0">
-            {steps.map((s, i) => (
-              <li key={s} aria-current={i === at ? "step" : undefined} className="min-w-0 flex-1">
-                {readOnly && <button type="button" onClick={() => go(s)} aria-label={`Jump to ${LABEL[s]} (preview)`} data-testid={`preview-jump-${s}`} className="mb-1 block h-3 w-full cursor-pointer opacity-0" />}
-                <span className="block h-1.5 overflow-hidden rounded-full bg-[var(--line)]"><span className="block h-full origin-left rounded-full transition-transform duration-500 motion-reduce:transition-none" style={{ background: "linear-gradient(90deg, var(--brand-2), var(--brand))", transform: `scaleX(${i < at ? 1 : i === at ? 0.5 : 0})` }} /></span>
-                <span className={`mt-1 hidden truncate text-[11px] font-extrabold sm:block ${i === at ? "text-[var(--brand)]" : "text-[var(--ink-3)]"}`}>{LABEL[s]}</span>
-              </li>
-            ))}
-          </ol>
-          <p className="m-0 mt-1 flex items-center gap-2 text-[11.5px] font-extrabold text-[var(--brand)] sm:hidden">{!readOnly && <ChildChip childId={childId} />}<span>Step {at + 1} of {steps.length} · {LABEL[step]}</span></p>
-        </nav>
-      </header>
+      {!hideHeader && (
+        <header className="sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-3 pb-2.5 pt-2 shadow-[var(--shadow-sm)] backdrop-blur sm:px-4">
+          <div className="flex items-center gap-2.5">
+            <button type="button" onClick={exit} aria-label={readOnly ? "Close preview" : "Leave this lesson"} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
+            {!readOnly && <span className="hidden flex-none sm:block"><ChildChip childId={childId} /></span>}
+            <div className="min-w-0 flex-1 truncate text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{[lesson.subject, lesson.year && (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year), lesson.title].filter(Boolean).join(" · ")}</div>
+            {!inPerson && !driven && <span className="rounded-full px-3 py-1 text-[13px] font-extrabold" style={{ background: "var(--gold-soft)", color: "color-mix(in srgb, var(--gold) 40%, #000)" }} title="Correct in a row" aria-label={`${streak} correct in a row`} data-testid="lesson-streak">🔥 {streak}</span>}
+            {!inPerson && !driven && <span key={xpKey} className={`rounded-full px-3 py-1 text-[13px] font-extrabold ${xpKey ? "ls-pulse" : ""}`} style={{ background: "var(--brand-soft)", color: "var(--brand)" }} aria-label={`${xp} experience points`} data-testid="lesson-xp">⭐ {xp} XP</span>}
+          </div>
+          <nav aria-label="Lesson progress" className="mt-2">
+            <ol className="m-0 flex list-none gap-1.5 p-0">
+              {steps.map((s, i) => (
+                <li key={s} aria-current={i === at ? "step" : undefined} className="min-w-0 flex-1">
+                  {readOnly && <button type="button" onClick={() => go(s)} aria-label={`Jump to ${LABEL[s]} (preview)`} data-testid={`preview-jump-${s}`} className="mb-1 block h-3 w-full cursor-pointer opacity-0" />}
+                  <span className="block h-1.5 overflow-hidden rounded-full bg-[var(--line)]"><span className="block h-full origin-left rounded-full transition-transform duration-500 motion-reduce:transition-none" style={{ background: "linear-gradient(90deg, var(--brand-2), var(--brand))", transform: `scaleX(${i < at ? 1 : i === at ? 0.5 : 0})` }} /></span>
+                  <span className={`mt-1 hidden truncate text-[11px] font-extrabold sm:block ${i === at ? "text-[var(--brand)]" : "text-[var(--ink-3)]"}`}>{LABEL[s]}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="m-0 mt-1 flex items-center gap-2 text-[11.5px] font-extrabold text-[var(--brand)] sm:hidden">{!readOnly && <ChildChip childId={childId} />}<span>Step {at + 1} of {steps.length} · {LABEL[step]}</span></p>
+          </nav>
+        </header>
+      )}
 
       <div key={`${round}-${step}`}>
         {step === "start" && (
-          <StepCard hero>
+          <StepCard hero className={startCardClassName}>
             <div className="flex flex-wrap gap-2 text-[12px] font-extrabold">
               {[lesson.keyStage && lesson.year ? `${lesson.keyStage} · ${/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year}` : lesson.keyStage || (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year), lesson.subject].filter(Boolean).map((c) => <span key={c} className="rounded-full bg-white/20 px-3 py-[3px]">{c}</span>)}
             </div>
@@ -221,32 +294,37 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
             <p className="m-0 mb-4 text-[13px] text-white/75">About {minutes} minutes · {hasSlides ? `${slideCount} slides` : `${lesson.points.length} ${lesson.points.length === 1 ? "idea" : "ideas"} · ${lesson.keywords.length} key ${lesson.keywords.length === 1 ? "word" : "words"}`}{data ? ` · ${data.warmup.length + (data.quiz?.questionCount ?? 0)} questions` : ""}</p>
             {loadErr && <p role="alert" className="mb-3 rounded-xl bg-white px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--red)]">{loadErr} <button type="button" onClick={load} className="font-extrabold underline">Try again</button></p>}
             {!readOnly && <WhoIsLearning childId={childId} tone="dark" />}
-            <button type="button" onClick={next} disabled={!data || (!readOnly && !gate.ok)} data-testid="lesson-start"
-              className={`inline-flex min-h-[48px] items-center gap-2 rounded-xl bg-white px-6 text-[15px] font-extrabold text-[var(--brand)] transition hover:brightness-95 disabled:opacity-50 ${FOCUS}`}>{data ? "Start the lesson →" : loadErr ? "Can't start yet" : "Getting ready…"}</button>
+            {!hideStartButton && (
+              <button type="button" onClick={next} disabled={!data || (!readOnly && !gate.ok)} data-testid="lesson-start"
+                className={`inline-flex min-h-[48px] items-center gap-2 rounded-xl bg-white px-6 text-[15px] font-extrabold text-[var(--brand)] transition hover:brightness-95 disabled:opacity-50 ${FOCUS}`}>{data ? "Start the lesson →" : loadErr ? "Can't start yet" : "Getting ready…"}</button>
+            )}
           </StepCard>
         )}
 
         {step === "learn" && <LearnStep lesson={lesson} widget={widget} addXP={addXP} onDone={next} onBack={back} />}
         {step === "slides" && hasDeck && !summaryView && (
-          <SlideDeck slides={lesson.deckSlides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={followStep === "slides" ? follow?.slide ?? null : null}
+          <SlideDeck slides={lesson.deckSlides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={slideFollowIndex}
             toolbar={lesson.slides.length > 0 ? <Btn tone="ghost" onClick={() => setOwnSlides(true)} data-testid="oak-deck-summary" className="!min-h-[36px] !px-3 !text-[12.5px]">Summary slides instead</Btn> : undefined}
             editor={readOnly && onLessonSaved ? { save: async (sl) => { onLessonSaved(await saveLessonSlides(note.id, qs, sl, "deckSlides")); } } : undefined} />
         )}
         {step === "slides" && !hasDeck && lesson.oakDeck && !summaryView && <OakDeckStep deckId={lesson.oakDeck} title={lesson.title} hasSummary={lesson.slides.length > 0} onSummary={() => setOwnSlides(true)} addXP={addXP} onDone={next} onBack={back} />}
         {step === "slides" && (summaryView || (!hasDeck && !lesson.oakDeck)) && (
-          <SlideDeck slides={lesson.slides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={followStep === "slides" ? follow?.slide ?? null : null}
+          <SlideDeck slides={lesson.slides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={slideFollowIndex}
             toolbar={hasDeck && summaryView ? <Btn tone="ghost" onClick={() => setOwnSlides(false)} data-testid="oak-deck-real" className="!min-h-[36px] !px-3 !text-[12.5px]">Lesson slides</Btn> : undefined}
             editor={readOnly && onLessonSaved ? { save: async (sl) => { onLessonSaved(await saveLessonSlides(note.id, qs, sl)); } } : undefined} />
         )}
         {step === "words" && <WordsStep lesson={lesson} addXP={addXP} onDone={next} onBack={back} />}
         {step === "warm" && data && (
-          <WarmupStep questions={data.warmup} config={config} scored={scored} onBack={back} skippable={readOnly} extra={inPerson?.warmupExtra}
+          <WarmupStep questions={data.warmup} config={config} scored={scored} onBack={back} skippable={readOnly} extra={inPerson?.warmupExtra ?? driven?.warmupExtra}
             check={(id, response) => checkWarmup(note.id, childQs, id, response)}
+            onLiveAnswer={onLiveAnswer ? (questionId, response) => onLiveAnswer({ step: "warm", questionId, response }) : undefined}
             onDone={(res: WarmupOutcome[]) => { setWarm({ ok: res.filter((r) => r.ok).length, total: res.length }); addXP(10); next(); }} />
         )}
         {step === "quiz" && data?.quiz && inPerson && inPerson.quiz({ quiz: data.quiz, onFinish: () => finishQuiz({ result: null, run: null, notice: null }), onBack: back })}
-        {step === "quiz" && data?.quiz && !inPerson && (
-          <QuizStep quiz={data.quiz} qs={qs} childId={childId} homeworkId={homeworkId} config={config} readOnly={readOnly} preview={readOnly ? { noteId: note.id, childQs } : undefined} onFinish={finishQuiz} onBack={back} />
+        {step === "quiz" && data?.quiz && !inPerson && driven && driven.quiz({ quiz: data.quiz, onFinish: () => finishQuiz({ result: null, run: null, notice: null }), onBack: back })}
+        {step === "quiz" && data?.quiz && !inPerson && !driven && (
+          <QuizStep quiz={data.quiz} qs={qs} childId={childId} homeworkId={homeworkId} config={config} readOnly={readOnly} preview={readOnly ? { noteId: note.id, childQs } : undefined} onFinish={finishQuiz} onBack={back}
+            onLiveAnswer={onLiveAnswer ? (questionId, response) => onLiveAnswer({ step: "quiz", questionId, response }) : undefined} />
         )}
         {step === "done" && inPerson && inPerson.done({ onExit })}
         {step === "done" && !inPerson && (

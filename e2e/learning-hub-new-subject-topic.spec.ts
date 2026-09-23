@@ -101,7 +101,7 @@ test.describe("new subject / topic inline", () => {
     test.setTimeout(360_000);
     await openTab(page, /^Lessons/);
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: /New lesson/ }).first().click();
+    await page.getByRole("button", { name: /new lesson/i }).first().click();
     const nt = page.getByTestId("note-new-topic");
     await nt.getByTestId("note-new-topic-topic-btn").click();
     await nt.getByTestId("note-new-topic-subject-select").selectOption(baseSubject);

@@ -1,1 +1,222 @@
-[{"id":"fractionBar","subject":"Maths","match":"simplest form|equivalent fraction|simplif"},{"id":"neurone","subject":"Biology","match":"neurone|synapse|nervous"}]
+[
+ {
+  "id": "fractionBar",
+  "subject": "Maths",
+  "match": "simplest form|equivalent fraction|simplif"
+ },
+ {
+  "id": "neurone",
+  "subject": "Biology",
+  "match": "neurone|synapse|nervous"
+ },
+ {
+  "id": "clockFace",
+  "subject": "Maths",
+  "match": "^(?!.*\\|.*(days|months|weeks|leap year|sequence (everyday )?events|sequencing events)).*(o'?clock|clock face|\\bclock\\b|quarter (past|to)|half past|(tell|telling|write|writing) the time|time to (the )?(hour|five|half|minute)|24.hour|12.hour|analogue|hours in a day|minutes in an hour|units of time|intervals of time|duration of events)"
+ },
+ {
+  "id": "measure",
+  "subject": "Maths",
+  "match": "^(?!.*\\|.*(temperature|protractor|graphs|decimal|compare and order lengths|Understand the concept of volume)).*(\\bruler|centimetres? (and|to|in)|read scales?|scales with different|(measure|measuring|measured) (in |the )?(length|mass|volume|liquids|items|lengths|whole|grams)|litres and millilitres|grams and kilograms|metres and centimetres|centimetres and millimetres|capacity|comparing and estimating mass|sense of measure|standard units of measure|\\| .*(convert|conversion).*(mass|capacity|length|units of measure)|converting units of)"
+ },
+ {
+  "id": "ratioBar",
+  "subject": "Maths",
+  "match": "^(?!.*(trigonometr|graph|enlargement|similarity|transformation|vector|\\bmaps?\\b|area|volume|perimeter|constant of|algebraic|modelled|percent)).*(^Ratio( and proportion)? \\||\\|.*(\\bratios?\\b|direct proportion in context|bar model to represent (an equation|spatial)|scaling|scale factors|multiplicative relationship))"
+ },
+ {
+  "id": "percentGrid",
+  "subject": "Maths",
+  "match": "^(?!.*(interest|profit|compound|technology|pie chart|multipl|divid|column|round|standard form|estimate|arithmetic|priority|calculating with|redistribution|angles|between numbers|limitations|negative|improper|mixed)).*(^Understanding percentages|^Understand (hundredths|tenths)|\\|.*(percentage[s]? (as|to|of)|percent means|converting (fractions|percentages|terminating)|fraction.decimal|common (fraction|equivalents)|equivalents to compare|terminating decimals|recurring decimals|hundredths?|tenths?|ordering (decimals|fractions)))"
+ },
+ {
+  "id": "balance",
+  "subject": "Maths",
+  "match": "^(?!.*(bar charts|pictograms|two-digit|surds|angles)).*(Calculating using knowledge of equivalence in addition and subtraction|Solving problems with two unknowns \\| Explain how to balance|Understand additive relationships and apply them to rearrange equations|Solving linear equations \\| (Solving simple linear equations|Solving two step linear|Preparing to solve two step|Many equations, one solution|Rearranging to solve|Equality in an equation)|Order of operations \\| Use knowledge of the order of operations to solve equations|Use equivalence and compensation to simplify and solve addition calculations \\| Use a balanced equation)"
+ },
+ {
+  "id": "functionMachine",
+  "subject": "Maths",
+  "match": "^(?!.*\\|.*(technology|graph|quadratic)).*(^Sequences \\||^Further sequences|arithmetic sequence|geometric sequence|special number sequence|nth term|position.to.term|term.to.term|function machine|\\binput\\b|generated from a rule|extrapolating a sequence|expressing an arithmetic)"
+ },
+ {
+  "id": "fractionWall",
+  "subject": "Maths",
+  "match": "^(?!.*\\|.*(decimal|recurring|terminating|technology|negative|integers|between numbers|limitations|patterns in the number))(?!.*(decimal fractions|algebraic|percent|ratio|probability|standard form|pie chart|angles|multipl|divid|priority|arithmetic procedures)).*(unit fractions?|fractions? (with the same|of a whole|greater than one|on a number line|between)|non-unit|compar\\w*.{0,40}fractions?|fractions? .{0,30}compar|order\\w* (sets of |non-related )?fractions|equivalen\\w*.{0,20}fractions?|add\\w*.{0,30}fractions?|subtract\\w*.{0,30}fractions?|mixed numbers|improper fractions|fractions and mixed|identify non-unit)"
+ },
+ {
+  "id": "sharing",
+  "subject": "Maths",
+  "match": "^(?!.*(fraction|decimal|index|indices|surd|standard form|order of operations|perimeter|\\bmean\\b|scal|multiplicative)).*(Introduction to division structures|Division with remainders|Doubling, halving, quotative and partitive division \\| (Explain each part of a division|Explain how a (dividend|divisor|division)|Explain how the quotient|Use knowledge of division)|\\|.*(equal groups|grouped equally|shared equally|sharing problem|remainder|division by (grouping|sharing)|halve (numbers|even)))"
+ },
+ {
+  "id": "numberLine",
+  "subject": "Maths",
+  "match": "^(?!.*(fraction|decimal|coordinate|graph)).*?\\|.*(skip count|represent counting in|counting (on|back|forwards?|backwards?|in )|count (on|back|forwards|across|efficiently in)|number (lines?|tracks?)|counting (to and from|patterns)|negative numbers|counting sequence|one more and one less|10 more or 10 less|crossing the tens|bridge 100|inequalities on)"
+ },
+ {
+  "id": "tenFrame",
+  "subject": "Maths",
+  "match": "^(?!.*(fraction|decimal|perimeter|column|statistics|pictogram|bar chart|odd|even|ordinal|inequality|compared|compare|order and|count a set|match the spoken|digits|length|height|weight|mass|difference|consecutive|money|coin|\\bp\\b)).*(Addition and subtraction facts within|Composition of numbers|Secure fluency of addition|Calculating within 20|Review strategies for adding|part.part.whole|Additive structures|Addition and subtraction within 10|Combining and partitioning|bridging|number bonds)"
+ },
+ {
+  "id": "placeValue",
+  "subject": "Maths",
+  "match": "^(?!.*(column|fraction|percent|round|estimat|money|standard form|volume|decimal fractions|mental strategies)).*(^(Place value|Securing place value|Secure place value|Understand place value|Understand what happens when a number is multiplied|Comparing, ordering and partitioning 2-digit|Counting and representing the numbers 20|Composition of\\s+multiples of 10)|\\|.*(composition of (seven|one million|100|powers)|partition (a )?(3|2)-digit|partition 3-digit|represent a (3|2)-digit|place value))"
+ },
+ {
+  "id": "arrayBuilder",
+  "subject": "Maths",
+  "match": "^(?!.*(fraction|decimal|percent|probability|index|indices|surd|transform|perimeter|standard form|rounding|expression|functions)).*(times tables?|^(Link area of rectangles|Grouping objects in different ways|Understand and represent multiplicative structures|Multiplication by partitioning|Multiply 3 or more|Apply the distributive law|Understand and use the concept of factorisation|Properties of number: factors, multiples)|\\|.*(\\barrays?\\b|commutative|square numbers?|distributive))"
+ },
+ {
+  "id": "langNegate",
+  "subject": "French",
+  "match": "\\|[^|]*(?:negat|ne … pas|ne…pas|\\bnicht\\b|\\bkein\\b|nunca|nejamais)"
+ },
+ {
+  "id": "langNegate",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:negat|ne … pas|ne…pas|\\bnicht\\b|\\bkein\\b|nunca|nejamais)"
+ },
+ {
+  "id": "langNegate",
+  "subject": "German",
+  "match": "\\|[^|]*(?:negat|ne … pas|ne…pas|\\bnicht\\b|\\bkein\\b|nunca|nejamais)"
+ },
+ {
+  "id": "langSounds",
+  "subject": "French",
+  "match": "\\|[^|]*(?:vowels?\\b|key sounds|\\bsounds?\\b|alphabet|liaison|silent|pronunc|phonic|\\bSSC\\b|read aloud)"
+ },
+ {
+  "id": "langSounds",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:vowels?\\b|key sounds|\\bsounds?\\b|alphabet|liaison|silent|pronunc|phonic|\\bSSC\\b|read aloud)"
+ },
+ {
+  "id": "langSounds",
+  "subject": "German",
+  "match": "\\|[^|]*(?:vowels?\\b|key sounds|\\bsounds?\\b|alphabet|liaison|silent|pronunc|phonic|\\bSSC\\b|read aloud)"
+ },
+ {
+  "id": "langNumbers",
+  "subject": "French",
+  "match": "\\|[^|]*(?:\\bnumbers?\\b|\\bdates?\\b|calendar|ordinal|telling the time|months|\\bage\\b|clock|cardinal|half past|'quand'|cuándo)"
+ },
+ {
+  "id": "langNumbers",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:\\bnumbers?\\b|\\bdates?\\b|calendar|ordinal|telling the time|months|\\bage\\b|clock|cardinal|half past|'quand'|cuándo)"
+ },
+ {
+  "id": "langNumbers",
+  "subject": "German",
+  "match": "\\|[^|]*(?:\\bnumbers?\\b|\\bdates?\\b|calendar|ordinal|telling the time|months|\\bage\\b|clock|cardinal|half past|'quand'|cuándo)"
+ },
+ {
+  "id": "langOrder",
+  "subject": "French",
+  "match": "\\|[^|]*(?:word order|inversion|adjective (position|placement)|adjectives? (after|before)|placement|time-manner-place|\\bweil\\b|nachdem|bevor|two objects|\\bposition\\b|subordinate|conjunction|\\bdenn\\b|manner before place)"
+ },
+ {
+  "id": "langOrder",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:word order|inversion|adjective (position|placement)|adjectives? (after|before)|placement|time-manner-place|\\bweil\\b|nachdem|bevor|two objects|\\bposition\\b|subordinate|conjunction|\\bdenn\\b|manner before place)"
+ },
+ {
+  "id": "langOrder",
+  "subject": "German",
+  "match": "\\|[^|]*(?:word order|inversion|adjective (position|placement)|adjectives? (after|before)|placement|time-manner-place|\\bweil\\b|nachdem|bevor|two objects|\\bposition\\b|subordinate|conjunction|\\bdenn\\b|manner before place)"
+ },
+ {
+  "id": "langDialogue",
+  "subject": "French",
+  "match": "\\|[^|]*(?:role-?play|conversation(?!al)|greetings?|introduc|interview|shopping|directions|café|restaurant|ordering|trip preparations)"
+ },
+ {
+  "id": "langDialogue",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:role-?play|conversation(?!al)|greetings?|introduc|interview|shopping|directions|café|restaurant|ordering|trip preparations)"
+ },
+ {
+  "id": "langDialogue",
+  "subject": "German",
+  "match": "\\|[^|]*(?:role-?play|conversation(?!al)|greetings?|introduc|interview|shopping|directions|café|restaurant|ordering|trip preparations)"
+ },
+ {
+  "id": "langAgree",
+  "subject": "French",
+  "match": "\\|[^|]*(?:adjective agreement|adjective endings|(regular|feminine|plural|singular|irregular|common|pre-nominal) (gender )?adjectives?|agreement)"
+ },
+ {
+  "id": "langAgree",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:adjective agreement|adjective endings|(regular|feminine|plural|singular|irregular|common|pre-nominal) (gender )?adjectives?|agreement)"
+ },
+ {
+  "id": "langAgree",
+  "subject": "German",
+  "match": "\\|[^|]*(?:adjective agreement|adjective endings|(regular|feminine|plural|singular|irregular|common|pre-nominal) (gender )?adjectives?|agreement)"
+ },
+ {
+  "id": "langGender",
+  "subject": "French",
+  "match": "\\|[^|]*(?:gender|(in)?definite articles?|partitive|\\barticles\\b|feminine nouns|masculine nouns|(plural|singular) nouns)"
+ },
+ {
+  "id": "langGender",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:gender|(in)?definite articles?|partitive|\\barticles\\b|feminine nouns|masculine nouns|(plural|singular) nouns)"
+ },
+ {
+  "id": "langGender",
+  "subject": "German",
+  "match": "\\|[^|]*(?:gender|(in)?definite articles?|partitive|\\barticles\\b|feminine nouns|masculine nouns|(plural|singular) nouns)"
+ },
+ {
+  "id": "langVerbs",
+  "subject": "French",
+  "match": "verbs?\\b|present tense|perfect|imperfect|preterite|\\btense\\b|\\b(être|avoir|aller|faire|ser|estar|tener|ir|hacer|sein|haben|gehen|werden|mögen|modals?|reflexive|conditional|future|infinitive|imperative|gustar|querer|vouloir|pouvoir|devoir)\\b"
+ },
+ {
+  "id": "langVerbs",
+  "subject": "Spanish",
+  "match": "verbs?\\b|present tense|perfect|imperfect|preterite|\\btense\\b|\\b(être|avoir|aller|faire|ser|estar|tener|ir|hacer|sein|haben|gehen|werden|mögen|modals?|reflexive|conditional|future|infinitive|imperative|gustar|querer|vouloir|pouvoir|devoir)\\b"
+ },
+ {
+  "id": "langVerbs",
+  "subject": "German",
+  "match": "verbs?\\b|present tense|perfect|imperfect|preterite|\\btense\\b|\\b(être|avoir|aller|faire|ser|estar|tener|ir|hacer|sein|haben|gehen|werden|mögen|modals?|reflexive|conditional|future|infinitive|imperative|gustar|querer|vouloir|pouvoir|devoir)\\b"
+ },
+ {
+  "id": "langListen",
+  "subject": "French",
+  "match": "\\|[^|]*(?:listening|dictation|comprehension|reading|\\bpoems?\\b|\\bstory\\b|\\bsong\\b|read and respond)"
+ },
+ {
+  "id": "langListen",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:listening|dictation|comprehension|reading|\\bpoems?\\b|\\bstory\\b|\\bsong\\b|read and respond)"
+ },
+ {
+  "id": "langListen",
+  "subject": "German",
+  "match": "\\|[^|]*(?:listening|dictation|comprehension|reading|\\bpoems?\\b|\\bstory\\b|\\bsong\\b|read and respond)"
+ },
+ {
+  "id": "langFlash",
+  "subject": "French",
+  "match": "\\|[^|]*(?:family|school|food|drink|colou?rs?|couleurs|days|classroom|in class|pets|animals|weather|clothes|home\\b|town|hobbies|\\bsports?\\b|jobs|holiday)"
+ },
+ {
+  "id": "langFlash",
+  "subject": "Spanish",
+  "match": "\\|[^|]*(?:family|school|food|drink|colou?rs?|couleurs|days|classroom|in class|pets|animals|weather|clothes|home\\b|town|hobbies|\\bsports?\\b|jobs|holiday)"
+ },
+ {
+  "id": "langFlash",
+  "subject": "German",
+  "match": "\\|[^|]*(?:family|school|food|drink|colou?rs?|couleurs|days|classroom|in class|pets|animals|weather|clothes|home\\b|town|hobbies|\\bsports?\\b|jobs|holiday)"
+ }
+]

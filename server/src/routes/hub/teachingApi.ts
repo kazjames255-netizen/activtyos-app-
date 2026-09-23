@@ -5,6 +5,7 @@ import { hubLessonsApi } from "./lessonsApi";
 import { hubBoardsApi } from "./boardsApi";
 import { hubLessonApi } from "./lessonApi";
 import { hubInPersonApi } from "./inPersonApi";
+import { hubRemoteSyncApi } from "./remoteSyncApi";
 import { hubFamilyInvitesApi } from "./familyInvitesApi";
 
 // Learning Hub — homework & submissions (milestone 6), flashcards & spaced
@@ -19,4 +20,5 @@ hubTeachingApi.use(hubLessonsApi);
 hubTeachingApi.use(hubBoardsApi); // the live whiteboard's saved copy (Round 4)
 hubTeachingApi.use(hubLessonApi); // the interactive lesson player's warm-up questions + instant checks
 hubTeachingApi.use(hubInPersonApi); // a tutor running a lesson/quiz with children beside them (no video): sessions, attendance, per-child results
+hubTeachingApi.use(hubRemoteSyncApi); // "Start lesson now (remote)": tutor broadcasts a lesson; remote students' screens follow, no video call
 hubTeachingApi.use(hubFamilyInvitesApi); // a tutor's invite link for a family who never booked → the parent enrols their own child

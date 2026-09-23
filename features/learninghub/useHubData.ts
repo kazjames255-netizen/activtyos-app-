@@ -32,6 +32,9 @@ export function useHubData(mode: "student" | "tutor") {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fetchedAt = useRef(0);
+  // The Lessons tab's year-group filter — lifted up here (not local to NotesPanel) so the sidebar's counts
+  // (GET /notes/counts) can be scoped by it too: they should always match what the list is actually showing.
+  const [years, setYears] = useState<number[]>([]);
 
   useEffect(() => {
     get<HubProvider[]>("/api/learning-hub/providers")
@@ -89,10 +92,11 @@ export function useHubData(mode: "student" | "tutor") {
   const loadNoteStats = useCallback(() => {
     if (!tenantId) return;
     const mine = key;
-    get<NoteStats>(`/api/learning-hub/notes/counts${childQs}`)
+    const yq = years.length ? `${childQs ? "&" : "?"}year=${years.join(",")}` : "";
+    get<NoteStats>(`/api/learning-hub/notes/counts${childQs}${yq}`)
       .then((r) => { patchBundle(mine, { noteStats: r }); setNotesVersion((v) => v + 1); })
       .catch(() => undefined);
-  }, [tenantId, key, childQs, patchBundle]);
+  }, [tenantId, key, childQs, years, patchBundle]);
   const loadGroups = useCallback(() => {
     if (!tenantId || mode !== "tutor") return;
     const mine = key;
@@ -124,6 +128,7 @@ export function useHubData(mode: "student" | "tutor") {
   }, [tenantId, key, qs, childQs, loadGroups, loadNoteStats]);
 
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { loadNoteStats(); }, [years, loadNoteStats]);
   useRealtime(["hubTopics", "hubEnrolments"], refresh);
   useRealtime(["hubNotes"], loadNoteStats);
   useRealtime(["hubGroups"], loadGroups);
@@ -156,7 +161,7 @@ export function useHubData(mode: "student" | "tutor") {
   return {
     providers, provider, tenantId, setTenantId, children, childId, childConfirmed, setChildId, child,
     qs, childQs, ready, topics, noteStats: ready ? bundle!.noteStats : null, notesVersion, students, groups, config: ready ? bundle!.config : HUB_DEFAULTS,
-    error, setError: reportError, refresh,
+    error, setError: reportError, refresh, years, setYears,
   };
 }
 

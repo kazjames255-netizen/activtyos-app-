@@ -9,7 +9,9 @@ import type { Cell, IpResult } from "./api";
 
 export interface ClassState {
   cells: Record<string, Record<string, Cell>>;
-  warm: Record<string, Record<string, boolean>>;
+  /** Per child × warm-up question: which option/answer THAT child gave (same shape as `cells`) — so who chose
+   *  what, and whether it was right, is visible per child, not just a blank right/wrong tally. */
+  warm: Record<string, Record<string, Cell>>;
   results: Record<string, IpResult>;
   /** The paper the answers above are for (the lesson's exit quiz, or the quiz the tutor picked). */
   assessmentId: string | null;
@@ -53,12 +55,11 @@ export function useClassState(sessionId: string) {
       return { ...s, cells };
     });
   }, []);
-  /** Cycle a warm-up tally: blank → right → wrong → blank. */
-  const tapWarm = useCallback((childId: string, questionId: string) => {
+  /** Set (or with `null` clear) one child's warm-up answer to one question — which option/text they gave, and/or the tutor's right/wrong call. */
+  const setWarmCell = useCallback((childId: string, questionId: string, cell: Cell | null) => {
     setState((s) => {
       const mine = { ...(s.warm[childId] ?? {}) };
-      const cur = mine[questionId];
-      if (cur === undefined) mine[questionId] = true; else if (cur) mine[questionId] = false; else delete mine[questionId];
+      if (cell && (cell.response !== undefined || cell.verdict)) mine[questionId] = cell; else delete mine[questionId];
       return { ...s, warm: { ...s.warm, [childId]: mine } };
     });
   }, []);
@@ -77,6 +78,6 @@ export function useClassState(sessionId: string) {
   const setAssessment = useCallback((assessmentId: string | null) => setState((s) => (s.assessmentId === assessmentId ? s : { ...s, assessmentId })), []);
   const clear = useCallback(() => { try { window.localStorage.removeItem(key(sessionId)); } catch { /* nothing to do */ } }, [sessionId]);
 
-  return { state, setCell, setAll, tapWarm, setResults, setAssessment, clear };
+  return { state, setCell, setAll, setWarmCell, setResults, setAssessment, clear };
 }
 export type ClassStore = ReturnType<typeof useClassState>;

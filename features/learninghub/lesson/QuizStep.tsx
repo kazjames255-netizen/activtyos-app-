@@ -21,12 +21,14 @@ import { Btn, StepCard, Tag, display } from "./lessonUi";
 
 export interface QuizOutcome { result: Result | null; run: StartedAttempt | null; notice: string | null }
 
-export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack, preview, homeworkId }: {
+export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack, preview, homeworkId, onLiveAnswer }: {
   quiz: { id: string; title: string; questionCount: number }; qs: string; childId: string | null; config: HubSettings; readOnly: boolean;
   /** Tutor preview: the lesson to practise the quiz of (instant feedback, nothing saved). */
   preview?: { noteId: string; childQs: string };
   /** The homework this lesson was opened from: the quiz attempt is recorded against it. */
   homeworkId?: string | null;
+  /** Remote-sync "own_pace": fired on every change to the current question's answer-so-far. */
+  onLiveAnswer?: (questionId: string, response: unknown) => void;
   onFinish: (o: QuizOutcome) => void; onBack: () => void;
 }) {
   const [run, setRun] = useState<StartedAttempt | null>(null);
@@ -69,6 +71,12 @@ export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack
 
   useEffect(() => { box.current?.focus({ preventScroll: true }); }, [idx, phase]);
   useEffect(() => { if (run && !readOnly && phase === "taking") saveDraft(run.attemptId, answers, idx); }, [run, readOnly, phase, answers, idx]);
+  const currentAnswer = run?.questions[idx] ? answers[run.questions[idx]!.id] : undefined;
+  useEffect(() => {
+    if (!run || readOnly || phase !== "taking" || currentAnswer === undefined) return;
+    onLiveAnswer?.(run.questions[idx]!.id, currentAnswer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentAnswer, idx]);
   useDraftSync(run && !readOnly && childId ? hubPath(qs, `/attempts/${run.attemptId}/draft`, { childId }) : null, answers, idx, !!run && !readOnly && phase === "taking");
 
   // Signed picture links expire: a failed picture asks for a fresh set (the server "resumes" the same attempt and re-signs).

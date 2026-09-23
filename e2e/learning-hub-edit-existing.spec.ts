@@ -64,7 +64,7 @@ test("lessons: New lesson has a New / Edit existing strip; Edit existing finds a
   const { ctx, page } = await tutorPage(browser);
   await tabOf(page, /^Lessons/).click();
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: /New lesson/ }).first().click();
+  await page.getByRole("button", { name: /new lesson/i }).first().click();
 
   const editor = page.locator("#hub-note-editor");
   await expect(editor.getByRole("heading", { name: "New lesson" })).toBeVisible();
@@ -106,7 +106,7 @@ test("lessons: the New tab starts blank again and asks first when the open lesso
   const { ctx, page } = await tutorPage(browser);
   await tabOf(page, /^Lessons/).click();
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: /New lesson/ }).first().click();
+  await page.getByRole("button", { name: /new lesson/i }).first().click();
   const editor = page.locator("#hub-note-editor");
   const strip = editor.getByTestId("creator-tabs");
   await strip.getByRole("tab", { name: "Edit existing" }).click();

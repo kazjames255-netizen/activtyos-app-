@@ -12,7 +12,7 @@ import type { ClassStore } from "./useClassState";
 // optional follow-up homework (the Homework form opens pre-filled), and "Finish" which closes the session and tells the families.
 
 export function warmTally(store: ClassStore): IpWarm[] {
-  return Object.entries(store.state.warm).map(([childId, m]) => ({ childId, correct: Object.values(m).filter((v) => v === true).length, total: Object.values(m).length })).filter((w) => w.total > 0);
+  return Object.entries(store.state.warm).map(([childId, m]) => ({ childId, correct: Object.values(m).filter((v) => v.verdict === "right").length, total: Object.values(m).length })).filter((w) => w.total > 0);
 }
 
 export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, store, hideNames, retry, toggleHere, followUp, finish, finishing }: {

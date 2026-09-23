@@ -10,7 +10,7 @@ WIDGETS.forceMotion = {
   title: "Push, resist, accelerate",
   intro: "Drag the force arrows (or use the sliders). Find out what balanced and unbalanced forces do to the speed of the trolley.",
   html() {
-    return `<div class="explore" id="fm"><svg id="fms" viewBox="0 0 600 270" style="touch-action:none;user-select:none" role="img" aria-label="A trolley with a forward push arrow and a backward resistive force arrow, above a speed-time graph"></svg>
+    return `<div class="explore" id="fm"><svg id="fms" viewBox="0 0 600 284" style="touch-action:none;user-select:none" role="img" aria-label="A trolley with a forward push arrow and a backward resistive force arrow, above a speed-time graph"></svg>
     <div class="row spread" style="margin-top:8px"><label class="small" style="flex:1;min-width:130px">Push <b class="stat" id="fmFv">4 N</b><input type="range" id="fmF" min="0" max="10" value="4" style="width:100%;accent-color:var(--brand)"></label>
       <label class="small" style="flex:1;min-width:130px"><span id="fmBn">Friction</span> <b class="stat" id="fmBv">2 N</b><input type="range" id="fmB" min="0" max="10" value="2" style="width:100%;accent-color:var(--brand)"></label></div>
     <div class="row" style="justify-content:center;margin:8px 0"><span class="small">Mass</span><button class="btn st" data-m="1">1 kg</button><button class="btn ghost st" data-m="2">2 kg</button><button class="btn ghost st" data-m="5">5 kg</button>

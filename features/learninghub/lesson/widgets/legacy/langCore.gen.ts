@@ -26,7 +26,7 @@ function speak(text,o={}){
   if(!canSpeak(l))return fail();
   try{
     speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=VL[l];const v=voiceFor(l);if(v)u.voice=v;u.rate=o.slow?.55:.9;
-    u.onerror=e=>{if(e&&e.error&&e.error!=="canceled"&&e.error!=="interrupted")fail()};if(o.onend)u.onend=o.onend;
+    u.onerror=e=>{if(e&&e.error&&e.error!=="canceled"&&e.error!=="interrupted"&&e.error!=="not-allowed")fail()};if(o.onend)u.onend=o.onend;
     speechSynthesis.speak(u);if(msg)msg.hidden=true;return true;
   }catch(e){return fail()}
 }
@@ -34,14 +34,14 @@ const norm=s=>String(s).toLowerCase().replace(/[’]/g,"'").replace(/[.,;:!?¿¡
 const flat=s=>norm(s).normalize("NFD").replace(/[̀-ͯ]/g,"");
 
 /* ---------- tap-or-drag tiles ---------- */
-/* o={tile:'.lg-tile',slot:'.lg-slot',drop:(tileEl,slotEl)=>void}. A tile can be dragged (pointer) or tapped then a slot tapped. */
+/* o={tile:'.lg-tile',slot:'.lg-slot',drop:(tileEl,slotEl)=>void, tap?:tileEl=>void (a tap acts directly instead of selecting)}. A tile can be dragged (pointer) or tapped then a slot tapped. */
 function drag(root,o){
   let sel=null,swallow=false;
   const clear=()=>{if(sel)sel.classList.remove("lg-sel");sel=null};
   root.addEventListener("click",e=>{
     if(swallow){swallow=false;return}
     const t=e.target.closest(o.tile),s=e.target.closest(o.slot);
-    if(t&&root.contains(t)&&!t.classList.contains("lg-used")&&!t.disabled){if(sel===t){clear();return}clear();sel=t;t.classList.add("lg-sel");return}
+    if(t&&root.contains(t)&&!t.classList.contains("lg-used")&&!t.disabled){if(o.tap){o.tap(t);return}if(sel===t){clear();return}clear();sel=t;t.classList.add("lg-sel");return}
     if(s&&sel){const tt=sel;clear();o.drop(tt,s)}
   });
   root.addEventListener("pointerdown",e=>{
@@ -91,9 +91,9 @@ const CSS=`<style>
 .lg .lg-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .lg .lg-chip{border:2px solid var(--line);background:#fff;color:var(--ink2);border-radius:99px;padding:6px 12px;font-weight:800;font-size:14px;min-height:36px}
 .lg .lg-chip.on{border-color:var(--brand2);background:var(--brand-soft);color:var(--brand)}
-.lg .lg-tile{touch-action:none;user-select:none;-webkit-user-select:none;border:2px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font-weight:800;font-size:16px;box-shadow:0 3px 0 var(--line);cursor:grab;color:var(--ink);min-height:40px}
-.lg .lg-tile.lg-sel{border-color:var(--brand2);background:var(--brand-soft);transform:translateY(-2px)}
-.lg .lg-tile.lg-used{opacity:.22;pointer-events:none}.lg .lg-tile.lg-lift{opacity:.4}
+.lg-tile{touch-action:none;user-select:none;-webkit-user-select:none;border:2px solid var(--line);background:#fff;border-radius:12px;padding:8px 12px;font-weight:800;font-size:16px;box-shadow:0 3px 0 var(--line);cursor:grab;color:var(--ink);min-height:40px}
+.lg-tile.lg-sel{border-color:var(--brand2);background:var(--brand-soft);transform:translateY(-2px)}
+.lg-tile.lg-used{opacity:.22;pointer-events:none}.lg-tile.lg-lift{opacity:.4}
 .lg-ghost{position:fixed!important;z-index:90;pointer-events:none;box-shadow:0 10px 24px rgba(20,26,51,.3)!important;transform:rotate(-3deg) scale(1.06)}
 .lg .lg-slot{min-width:60px;min-height:40px;border:2px dashed #b8c4ff;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-weight:900;padding:0 8px;color:var(--ink);vertical-align:middle}
 .lg .lg-slot.full{border-style:solid;border-color:var(--ok);background:var(--ok-soft)}

@@ -234,19 +234,16 @@ test.describe("tutor UI: teach a lesson in person to two children", () => {
     const page = await ctx.newPage();
     await gotoHub(page, "/freelancer/learninghub?tab=notes");
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 25_000 });
-    // The Lessons area has the entry point up top …
-    await expect(page.getByTestId("lessons-teach-in-person")).toBeVisible();
-    // … and the lesson's own button pre-selects the lesson.
+    // Open the lesson, preview it, then go live in person from the "One room" card (NotesPanel.tsx → GoLivePicker).
     await page.getByLabel("Search lessons").fill(L.title);
     await page.getByRole("button", { name: L.title, exact: true }).first().click();
-    await page.getByTestId("lesson-teach-in-person").click();
+    await page.getByTestId("lesson-open").click();
+    await page.getByTestId("lesson-one-room").click();
 
-    const app = page.getByTestId("inperson-app");
-    await expect(app).toBeVisible();
-    await expect(app.getByTestId("ip-chosen")).toContainText(L.title, { timeout: 20_000 });
-    await app.getByRole("button", { name: nameA, exact: true }).click();
-    await app.getByRole("button", { name: nameB, exact: true }).click();
-    await app.getByTestId("ip-start").click();
+    await expect(page.getByRole("heading", { name: "Who's here?" })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: nameA, exact: true }).click();
+    await page.getByRole("button", { name: nameB, exact: true }).click();
+    await page.getByTestId("golive-start").click();
 
     const run = page.getByTestId("inperson-run");
     await expect(run).toBeVisible({ timeout: 20_000 });
@@ -255,17 +252,24 @@ test.describe("tutor UI: teach a lesson in person to two children", () => {
     await expect(page.getByTestId("ip-banner")).toContainText("2 children");
     await expect(page.getByTestId("ip-who-btn")).toContainText("2 of 2 here");
 
-    // The lesson player runs read-only, on the tutor's device: nothing is started for any child.
-    await page.getByTestId("lesson-start").click();
+    // The lesson player runs read-only, on the tutor's device: nothing is started for any child. A live
+    // in-person session skips the Start step automatically (who's here was already chosen to get here).
     await page.getByTestId("preview-jump-warm").click({ force: true });
-    // Warm-up: out loud. Show the answer, tap who got it.
+    // Warm-up: out loud. Tag each child's answer onto the option they said, then check the class.
     const warm = page.getByTestId("ip-warm-extra");
     await expect(warm).toBeVisible();
-    await warm.getByTestId("ip-warm-reveal").click();
-    await expect(warm.getByRole("note")).toContainText("Answer:");
-    await warm.getByTestId(`ip-warm-${nameA}`).click(); // got it
-    await warm.getByTestId(`ip-warm-${nameB}`).click(); // got it …
-    await warm.getByTestId(`ip-warm-${nameB}`).click(); // … then not yet
+    const wq = L.warmup[0]!;
+    if (wq.kind === "single") {
+      await warm.getByTestId(`ip-warm-name-${nameA}`).click();
+      await warm.locator('[data-testid^="ip-warm-opt-"]', { hasText: wq.right }).click(); // A: right by option
+      await warm.getByTestId(`ip-warm-name-${nameB}`).click();
+      await warm.locator('[data-testid^="ip-warm-opt-"]', { hasText: wrongOption(wq) }).click(); // B: wrong by option
+      await warm.getByTestId("ip-warm-check").click();
+      await expect(warm.getByRole("note")).toContainText(wq.right);
+    } else {
+      await warm.getByTestId(`ip-warm-right-${nameA}`).click(); // got it
+      await warm.getByTestId(`ip-warm-wrong-${nameB}`).click(); // not yet
+    }
 
     // Quiz: the capture grid.
     await page.getByTestId("preview-jump-quiz").click({ force: true });
@@ -307,7 +311,7 @@ test.describe("tutor UI: teach a lesson in person to two children", () => {
     // Follow-up homework opens the Homework form pre-filled (and finishes the session).
     await page.getByTestId("ip-followup-weak").click();
     await expect(page.locator(`input[value="Follow-up: ${L.title}"]`)).toBeVisible({ timeout: 25_000 });
-    await expect(page.getByTestId("inperson-app")).toHaveCount(0);
+    await expect(page.getByTestId("inperson-run")).toHaveCount(0);
     await ctx.close();
   });
 
@@ -396,9 +400,12 @@ test.describe("setup: year filter + send to the children's portals", () => {
     test.setTimeout(360_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
-    await gotoHub(page, "/freelancer/learninghub?tab=notes");
-    await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId("lessons-teach-in-person").click();
+    // The full-screen in-person setup (lesson/quiz search, year filters, "send to portal" choice) lives behind
+    // TutorHome's "Teach in person" tile now that the per-lesson toolbar button is gone (NotesPanel goes live
+    // inline via GoLivePicker instead, which has no such setup step).
+    await gotoHub(page, "/freelancer/learninghub?tab=home");
+    await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId("home-teach-in-person").click();
     const app = page.getByTestId("inperson-app");
     await expect(app).toBeVisible();
 
@@ -445,9 +452,9 @@ test.describe("setup: year filter + send to the children's portals", () => {
     test.setTimeout(360_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
-    await gotoHub(page, "/freelancer/learninghub?tab=notes");
-    await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId("lessons-teach-in-person").click();
+    await gotoHub(page, "/freelancer/learninghub?tab=home");
+    await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId("home-teach-in-person").click();
     const app = page.getByTestId("inperson-app");
     await expect(app).toBeVisible();
     await app.getByRole("tab", { name: "A quiz or placement test" }).click();

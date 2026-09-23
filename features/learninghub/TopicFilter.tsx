@@ -150,7 +150,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
   );
 
   const rowShell = (active: boolean, color: string) =>
-    `group flex items-center rounded-xl transition-colors ${active ? "" : "hover:bg-[var(--panel)]"} ${rowH}`;
+    `group flex items-start gap-0 rounded-xl py-1 transition-colors ${active ? "" : "hover:bg-[var(--panel)]"} ${rowH}`;
   const activeStyle = (active: boolean, color: string) => (active ? { background: tint(color, 11), boxShadow: `inset 0 0 0 1.5px ${tint(color, 55)}` } : undefined);
 
   const chevron = (id: string, label: string, isOpen: boolean, controls: string) => (
@@ -202,7 +202,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
                 <button type="button" onClick={() => { expand(s.subject); pick({ subject: s.subject, topicId: null }); }} aria-current={sel ? "true" : undefined}
                   className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl pr-2 text-left text-[13px] font-bold text-[var(--ink)] ${rowH} ${FOCUS}`}>
                   <SubjectTile subject={s.subject} size={roomy ? 30 : 26} />
-                  <span className="min-w-0 flex-1 truncate">{s.subject}</span>
+                  <span className="min-w-0 flex-1 break-words" title={s.subject}>{s.subject}</span>
                   <Pill n={counts.bySubject.get(s.subject) ?? 0} active={sel} color={color} />
                 </button>
                 {canEdit && (
@@ -219,7 +219,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
             )}
 
             {isOpen && (
-              <div id={subId} className="ml-[13px] border-l-2 pl-1.5" style={{ borderColor: tint(color, 35) }}>
+              <div id={subId} className="ml-[13px] space-y-1 border-l-2 pl-1.5" style={{ borderColor: tint(color, 35) }}>
                 {s.topics.filter(({ topic, subs }) => !needle || nameHit(s.subject) || nameHit(topic.topic) || subs.some((x) => nameHit(x.subtopic))).map(({ topic, subs: allSubs }) => {
                   // While searching, a topic opens onto (only) the subtopics that match, so a 700-row taxonomy stays a short list.
                   const subs = needle && !nameHit(s.subject) && !nameHit(topic.topic) ? allSubs.filter((x) => nameHit(x.subtopic)) : allSubs;
@@ -235,7 +235,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
                           {subs.length ? chevron(topic.id, topic.topic, tOpen, tid) : spacer}
                           <button type="button" onClick={() => pick({ subject: s.subject, topicId: topic.id })} aria-current={tSel ? "true" : undefined}
                             className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl pr-2 text-left text-[13px] font-semibold text-[var(--ink)] ${rowH} ${FOCUS}`}>
-                            <span className="min-w-0 flex-1 truncate">{topic.topic}</span>
+                            <span className="min-w-0 flex-1 break-words" title={topic.topic}>{topic.topic}</span>
                             <Pill n={counts.byTopic.get(topic.id) ?? 0} active={tSel} color={color} />
                           </button>
                           {canEdit && (
@@ -253,7 +253,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
                       {editing?.kind === "add-sub" && editing.parentId === topic.id &&
                         inlineForm({ placeholder: "Subtopic name", value: name, onValue: setName, onSave: () => run(() => post("/api/learning-hub/topics" + qs, { parentTopicId: topic.id, subtopic: name })) })}
                       {tOpen && subs.length > 0 && (
-                        <div id={tid} className="ml-[13px] border-l border-[var(--line)] pl-1.5">
+                        <div id={tid} className="ml-[13px] space-y-1 border-l border-[var(--line)] pl-1.5">
                           {subs.map((sub) => {
                             const sSel = filter.topicId === sub.id;
                             return (
@@ -264,7 +264,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
                                   <div className={rowShell(sSel, color)} style={activeStyle(sSel, color)}>
                                     <button type="button" onClick={() => pick({ subject: s.subject, topicId: sub.id })} aria-current={sSel ? "true" : undefined}
                                       className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] ${rowH} ${FOCUS}`}>
-                                      <span className="min-w-0 flex-1 truncate">{sub.subtopic}</span>
+                                      <span className="min-w-0 flex-1 break-words" title={sub.subtopic ?? undefined}>{sub.subtopic}</span>
                                       <Pill n={counts.byTopic.get(sub.id) ?? 0} active={sSel} color={color} />
                                     </button>
                                     {canEdit && canChangeRow(franchiseId, sub.franchiseId) && (

@@ -17,7 +17,7 @@ export function FamilyInviteClaim({ token, portal }: { token: string; portal: st
   const [kids, setKids] = useState<Kid[] | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [done, setDone] = useState<string[]>([]);
+  const [done, setDone] = useState<string[]>([]); // child ids enrolled this visit
 
   useEffect(() => {
     let live = true;
@@ -28,7 +28,7 @@ export function FamilyInviteClaim({ token, portal }: { token: string; portal: st
 
   const enrol = async (k: Kid) => {
     setBusy(k.id); setProblem(null);
-    try { await post(`/api/learning-hub/family-invites/${encodeURIComponent(token)}/accept`, { childId: k.id }); setDone((d) => [...d, k.name]); }
+    try { await post(`/api/learning-hub/family-invites/${encodeURIComponent(token)}/accept`, { childId: k.id }); setDone((d) => [...d, k.id]); }
     catch (e) { setProblem(errMsg(e, "Couldn't enrol that child.")); }
     finally { setBusy(null); }
   };
@@ -56,7 +56,7 @@ export function FamilyInviteClaim({ token, portal }: { token: string; portal: st
             ) : (
               <ul className="mt-4 grid gap-2" aria-label="Your children">
                 {kids.map((k) => {
-                  const enrolled = done.includes(k.name) || (preview.alreadyEnrolled ?? []).includes(k.id);
+                  const enrolled = done.includes(k.id) || (preview.alreadyEnrolled ?? []).includes(k.id);
                   return (
                     <li key={k.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-3 py-2.5">
                       <span className="min-w-0 flex-1 truncate text-[14px] font-extrabold">{k.name}</span>

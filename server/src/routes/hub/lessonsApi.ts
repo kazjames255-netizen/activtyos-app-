@@ -50,9 +50,11 @@ interface LessonDoc {
   /** Safeguarding: true from the moment a tutor ENDS (or reopens) a lesson until a tutor joins again. While set, a family can neither
    *  (re)join nor "Stay" — a room must never carry on with children in it and no tutor. Absent on lessons that were never ended. */
   needsTutor?: boolean;
-  /** "in_person" = a tutor running a lesson with children beside them (routes/hub/inPersonApi.ts). Not a video lesson: hidden from
-   *  every list and refused by join / extend / reopen / edit here. Absent = a video lesson. */
-  mode?: "video" | "in_person";
+  /** "in_person" = a tutor running a lesson with children beside them (routes/hub/inPersonApi.ts). "remote_sync" = a tutor
+   *  broadcasting a lesson to remote students with no video call, their screens kept in step with the tutor's
+   *  (routes/hub/remoteSyncApi.ts). Neither is a video lesson: hidden from every list and refused by join / extend /
+   *  reopen / edit here. Absent = a video lesson. */
+  mode?: "video" | "in_person" | "remote_sync";
   /** A weekly repeat: every lesson made together shares `seriesId` (an instance is otherwise an ordinary lesson: edit / cancel one on its own). */
   seriesId?: string; seriesIndex?: number; seriesCount?: number;
   /** "Log a lesson already held": recorded after the fact (ended, attendance as the tutor entered it, never had a room). */
@@ -150,7 +152,7 @@ function familyOut(l: Lesson, ctx: HubCtx) {
 }
 
 const allLessons = async (tenantId: string): Promise<Lesson[]> =>
-  (await lessonsCol.where("tenantId", "==", tenantId).get()).docs.map((d) => ({ id: d.id, ...(d.data() as LessonDoc) })).filter((l) => l.mode !== "in_person");
+  (await lessonsCol.where("tenantId", "==", tenantId).get()).docs.map((d) => ({ id: d.id, ...(d.data() as LessonDoc) })).filter((l) => l.mode !== "in_person" && l.mode !== "remote_sync");
 
 // GET /lessons — T: the lessons in scope (last 90 days onwards); P: their children's upcoming + recent.
 hubLessonsApi.get("/lessons", async (req, res) => {
@@ -239,7 +241,7 @@ hubLessonsApi.post("/lessons", async (req, res) => {
 async function editableLesson(ctx: HubCtx, id: string, res: import("express").Response): Promise<Lesson | null> {
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return null; }
   const snap = await lessonsCol.doc(id).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person" || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return null; }
+  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || (snap.get("mode") === "in_person" || snap.get("mode") === "remote_sync") || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return null; }
   if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That lesson belongs to head office" }); return null; }
   return { id: snap.id, ...(snap.data() as LessonDoc) };
 }
@@ -411,7 +413,7 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const snap = await lessonsCol.doc(id).get();
   // A lesson of another tenant is a 404 for everyone — never a hint that it exists.
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person") { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person" || snap.get("mode") === "remote_sync") { res.status(404).json({ error: "Lesson not found" }); return; }
   const lesson: Lesson = { id: snap.id, ...(snap.data() as LessonDoc) };
 
   // ── who is joining, and are they allowed on THIS lesson? ──
@@ -498,7 +500,7 @@ hubLessonsApi.post("/lessons/:id/attended", async (req, res) => {
   const id = req.params.id;
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const snap = await lessonsCol.doc(id).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person") { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person" || snap.get("mode") === "remote_sync") { res.status(404).json({ error: "Lesson not found" }); return; }
   const lesson: Lesson = { id: snap.id, ...(snap.data() as LessonDoc) };
   // Siblings on one device: the parent may say `childIds: [a, b]` (and/or the usual `childId` / ?childId=) — EVERY one of their own children
   // named who is in this lesson is recorded present. Ids that aren't the parent's own children, or aren't in the lesson, are ignored;
@@ -529,7 +531,7 @@ hubLessonsApi.post("/lessons/:id/extend", async (req, res) => {
   const id = req.params.id;
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const snap = await lessonsCol.doc(id).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person") { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") === "in_person" || snap.get("mode") === "remote_sync") { res.status(404).json({ error: "Lesson not found" }); return; }
   const lesson: Lesson = { id: snap.id, ...(snap.data() as LessonDoc) };
   if (isParent(ctx)) {
     if (!scopedChildren(ctx).some((c) => lesson.childIds.includes(c.childId))) { res.status(404).json({ error: "Lesson not found" }); return; } // (?childId= narrows to that child)

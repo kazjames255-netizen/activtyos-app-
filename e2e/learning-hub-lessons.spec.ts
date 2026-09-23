@@ -179,7 +179,7 @@ test.describe("tutor: lessons list, preview", () => {
     await expect(tabOf(page, /Notes & resources/)).toHaveCount(0);
     await tabOf(page, /^Lessons/).click();
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole("button", { name: /New lesson/ }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /new lesson/i }).first()).toBeVisible();
 
     await page.getByLabel("Search lessons").fill(L.title);
     const card = cardWith(page, L.title);

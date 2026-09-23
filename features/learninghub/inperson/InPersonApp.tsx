@@ -94,7 +94,10 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
   );
 }
 
-function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { qs: string; config: HubSettings; initial: IpSession; roster: Student[]; goTo?: (key: "homework") => void; onClose: () => void }) {
+/** The live in-person run: header (leave / who's here) + the lesson player (or bare capture grid for a quiz-only
+ *  session) + results. Exported so a tutor's own lesson PREVIEW (NotesPanel.tsx) can swap into the SAME component
+ *  inline once a session is created there via GoLivePicker, instead of mounting a separate full-screen app. */
+export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { qs: string; config: HubSettings; initial: IpSession; roster: Student[]; goTo?: (key: "homework") => void; onClose: () => void }) {
   const store = useClassState(initial.id);
   const [sess, setSess] = useState<IpSession>(initial);
   const [note, setNote] = useState<Note | null>(null);
@@ -180,7 +183,7 @@ function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { qs: str
         <CaptureGrid qs={qs} sessionId={initial.id} assessmentId={qz.id} roster={present} store={store} hideNames={hideNames} onBack={onBack} handIn={handIn} onDone={() => { store.setAssessment(qz.id); onFinish(); }} />
       </QuizSlot>
     ),
-    warmupExtra: (q) => <WarmupExtra q={q} noteId={initial.noteId!} qs={qs} roster={present} store={store} hideNames={hideNames} />,
+    warmupExtra: (q) => <WarmupExtra q={q} noteId={initial.noteId!} qs={qs} roster={present} store={store} hideNames={hideNames} config={config} />,
     done: () => results,
   };
 

@@ -35,7 +35,7 @@ WIDGETS.placeValue={
  <div class="stat" id="pv-num" style="text-align:center;font-size:24px;margin-top:10px"></div>
  <p class="small" id="pv-say" style="text-align:center;margin:4px 0 0"></p></div>`},
  init(){
-  const box=$("#pv");let mode="w",exps=[3,2,1,0],n=[0,0,0,0];const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const box=$("#pv");let busy=false,mode="w",exps=[3,2,1,0],n=[0,0,0,0];const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
   const NM={3:"Thousands",2:"Hundreds",1:"Tens",0:"Ones","-1":"Tenths","-2":"Hundredths"},SH={3:"Th",2:"H",1:"T",0:"O","-1":"t","-2":"h"};
   const val=e=>e>=0?String(Math.pow(10,e)):"0."+"0".repeat(-e-1)+"1";
   const setMode=m=>{mode=m;exps=m==="w"?[3,2,1,0]:[1,0,-1,-2];n=[0,0,0,0];box.querySelectorAll("[data-m]").forEach(b=>b.classList.toggle("on",b.dataset.m===m));draw()};
@@ -52,9 +52,10 @@ WIDGETS.placeValue={
    cols.querySelectorAll("button[data-a]").forEach(b=>b.onclick=()=>step(+b.dataset.i,b.dataset.a==="+"?1:-1));
   }
   function step(i,d){
+   if(busy)return;
    if(d>0){n[i]++;if(n[i]>=10){if(i===0){n[0]=9;$("#pv-say").textContent="That's the biggest column — can't go higher here!";return draw()}
-     draw({i});const body=cols.querySelectorAll(".pv-body")[i];const k=[...body.children];k.forEach(x=>x.classList.add("out"));
-     setTimeout(()=>{n[i]=0;n[i-1]++;addXP(1);draw({i:i-1});$("#pv-say").textContent="10 counters swapped for 1 counter in the next column!"},reduce?0:340);return}}
+     busy=true;draw({i});const body=cols.querySelectorAll(".pv-body")[i];const k=[...body.children];k.forEach(x=>x.classList.add("out"));
+     setTimeout(()=>{busy=false;n[i]=0;n[i-1]++;addXP(1);draw({i:i-1});$("#pv-say").textContent="10 counters swapped for 1 counter in the next column!"},reduce?0:340);return}}
    else{ if(n[i]>0)n[i]--;else{ // unexchange: borrow one from the left
      let j=i-1;while(j>=0&&n[j]===0)j--;if(j<0)return;n[j]--;for(let k=j+1;k<=i;k++)n[k]=(k===i?9:9);draw();$("#pv-say").textContent="Unpacked 1 counter into 10 in the column to the right.";return}}
    draw(d>0?{i}:null)}

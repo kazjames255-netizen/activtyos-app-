@@ -177,7 +177,7 @@ test.describe("tutor builds topics and notes", () => {
 
     // No notes yet → an empty state with a call to action, not a bare list.
     await expect(page.getByText("No lessons here yet")).toBeVisible();
-    await page.getByRole("button", { name: /New lesson/ }).first().click();
+    await page.getByRole("button", { name: /new lesson/i }).first().click();
     await page.getByLabel("Title", { exact: true }).fill(noteTitle);
     await page.getByTestId("sb-title").fill("Factorising");
     await page.getByTestId("sb-add-block").click();
@@ -206,7 +206,7 @@ test.describe("tutor builds topics and notes", () => {
     await openNotes(page);
     await revealAll(page);
     await rowOf(page, subject).click();
-    await page.getByRole("button", { name: /New lesson/ }).first().click();
+    await page.getByRole("button", { name: /new lesson/i }).first().click();
     await page.getByLabel("Title", { exact: true }).fill(`Unsaved ${stamp}`);
     await tabOf(page, /Students/).click();
     await expect(tabOf(page, /^Lessons/)).toContainText("Unsaved");
@@ -329,7 +329,7 @@ test.describe("a family reads it (the student side)", () => {
     await rowOf(page, subject).click();
     await expect(cardWith(page, noteTitle)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(`Draft ${stamp}`)).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /New lesson|Add topic|Enrol/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /new lesson|add topic|enrol/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Edit/ })).toHaveCount(0);
     await expect(tabOf(page, /Students/)).toHaveCount(0); // the roster is a tutor's tool
     // The reading view has a worksheet shelf; still no edit / delete.
@@ -378,7 +378,7 @@ test.describe("a staff member authors too", () => {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(rowOf(page, staffSubject)).toBeVisible({ timeout: 20_000 });
     await rowOf(page, staffSubject).click();
-    await page.getByRole("button", { name: /New lesson/ }).first().click();
+    await page.getByRole("button", { name: /new lesson/i }).first().click();
     await page.getByLabel("Title", { exact: true }).fill(staffNote);
     await page.getByTestId("sb-add-block").click();
     await page.getByTestId("sb-add-text").click();

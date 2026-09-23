@@ -50,7 +50,7 @@ async function openNewLesson(page: Page) {
   await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
   await tabOf(page, /^Lessons/).click();
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: /New lesson/ }).first().click();
+  await page.getByRole("button", { name: /new lesson/i }).first().click();
   await expect(page.locator("#hub-note-title")).toBeVisible({ timeout: 20_000 });
 }
 const listTopics = () => apiFetch<{ id: string; subject: string; topic: string }[]>("/api/learning-hub/topics", token);

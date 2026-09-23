@@ -533,9 +533,11 @@ learningHub.get("/notes", async (req, res) => {
     allowed = new Set([topicId, ...topics.filter((t) => t.parentTopicId === topicId).map((t) => t.id)]);
   }
   const pub = req.query.published === "1" ? true : req.query.published === "0" ? false : null;
-  // `?year=6` (1–13): lessons for that school year — the lesson's own `year`, or a topic whose subtopic is "Year 6" (how the Oak import files them).
-  const yearN = /^\d{1,2}$/.test(String(req.query.year ?? "")) ? Number(req.query.year) : null;
-  const yearTopics = yearN ? new Set(topics.filter((t) => t.subtopic && new RegExp(`^year\\s*${yearN}$`, "i").test(t.subtopic.trim())).map((t) => t.id)) : null;
+  // `?year=6` or `?year=3,4,5,6` (1–13, comma-separated for a key-stage picker): lessons for those school years —
+  // the lesson's own `year`, or a topic whose subtopic is "Year 6" (how the Oak import files them).
+  const yearNs = String(req.query.year ?? "").split(",").map((x) => x.trim()).filter((x) => /^\d{1,2}$/.test(x)).map(Number);
+  const yearSet = yearNs.length ? new Set(yearNs) : null;
+  const yearTopics = yearSet ? new Set(topics.filter((t) => t.subtopic && yearNs.some((y) => new RegExp(`^year\\s*${y}$`, "i").test(t.subtopic!.trim()))).map((t) => t.id)) : null;
   // `?lessons=1`: interactive lessons only (so a page of 40 is 40 lessons, not whatever plain notes sort among them).
   const onlyLessons = req.query.lessons === "1";
   const index = await noteIndex(ctx.tenantId);
@@ -543,7 +545,7 @@ learningHub.get("/notes", async (req, res) => {
   for (const n of index.values()) {
     if (!allowed.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published)) continue;
     if (onlyLessons && !n.isLesson) continue;
-    if (yearN && n.lessonYear !== yearN && !yearTopics!.has(n.topicId)) continue;
+    if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     if (pub !== null && ctx.canEdit && n.published !== pub) continue;
     if (ids && !ids.has(n.id)) continue;
     if (needle && !n.search.includes(needle)) continue;
@@ -579,11 +581,16 @@ learningHub.get("/notes/counts", async (req, res) => {
   if (!ctx) return;
   const topics = await visibleTopics(ctx);
   const visible = new Set(topics.map((t) => t.id));
+  // `?year=6` or `?year=3,4,5,6`: same year filter GET /notes uses — the sidebar counts should match what the list shows.
+  const yearNs = String(req.query.year ?? "").split(",").map((x) => x.trim()).filter((x) => /^\d{1,2}$/.test(x)).map(Number);
+  const yearSet = yearNs.length ? new Set(yearNs) : null;
+  const yearTopics = yearSet ? new Set(topics.filter((t) => t.subtopic && yearNs.some((y) => new RegExp(`^year\\s*${y}$`, "i").test(t.subtopic!.trim()))).map((t) => t.id)) : null;
   const weekAgo = Date.now() - 7 * 86_400_000;
   const byTopic: Record<string, number> = {};
   let total = 0, drafts = 0, files = 0, fresh = 0;
   for (const n of (await noteIndex(ctx.tenantId)).values()) {
     if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published)) continue;
+    if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     byTopic[n.topicId] = (byTopic[n.topicId] ?? 0) + 1;
     total++; files += n.attachments.length;
     if (!n.published) drafts++;
@@ -659,11 +666,22 @@ async function checkLesson(tenantId: string, lesson: z.infer<typeof lessonBody>)
   const ids = lesson.warmupQuestionIds ?? [];
   if (ids.length) {
     const qs = await questionIndex(tenantId);
-    if (ids.some((id) => !qs.has(id))) return "A warm-up question in this lesson doesn't exist";
+    const missing = ids.filter((id) => !qs.has(id));
+    // The cached tenant-wide index is built from a `.where(tenantId==)` query, which (unlike a direct doc get) isn't
+    // guaranteed to see a document the instant after it was written — a tutor authoring a lesson right after adding
+    // its warm-up questions (this exact flow) can hit that gap. Confirm real absence with a direct read before refusing.
+    if (missing.length) {
+      const snaps = await db.getAll(...missing.filter(okId).map((id) => db.collection("hubQuestions").doc(id)));
+      if (missing.length !== snaps.length || snaps.some((s) => !s.exists || s.get("tenantId") !== tenantId)) return "A warm-up question in this lesson doesn't exist";
+    }
   }
   if (lesson.quizId) {
-    const a = (await assessmentRows(tenantId)).get(lesson.quizId);
-    if (!a) return "The quiz for this lesson doesn't exist";
+    let exists = (await assessmentRows(tenantId)).has(lesson.quizId);
+    if (!exists && okId(lesson.quizId)) {
+      const snap = await db.collection("hubAssessments").doc(lesson.quizId).get();
+      exists = snap.exists && snap.get("tenantId") === tenantId;
+    }
+    if (!exists) return "The quiz for this lesson doesn't exist";
   }
   // A slide deck sent on create / edit gets the SAME picture checks as PATCH (cleanSlideArt + claimSlideImages): the body is
   // passthrough, and `slidesOut` signs every `image.id` it finds — without this a lesson could carry any private image id

@@ -27,17 +27,17 @@ WIDGETS.wordClass = (() => {
   #wc .pen{border:2px solid var(--line);background:#fff;border-radius:99px;padding:8px 14px;font-weight:800;font-size:14px;cursor:pointer;display:flex;gap:7px;align-items:center;transition:transform .15s}
   #wc .pen i{width:14px;height:14px;border-radius:50%;display:inline-block}
   #wc .pen.on{transform:scale(1.07);box-shadow:0 3px 0 var(--line)}
-  #wc .pen.hint{animation:wcp 1.2s 3}@keyframes wcp{50%{box-shadow:0 0 0 6px var(--brand-soft)}}
+  #wc .pen.wch{animation:wcp 1.2s 3}@keyframes wcp{50%{box-shadow:0 0 0 6px var(--brand-soft)}}
   #wc .sent{display:flex;flex-wrap:wrap;gap:8px 6px;padding:16px 8px;font-size:21px;font-weight:700;min-height:90px;align-content:center}
   #wc .w{border:2px solid transparent;background:transparent;font:inherit;color:var(--ink);padding:3px 8px;border-radius:10px;cursor:pointer;transition:background .2s,transform .2s}
   #wc .w:hover{background:var(--brand-soft)}
-  #wc .w.pop{animation:wcpop .35s}@keyframes wcpop{40%{transform:translateY(-8px) scale(1.12)}}
+  #wc .w.wcp{animation:wcpop .35s}@keyframes wcpop{40%{transform:translateY(-8px) scale(1.12)}}
   #wc .w.ok::after{content:" ✓";font-size:13px;color:var(--ok)}#wc .w.no{border-color:var(--bad);border-style:dashed}
   #wc .w.miss{border-color:var(--warn);border-style:dotted}
   #wc .msg{min-height:26px;font-weight:700;margin:6px 0}</style>`;
   const draw = () => {
     const S = BANK[si];
-    root.querySelector(".pal").innerHTML = Object.entries(CL).map(([k, v]) => `<button class="pen${cur === k ? " on" : ""}${focus() === k && !checked ? " hint" : ""}" data-k="${k}" style="border-color:${cur === k ? v[1] : ""}"><i style="background:${v[1]}"></i>${v[0]}</button>`).join("");
+    root.querySelector(".pal").innerHTML = Object.entries(CL).map(([k, v]) => `<button class="pen${cur === k ? " on" : ""}${focus() === k && !checked ? " wch" : ""}" data-k="${k}" style="border-color:${cur === k ? v[1] : ""}"><i style="background:${v[1]}"></i>${v[0]}</button>`).join("");
     root.querySelector(".sent").innerHTML = S.map((x, i) => {
       const p = paint[i], c = p && CL[p], right = x.c && p === x.c, st = c ? `background:${c[2]};border-color:${c[1]};color:${c[1]}` : "";
       let cls = "w"; if (checked) cls += p ? (p === x.c ? " ok" : " no") : (x.c ? " miss" : "");
@@ -46,14 +46,14 @@ WIDGETS.wordClass = (() => {
     root.querySelectorAll(".pen").forEach(b => b.onclick = () => { cur = b.dataset.k; draw(); });
     root.querySelectorAll(".w").forEach(b => b.onclick = () => {
       if (checked) return; const i = +b.dataset.i; paint[i] = paint[i] === cur ? "" : cur; draw();
-      const nb = root.querySelector(`.w[data-i="${i}"]`); nb.classList.add("pop");
+      const nb = root.querySelector(`.w[data-i="${i}"]`); nb.classList.add("wcp");
     });
   };
   const check = () => {
     const S = BANK[si]; checked = true; draw();
     const tot = S.filter(x => x.c).length, good = S.filter((x, i) => x.c && paint[i] === x.c).length, bad = S.filter((x, i) => paint[i] && paint[i] !== x.c).length;
     const m = root.querySelector(".msg");
-    if (good === tot && !bad) { m.innerHTML = `<span style="color:var(--ok)">Perfect. All ${tot} words sorted!</span>`; addXP(4); done++; root.querySelectorAll(".w.ok").forEach((b, n) => setTimeout(() => b.classList.add("pop"), n * 90)); }
+    if (good === tot && !bad) { m.innerHTML = `<span style="color:var(--ok)">Perfect. All ${tot} words sorted!</span>`; addXP(4); done++; root.querySelectorAll(".w.ok").forEach((b, n) => setTimeout(() => b.classList.add("wcp"), n * 90)); }
     else m.innerHTML = `<span style="color:var(--warn)">${good} of ${tot} right${bad ? `, ${bad} painted wrongly (dashed)` : ""}. Dotted words were missed. Try again or move on.</span>`;
     root.querySelector(".chk").style.display = "none"; root.querySelector(".nxt").style.display = "";
   };

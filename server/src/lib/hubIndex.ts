@@ -69,8 +69,13 @@ export async function shardedTenantRead(col: FirebaseFirestore.CollectionReferen
 
 // ── topics ───────────────────────────────────────────────────────────────────
 export type TopicRow = TopicDoc & { id: string };
+// A single `where tenantId ==` stream (no `swr`, a 60s TTL) was fine for a ~700-topic tenant, but blocks the request
+// outright once the TTL lapses — and every hub request goes through `visibleTopics()` → here. At real-tenant scale
+// (2,400+ topics) under Firestore contention (a concurrent bulk import) that stream spiked past 30s. Sharded (like
+// the other big indexes) + `swr` so a request never blocks on a rebuild once the first one has landed, and `disk` so
+// a process restart doesn't either.
 export const tenantTopics = (tenantId: string): Promise<TopicRow[]> =>
-  hubCached("topics", tenantId, "", TTL_TOPICS, async () => (await topicsCol.where("tenantId", "==", tenantId).get()).docs.map((d) => ({ id: d.id, ...(d.data() as TopicDoc) })), { swr: true });
+  hubCached("topics", tenantId, "", TTL_TOPICS, async () => (await shardedTenantRead(topicsCol, tenantId, null)).map((d) => ({ id: d.id, ...(d.data() as TopicDoc) })), { swr: true, disk: true });
 
 export const patchTopic = (tenantId: string, row: TopicRow | { id: string; deleted: true }) =>
   patchHub<TopicRow[]>("topics", tenantId, (list) => {
@@ -96,7 +101,7 @@ export const questionIndex = (tenantId: string): Promise<Map<string, QRow>> =>
   hubCached("questions", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(questionsCol, tenantId, [...Q_FIELDS]);
     return new Map(docs.map((d) => [d.id, qRow(d.id, d.data() as Partial<QuestionDoc>)] as const));
-  }, { swr: true });
+  }, { swr: true, disk: true });
 export const patchQuestion = (tenantId: string, id: string, doc: Partial<QuestionDoc> | null) =>
   patchHub<Map<string, QRow>>("questions", tenantId, (m) => { if (doc) m.set(id, qRow(id, doc)); else m.delete(id); });
 
@@ -153,7 +158,7 @@ export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> =>
       if (bodies.has(d.id)) data.body = bodies.get(d.id);
       return [d.id, noteRow(d.id, data)] as const;
     }));
-  }, { swr: true });
+  }, { swr: true, disk: true });
 export const patchNote = (tenantId: string, id: string, doc: NoteDocLike | null) =>
   patchHub<Map<string, NoteRow>>("notes", tenantId, (m) => { if (doc) m.set(id, noteRow(id, doc)); else m.delete(id); });
 
@@ -163,7 +168,7 @@ export const assessmentRows = (tenantId: string): Promise<Map<string, AsmRow>> =
   hubCached("assessments", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(assessmentsCol, tenantId, null);
     return new Map(docs.map((d) => [d.id, { id: d.id, ...(d.data() as AssessmentDoc) }] as const));
-  }, { swr: true });
+  }, { swr: true, disk: true });
 export const patchAssessment = (tenantId: string, id: string, doc: AssessmentDoc | null) =>
   patchHub<Map<string, AsmRow>>("assessments", tenantId, (m) => { if (doc) m.set(id, { id, ...doc }); else m.delete(id); });
 
@@ -188,7 +193,7 @@ export const cardIndex = (tenantId: string): Promise<Map<string, CardRow>> =>
   hubCached("cards", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(flashcardsCol, tenantId, ["topicId", "franchiseId", "published", "createdAt"]);
     return new Map(docs.map((d) => [d.id, { id: d.id, topicId: d.get("topicId") as string, franchiseId: (d.get("franchiseId") as string | null) ?? null, published: d.get("published") !== false, createdAt: (d.get("createdAt") as string) ?? "" }] as const));
-  }, { swr: true });
+  }, { swr: true, disk: true });
 export const patchCard = (tenantId: string, id: string, doc: { topicId?: string; franchiseId?: string | null; published?: boolean; createdAt?: string } | null) =>
   patchHub<Map<string, CardRow>>("cards", tenantId, (m) => {
     if (!doc) { m.delete(id); return; }

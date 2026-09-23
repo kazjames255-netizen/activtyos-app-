@@ -19,11 +19,11 @@ export default function register(H: LegacyHelpers) {
   const simple=v=>{ const n=v.length; for(let i=0;i<n;i++) for(let j=i+2;j<n;j++){ if(i===0&&j===n-1) continue; if(seg(v[i],v[(i+1)%n],[v[j],v[(j+1)%n]])) return false; } return true; };
   WIDGETS.angleExplorer={title:"Explore angles",intro:"Drag a ray or a corner and read the angle. What always stays the same?",
   html(){ return `<div class="explore" id="anw"><div class="row" style="justify-content:center;margin-bottom:8px" id="anm">${Object.keys(MODES).map(k=>`<button class="btn ghost pr fk" data-m="${k}">${MODES[k]}</button>`).join("")}</div>
-    <svg id="ans" viewBox="0 0 360 360" role="img" aria-label="Angle explorer" style="touch-action:none;max-width:420px;margin:0 auto;user-select:none"><g id="and"></g></svg>
+    <svg id="anvs" viewBox="0 0 360 360" role="img" aria-label="Angle explorer" style="touch-action:none;max-width:420px;margin:0 auto;user-select:none"><g id="and"></g></svg>
     <div style="text-align:center;margin:8px 0 2px"><span class="big" id="anbig" style="font-size:40px"></span> <span class="tag" id="antag" style="vertical-align:middle"></span></div>
     <p class="small" id="ansay" style="text-align:center;margin:4px 0 0"></p></div>`; },
   init(){
-    const svg=$("#ans"), dyn=$("#and"); let mode="measure", th=50, ln=65, pr=[40,150,255], tri=[[70,270],[290,270],[200,90]], quad=[[70,280],[290,280],[260,100],[110,140]], drag=null, mv=0;
+    const svg=$("#anvs"), dyn=$("#and"); let mode="measure", th=50, ln=65, pr=[40,150,255], tri=[[70,270],[290,270],[200,90]], quad=[[70,280],[290,280],[260,100],[110,140]], drag=null, mv=0;
     const ang=(pts)=>{ const n=pts.length; let ar=0; pts.forEach((p,i)=>{ const q=pts[(i+1)%n]; ar+=p[0]*(-q[1])-q[0]*(-p[1]); }); const ccw=ar>0, m=x=>((x%360)+360)%360;
       return pts.map((p,i)=>{ const a=pts[(i+1)%n], b=pts[(i+n-1)%n], ta=Math.atan2(p[1]-a[1],a[0]-p[0])/D, tb=Math.atan2(p[1]-b[1],b[0]-p[0])/D; return ccw?{s:ta,v:m(tb-ta)}:{s:tb,v:m(ta-tb)}; }); };
     const ticks=(full)=>{ let h=`<circle cx="${CX}" cy="${CY}" r="${R+22}" fill="#fff" stroke="#cfd8ff"/>`; for(let a=0;a<360;a+=5){ if(!full&&a>180) break; const big=a%30===0, p1=pol(a,R+(big?8:a%10===0?12:15)), p2=pol(a,R+20); h+=`<line x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}" stroke="#7b83a3" stroke-width="${big?1.6:1}"/>`; if(a%30===0){ const t=pol(a,R-4); h+=`<text x="${t[0]}" y="${t[1]+3.5}" font-size="9" font-weight="800" fill="#7b83a3" text-anchor="middle">${a}</text>`; } } return h; };

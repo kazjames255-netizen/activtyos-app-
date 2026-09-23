@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, FieldLabel, Input, Select, inputCls } from "@/components/ui";
+import { Button, FieldLabel, Input, inputCls } from "@/components/ui";
 import { del, get, post, put } from "@/lib/api";
 import { renderMarkdown } from "@/lib/markdown";
 import type { HubSettings } from "@/lib/hubConfig";
@@ -10,16 +10,21 @@ import { ConfirmButton, EmptyState, FOCUS, Icon, SkeletonRows, SubjectChip, Swit
 import { lessonHomeworkIntent, useOpenLessonRequest } from "./hubIntent";
 import { NewTopicInline, useTopicsWithNew } from "./NewTopicInline";
 import { TopicPicker } from "./TopicPicker";
+import { YearGroupPicker } from "./YearGroupPicker";
 import { SlideBuilder, finishSlides, newSlide, slidesToText } from "./lesson/builder/SlideBuilder";
 import { normalizeSlides, type Slide } from "./lesson/slides/types";
 import { LessonPlayer } from "./lesson/LessonPlayer";
 import type { LessonRaw } from "./lesson/types";
-import { TeachInPersonButton } from "./inperson/TeachInPersonButton";
+import { GoLivePicker } from "./inperson/GoLivePicker";
+import { SessionRunner } from "./inperson/InPersonApp";
+import type { IpSession } from "./inperson/api";
+import { StartRemoteSyncButton } from "./remotesync/StartRemoteSyncButton";
+import { JoinRemoteSyncBanner } from "./remotesync/JoinRemoteSyncBanner";
 import { closeLink, openLink, useLinkOpen } from "./family/link";
 import { LessonTutorPanel } from "./lesson/LessonTutorPanel";
 import { stripPlanSection } from "./lesson/plan";
 import { SubjectCover, SubjectTile } from "./subjectArt";
-import { canChangeRow, errMsg, fmtDate, fmtSize, readMins, topicLabel, type Attachment, type HubFilter, type Note, type NoteLite, type Topic, type VideoInput } from "./types";
+import { canChangeRow, errMsg, fmtDate, fmtSize, readMins, topicLabel, type Attachment, type HubFilter, type Note, type NoteLite, type Student, type Topic, type VideoInput } from "./types";
 import { VideoChip, VideoEditor, VideoEmbeds, videoPayload, videosToInputs } from "./videoKit";
 
 // Lessons & resource library (hubNotes; the UI calls them "Lessons") — browsable by TOPIC (the sidebar filter),
@@ -68,6 +73,9 @@ interface Props {
   /** Shell focus mode while a pupil is inside a lesson. */
   setFocus?: (on: boolean, opts?: { bare?: boolean }) => void;
   goTo?: (key: "flashcards" | "homework") => void;
+  /** The Lessons tab's year-group filter — lifted to the hub shell so the sidebar's counts stay in sync with it too. */
+  years: number[];
+  onYearsChange: (y: number[]) => void;
 }
 
 type Draft = { id: string | null; topicId: string; title: string; body: string; published: boolean; attachments: { id: string; name: string; size: number; contentType?: string }[]; videos: VideoInput[]; /** Editing an interactive lesson (its structured part is untouched by this editor). */ isLesson?: boolean;
@@ -101,7 +109,7 @@ function FileTile({ a }: { a: Attachment }) {
   );
 }
 
-export function NotesPanel({ topics: topicsProp, version, listQs, covered, filter, canEdit, readOnly = false, franchiseId = null, qs, onChanged, onError, onAddTopic, onDirtyChange, onClearFilter, active = true, childId = null, config, setFocus, goTo }: Props) {
+export function NotesPanel({ topics: topicsProp, version, listQs, covered, filter, canEdit, readOnly = false, franchiseId = null, qs, onChanged, onError, onAddTopic, onDirtyChange, onClearFilter, active = true, childId = null, config, setFocus, goTo, years, onYearsChange }: Props) {
   // `canEdit` = tutor mode (a view-only staff member is in it too — the screens are the tutor's); `mayAuthor` = may also WRITE.
   const mayAuthor = canEdit && !readOnly;
   // Topics created inline ("+ New subject / topic") show up at once, before the realtime refetch lands.
@@ -114,6 +122,12 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
   const [preview, setPreview] = useState(false);
   const [reading, setReading] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
+  // "Teach in person" from the tutor's own preview: click "Start the lesson" → pick who's here → the SAME LessonPlayer
+  // goes live (see GoLivePicker / inperson/SessionRunner). `goingLive` is the inline "who's here?" step; once a
+  // session exists, `ipSession` swaps the preview into the real in-person run.
+  const [goingLive, setGoingLive] = useState(false);
+  const [ipSession, setIpSession] = useState<IpSession | null>(null);
+  const [ipRoster, setIpRoster] = useState<Student[]>([]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -156,8 +170,9 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     if (cursor) sp.set("cursor", cursor);
     if (filter.topicId) sp.set("topicId", filter.topicId); else if (filter.subject) sp.set("subject", filter.subject);
     if (dq) sp.set("q", dq);
+    if (years.length) sp.set("year", years.join(","));
     return `/api/learning-hub/notes${listQs}${listQs ? "&" : "?"}${sp.toString()}`;
-  }, [filter.topicId, filter.subject, dq, listQs]);
+  }, [filter.topicId, filter.subject, dq, years, listQs]);
 
   const loadList = useCallback((more: boolean, cursor: string | null = null) => {
     const mine = ++seq.current;
@@ -213,7 +228,7 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
   const openNote = reading && opened?.id === reading ? opened : null;
-  useEffect(() => { setPreviewing(false); }, [reading]);
+  useEffect(() => { setPreviewing(false); setGoingLive(false); setIpSession(null); }, [reading]);
   // Picking a different topic in the sidebar leaves whatever lesson was open: show that topic's list, not the old lesson.
   useEffect(() => { setReading(null); }, [filter.topicId, filter.subject]);
   // A pupil's homework "Start the lesson" opens that lesson here (and Back returns to the homework).
@@ -484,12 +499,51 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     );
   }
   if (openNote?.lesson && config && (!canEdit || previewing)) {
-    // An interactive lesson: pupils play it; a tutor's Preview plays it read-only (nothing started or saved).
+    // An interactive lesson: pupils play it; a tutor's Preview plays it read-only (nothing started or saved) —
+    // unless they've gone live in person (ipSession), in which case the SAME player is now the real thing.
+    const exitPreview = () => { setPreviewing(false); setGoingLive(false); setIpSession(null); };
     return (
       <div id="hub-reader-wrap">
-        <LessonPlayer note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} qs={qs} childQs={listQs} childId={childId} config={config}
-          readOnly={canEdit} setFocus={setFocus} goTo={goTo} onLessonSaved={canChange(openNote) ? (n) => setOpened(n as Note) : undefined} onExit={() => { if (canEdit) setPreviewing(false); else { closeReading(); if (returnTo.current) { returnTo.current = null; goTo?.("homework"); } } }} homeworkId={canEdit ? null : urlLesson.hw} />
-        {((openNote.videos?.length ?? 0) > 0 || openNote.attachments.length > 0) && (
+        {canEdit && (
+          <div className="mb-3">
+            <button type="button" onClick={exitPreview} data-testid="lesson-preview-back" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink)] hover:border-[var(--brand-2)] ${FOCUS}`}>
+              <Icon name="arrowLeft" size={15} /> Back
+            </button>
+          </div>
+        )}
+        {ipSession ? (
+          <SessionRunner key={ipSession.id} qs={qs} config={config} initial={ipSession} roster={ipRoster} goTo={goTo} onClose={exitPreview} />
+        ) : goingLive ? (
+          <GoLivePicker qs={qs} noteId={openNote.id} title={openNote.title} onCancel={() => setGoingLive(false)}
+            onStarted={(session, roster) => { setIpRoster(roster); setIpSession(session); setGoingLive(false); }} />
+        ) : (
+          canEdit ? (
+            <div className="overflow-hidden rounded-2xl border border-[var(--line)] shadow-[var(--shadow-sm)]" data-testid="lesson-mode-card">
+              <LessonPlayer note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} qs={qs} childQs={listQs} childId={childId} config={config}
+                readOnly setFocus={setFocus} goTo={goTo} onLessonSaved={canChange(openNote) ? (n) => setOpened(n as Note) : undefined}
+                onExit={() => setPreviewing(false)} hideStartButton hideHeader startCardClassName="!rounded-b-none !rounded-t-2xl !border-0 !shadow-none" />
+              <div className="grid divide-y divide-[var(--line)] bg-[var(--surface)] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                <div className="flex flex-col p-5">
+                  <span className="mb-2 grid h-11 w-11 place-items-center rounded-full" style={{ background: tint("var(--brand)", 14), color: "var(--brand)" }}><Icon name="users" size={22} /></span>
+                  <h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>One room</h3>
+                  <p className="m-0 mt-1.5 flex-1 text-[14px] leading-relaxed text-[var(--ink-2)]">Best when a child is sat right here with you — you run it together on this screen, and their answers get recorded as you go.</p>
+                  <Button variant="primary" onClick={() => setGoingLive(true)} className="!mt-4 !h-[46px] !w-full !text-[15px]" data-testid="lesson-one-room"><Icon name="play" size={16} /> Start — one room</Button>
+                </div>
+                <div className="flex flex-col p-5">
+                  <span className="mb-2 grid h-11 w-11 place-items-center rounded-full" style={{ background: tint("var(--violet)", 14), color: "var(--violet)" }}><Icon name="play" size={22} /></span>
+                  <h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Share with children</h3>
+                  <p className="m-0 mt-1.5 flex-1 text-[14px] leading-relaxed text-[var(--ink-2)]">Best when each child has their own device — they follow along and answer for themselves, wherever they are.</p>
+                  <StartRemoteSyncButton qs={qs} config={config} noteId={openNote.id} title={openNote.title} testId="lesson-start-remote-sync" variant="solid" className="!mt-4 !h-[46px] !w-full !justify-center !text-[15px]" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <LessonPlayer note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} qs={qs} childQs={listQs} childId={childId} config={config}
+              readOnly={false} setFocus={setFocus} goTo={goTo} onLessonSaved={canChange(openNote) ? (n) => setOpened(n as Note) : undefined}
+              onExit={() => { closeReading(); if (returnTo.current) { returnTo.current = null; goTo?.("homework"); } }} homeworkId={urlLesson.hw} />
+          )
+        )}
+        {!ipSession && !goingLive && ((openNote.videos?.length ?? 0) > 0 || openNote.attachments.length > 0) && (
           <div className="mt-4 grid gap-4" data-testid="lesson-extras">
             {(openNote.videos?.length ?? 0) > 0 && <VideoEmbeds videos={openNote.videos} />}
             {openNote.attachments.length > 0 && (
@@ -515,7 +569,7 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
           </button>
           <span className="ml-auto flex flex-wrap items-center gap-1.5">
             <Button onClick={() => window.print()} className="!h-[44px] lg:!h-[40px]"><Icon name="print" size={15} /> Print</Button>
-            {mayAuthor && !!openNote.lesson && <TeachInPersonButton qs={qs} config={config} goTo={goTo} preset={{ noteId: openNote.id }} testId="lesson-teach-in-person" className="!min-h-[44px] lg:!min-h-[40px]" />}
+            {mayAuthor && !!openNote.lesson && <Button variant="primary" onClick={() => setPreviewing(true)} className="!h-[44px] lg:!h-[40px]" data-testid="lesson-open"><Icon name="play" size={15} /> Open</Button>}
             {mayAuthor && goTo && <Button variant="primary" onClick={() => setForChildren(openNote)} className="!h-[44px] lg:!h-[40px]" data-testid="lesson-set-for-children" title="Give this lesson to students or a group, with a due date"><Icon name="homework" size={15} /> Set for children</Button>}
             {canChange(openNote) && <Button onClick={() => startEdit(openNote)} className="!h-[44px] lg:!h-[40px]"><Icon name="edit" size={15} /> Edit</Button>}
             {canChange(openNote) && <ConfirmButton ariaLabel={`Delete ${openNote.title}`} label="Delete" confirmLabel="Confirm delete" disabled={busy} onConfirm={() => remove(openNote.id)} />}
@@ -557,14 +611,16 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
   const searching = q.trim().length > 0;
   return (
     <div id="hub-notes">
+      {!canEdit && <JoinRemoteSyncBanner qs={listQs} childId={childId} config={config} />}
       <div ref={scrollTop} className="mb-4 flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[200px] flex-1 sm:max-w-[340px]">
           <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search lessons…" aria-label="Search lessons" className={`!min-h-[44px] w-full !rounded-full !pl-9 ${FOCUS}`} />
         </div>
+        <YearGroupPicker years={years} onChange={onYearsChange} />
         {/* No "0 lessons" while the list is still loading — say so instead. */}
         <span className="text-[12.5px] font-semibold text-[var(--ink-2)]" aria-live="polite">{loaded ? `${total} ${total === 1 ? "lesson" : "lessons"}` : "Loading…"}</span>
-        {mayAuthor && !noTopics && <span className="ml-auto flex flex-wrap items-center gap-2"><TeachInPersonButton qs={qs} config={config} goTo={goTo} variant="outline" testId="lessons-teach-in-person" /><Button variant="primary" className="!h-[44px] !px-5" onClick={startNew}><Icon name="plus" size={16} /> New lesson</Button></span>}
+        {mayAuthor && !noTopics && <span className="ml-auto flex flex-wrap items-center gap-2"><Button variant="primary" className="!h-[44px] !px-5" onClick={startNew}><Icon name="plus" size={16} /> Create new lesson</Button></span>}
       </div>
 
       {!loaded && groups.length === 0 && !noTopics && <SkeletonRows rows={3} label="Loading lessons" variant="card" grid />}
@@ -638,7 +694,7 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
                         </div>
                         <div className="mt-auto flex flex-wrap items-center gap-x-2.5 gap-y-1.5 pt-3 text-[11.5px] font-semibold text-[var(--ink-2)]">
                           {n.kind === "board" && <span data-testid="board-snapshot-pill" className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--gold)", 16), color: "var(--brand-ink)" }}><Icon name="image" size={12} />Board snapshot</span>}
-                          {n.isLesson && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--violet)", 12), color: "var(--violet)" }}><Icon name="sparkle" size={12} />Interactive</span>}
+                          {n.isLesson && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--violet)", 12), color: "var(--violet)" }}><Icon name="sparkle" size={12} />View</span>}
                           <VideoChip count={n.videos?.length ?? 0} />
                           {mins > 0 && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint(color, 12), color: subjectInk(t?.subject ?? "") }}><Icon name="notes" size={12} />{mins} min read</span>}
                           <span>{n.createdByName || "Your tutor"}</span>
