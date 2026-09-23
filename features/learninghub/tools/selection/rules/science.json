@@ -107,7 +107,7 @@
    "weight": 0.95,
    "any": [
     "\\bcalculat\\w+",
-    "\\b\\w\\s?=\\s?\\w\\s?[\u00d7x*/\u00f7]\\s?\\w",
+    "\\b\\w\\s?=\\s?\\w\\s?[×x*/÷]\\s?\\w",
     "\\bformula\\b",
     "\\brearrang\\w+",
     "\\bequations?\\b.{0,20}\\b(motion|energy|power|speed|force|pressure)",
@@ -363,7 +363,7 @@
     "\\btest(ing)?\\b.{0,30}\\b(idea|question|which)",
     "\\bidentify (and )?(carry|scientific)",
     "\\bpattern seeking|comparative|observation over time",
-    "\\bhazards?\\b|\\brisk\\b",
+    "\\bhazards?\\b|\\brisk assess\\w+",
     "\\bwhat happens\\b",
     "\\benquir\\w+",
     "\\bfind out\\b",
@@ -412,7 +412,8 @@
     "\\bquadrat|\\btransect|\\bsampling\\b"
    ],
    "none": [
-    "\\bfood (tests?|groups?|labels?)"
+    "\\bfood (tests?|groups?|labels?)",
+    "\\bbiological molecules"
    ],
    "programme": "^biology|combined|science-",
    "subject": [
@@ -495,6 +496,9 @@
    "programme": "^chemistry|^physics|combined|science-",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bwastewater|\\bsewage"
    ]
   },
   {
@@ -697,7 +701,9 @@
     "\\bcompounds?\\b|\\bmetals?\\b",
     "\\breactivity\\b",
     "\\bcarbon\\b",
-    "\\bthe atmosphere"
+    "\\bthe atmosphere",
+    "\\bsalts?\\b",
+    "\\bionic compounds?"
    ],
    "programme": "^chemistry|combined|science-",
    "subject": [
@@ -724,10 +730,13 @@
     "\\bradioactiv\\w+|\\bhalf-life",
     "\\bnuclear (fission|fusion|equations?|power|radiation)",
     "\\bplum pudding|rutherford|bohr|model of the atom",
-    "\\balpha|beta|gamma\\b|\\bionising"
+    "\\balpha|beta|gamma\\b|\\bionising",
+    "\\bsalts?\\b",
+    "\\bionic (compounds?|lattice)"
    ],
    "none": [
-    "\\bion channel"
+    "\\bion channel",
+    "\\buses? of (radiation|radioactiv)"
    ],
    "programme": "^chemistry|^physics|combined|science-secondary",
    "subject": [
@@ -749,6 +758,9 @@
    "programme": "^chemistry|^physics|combined|science-secondary",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\buses? of (radiation|radioactiv)"
    ]
   },
   {
@@ -776,7 +788,8 @@
     "\\bnutrients?\\b"
    ],
    "none": [
-    "\\bnon-?statutory.{0,5}$"
+    "\\bnon-?statutory.{0,5}$",
+    "\\bwastewater|\\bsewage"
    ],
    "programme": "^science-|^chemistry|combined",
    "subject": [
@@ -962,7 +975,6 @@
    "any": [
     "\\bheart rate|\\bpulse\\b",
     "\\bbreath\\w*|\\brespirat\\w+|ventilat\\w+",
-    "\\bexercis\\w+|\\bfitness\\b",
     "\\bblood\\b",
     "\\bcirculat\\w+",
     "\\bcardiac|\\bcardiovascular",
@@ -976,12 +988,19 @@
    "programme": "^biology|combined|science-",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bnon-?communicable",
+    "\\brisk factors?",
+    "\\bobesity",
+    "\\bimbalanced",
+    "\\bplant diseases?"
    ]
   },
   {
    "id": "science.S-20.2",
    "tool": "S-20",
-   "weight": 0.55,
+   "weight": 0.4,
    "any": [
     "\\bhealthy\\b|\\bhealth\\b|\\bdiet\\b|\\bnutri\\w+|\\bvitamins?",
     "\\bdrugs?\\b|\\balcohol|\\bsmok\\w+|\\bcaffeine|\\btobacco",
@@ -992,6 +1011,14 @@
    "programme": "^biology|combined|science-",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bnon-?communicable",
+    "\\brisk factors?",
+    "\\bobesity",
+    "\\bimbalanced",
+    "\\bplant diseases?",
+    "\\bexercise\\b"
    ]
   },
   {
@@ -1114,7 +1141,6 @@
    "weight": 1,
    "any": [
     "\\bbody systems?|\\borgan systems?",
-    "\\borgans?\\b",
     "\\bdigest\\w+|\\bexcret\\w+",
     "\\bheart\\b|\\blungs?\\b|\\bstomach|\\bintestine|\\bliver|\\bkidneys?\\b|\\bbrain\\b",
     "\\bhuman body",
@@ -1122,11 +1148,20 @@
     "\\bexchange surfaces|\\bgas exchange|\\balveoli|\\bvilli",
     "\\btissues?\\b",
     "\\breproductive (system|organs)",
-    "\\bplant (organs|tissues|systems)|\\bxylem|\\bphloem|\\btransport in"
+    "\\bplant (organs|tissues|systems)|\\bxylem|\\bphloem|\\btransport in",
+    "\\borgans? (of|in) the (human )?body|\\borgans\\b.{0,20}\\b(function|system|structure)",
+    "\\binsulin|\\bglucagon|\\bblood (sugar|glucose)"
    ],
    "programme": "^biology|combined|science-",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bnon-?communicable",
+    "\\brisk factors?",
+    "\\bobesity",
+    "\\bimbalanced",
+    "\\bplant diseases?"
    ]
   },
   {
@@ -1141,6 +1176,14 @@
    "programme": "^biology|combined|science-",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bnon-?communicable",
+    "\\brisk factors?",
+    "\\bobesity",
+    "\\bimbalanced",
+    "\\bplant diseases?",
+    "\\bexercise\\b"
    ]
   },
   {
@@ -1185,11 +1228,14 @@
     "\\binstrumental|\\bspectroscop\\w+|\\bspectrometry",
     "\\bcarbon dioxide.{0,30}(limewater|test)|limewater",
     "\\bion (test|identification)|\\bsulfate|\\bhalide|\\bcarbonate\\b.{0,20}\\btest",
-    "\\bbiological molecules|\\bgases\\b.{0,40}\\btest|\\btests?\\b.{0,25}\\bgas(es)?\\b|\\bbenedict|\\biodine|\\bbiuret|\\bfood tests?"
+    "\\bbiological molecules.{0,40}\\btests?|\\btests? .{0,15}biological molecules|\\bgases\\b.{0,40}\\btest|\\btests?\\b.{0,25}\\bgas(es)?\\b|\\bbenedict|\\biodine|\\bbiuret|\\bfood tests?"
    ],
    "programme": "^chemistry|combined|^biology|science-secondary",
    "subject": [
     "science"
+   ],
+   "none": [
+    "\\bwastewater|\\bsewage"
    ]
   },
   {
@@ -1324,6 +1370,34 @@
    "any": [
     "\\bresults\\b|\\bdata\\b|\\bobservations?\\b|\\btable\\b|\\bmeasure\\w*|\\brecord\\w*|\\bfrequency\\b|\\bcollect\\w*"
    ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-02.5",
+   "tool": "S-02",
+   "weight": 0.8,
+   "any": [
+    "\\brate of .{0,30}(enzyme|reaction|photosynthesis)",
+    "\\benzymes?\\b.{0,50}\\b(rate|temperature|concentration|ph)\\b",
+    "\\b(substrate|enzyme) concentration"
+   ],
+   "programme": "^biology|combined|^chemistry",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-05.3",
+   "tool": "S-05",
+   "weight": 0.8,
+   "any": [
+    "\\b(aerobic|anaerobic|cellular) respiration",
+    "\\brespiration\\b.{0,30}\\bequation",
+    "\\bphotosynthesis\\b.{0,30}\\bequation"
+   ],
+   "programme": "^biology|combined|science-secondary",
    "subject": [
     "science"
    ]

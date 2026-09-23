@@ -1,0 +1,490 @@
+[
+ {
+  "t": "Understanding the historical context of 'Oliver Twist'",
+  "s": "english",
+  "y": 8,
+  "u": "oliver twist",
+  "o": "I can explain the Victorian context of the novel.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Background to the poem 'Ozymandias'",
+  "s": "english",
+  "y": 9,
+  "u": "poetry",
+  "o": "I can find out the background to the poem.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Reflecting on my reading in Year 6",
+  "s": "english",
+  "y": 6,
+  "u": "reading for pleasure",
+  "o": "I can reflect on the books I have read.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Choosing books: my reading preferences",
+  "s": "english",
+  "y": 4,
+  "u": "reading for pleasure",
+  "o": "I can talk about the kinds of books I prefer.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "The social context of 'An Inspector Calls'",
+  "s": "english",
+  "y": 10,
+  "u": "modern text",
+  "o": "I can explain the social context of the play.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Building background knowledge about the Second World War before reading 'Goodnight Mister Tom'",
+  "s": "english",
+  "y": 6,
+  "u": "goodnight mister tom",
+  "o": "I can use what I know about evacuation to understand the story.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-01",
+   "E-16"
+  ],
+  "not": [
+   "N-06",
+   "N-08",
+   "E-04",
+   "E-05"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Planning the climax of my adventure story",
+  "s": "english",
+  "y": 5,
+  "u": "adventure stories",
+  "o": "I can plan the climax of my story.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Writing the opening of a mystery story",
+  "s": "english",
+  "y": 6,
+  "u": "mystery narrative",
+  "o": "I can write an opening that hooks the reader.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Investigating the clues in 'The Hound of the Baskervilles'",
+  "s": "english",
+  "y": 7,
+  "u": "gothic and detective fiction",
+  "o": "I can make inferences about the crime using clues.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-16",
+   "E-03",
+   "E-01"
+  ],
+  "not": [
+   "N-06"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Who is the culprit? Deducing from evidence in a short story",
+  "s": "english",
+  "y": 8,
+  "u": "detective short stories",
+  "o": "I can use evidence to deduce who committed the crime.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-16",
+   "E-03",
+   "E-01"
+  ],
+  "not": [
+   "N-06"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Analysing the rhetorical techniques in Martin Luther King's speech",
+  "s": "english",
+  "y": 9,
+  "u": "speeches",
+  "o": "I can analyse how the speaker persuades the audience.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01",
+   "E-02"
+  ],
+  "not": [
+   "N-08"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Writing a persuasive speech about school uniform",
+  "s": "english",
+  "y": 8,
+  "u": "persuasive writing",
+  "o": "I can write a speech using persuasive techniques.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08",
+   "E-06"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Writing a newspaper report about a flood",
+  "s": "english",
+  "y": 5,
+  "u": "newspaper reports",
+  "o": "I can write a report using the features of a newspaper.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Writing an introduction to a discussion essay",
+  "s": "english",
+  "y": 6,
+  "u": "discussion writing",
+  "o": "I can write an introduction to an essay.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-05",
+   "E-04"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Structuring the second main paragraph of an essay",
+  "s": "english",
+  "y": 5,
+  "u": "discussion writing",
+  "o": "I can structure a paragraph of an essay.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-04",
+   "E-05"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Writing a point-evidence-explain paragraph about Macbeth",
+  "s": "english",
+  "y": 10,
+  "u": "macbeth",
+  "o": "I can write an analytical paragraph.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-04"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Why exercise matters for a healthy lifestyle",
+  "s": "science",
+  "y": 3,
+  "u": "health",
+  "o": "I can explain why exercise is important.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-15",
+   "S-07",
+   "X-12",
+   "X-16"
+  ],
+  "not": [
+   "S-20",
+   "S-25"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Lifestyle risk factors for heart disease",
+  "s": "science",
+  "y": 10,
+  "u": "health and disease",
+  "o": "I can describe risk factors for disease.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-07",
+   "S-15",
+   "X-12",
+   "X-16"
+  ],
+  "not": [
+   "S-20",
+   "S-25"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Sexually transmitted infections and prevention",
+  "s": "science",
+  "y": 9,
+  "u": "health",
+  "o": "I can describe how infections spread.",
+  "p": "science-secondary-ks3",
+  "expect": [
+   "S-07",
+   "S-15",
+   "X-12",
+   "X-16"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Ionic compounds and their formulae",
+  "s": "science",
+  "y": 10,
+  "u": "bonding",
+  "o": "I can work out the formula of an ionic compound.",
+  "p": "chemistry-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-14",
+   "S-13"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Making soluble salts from an acid and a base",
+  "s": "science",
+  "y": 10,
+  "u": "chemical changes",
+  "o": "I can name the salt made from an acid.",
+  "p": "chemistry-secondary-ks4-higher-aqa",
+  "expect": [
+   "S-05",
+   "S-14",
+   "S-13"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "The effect of pH on enzyme rate: reading the graph",
+  "s": "science",
+  "y": 10,
+  "u": "enzymes",
+  "o": "I can interpret a graph of enzyme rate against pH.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-02"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "The equation for aerobic respiration",
+  "s": "science",
+  "y": 10,
+  "u": "respiration",
+  "o": "I can write the word and symbol equation for aerobic respiration.",
+  "p": "biology-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-05"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Uses of radiation in medicine",
+  "s": "science",
+  "y": 11,
+  "u": "radioactivity",
+  "o": "I can describe uses of radiation.",
+  "p": "physics-secondary-ks4-foundation-aqa",
+  "expect": [
+   "S-04",
+   "S-07",
+   "X-12",
+   "X-16",
+   "S-15"
+  ],
+  "not": [
+   "S-14"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Adding and subtracting parallel vectors",
+  "s": "maths",
+  "y": 11,
+  "u": "vectors",
+  "o": "I can write one vector as a multiple of another.",
+  "p": "maths-secondary-ks4-higher-aqa",
+  "expect": [
+   "M-25",
+   "M-50",
+   "M-52",
+   "M-23",
+   "M-40",
+   "M-61"
+  ],
+  "not": [
+   "M-21"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Plotting coordinates in four quadrants",
+  "s": "maths",
+  "y": 7,
+  "u": "coordinates",
+  "o": "I can plot points in all four quadrants.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-21"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "What we do: 'jugamos' and 'jugáis' intonation",
+  "s": "languages",
+  "y": 4,
+  "u": "spanish ks2",
+  "o": "I can say how we play.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-07",
+   "L-05",
+   "L-09",
+   "L-16"
+  ],
+  "not": [
+   "L-03",
+   "L-08"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Going to the shops: 'al' and 'a la'",
+  "s": "languages",
+  "y": 6,
+  "u": "spanish ks2",
+  "o": "I can say where I am going.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-05",
+   "L-07",
+   "L-09",
+   "L-16"
+  ],
+  "not": [
+   "L-03",
+   "L-08"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Numbers to 31 and birthdays",
+  "s": "languages",
+  "y": 5,
+  "u": "spanish ks2",
+  "o": "I can say the date of my birthday.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-16",
+   "L-05"
+  ],
+  "not": [
+   "L-03",
+   "L-08"
+  ],
+  "note": "tighten (self-labelled)"
+ },
+ {
+  "t": "Reading aloud: the perfect tense with 'avoir'",
+  "s": "languages",
+  "y": 10,
+  "u": "perfect tense",
+  "o": "I can read aloud with good pronunciation.",
+  "p": "french-secondary-ks4-higher-aqa",
+  "expect": [
+   "L-08",
+   "L-03"
+  ],
+  "not": [],
+  "note": "tighten (self-labelled)"
+ }
+]

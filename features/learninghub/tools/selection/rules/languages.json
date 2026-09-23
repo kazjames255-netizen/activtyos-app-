@@ -13,6 +13,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -28,6 +32,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -39,6 +47,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -129,7 +141,8 @@
    "tool": "L-07",
    "weight": 0.9,
    "any": [
-    "\\b(sounds?|pronunciation|pronounce|phonics|silent|liaison|vowels?|consonants?|alphabet|SSCs?|sound-symbol|umlaut|nasal|accents?)\\b"
+    "\\b(sounds?|pronunciation|pronounce|phonics|silent|liaison|vowels?|consonants?|alphabet|SSCs?|sound-symbol|umlaut|nasal|accents?)\\b",
+    "intonation"
    ],
    "none": [
     "\\bsounds? like\\b"
@@ -165,6 +178,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -662,6 +679,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -720,6 +741,10 @@
    ],
    "subject": [
     "languages"
+   ],
+   "years": [
+    7,
+    13
    ]
   },
   {
@@ -753,6 +778,41 @@
    "weight": 0.24,
    "any": [
     "."
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-05.4",
+   "tool": "L-05",
+   "weight": 0.65,
+   "any": [
+    "\\bverbs?\\b",
+    "-(er|ar|ir|re)\\b",
+    "['‘’][^'‘’]{1,20}['‘’]",
+    "\\bhave\\b",
+    "\\bpersons?\\b"
+   ],
+   "years": [
+    3,
+    6
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-07.3",
+   "tool": "L-07",
+   "weight": 0.55,
+   "any": [
+    "['‘’][^'‘’]{1,20}['‘’]",
+    "\\bintonation\\b"
+   ],
+   "years": [
+    3,
+    6
    ],
    "subject": [
     "languages"

@@ -355,6 +355,10 @@
    ],
    "subject": [
     "maths"
+   ],
+   "none": [
+    "\\bparallel\\b",
+    "\\bpositions? vectors?\\b(?!x)x"
    ]
   },
   {

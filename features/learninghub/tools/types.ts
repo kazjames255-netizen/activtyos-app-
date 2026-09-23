@@ -15,9 +15,9 @@ export type ToolStatus = "live" | "building" | "soon";
 export type ToolImpl =
   | { kind: "drawer"; id: HelpToolId }                  // an existing Tools-drawer tool (remotesync/HelpTools.tsx), hosted unchanged
   | { kind: "widget"; id: string }                      // an existing lesson "Explore" widget (lesson/widgets)
-  | { kind: "native"; load: () => Promise<{ default: ComponentType<ToolProps> }> }; // a tool built on the engine
+  | { kind: "native"; load: () => Promise<{ default: ComponentType<ToolProps> }>; /** Settings for this particular tool (which instruments, which paper, which question types). */ params?: Record<string, unknown> }; // a tool built on the engine
 
-export interface ToolProps { mode: ToolMode; qs: string; onClose?: () => void }
+export interface ToolProps { mode: ToolMode; qs: string; onClose?: () => void; /** From the registry entry's `params`. */ params?: Record<string, unknown>; /** Autosave key (the tool id). */ toolId?: string }
 
 export interface ToolMeta {
   id: string;                 // plan id ("M-01") or "w.<widget>" / "L.<drawer>" for existing tools

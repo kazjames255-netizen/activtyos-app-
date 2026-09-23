@@ -421,7 +421,23 @@
    "none": [
     "non-?chronological",
     "analy[sz]",
-    "\\bsoliloquy"
+    "\\bsoliloquy",
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\binvestigat",
+    "\\binfer",
+    "\\bdeduc",
+    "\\bcomprehen",
+    "\\bretriev",
+    "\\bsummaris",
+    "\\bexplor(e|ing)\\b.{0,30}\\b(text|chapter|extract)",
+    "\\bcharacters?\\b",
+    "\\bwhy\\b",
+    "\\bhow (does|do)\\b",
+    "\\bmotif",
+    "\\bevaluat"
    ],
    "fields": [
     "title",
@@ -443,7 +459,23 @@
     "resolution"
    ],
    "none": [
-    "non-?chronological"
+    "non-?chronological",
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\binvestigat",
+    "\\binfer",
+    "\\bdeduc",
+    "\\bcomprehen",
+    "\\bretriev",
+    "\\bsummaris",
+    "\\bexplor(e|ing)\\b.{0,30}\\b(text|chapter|extract)",
+    "\\bcharacters?\\b",
+    "\\bwhy\\b",
+    "\\bhow (does|do)\\b",
+    "\\bmotif",
+    "\\bevaluat"
    ],
    "fields": [
     "objective"
@@ -540,7 +572,13 @@
     "\\breport(ed)? speech",
     "soliloquy",
     "macbeth",
-    "reporting verb"
+    "reporting verb",
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\bspeech.{0,40}(analy|motif|methods|techniques|devices)",
+    "(analy\\w*|motif|use of|methods|techniques|devices).{0,40}\\bspeech"
    ],
    "fields": [
     "title",
@@ -564,6 +602,14 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\bspeech.{0,40}(analy|motif|methods|techniques|devices)",
+    "(analy\\w*|motif|use of|methods|techniques|devices).{0,40}\\bspeech"
    ]
   },
   {
@@ -586,7 +632,8 @@
    "none": [
     "non-?chronological",
     "\\breport\\b",
-    "\\bletter"
+    "\\bletter",
+    "^(?![\\s\\S]*\\b(essays?|paragraphs?)\\b)[\\s\\S]*\\b(contexts?|background|reflect(ion|ing)?|preferences?)\\b"
    ],
    "years": [
     7,
@@ -698,6 +745,13 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ]
   },
   {
@@ -724,6 +778,13 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ]
   },
   {
@@ -786,6 +847,13 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ]
   },
   {
@@ -813,6 +881,11 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "^(?![\\s\\S]*\\b(essays?|paragraphs?)\\b)[\\s\\S]*\\b(contexts?|background|reflect(ion|ing)?|preferences?)\\b",
+    "\\binvestigat",
+    "\\bdeduc"
    ]
   },
   {
@@ -845,7 +918,12 @@
     "\\bodes?\\b"
    ],
    "none": [
-    "\\bwrite (a|an) (story|letter)"
+    "\\bwrite (a|an) (story|letter)",
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ],
    "fields": [
     "title",
@@ -871,6 +949,13 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ]
   },
   {
@@ -999,6 +1084,13 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontext (of|for)\\b",
+    "\\b(the|historical|social|cultural|authorial) (\\w+ )?contexts?\\b",
+    "\\bbackground\\b",
+    "\\bpreferences?\\b",
+    "\\breflect(ion|ing)?\\b"
    ]
   },
   {
@@ -1280,6 +1372,12 @@
    ],
    "subject": [
     "english"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b"
    ]
   },
   {
@@ -1313,6 +1411,119 @@
    "years": [
     7,
     11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-16.3",
+   "tool": "E-16",
+   "weight": 0.8,
+   "any": [
+    "\\binvestigat",
+    "\\bdeduc",
+    "\\binfer",
+    "plausible explanation",
+    "\\bclues?\\b"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\bparagraphs?\\b",
+    "\\bessay"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-03.2",
+   "tool": "E-03",
+   "weight": 0.8,
+   "any": [
+    "\\binvestigat\\w+.{0,40}\\b(in|of) ['‘’\"]",
+    "\\bevidence\\b.{0,60}['‘’]"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\bparagraphs?\\b",
+    "\\bessay"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-01.4",
+   "tool": "E-01",
+   "weight": 0.85,
+   "any": [
+    "\\bspeech.{0,40}(analy|motif|methods|techniques|devices)",
+    "(analy\\w*|motif|use of|methods|techniques|devices).{0,40}\\bspeech"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-04.2",
+   "tool": "E-04",
+   "weight": 0.8,
+   "any": [
+    "\\bparagraphs?\\b.{0,50}\\bessay",
+    "\\bessay\\b.{0,50}\\bparagraphs?",
+    "\\bmain paragraph"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b"
+   ],
+   "years": [
+    5,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-05.2",
+   "tool": "E-05",
+   "weight": 0.75,
+   "any": [
+    "\\bessay",
+    "\\bintroduction\\b.{0,30}\\bconclusion"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b",
+    "\\bparagraphs?\\b.{0,50}\\bessay"
+   ],
+   "years": [
+    5,
+    6
    ],
    "subject": [
     "english"

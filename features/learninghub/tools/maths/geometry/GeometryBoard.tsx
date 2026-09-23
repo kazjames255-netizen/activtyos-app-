@@ -48,6 +48,8 @@ export interface GeometryBoardProps {
   qs?: string;
   /** Instruments on the desk at the start (ignored once a saved state loads). */
   preset?: InstrKind[];
+  /** Instruments the pupil may add from the bar (default: all eight). */
+  offer?: InstrKind[];
   paper?: PaperKind;
   /** A question to work on (assess/practise). */
   problem?: Problem | null;
@@ -61,11 +63,14 @@ export interface GeometryBoardProps {
   onSubmit?: (a: { number?: number | null; marks: Mark[] }, r: CheckResult) => void;
 }
 
+/** Where a new instrument first lands: fully on the paper, and not on top of the others. */
+const HOME: Record<InstrKind, Pt> = { ruler15: [40, 128], ruler30: [10, 138], straightedge: [30, 122], protractor180: [105, 88], protractor360: [105, 76], compass: [150, 50], setsquare45: [20, 118], setsquare3060: [20, 118] };
+const homeFor = (k: InstrKind, taken: number): Pt => [HOME[k][0] + (taken % 3) * 6, HOME[k][1] - (taken % 3) * 6];
 const newInstr = (k: InstrKind, at: Pt): Instrument => makeInstrument(k, uid("i"), at);
 const inPoly = (poly: readonly Pt[], p: Pt) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i]!, b = poly[j]!; if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
-const stateFrom = (paper: PaperKind, preset: InstrKind[], given: Mark[] = []): GeoState => ({ paper, instruments: preset.map((k, i) => newInstr(k, [24 + i * 8, 100 - i * 6])), marks: given });
+const stateFrom = (paper: PaperKind, preset: InstrKind[], given: Mark[] = []): GeoState => ({ paper, instruments: preset.map((k, i) => newInstr(k, homeFor(k, i))), marks: given });
 
-export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], paper = "plain", problem: problemProp = null, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit }: GeometryBoardProps) {
+export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit }: GeometryBoardProps) {
   const assess = mode === "assess";
   const [problem, setProblem] = useState<Problem | null>(problemProp);
   const [hist, setHist] = useState<History<GeoState>>(() => newHistory(stateFrom(problemProp?.paper ?? paper, preset, problemProp?.given ?? [])));
@@ -191,22 +196,15 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
     const d = dragRef.current;
     if (!d) return;
     const base = hist.present;
-    if (d.k === "move") setLive(patchInstr(d.id, (i) => (i.kind === "compass" ? { ...i, x: d.orig.x + p[0] - d.start[0], y: d.orig.y + p[1] - d.start[1] } : { ...i, x: d.orig.x + p[0] - d.start[0], y: d.orig.y + p[1] - d.start[1] }), base));
-    else if (d.k === "rotate") setLive(patchInstr(d.id, (i) => ({ ...i, rot: round(dirOf([i.x, i.y], p), 1) }), base));
-    else if (d.k === "radius") setLive(patchInstr(d.id, (i) => withRadius({ ...i, pen: round(dirOf([i.x, i.y], p), 1) }, dist([i.x, i.y], p)), base));
-    else if (d.k === "sweep") {
-      const c: Pt = [d.orig.x, d.orig.y], ang = dirOf(c, p);
-      let step = ang - d.last; if (step > 180) step -= 360; if (step < -180) step += 360;
-      const total = Math.max(-360, Math.min(360, d.total + step));
-      setDrag({ ...d, last: ang, total });
-      setLive(patchInstr(d.id, (i) => ({ ...i, pen: ang }), base));
-    } else if (d.k === "pan") {
+    if (d.k === "pan") {
       const svg = svgRef.current!, k = view.w / svg.getBoundingClientRect().width;
       setView((v) => ({ ...v, x: d.view.x - (e.clientX - d.start[0]) * k, y: d.view.y - (e.clientY - d.start[1]) * k }));
-    } else if (d.k === "edge") { const s = drawAlongEdge(d.edge, d.from, p); setDrag({ ...d, from: d.from, to: s.b }); }
-    else if (d.k === "free") setDrag({ ...d, to: p });
-    else if (d.k === "pencil") setDrag({ ...d, pts: [...d.pts, p] });
-    else if (d.k === "two") {
+    } else if (d.k !== "two") {
+      const fx = dragEffect(d, p, base);
+      if (fx.state) setLive(fx.state);
+      if (fx.drag) { dragRef.current = fx.drag; setDrag(fx.drag); }
+    }
+    if (d.k === "two") {
       const [a, b] = d.ids.map((i) => pointers.current.get(i)) as [Pt | undefined, Pt | undefined];
       if (!a || !b) return;
       const delta = dirOf(a, b) - d.a0, c: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], o = rotateAbout([d.orig.x, d.orig.y], d.c0, delta);
@@ -219,25 +217,28 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
     const d = dragRef.current;
     if (!d) return;
     if (d.k === "two" && pointers.current.size > 0) return; // still one finger down — wait for it to lift
-    setDrag(null);
-    const base = live ?? hist.present;
+    setDrag(null); dragRef.current = null;
+    // Finish from the RELEASE position, not from whatever the last render happened to hold (a fast flick can skip the last move event).
+    const release = toWorld(e), fx0 = d.k === "two" || d.k === "pan" ? {} : dragEffect(d, release, hist.present);
+    const dd: Drag = fx0.drag ?? d;
+    const base = fx0.state ?? live ?? hist.present;
     if (d.k === "move" || d.k === "rotate" || d.k === "radius" || d.k === "two") {
       const id = d.k === "two" || d.k === "move" || d.k === "rotate" || d.k === "radius" ? d.id : "";
       const next = patchInstr(id, (i) => settle(i, base), base); setLive(null); setHist((h) => commit(replacePresent(h, hist.present), next)); say_(`${label(base, id)} placed`);
     } else if (d.k === "sweep") {
-      const ins = base.instruments.find((i) => i.id === d.id);
+      const ins = base.instruments.find((i) => i.id === d.id), total = dd.k === "sweep" ? dd.total : d.total;
       setLive(null);
-      if (ins && Math.abs(d.total) > 2) {
-        const a = arcFromSweep([ins.x, ins.y], ins.r ?? 60, d.orig.pen ?? 0, d.total);
+      if (ins && Math.abs(total) > 2) {
+        const a = arcFromSweep([ins.x, ins.y], ins.r ?? 60, d.orig.pen ?? 0, total);
         apply({ ...hist.present, instruments: hist.present.instruments.map((i) => (i.id === d.id ? { ...i, pen: ins.pen } : i)), marks: [...hist.present.marks, { id: uid("m"), k: "arc", ...a }] });
       } else apply({ ...hist.present, instruments: hist.present.instruments.map((i) => (i.id === d.id ? { ...i, pen: ins?.pen ?? i.pen } : i)) });
-    } else if (d.k === "edge") {
-      if (dist(d.from, d.to) >= 1) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "seg", a: [round(d.from[0], 2), round(d.from[1], 2)], b: [round(d.to[0], 2), round(d.to[1], 2)], ruled: true }] });
-    } else if (d.k === "free") {
-      const to = nearestPoint(snapPoints(state.marks), d.to, 3) ?? d.to;
-      if (dist(d.from, to) >= 2) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "seg", a: d.from, b: to, ruled: false }] });
-    } else if (d.k === "pencil") {
-      if (d.pts.length > 2) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "free", pts: d.pts.filter((_, i) => i % 2 === 0 || i === d.pts.length - 1).map((q) => [round(q[0], 1), round(q[1], 1)] as Pt) }] });
+    } else if (d.k === "edge" && dd.k === "edge") {
+      if (dist(dd.from, dd.to) >= 1) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "seg", a: [round(dd.from[0], 2), round(dd.from[1], 2)], b: [round(dd.to[0], 2), round(dd.to[1], 2)], ruled: true }] });
+    } else if (d.k === "free" && dd.k === "free") {
+      const to = nearestPoint(snapPoints(state.marks), dd.to, 3) ?? dd.to;
+      if (dist(dd.from, to) >= 2) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "seg", a: dd.from, b: to, ruled: false }] });
+    } else if (d.k === "pencil" && dd.k === "pencil") {
+      if (dd.pts.length > 2) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "free", pts: dd.pts.filter((_, i) => i % 2 === 0 || i === dd.pts.length - 1).map((q) => [round(q[0], 1), round(q[1], 1)] as Pt) }] });
     }
   };
 
@@ -264,7 +265,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
   };
 
   // ── toolbar actions ──
-  const addInstr = (k: InstrKind) => { if (state.instruments.some((i) => i.kind === k) && k !== "straightedge") { setSel(state.instruments.find((i) => i.kind === k)!.id); return; } const i = newInstr(k, [26 + state.instruments.length * 8, 96 - state.instruments.length * 6]); apply({ ...state, instruments: [...state.instruments, i] }); setSel(i.id); say_(`${INSTR_LABEL[k]} added`); };
+  const addInstr = (k: InstrKind) => { if (state.instruments.some((i) => i.kind === k) && k !== "straightedge") { setSel(state.instruments.find((i) => i.kind === k)!.id); return; } const i = newInstr(k, homeFor(k, state.instruments.filter((x) => x.kind === k).length)); apply({ ...state, instruments: [...state.instruments, i] }); setSel(i.id); say_(`${INSTR_LABEL[k]} added`); };
   const zoom = (f: number) => setView((v) => { const w = Math.max(60, Math.min(VIEW_W * 2, v.w * f)), k = w / v.w; return { x: v.x + (v.w - w) / 2, y: v.y + ((v.w - w) / 2) * (VIEW_H / VIEW_W), w: w === v.w * k ? w : w }; });
   const fit = () => setView({ x: -AB[0], y: -AB[1], w: VIEW_W });
   const clearMarks = () => { apply({ ...state, marks: state.marks.filter((m) => "given" in m && m.given) }); setResult(null); };
@@ -335,7 +336,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         {!assess && <label className="ml-auto inline-flex min-h-[40px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={readouts} onChange={(e) => setReadouts(e.target.checked)} className="accent-[var(--brand)]" />Show readings</label>}
       </div>
       <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Instruments">
-        {ALL_INSTR.filter((k) => !compact || preset.includes(k) || state.instruments.some((i) => i.kind === k)).map((k) => <button key={k} type="button" onClick={() => addInstr(k)} className={`${btn} ${on(state.instruments.some((i) => i.kind === k) && sel === state.instruments.find((i) => i.kind === k)?.id)}`}>{INSTR_LABEL[k]}</button>)}
+        {(offer ?? ALL_INSTR).map((k) => <button key={k} type="button" onClick={() => addInstr(k)} className={`${btn} ${on(state.instruments.some((i) => i.kind === k) && sel === state.instruments.find((i) => i.kind === k)?.id)}`}>{INSTR_LABEL[k]}</button>)}
         {!problem && <select value={state.paper} onChange={(e) => apply({ ...state, paper: e.target.value as PaperKind })} aria-label="Paper" className={`ml-auto min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[12.5px] font-semibold text-[var(--ink)] ${FOCUS}`}>{PAPERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>}
       </div>
 
@@ -345,7 +346,15 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)}>
           <PaperDefs id={cid} />
           <Paper id={cid} kind={state.paper} />
-          <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+          {state.instruments.filter((i) => i.kind !== "compass").map((i) => (
+            <g key={i.id} transform={`translate(${i.x} ${i.y}) rotate(${-i.rot})`} tabIndex={0} role="button" aria-label={`${INSTR_LABEL[i.kind]}. Arrow keys move, Shift and left or right arrow turns, Delete removes.`}
+              aria-pressed={sel === i.id} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", cursor: tool === "move" ? "grab" : "crosshair" }}>
+              <InstrumentArt i={i} />
+              {sel === i.id && <SelectRing i={i} />}
+            </g>
+          ))}
+          {/* Pencil marks sit ABOVE the ruler, like real pencil drawn along its edge. */}
+          <g fill="none" strokeLinecap="round" strokeLinejoin="round" pointerEvents="none">
             {state.marks.map((m) => m.k === "seg" ? <line key={m.id} x1={m.a[0]} y1={m.a[1]} x2={m.b[0]} y2={m.b[1]} stroke={strokeFor(m)} strokeWidth={0.5} strokeDasharray={m.dashed ? "2 1.6" : undefined} />
               : m.k === "arc" ? (m.a1 - m.a0 >= 359.9 ? <circle key={m.id} cx={m.c[0]} cy={m.c[1]} r={m.r} stroke={strokeFor(m)} strokeWidth={0.4} /> : <path key={m.id} d={arcPath(m)} stroke={strokeFor(m)} strokeWidth={0.4} />)
               : m.k === "free" ? <polyline key={m.id} points={m.pts.map((q) => q.join(",")).join(" ")} stroke="var(--ink)" strokeWidth={0.5} />
@@ -355,13 +364,6 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
             {drag?.k === "pencil" && <polyline points={drag.pts.map((q) => q.join(",")).join(" ")} stroke="var(--brand)" strokeWidth={0.6} />}
             {drag?.k === "sweep" && Math.abs(drag.total) > 1 && <path d={arcPath({ id: "p", k: "arc", ...arcFromSweep([drag.orig.x, drag.orig.y], drag.orig.r ?? 60, drag.orig.pen ?? 0, drag.total) })} stroke="var(--brand)" strokeWidth={0.6} />}
           </g>
-          {state.instruments.filter((i) => i.kind !== "compass").map((i) => (
-            <g key={i.id} transform={`translate(${i.x} ${i.y}) rotate(${-i.rot})`} tabIndex={0} role="button" aria-label={`${INSTR_LABEL[i.kind]}. Arrow keys move, Shift and left or right arrow turns, Delete removes.`}
-              aria-pressed={sel === i.id} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", cursor: tool === "move" ? "grab" : "crosshair" }}>
-              <InstrumentArt i={i} />
-              {sel === i.id && <SelectRing i={i} />}
-            </g>
-          ))}
           {state.instruments.filter((i) => i.kind === "compass").map((i) => (
             <g key={i.id} tabIndex={0} role="button" aria-label="Compasses. Arrow keys move, plus and minus change the radius, Delete removes." onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none" }}>
               <CompassArt i={i} showRadius={showRead} />
@@ -386,6 +388,26 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
       <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Drag an instrument to move it · drag the round handle to turn it · with two fingers you can move and turn together · Draw ▸ Line along a ruler edge for a straight line.</p>
     </div>
   );
+}
+
+
+/** The drag's effect at pointer position `p` — used both while moving and on release, so a fast flick still finishes exactly where the pointer was let go. */
+function dragEffect(d: Drag, p: Pt, base: GeoState): { state?: GeoState; drag?: Drag } {
+  const patch = (id: string, f: (i: Instrument) => Instrument): GeoState => ({ ...base, instruments: base.instruments.map((i) => (i.id === id ? f(i) : i)) });
+  switch (d.k) {
+    case "move": return { state: patch(d.id, (i) => ({ ...i, x: d.orig.x + p[0] - d.start[0], y: d.orig.y + p[1] - d.start[1] })) };
+    case "rotate": return { state: patch(d.id, (i) => ({ ...i, rot: round(dirOf([i.x, i.y], p), 1) })) };
+    case "radius": return { state: patch(d.id, (i) => withRadius({ ...i, pen: round(dirOf([i.x, i.y], p), 1) }, dist([i.x, i.y], p))) };
+    case "sweep": {
+      const c: Pt = [d.orig.x, d.orig.y], ang = dirOf(c, p);
+      let step = ang - d.last; if (step > 180) step -= 360; if (step < -180) step += 360;
+      return { state: patch(d.id, (i) => ({ ...i, pen: ang })), drag: { ...d, last: ang, total: Math.max(-360, Math.min(360, d.total + step)) } };
+    }
+    case "edge": return { drag: { ...d, to: drawAlongEdge(d.edge, d.from, p).b } };
+    case "free": return { drag: { ...d, to: p } };
+    case "pencil": return { drag: { ...d, pts: [...d.pts, p] } };
+    default: return {};
+  }
 }
 
 const isCompass = (i: Instrument) => i.kind === "compass";

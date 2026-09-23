@@ -28,7 +28,7 @@ function Body({ tool, mode, qs, onClose }: { tool: ToolMeta; mode: ToolMode; qs:
   if (!impl) return <p className="m-0 text-[14px] font-semibold text-[var(--ink-2)]">This tool isn’t built yet.</p>;
   if (impl.kind === "drawer") return <DrawerToolView id={impl.id} />;
   if (impl.kind === "widget") { const w = getWidget(impl.id); return w ? <div><p className="m-0 mb-3 text-[13.5px] font-semibold text-[var(--ink-2)]">{w.intro}</p><w.Component onXP={() => {}} /></div> : <p className="m-0">This tool isn’t available.</p>; }
-  return Native ? <Suspense fallback={<SkeletonRows rows={3} label="Loading the tool" variant="card" />}><Native mode={mode} qs={qs} onClose={onClose} /></Suspense> : null;
+  return Native ? <Suspense fallback={<SkeletonRows rows={3} label="Loading the tool" variant="card" />}><Native mode={mode} qs={qs} onClose={onClose} params={impl.kind === "native" ? impl.params : undefined} toolId={tool.id} /></Suspense> : null;
 }
 
 export function ToolHost({ tool, mode = "practise", qs, onClose }: { tool: ToolMeta; mode?: ToolMode; qs: string; onClose: () => void }) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Suspense, lazy, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { FOCUS, Icon } from "../kit";
 import { FloatingPanel } from "./FloatingPanel";
 import NumberLineTool from "./NumberLineTool";
@@ -118,6 +118,9 @@ const DEFAULT_SUGGESTED: HelpToolId[] = ["numberline", "timestable", "calculator
  *  subject); every other group starts collapsed. */
 const DEFAULT_OPEN_GROUP = "maths";
 
+const GeoBoard = lazy(() => import("../tools/maths/geometry/GeometryBoard").then((m) => ({ default: m.GeometryBoard })));
+const GEO_OFFER: ("ruler15" | "straightedge" | "protractor180" | "protractor360" | "compass" | "setsquare45" | "setsquare3060")[] = ["ruler15", "straightedge", "protractor180", "protractor360", "compass", "setsquare45", "setsquare3060"];
+
 const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: ToolStateFor<HelpToolId>) => void) => ReactNode> = {
   calculator: (v, set) => <Calculator value={v as CalcState} onChange={set} />,
   // A finished, self-contained component supplied as-is (see NumberLineTool.tsx) — it manages its own state
@@ -127,8 +130,9 @@ const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: Too
   fractions: (v, set) => <Fractions value={v as FractionsState} onChange={set} />,
   grid: (v, set) => <CoordGrid value={v as GridState} onChange={set} />,
   plot: (v, set) => <BarChart value={v as BarChartState} onChange={set} />,
-  ruler: () => <Ruler />,
-  protractor: () => <Protractor />,
+  // The real instruments (tools/maths/geometry): movable, turnable, snapping, with a drawing compass and set square on the desk.
+  ruler: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={["ruler15"]} offer={GEO_OFFER} generatorIds={[]} /></Suspense>,
+  protractor: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={["protractor180", "ruler15"]} offer={GEO_OFFER} generatorIds={["M-G01.measure", "M-G01.draw"]} /></Suspense>,
   periodic: () => <Periodic />,
   bohr: (v, set) => <Bohr value={v as BohrState} onChange={set} />,
   apparatus: () => <Apparatus />,
@@ -151,8 +155,8 @@ const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: 
   fractions: { w: 260, h: 220, minW: 220, minH: 200 },
   grid: { w: 300, h: 320, minW: 260, minH: 280 },
   plot: { w: 360, h: 280, minW: 280, minH: 240 },
-  ruler: { w: 400, h: 140, minW: 300, minH: 120 },
-  protractor: { w: 300, h: 220, minW: 260, minH: 200 },
+  ruler: { w: 600, h: 620, minW: 440, minH: 480 },
+  protractor: { w: 600, h: 620, minW: 440, minH: 480 },
   periodic: { w: 400, h: 300, minW: 320, minH: 260 },
   bohr: { w: 280, h: 320, minW: 240, minH: 280 },
   apparatus: { w: 300, h: 220, minW: 260, minH: 200 },

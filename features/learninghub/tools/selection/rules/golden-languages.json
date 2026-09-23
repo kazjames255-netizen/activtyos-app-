@@ -43,7 +43,9 @@
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -114,12 +116,13 @@
   "o": "I can use ‘hacer’ to describe the weather and say what I and others are doing.",
   "p": "spanish-primary-ks2",
   "expect": [
-   "L-03",
    "L-16"
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -145,11 +148,16 @@
   "o": "I can say what others have using 'tiene' and 'tienen'.",
   "p": "spanish-primary-ks2",
   "expect": [
-   "L-03"
+   "L-05",
+   "L-07",
+   "L-09",
+   "L-16"
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -191,11 +199,16 @@
   "o": "I can use ‘tengo’ and ‘tiene’ with nouns to speak and write about belongings I and my friends have. I can distinguish between [ci] and [ca], [co], and [cu] sounds.",
   "p": "spanish-primary-ks2",
   "expect": [
-   "L-03"
+   "L-05",
+   "L-07",
+   "L-09",
+   "L-16"
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -212,7 +225,9 @@
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -228,7 +243,9 @@
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -300,12 +317,13 @@
   "o": "I can use a number of -ar infinitive verbs to talk about activities in the classroom.",
   "p": "spanish-primary-ks2",
   "expect": [
-   "L-03",
    "L-05"
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -392,13 +410,14 @@
   "o": "I can use 'être' with adjectives to make simple statements about myself and questions about others.",
   "p": "french-primary-ks2",
   "expect": [
-   "L-12",
-   "L-03"
+   "L-12"
   ],
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -454,12 +473,17 @@
   "o": "I can use singular ‘faire’ to express which sports and activities I and others do or make.",
   "p": "french-primary-ks2",
   "expect": [
-   "L-03"
+   "L-05",
+   "L-07",
+   "L-09",
+   "L-16"
   ],
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -485,12 +509,13 @@
   "o": "I can use the verbs ‘ir’ and ‘estar’ followed by the correct preposition to describe a trip to Barcelona.",
   "p": "spanish-primary-ks2",
   "expect": [
-   "L-03",
    "L-20"
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -577,7 +602,9 @@
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -679,13 +706,14 @@
   "p": "french-primary-ks2",
   "expect": [
    "L-10",
-   "L-04",
-   "L-03"
+   "L-04"
   ],
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -701,7 +729,9 @@
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -745,7 +775,9 @@
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -898,7 +930,9 @@
   "not": [
    "L-20",
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {
@@ -1077,7 +1111,9 @@
   ],
   "not": [
    "L-11",
-   "L-13"
+   "L-13",
+   "L-03",
+   "L-08"
   ]
  },
  {

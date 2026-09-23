@@ -94,6 +94,12 @@
     "\\bgenerate ideas",
     "\\bspider diagram",
     "\\bconcept map"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b"
    ]
   },
   {
@@ -114,6 +120,12 @@
    ],
    "fields": [
     "title"
+   ],
+   "none": [
+    "\\bcontexts?\\b",
+    "\\bbackground\\b",
+    "\\breflect(ion|ing)?\\b",
+    "\\bpreferences?\\b"
    ]
   },
   {
