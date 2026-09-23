@@ -53,10 +53,13 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
   const portal = (usePathname() ?? "").split("/")[1] ?? "";
   const tutor = mode === "tutor";
   const childName = kids.find((c) => c.childId === childId)?.childName;
-  const files = noteStats?.files ?? 0;
   const drafts = noteStats?.drafts ?? 0;
   const fresh = noteStats?.fresh ?? 0;
-  const noteTotal = noteStats?.total ?? 0;
+  // P-02: count only real lessons, and only subjects that have one (falls back to the old numbers on an older server).
+  const lessonCount = noteStats?.lessons ?? noteStats?.total ?? 0;
+  const subjectCount = noteStats?.lessonTopicIds
+    ? new Set(topics.filter((t) => noteStats.lessonTopicIds!.includes(t.id)).map((t) => t.subject)).size
+    : subjectsOf(topics).length;
   const val = (n: number) => (ready ? String(n) : "–");
 
   const [open, setOpen] = useState(true);
@@ -134,10 +137,13 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
               {tutor ? "Teaching Hub" : "My Classroom"}
             </h2>
             <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>
+            <p className="mt-1 text-[12.5px] font-bold text-white/95" data-testid="hub-hero-summary">
+              {ready ? `${tutor ? `${activeStudents} ${activeStudents === 1 ? "student" : "students"} · ` : ""}${lessonCount} ${lessonCount === 1 ? "lesson" : "lessons"} · ${subjectCount} ${subjectCount === 1 ? "subject" : "subjects"}` : "Loading…"}
+            </p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             {pickers}
-            <button type="button" onClick={toggle} aria-expanded={open} title={open ? "Collapse cards" : "Show cards"}
+            <button type="button" onClick={toggle} aria-expanded={open} title={open ? "Hide the numbers" : "Show the numbers"}
               className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/20 px-3.5 text-[12px] font-bold text-white/90 backdrop-blur-sm transition hover:text-white lg:min-h-[36px] ${FOCUS}`}
               style={{ background: "rgba(12,26,68,.42)" }}>
               <Icon name="chevronDown" size={13} strokeWidth={2.4} className={`transition-transform ${open ? "" : "-rotate-90"}`} />{open ? "Hide" : "Show"}
@@ -146,10 +152,9 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
         </div>
       </div>
       {open && (
-        <div className="mb-3.5 -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&>*]:min-w-[156px] [&>*]:flex-1 [&>*]:snap-start lg:grid lg:grid-cols-4 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-          <Stat label="Subjects" icon="layers" color={ACT_C[0]} value={val(subjectsOf(topics).length)} sub={ready ? `${topics.length} ${topics.length === 1 ? "topic" : "topics"}` : undefined} />
-          <Stat label="Lessons" icon="notes" color={ACT_C[1]} value={noteStats ? val(noteTotal) : "–"} sub={tutor && drafts ? `${drafts} in draft` : fresh ? `${fresh} new this week` : undefined} />
-          <Stat label="Worksheets" icon="file" color={ACT_C[5]} value={noteStats ? val(files) : "–"} sub="PDFs and images" />
+        <div className="mb-3.5 -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&>*]:min-w-[156px] [&>*]:flex-1 [&>*]:snap-start lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
+          <Stat label="Subjects" icon="layers" color={ACT_C[0]} value={val(subjectCount)} sub={ready ? "with lessons" : undefined} />
+          <Stat label="Lessons" icon="notes" color={ACT_C[1]} value={noteStats ? val(lessonCount) : "–"} sub={tutor && drafts ? `${drafts} in draft` : fresh ? `${fresh} new this week` : undefined} />
           {tutor
             ? <Stat label="Students" icon="users" color={ACT_C[3]} value={val(activeStudents)} sub="enrolled and active" />
             : <Stat label="Learning as" icon="sparkle" color={ACT_C[3]} value={childName?.split(" ")[0] ?? "–"} sub={provider?.name} />}

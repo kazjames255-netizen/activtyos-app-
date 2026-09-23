@@ -599,7 +599,10 @@ learningHub.get("/notes/counts", async (req, res) => {
   const yearTopics = yearSet ? new Set(topics.filter((t) => t.subtopic && yearNs.some((y) => new RegExp(`^year\\s*${y}$`, "i").test(t.subtopic!.trim()))).map((t) => t.id)) : null;
   const weekAgo = Date.now() - 7 * 86_400_000;
   const byTopic: Record<string, number> = {};
-  let total = 0, drafts = 0, files = 0, fresh = 0;
+  let total = 0, drafts = 0, files = 0, fresh = 0, lessons = 0;
+  // P-02: real lessons only (interactive or Oak lessons, not whiteboard snapshots or bare notes), and the topics holding one,
+  // so the hub header can say how many subjects actually have lessons. Additive: every existing field is unchanged.
+  const lessonTopics = new Set<string>();
   const assigned = await familyAssignedNoteIds(ctx);
   for (const n of (await noteIndex(ctx.tenantId)).values()) {
     if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned.has(n.id))) continue;
@@ -608,9 +611,10 @@ learningHub.get("/notes/counts", async (req, res) => {
     total++; files += n.attachments.length;
     if (!n.published) drafts++;
     if (Date.parse(n.createdAt) > weekAgo) fresh++;
+    if ((n.isLesson || n.oakKey) && n.kind !== "board") { lessons++; lessonTopics.add(n.topicId); }
   }
   res.set("Cache-Control", "private, no-cache").vary("Authorization");
-  res.json({ total, drafts, files, fresh, byTopic });
+  res.json({ total, drafts, files, fresh, byTopic, lessons, lessonTopicIds: [...lessonTopics] });
 });
 
 /** A family may open a note their child never got as homework while a tutor is actively live-driving THAT note at

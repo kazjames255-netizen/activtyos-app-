@@ -60,7 +60,7 @@ export interface NoteLite extends Omit<Note, "body"> {
 }
 
 /** GET /notes/counts — what the sidebar and hero show, without listing a single note. */
-export interface NoteStats { total: number; drafts: number; files: number; fresh: number; byTopic: Record<string, number> }
+export interface NoteStats { total: number; drafts: number; files: number; fresh: number; byTopic: Record<string, number>; /** Real lessons only (P-02); absent on an older server. */ lessons?: number; /** Topics that hold at least one real lesson. */ lessonTopicIds?: string[] }
 
 export interface HubChild { childId: string; childName: string }
 export interface HubProvider { tenantId: string; name: string; canEdit: boolean; /** Tutors: their franchise (null = tenant-level / head office) — head-office rows are read-only for a franchise. */ franchiseId?: string | null; /** Tutors: their portal role. */ role?: string; /** Tutors: their own login id (matches a student's / lesson's `tutorUid`). */ uid?: string; /** Parents: their enrolled children at this provider. */ children: HubChild[] }
