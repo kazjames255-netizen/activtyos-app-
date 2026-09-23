@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { buildFixture, ctxFor, probe, settle, gotoHubPage, VIEWPORTS, type Fx } from "./fixture";
 
+// (429s from the fire-and-forget open-event log are ignored: 100 opens in a burst trips the API rate limit, a person never would.)
 // Opens EVERY live tool from the Tools tab grid as a tutor, at desktop and phone, and fails on a crash card or a console/page error.
 //   npx playwright test e2e/review/tools-open-all.spec.ts --project=e2e --workers=1
 test.describe.configure({ mode: "serial" });
@@ -19,7 +20,7 @@ for (const vp of ["1440", "390"] as const) {
     const ids = await page.locator("[data-testid^='tool-']").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.testid!.slice(5)));
     console.log(`tools listed: ${ids.length}`);
     expect(ids.length).toBeGreaterThan(0);
-    expect(await page.locator("[data-status]:not([data-status='live'])").count(), "no unreleased tiles").toBe(0);
+    expect(await page.locator("#hub-tools [data-status]:not([data-status='live'])").count(), "no unreleased tiles").toBe(0);
     const fails: string[] = [];
     for (const id of ids) {
       pr.reset();
@@ -34,7 +35,7 @@ for (const vp of ["1440", "390"] as const) {
         if (await dlg.getByRole("alert").filter({ hasText: /ran into a problem/ }).count()) problems.push("crash card");
         if (((await dlg.innerText()).trim().length) < 20) problems.push("empty body");
       } catch (e) { problems.push(`no dialog/timeout: ${String(e).slice(0, 80)}`); }
-      const errs = [...pr.pageErrors, ...pr.console.filter((c) => c.startsWith("error"))];
+      const errs = [...pr.pageErrors, ...pr.console.filter((c) => c.startsWith("error") && !/status of 429/.test(c))];
       if (errs.length) problems.push(errs[0]!);
       if (problems.length) fails.push(`${id}: ${problems.join("; ")}`);
       await page.keyboard.press("Escape");
