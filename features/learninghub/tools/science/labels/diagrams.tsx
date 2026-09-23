@@ -61,8 +61,8 @@ function Flower() {
   return (
     <g>
       <line x1={200} y1={222} x2={200} y2={296} stroke={G} strokeWidth={9} strokeLinecap="round" />
-      <ellipse cx={100} cy={140} rx={32} ry={80} fill={wash(PK, 55)} stroke={INK} strokeWidth={1.8} />
-      <ellipse cx={300} cy={140} rx={32} ry={80} fill={wash(PK, 55)} stroke={INK} strokeWidth={1.8} />
+      <path d="M188 215 C118 218 44 176 56 96 C110 104 170 146 188 215 Z" fill={wash(PK, 55)} stroke={INK} strokeWidth={1.8} />
+      <path d="M212 215 C282 218 356 176 344 96 C290 104 230 146 212 215 Z" fill={wash(PK, 55)} stroke={INK} strokeWidth={1.8} />
       <ellipse cx={200} cy={222} rx={26} ry={12} fill={wash(G, 45)} stroke={INK} strokeWidth={1.6} />
       <ellipse cx={162} cy={232} rx={30} ry={9} transform="rotate(-25 162 232)" fill={wash(G, 60)} stroke={INK} strokeWidth={1.6} />
       <ellipse cx={238} cy={232} rx={30} ry={9} transform="rotate(25 238 232)" fill={wash(G, 60)} stroke={INK} strokeWidth={1.6} />

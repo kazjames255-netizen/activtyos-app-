@@ -1,0 +1,22 @@
+screen,role,primary_actions,secondary_actions,other_clickables,approx_words_above_fold,distinct_badges_chips_colours,notes
+Hub shell+hero (Home),tutor,"1: Settings link","2: Hide/Show cards; provider Select (>1 provider)",4 stat tiles,90,"4 stat colours",Hero title + lede + 4 tiles push content down; Hide hides tiles only
+Tab strip,tutor,11 tabs,0,0,30,"live dot + Unsaved + count badges",Scrolls horizontally on phone; icons only at lg
+Home,tutor,"6: New lesson; New quiz; Assign homework; Schedule video lesson; Enrol student; Teach in person","5: Rejoin (banner); attention rows x5; Show more","~15: snapshot rows; nudges; improvers; feed rows",220,"~12 (5 tones + band colours + tone icons)",Attention card + quick actions + snapshot + callouts + feed + rhythm; two banner pollers
+Live lessons,tutor,"2: Schedule video lesson; Teach in person","6: Join/Rejoin; Quick join; Board; Check; Edit; Cancel; Upcoming/Past","~10",110,"~6 (live/grace/upcoming pills)",Lobby and call go full-screen (focus mode)
+Students (+groups),tutor,"1: Enrol a student (+New group)","~6 per card x N: Progress; Message; Set homework; menu (Edit/Pause/Un-enrol); group tiles; filters","~12+",120,"~10 (status; year; group; subject chips; badges: Live/Next/overdue/to mark)",3 filters + search + group cards each with 3 tiles + "+"
+Progress,tutor,"1: open a student","3: Set homework; Recalculate; All students","~10 rows",100,"~8 band colours",CurriculumRings duplicates the Lessons curriculum card
+Placement test,tutor,"1: + New placement test","~8: Set for children; Preview; Edit; Publish; Delete; filter chips","4 sub-tabs; ~10",110,"~7",PlacementGuide + WaiveCard; 4 sub-tabs incl. shared Question bank
+Quizzes,tutor,"1: + New quiz","~8 (as above)","4 sub-tabs; ~10",90,"~7",4 sub-tabs (not 3)
+Homework,tutor,"1: Set homework","4: Inbox/Set homework switch; hand-in filters; Edit; Delete","~12",90,"~6",Segmented label 'Set homework' is a list AND a button
+Lessons (+curriculum card),tutor,"2: New lesson; Add topic","~8: Set for children; Edit; Search; Print; Go live; Preview","~20",140,"~10 (subject colours; Draft; Published; year)",CurriculumCard above list; sidebar filter; the list mounts hidden on every tab
+Tools,tutor,0,"search; subject chips; KS chips","~40 tool tiles",50,~8,Sparkle icon fallback
+Flashcards,tutor,"2: Add card; Bulk add","Publish; search; per-topic add; card menu","~10",80,~5,
+Student message centre,tutor,"1: New message","folders; threads","~10",60,"1 unread dot",Key 'questions'
+Home,parent,"~4 CTAs: Review flashcards; See progress; Start next step; Ask your tutor","Homework View all; Results View all","~8",250,~10,"Summary strip + hero + 4 cards; mail toggle"
+Home,child (kid),"~3 BigButtons","2","~5",180,~8,"Kid wording, band renamed Getting started / Getting there / Got it!"
+Starting quiz,child,"1: Do the starting quiz","Show more; Resume","~3",70,~4,Same StudentAssess runner
+Quizzes,child,"1: start/resume","View result; Show more","~6",80,~6,
+Homework,child,"1: open item","Hand in; Change; Flashcards; Start lesson","~8",70,~6,
+Lessons,child,"1: open lesson","Search; Print","~8",70,~4,
+Flashcards,child,"1: Start review","Refresh","~3",60,~4,
+Messages,child,"1: New message","Open thread","~5",60,1,

@@ -20,7 +20,7 @@ function Seg({ label, value, options, onChange }: { label: string; value: number
       <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{label}</span>
       {options.map((o, i) => (
         <button key={o} type="button" aria-pressed={value === i} onClick={() => onChange(i)}
-          className={`min-h-[40px] min-w-[40px] rounded-xl border px-2 text-[12px] font-bold ${FOCUS} ${value === i ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`}>{i === 0 ? "A" : i === 1 ? "A+" : "A++"}<span className="sr-only"> {o}</span></button>
+          className={`min-h-[44px] min-w-[44px] rounded-xl border px-2 text-[12px] font-bold ${FOCUS} ${value === i ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`}>{i === 0 ? "A" : i === 1 ? "A+" : "A++"}<span className="sr-only"> {o}</span></button>
       ))}
     </div>
   );

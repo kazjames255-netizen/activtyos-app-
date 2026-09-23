@@ -170,7 +170,7 @@ export function dateForms(lang: NLang, d: number, m: number, opts: { dative?: bo
   }
   if (lang === "es") {
     const day = d === 1 ? "primero" : numberWords("es", d).text;
-    const spoken = d === 1 ? ["primero", "uno", "primer"] : numberWords("es", d).all;
+    const spoken = d === 1 ? ["primero", "uno"] : numberWords("es", d).all;
     const acc = spoken.flatMap((x) => [`el ${x} de ${month}`, `${x} de ${month}`]);
     return { written: `el ${d} de ${month}`, words: `el ${day} de ${month}`, accepted: acc.filter((v, i, a) => a.indexOf(v) === i) };
   }

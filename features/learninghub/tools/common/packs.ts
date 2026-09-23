@@ -70,7 +70,7 @@ export const SORT_SETS: SortSet[] = [
   S("mat-rational", "Rational or irrational", "maths", [4], "Can it be written as a fraction of two integers?", ["Rational", "Irrational"],
     [["1/3", 0], ["0.75", 0], ["√9", 0], ["√16", 0], ["√2", 1], ["π", 1], ["√5", 1], ["√3", 1]], "√9 = 3 and √16 = 4 are whole numbers, so they are rational."),
   S("mat-sqcube", "Square or cube numbers", "maths", [2, 3], "Is it a square number or a cube number?", ["Square number", "Cube number"],
-    [["16", 0], ["25", 0], ["49", 0], ["8", 1], ["27", 1], ["64", 1], ["125", 1]]),
+    [["16", 0], ["25", 0], ["49", 0], ["8", 1], ["27", 1], ["216", 1], ["125", 1]]),
   // ---- English
   S("eng-wordclass", "Word classes", "english", [2, 3], "Noun, verb, adjective or adverb?", ["Noun", "Verb", "Adjective", "Adverb"],
     [["table", 0], ["freedom", 0], ["run", 1], ["jumped", 1], ["happy", 2], ["blue", 2], ["quickly", 3], ["softly", 3]]),
@@ -121,7 +121,7 @@ export const SEQUENCE_SETS: SequenceSet[] = [
   Q("seq-mitosis", "Mitosis (simple)", "science", [4], "Put the stages of cell division in order.", ["DNA is copied", "Chromosomes line up in the middle", "Copies are pulled to opposite ends", "Two nuclei form", "The cell splits into two"]),
   Q("seq-planets", "Planets from the Sun", "science", [2, 3], "Nearest the Sun first.", ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]),
   Q("seq-distil", "Fractional distillation of crude oil", "science", [4], "Put the method in order.", ["Crude oil is heated", "It vaporises", "Vapour enters the column", "Vapour rises and cools", "Each fraction condenses at its boiling point", "Fractions are collected"]),
-  Q("mat-bidmas", "Order of operations", "maths", [2, 3], "Which is done first, then next?", ["Brackets", "Indices", "Division", "Multiplication", "Addition", "Subtraction"]),
+  Q("mat-bidmas", "Order of operations", "maths", [2, 3], "Which is done first, then next?", ["Brackets", "Indices (powers)", "Division and multiplication, left to right", "Addition and subtraction, left to right"]),
   Q("mat-units", "Length units", "maths", [2, 3], "Smallest to largest.", ["Millimetre", "Centimetre", "Metre", "Kilometre"]),
   Q("hum-events1", "British history in order", "humanities", [3], "Earliest first.", ["Battle of Hastings (1066)", "Magna Carta sealed (1215)", "Spanish Armada defeated (1588)", "Great Fire of London (1666)", "Battle of Waterloo (1815)"]),
   Q("hum-events2", "Twentieth century events", "humanities", [3, 4], "Earliest first.", ["First World War begins (1914)", "Some women get the vote (1918)", "Second World War begins (1939)", "NHS founded (1948)", "First Moon landing (1969)", "Berlin Wall falls (1989)"]),

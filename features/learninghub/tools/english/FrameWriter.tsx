@@ -12,7 +12,7 @@ import { ReadingControls, textStyle, useReadingOpts } from "./readingOptions";
 
 type Props = Partial<ToolProps> & { onChange?: (piece: string) => void };
 
-const chip = `min-h-[40px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-left text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`;
+const chip = `min-h-[44px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-left text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`;
 const btn = `min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[13px] font-bold text-[var(--ink)] ${FOCUS}`;
 const btnOn = `min-h-[44px] rounded-xl border border-[var(--brand)] bg-[var(--brand)] px-3 text-[13px] font-bold text-white ${FOCUS}`;
 
@@ -80,7 +80,7 @@ export default function FrameWriter(props: Props) {
           </fieldset>
         )}
         {!assess && sec.exampleFor && (
-          <details className="mt-2"><summary className={`min-h-[40px] cursor-pointer py-2 text-[13px] font-bold text-[var(--brand)] ${FOCUS}`}>See an example</summary>
+          <details className="mt-2"><summary className={`min-h-[44px] cursor-pointer py-2 text-[13px] font-bold text-[var(--brand)] ${FOCUS}`}>See an example</summary>
             <p className="m-0 rounded-xl bg-[var(--surface)] p-2 text-[13.5px] italic text-[var(--ink)]">{sec.exampleFor}</p></details>
         )}
       </section>
@@ -110,7 +110,7 @@ export default function FrameWriter(props: Props) {
 
       {!assess && frame.banks && view !== "piece" && (
         <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <summary className={`min-h-[40px] cursor-pointer py-2 text-[13px] font-bold ${FOCUS}`}>Word bank</summary>
+          <summary className={`min-h-[44px] cursor-pointer py-2 text-[13px] font-bold ${FOCUS}`}>Word bank</summary>
           {frame.banks.map((b) => (
             <div key={b.label} className="mt-1"><p className="m-0 text-[12px] font-bold text-[var(--ink-2)]">{b.label}</p>
               <p className="m-0 text-[13.5px]">{b.words.join(" · ")}</p></div>
@@ -156,7 +156,7 @@ export default function FrameWriter(props: Props) {
 
       {!assess && (
         <details className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <summary className={`min-h-[40px] cursor-pointer py-2 text-[13px] font-extrabold ${FOCUS}`}>Sentence check (advice, not a mark)</summary>
+          <summary className={`min-h-[44px] cursor-pointer py-2 text-[13px] font-extrabold ${FOCUS}`}>Sentence check (advice, not a mark)</summary>
           {report.words === 0 ? <p className="m-0 text-[13.5px] text-[var(--ink-2)]">Write something first and tips will appear here.</p> : (
             <ul className="m-0 grid gap-1 pl-5 text-[13.5px]">
               <li>{report.words} words, {report.sentences} sentences, {report.paragraphs} paragraph{report.paragraphs === 1 ? "" : "s"}; average {report.avgSentenceLength} words a sentence.</li>

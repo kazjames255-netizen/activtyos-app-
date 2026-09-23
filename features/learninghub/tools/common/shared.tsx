@@ -46,7 +46,7 @@ export function useDragDrop(onDrop: (id: string, target: string) => void) {
     onPointerUp: (e: PointerEvent<HTMLElement>) => { const s = st.current; if (s?.on) { suppress.current = true; const t = targetAt(e.clientX, e.clientY); if (t !== null) onDrop(s.id, t); setTimeout(() => { suppress.current = false; }, 0); } end(); },
     onPointerCancel: end,
     onClickCapture: (e: { preventDefault(): void; stopPropagation(): void }) => { if (suppress.current) { e.preventDefault(); e.stopPropagation(); suppress.current = false; } },
-    style: { touchAction: "none" as const },
+    style: { touchAction: "pan-y" as const },
   });
   const ghost: ReactNode = drag ? <div aria-hidden className="pointer-events-none fixed z-[70] max-w-[220px] rounded-xl border-2 border-[var(--brand)] bg-[var(--surface)] px-3 py-2 text-[13px] font-extrabold text-[var(--ink)] shadow-lg" style={{ left: drag.x, top: drag.y, transform: "translate(-50%,-120%)" }}>{drag.label}</div> : null;
   return { bind, over, dragId: drag?.id ?? null, ghost };

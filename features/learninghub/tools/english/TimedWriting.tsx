@@ -17,7 +17,7 @@ const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${Str
 
 export default function TimedWriting(props: Props) {
   const assess = props.mode === "assess";
-  const ks = typeof props.params?.keyStage === "number" ? props.params.keyStage : 3;
+  const ks = typeof props.params?.keyStage === "number" ? props.params.keyStage : 0;
   const key = `aos.timedwriting.${props.toolId ?? "english"}`;
   const [text, setText] = useState("");
   const [timerOn, setTimerOn] = useState(ks >= 3);
