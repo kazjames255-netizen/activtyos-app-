@@ -24,6 +24,7 @@ const NATIVE: Record<string, ToolImpl> = {
   "M-10": geo(["protractor360", "ruler15"], ["M-G09.measure", "M-G09.draw"]),
   "M-09": { kind: "native", load: () => import("./maths/AngleFacts") },
   "M-21": { kind: "native", load: () => import("./maths/CoordGrid") },
+  "L-01": { kind: "native", load: () => import("./languages/AccentBar") },
   "H-G05": geo(["protractor360", "ruler15"], ["M-G09.measure", "M-G09.draw"]),
 };
 
