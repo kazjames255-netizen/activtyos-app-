@@ -6,6 +6,7 @@ import { Button } from "@/components/ui";
 import { Icon } from "./kit";
 import { post } from "@/lib/api";
 import type { PanelMeta, PanelProps } from "./panelTypes";
+import { CurriculumRings } from "./curriculum/CurriculumRings";
 import { Overview } from "./progress/Overview";
 import { ProgressView } from "./progress/ProgressView";
 import { hubPath } from "./shared-assess/api";
@@ -24,10 +25,10 @@ export function Panel(p: PanelProps) {
 
   if (!p.canEdit) {
     if (!p.childId) return <EmptyState icon="users" title="Choose a child" body="Pick which child's progress you'd like to see." />;
-    return <ProgressView p={p} childId={p.childId} />;
+    return <><CurriculumRings qs={p.childQs ?? p.qs} canEdit={false} onOpenMap={() => p.goTo?.("notes")} /><ProgressView p={p} childId={p.childId} /></>;
   }
 
-  if (!open) return <Overview p={p} onOpen={(id, name) => setOpen({ id, name })} />;
+  if (!open) return <><CurriculumRings qs={p.qs} canEdit onOpenMap={() => p.goTo?.("notes")} /><Overview p={p} onOpen={(id, name) => setOpen({ id, name })} /></>;
 
   const recompute = async () => {
     setBusy(true);

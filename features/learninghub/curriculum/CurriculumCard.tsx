@@ -33,8 +33,14 @@ const PATTERN: Partial<Record<CellKind, string>> = {
   thin: "radial-gradient(color-mix(in srgb, var(--sem-warn) 55%, transparent) 1.2px, transparent 1.6px) 0 0 / 6px 6px",
 };
 
-function Ring({ pct, label, size = 92 }: { pct: number; label: string; size?: number }) {
+export function Ring({ pct, label, size = 92, count }: { pct: number; label: string; size?: number; /** No score to show (nothing to measure against): draw an empty ring with this number in the middle instead. */ count?: number }) {
   const r = (size - 12) / 2, c = 2 * Math.PI * r;
+  if (count !== undefined) return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${count} ${label}`} className="flex-none">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth={9} strokeDasharray="3 5" />
+      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fontSize={size * 0.24} fontWeight={800} fill="var(--ink)" style={{ fontFamily: "var(--ff-display)" }}>{count}</text>
+    </svg>
+  );
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${pct}% ${label}`} className="flex-none">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line)" strokeWidth={9} />
@@ -77,6 +83,9 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const years = useMemo(() => visibleYears(inGroup, byArea), [inGroup, byArea]);
   const shown = useMemo(() => (onlyGaps && mode === "tutor" ? inGroup.filter((a) => years.some((y) => { const k = cellKind(mode, a, y, byArea).kind; return k === "gap" || k === "thin"; })) : inGroup), [inGroup, onlyGaps, mode, years, byArea]);
   const sum = useMemo(() => summarise(data?.rows ?? [], new Set(inGroup.map((a) => a.id))), [data, inGroup]);
+  const placed = useMemo(() => inGroup.reduce((n, a) => n + a.y.reduce((x, y) => x + y, 0), 0), [inGroup]);
+  /** The curriculum gives this subject no checklist of areas (e.g. languages), so there is no honest "% covered" — show the lessons placed instead. */
+  const noList = mode === "tutor" && sum.checked === 0;
   const kid = useMemo(() => childSummary(inGroup, (data?.rows ?? []).filter((r) => inGroup.some((a) => a.id === r.areaId))), [data, inGroup]);
   const autoPct = data && data.lessons ? Math.round(((data.autoMapped.medium + data.autoMapped.low) / Math.max(1, data.autoMapped.high + data.autoMapped.medium + data.autoMapped.low)) * 100) : 0;
 
@@ -123,10 +132,15 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
 
               {/* headline */}
               <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl bg-[var(--panel)] p-3.5">
-                <Ring pct={mode === "tutor" ? sum.pct : kid.pct} label={mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
+                <Ring pct={mode === "tutor" ? sum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
                 <div className="grid gap-1.5">
                   {mode === "tutor" ? (
-                    <>
+                    noList ? (
+                      <>
+                        <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{placed} {GROUP_LABEL[g]} lessons placed on the curriculum</p>
+                        <p className="m-0 max-w-[46ch] text-[12.5px] font-semibold text-[var(--ink-2)]">The national curriculum doesn’t list checkable areas for {GROUP_LABEL[g].toLowerCase()}, so there’s no coverage score — the grid shows where each lesson sits.</p>
+                      </>
+                    ) : <>
                       <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{sum.covered} of {sum.checked} areas covered in {GROUP_LABEL[g]}</p>
                       <div className="flex flex-wrap gap-x-4 gap-y-1"><Stat n={sum.covered} label="covered (5+ lessons)" dot="var(--sem-ok)" /><Stat n={sum.thin} label="thin (1–4)" dot="var(--sem-warn)" /><Stat n={sum.gaps} label="gaps" dot="var(--sem-crit)" /></div>
                     </>
