@@ -18,7 +18,8 @@ import { useStudentHome } from "./useHomeData";
 import { AskTutorLink, useFamily } from "../family/FamilyContext";
 import { openLink } from "../family/link";
 import { kidBand } from "../family/KidMode";
-import { KID_COPY, useKidCopy } from "../family/kidCopy";
+import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
+import { KidHome, type KidRow, type KidStep } from "./KidHome";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
 
 // Student / parent Home — a warm "today" for the chosen child: what's next, what
@@ -40,7 +41,8 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const { ready, parts, failed, reload } = useStudentHome(qs, childId, onError);
   const now = useNow(30_000);
   const kidMode = useFamily().kid;
-  const { kind } = useKidCopy(props.students.find((s) => s.childId === childId)?.yearGroup);
+  const yearGroup = props.students.find((s) => s.childId === childId)?.yearGroup;
+  const { kind } = useKidCopy(yearGroup);
   const kid = props.child ?? props.students.find((s) => s.childId === childId) ?? null;
   const name = kid?.childName ?? "there";
 
@@ -104,12 +106,44 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const partial = (Object.keys(failed) as (keyof typeof failed)[]);
   const partLabel = { lessons: "lessons", homework: "homework", due: "flashcards", attempts: "quiz results", mastery: kidMode ? "your level" : "mastery", assessments: "quizzes" } as const;
 
+  // Kid mode: ONE big next step, nothing else competing (P-03). Streak, level and stats stay out of a child's Home.
+  if (kidMode) {
+    const band = bandOrDefault(yearGroup);
+    const liveNow = d.upcoming.find((l) => lessonTiming(l, now).phase === "open") ?? null;
+    const cardsReady = dueCards + newCards > 0;
+    const step: KidStep | null = liveNow ? { icon: "video", text: "Join your lesson", to: "live" }
+      : d.todo.length > 0 ? { icon: "homework", text: "Your homework is ready", to: "homework" }
+      : cardsReady ? { icon: "cards", text: "Play your cards", to: "flashcards" }
+      : d.step ? { icon: "quiz", text: d.step.go === "diagnostic" ? "Do your starting quiz" : "Try a quiz", to: d.step.go }
+      : null;
+    const dayName = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "long" });
+    const weekEnd = now + 7 * 86_400_000;
+    const hwRows: KidRow[] = d.todo.map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : `Due ${dayName(h.dueAt)}`, to: "homework" }));
+    const rows: KidRow[] = band === "ks2"
+      ? [...hwRows.slice(0, 2),
+         ...(cardsReady ? [{ key: "cards", icon: "cards", title: "Your cards", note: `${plural(dueCards + newCards, "card")} ready`, to: "flashcards" } as KidRow] : []),
+         ...(next && next !== liveNow ? [{ key: "lesson", icon: "video", title: next.title, note: dayName(next.startsAt), to: "live" } as KidRow] : []),
+         ...(d.results[0] ? [{ key: "result", icon: "quiz", title: d.results[0].assessmentTitle ?? "Quiz", note: d.results[0].status === "pending_marking" ? "Handed in" : d.results[0].passed === false && kind ? "Nearly there" : "Marked", to: "quizzes" } as KidRow] : [])]
+      : band === "ks1" ? []
+      : todoThisWeek(d.todo, weekEnd).map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : `Due ${dayName(h.dueAt)}`, to: "homework" } as KidRow));
+    return (
+      <div className="space-y-4">
+        <JoinRemoteSyncBanner qs={childQs ?? qs} childId={childId} config={config} />
+        <KidHome name={firstName(name)} band={band} step={step} rows={rows} failedHomework={!!failed.homework} onRetry={reload} go={(k) => go(k)} />
+      </div>
+    );
+  }
+
   return (
     <div id="hub-home-student" className="space-y-4">
       <JoinRemoteSyncBanner qs={childQs ?? qs} childId={childId} config={config} />
       {!kidMode && (
         <section aria-label={`${firstName(name)} this week`} data-testid="hub-parent-summary" data-ui="card" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
           <div className="min-w-0 flex-1 basis-[240px]">
+            <div data-testid="hub-parent-verdict" role="status" className="mb-1.5 flex items-center gap-2 text-[15px] font-extrabold" style={{ color: failed.homework ? "var(--ink-2)" : d.overdueN ? "var(--red)" : "var(--green)" }}>
+              <Icon name={failed.homework || d.overdueN ? "warning" : "check"} size={17} strokeWidth={2.4} />
+              {failed.homework ? "We couldn't check homework just now" : d.overdueN ? `${plural(d.overdueN, "homework task")} overdue` : "On track. Nothing is overdue"}
+            </div>
             <div className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">{firstName(name)} this week</div>
             <div className="mt-0.5 text-[13.5px] font-semibold leading-snug text-[var(--ink)]" data-testid="hub-parent-summary-text">
               {d.weekQuizzes + d.weekHomework + d.waitingMark === 0
@@ -327,4 +361,9 @@ function ResultTile({ a, now, onOpen, kid, kind }: { a: AttemptRow; now: number;
       </button>
     </li>
   );
+}
+
+/** Homework that is overdue or due within the week (a teen's "due this week" list). */
+function todoThisWeek<T extends { dueAt: string }>(todo: T[], weekEnd: number): T[] {
+  return todo.filter((h) => new Date(h.dueAt).getTime() <= weekEnd);
 }

@@ -12,7 +12,10 @@ import { ParentGate } from "./ParentGate";
 const KEY = "aos.hub.kid";
 // "diagnostic" (the placement test) is here so a quiz that is locked behind one can be unlocked from kid mode: the same runner, the same
 // child chip, and the same forced child (there is no picker), just worded as the "Starting quiz" for a child.
-export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards", "questions"] as const;
+// "live" (join the lesson that is on now) and "dashboard" (the child-scoped stars view, P-03) are reachable from the Home card only:
+// they are on the allow-list but kept off the tab strip (KID_STRIP_HIDDEN).
+export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards", "questions", "live", "dashboard"] as const;
+export const KID_STRIP_HIDDEN: readonly string[] = ["live", "dashboard"];
 /** The tenant's default level names in a child's words. A tutor's own names (anything else) are left exactly as written. */
 const KID_BAND: Record<string, string> = { learning: "Getting started", developing: "Getting there", secure: "Got it!" };
 export const kidBand = (label: string | null | undefined, kid: boolean): string => (label == null ? "" : kid ? KID_BAND[label.trim().toLowerCase()] ?? label : label);

@@ -12,6 +12,8 @@ import { ProgressView } from "./progress/ProgressView";
 import { hubPath } from "./shared-assess/api";
 import { EmptyState, FOCUS, TAP } from "./shared-assess/ui";
 import { errMsg } from "./types";
+import { useFamily } from "./family/FamilyContext";
+import { KidStars } from "./progress/KidStars";
 
 // Progress — the mastery dashboard. A family sees their chosen child's mastery by
 // topic, growth from the placement-test baseline and the recent-quiz trend; a
@@ -22,8 +24,10 @@ export function Panel(p: PanelProps) {
   // A student card ("Progress") lands here with that child already open.
   const [open, setOpen] = useState<{ id: string; name: string } | null>(() => (p.canEdit ? takeOpenStudent() : null));
   const [busy, setBusy] = useState(false);
+  const kid = useFamily().kid;
 
   if (!p.canEdit) {
+    if (kid && p.childId) return <KidStars p={p} childId={p.childId} />; // a child sees stars only (P-03)
     if (!p.childId) return <EmptyState icon="users" title="Choose a child" body="Pick which child's progress you'd like to see." />;
     return <><CurriculumRings qs={p.childQs ?? p.qs} canEdit={false} onOpenMap={() => p.goTo?.("notes")} /><ProgressView p={p} childId={p.childId} /></>;
   }

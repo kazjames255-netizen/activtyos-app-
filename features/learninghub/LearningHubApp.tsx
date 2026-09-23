@@ -15,7 +15,7 @@ import { TopicFilter } from "./TopicFilter";
 import { useHubData, useLiveNow } from "./useHubData";
 import { coveredTopicIds, type HubFilter } from "./types";
 import { FamilyBar, FamilyProvider, type FamilyCtx } from "./family/FamilyContext";
-import { KID_TABS, KID_TAB_LABEL, KidBar, readKid, useKidGuards, writeKid } from "./family/KidMode";
+import { KID_STRIP_HIDDEN, KID_TABS, KID_TAB_LABEL, KidBar, readKid, useKidGuards, writeKid } from "./family/KidMode";
 import { setLinkParams, useLinkSearch } from "./family/link";
 import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
 import { useRealtime } from "@/lib/realtime";
@@ -196,7 +196,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     tenantId, qs, canEdit, readOnly, franchiseId: provider.franchiseId ?? null, me: tutor && provider.uid ? { uid: provider.uid, role: provider.role ?? "" } : null, topics, filter, covered, students, childId: hub.childId, config,
     onError: setError, mode, providerName: provider.name, child: hub.child, refreshStudents: refresh, goTo: go, childQs, setFocus, groups, refreshGroups: refresh,
   };
-  const tabs: HubTab[] = modules.filter((m) => !kid || (KID_TABS as readonly string[]).includes(m.meta.key)).map((m) => ({
+  const tabs: HubTab[] = modules.filter((m) => !kid || ((KID_TABS as readonly string[]).includes(m.meta.key) && !KID_STRIP_HIDDEN.includes(m.meta.key))).map((m) => ({
     // Families see "Messages" (it's their own inbox); the tutor keeps "Student message centre" (kid label wins when both apply).
     meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : !tutor && m.meta.key === "questions" ? { ...m.meta, label: "Messages" } : m.meta,
     badge: m.meta.key === "notes" && dirty ? "Unsaved" : m.meta.key === "questions" && unreadQuestions > 0 ? String(unreadQuestions) : undefined,
