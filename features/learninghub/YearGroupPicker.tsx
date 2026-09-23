@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FOCUS, Icon, tint } from "./kit";
+import { useEscapeLayer } from "./escapeLayer";
 
 // A fun, big-circle multi-select for "which school years" — used to filter the lesson library.
 // Chosen years are sent to the server as `?year=3,4,5,6` (learningHub.ts's notes list already
@@ -37,11 +38,10 @@ export function YearGroupPicker({ years, onChange, hasReception = false }: { yea
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+    return () => { document.removeEventListener("mousedown", onDown); };
   }, [open]);
+  useEscapeLayer(open, () => setOpen(false));
 
   const toggleYear = (y: number) => onChange(years.includes(y) ? years.filter((x) => x !== y) : [...years, y]);
   const toggleStage = (stageYears: number[]) => {

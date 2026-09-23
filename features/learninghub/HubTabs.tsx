@@ -16,7 +16,7 @@ export interface HubTab { meta: PanelMeta; /** Unsaved-work marker (the notes ed
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections" }: { tabs: HubTab[]; active: PanelMeta["key"]; onSelect: (k: PanelMeta["key"]) => void; liveNow?: boolean; label?: string }) {
+export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections" }: { tabs: HubTab[]; active: PanelMeta["key"]; onSelect: (k: PanelMeta["key"], how?: "arrow") => void; liveNow?: boolean; label?: string }) {
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -73,7 +73,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
     else if (e.key === "End") n = keys.length - 1;
     if (n < 0) return;
     e.preventDefault();
-    onSelect(keys[n]);
+    onSelect(keys[n], "arrow");
     refs.current.get(keys[n])?.focus();
   };
 
@@ -96,7 +96,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
             const main = meta.key === "live" && !soon; // the headline function (Live lessons) gets presence
             const dot = meta.key === "live" && liveNow;
             const style: CSSProperties = on
-              ? { background: "transparent", color: "#fff", borderColor: "transparent" }
+              ? { background: "transparent", color: "var(--on-brand, #fff)", borderColor: "transparent" }
               : soon
                 ? { background: "var(--panel)", color: "var(--ink)", borderColor: "var(--ink-3)", borderStyle: "dashed" }
                 : main
@@ -119,8 +119,8 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
                   </span>
                 )}
                 {dot && <span className="sr-only"> (live now)</span>}
-                {soon && <span className="rounded-full border px-2 py-px text-[11px] font-extrabold uppercase tracking-wide" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)", color: "#7a5300" }}>Soon</span>}
-                {badge && <span className="rounded-full px-1.5 py-px text-[11px] font-extrabold uppercase" style={{ background: "var(--gold)", color: "#3a2a05" }}>{badge}</span>}
+                {soon && <span className="rounded-full border px-2 py-px text-[11px] font-extrabold uppercase tracking-wide" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)", color: "var(--hub-gold-ink, #7a5300)" }}>Soon</span>}
+                {badge && <span className="rounded-full px-1.5 py-px text-[11px] font-extrabold uppercase" style={{ background: "var(--gold)", color: "var(--on-gold, #3a2a05)" }}>{badge}</span>}
               </button>
             );
           })}

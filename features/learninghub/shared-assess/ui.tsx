@@ -5,6 +5,7 @@
 // light shell both just work.
 import { useEffect, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "../kit";
+import { useEscapeLayer } from "../escapeLayer";
 import type { Tone } from "./format";
 import { useCountUp, useGrow, useReducedMotion } from "./motion";
 
@@ -234,6 +235,7 @@ export function Modal({ title, onClose, children, footer, wide, id, headerExtra 
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  useEscapeLayer(true, () => closeRef.current());
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null;
     const prevOverflow = document.body.style.overflow;
@@ -241,7 +243,6 @@ export function Modal({ title, onClose, children, footer, wide, id, headerExtra 
     const first = ref.current?.querySelector<HTMLElement>("[data-autofocus], input, textarea, select");
     (first ?? ref.current)?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); closeRef.current(); return; }
       if (e.key !== "Tab" || !ref.current) return;
       const f = [...ref.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), textarea, select, [tabindex]:not([tabindex="-1"])')].filter((x) => x.offsetParent !== null);
       if (!f.length) return;

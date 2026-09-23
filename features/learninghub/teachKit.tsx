@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Ico, type IcoName } from "./teachIcons";
+import { useEscapeLayer } from "./escapeLayer";
 
 // Shared building blocks for the three teaching panels (Live lessons, Homework,
 // Flashcards). Kept in its own file so the shell/notes owners can reshape kit.tsx
@@ -190,6 +191,7 @@ export function Dialog({ title, subtitle, onClose, children, footer, size = "md"
   const [ready, setReady] = useState(false);
   const markReady = useCallback(() => setReady(true), []);
   useEffect(() => { closeRef.current = onClose; });
+  useEscapeLayer(ready, () => closeRef.current());
   useEffect(() => {
     if (!ready) return;
     const prev = document.activeElement as HTMLElement | null;
@@ -199,7 +201,6 @@ export function Dialog({ title, subtitle, onClose, children, footer, size = "md"
     const first = node?.querySelector<HTMLElement>("[data-autofocus],input,textarea,select");
     if (first) first.focus({ preventScroll: true }); else node?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); closeRef.current(); return; }
       if (e.key !== "Tab" || !node) return;
       const els = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null);
       if (!els.length) return;
@@ -358,12 +359,11 @@ export function MoreMenu({ label, children, className = "" }: { label: string; c
   useEffect(() => {
     if (!open) return;
     const down = (e: MouseEvent | TouchEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false); };
-    const key = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); btn.current?.focus(); } };
     document.addEventListener("mousedown", down);
     document.addEventListener("touchstart", down);
-    document.addEventListener("keydown", key);
-    return () => { document.removeEventListener("mousedown", down); document.removeEventListener("touchstart", down); document.removeEventListener("keydown", key); };
+    return () => { document.removeEventListener("mousedown", down); document.removeEventListener("touchstart", down); };
   }, [open]);
+  useEscapeLayer(open, () => { setOpen(false); btn.current?.focus(); });
   return (
     <span ref={wrap} className={`relative inline-flex ${className}`}>
       <button ref={btn} type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open}

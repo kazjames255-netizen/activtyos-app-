@@ -20,6 +20,7 @@ import { setLinkParams, useLinkSearch } from "./family/link";
 import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
 import { useRealtime } from "@/lib/realtime";
 import { listDoubts } from "./lesson/doubts/api";
+import { useOnBrand } from "./onBrand";
 
 // Learning Hub — the tutoring vertical's page. One shell, two audiences: a
 // family sees their tutor's hub read-only for the chosen child; the tutor sees
@@ -88,6 +89,27 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   useLayoutEffect(() => { activeRef.current = active; }, [active]);
   const setFocus = useCallback((on: boolean, opts?: { bare?: boolean }) => { setFocusFor(on ? activeRef.current : null); setFocusBare(on && !!opts?.bare); }, []);
   const focus = focusFor === active;
+  // A tab switched by click / Enter / a link moves focus to the panel heading (arrow-key roving keeps focus on the strip) and titles the page.
+  const moveFocus = useRef(false);
+  useOnBrand(tenantId ?? "");
+  useEffect(() => {
+    const before = document.title;
+    document.title = `${current.meta.label} - ${hubName(mode)}`;
+    return () => { document.title = before; };
+  }, [current.meta.label, mode]);
+  useEffect(() => {
+    if (!moveFocus.current) return;
+    moveFocus.current = false;
+    const t = requestAnimationFrame(() => {
+      const panel = document.getElementById(`hub-tabpanel-${active}`);
+      if (!panel || panel.hidden) return;
+      const h = panel.querySelector<HTMLElement>("h1, h2");
+      const target = h ?? panel;
+      if (h && !h.hasAttribute("tabindex")) h.setAttribute("tabindex", "-1");
+      target.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(t);
+  }, [active]);
   const liveNow = useLiveNow(hub.childQs, !!tenantId && (!tutor ? !!hub.childId : true));
 
   // The Questions tab's unread badge — either side should see "someone's waiting" without opening the tab.
@@ -101,7 +123,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
 
   // Navigating clears any stale error banner.
   const go = useCallback((k: TabKey) => {
-    setError(null); setFocusFor(null); setPicked(k);
+    setError(null); setFocusFor(null); moveFocus.current = true; setPicked(k);
     setLinkParams({ tab: k }, true); // a different tab never keeps the old lesson / quiz / homework open
   }, [setError]);
   // Back / a link that names a tab (a notification, "Start the lesson" from a homework) moves the tab too.
@@ -242,8 +264,9 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
         )}
 
         {!focus && !kid && !tutor && <FamilyBar />}
+        {!tutor && hub.childId && <p role="status" aria-live="polite" aria-busy={!settled || undefined} className="sr-only" id="hub-child-live">{settled ? `Showing ${hub.children.find((c) => c.childId === hub.childId)?.childName ?? "your child"}` : "Loading"}</p>}
 
-        {!focus && <HubTabs tabs={tabs} active={active} onSelect={go} liveNow={liveNow} />}
+        {!focus && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
 
         {chips && !focus && topicFilter("chips")}
 
@@ -253,14 +276,14 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
           <main className="min-w-0">
             {/* Notes stays mounted (hidden) on other tabs so an unsaved draft survives a tab switch. */}
             {settled && (
-              <div role="tabpanel" id="hub-tabpanel-notes" aria-labelledby="hub-tab-notes" hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
+              <div role="tabpanel" id="hub-tabpanel-notes" data-hub-panel aria-labelledby="hub-tab-notes" hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
                 <NotesPanel topics={topics} version={notesVersion} listQs={childQs} covered={covered} filter={filter} canEdit={canEdit} readOnly={readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError}
                   onAddTopic={() => setAddSignal((n) => n + 1)} onDirtyChange={setDirty} onClearFilter={() => onFilter(NONE)} active={active === "notes"}
                   childId={hub.childId} config={config} setFocus={setFocus} goTo={go as (k: "flashcards" | "homework") => void} years={hub.years} onYearsChange={hub.setYears} />
               </div>
             )}
             {active !== "notes" && (
-              <div role="tabpanel" id={`hub-tabpanel-${active}`} aria-labelledby={`hub-tab-${active}`} tabIndex={-1} className="hub-rise outline-none" key={active}>{body}</div>
+              <div role="tabpanel" id={`hub-tabpanel-${active}`} data-hub-panel aria-busy={!settled || undefined} aria-labelledby={`hub-tab-${active}`} tabIndex={-1} className="hub-rise outline-none" key={active}>{body}</div>
             )}
             {active === "notes" && !settled && <SkeletonRows rows={4} label="Loading lessons" variant="card" grid />}
           </main>

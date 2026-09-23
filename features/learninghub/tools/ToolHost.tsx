@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { DrawerToolView } from "../remotesync/HelpTools";
 import { getWidget } from "../lesson/widgets";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
+import { useEscapeLayer } from "../escapeLayer";
 import { LIGHT_SCOPE } from "./lightScope";
 import type { ToolMeta, ToolMode } from "./types";
 
@@ -34,11 +35,12 @@ function Body({ tool, mode, qs, onClose }: { tool: ToolMeta; mode: ToolMode; qs:
 export function ToolHost({ tool, mode = "practise", qs, onClose }: { tool: ToolMeta; mode?: ToolMode; qs: string; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  // Escape closes only the topmost layer: a dialog opened inside the tool (or the tool opened over a quiz dialog) is closed first.
+  useEscapeLayer(true, onClose);
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null, prev = document.body.style.overflow;
     document.body.style.overflow = "hidden"; closeRef.current?.focus();
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { onClose(); return; }
       if (e.key !== "Tab" || !panelRef.current) return;
       const f = [...panelRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), select, input, textarea, a[href], [tabindex]:not([tabindex='-1'])")].filter((x) => x.offsetParent !== null);
       if (!f.length) return;
