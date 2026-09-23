@@ -210,13 +210,14 @@ test.describe("set a lesson for children", () => {
     await ctx.close();
   });
 
-  test("a plain (non-interactive) lesson can be set for a whole group from the list card", async ({ browser }) => {
+  test("a plain (non-interactive) lesson can be set for a whole group from the lesson reader", async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
     await openTutorLessons(page);
     const card = await searchLesson(page, plainTitle);
-    await card.getByRole("button", { name: `Set ${plainTitle} for children` }).click();
+    await card.getByRole("button", { name: plainTitle, exact: true }).click(); // the list icon is gone: one form, opened from the reader
+    await page.getByTestId("lesson-set-for-children").click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
     await expect(dlg.getByLabel("Title")).toHaveValue(hwTitle(plainTitle), { timeout: 20_000 });
