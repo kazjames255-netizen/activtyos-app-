@@ -64,8 +64,13 @@ export function QuizSelect({ qs, value, selected, onChange, focus }: { qs: strin
 
 const NOTE_LIMIT = 40;
 /** Lesson picker: search + a short checklist (server search, sorted shelf by shelf). Attached lessons are shown by the form itself. */
-export function NoteChecklist({ qs, topics, noteIds, onToggle, onSeen }: { qs: string; topics: Topic[]; noteIds: string[]; onToggle: (n: Note) => void; onSeen: (rows: Note[]) => void }) {
+export function NoteChecklist({ qs, topics, noteIds, onToggle, onSeen, yearGroups = [], defaultYear = "" }: { qs: string; topics: Topic[]; noteIds: string[]; onToggle: (n: Note) => void; onSeen: (rows: Note[]) => void; /** The tenant's free-text year list ("Year 5"). Empty hides the Year filter. */ yearGroups?: string[]; /** Pre-picked year: the form passes it ONLY while exactly one student is selected. */ defaultYear?: string }) {
   const [q, setQ] = useState("");
+  const [yearPick, setYearPick] = useState<string | null>(null); // null = follow defaultYear until the tutor chooses
+  const [subject, setSubject] = useState("");
+  const year = yearPick ?? defaultYear;
+  const yearN = /(\d{1,2})/.exec(year)?.[1]; // the API filters by school-year number
+  const subjects = useMemo(() => [...new Set(topics.map((t) => t.subject).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [topics]);
   const dq = useDebounced(q.trim());
   const [res, setRes] = useState<{ items: Note[]; total: number } | null>(null);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
@@ -73,11 +78,11 @@ export function NoteChecklist({ qs, topics, noteIds, onToggle, onSeen }: { qs: s
   useEffect(() => { seenRef.current = onSeen; });
   useEffect(() => {
     let live = true;
-    get<{ items: Note[]; total: number }>(`/api/learning-hub/notes${withQs(qs, { limit: String(NOTE_LIMIT), sort: "topic", q: dq || undefined })}`)
+    get<{ items: Note[]; total: number }>(`/api/learning-hub/notes${withQs(qs, { limit: String(NOTE_LIMIT), sort: "topic", q: dq || undefined, year: yearN, subject: subject || undefined })}`)
       .then((r) => { if (!live) return; const items = Array.isArray(r) ? (r as Note[]) : r.items ?? []; setRes({ items, total: Array.isArray(r) ? items.length : r.total ?? items.length }); seenRef.current(items); })
       .catch(() => { if (live) setRes({ items: [], total: 0 }); });
     return () => { live = false; };
-  }, [qs, dq]);
+  }, [qs, dq, yearN, subject]);
   if (res === null) return <Skeleton className="h-[80px]" />;
   return (
     <div className="grid gap-1.5">
@@ -85,8 +90,24 @@ export function NoteChecklist({ qs, topics, noteIds, onToggle, onSeen }: { qs: s
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search lessons…" aria-label="Search lessons" id="hub-hw-note-search"
           className={`min-h-[40px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${FOCUS}`} />
       )}
+      {(yearGroups.length > 0 || subjects.length > 1) && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {yearGroups.length > 0 && (
+            <Select id="hub-hw-note-year" aria-label="Filter lessons by year" className="min-h-[44px] w-full" value={year} onChange={(e) => setYearPick(e.target.value)}>
+              <option value="">All years</option>
+              {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
+            </Select>
+          )}
+          {subjects.length > 1 && (
+            <Select id="hub-hw-note-subject" aria-label="Filter lessons by subject" className={`min-h-[44px] w-full ${yearGroups.length ? "" : "col-span-2"}`} value={subject} onChange={(e) => setSubject(e.target.value)}>
+              <option value="">All subjects</option>
+              {subjects.map((x) => <option key={x} value={x}>{x}</option>)}
+            </Select>
+          )}
+        </div>
+      )}
       {res.items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-[12.5px] text-[var(--ink-3)]">{dq ? `No lesson matches “${dq}”.` : "No lessons yet — add some in the Lessons tab."}</p>
+        <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-[12.5px] text-[var(--ink-3)]">{yearN || subject ? "No lesson matches these filters. Try All years or All subjects." : dq ? `No lesson matches “${dq}”.` : "No lessons yet — add some in the Lessons tab."}</p>
       ) : (
         <div className="max-h-[190px] overflow-y-auto rounded-xl border border-[var(--line)]">
           {res.items.map((n) => {

@@ -53,6 +53,8 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   const preGroup = useMemo(() => (initialGroupId ? groups.find((g) => g.id === initialGroupId) ?? null : null), [initialGroupId, groups]);
   const [childIds, setChildIds] = useState<string[]>(() => homework?.assignedChildIds ?? initialChildIds ?? (preGroup ? groupMemberIds(preGroup) : roster.length === 1 ? [roster[0]!.childId] : []));
   const [groupIds, setGroupIds] = useState<string[]>(() => homework?.groupIds ?? initialGroupIds ?? (preGroup ? [preGroup.id] : []));
+  // Year filter default: ONLY when exactly one student is ticked, and only if their year is in the tenant's list.
+  const singleYear = (() => { if (childIds.length !== 1) return ""; const y = (roster.find((s) => s.childId === childIds[0])?.yearGroup ?? "").trim().toLowerCase(); return (config.yearGroups ?? []).find((g) => g.trim().toLowerCase() === y) ?? ""; })();
   const [videos, setVideos] = useState(() => videosToInputs(homework?.videos));
   // The chosen quiz (any state — a lesson's exit quiz may still be a draft), the lessons attached (id → row, so drafts are spotted),
   // and which enrolled students that quiz can't reach. The pickers themselves search server-side (hwPickers.tsx).
@@ -201,7 +203,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
               <button type="button" disabled={!!publishing} onClick={() => void Promise.all(attachedDrafts.map((n) => doPublish("note", n.id)))} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing ? "Publishing…" : attachedDrafts.length === 1 ? "Publish it" : "Publish them"}</button>
             </div>
           )}
-          <NoteChecklist qs={qs} topics={topics} noteIds={noteIds}
+          <NoteChecklist qs={qs} topics={topics} noteIds={noteIds} yearGroups={config.yearGroups ?? []} defaultYear={singleYear}
             onSeen={(rows) => setNoteRows((m) => new Map([...m, ...rows.map((n) => [n.id, n] as const)]))}
             onToggle={(n) => { setNoteRows((m) => new Map(m).set(n.id, n)); setNoteIds((cur) => (cur.includes(n.id) ? cur.filter((x) => x !== n.id) : [...cur, n.id].slice(0, 20))); }} />
         </div>

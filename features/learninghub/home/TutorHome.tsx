@@ -145,6 +145,9 @@ export function TutorHome(props: PanelProps) {
   const attendees = next ? (next.students?.length ? next.students.map((s) => s.childName) : (next.childIds ?? []).map((id) => nameOf.get(id) ?? "Student")) : [];
   const attn = d.toMark.length + d.written.length + d.overdue.length + d.quiet.length;
   const allFailed = Object.keys(failed).length;
+  // P-12: a brand-new tutor (no active students, nothing failed to load) gets a 3-step guide instead of a wall of zeros.
+  // It is the empty state itself: it disappears as soon as there is one student.
+  const firstRun = !props.readOnly && allFailed === 0 && students.filter((s) => s.active !== false).length === 0;
 
   return (
     <div id="hub-home-tutor" className="space-y-4">
@@ -155,6 +158,7 @@ export function TutorHome(props: PanelProps) {
         </div>
       )}
 
+      {firstRun && <FirstRunGuide onStep={(i) => { if (i === 0) go("students"); else if (i === 1) go("notes"); else { setHubIntent({ kind: "homework", groupId: "" }); go("homework"); } }} />}
       {multiTutor && <div className="flex justify-end"><ScopeToggle scope={scope} onChange={setScope} mine={mineCount} all={allLessons?.length ?? 0} what="lessons" /></div>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <NextLessonHero lesson={next} isTutor readOnly={props.readOnly} attendees={attendees} extraCount={Math.max(0, d.upcoming.length - 1)}
@@ -162,7 +166,7 @@ export function TutorHome(props: PanelProps) {
           topicLabel={next?.topicId && topicById.get(next.topicId) ? topicLabel(topicById.get(next.topicId)!) : undefined}
           onGo={() => go("live")} onSchedule={() => go("live")} />
 
-        <Card title="Needs your attention" icon="warning" tone={attn ? "gold" : "green"} className="h-full" style={rise(1)}
+        {!firstRun && <Card title="Needs your attention" icon="warning" tone={attn ? "gold" : "green"} className="h-full" style={rise(1)}
           aside={<span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={attn ? { background: TONES.gold.bg, color: TONES.gold.fg } : { background: TONES.green.bg, color: TONES.green.fg }}>{attn ? plural(attn, "thing") : "All caught up"}</span>}>
           <div className="grid gap-2">
             <Attention icon="homework" tone="brand" count={d.toMark.length} label="Homework to mark" hint={`${plural(d.toMark.length, "hand-in")} waiting`} onClick={() => go("homework")} />
@@ -171,7 +175,7 @@ export function TutorHome(props: PanelProps) {
             <Attention icon="warning" tone="red" count={d.overdue.length} label="Overdue homework" hint="Past due and not handed in" onClick={() => { requestHomeworkFilter("assigned"); go("homework"); }} />
             <Attention icon="users" tone="gold" count={d.quiet.length} label="Quiet for 14+ days" hint={d.quiet.slice(0, 2).map((s) => s.childName.split(" ")[0]).join(", ") || "No recent activity"} onClick={() => go("students")} />
           </div>
-        </Card>
+        </Card>}
       </div>
 
       {!props.readOnly && <nav aria-label="Quick actions" className="home-rise grid grid-cols-2 gap-2.5 sm:grid-cols-3 2xl:grid-cols-6" style={rise(2)}>
@@ -190,12 +194,12 @@ export function TutorHome(props: PanelProps) {
       </nav>}
       {teaching && <InPersonApp qs={qs} config={config} goTo={goTo} onClose={() => setTeaching(false)} />}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      {!firstRun && <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <ClassSnapshot overview={parts.overview} roster={students} bands={config.masteryBands} failed={failed.overview} onGo={go} delay={3 * 60} />
         <Callouts improvers={d.gains} nudges={d.nudges} hasResults={d.hasResults} onGo={go} onNudge={props.readOnly ? undefined : (id) => { setHubIntent({ kind: "homework", groupId: "", childIds: [id] }); go("homework"); }} delay={4 * 60} />
-      </div>
+      </div>}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      {!firstRun && <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
         <Card title="Recent activity" icon="sparkle" tone="brand" style={rise(5)}>
           {d.feed.length === 0 ? (
             <EmptyState icon="sparkle" title="It's quiet — for now" body="Quiz results, hand-ins and marked work land here as they happen, live." />
@@ -217,7 +221,31 @@ export function TutorHome(props: PanelProps) {
           )}
         </Card>
         <RhythmChart days={d.days} now={now} delay={6 * 60} unit="quizzes handed in" emptyText="No quiz hand-ins in the last two weeks. When students sit a quiz, the days light up here." />
-      </div>
+      </div>}
     </div>
+  );
+}
+
+const FIRST_STEPS: { title: string; body: string; icon: IconName }[] = [
+  { title: "Add a student", body: "Enrol the first child on your roster.", icon: "users" },
+  { title: "Pick a lesson", body: "Choose something from the Lessons shelf.", icon: "notes" },
+  { title: "Set homework", body: "Give them their first task.", icon: "homework" },
+];
+
+/** Three steps for a tutor with no students yet. Shown only while the roster is empty. */
+function FirstRunGuide({ onStep }: { onStep: (i: number) => void }) {
+  return (
+    <Card title="Get started in three steps" icon="sparkle" tone="brand" className="home-rise">
+      <ol data-testid="hub-first-run" className="grid gap-2 sm:grid-cols-3">
+        {FIRST_STEPS.map((st, i) => (
+          <li key={st.title}>
+            <button type="button" onClick={() => onStep(i)} className={`home-lift flex min-h-[64px] w-full items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 text-left ${FOCUS}`}>
+              <IconTile icon={st.icon} tone="brand" size={40} />
+              <span className="min-w-0"><span className="block text-[13.5px] font-extrabold text-[var(--ink)]">{i + 1}. {st.title}</span><span className="block text-[12px] text-[var(--ink-3)]">{st.body}</span></span>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }
