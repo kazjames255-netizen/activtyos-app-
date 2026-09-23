@@ -243,7 +243,7 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
   let items: Record<string, unknown>[];
   if (ctx.canEdit) {
     // Optional per-child view for a tutor (lastAttempt etc.) mirrors what the family sees.
-    const [extra, kids] = await Promise.all([child ? childOverlay(ctx, child, list) : null, page.length ? kidsFor(ctx, null) : Promise.resolve([] as Kid[])]);
+    const [extra, kids] = await Promise.all([child ? childOverlay(ctx, child, list, base) : null, page.length ? kidsFor(ctx, null) : Promise.resolve([] as Kid[])]);
     items = page.map((a) => {
       // Tutors see everything, plus how many of THEIR students it is for (`eligibleCount` = offered it: fits, or year/age unknown).
       const aud = normAudience(a.audience);
@@ -258,7 +258,7 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
       };
     });
   } else {
-    const extra = child ? await childOverlay(ctx, child, list) : null;
+    const extra = child ? await childOverlay(ctx, child, list, base) : null;
     // A lesson's exit quiz is a normal quiz, but it belongs at the end of its lesson: say which lesson, so the UI doesn't offer it cold.
     const lessonOf = new Map<string, { id: string; title: string }>();
     if (page.length) for (const n of (await noteIndex(ctx.tenantId)).values()) if (n.published && n.lessonQuizId && !lessonOf.has(n.lessonQuizId)) lessonOf.set(n.lessonQuizId, { id: n.id, title: n.title });
@@ -326,7 +326,8 @@ hubAssessmentsCrud.get("/assessments/:id", async (req, res) => {
 });
 
 /** For a child: each assessment's lastAttempt, the retake state, and `done` / `locked` flags. */
-async function childOverlay(ctx: HubCtx, child: ChildRef, list: Row[]) {
+/** `all` = every paper this caller may see BEFORE the type/subject filters: a quiz list (?type=quiz) must still know a published diagnostic exists to lock behind. */
+async function childOverlay(ctx: HubCtx, child: ChildRef, list: Row[], all: Row[] = list) {
   const snap = await attemptsCol.where("tenantId", "==", ctx.tenantId).where("childId", "==", child.childId)
     .select("assessmentId", "assessmentType", "status", "pct", "passMarkPct", "submittedAt", "startedAt", "subject", "baselineReset").get();
   const attempts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { assessmentId: string; assessmentType: string; status: string; pct: number | null; passMarkPct?: number; submittedAt: string | null; startedAt: string; subject: string; baselineReset?: boolean }) }));
@@ -351,7 +352,7 @@ async function childOverlay(ctx: HubCtx, child: ChildRef, list: Row[]) {
   const facts = await childFacts(child, cfg.yearGroups);
   // Is there a published diagnostic FOR THIS CHILD (their scope + audience) for each subject? Only then can a
   // quiz honestly be "locked behind" it.
-  const diagSubjects = new Set(list.filter((a) => a.type === "diagnostic" && a.published !== false && fitsChild(a.franchiseId, child) && audienceFit(normAudience(a.audience), facts) !== "no").map((a) => a.subject.toLowerCase()));
+  const diagSubjects = new Set(all.filter((a) => a.type === "diagnostic" && a.published !== false && fitsChild(a.franchiseId, child) && audienceFit(normAudience(a.audience), facts) !== "no").map((a) => a.subject.toLowerCase()));
   const out = new Map<string, Record<string, unknown>>();
   for (const a of list) {
     const l = last.get(a.id);
