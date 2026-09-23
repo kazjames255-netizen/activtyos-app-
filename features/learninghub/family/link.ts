@@ -13,7 +13,7 @@ import { useMemo, useSyncExternalStore } from "react";
 // history.state is always carried over: Next's router keeps its own bookkeeping there (__NA …), and an entry without it
 // makes the router hard-reload on Back.
 
-export type OpenKind = "quiz" | "lesson" | "hw";
+export type OpenKind = "quiz" | "lesson" | "hw" | "doubt";
 export interface OpenRef { kind: OpenKind; id: string }
 
 const EVT = "aos-hub-link";
@@ -32,7 +32,7 @@ export function useLinkSearch(): string {
 }
 
 export function parseOpen(raw: string | null | undefined): OpenRef | null {
-  const m = /^(quiz|lesson|hw):([A-Za-z0-9_-]{1,100})$/.exec(raw ?? "");
+  const m = /^(quiz|lesson|hw|doubt):([A-Za-z0-9_-]{1,100})$/.exec(raw ?? "");
   return m ? { kind: m[1] as OpenKind, id: m[2] } : null;
 }
 

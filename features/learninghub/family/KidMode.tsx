@@ -12,12 +12,12 @@ import { ParentGate } from "./ParentGate";
 const KEY = "aos.hub.kid";
 // "diagnostic" (the placement test) is here so a quiz that is locked behind one can be unlocked from kid mode: the same runner, the same
 // child chip, and the same forced child (there is no picker), just worded as the "Starting quiz" for a child.
-export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards"] as const;
+export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards", "questions"] as const;
 /** The tenant's default level names in a child's words. A tutor's own names (anything else) are left exactly as written. */
 const KID_BAND: Record<string, string> = { learning: "Getting started", developing: "Getting there", secure: "Got it!" };
 export const kidBand = (label: string | null | undefined, kid: boolean): string => (label == null ? "" : kid ? KID_BAND[label.trim().toLowerCase()] ?? label : label);
 /** What a tab is called on a child's screen (the rest keep their names). */
-export const KID_TAB_LABEL: Record<string, string> = { diagnostic: "Starting quiz", dashboard: "How I'm doing" };
+export const KID_TAB_LABEL: Record<string, string> = { diagnostic: "Starting quiz", dashboard: "How I'm doing", questions: "Messages" };
 
 export interface KidStore { t: string; c: string }
 export function readKid(): KidStore | null {

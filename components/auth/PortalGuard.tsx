@@ -6,7 +6,7 @@ import { startClockSync } from "@/features/timeclock/data";
 import { fetchOnboarding } from "@/features/team/onboardStore";
 import { syncLearning } from "@/features/learning/courseCompletions";
 import { useRouter } from "next/navigation";
-import { ApiError, get as apiGet, getActAs } from "@/lib/api";
+import { ApiError, get as apiGet, getActAs, isTwoFaRequired } from "@/lib/api";
 import { PORTAL_ACCESS, ROLE_HOME, type Me } from "@/lib/roles";
 
 // The signed-in account's /api/me, cached for the whole SPA session. Without
@@ -46,7 +46,7 @@ export function getMe(): Promise<Me> {
         .catch((e) => {
           if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
             clearMeCache();
-            window.dispatchEvent(new CustomEvent(ME_INVALID_EVENT, { detail: { status: e.status, message: e.message } }));
+            window.dispatchEvent(new CustomEvent(ME_INVALID_EVENT, { detail: { status: e.status, message: e.message, twoFaRequired: isTwoFaRequired(e) } }));
           }
         });
     }
@@ -114,8 +114,12 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
   // signed out elsewhere) — act on it now rather than on the next full sign-in.
   useEffect(() => {
     const h = (ev: Event) => {
-      const d = (ev as CustomEvent<{ status: number; message: string }>).detail;
-      if (d.status === 401) router.replace("/login");
+      const d = (ev as CustomEvent<{ status: number; message: string; twoFaRequired?: boolean }>).detail;
+      // A platform account's 12h 2FA verification lapsed mid-session (see
+      // middleware/role.ts). No in-place re-verify UI here — just bounce to
+      // login, where signing in again runs the 2FA step fresh.
+      if (d.twoFaRequired) router.replace("/login?notice=2fa");
+      else if (d.status === 401) router.replace("/login");
       else if (/switched off|closed this account/i.test(d.message)) setSwitchedOff(d.message);
     };
     window.addEventListener(ME_INVALID_EVENT, h);
@@ -155,8 +159,11 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
       .catch((e) => {
         if (cancelled) return;
         clearMeCache(); // a failed lookup shouldn't stick — let the next try re-fetch
+        // A platform account's 2FA verification lapsed — see the event handler
+        // above for the mid-session version of this same case.
+        if (isTwoFaRequired(e)) router.replace("/login?notice=2fa");
         // Signed out entirely → the login page, not a shell full of 403s.
-        if (e instanceof ApiError && e.status === 401) router.replace("/login");
+        else if (e instanceof ApiError && e.status === 401) router.replace("/login");
         // The account was switched off (Team → Deactivate) — say so plainly
         // instead of opening a shell where every screen fails.
         else if (e instanceof ApiError && e.status === 403 && /switched off|closed this account/i.test(e.message)) setSwitchedOff(e.message);

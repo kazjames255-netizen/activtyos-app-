@@ -201,6 +201,26 @@ export const patchCard = (tenantId: string, id: string, doc: { topicId?: string;
     m.set(id, { id, topicId: doc.topicId ?? prev?.topicId ?? "", franchiseId: doc.franchiseId !== undefined ? doc.franchiseId : prev?.franchiseId ?? null, published: doc.published !== undefined ? doc.published !== false : prev?.published ?? true, createdAt: doc.createdAt ?? prev?.createdAt ?? "" });
   });
 
+// ── family: which notes has this child actually been sent? ──────────────────
+// A family's "Lessons" tab must only show notes their tutor has actually assigned (via homework — see
+// hub/homeworkApi.ts), not the whole library. `hubHomework` is a small, per-tenant/per-child collection (nothing
+// like the 89k-question index above), so a direct, targeted query is cheap — no full-collection scan needed.
+// Queried by `assignedChildIds array-contains childId` alone (child ids are Firestore auto-ids, effectively unique
+// across tenants) so no composite (tenantId== + array-contains) index is required; the tenant is re-checked in
+// memory before a row's noteIds count. Short TTL (roster-length): a newly assigned lesson should show up promptly,
+// and this is never patched on write like the bigger indexes above.
+const homeworkCol = db.collection("hubHomework");
+export const childAssignedNoteIds = (tenantId: string, childId: string): Promise<Set<string>> =>
+  hubCached("assignedNotes", tenantId, childId, TTL_ROSTER, async () => {
+    const snap = await homeworkCol.where("assignedChildIds", "array-contains", childId).select("tenantId", "noteIds").get();
+    const ids = new Set<string>();
+    for (const d of snap.docs) {
+      if (d.get("tenantId") !== tenantId) continue;
+      for (const id of (d.get("noteIds") as string[] | undefined) ?? []) ids.add(id);
+    }
+    return ids;
+  });
+
 // ── roster ───────────────────────────────────────────────────────────────────
 /** Every enrolment row of the tenant (active or not), unfiltered — callers apply canSeeStudent. */
 export const tenantRoster = (tenantId: string): Promise<EnrolmentDoc[]> =>

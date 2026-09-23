@@ -249,9 +249,12 @@ export function MatchInput({ terms, definitions, value, onChange, disabled }: { 
       </div>
       <span className="sr-only" role="status" aria-live="polite">{said}</span>
       {ghost && createPortal(
-        <div aria-hidden className="pointer-events-none fixed z-[200] max-w-[300px] rotate-[-2deg] scale-[1.04] rounded-[11px] border-2 border-[var(--brand)] bg-[var(--surface)] px-3.5 py-2.5 text-[15px] font-semibold leading-snug text-[var(--ink)] shadow-[0_12px_28px_rgba(0,0,0,.25)]" style={{ left: ghost.x - 30, top: ghost.y - 20 }}>
+        <div aria-hidden className="pointer-events-none fixed z-[510] max-w-[300px] rotate-[-2deg] scale-[1.04] rounded-[11px] border-2 border-[var(--brand)] bg-[var(--surface)] px-3.5 py-2.5 text-[15px] font-semibold leading-snug text-[var(--ink)] shadow-[0_12px_28px_rgba(0,0,0,.25)]" style={{ left: ghost.x - 30, top: ghost.y - 20 }}>
           {definitions[ghost.tile].text}
-        </div>, document.body)}
+        </div>,
+        // #learning-hub's CSS-variable overrides (a warm light palette, forced regardless of dark-mode) are what
+        // --surface/--ink resolve to here — portalling past it to document.body would fall back to :root's.
+        document.getElementById("learning-hub") ?? document.body)}
     </div>
   );
 }

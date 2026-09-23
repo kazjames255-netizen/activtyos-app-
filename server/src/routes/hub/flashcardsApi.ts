@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../../firebase";
 import { canSee, canWriteRow, hubConfig, okId, registerTopicRef, requireEdit, resolveCtx, type EnrolledChild, type HubCtx } from "../../lib/hubCore";
 import { buildQueue, isQuality, sm2, type SrsState } from "../../lib/hubSrs";
-import { chunk, flashcardsCol, isParent, nowIso, parentChild, reviewsCol, tenantEnrolments, topicFamily, visibleTopic } from "./teachingCommon";
+import { chunk, eligibleStudents, flashcardsCol, isParent, nowIso, parentChild, reviewsCol, tenantEnrolments, topicFamily, visibleTopic } from "./teachingCommon";
 import { cardIndex, patchCard, tenantTopics as cachedTopics, topicRank, type CardRow } from "../../lib/hubIndex";
 import { hubCached } from "../../lib/hubCache";
 import { pingHub } from "../../lib/hubPing";
@@ -39,6 +39,41 @@ const reviewId = (tenantId: string, childId: string, cardId: string) => `${tenan
 
 const cardOut = (c: Card) => ({ id: c.id, topicId: c.topicId, front: c.front, back: c.back, published: c.published !== false, franchiseId: c.franchiseId ?? null, createdAt: c.createdAt, updatedAt: c.updatedAt });
 
+// A child's `subjects` (hubEnrolments) is a broad, provider-wide restriction, meant for a multi-subject tenant to
+// wall a family off from subjects they're not enrolled for. It was never meant to be the sole gate on a huge shared
+// curriculum: a child enrolled with no `subjects` picked (the common case — most enrolments never set it) fell back
+// to "sees every published card in the tenant", which on a platform-scale seeded library is tens of thousands of
+// cards with nothing to do with what they're actually being taught. `hubFlashcardAssignments` is the real,
+// topic-level "this child has actually been given this" record — set from the lesson the topic belongs to (see
+// NotesPanel's tutor-side flashcards panel), same idea as homework needing an explicit "Set for children".
+const assignmentsCol = () => db.collection("hubFlashcardAssignments");
+const assignmentId = (tenantId: string, childId: string, topicId: string) => `${tenantId}__${childId}__${topicId}`;
+/** A topic assignment's scope: `null` = the whole topic (every card in it, including ones added later); a Set =
+ *  only those specific cardIds — the tutor picking individual cards rather than the whole deck. */
+type AssignedScope = Map<string, Set<string> | null>;
+function scopeFromDoc(d: FirebaseFirestore.QueryDocumentSnapshot): [string, Set<string> | null] {
+  const cardIds = d.get("cardIds") as string[] | null | undefined;
+  return [d.get("topicId") as string, cardIds && cardIds.length ? new Set(cardIds) : null];
+}
+/** Every topic this child has been explicitly assigned flashcards for, and which cards within it (null = all). */
+async function assignedScopeFor(tenantId: string, childId: string): Promise<AssignedScope> {
+  const snap = await assignmentsCol().where("tenantId", "==", tenantId).where("childId", "==", childId).select("topicId", "cardIds").get();
+  return new Map(snap.docs.map(scopeFromDoc));
+}
+/** The whole tenant's assignments at once, grouped by child — one read instead of one per roster row (the tutor
+ *  stats table computes "cards available" for every student). */
+async function assignedScopeByChild(tenantId: string): Promise<Map<string, AssignedScope>> {
+  const snap = await assignmentsCol().where("tenantId", "==", tenantId).select("childId", "topicId", "cardIds").get();
+  const m = new Map<string, AssignedScope>();
+  for (const d of snap.docs) {
+    const childId = d.get("childId") as string;
+    const [topicId, scope] = scopeFromDoc(d);
+    const existing = m.get(childId);
+    if (existing) existing.set(topicId, scope); else m.set(childId, new Map([[topicId, scope]]));
+  }
+  return m;
+}
+
 const cardBody = z.object({
   topicId: z.string().min(1).max(100),
   front: z.string().trim().min(1).max(1000),
@@ -46,15 +81,21 @@ const cardBody = z.object({
   published: z.boolean().default(true),
 });
 
-/** May THIS child study this card? Published; from head office or the child's own
- *  franchise; in a subject the child is enrolled for. */
-function cardForChild(c: { published?: boolean; topicId: string; franchiseId?: string | null }, topics: Map<string, TopicLite>, kid: EnrolledChild): boolean {
+/** May THIS child study this card? Published; from head office or the child's own franchise; and either their
+ *  enrolment names this subject, or this exact card falls within what was explicitly assigned to them
+ *  (`assignedScope` — the whole topic, or just some of its cards). An enrolment with no subjects at all grants
+ *  nothing by itself any more — see the comment above `assignmentsCol`. */
+function cardForChild(c: { id: string; published?: boolean; topicId: string; franchiseId?: string | null }, topics: Map<string, TopicLite>, kid: EnrolledChild, assignedScope: AssignedScope): boolean {
   if (c.published === false) return false;
   const t = topics.get(c.topicId);
   if (!t) return false; // topic gone, or not this tenant's
   const f = c.franchiseId ?? null;
   if (f !== null && f !== (kid.franchiseId ?? null)) return false;
-  return !kid.subjects.length || kid.subjects.some((s) => s.toLowerCase() === t.subject.toLowerCase());
+  if (assignedScope.has(c.topicId)) {
+    const scope = assignedScope.get(c.topicId)!;
+    if (scope === null || scope.has(c.id)) return true;
+  }
+  return kid.subjects.some((s) => s.toLowerCase() === t.subject.toLowerCase());
 }
 
 async function tenantTopics(tenantId: string): Promise<Map<string, TopicLite & { topic: string; subtopic: string | null }>> {
@@ -85,11 +126,12 @@ hubFlashcardsApi.get("/flashcards/due", async (req, res) => {
   }
   // The queue is worked out from the cached LIGHT card index (id, topic, scope, published, created) + this child's review
   // rows; only the ≤50 cards actually handed over are read in full (front/back) — never all ~4,500 of them.
-  const [topics, index, revSnap] = await Promise.all([
+  const [topics, index, revSnap, assignedScope] = await Promise.all([
     tenantTopics(ctx.tenantId), cardIndex(ctx.tenantId),
     reviewsCol.where("tenantId", "==", ctx.tenantId).where("childId", "==", kid.childId).select("cardId", "nextDueAt").get(),
+    assignedScopeFor(ctx.tenantId, kid.childId),
   ]);
-  const mine = [...index.values()].filter((c) => (!family || family.has(c.topicId)) && cardForChild(c, topics, kid));
+  const mine = [...index.values()].filter((c) => (!family || family.has(c.topicId)) && cardForChild(c, topics, kid, assignedScope));
   const reviews = new Map(revSnap.docs.map((d) => [d.get("cardId") as string, { cardId: d.get("cardId") as string, nextDueAt: d.get("nextDueAt") as string }]));
   mine.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
   const q = buildQueue(mine, reviews, new Date());
@@ -115,8 +157,8 @@ hubFlashcardsApi.post("/flashcards/:id/review", async (req, res) => {
   const cs = await flashcardsCol.doc(req.params.id).get();
   if (!cs.exists || cs.get("tenantId") !== ctx.tenantId) { res.status(404).json({ error: "Card not found" }); return; }
   const card = { id: cs.id, ...(cs.data() as CardDoc) };
-  const topics = await tenantTopics(ctx.tenantId);
-  if (!cardForChild(card, topics, kid)) { res.status(404).json({ error: "Card not found" }); return; }
+  const [topics, assignedScope] = await Promise.all([tenantTopics(ctx.tenantId), assignedScopeFor(ctx.tenantId, kid.childId)]);
+  if (!cardForChild(card, topics, kid, assignedScope)) { res.status(404).json({ error: "Card not found" }); return; }
   const cfg = await hubConfig(ctx.tenantId, kid.franchiseId);
   const ref = reviewsCol.doc(reviewId(ctx.tenantId, kid.childId, card.id));
   const quality = body.quality;
@@ -148,11 +190,12 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
   type RevLite = { childId: string; cardId: string; nextDueAt: string; intervalDays: number; lastReviewedAt: string };
-  const [topics, index, students, revs] = await Promise.all([
+  const [topics, index, students, revs, assignedByChild] = await Promise.all([
     tenantTopics(ctx.tenantId), cardIndex(ctx.tenantId), tenantEnrolments(ctx),
     // Only the five fields the stats use, cached for a few seconds (a tenant's review rows grow with students × cards studied).
     hubCached("reviews", ctx.tenantId, "", 20_000, async () =>
       (await reviewsCol.where("tenantId", "==", ctx.tenantId).select("childId", "cardId", "nextDueAt", "intervalDays", "lastReviewedAt").get()).docs.map((d) => d.data() as RevLite)),
+    assignedScopeByChild(ctx.tenantId),
   ]);
   const cards = [...index.values()].filter((c) => canSee(ctx, c.franchiseId));
   const byTopic = new Map<string, number>();
@@ -162,7 +205,7 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
   const nowIsoStr = nowIso();
   const rows = [...students.values()].filter((e) => e.active !== false).map((e) => {
     const kid: EnrolledChild = { childId: e.childId, childName: e.childName, franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [] };
-    const avail = cards.filter((c) => cardForChild(c, topics, kid));
+    const avail = cards.filter((c) => cardForChild(c, topics, kid, assignedByChild.get(e.childId) ?? new Map()));
     const availIds = new Set(avail.map((c) => c.id));
     const rev = (revByChild.get(e.childId) ?? []).filter((r) => availIds.has(r.cardId));
     return {
@@ -178,6 +221,60 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
       .sort((a, b) => a.subject.localeCompare(b.subject) || a.topic.localeCompare(b.topic) || (a.subtopic ?? "").localeCompare(b.subtopic ?? "")),
     students: rows,
   });
+});
+
+// ── Tutor: assign a topic's flashcards to students ───────────────────────────
+// From the lesson itself (its topic's flashcards, right there while teaching it) or from "Set for children" —
+// either way, this is the one thing that actually puts a topic's cards in a child's queue when their enrolment
+// doesn't already cover its subject. See the comment above `assignmentsCol`.
+
+const assignBody = z.object({
+  topicId: z.string().min(1).max(100), childIds: z.array(z.string().min(1).max(100)).min(1).max(100),
+  /** Specific cards within the topic, instead of the whole thing — the tutor ticking individual cards rather than
+   *  the bulk "the whole topic" default. Omitted/empty = the whole topic (including cards added to it later). */
+  cardIds: z.array(z.string().min(1).max(100)).max(MAX_CARDS).optional(),
+});
+
+// GET /flashcards/assigned?topicId= → { childIds: string[] } — who (of the caller's own students) already has this
+// topic's cards, so the picker can show it back pre-ticked instead of losing the tutor's own earlier choice.
+hubFlashcardsApi.get("/flashcards/assigned", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const t = await visibleTopic(ctx, req.query.topicId);
+  if (!t) { res.status(404).json({ error: "Topic not found" }); return; }
+  const mine = await tenantEnrolments(ctx);
+  const snap = await assignmentsCol().where("tenantId", "==", ctx.tenantId).where("topicId", "==", t.id).select("childId").get();
+  res.json({ childIds: snap.docs.map((d) => d.get("childId") as string).filter((id) => mine.has(id)) });
+});
+
+// POST /flashcards/assign {topicId, childIds} → { assigned: string[] }
+hubFlashcardsApi.post("/flashcards/assign", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const parsed = assignBody.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const t = await visibleTopic(ctx, parsed.data.topicId);
+  if (!t) { res.status(404).json({ error: "Topic not found" }); return; }
+  const students = await eligibleStudents(ctx, parsed.data.childIds);
+  if (!students) { res.status(404).json({ error: "Student not found — flashcards are assigned to your enrolled students" }); return; }
+  // Specific cards, once confirmed they're actually this topic's own (never trust an id list at face value) — an
+  // empty/omitted list means "the whole topic", stored as `cardIds: null` so cards added later are included too.
+  let cardIds: string[] | null = null;
+  if (parsed.data.cardIds?.length) {
+    const index = await cardIndex(ctx.tenantId);
+    cardIds = parsed.data.cardIds.filter((id) => index.get(id)?.topicId === t.id);
+    if (!cardIds.length) { res.status(400).json({ error: "None of those cards belong to this topic" }); return; }
+  }
+  const now = nowIso();
+  const batch = db.batch();
+  for (const s of students) {
+    batch.set(assignmentsCol().doc(assignmentId(ctx.tenantId, s.childId, t.id)), {
+      tenantId: ctx.tenantId, franchiseId: s.franchiseId ?? null, childId: s.childId, topicId: t.id,
+      cardIds, assignedBy: ctx.uid, assignedAt: now,
+    }, { merge: true });
+  }
+  await batch.commit();
+  res.json({ assigned: students.map((s) => s.childId) });
 });
 
 // GET /flashcards?topicId= — the tutor's deck (drafts included); a topic id also pulls in its subtopics.

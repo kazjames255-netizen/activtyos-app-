@@ -130,7 +130,10 @@ export function useHubData(mode: "student" | "tutor") {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { loadNoteStats(); }, [years, loadNoteStats]);
   useRealtime(["hubTopics", "hubEnrolments"], refresh);
-  useRealtime(["hubNotes"], loadNoteStats);
+  // A family's note list/counts are now scoped to what's actually been assigned (server: GET /notes, /notes/counts),
+  // so a newly-assigned lesson must refresh this the moment the homework naming their child is created — not just
+  // when the library itself changes.
+  useRealtime(["hubNotes", "hubHomework"], loadNoteStats);
   useRealtime(["hubGroups"], loadGroups);
 
   // Coming back to the tab: re-sign the attachment links if they've aged.

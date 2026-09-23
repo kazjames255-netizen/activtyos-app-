@@ -147,6 +147,15 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
   return res.json() as Promise<T>;
 }
 
+// A platform account's session-level 2FA verification (server: `attachRole`
+// in server/src/middleware/role.ts, TTL 12h) can lapse while a page sits
+// open. Any /api/* call then 403s with this code instead of its usual
+// payload — recognizable here so a caller can show something clearer than
+// the raw error, even if it's just "sign in again" rather than a full
+// re-verify-in-place flow.
+export const isTwoFaRequired = (e: unknown): boolean =>
+  e instanceof ApiError && (e.body as { code?: string } | undefined)?.code === "2fa_required";
+
 export const get = <T>(path: string) => api<T>(path);
 export const post = <T>(path: string, body: unknown) =>
   api<T>(path, { method: "POST", body: JSON.stringify(body) });

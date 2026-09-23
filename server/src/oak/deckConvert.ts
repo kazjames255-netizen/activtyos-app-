@@ -706,7 +706,20 @@ export async function convertPptx(buf: Buffer, opts: ConvertOpts): Promise<{ sli
     const allText = textOf(tree).replace(/\s+/g, " ").trim();
     sc.attribution = /oak national academy/i.test(allText) && /©|open government licen[cs]e|licensed under/i.test(allText);
     // Owner decision (2026-09-21): the closing "© Oak National Academy / Open Government Licence" slide is not shown to pupils.
-    const why = /how to use oak lessons/i.test(allText) ? "how-to-use-oak-lessons" : sc.attribution ? "attribution" : !allText && !chs(spTreeOf(tree), "p:pic").length ? "empty" : "";
+    // Owner decision (2026-09-23): a second, newer Oak template slide leaked through undetected — Oak renamed/restyled the
+    // "how to use Oak lessons" page (title now varies: "How our teaching resources are designed for the classroom" / "This
+    // lesson includes additional materials which can be downloaded from the lesson page…") but its BODY copy is stable:
+    // "Oak's lessons are structured around learning cycles… Oak's lesson structure / Useful links… Teacher Guidance". Oak also
+    // ships a follow-on "Available/Video clips" page (blank title, no Oak mention) that is teacher-only chatter from the same
+    // template family, identified by its own stable body copy + the same "Teacher guidance" footer label. Neither slide is
+    // ever shown in real pupil content, so match on BODY TEXT, not position (their slide index varies deck to deck).
+    const isOakTeacherGuidance = /oak.?s lessons? (?:are|is) structured around/i.test(allText) || /oak.?s lesson structure/i.test(allText);
+    const isOakClipsGuidance = /teacher guidance/i.test(allText) && /to help you teach this lesson, we/i.test(allText);
+    const why = /how to use oak lessons/i.test(allText) ? "how-to-use-oak-lessons"
+      : isOakTeacherGuidance ? "oak-teacher-guidance"
+      : isOakClipsGuidance ? "oak-clips-guidance"
+      : sc.attribution ? "attribution"
+      : !allText && !chs(spTreeOf(tree), "p:pic").length ? "empty" : "";
     if (why) { stats.dropped.push({ n: si + 1, why }); continue; }
 
     // Background: slide → layout → master.

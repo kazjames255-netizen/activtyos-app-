@@ -30,8 +30,8 @@ export interface FamilyNotice {
   /** Where the bell entry lands inside the hub: `?tab=…` (default: the hub's Home) and, for one thing, `open=<kind>:<id>` (a lesson to play,
    *  a quiz to start, a homework to open). The child rides along (`child=`) whenever this family has exactly one child in scope, so the
    *  link opens the right child's view instead of whichever child was last picked. */
-  tab?: "home" | "live" | "quizzes" | "diagnostic" | "homework" | "notes" | "flashcards";
-  open?: { kind: "quiz" | "lesson" | "hw"; id: string } | null;
+  tab?: "home" | "live" | "quizzes" | "diagnostic" | "homework" | "notes" | "flashcards" | "questions";
+  open?: { kind: "quiz" | "lesson" | "hw" | "doubt"; id: string } | null;
 }
 
 /** /custdash/learninghub?tab=…&child=…&open=… — the same shape the hub reads (features/learninghub/family/link.ts). */
@@ -80,17 +80,3 @@ export const nameList = (names: string[]) => {
   const uniq = [...new Set(names.map((x) => x.trim()).filter(Boolean))];
   return uniq.length <= 1 ? (uniq[0] ?? "your child") : `${uniq.slice(0, -1).join(", ")} and ${uniq[uniq.length - 1]}`;
 };
-
-/** New published note → the families of students who can see its topic. Called
- *  once from POST /notes; resolves the topic's subject itself so that route
- *  needs only this one line. */
-export function notifyNewNote(tenantId: string, franchiseId: string | null, topicId: string, title: string, noteId: string): void {
-  void (async () => {
-    const t = await db.collection("hubTopics").doc(topicId).get();
-    const subject = t.exists && t.get("tenantId") === tenantId ? ((t.get("subject") as string | undefined) ?? null) : null;
-    await notifyFamilies({
-      tenantId, franchiseId, subject, ref: noteId, tab: "notes", open: { kind: "lesson", id: noteId },
-      compose: (names) => ({ title: "New lesson shared", body: `New lesson for ${nameList(names)}: "${title}"${subject ? ` (${subject})` : ""}.` }),
-    });
-  })().catch(() => {});
-}

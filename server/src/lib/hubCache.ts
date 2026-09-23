@@ -50,7 +50,7 @@ function diskRead<T>(kind: HubKind, tenantId: string): T | null {
 }
 
 export type HubKind =
-  | "topics" | "notes" | "questions" | "assessments" | "roster" | "mastery" | "cards" | "reviews";
+  | "topics" | "notes" | "questions" | "assessments" | "roster" | "mastery" | "cards" | "reviews" | "assignedNotes";
 
 const keyOf = (kind: HubKind, tenantId: string, extra = "") => `${kind}|${tenantId}|${extra}`;
 

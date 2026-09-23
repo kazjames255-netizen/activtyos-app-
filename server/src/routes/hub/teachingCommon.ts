@@ -19,6 +19,7 @@ export const flashcardsCol = db.collection("hubFlashcards");
 export const reviewsCol = db.collection("hubFlashcardReviews");
 export const lessonsCol = db.collection("hubLessons");
 export const imagesCol = db.collection("images");
+export const doubtsCol = db.collection("hubDoubts");
 
 export const nowIso = () => new Date().toISOString();
 

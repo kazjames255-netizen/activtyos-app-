@@ -17,6 +17,7 @@ import { useStudentHome } from "./useHomeData";
 import { AskTutorLink, useFamily } from "../family/FamilyContext";
 import { openLink } from "../family/link";
 import { kidBand } from "../family/KidMode";
+import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
 
 // Student / parent Home — a warm "today" for the chosen child: what's next, what
 // is due, how the last quizzes went, where they're strong, and one clear next step.
@@ -32,7 +33,7 @@ export function StudentHome(props: PanelProps) {
 }
 
 function StudentHomeFor(props: PanelProps & { childId: string }) {
-  const { qs, childId, config, onError, goTo, providerName } = props;
+  const { qs, childQs, childId, config, onError, goTo, providerName } = props;
   const go = goTo ?? (() => undefined);
   const { ready, parts, failed, reload } = useStudentHome(qs, childId, onError);
   const now = useNow(30_000);
@@ -100,6 +101,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
 
   return (
     <div id="hub-home-student" className="space-y-4">
+      <JoinRemoteSyncBanner qs={childQs ?? qs} childId={childId} config={config} />
       {!kidMode && (
         <section aria-label={`${firstName(name)} this week`} data-testid="hub-parent-summary" data-ui="card" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
           <div className="min-w-0 flex-1 basis-[240px]">

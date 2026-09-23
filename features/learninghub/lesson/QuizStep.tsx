@@ -21,14 +21,18 @@ import { Btn, StepCard, Tag, display } from "./lessonUi";
 
 export interface QuizOutcome { result: Result | null; run: StartedAttempt | null; notice: string | null }
 
-export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack, preview, homeworkId, onLiveAnswer }: {
+export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack, preview, homeworkId, onLiveAnswer, onView }: {
   quiz: { id: string; title: string; questionCount: number }; qs: string; childId: string | null; config: HubSettings; readOnly: boolean;
   /** Tutor preview: the lesson to practise the quiz of (instant feedback, nothing saved). */
   preview?: { noteId: string; childQs: string };
   /** The homework this lesson was opened from: the quiz attempt is recorded against it. */
   homeworkId?: string | null;
-  /** Remote-sync "own_pace": fired on every change to the current question's answer-so-far. */
-  onLiveAnswer?: (questionId: string, response: unknown) => void;
+  /** Remote-sync "own_pace": fired on every change to the current question's answer-so-far, with its prompt text
+   *  (so the tutor's mini-screen can show "Q: …" with no separate lookup). Real-quiz correctness isn't known until
+   *  submission, so there's no verdict here — the tutor's screen just shows "answered". */
+  onLiveAnswer?: (questionId: string, response: unknown, prompt: string) => void;
+  /** "Ask my teacher": fired as soon as a question is on screen (before any answer). */
+  onView?: (q: { id: string; prompt: string }) => void;
   onFinish: (o: QuizOutcome) => void; onBack: () => void;
 }) {
   const [run, setRun] = useState<StartedAttempt | null>(null);
@@ -70,11 +74,13 @@ export function QuizStep({ quiz, qs, childId, config, readOnly, onFinish, onBack
   }, []);
 
   useEffect(() => { box.current?.focus({ preventScroll: true }); }, [idx, phase]);
+  useEffect(() => { if (run && phase === "taking") onView?.({ id: run.questions[idx]!.id, prompt: run.questions[idx]!.prompt }); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [run, phase, idx]);
   useEffect(() => { if (run && !readOnly && phase === "taking") saveDraft(run.attemptId, answers, idx); }, [run, readOnly, phase, answers, idx]);
   const currentAnswer = run?.questions[idx] ? answers[run.questions[idx]!.id] : undefined;
   useEffect(() => {
     if (!run || readOnly || phase !== "taking" || currentAnswer === undefined) return;
-    onLiveAnswer?.(run.questions[idx]!.id, currentAnswer);
+    onLiveAnswer?.(run.questions[idx]!.id, currentAnswer, run.questions[idx]!.prompt);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentAnswer, idx]);
   useDraftSync(run && !readOnly && childId ? hubPath(qs, `/attempts/${run.attemptId}/draft`, { childId }) : null, answers, idx, !!run && !readOnly && phase === "taking");

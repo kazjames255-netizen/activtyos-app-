@@ -16,6 +16,7 @@ import { NextLessonHero, over } from "./NextLesson";
 import { RhythmChart } from "./RhythmChart";
 import { useTutorHome } from "./useHomeData";
 import { ScopeToggle, useScope } from "../mineKit";
+import { TutorLiveBanner } from "../remotesync/TutorLiveBanner";
 
 type Go = NonNullable<PanelProps["goTo"]>;
 
@@ -147,6 +148,7 @@ export function TutorHome(props: PanelProps) {
 
   return (
     <div id="hub-home-tutor" className="space-y-4">
+      <TutorLiveBanner qs={qs} goTo={() => go("notes")} />
       {allFailed > 0 && allFailed < 4 && (
         <div className="space-y-2">
           {(Object.keys(failed) as (keyof typeof failed)[]).map((k) => <PartError key={k} what={({ lessons: "your lessons", inbox: "the homework inbox", overview: "student mastery", attempts: "quiz activity" } as const)[k]} message={failed[k]} onRetry={reload} />)}

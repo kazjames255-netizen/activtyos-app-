@@ -18,6 +18,8 @@ import { FamilyBar, FamilyProvider, type FamilyCtx } from "./family/FamilyContex
 import { KID_TABS, KID_TAB_LABEL, KidBar, readKid, useKidGuards, writeKid } from "./family/KidMode";
 import { setLinkParams, useLinkSearch } from "./family/link";
 import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
+import { useRealtime } from "@/lib/realtime";
+import { listDoubts } from "./lesson/doubts/api";
 
 // Learning Hub — the tutoring vertical's page. One shell, two audiences: a
 // family sees their tutor's hub read-only for the chosen child; the tutor sees
@@ -87,6 +89,15 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const setFocus = useCallback((on: boolean, opts?: { bare?: boolean }) => { setFocusFor(on ? activeRef.current : null); setFocusBare(on && !!opts?.bare); }, []);
   const focus = focusFor === active;
   const liveNow = useLiveNow(hub.childQs, !!tenantId && (!tutor ? !!hub.childId : true));
+
+  // The Questions tab's unread badge — either side should see "someone's waiting" without opening the tab.
+  const [unreadQuestions, setUnreadQuestions] = useState(0);
+  const loadUnreadQuestions = useCallback(() => {
+    if (!tenantId || (!tutor && !hub.childId)) return;
+    listDoubts(tutor ? qs : hub.childQs).then((rows) => setUnreadQuestions(rows.filter((d) => (tutor ? d.unreadByTutor : d.unreadByFamily)).length)).catch(() => undefined);
+  }, [tutor, tenantId, qs, hub.childId, hub.childQs]);
+  useEffect(() => { loadUnreadQuestions(); const t = setInterval(loadUnreadQuestions, 20_000); return () => clearInterval(t); }, [loadUnreadQuestions]);
+  useRealtime(["hubDoubts"], loadUnreadQuestions);
 
   // Navigating clears any stale error banner.
   const go = useCallback((k: TabKey) => {
@@ -163,7 +174,11 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     tenantId, qs, canEdit, readOnly, franchiseId: provider.franchiseId ?? null, me: tutor && provider.uid ? { uid: provider.uid, role: provider.role ?? "" } : null, topics, filter, covered, students, childId: hub.childId, config,
     onError: setError, mode, providerName: provider.name, child: hub.child, refreshStudents: refresh, goTo: go, childQs, setFocus, groups, refreshGroups: refresh,
   };
-  const tabs: HubTab[] = modules.filter((m) => !kid || (KID_TABS as readonly string[]).includes(m.meta.key)).map((m) => ({ meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : m.meta, badge: m.meta.key === "notes" && dirty ? "Unsaved" : undefined }));
+  const tabs: HubTab[] = modules.filter((m) => !kid || (KID_TABS as readonly string[]).includes(m.meta.key)).map((m) => ({
+    // Families see "Messages" (it's their own inbox); the tutor keeps "Student message centre" (kid label wins when both apply).
+    meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : !tutor && m.meta.key === "questions" ? { ...m.meta, label: "Messages" } : m.meta,
+    badge: m.meta.key === "notes" && dirty ? "Unsaved" : m.meta.key === "questions" && unreadQuestions > 0 ? String(unreadQuestions) : undefined,
+  }));
   // The roster is about people, not topics — give it the full width. Quizzes,
   // homework and placement are card grids that want the width too: their
   // subject filter is a chip bar above the content, not a 280px column.

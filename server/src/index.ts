@@ -86,6 +86,7 @@ import { children } from "./routes/children";
 import { platformNotifications } from "./routes/platformNotifications";
 import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
+import { twoFa } from "./routes/twoFa";
 import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
 import { enforceSubscription } from "./middleware/subscription";
@@ -196,6 +197,12 @@ app.use("/api/demo-slots", demoSlotsPublic);
 // Provider directory for the parent sign-up picker — a parent has no account
 // yet, so this must sit above requireAuth. Name + rough location only.
 app.use("/api/providers", rateLimit("providers", 120), providersPublic);
+
+// Platform 2FA: `requireAuth` only, deliberately mounted ABOVE attachRole —
+// attachRole is what refuses an unverified platform account (see
+// middleware/role.ts), so these must stay reachable to a signed-in platform
+// user who hasn't verified yet, or verification could never happen.
+app.use("/api/auth/2fa", requireAuth, rateLimit("2fa", 20), twoFa);
 
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past

@@ -7,6 +7,7 @@ import { cleanKindResponse, presentMatch, presentOrder, type Pair } from "../../
 import { inferRule, markResponse, revealAllowed } from "../../lib/hubScoring";
 import { assessmentRows } from "../../lib/hubIndex";
 import { fitsChild, loadTopics, questionsCol, requestedChild, type ChildRef, type QuestionDoc } from "./shared";
+import { normalizeLesson } from "../../../../features/learninghub/lesson/types";
 
 // Learning Hub — the interactive LESSON player's two question endpoints (features/learninghub/lesson).
 //
@@ -99,6 +100,26 @@ hubLessonApi.get("/notes/:id/lesson-questions", async (req, res) => {
     if (a && visible) quiz = { id: a.id, title: a.title, questionCount: a.questionIds?.length ?? 0 };
   }
   res.json({ warmup, quiz });
+});
+
+// GET /notes/:id/slide-peek?slide=<n> — "Ask my teacher"'s "View slide": the ONE slide a thread is about, for
+// whoever may see the THREAD (a family in it, or the tutor) — not gated on the family having been formally set
+// this lesson as homework (GET /notes/:id's rule), since being IN the conversation about it already proves they
+// were shown it. Same tenant/franchise visibility as everywhere else; never the answer key beyond what a slide
+// itself already shows (slides carry no marked answers).
+hubLessonApi.get("/notes/:id/slide-peek", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx) return;
+  const nf = () => { res.status(404).json({ error: "Lesson not found" }); return; };
+  if (!okId(req.params.id)) return nf();
+  const snap = await notesCol.doc(req.params.id).get();
+  const n = snap.exists ? (snap.data() as { tenantId: string; franchiseId: string | null; title: string; published?: boolean; lesson?: unknown }) : null;
+  if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) return nf();
+  if (!n.lesson || typeof n.lesson !== "object") return nf();
+  const idx = Math.max(0, Math.trunc(Number(req.query.slide)) || 0);
+  const lesson = normalizeLesson(n.lesson, n.title);
+  const slides = lesson.deckSlides.length ? lesson.deckSlides : lesson.slides;
+  res.json({ title: lesson.title, slide: slides[idx] ?? null });
 });
 
 const checkBody = z.object({ questionId: z.string().min(1).max(100), response: z.unknown() });

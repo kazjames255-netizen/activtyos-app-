@@ -77,8 +77,22 @@ function useEdgeFade() {
 
 export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, franchiseId, qs, onChanged, onError, addSignal = 0, variant = "sidebar" }: Props) {
   const isDesktop = useIsDesktop();
-  const tree = useMemo(() => buildTree(topics), [topics]);
+  const fullTree = useMemo(() => buildTree(topics), [topics]);
   const counts = useMemo(() => countsFromStats(topics, noteStats), [topics, noteStats]);
+  // A family/student only ever picks from this list — an empty subject or topic is nothing to open, just noise
+  // in what's meant to be "what's actually there for my child". A tutor still sees everything (they're the one
+  // who'd add a topic's first lesson), so this only narrows the read-only side.
+  const tree = useMemo(() => {
+    if (canEdit) return fullTree;
+    return fullTree
+      .filter((s) => (counts.bySubject.get(s.subject) ?? 0) > 0)
+      .map((s) => ({
+        ...s,
+        topics: s.topics
+          .filter(({ topic }) => (counts.byTopic.get(topic.id) ?? 0) > 0)
+          .map((t) => ({ ...t, subs: t.subs.filter((sub) => (counts.byTopic.get(sub.id) ?? 0) > 0) })),
+      }));
+  }, [fullTree, canEdit, counts]);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<Editing>(null);
   const [subject, setSubject] = useState("");

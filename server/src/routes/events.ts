@@ -30,7 +30,7 @@ import { hubPingRef } from "../lib/hubPing";
 // ~4,500 flashcards and thousands of attempts — must never be streamed tenant-wide (attaching a listener reads the whole
 // result set, per connection): they are PING channels, fed by one tiny per-tenant document that the hub's write routes
 // stamp (lib/hubPing.ts). The client still receives {collection} and refetches through the normal authorized endpoints.
-const HUB_DIRECT_CHANNELS = ["hubHomework", "hubSubmissions", "hubLessons", "hubGroups"];
+const HUB_DIRECT_CHANNELS = ["hubHomework", "hubSubmissions", "hubLessons", "hubGroups", "hubDoubts"];
 const HUB_PING_CHANNELS = ["hubTopics", "hubNotes", "hubQuestions", "hubAssessments", "hubFlashcards", "hubAttempts"];
 // What a FAMILY may watch tenant-wide (shared content, not per-family rows).
 const HUB_FAMILY_DIRECT = ["hubHomework"];

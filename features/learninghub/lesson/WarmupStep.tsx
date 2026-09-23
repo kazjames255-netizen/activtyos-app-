@@ -17,7 +17,7 @@ import { errMsg } from "../types";
 const CHEERS = ["Yes!", "Spot on!", "Nice one!", "Correct!"];
 export interface WarmupOutcome { ok: boolean | null }
 
-export function WarmupStep({ questions, config, check, scored, onDone, onBack, skippable, extra, onLiveAnswer }: {
+export function WarmupStep({ questions, config, check, scored, onDone, onBack, skippable, extra, onLiveAnswer, onView }: {
   questions: WarmupQuestion[]; config: HubSettings;
   check: (questionId: string, response: unknown) => Promise<WarmupCheck>;
   /** Report one checked answer (streak / XP live in the player). */
@@ -27,8 +27,12 @@ export function WarmupStep({ questions, config, check, scored, onDone, onBack, s
   skippable?: boolean;
   /** In-person class mode, or remote-sync "driven": extra controls for the tutor under the question (per-child tally / tagging), replacing the normal input entirely. */
   extra?: (q: WarmupQuestion) => ReactNode;
-  /** Remote-sync "own_pace": fired on every change to this question's answer-so-far. */
-  onLiveAnswer?: (questionId: string, response: unknown) => void;
+  /** Remote-sync "own_pace": fired on every change to this question's answer-so-far, with its prompt text (so the
+   *  tutor's mini-screen can show "Q: …" with no separate lookup) and, once Check is pressed, the verdict. */
+  onLiveAnswer?: (questionId: string, response: unknown, extra: { prompt: string; verdict?: boolean | null }) => void;
+  /** "Ask my teacher": fired as soon as a question is shown (before any answer), so the player always knows the exact
+   *  question currently on screen — unlike `onLiveAnswer`, which only fires once the pupil starts answering. */
+  onView?: (q: { id: string; prompt: string }) => void;
 }) {
   const [i, setI] = useState(0);
   const results = useRef<WarmupOutcome[]>([]);
@@ -36,16 +40,17 @@ export function WarmupStep({ questions, config, check, scored, onDone, onBack, s
   if (!q) return null;
   return (
     <WarmupCard key={q.id} q={q} n={i + 1} of={questions.length} config={config} check={check} scored={scored}
-      onBack={i === 0 ? onBack : undefined} skippable={skippable} extra={extra} onLiveAnswer={onLiveAnswer}
+      onBack={i === 0 ? onBack : () => setI(i - 1)} skippable={skippable} extra={extra} onLiveAnswer={onLiveAnswer} onView={onView}
       onNext={(o) => { results.current[i] = o; if (i + 1 >= questions.length) onDone([...results.current]); else setI(i + 1); }} />
   );
 }
 
-function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable, extra, onLiveAnswer }: {
+function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable, extra, onLiveAnswer, onView }: {
   q: WarmupQuestion; n: number; of: number; config: HubSettings;
   check: (id: string, response: unknown) => Promise<WarmupCheck>; scored: (ok: boolean, hinted: boolean) => void;
   onNext: (o: WarmupOutcome) => void; onBack?: () => void; skippable?: boolean; extra?: (q: WarmupQuestion) => ReactNode;
-  onLiveAnswer?: (questionId: string, response: unknown) => void;
+  onLiveAnswer?: (questionId: string, response: unknown, extra: { prompt: string; verdict?: boolean | null }) => void;
+  onView?: (q: { id: string; prompt: string }) => void;
 }) {
   const rule = ruleOf(config.questionKinds, q.kind);
   const [value, setValue] = useState<Answer | undefined>(undefined);
@@ -55,19 +60,22 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
   const [err, setErr] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { box.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => { onView?.({ id: q.id, prompt: q.prompt }); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.id]);
 
   const response = () => {
     if (Array.isArray(value)) return value;
     if (rule === "numeric" && typeof value === "string") { const x = Number(value.replace(/,/g, "").trim()); return Number.isFinite(x) ? x : value; }
     return value;
   };
-  useEffect(() => { if (value !== undefined) onLiveAnswer?.(q.id, response()); // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (value !== undefined) onLiveAnswer?.(q.id, response(), { prompt: q.prompt }); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   const doCheck = async () => {
     setBusy(true); setErr(null);
     try {
       const v = await check(q.id, response());
       setVerdict(v);
+      onLiveAnswer?.(q.id, response(), { prompt: q.prompt, verdict: v.correct });
       if (v.correct !== null) scored(v.correct, hint);
       if (v.correct === false) box.current?.closest("section")?.classList.add("ls-shake");
       else if (v.correct) box.current?.closest("section")?.classList.add("ls-pulse");
@@ -110,9 +118,11 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
         </div>
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        {onBack && !verdict ? <Btn tone="ghost" onClick={onBack}>Back</Btn> : <span />}
+        {onBack ? <Btn tone="ghost" onClick={onBack}>Back</Btn> : <span />}
         <span className="flex flex-wrap gap-2">
-          {skippable && !verdict && <Btn tone="ghost" onClick={() => onNext({ ok: null })} data-testid="lesson-skip">Skip →</Btn>}
+          {/* Tutor preview only: skip past a question at any point, answered/checked or not — nothing here is
+             saved or counted, so there's no reason to force them through it to move on. */}
+          {skippable && <Btn tone="ghost" onClick={() => onNext({ ok: null })} data-testid="lesson-skip">Skip →</Btn>}
           {q.hint && !verdict && <Btn tone="ghost" disabled={hint} onClick={() => setHint(true)}>💡 Hint</Btn>}
           {!verdict
             ? <Btn onClick={doCheck} disabled={busy || !isAnswered(value)} data-testid="lesson-check">{busy ? "Checking…" : "Check"}</Btn>

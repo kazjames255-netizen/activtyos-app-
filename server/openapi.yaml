@@ -811,6 +811,8 @@ tags:
     description: GDPR — what we hold, export, deletion request (every role)
   - name: tenants
   - name: meta
+  - name: 2fa
+    description: Mandatory email two-factor auth for the platform (HQ) portal — a small, manually-provisioned set of accounts
   - name: ai
     description: AI assistant — plain-English Q&A over the caller's own live data (read-only)
   - name: learning-hub
@@ -935,6 +937,12 @@ paths:
     get:
       tags: [meta]
       summary: Who am I
+      description: >
+        For a `platform` account that hasn't completed email 2FA this sign-in
+        (or whose 2FA has expired — see `/api/auth/2fa/*`), this and every
+        other `/api/*` call 403s with `{error, code: "2fa_required"}` instead
+        of ever attaching the platform role. The client reads that code as
+        "show the code-entry step".
       responses:
         "200":
           description: The signed-in account's role and tenant
@@ -949,6 +957,103 @@ paths:
                   tenantName: { type: string, nullable: true }
                   franchiseId: { type: string, nullable: true }
         "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: A platform account that hasn't verified 2FA this session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  code: { type: string, enum: [2fa_required] }
+
+  /api/auth/2fa/send:
+    post:
+      tags: [2fa]
+      summary: Email a fresh one-time code (platform accounts only)
+      description: >
+        `requireAuth` only — deliberately reachable BEFORE the platform role
+        is attached, since that's exactly the account this gate is for.
+        403s with `code: "not_platform"` for anyone whose `users/{uid}.role`
+        isn't `platform`. Generates a 6-digit code, valid 10 minutes, and
+        emails it to the platform team's fixed admin inbox (not the
+        signing-in account's own address — platform accounts are a small,
+        manually-provisioned set). Refuses a resend within 30s of the last
+        one with **429** `{code: "2fa_resend_throttled", retryAfterMs}`.
+      responses:
+        "200":
+          description: Code sent (or resend throttle not hit)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: boolean }
+                  delivered: { type: boolean, description: "false only if the mail transport itself failed" }
+                  expiresInMs: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: Not a platform account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { error: { type: string }, code: { type: string, enum: [not_platform] } }
+        "429":
+          description: Resend requested too soon
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  code: { type: string, enum: [2fa_resend_throttled] }
+                  retryAfterMs: { type: integer }
+
+  /api/auth/2fa/verify:
+    post:
+      tags: [2fa]
+      summary: Verify the emailed one-time code (platform accounts only)
+      description: >
+        On success, sets `twoFaVerifiedAt` — attachRole then treats this
+        account as verified for 12h (see middleware/role.ts). Locks out after
+        5 wrong attempts against the current code with **429**
+        `{code: "2fa_locked"}`; request a fresh code to reset the counter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: "482913" }
+      responses:
+        "200":
+          description: Verified — the caller may now retry any /platform/* API
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { verified: { type: boolean } }
+        "400":
+          description: Malformed body, or no code outstanding / expired
+        "401":
+          description: Wrong code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { error: { type: string }, code: { type: string, enum: [2fa_invalid] } }
+        "403":
+          description: Not a platform account
+        "429":
+          description: Too many wrong attempts against the current code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { error: { type: string }, code: { type: string, enum: [2fa_locked] } }
 
   /api/register-role:
     post:
@@ -4980,7 +5085,7 @@ paths:
   /api/learning-hub/notes:
     get:
       tags: [learning-hub]
-      summary: Course notes & resources (families see published ones only) — LIGHT list, no bodies
+      summary: Course notes & resources (a family sees only what's been sent to their child) — LIGHT list, no bodies
       description: >
         Each row carries `attachments[]` (signed links), `videos[]` (`HubVideo`, YouTube only), an `excerpt` (≤160 chars),
         `hasBody` and `readMinutes` — but NOT the note `body` (a written library is ~1 MB of markdown that no list shows):
@@ -4988,6 +5093,14 @@ paths:
         Extra filters: `subject`, `q` (title + body, case-insensitive), `published=0|1` (tutors), `ids=a,b,c`, `sort=topic`
         (subject › topic › subtopic, then title; default is title). `?limit=&cursor=` returns `{items, total, nextCursor}`
         (default 60, max 200); without them the reply is still a plain array.
+
+
+        **Family visibility (breaking change):** a parent/child caller (`ctx.canEdit` false) no longer browses the
+        tutor's whole published library — only notes actually SENT to that child, i.e. named in a `noteIds` of a
+        `POST /homework` the child is in `assignedChildIds` of (`?childId=` picks which enrolled child; no `childId`
+        with several children in scope = the union of all of them). Tutors (`canEdit`) are unaffected. `GET /notes/{id}`
+        has the matching restriction (a stale/foreign link 404s), with one exception: a note a tutor is live-driving
+        at that child right now via "Start lesson now (remote)" stays reachable while that session is live.
       parameters:
         - { $ref: "#/components/parameters/hubTenantId" }
         - { name: topicId, in: query, schema: { type: string } }
@@ -5028,7 +5141,7 @@ paths:
   /api/learning-hub/notes/counts:
     get:
       tags: [learning-hub]
-      summary: "Note counts without listing notes — `{ total, drafts, files, fresh (created in the last 7 days), byTopic: { topicId: n } }` (own rows per topic; same visibility as GET /notes)"
+      summary: "Note counts without listing notes — `{ total, drafts, files, fresh (created in the last 7 days), byTopic: { topicId: n } }` (own rows per topic; same visibility as GET /notes, including the family assigned-only restriction)"
       parameters:
         - { $ref: "#/components/parameters/hubTenantId" }
       responses:
@@ -5037,7 +5150,7 @@ paths:
   /api/learning-hub/notes/{id}:
     get:
       tags: [learning-hub]
-      summary: "One note WITH its `body` (a family never gets a draft; a foreign / out-of-scope id is 404)"
+      summary: "One note WITH its `body` (a family never gets a draft, or a note not sent to their child, or a foreign / out-of-scope id — all 404; a live remote-sync session at that child is the one exception, see GET /notes)"
       parameters:
         - { $ref: "#/components/parameters/hubTenantId" }
         - { name: id, in: path, required: true, schema: { type: string } }

@@ -8,7 +8,7 @@ import type { PanelMeta, PanelProps } from "./panelTypes";
 import { useRosterInsights, type Insight } from "./useRosterInsights";
 import { GroupsSection } from "./GroupsSection";
 import { GroupChip } from "./groupKit";
-import { requestOpenStudent, setHubIntent, takeHubIntent } from "./hubIntent";
+import { requestNewMessage, requestOpenStudent, setHubIntent, takeHubIntent } from "./hubIntent";
 import { errMsg, fmtDate, groupMemberIds, subjectsOf, type HubGroup, type Student } from "./types";
 import { ScopeToggle, useScope } from "./mineKit";
 
@@ -374,6 +374,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
   }, [students, q, view, insights.byChild, activeGroup, mineOnly, myUid]);
 
   const openProgress = (s: Student) => { requestOpenStudent(s.childId, s.childName); goTo?.("dashboard"); };
+  const openMessage = (s: Student) => { requestNewMessage(s.childId); goTo?.("questions"); };
   const setHomework = (s: Student) => { setHubIntent({ kind: "homework", groupId: "", childIds: [s.childId] }); goTo?.("homework"); };
   const beginEdit = (s: Student) => { setEditing(s); setEditTutor(s.tutorUid ?? ""); setChosen(s.subjects ?? []); setEditYear(s.yearGroupAuto ? "" : s.yearGroup ?? ""); setEditGroups((groupsOf.get(s.childId) ?? []).map((g) => g.id)); };
   const saveDetails = async () => {
@@ -499,6 +500,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
                   )}
                   <span className="ml-auto flex flex-wrap items-center gap-1">
                     <button type="button" data-testid="hub-student-progress" onClick={() => openProgress(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Open ${s.childName}'s progress`}>Progress <Icon name="chevronRight" size={13} /></button>
+                    {canEdit && <button type="button" data-testid="hub-student-message" onClick={() => openMessage(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Message ${s.childName}`}><Icon name="help" size={13} />Message</button>}
                     {canEdit && on && <button type="button" data-testid="hub-student-homework" onClick={() => setHomework(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Set homework for ${s.childName}`}>Set homework</button>}
                   </span>
                   {canEdit && (

@@ -230,7 +230,7 @@ export function Switch({ on, onChange, label, id }: { on: boolean; onChange: (v:
 
 /** Accessible modal: Esc closes, focus moves in and returns, body scroll locked,
  *  full-screen sheet on phones. */
-export function Modal({ title, onClose, children, footer, wide, id }: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; id?: string }) {
+export function Modal({ title, onClose, children, footer, wide, id, headerExtra }: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; id?: string; headerExtra?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -258,6 +258,7 @@ export function Modal({ title, onClose, children, footer, wide, id }: { title: R
         className={`flex max-h-full w-full flex-col overflow-hidden bg-[var(--surface)] shadow-[var(--shadow-pop)] outline-none md:rounded-2xl ${wide ? "md:max-w-[880px]" : "md:max-w-[620px]"}`}>
         <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
           <h2 className="min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={display}>{title}</h2>
+          {headerExtra}
           <button type="button" onClick={onClose} aria-label="Close" className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[20px] leading-none text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>

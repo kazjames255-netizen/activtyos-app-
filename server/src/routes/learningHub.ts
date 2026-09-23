@@ -13,7 +13,7 @@ import {
 import { forgetHub } from "../lib/hubCache";
 import { pingHub } from "../lib/hubPing";
 import { gzipJson } from "../lib/gzipJson";
-import { assessmentRows, collate, noteIndex, patchNote, questionIndex, patchTopic, tenantRoster, tenantTopics, topicRank, type NoteRow } from "../lib/hubIndex";
+import { assessmentRows, childAssignedNoteIds, collate, noteIndex, patchNote, questionIndex, patchTopic, tenantRoster, tenantTopics, topicRank, type NoteRow } from "../lib/hubIndex";
 import { ageInYears, cleanVideos, inList, videosOut, yearGroupFromDob, type StoredVideo } from "../lib/hubRules";
 import { removeFromGroups } from "../lib/hubGroups";
 import { buildHomeworkPack } from "../lib/hubHomeworkPack";
@@ -23,7 +23,6 @@ import { planForFamily } from "../../../features/learninghub/lesson/plan";
 import { PIC_BY_ID } from "../oak/factory/art/library";
 import { cleanCanvasBlock, signCanvasSlides } from "../oak/canvasSchema";
 import { withSlideUrls } from "../lib/slideStorage";
-import { notifyNewNote } from "../lib/hubNotify";
 import { hubAssessmentsApi } from "./hub/assessmentsApi";
 import { hubTeachingApi } from "./hub/teachingApi";
 import { hubTutorsApi, resolveTutor } from "./hub/tutorsApi";
@@ -519,6 +518,18 @@ const intParam = (v: unknown, dflt: number, max: number) => { const n = Number(v
 // GET /notes/:id. Extra (all optional): `?full=1` = the old shape with `body` on every row; `?subject=`, `?q=`
 // (title + body, case-insensitive), `?published=0|1` (tutors), `?ids=a,b` (specific notes); `?limit=&cursor=` turns
 // the reply into `{ items, total, nextCursor }` (default limit 60, max 200) — without them it is still a plain array.
+// A family only ever sees notes actually SENT to their child (via homework — hub/homeworkApi.ts's `noteIds` +
+// `assignedChildIds`), never the tutor's whole library. Union across every child in scope (usually one; a
+// multi-child family with no `?childId=` sees the union, same as `scopedChildren` does everywhere else in the
+// hub). `null` (not a family caller — a tutor) means "no restriction", vs. an empty Set meaning "assigned nothing".
+async function familyAssignedNoteIds(ctx: HubCtx): Promise<Set<string> | null> {
+  if (ctx.canEdit) return null;
+  const kids = scopedChildren(ctx);
+  if (!kids.length) return new Set();
+  const sets = await Promise.all(kids.map((c) => childAssignedNoteIds(ctx.tenantId, c.childId)));
+  return sets.length === 1 ? sets[0]! : new Set(sets.flatMap((s) => [...s]));
+}
+
 learningHub.get("/notes", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx) return;
@@ -541,9 +552,10 @@ learningHub.get("/notes", async (req, res) => {
   // `?lessons=1`: interactive lessons only (so a page of 40 is 40 lessons, not whatever plain notes sort among them).
   const onlyLessons = req.query.lessons === "1";
   const index = await noteIndex(ctx.tenantId);
+  const assigned = await familyAssignedNoteIds(ctx);
   const rows: NoteRow[] = [];
   for (const n of index.values()) {
-    if (!allowed.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published)) continue;
+    if (!allowed.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned.has(n.id))) continue;
     if (onlyLessons && !n.isLesson) continue;
     if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     if (pub !== null && ctx.canEdit && n.published !== pub) continue;
@@ -588,8 +600,9 @@ learningHub.get("/notes/counts", async (req, res) => {
   const weekAgo = Date.now() - 7 * 86_400_000;
   const byTopic: Record<string, number> = {};
   let total = 0, drafts = 0, files = 0, fresh = 0;
+  const assigned = await familyAssignedNoteIds(ctx);
   for (const n of (await noteIndex(ctx.tenantId)).values()) {
-    if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published)) continue;
+    if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned.has(n.id))) continue;
     if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     byTopic[n.topicId] = (byTopic[n.topicId] ?? 0) + 1;
     total++; files += n.attachments.length;
@@ -600,8 +613,21 @@ learningHub.get("/notes/counts", async (req, res) => {
   res.json({ total, drafts, files, fresh, byTopic });
 });
 
+/** A family may open a note their child never got as homework while a tutor is actively live-driving THAT note at
+ *  THAT child via "Start lesson now (remote)" (hub/remoteSyncApi.ts) — features/learninghub/remotesync/JoinRemoteSyncBanner.tsx
+ *  fetches the note by id straight from the family's own device mid-session. Once the tutor ends the session this
+ *  stops applying (status flips off "live"), same as the banner itself disappearing. */
+async function liveRemoteSyncCoversNote(ctx: HubCtx, noteId: string): Promise<boolean> {
+  const ids = scopedChildren(ctx).map((c) => c.childId);
+  if (!ids.length) return false;
+  const snap = await db.collection("hubLessons").where("tenantId", "==", ctx.tenantId).where("mode", "==", "remote_sync").where("status", "==", "live").where("noteId", "==", noteId).get();
+  return snap.docs.some((d) => ((d.get("childIds") as string[] | undefined) ?? []).some((c) => ids.includes(c)));
+}
+
 // GET /notes/:id — one note WITH its body (the list is light). Same visibility as the list: a family never gets a
-// draft, and a foreign / out-of-scope id is a 404.
+// draft, a foreign / out-of-scope id is a 404, and (like the list) a family only ever gets a note actually sent to
+// their child as homework — an id from a stale link or another family's homework link is a 404 too, never a peek —
+// UNLESS a tutor is live-driving that exact note at that exact child right now (liveRemoteSyncCoversNote above).
 learningHub.get("/notes/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx) return;
@@ -609,6 +635,8 @@ learningHub.get("/notes/:id", async (req, res) => {
   const snap = await notesCol.doc(req.params.id).get();
   const n = snap.exists ? (snap.data() as NoteDoc) : null;
   if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Lesson not found" }); return; }
+  const assigned = await familyAssignedNoteIds(ctx);
+  if (assigned && !assigned.has(snap.id) && !(await liveRemoteSyncCoversNote(ctx, snap.id))) { res.status(404).json({ error: "Lesson not found" }); return; }
   const topic = (await visibleTopics(ctx)).find((t) => t.id === n.topicId);
   if (!topic) { res.status(404).json({ error: "Lesson not found" }); return; }
   res.json(await noteOutA(req, snap.id, n, ctx.canEdit));
@@ -762,7 +790,10 @@ learningHub.post("/notes", async (req, res) => {
   const doc: NoteDoc = { tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, topicId: parsed.data.topicId, title: parsed.data.title, body: parsed.data.body, published: parsed.data.published, attachments: atts, videos: vids, ...(parsed.data.kind ? { kind: parsed.data.kind } : {}), ...(parsed.data.lesson ? { lesson: parsed.data.lesson } : {}), createdBy: ctx.uid, createdByName: ctx.name, createdAt: now, updatedAt: now };
   const ref = await notesCol.add(doc);
   patchNote(ctx.tenantId, ref.id, doc); pingHub(ctx.tenantId, "hubNotes");
-  if (doc.published && doc.kind !== "board") notifyNewNote(ctx.tenantId, ctx.franchiseId, doc.topicId, doc.title, ref.id); // family bell (lib/hubNotify.ts) — never blocks the response
+  // No "new lesson published" bell here any more: publishing a note to the library tells nobody's family anything
+  // by itself — a family only hears about a lesson once it's actually SENT to their child (assigned as homework,
+  // hub/homeworkApi.ts's notifyAssigned), which is also the only thing that makes the lesson visible to them (see
+  // GET /notes below).
   res.status(201).json(await noteOutA(req, ref.id, doc));
 });
 

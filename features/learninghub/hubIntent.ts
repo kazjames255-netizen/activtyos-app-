@@ -59,18 +59,39 @@ export function useHubView(section: ViewSection): [string | null, () => void] {
 // The Lessons panel stays mounted (hidden) on other tabs, so this is a request it listens for (and also picks up on mount).
 
 let openLessonId: string | null = null;
-let openLessonFrom: "homework" | null = null;
+let openLessonFrom: "homework" | "live" | null = null;
 const lessonSubs = new Set<() => void>();
 
-/** Ask the Lessons panel to open lesson `noteId` (the caller switches to the Lessons tab). */
-export function requestOpenLesson(noteId: string, from: "homework" | null = null) { openLessonId = noteId; openLessonFrom = from; lessonSubs.forEach((f) => f()); }
+/** Ask the Lessons panel to open lesson `noteId` (the caller switches to the Lessons tab). `from: "live"` — the
+ *  tutor's own "you're broadcasting — Rejoin" banner — skips straight past the one-room/share-with-children mode
+ *  picker into the Share-with-children roster (which already offers "Resume broadcasting" plus the same student
+ *  picker to add/remove who's in it), instead of making them re-pick a mode they already chose. */
+export function requestOpenLesson(noteId: string, from: "homework" | "live" | null = null) { openLessonId = noteId; openLessonFrom = from; lessonSubs.forEach((f) => f()); }
 
-/** Lessons panel: `handler(noteId, from)` runs once per request (also for one made before this mounted); `from` = the tab to return to on exit. */
-export function useOpenLessonRequest(handler: (noteId: string, from: "homework" | null) => void) {
+/** Lessons panel: `handler(noteId, from)` runs once per request (also for one made before this mounted); `from` = the tab to return to on exit ("homework"), or "live" to jump straight into a rejoin. */
+export function useOpenLessonRequest(handler: (noteId: string, from: "homework" | "live" | null) => void) {
   useEffect(() => {
     const run = () => { if (openLessonId) { const id = openLessonId, from = openLessonFrom; openLessonId = null; openLessonFrom = null; handler(id, from); } };
     lessonSubs.add(run); run();
     return () => { lessonSubs.delete(run); };
+  }, [handler]);
+}
+
+// ── "Message this student" intent: the Students roster's "Message" action → the Questions tab opens a fresh
+// composer pre-filled with that child. Mirrors the "open this lesson" intent above.
+
+let newMsgChildId: string | null = null;
+const newMsgSubs = new Set<() => void>();
+
+/** Ask the Questions panel to start a new message to `childId` (the caller switches to the Questions tab). */
+export function requestNewMessage(childId: string) { newMsgChildId = childId; newMsgSubs.forEach((f) => f()); }
+
+/** Questions panel: `handler(childId)` runs once per request (also for one made before this mounted). */
+export function useNewMessageRequest(handler: (childId: string) => void) {
+  useEffect(() => {
+    const run = () => { if (newMsgChildId) { const id = newMsgChildId; newMsgChildId = null; handler(id); } };
+    newMsgSubs.add(run); run();
+    return () => { newMsgSubs.delete(run); };
   }, [handler]);
 }
 

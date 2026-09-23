@@ -18,6 +18,7 @@ import { OakDeckStep } from "./OakDeckStep";
 import { WordsStep } from "./WordsStep";
 import { getWidget } from "./widgets";
 import { ChildChip, useChildGate, WhoIsLearning } from "../family/FamilyContext";
+import { AskTeacher, type AskContext } from "./doubts/AskTeacher";
 
 // The interactive lesson player: Start → Learn → Key words → Warm-up → Quiz → Done, one small step at a time, with a sticky
 // header (progress, XP, streak), confetti and the licence credit. It renders a hubNotes doc's structured `lesson` field.
@@ -27,6 +28,10 @@ import { ChildChip, useChildGate, WhoIsLearning } from "../family/FamilyContext"
 
 type StepId = "start" | "learn" | "slides" | "words" | "warm" | "quiz" | "done";
 const LABEL: Record<StepId, string> = { start: "Start", learn: "Learn", slides: "Lesson", words: "Key words", warm: "Warm-up", quiz: "Quiz", done: "Done" };
+
+/** Remote-sync "own_pace" mini-screens — see `onLiveAnswer` below. `questionId`/`questionPrompt`/`response`/`verdict`
+ *  are only ever present while `step` is "warm" or "quiz"; any other step reports just the bare position. */
+export interface LiveAnswerPosition { step: StepId; slide: number; questionId?: string; questionPrompt?: string; response?: unknown; verdict?: boolean | null }
 
 /** In-person class mode (features/learninghub/inperson): a TUTOR runs this lesson on their own device with children beside them
  *  (pair it with `readOnly`, so nothing is started here). The player keeps its steps; these slots swap what is recorded. */
@@ -80,9 +85,12 @@ export interface LessonPlayerProps {
    *  own Next/Continue/Finish can never move them PAST the tutor's current top-level step (they can still fully answer
    *  within it). "own_pace": `follow` is ignored outright — no gating at all. */
   pace?: "driven" | "lockstep" | "own_pace";
-  /** Remote-sync "own_pace" mini-screens: fired (debounced by the caller, not here) whenever this pupil's current
-   *  warm-up/quiz answer changes, so a tutor elsewhere can see it live. Never affects marking. */
-  onLiveAnswer?: (p: { step: "warm" | "quiz"; questionId: string; response: unknown }) => void;
+  /** Remote-sync "own_pace" mini-screens: this pupil's REAL current position, for a tutor elsewhere to see live.
+   *  Fired (debounced by the caller, not here) on every step/slide change — mirroring `onProgress`'s own step
+   *  tracking below, just reported to the mini-screens channel instead of the tutor's `follow` position — AND, more
+   *  often, whenever the current warm-up/quiz answer changes (with the question's prompt, and, warm-up only, the
+   *  Check verdict once known). Never affects marking. */
+  onLiveAnswer?: (p: LiveAnswerPosition) => void;
   /** Tutor-led class mode — see InPersonSlots. */
   inPerson?: InPersonSlots;
   /** Remote-sync "I answer, they watch" mode — see DrivenSlots. */
@@ -99,6 +107,13 @@ export interface LessonPlayerProps {
    *  tutor decision screen, where nothing has started yet so none of that means anything. Exiting is via the
    *  page's own Back button instead. */
   hideHeader?: boolean;
+  /** Remote-sync's student page has its own "Ask your teacher" sidebar card (same hubDoubts thread, context-tagged
+   *  identically) — suppress this inline banner there so the pupil isn't offered two askers for the same thing. */
+  hideAskTeacher?: boolean;
+  /** Remote-sync's teacher/student pages: renders banner + header + content as flush sections of ONE outer card
+   *  (LessonCard.tsx supplies the border/radius/background) instead of each piece floating as its own bordered
+   *  box with its own width. No visual change to any OTHER caller — home/homework lessons keep their own look. */
+  flatShell?: boolean;
 }
 
 // A pupil's place in a lesson survives a refresh / Back (this tab only): the step, XP and streak. Dropped when they leave on purpose or finish.
@@ -107,7 +122,7 @@ const loadProg = (k: string): { step?: string; xp?: number; streak?: number } | 
 const saveProg = (k: string, v: { step: string; xp: number; streak: number }) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 const dropProg = (k: string) => { try { sessionStorage.removeItem(k); } catch { /* ignore */ } };
 
-export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, pace, onLiveAnswer, inPerson, driven, homeworkId, hideStartButton, startCardClassName, hideHeader }: LessonPlayerProps) {
+export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, pace, onLiveAnswer, inPerson, driven, homeworkId, hideStartButton, startCardClassName, hideHeader, flatShell, hideAskTeacher }: LessonPlayerProps) {
   const lesson = useMemo(() => normalizeLesson(note.lesson, note.title), [note.lesson, note.title]);
   const widget = useMemo(() => getWidget(lesson.widget), [lesson.widget]);
 
@@ -193,11 +208,25 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
     setStep((s) => (steps.indexOf(s) > capIndex ? (steps[capIndex] as StepId) : s));
   }, [capIndex, steps]);
 
+  // "Ask my teacher": the exact warm-up/quiz question on screen right now (a slide's own title stands in for
+  // "slides" — see `askContext` below), reported by WarmupStep/QuizStep's `onView` as soon as it's shown.
+  const [qCtx, setQCtx] = useState<{ id: string; prompt: string } | null>(null);
+  useEffect(() => { setQCtx(null); }, [step]);
+
   // Live lessons: report where we are, and follow the tutor (never out of the quiz / the result, never into them).
   const [slide, setSlide] = useState(0);
   const progressRef = useRef(onProgress);
   progressRef.current = onProgress;
   useEffect(() => { progressRef.current?.({ step, slide: step === "slides" ? slide : 0 }); }, [step, slide]);
+  // Remote-sync "own_pace" mini-screens: report this pupil's bare position on every step/slide change, mirroring the
+  // onProgress effect above. Skipped for warm/quiz — WarmupStep/QuizStep's own onLiveAnswer calls already report
+  // {step: "warm"|"quiz", ...} themselves, richer (question + answer), so this would just be a redundant, blanker write.
+  const liveAnswerRef = useRef(onLiveAnswer);
+  liveAnswerRef.current = onLiveAnswer;
+  useEffect(() => {
+    if (step === "warm" || step === "quiz") return;
+    liveAnswerRef.current?.({ step, slide: step === "slides" ? slide : 0 });
+  }, [step, slide]);
   useEffect(() => {
     // "lockstep" / "own_pace": this pupil's own screen moves itself (see `go`'s cap, or nothing at all) — it is never
     // teleported. Anything else (video-call lessons, remote-sync "driven") keeps the original forced-follow.
@@ -246,21 +275,41 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
     setXp(0); setStreak(0); setWarm(null); setQuiz(null); setRound((r) => r + 1); go("start");
   };
 
+  // "Ask my teacher"'s context: a slide's own title (real, readable content — never just "slide 3"), or the exact
+  // warm-up/quiz question on screen; nothing for Start/Learn/Key words/Done, where there's no one specific thing to ask about.
+  const activeSlideTitle = step === "slides" ? (hasDeck && !summaryView ? lesson.deckSlides[slide]?.title : lesson.slides[slide]?.title) ?? null : null;
+  const askContext: AskContext = step === "warm" || step === "quiz"
+    ? { step, slide: 0, questionId: qCtx?.id ?? null, questionPrompt: qCtx?.prompt ?? null }
+    : { step, slide, questionId: null, questionPrompt: activeSlideTitle };
+
   const leaveNow = () => { dropProg(pk); onExit(); };
   const exit = () => { if (step !== "start" && step !== "done" && !readOnly) setLeave(true); else leaveNow(); };
   const minutes = Math.max(5, Math.round(((hasSlides ? slideCount * 0.75 : lesson.points.length * 1.5) + lesson.keywords.length * 0.5 + ((data?.warmup.length ?? 0) + (data?.quiz?.questionCount ?? 0)) * 0.75) / 5) * 5);
 
   return (
-    <div ref={top} className="mx-auto w-full max-w-[820px] scroll-mt-2" data-testid="lesson-player" data-step={step}>
+    <div ref={top} className={flatShell ? "scroll-mt-2" : "mx-auto w-full max-w-[820px] scroll-mt-2"} data-testid="lesson-player" data-step={step}>
       <LessonStyles />
       <Confetti fire={burst.n} scale={burst.scale} />
       {readOnly && (inPerson?.banner ?? driven?.banner)}
-      {readOnly && !inPerson && !driven && !hideHeader && <div role="note" className="mb-3 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">Preview — this is what students see. Nothing you do here is saved or counted.</div>}
+      {readOnly && !inPerson && !driven && !hideHeader && (
+        flatShell ? (
+          <div role="note" className="flex items-center gap-2 px-[20px] py-[10px] text-[13px] font-semibold text-[var(--brand)]" style={{ background: "#EEF0FB" }}>
+            <Icon name="eye" size={16} className="flex-none" />Student preview — nothing here is saved or counted.
+          </div>
+        ) : (
+          <div role="note" className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">
+            <Icon name="eye" size={16} className="flex-none text-[var(--brand-2)]" />Student preview — nothing here is saved or counted.
+          </div>
+        )
+      )}
 
       {!hideHeader && (
-        <header className="sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-3 pb-2.5 pt-2 shadow-[var(--shadow-sm)] backdrop-blur sm:px-4">
+        <header className={flatShell ? "px-[28px] py-[24px]" : "sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-3 pb-2.5 pt-2 shadow-[var(--shadow-sm)] backdrop-blur sm:px-4"}>
           <div className="flex items-center gap-2.5">
-            <button type="button" onClick={exit} aria-label={readOnly ? "Close preview" : "Leave this lesson"} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
+            <button type="button" onClick={exit} aria-label={readOnly ? "Close preview" : "Leave this lesson"} data-testid="lesson-leave"
+              className={`flex flex-none items-center gap-1.5 ${FOCUS} ${readOnly ? "h-11 w-11 justify-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)]" : "h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--red)] hover:bg-[var(--red-soft)] hover:text-[var(--red)]"}`}>
+              <Icon name="close" size={readOnly ? 20 : 15} />{!readOnly && "Leave lesson"}
+            </button>
             {!readOnly && <span className="hidden flex-none sm:block"><ChildChip childId={childId} /></span>}
             <div className="min-w-0 flex-1 truncate text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{[lesson.subject, lesson.year && (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year), lesson.title].filter(Boolean).join(" · ")}</div>
             {!inPerson && !driven && <span className="rounded-full px-3 py-1 text-[13px] font-extrabold" style={{ background: "var(--gold-soft)", color: "color-mix(in srgb, var(--gold) 40%, #000)" }} title="Correct in a row" aria-label={`${streak} correct in a row`} data-testid="lesson-streak">🔥 {streak}</span>}
@@ -281,7 +330,9 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
         </header>
       )}
 
-      <div key={`${round}-${step}`}>
+      {flatShell && !hideHeader && <div style={{ borderTop: "1px solid #E4E4EE" }} />}
+
+      <div key={`${round}-${step}`} className={flatShell ? "px-[28px] py-[24px] [&>section]:m-0 [&>section]:rounded-none [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none" : undefined}>
         {step === "start" && (
           <StepCard hero className={startCardClassName}>
             <div className="flex flex-wrap gap-2 text-[12px] font-extrabold">
@@ -317,18 +368,23 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
         {step === "warm" && data && (
           <WarmupStep questions={data.warmup} config={config} scored={scored} onBack={back} skippable={readOnly} extra={inPerson?.warmupExtra ?? driven?.warmupExtra}
             check={(id, response) => checkWarmup(note.id, childQs, id, response)}
-            onLiveAnswer={onLiveAnswer ? (questionId, response) => onLiveAnswer({ step: "warm", questionId, response }) : undefined}
+            onLiveAnswer={onLiveAnswer ? (questionId, response, extra) => onLiveAnswer({ step: "warm", slide: 0, questionId, questionPrompt: extra.prompt, response, verdict: extra.verdict }) : undefined}
+            onView={!readOnly ? setQCtx : undefined}
             onDone={(res: WarmupOutcome[]) => { setWarm({ ok: res.filter((r) => r.ok).length, total: res.length }); addXP(10); next(); }} />
         )}
         {step === "quiz" && data?.quiz && inPerson && inPerson.quiz({ quiz: data.quiz, onFinish: () => finishQuiz({ result: null, run: null, notice: null }), onBack: back })}
         {step === "quiz" && data?.quiz && !inPerson && driven && driven.quiz({ quiz: data.quiz, onFinish: () => finishQuiz({ result: null, run: null, notice: null }), onBack: back })}
         {step === "quiz" && data?.quiz && !inPerson && !driven && (
           <QuizStep quiz={data.quiz} qs={qs} childId={childId} homeworkId={homeworkId} config={config} readOnly={readOnly} preview={readOnly ? { noteId: note.id, childQs } : undefined} onFinish={finishQuiz} onBack={back}
-            onLiveAnswer={onLiveAnswer ? (questionId, response) => onLiveAnswer({ step: "quiz", questionId, response }) : undefined} />
+            onLiveAnswer={onLiveAnswer ? (questionId, response, prompt) => onLiveAnswer({ step: "quiz", slide: 0, questionId, questionPrompt: prompt, response }) : undefined}
+            onView={!readOnly ? setQCtx : undefined} />
         )}
         {step === "done" && inPerson && inPerson.done({ onExit })}
         {step === "done" && !inPerson && (
           <DoneStep lesson={lesson} quiz={quiz} warm={warm} xp={xp} preview={readOnly} onAgain={restart} onExit={leaveNow} onFlashcards={goTo && !readOnly && lesson.keywords.length ? () => goTo("flashcards") : undefined} />
+        )}
+        {!readOnly && !inPerson && !driven && !hideAskTeacher && step !== "start" && step !== "done" && (
+          <AskTeacher qs={childQs} childId={childId} noteId={note.id} lessonTitle={lesson.title} context={askContext} config={config} />
         )}
       </div>
 

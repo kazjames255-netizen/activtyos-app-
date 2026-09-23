@@ -97,8 +97,26 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
       _res.status(403).json({ error: "You closed this account. Reopen it to carry on — your bookings and history are still here.", code: "account_closed" });
       return;
     }
+    const role = normalizeRole(d.role);
+    // Mandatory email 2FA for the platform (HQ super-admin) portal — a small,
+    // manually-provisioned set of accounts (routes/twoFa.ts). A platform
+    // account only gets `req.auth.role = "platform"` (and so only reaches
+    // any /platform/* page or API) once `twoFaVerifiedAt` is set and still
+    // within this session TTL; otherwise every /api/* request 403s with
+    // `2fa_required`, including GET /api/me — the client reads that as "show
+    // the code-entry step". 12h: long enough not to re-prompt mid-shift,
+    // short enough that a stolen token alone (no email access) can't sit
+    // valid indefinitely.
+    const TWO_FA_TTL_MS = 12 * 60 * 60_000;
+    if (role === "platform") {
+      const verifiedAt = Number(d.twoFaVerifiedAt) || 0;
+      if (!verifiedAt || Date.now() - verifiedAt > TWO_FA_TTL_MS) {
+        _res.status(403).json({ error: "Two-factor verification required.", code: "2fa_required" });
+        return;
+      }
+    }
     req.auth = {
-      role: normalizeRole(d.role),
+      role,
       tenantId: d.tenantId ?? null,
       franchiseId: d.franchiseId ?? null,
       ...staffFields(d),

@@ -19,9 +19,13 @@ import { GoLivePicker } from "./inperson/GoLivePicker";
 import { SessionRunner } from "./inperson/InPersonApp";
 import type { IpSession } from "./inperson/api";
 import { StartRemoteSyncButton } from "./remotesync/StartRemoteSyncButton";
+import { RemoteSyncApp } from "./remotesync/RemoteSyncApp";
 import { JoinRemoteSyncBanner } from "./remotesync/JoinRemoteSyncBanner";
+import { TutorLiveBanner } from "./remotesync/TutorLiveBanner";
 import { closeLink, openLink, useLinkOpen } from "./family/link";
 import { LessonTutorPanel } from "./lesson/LessonTutorPanel";
+import { FlashcardsForLesson } from "./lesson/FlashcardsForLesson";
+import { HomeworkForLesson } from "./lesson/HomeworkForLesson";
 import { stripPlanSection } from "./lesson/plan";
 import { SubjectCover, SubjectTile } from "./subjectArt";
 import { canChangeRow, errMsg, fmtDate, fmtSize, readMins, topicLabel, type Attachment, type HubFilter, type Note, type NoteLite, type Student, type Topic, type VideoInput } from "./types";
@@ -128,6 +132,9 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
   const [goingLive, setGoingLive] = useState(false);
   const [ipSession, setIpSession] = useState<IpSession | null>(null);
   const [ipRoster, setIpRoster] = useState<Student[]>([]);
+  // Set by a "live" open-lesson request (the tutor's Rejoin banner); consumed once the note's body has loaded — see the effect below.
+  const pendingLiveRejoin = useRef(false);
+  const [rejoinLive, setRejoinLive] = useState(false);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -228,12 +235,22 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
   const openNote = reading && opened?.id === reading ? opened : null;
-  useEffect(() => { setPreviewing(false); setGoingLive(false); setIpSession(null); }, [reading]);
+  useEffect(() => { setPreviewing(false); setGoingLive(false); setIpSession(null); setRejoinLive(false); }, [reading]);
+  // A "you're broadcasting — Rejoin" request: once the lesson's body has loaded, skip the one-room/share-with-children
+  // choice entirely (the tutor already made it) and land straight on the share-with-children roster, which offers
+  // "Resume broadcasting" plus the same student picker to add/remove who's in the class.
+  useEffect(() => {
+    if (openNote && pendingLiveRejoin.current) { pendingLiveRejoin.current = false; setPreviewing(true); setRejoinLive(true); }
+  }, [openNote]);
   // Picking a different topic in the sidebar leaves whatever lesson was open: show that topic's list, not the old lesson.
   useEffect(() => { setReading(null); }, [filter.topicId, filter.subject]);
   // A pupil's homework "Start the lesson" opens that lesson here (and Back returns to the homework).
   const returnTo = useRef<"homework" | null>(null);
-  useOpenLessonRequest(useCallback((id: string, from: "homework" | null) => { returnTo.current = from; setPreviewing(false); setReading(id); }, []));
+  useOpenLessonRequest(useCallback((id: string, from: "homework" | "live" | null) => {
+    returnTo.current = from === "homework" ? "homework" : null;
+    pendingLiveRejoin.current = from === "live";
+    setPreviewing(false); setReading(id);
+  }, []));
   // A family's open lesson lives in the URL (?open=lesson:<id>[&hw=<homework>]): a refresh resumes it, Back closes it (instead of leaving the hub),
   // and a link (a homework's "Start the lesson", a notification) lands on it.
   const urlLesson = useLinkOpen("lesson");
@@ -516,6 +533,11 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
         ) : goingLive ? (
           <GoLivePicker qs={qs} noteId={openNote.id} title={openNote.title} onCancel={() => setGoingLive(false)}
             onStarted={(session, roster) => { setIpRoster(roster); setIpSession(session); setGoingLive(false); }} />
+        ) : rejoinLive ? (
+          // Leaving here came FROM the "you're broadcasting" banner, not from browsing this lesson — landing back
+          // on the one-room/share-with-children choice would read as a non-sequitur (that card has no session
+          // context any more). Go all the way back to the lesson list instead, same as any other "Back".
+          <RemoteSyncApp qs={qs} config={config} noteId={openNote.id} title={openNote.title} onClose={() => { setRejoinLive(false); closeReading(); }} />
         ) : (
           canEdit ? (
             <div className="overflow-hidden rounded-2xl border border-[var(--line)] shadow-[var(--shadow-sm)]" data-testid="lesson-mode-card">
@@ -590,6 +612,12 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
               <p className="mt-2 text-[12.5px] text-[var(--ink-2)]">By {openNote.createdByName || "your tutor"} · updated {fmtDate(openNote.updatedAt)}{openNote.body.trim() ? ` · ${readMins(openNote.body)} min read` : ""}</p>
               {(openNote.videos?.length ?? 0) > 0 && <VideoEmbeds videos={openNote.videos} className="mt-6" />}
               {openNote.lesson && config && <LessonTutorPanel note={openNote} qs={qs} canEdit={mayAuthor} goTo={goTo} onPreview={() => setPreviewing(true)} onSaved={(n) => setOpened(n)} onError={onError} />}
+              {mayAuthor && (
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {t && <FlashcardsForLesson qs={qs} topicId={t.id} />}
+                  <HomeworkForLesson qs={qs} note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} />
+                </div>
+              )}
               <div className="mt-6 space-y-3 text-[15.5px] leading-[1.75] text-[var(--ink)]">
                 {(config && openNote.lesson?.plan ? stripPlanSection(openNote.body) : openNote.body).trim() ? renderMarkdown(config && openNote.lesson?.plan ? stripPlanSection(openNote.body) : openNote.body) : <p className="text-[var(--ink-2)]">No written text — see the attached worksheets below.</p>}
               </div>
@@ -612,6 +640,7 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
   return (
     <div id="hub-notes">
       {!canEdit && <JoinRemoteSyncBanner qs={listQs} childId={childId} config={config} />}
+      {canEdit && <TutorLiveBanner qs={listQs} />}
       <div ref={scrollTop} className="mb-4 flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[200px] flex-1 sm:max-w-[340px]">
           <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />

@@ -56,6 +56,14 @@ const PATHS: Record<string, ReactNode> = {
   external: <><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" /></>,
   link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></>,
   sparkle: <><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z" /></>,
+  help: <><circle cx="12" cy="12" r="9" /><path d="M9.2 9a2.8 2.8 0 1 1 4.3 2.4c-.9.6-1.5 1.1-1.5 2.1" /><path d="M12 17.5v.1" /></>,
+  calculator: <><rect x="5" y="2" width="14" height="20" rx="2" /><path d="M8 6h8M8 11h1M12 11h1M16 11h1M8 15h1M12 15h1M16 15h1M8 19h1M12 19h1M16 19h1" /></>,
+  ruler: <><path d="M3 16 16 3l5 5L8 21z" /><path d="m13 6 2 2M9 10l2 2M17 10l2 2" /></>,
+  toolbox: <><rect x="2" y="9" width="20" height="12" rx="2" /><path d="M8 9V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" /><path d="M2 13h20" /></>,
+  eye: <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></>,
+  chat: <><path d="M4 4h16v12H8l-4 4V4z" /></>,
+  minus: <><path d="M5 12h14" /></>,
+  refresh: <><path d="M3 12a9 9 0 0 1 15.3-6.3L21 8M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.3L3 16M3 21v-5h5" /></>,
 };
 export type IconName = keyof typeof PATHS;
 export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: { name: IconName; size?: number; className?: string; strokeWidth?: number }) {
@@ -66,7 +74,7 @@ export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: { n
   );
 }
 /** The tab icon for each hub panel (PanelMeta.key). */
-export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards" };
+export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards", questions: "help" };
 
 // ── responsive hook ────────────────────────────────────────────────────────
 /** True at the `lg` breakpoint and up (server / first paint: false). */
