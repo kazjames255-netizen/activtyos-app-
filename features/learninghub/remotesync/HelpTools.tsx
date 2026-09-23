@@ -119,6 +119,7 @@ const DEFAULT_SUGGESTED: HelpToolId[] = ["numberline", "timestable", "calculator
 const DEFAULT_OPEN_GROUP = "maths";
 
 const GeoBoard = lazy(() => import("../tools/maths/geometry/GeometryBoard").then((m) => ({ default: m.GeometryBoard })));
+const GridLazy = lazy(() => import("../tools/maths/CoordGrid"));
 const GEO_OFFER: ("ruler15" | "straightedge" | "protractor180" | "protractor360" | "compass" | "setsquare45" | "setsquare3060")[] = ["ruler15", "straightedge", "protractor180", "protractor360", "compass", "setsquare45", "setsquare3060"];
 
 const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: ToolStateFor<HelpToolId>) => void) => ReactNode> = {
@@ -128,7 +129,7 @@ const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: Too
   numberline: () => <NumberLineTool />,
   timestable: (v, set) => <TimesTable value={v as TimesTableState} onChange={set} />,
   fractions: (v, set) => <Fractions value={v as FractionsState} onChange={set} />,
-  grid: (v, set) => <CoordGrid value={v as GridState} onChange={set} />,
+  grid: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GridLazy compact /></Suspense>,
   plot: (v, set) => <BarChart value={v as BarChartState} onChange={set} />,
   // The real instruments (tools/maths/geometry): movable, turnable, snapping, with a drawing compass and set square on the desk.
   ruler: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={["ruler15"]} offer={GEO_OFFER} generatorIds={[]} /></Suspense>,
@@ -153,7 +154,7 @@ const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: 
   numberline: { w: 620, h: 330, minW: 440, minH: 300 },
   timestable: { w: 300, h: 360, minW: 260, minH: 300 },
   fractions: { w: 260, h: 220, minW: 220, minH: 200 },
-  grid: { w: 300, h: 320, minW: 260, minH: 280 },
+  grid: { w: 470, h: 720, minW: 340, minH: 520 },
   plot: { w: 360, h: 280, minW: 280, minH: 240 },
   ruler: { w: 600, h: 620, minW: 440, minH: 480 },
   protractor: { w: 600, h: 620, minW: 440, minH: 480 },

@@ -21,6 +21,10 @@ const NATIVE: Record<string, ToolImpl> = {
   "M-06": geo(["straightedge", "compass"], ["M-G02.perpBisector", "M-G02.angleBisector", "M-G02.equilateral"]),
   "M-07": geo(["straightedge", "compass", "ruler15"], ["M-G02.perpBisector", "M-G02.angleBisector", "M-G02.triangle", "M-G02.equilateral", "M-G02.locus"]),
   "M-20": geo(["ruler15"], [], "squared"),
+  "M-10": geo(["protractor360", "ruler15"], ["M-G09.measure", "M-G09.draw"]),
+  "M-09": { kind: "native", load: () => import("./maths/AngleFacts") },
+  "M-21": { kind: "native", load: () => import("./maths/CoordGrid") },
+  "H-G05": geo(["protractor360", "ruler15"], ["M-G09.measure", "M-G09.draw"]),
 };
 
 function build(): ToolMeta[] {
