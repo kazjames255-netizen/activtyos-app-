@@ -505,6 +505,11 @@ test.describe("privacy: export and the child-delete cascade", () => {
 
   test("deleting a child removes their learning data everywhere", async () => {
     // child2 has: an enrolment, a homework submission (hw2) and a card review.
+    // P-11: a question child2 asked their tutor must be in the export first, then gone with the child.
+    const asked = await send("POST", `${HUB}/doubts${qc(child2)}`, parent, { text: `Why is it 3/4? ${stamp}` });
+    expect(asked.status, JSON.stringify(asked.body)).toBe(201);
+    const before = await get<Record<string, Record<string, unknown>[]>>("/api/privacy/export", parent);
+    expect(before.learningDoubts.some((d) => d.childId === child2)).toBe(true);
     const del = await send("DELETE", `/api/my/children/${child2}`, parent);
     expect(del.status, JSON.stringify(del.body)).toBe(200);
 
@@ -512,6 +517,7 @@ test.describe("privacy: export and the child-delete cascade", () => {
     expect(x.learningEnrolments.some((e) => e.childId === child2)).toBe(false);
     expect(x.learningHomework.some((h) => h.childId === child2)).toBe(false);
     expect(x.learningFlashcardReviews.some((r) => r.childId === child2)).toBe(false);
+    expect(x.learningDoubts.some((d) => d.childId === child2)).toBe(false);
     // …while their sibling's record is intact.
     expect(x.learningEnrolments.some((e) => e.childId === child1 && e.tenantId === tenantId)).toBe(true);
     expect(x.learningFlashcardReviews.filter((r) => r.childId === child1).length).toBe(2);

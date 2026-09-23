@@ -9,3 +9,5 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 5. Tutor->parent nudge message template NOT built (needs consent/tone design; R-9).
 6. Acting-as stamping, ParentGate server enforcement, per-child accommodations: roadmap.
 7. Set MAIL_ALLOWLIST before any marking tests (dev mail is live).
+8. P-01 expiry chosen as 90 min (brief said 45): long lessons with quiet spells must not be cut off; End lesson button gives the tutor an explicit exit. Read from a tenant setting later.
+9. P-11 gaps: multi-child family notifications (name several kids) are not erased on one child's deletion; `/api/privacy` summary counts only the older keys; board image docs are deleted only for elements carrying the child's `cid`. Owner to review.
