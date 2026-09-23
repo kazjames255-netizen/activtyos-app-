@@ -183,7 +183,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   // homework and placement are card grids that want the width too: their
   // subject filter is a chip bar above the content, not a 280px column.
   const chips = active === "quizzes" || active === "homework" || active === "diagnostic";
-  const sidebar = active !== "students" && active !== "home" && !chips && !focus;
+  const sidebar = active !== "students" && active !== "home" && active !== "tools" && !chips && !focus; // Tools has its own filters
 
   const settled = ready && (!kid || hub.childId === kidChildId);
   const body = (() => {

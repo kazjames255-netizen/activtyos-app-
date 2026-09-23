@@ -834,3 +834,9 @@ function Spinner({ value, onChange }: { value: SpinnerState; onChange: (v: Spinn
     </div>
   );
 }
+
+/** One drawer tool, standing alone with its own state — how the Tools tab (tools/ToolHost) runs an existing drawer tool unchanged. */
+export function DrawerToolView({ id }: { id: HelpToolId }) {
+  const [v, setV] = useState<unknown>(() => TOOL_DEFAULTS[id]);
+  return <>{TOOL_RENDER[id](v as ToolStateFor<HelpToolId>, setV as (v: ToolStateFor<HelpToolId>) => void)}</>;
+}

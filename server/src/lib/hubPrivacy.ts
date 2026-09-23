@@ -116,6 +116,13 @@ export async function eraseChildLearning(childId: string): Promise<void> {
     const still = [...new Set(pages.flatMap((p) => p.elements.flatMap((e) => (e.cid ? [e.cid] : []))))];
     await d.ref.update({ pages, childIds: still });
   }
+  // A child's autosaved tool work (Tools tab): keyed by the child, so erase it with them.
+  const toolStates = await db.collection("hubToolStates").where("ownerKey", "==", childId).get();
+  for (const part of chunks(toolStates.docs, 400)) {
+    const b = db.batch();
+    for (const d of part) if (d.get("ownerType") === "child") b.delete(d.ref);
+    await b.commit();
+  }
   const homework = await db.collection("hubHomework").where("assignedChildIds", "array-contains", childId).get();
   for (const part of chunks(homework.docs, 400)) {
     const b = db.batch();
