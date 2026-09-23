@@ -1,4 +1,5 @@
 import type { HubVideo } from "../types";
+import { KID_COPY } from "../family/kidCopy";
 
 // Homework — shapes mirror server/src/routes/hub/homeworkApi.ts (contract:
 // docs/learning-hub.md → Homework). Marking is the tutor's; the server only
@@ -34,13 +35,15 @@ export interface AttemptLite { id: string; assessmentId: string; homeworkId: str
 
 /** Where a homework stands against its due date, for chips. */
 export type DueTone = "red" | "gold" | "neutral" | "green" | "brand";
-export function dueState(dueAt: string, status: SubStatus, now: number): { label: string; tone: DueTone; overdue: boolean; soon: boolean } {
+export function dueState(dueAt: string, status: SubStatus, now: number, kid = false): { label: string; tone: DueTone; overdue: boolean; soon: boolean } {
   if (status === "marked") return { label: "Marked", tone: "green", overdue: false, soon: false };
   if (status === "submitted") return { label: "Handed in", tone: "brand", overdue: false, soon: false };
   const diff = new Date(dueAt).getTime() - now;
   const day = 86_400_000;
   if (diff < 0) {
     const d = Math.ceil(-diff / day);
+    // A child never sees "Overdue": it is homework that is "Waiting for you" (P-13). `overdue` stays true for logic and the tutor/parent wording.
+    if (kid) return { label: diff > -day ? KID_COPY.waiting : KID_COPY.waitingSince(new Date(dueAt).toLocaleDateString("en-GB", { weekday: "long" })), tone: "gold", overdue: true, soon: false };
     return { label: diff > -day ? "Overdue" : `Overdue by ${d} day${d === 1 ? "" : "s"}`, tone: "red", overdue: true, soon: false };
   }
   if (diff <= 2 * day) {

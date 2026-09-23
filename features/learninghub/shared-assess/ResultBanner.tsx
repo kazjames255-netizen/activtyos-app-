@@ -35,9 +35,11 @@ interface Props {
   onReviewTopics?: () => void;
   actions?: ReactNode;
   partial?: PartialInfo;
+  /** Kind child wording: hide the pass mark and the points-to-go arithmetic. */
+  kindCopy?: boolean;
 }
 
-export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headline, sub, eyebrow, weakTopics = [], onReviewTopics, actions, partial }: Props) {
+export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headline, sub, eyebrow, weakTopics = [], onReviewTopics, actions, partial, kindCopy }: Props) {
   const fam = useFamily();
   const family = fam.active, kidView = fam.kid;
   const reduced = useReducedMotion();
@@ -59,7 +61,7 @@ export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headli
       <span aria-hidden className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full" style={{ background: `radial-gradient(circle, color-mix(in srgb, ${wash} ${kind === "passed" ? 26 : 14}%, transparent) 0%, transparent 70%)`, opacity: pop ? 1 : 0, transition: reduced ? "none" : "opacity 900ms ease" }} />
       <div className="relative flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:gap-8 sm:p-8 sm:text-left">
         <div className="relative flex-none">
-          <ScoreRing pct={pct} size={172} stroke={14} tone={tone} passMark={kind === "passed" || kind === "missed" ? passMark : null} glow={kind === "passed"}
+          <ScoreRing pct={pct} size={172} stroke={14} tone={tone} passMark={!kindCopy && (kind === "passed" || kind === "missed") ? passMark : null} glow={kind === "passed"}
             state={kind === "pending" ? "pending" : undefined} sub={kind === "pending" ? "Awaiting marking" : kind === "partial" ? "auto-marked" : undefined}
             maybe={kind === "partial" ? partial?.maybe : undefined}
             ariaLabel={kind === "partial" && partial ? `Auto-marked ${partial.autoMarks} out of ${partial.autoMax}, ${Math.round(pct)} percent. ${wp} written ${wp === 1 ? "answer is" : "answers are"} still being marked, so this may change.` : undefined} />
@@ -82,8 +84,8 @@ export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headli
             {kind === "pending" && <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kidView ? "Your tutor is marking it" : "Awaiting marking"}</Chip>}
             {kind === "baseline" && <Chip tone={BRAND} icon={<Icon name="compass" size={12} />}>{family ? "Starting point set" : "Baseline set"}</Chip>}
             {kind === "passed" && <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>Passed</Chip>}
-            {kind === "missed" && <Chip tone={GOLD}>{gap != null && gap > 0 ? `${gap} ${gap === 1 ? "point" : "points"} to go` : "Not passed yet"}</Chip>}
-            {passMark != null && kind !== "baseline" && <Chip tone={NEUTRAL}>Pass mark {passMark}%</Chip>}
+            {kind === "missed" && <Chip tone={GOLD}>{kindCopy ? "Have another go" : gap != null && gap > 0 ? `${gap} ${gap === 1 ? "point" : "points"} to go` : "Not passed yet"}</Chip>}
+            {passMark != null && kind !== "baseline" && !kindCopy && <Chip tone={NEUTRAL}>Pass mark {passMark}%</Chip>}
           </div>
           {kind === "missed" && weakTopics.length > 0 && (
             <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">

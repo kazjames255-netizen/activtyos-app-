@@ -7,6 +7,7 @@ import { ruleOf, type Option, type Result, type ResultAnswer, type TakeQuestion 
 import { OK, NEUTRAL, RED, topicShort, type Tone } from "./format";
 import { QImage } from "./QuestionImage";
 import { ResultBanner } from "./ResultBanner";
+import { KID_COPY, useKidCopy } from "../family/kidCopy";
 import { Chip, display, HourglassIcon, Meter } from "./ui";
 
 // Scored-feedback screen (also the read-only look at a past attempt). It renders
@@ -82,11 +83,14 @@ interface Props {
   actions?: ReactNode;
   /** Tutor view: reword the headline. */
   tutor?: boolean;
+  /** The child's school year ("Year 5"), to age-band the kind wording in kid mode. Unknown is fine. */
+  kidYear?: string | null;
   /** Re-fetch this result (signed picture links expire); called once per failed picture. */
   onRefreshImages?: () => Promise<unknown> | void;
 }
 
-export function ResultView({ result, questions, topics, config, type, passMarkPct, title, children, actions, tutor, onRefreshImages }: Props) {
+export function ResultView({ result, questions, topics, config, type, passMarkPct, title, children, actions, tutor, kidYear, onRefreshImages }: Props) {
+  const { kind } = useKidCopy(kidYear); // kid mode, under Year 10: no pass-mark arithmetic (P-13)
   const pending = result.status === "pending_marking";
   const passed = result.passed === true;
   const qById = new Map((questions ?? []).map((q) => [q.id, q]));
@@ -111,7 +115,7 @@ export function ResultView({ result, questions, topics, config, type, passMarkPc
       ? tutor ? "Placement test result" : "Your starting point is set"
       : passed
         ? tutor ? "Passed" : "Brilliant, you passed!"
-        : tutor ? "Not passed" : (pass != null && pass - result.pct > 30) ? "Not there yet" : "Nearly there";
+        : tutor ? "Not passed" : kind ? KID_COPY.nearlyThere.split(".")[0]! : (pass != null && pass - result.pct > 30) ? "Not there yet" : "Nearly there";
   const gap = pass != null ? Math.max(0, Math.round(pass - result.pct)) : null;
   const sub = partial
     ? tutor ? `${wp} ${noun} waiting for you to mark. The score updates when you save your marks.`
@@ -123,6 +127,7 @@ export function ResultView({ result, questions, topics, config, type, passMarkPc
       : passed
         ? "Every topic you practise moves your progress forward."
         : tutor ? `Scored ${Math.round(result.pct)}% against a ${pass}% pass mark.`
+          : kind ? `${result.keyHeld ? "Go back over the lesson, then have another go." : "Look back at the answers below, then have another go."}`
           : gap != null && pass != null ? `You scored ${Math.round(result.pct)}%, ${gap <= 15 ? "just " : ""}${gap} ${gap === 1 ? "point" : "points"} short of the ${pass}% pass mark. ${result.keyHeld ? "Go back over the lesson, then have another go." : "Look back at the answers below, then have another go."}` : result.keyHeld ? "Go back over the lesson, then have another go." : "Look back at the answers below, then have another go.";
 
   const [flash, setFlash] = useState(false);
@@ -139,7 +144,7 @@ export function ResultView({ result, questions, topics, config, type, passMarkPc
 
   return (
     <div className="grid gap-4" data-testid="hub-result">
-      <ResultBanner kind={partial ? "partial" : pending ? "pending" : diag ? "baseline" : passed ? "passed" : "missed"} partial={partial ? { autoMarks: result.autoMarks!, autoMax, writtenPending: wp, maybe: writtenShare } : undefined} pct={result.pct} scoreMarks={result.scoreMarks} maxMarks={result.maxMarks} passMark={diag ? null : pass}
+      <ResultBanner kind={partial ? "partial" : pending ? "pending" : diag ? "baseline" : passed ? "passed" : "missed"} partial={partial ? { autoMarks: result.autoMarks!, autoMax, writtenPending: wp, maybe: writtenShare } : undefined} pct={result.pct} scoreMarks={result.scoreMarks} maxMarks={result.maxMarks} passMark={diag ? null : pass} kindCopy={kind}
         headline={headline} sub={sub} eyebrow={title} actions={actions}
         weakTopics={tutor ? [] : weak.map((w) => (w.t ? topicShort(w.t) : "Topic"))} onReviewTopics={tutor ? undefined : reviewTopics} />
 

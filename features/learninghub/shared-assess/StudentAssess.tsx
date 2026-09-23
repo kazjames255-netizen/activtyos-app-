@@ -126,7 +126,7 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
     return (
       <ScrollTop className="mx-auto w-full max-w-[860px]">
         <button type="button" onClick={() => setReview(null)} className="mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pr-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)]"><Icon name="arrowLeft" size={16} />Back</button>
-        <ResultView onRefreshImages={async () => { const r = await get<Result>(hubPath(p.qs, `/attempts/${review.r.id}`, { childId })); setReview((cur) => cur && { ...cur, r }); }} result={review.r} questions={undefined} topics={p.topics} config={p.config} type={type} passMarkPct={review.a.passMarkPct} title={`${review.a.title} · ${fmtDate(review.r.submittedAt)}`}>
+        <ResultView kidYear={p.students.find((s) => s.childId === childId)?.yearGroup} onRefreshImages={async () => { const r = await get<Result>(hubPath(p.qs, `/attempts/${review.r.id}`, { childId })); setReview((cur) => cur && { ...cur, r }); }} result={review.r} questions={undefined} topics={p.topics} config={p.config} type={type} passMarkPct={review.a.passMarkPct} title={`${review.a.title} · ${fmtDate(review.r.submittedAt)}`}>
           {diag && review.r.status === "marked" ? <BaselineCard p={p} childId={childId} subject={review.a.subject} /> : null}
         </ResultView>
       </ScrollTop>

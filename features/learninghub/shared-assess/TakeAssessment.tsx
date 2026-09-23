@@ -241,7 +241,7 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
     return (
       <div ref={topRef} className="mx-auto w-full max-w-[860px]">
         <div className="mb-2 flex items-center gap-2" data-testid="hub-result-for"><ChildChip childId={childId} /><span className="text-[12.5px] font-semibold text-[var(--ink-3)]">result saved</span></div>
-        <ResultView result={result} questions={qs} topics={p.topics} config={p.config} type={a.type} passMarkPct={a.passMarkPct} title={a.title}
+        <ResultView kidYear={p.students.find((s) => s.childId === childId)?.yearGroup} result={result} questions={qs} topics={p.topics} config={p.config} type={a.type} passMarkPct={a.passMarkPct} title={a.title}
           actions={<>
             <Button variant="solid" className={TAP} onClick={onExit}>Back to {diag ? (kidNoun ? "starting quizzes" : "placement tests") : "quizzes"}</Button>
             {!diag && (again.policy === "once"
