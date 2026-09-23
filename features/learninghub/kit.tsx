@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { colorFor } from "@/features/money/finance-kit";
 import { inkForBase, subjectSwatch } from "./subjectColour";
 import type { PanelMeta } from "./panelTypes";
+import { useEscapeLayer } from "./escapeLayer";
+export { useEscapeLayer };
 
 // Shared pieces for every hub panel: icons, empty / loading / coming-soon
 // states, a modal + bottom sheet, a switch. Panels import from here rather than
@@ -98,6 +100,10 @@ export function HubStyles() {
       #learning-hub {
         /* Helper text: the app's --ink-3 (#8a86a3) is only 3.3:1 on the hub's light surfaces. Hub-only override (5.0+:1); the app-wide token is untouched. */
         --ink-3: #6b6788;
+        /* P-07 (contrast, measured on #fff): --green 2.74 -> #0b7a44 5.41 (white text on green fills, green text on white); gold text
+           #7a5300 6.85; control borders 1.2:1 -> #85849b >= 3:1; --on-brand is white (10.2 / 4.98 on the default blues) and is
+           recomputed per tenant accent by useOnBrand(); --on-gold is the ink for text ON --gold fills (9.9). */
+        --green: #0b7a44; --hub-gold-ink: #7a5300; --on-gold: #171534; --hub-control-line: #85849b; --on-brand: #ffffff;
         --hub-green-ink: #0a6b3a; --hub-green-fill: #0b7a44; --hub-red-ink: #b3131c; /* AA-safe text / white-on-fill versions of --green and --red */
         --hub-warm: color-mix(in srgb, var(--gold) 6%, var(--surface));
         --hub-warm-2: color-mix(in srgb, var(--gold) 12%, var(--surface));
@@ -106,6 +112,10 @@ export function HubStyles() {
         --hub-scrim: color-mix(in srgb, color-mix(in srgb, var(--ink) 70%, var(--gold)) 42%, transparent);
         --hub-warm-shadow: 0 30px 70px -24px color-mix(in srgb, color-mix(in srgb, var(--ink) 55%, var(--gold)) 55%, transparent), 0 3px 12px -4px color-mix(in srgb, color-mix(in srgb, var(--ink) 40%, var(--gold)) 22%, transparent);
       }
+      /* Form controls need a 3:1 edge (WCAG 1.4.11); the app's 1.2:1 --line stays for decorative card borders. */
+      #learning-hub :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not(:focus) { border-color: var(--hub-control-line) }
+      #learning-hub [data-hub-panel]:focus, #learning-hub [data-hub-panel] [tabindex="-1"]:focus { outline: none }
+      #learning-hub [style*="linear-gradient(180deg, var(--brand-2), var(--brand))"] { color: var(--on-brand) }
       .hub-layer { background: var(--hub-scrim); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); color: var(--ink) }
       .hub-sheet { background: var(--hub-warm); border: 1px solid var(--hub-warm-line); box-shadow: var(--hub-warm-shadow); color: var(--ink) }
       .hub-sheet-head { background: var(--hub-warm); border-bottom: 1px solid var(--hub-warm-line) }
@@ -306,6 +316,7 @@ export function Modal({ open, onClose, title, children, footer, wide, id }: { op
   const titleId = useId();
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+  useEscapeLayer(open, onClose);
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
@@ -313,7 +324,6 @@ export function Modal({ open, onClose, title, children, footer, wide, id }: { op
     const first = node?.querySelector<HTMLElement>("[data-autofocus]") ?? node?.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? node)?.focus();
     const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { e.stopPropagation(); onCloseRef.current(); return; }
       if (e.key !== "Tab" || !node) return;
       const items = [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.offsetParent !== null);
       if (!items.length) return;
@@ -429,6 +439,7 @@ export function RowMenu({ label, items, roomy, tone }: { label: string; items: M
     return { left: Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)), top, host: b.closest<HTMLElement>("#learning-hub") ?? document.body };
   };
   const isOpen = !!pos;
+  useEscapeLayer(isOpen, () => close(true));
   useEffect(() => {
     if (!isOpen) return;
     const first = menu.current?.querySelector<HTMLElement>('[role="menuitem"]');
@@ -446,7 +457,6 @@ export function RowMenu({ label, items, roomy, tone }: { label: string; items: M
 
   const open = () => { const p = place(); if (p) setPos(p); };
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") { e.stopPropagation(); close(true); }
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const els = [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
