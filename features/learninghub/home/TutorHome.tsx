@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { EmptyState } from "../kit";
-import { setHubIntent } from "../hubIntent";
+import { requestHomeworkFilter, setHubIntent } from "../hubIntent";
 import { InPersonApp } from "../inperson/InPersonApp";
 import { pctOf } from "../homework/hwTypes";
 import { lessonTiming } from "../live/lessonTypes";
@@ -168,7 +168,7 @@ export function TutorHome(props: PanelProps) {
             <Attention icon="homework" tone="brand" count={d.toMark.length} label="Homework to mark" hint={`${plural(d.toMark.length, "hand-in")} waiting`} onClick={() => go("homework")} />
             <Attention icon="quiz" tone="violet" count={d.writtenQuiz} label="Written answers to mark" hint="Quiz answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("quizzes"); }} />
             {d.writtenPlacement > 0 && <Attention icon="compass" tone="violet" count={d.writtenPlacement} label="Placement tests to mark" hint="Placement test answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("diagnostic"); }} />}
-            <Attention icon="warning" tone="red" count={d.overdue.length} label="Overdue homework" hint="Past due and not handed in" onClick={() => go("homework")} />
+            <Attention icon="warning" tone="red" count={d.overdue.length} label="Overdue homework" hint="Past due and not handed in" onClick={() => { requestHomeworkFilter("assigned"); go("homework"); }} />
             <Attention icon="users" tone="gold" count={d.quiet.length} label="Quiet for 14+ days" hint={d.quiet.slice(0, 2).map((s) => s.childName.split(" ")[0]).join(", ") || "No recent activity"} onClick={() => go("students")} />
           </div>
         </Card>
@@ -192,7 +192,7 @@ export function TutorHome(props: PanelProps) {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <ClassSnapshot overview={parts.overview} roster={students} bands={config.masteryBands} failed={failed.overview} onGo={go} delay={3 * 60} />
-        <Callouts improvers={d.gains} nudges={d.nudges} hasResults={d.hasResults} onGo={go} delay={4 * 60} />
+        <Callouts improvers={d.gains} nudges={d.nudges} hasResults={d.hasResults} onGo={go} onNudge={props.readOnly ? undefined : (id) => { setHubIntent({ kind: "homework", groupId: "", childIds: [id] }); go("homework"); }} delay={4 * 60} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">

@@ -8,7 +8,7 @@ import type { PanelProps } from "../panelTypes";
 import { errMsg, type HubGroup } from "../types";
 import { GroupChip, GroupViewChip, useGroupView } from "../groupKit";
 import { isQuizHw, membersOf, relevantTo } from "../groupStatus";
-import { takeHubIntent } from "../hubIntent";
+import { takeHomeworkFilter, takeHubIntent } from "../hubIntent";
 import { VideoChip } from "../videoKit";
 import { Avatar, DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Overline, Pill, Segmented, Skeleton, fmtDayTime, useNow, withQs, type Tone } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
@@ -49,6 +49,8 @@ export function TutorHomework({ qs, topics, students, config, onError, groups = 
   // A group quick action from the Students tab lands here with its form open ("Set a quiz" focuses the quiz picker).
   const [preset, setPreset] = useState<{ groupId: string; quiz: boolean; assessmentId?: string; noteIds?: string[]; title?: string; instructions?: string; childIds?: string[]; packNoteId?: string } | null>(null);
   const tookIntent = useRef(false);
+  // Home's "Overdue" tile asks for the not-handed-in list (consumed once).
+  const requestedFilter = useRef<Filter | null>(takeHomeworkFilter());
   useEffect(() => {
     if (tookIntent.current) return;
     const i = takeHubIntent(["homework", "quiz"]);
@@ -81,6 +83,7 @@ export function TutorHomework({ qs, topics, students, config, onError, groups = 
   useEffect(() => {
     if (!inbox || autoPicked.current) return;
     autoPicked.current = true;
+    if (requestedFilter.current) { setFilter(requestedFilter.current); return; }
     if (!inbox.some((r) => r.status === "submitted")) setFilter(inbox.some((r) => r.status === "assigned") ? "assigned" : "all");
   }, [inbox]);
 

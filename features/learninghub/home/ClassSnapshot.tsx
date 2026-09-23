@@ -131,7 +131,7 @@ export interface Improver { childId: string; childName: string; delta: number; l
 export interface Nudge { childId: string; childName: string; reason: string }
 
 /** "Top improvers" and "Needs a nudge" — two short, kind lists. */
-export function Callouts({ improvers, nudges, hasResults, onGo, delay = 0 }: { improvers: Improver[]; nudges: Nudge[]; hasResults: boolean; onGo: (k: "homework" | "dashboard" | "quizzes") => void; delay?: number }) {
+export function Callouts({ improvers, nudges, hasResults, onGo, onNudge, delay = 0 }: { improvers: Improver[]; nudges: Nudge[]; hasResults: boolean; onGo: (k: "homework" | "dashboard" | "quizzes") => void; /** Nudge = open the homework form with this student ticked; omitted (view-only) means the row opens their progress instead. */ onNudge?: (childId: string) => void; delay?: number }) {
   const up = TONES.green, nudge = TONES.gold;
   return (
     <div className="grid h-full min-w-0 content-start gap-4">
@@ -160,11 +160,11 @@ export function Callouts({ improvers, nudges, hasResults, onGo, delay = 0 }: { i
           <ul className="space-y-1.5">
             {nudges.slice(0, 3).map((n) => (
               <li key={n.childId}>
-                <button type="button" onClick={() => onGo("homework")} aria-label={`${n.childName}: ${n.reason}. Assign homework.`}
+                <button type="button" onClick={() => (onNudge ? onNudge(n.childId) : onGo("dashboard"))} aria-label={`${n.childName}: ${n.reason}. ${onNudge ? "Set homework for them." : "Open progress."}`}
                   className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-2xl px-2.5 py-1.5 text-left transition hover:bg-[var(--panel)] ${FOCUS}`}>
                   <Person name={n.childName} size={32} />
                   <span className="min-w-0 flex-1"><span className="block truncate text-[13px] font-bold text-[var(--ink)]">{firstName(n.childName)}</span><span className="block truncate text-[11.5px] text-[var(--ink-3)]">{n.reason}</span></span>
-                  <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: nudge.bg, color: nudge.fg, borderColor: nudge.line }}>Assign <Icon name="chevronRight" size={12} /></span>
+                  <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: nudge.bg, color: nudge.fg, borderColor: nudge.line }}>{onNudge ? "Set homework" : "Progress"} <Icon name="chevronRight" size={12} /></span>
                 </button>
               </li>
             ))}

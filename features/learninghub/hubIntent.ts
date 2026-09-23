@@ -118,3 +118,9 @@ let openStudent: { id: string; name: string } | null = null;
 export const requestOpenStudent = (id: string, name: string) => { openStudent = { id, name }; };
 /** Progress panel, once on mount: the student a card asked for (and clear it). */
 export function takeOpenStudent(): { id: string; name: string } | null { const s = openStudent; openStudent = null; return s; }
+
+// ── "Show me the overdue list" intent: Home's Overdue tile → Homework opens on the "Not handed in" filter (not To mark) ──
+let hwFilter: "assigned" | null = null;
+export const requestHomeworkFilter = (f: "assigned") => { hwFilter = f; };
+/** Homework panel, once on mount: the inbox filter Home asked for (and clear it). */
+export function takeHomeworkFilter(): "assigned" | null { const f = hwFilter; hwFilter = null; return f; }
