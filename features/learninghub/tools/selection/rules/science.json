@@ -1,0 +1,1213 @@
+{
+ "version": "1",
+ "rules": [
+  {
+   "id": "science.S-01.1",
+   "tool": "S-01",
+   "weight": 0.9,
+   "any": [
+    "\\b(cells?|organelles?|microscop\\w*)\\b",
+    "\\bparts? of (a |the )?(plant|flower|body|eye|ear|heart|lung|skeleton|leaf)",
+    "\\b(heart|lungs?|eye|ear|skeleton|kidney|digestive system|reproductive system|flower|leaf|root|stem|skin|brain|nervous system|circulatory|respiratory)\\b",
+    "\\bapparatus\\b",
+    "\\bteeth|tooth\\b",
+    "\\borgans?\\b",
+    "\\bmuscles?|bones?|joints?\\b"
+   ],
+   "none": [
+    "cell(s)? (and|or) battery",
+    "\\bsolar cell|fuel cell|electrochemical|electric cell|photocell|light-dependent"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-01.2",
+   "tool": "S-01",
+   "weight": 0.7,
+   "any": [
+    "\\bapparatus\\b",
+    "\\bequipment\\b"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-02.1",
+   "tool": "S-02",
+   "weight": 0.9,
+   "any": [
+    "line of best fit",
+    "\\bgraphs?\\b",
+    "\\bplot\\w*",
+    "\\bresults\\b",
+    "\\banalys\\w+ (of )?(data|results)",
+    "\\bgradient\\b",
+    "\\bscatter\\b",
+    "\\bcorrelat\\w+"
+   ],
+   "none": [
+    "\\bfood\\b",
+    "\\bgraph\\w* (of )?(a )?(diamond|carbon)"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-02.2",
+   "tool": "S-02",
+   "weight": 0.85,
+   "any": [
+    "required practical",
+    "\\bpractical\\b",
+    "\\binvestigat\\w+",
+    "\\bmeasur\\w+",
+    "\\brate of (a )?reaction",
+    "\\bstretching\\b",
+    "\\bspecific heat capacity\\b"
+   ],
+   "programme": "^physics|combined|^chemistry|^biology",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-02.3",
+   "tool": "S-02",
+   "weight": 0.3,
+   "any": [
+    "\\bdata\\b",
+    "\\bmeasurements?\\b",
+    "\\btable\\b",
+    "\\btrends?\\b",
+    "\\bpatterns?\\b"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-03.1",
+   "tool": "S-03",
+   "weight": 0.95,
+   "any": [
+    "\\bcalculat\\w+",
+    "\\b\\w\\s?=\\s?\\w\\s?[\u00d7x*/\u00f7]\\s?\\w",
+    "\\bformula\\b",
+    "\\brearrang\\w+",
+    "\\bequations?\\b.{0,20}\\b(motion|energy|power|speed|force|pressure)",
+    "\\bhooke",
+    "\\bmoments?\\b",
+    "\\bwork done\\b",
+    "\\bpower\\b",
+    "\\bdensity\\b",
+    "\\bpressure\\b",
+    "\\bspeed\\b",
+    "\\bvelocity\\b",
+    "\\bacceleration\\b",
+    "\\bmomentum\\b",
+    "\\bkinetic energy|gravitational potential energy|elastic potential energy\\b",
+    "\\bspecific (heat|latent)\\b",
+    "\\bwave (speed|equation)\\b",
+    "\\bresistance\\b",
+    "\\bcharge\\b.{0,20}\\bcurrent\\b",
+    "\\bhalf-life\\b"
+   ],
+   "none": [
+    "\\bfood\\b"
+   ],
+   "programme": "^physics|combined|science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-03.2",
+   "tool": "S-03",
+   "weight": 0.9,
+   "any": [
+    "\\bmoles?\\b",
+    "\\brelative (formula|atomic) mass",
+    "\\bconcentration\\b.{0,30}\\b(calculat|mol|g/dm)",
+    "\\bpercentage yield|atom economy",
+    "\\bcalculat\\w+",
+    "\\bavogadro",
+    "\\bmolar volume",
+    "\\bmass in (a )?chemical reaction",
+    "\\bconservation of mass\\b",
+    "\\bempirical formula",
+    "\\bmagnification\\b",
+    "\\bpercentage\\b.{0,20}\\b(change|mass|composition)",
+    "\\brf value",
+    "\\bcalculating\\b"
+   ],
+   "programme": "^chemistry|combined",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-03.3",
+   "tool": "S-03",
+   "weight": 0.85,
+   "any": [
+    "\\bcalculat\\w+",
+    "\\bmagnification\\b",
+    "\\bpercentage\\b",
+    "\\brate of\\b.{0,20}\\b(calculat|photosynthesis)",
+    "\\bmean\\b",
+    "\\bquadrat|transect\\b",
+    "\\bBMI\\b",
+    "\\bcardiac output\\b"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "programme": "^biology|combined",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-03.4",
+   "tool": "S-03",
+   "weight": 0.85,
+   "any": [
+    "\\bcalculat\\w+",
+    "\\bmagnification\\b"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-04.1",
+   "tool": "S-04",
+   "weight": 1,
+   "any": [
+    "\\bcircuits?\\b",
+    "\\bcurrent\\b",
+    "\\bpotential difference\\b",
+    "\\bvoltage\\b",
+    "\\bresistors?\\b",
+    "\\bresistance\\b",
+    "\\bseries\\b.{0,15}\\bparallel\\b",
+    "\\bparallel circuit",
+    "\\bbulbs?\\b",
+    "\\bthermistor|\\bLDR\\b|\\bdiode\\b",
+    "\\bammeter|voltmeter\\b",
+    "\\bI-V\\b",
+    "\\bmains electricity\\b",
+    "\\bcomponents?\\b.{0,20}\\b(circuit|electric)",
+    "\\belectrical\\b",
+    "\\belectricity\\b",
+    "\\bswitch(es)?\\b",
+    "\\bbatter(y|ies)\\b"
+   ],
+   "none": [
+    "\\belectromagnetic\\b",
+    "\\bvoltage.{0,20}(cell|electrochem)",
+    "\\belectrochemi",
+    "\\bcell voltage",
+    "\\bchemical cells?",
+    "\\bfuel cells?",
+    "\\bcirculat\\w+",
+    "\\bblood circuit"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-04.2",
+   "tool": "S-04",
+   "weight": 0.7,
+   "any": [
+    "\\belectric\\w* (current|charge|circuit)",
+    "\\bstatic electricity\\b"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-05.1",
+   "tool": "S-05",
+   "weight": 1,
+   "any": [
+    "\\bbalanc\\w+ (chemical |symbol |ionic |half )?equations?",
+    "\\b(word|symbol|chemical|ionic|half) equations?",
+    "\\breactants?\\b",
+    "\\bproducts?\\b.{0,20}\\b(reaction|reactant)",
+    "\\bcombustion\\b",
+    "\\bneutralisation\\b",
+    "\\bcarbonates?\\b",
+    "\\breactions? of (acids?|metals?|group)",
+    "\\bdisplacement\\b",
+    "\\boxidation\\b|\\breduction\\b",
+    "\\bdecomposition\\b",
+    "\\bprecipitat\\w+",
+    "\\bthermal decomposition",
+    "\\bconservation of mass\\b",
+    "\\bchemical reactions?\\b",
+    "\\bsalts?\\b",
+    "\\breactivity\\b",
+    "\\bextraction of metals",
+    "\\bhaber process\\b",
+    "\\belectrolysis\\b",
+    "\\bacids?\\b.{0,40}\\b(metals?|alkalis?|bases?)"
+   ],
+   "none": [
+    "\\bnon-chemical"
+   ],
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-05.2",
+   "tool": "S-05",
+   "weight": 0.7,
+   "any": [
+    "\\breactions?\\b"
+   ],
+   "programme": "^chemistry|combined|science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-06.1",
+   "tool": "S-06",
+   "weight": 1,
+   "any": [
+    "\\bforces?\\b",
+    "\\bfriction\\b",
+    "\\bweight\\b",
+    "\\bresultant\\b",
+    "\\bnewton\\w*",
+    "\\bgravity\\b",
+    "\\bgravitational (field|force|attraction)",
+    "\\bair resistance|drag|upthrust|buoyan\\w+",
+    "\\bfree.body",
+    "\\bcontact forces?|non-contact",
+    "\\bpush(es|ing)?\\b|\\bpull(s|ing)?\\b",
+    "\\bterminal velocity\\b",
+    "\\bnormal contact",
+    "\\bbalanced|unbalanced",
+    "\\bstretching\\b|\\bspring\\b|\\bhooke",
+    "\\bmoments?\\b|\\blevers?\\b",
+    "\\bmagnetic (force|attraction)",
+    "\\bpressure\\b",
+    "\\bstopping distance|braking",
+    "\\bcircular motion|centripetal\\b",
+    "\\bsurfaces\\b.{0,40}\\b(slid|slip|grip)"
+   ],
+   "none": [
+    "\\bforces? of (natural )?selection",
+    "\\bforce of (feeding|competition)",
+    "\\bbiological",
+    "\\b(taking|change) the weight of",
+    "\\bweight (of|loss|gain) (in )?(the )?(body|person)",
+    "\\bbody weight",
+    "\\bweighing food",
+    "\\bdiet",
+    "\\bmagnetic (field|poles?)",
+    "\\belectromagnetic"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-07.1",
+   "tool": "S-07",
+   "weight": 0.95,
+   "any": [
+    "\\bvariables?\\b",
+    "\\bfair test",
+    "\\bhypothes\\w+",
+    "\\bplan(ning)?\\b.{0,30}\\b(investigation|experiment|method|practical|test)",
+    "\\bpractical\\b",
+    "\\binvestigat\\w+",
+    "\\brequired practical",
+    "\\bexperiments?\\b",
+    "\\bmethods?\\b.{0,20}\\b(safe|accurate|repeat)",
+    "\\bcontrol(led)?\\b",
+    "\\bpredict\\w*",
+    "\\bset up (an|a)\\b",
+    "\\btest(ing)?\\b.{0,30}\\b(idea|question|which)",
+    "\\bidentify (and )?(carry|scientific)",
+    "\\bpattern seeking|comparative|observation over time",
+    "\\bhazards?\\b|\\brisk\\b",
+    "\\bwhat happens\\b",
+    "\\benquir\\w+",
+    "\\bfind out\\b",
+    "\\bscientific (method|enquir\\w+|questions?)",
+    "\\brepeat(ed|ing)?\\b.{0,20}\\b(measurements?|readings|results)"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-07.2",
+   "tool": "S-07",
+   "weight": 0.6,
+   "any": [
+    "\\bplan\\b",
+    "\\baccura\\w+",
+    "\\breliab\\w+",
+    "\\bevaluat\\w+",
+    "\\bdesign\\w* (a|an|and)"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-08.1",
+   "tool": "S-08",
+   "weight": 1,
+   "any": [
+    "\\bfood (chains?|webs?)",
+    "\\bproducers?\\b",
+    "\\bconsumers?\\b",
+    "\\bpredators?\\b|\\bprey\\b",
+    "\\becosystems?\\b",
+    "\\bhabitats?\\b",
+    "\\bpopulations?\\b",
+    "\\bcarnivores?|herbivores?|omnivores?\\b",
+    "\\bbiodiversity\\b",
+    "\\benvironment\\b.{0,30}\\b(living|organisms|animals|plants)",
+    "\\bmicrohabitat",
+    "\\bcompetition\\b",
+    "\\bpyramids? of (biomass|numbers)",
+    "\\bbiomass\\b",
+    "\\bdependen\\w+\\b.{0,20}\\b(organisms|species)",
+    "\\bcarbon cycle|water cycle|nitrogen cycle",
+    "\\bdecomposers?|decay\\b",
+    "\\bfeeding relationships",
+    "\\btrophic",
+    "\\bspecies\\b",
+    "\\bextinct\\w*",
+    "\\bpollut\\w+",
+    "\\bsustainab\\w+",
+    "\\bconservation\\b",
+    "\\bliving things and (their|the)\\b",
+    "\\bdeforestation|global warming|climate change",
+    "\\banimals\\b.{0,30}\\b(live|eat|feed)",
+    "\\badaptations?\\b",
+    "\\bfood\\b.{0,20}\\b(animals|plants|source)",
+    "\\bsampling\\b|\\bquadrat|\\btransect"
+   ],
+   "none": [
+    "\\bfood (tests?|groups?|labels?)",
+    "\\bdigest\\w+"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-09.1",
+   "tool": "S-09",
+   "weight": 1,
+   "any": [
+    "\\bparticle\\w*",
+    "\\bstates? of matter",
+    "\\bsolids?, liquids?",
+    "\\bmelting|boiling|freezing|condens\\w+|evaporat\\w+|sublimat\\w+",
+    "\\bdiffusion\\b",
+    "\\bdensity\\b",
+    "\\bgas(es)? pressure",
+    "\\bdissolv\\w+|\\bsolutions?\\b|solubility",
+    "\\bgases\\b|\\bliquids?\\b",
+    "\\bthermal energy\\b|\\btemperature\\b",
+    "\\bkinetic (theory|model)",
+    "\\bevaporation\\b",
+    "\\bchanges? of state|state changes?",
+    "\\bbrownian",
+    "\\bcondensation|water cycle",
+    "\\bexpansion\\b|\\bcontraction\\b",
+    "\\bgas\\b.{0,20}\\b(volume|pressure|temperature)",
+    "\\bconduction|convection\\b",
+    "\\bspecific latent",
+    "\\bpure substances?|mixtures?\\b",
+    "\\bfiltration|distillation|chromatography|crystallisation|separat\\w+"
+   ],
+   "none": [
+    "\\bdiffusion of (oxygen|glucose|nutrients)",
+    "\\bfood\\b",
+    "\\bleaf\\b"
+   ],
+   "programme": "^chemistry|^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-09.2",
+   "tool": "S-09",
+   "weight": 0.9,
+   "any": [
+    "\\bdiffusion\\b",
+    "\\bosmosis\\b",
+    "\\bactive transport\\b"
+   ],
+   "none": [
+    "xxxx"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-10.1",
+   "tool": "S-10",
+   "weight": 1,
+   "any": [
+    "\\benergy\\b.{0,25}\\b(stores?|transfers?|transferr\\w+|efficien\\w+|resources?|dissipat\\w+)",
+    "\\bsankey\\b",
+    "\\befficien\\w+",
+    "\\benergy (stores?|transfers?)",
+    "\\bconservation of energy\\b",
+    "\\bwasted energy|dissipat\\w+",
+    "\\bpower\\b",
+    "\\brenewable|non-renewable|fossil fuels?",
+    "\\bkinetic energy|potential energy|thermal energy\\b",
+    "\\binsulat\\w+",
+    "\\bheating and cooling|thermal (conduct|insulat)",
+    "\\bfuels?\\b",
+    "\\benergy\\b",
+    "\\bwork done\\b",
+    "\\bnational grid\\b",
+    "\\belectricity generation|power stations?",
+    "\\bspecific heat capacity\\b|\\bthermal\\b"
+   ],
+   "none": [
+    "\\benergy (from|in) food",
+    "\\bfood\\b",
+    "\\benergy (level|profile|change).{0,15}(reaction|bond)",
+    "\\bactivation energy",
+    "\\bexothermic|endothermic"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-10.2",
+   "tool": "S-10",
+   "weight": 0.75,
+   "any": [
+    "\\bexothermic|endothermic",
+    "\\benergy (change|profile|level)s?",
+    "\\bbond energ\\w+",
+    "\\benergy transfer\\w*",
+    "\\bfuels?\\b"
+   ],
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-10.3",
+   "tool": "S-10",
+   "weight": 0.7,
+   "any": [
+    "\\benergy transfers?\\b",
+    "\\benergy\\b.{0,20}\\b(food|respiration|ecosystem)",
+    "\\bbiomass\\b.{0,20}\\b(transfer|efficien)",
+    "\\befficien\\w+"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-11.1",
+   "tool": "S-11",
+   "weight": 1,
+   "any": [
+    "\\bwaves?\\b",
+    "\\bwavelength\\b",
+    "\\bfrequency\\b",
+    "\\bamplitude\\b",
+    "\\bsound\\b",
+    "\\bultrasound|infrasound\\b",
+    "\\becho",
+    "\\bpitch|volume|loudness\\b",
+    "\\belectromagnetic (spectrum|radiation|waves)",
+    "\\btransverse|longitudinal",
+    "\\bradio|microwave|infrared|ultraviolet|x-?rays?|gamma\\b",
+    "\\bvibrat\\w+",
+    "\\bhearing|\\bear\\b.{0,20}\\bsound",
+    "\\bseismic\\b",
+    "\\bsonar|oscilloscope"
+   ],
+   "none": [
+    "\\bheart rate",
+    "\\bwater waves? (energy)"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-12.1",
+   "tool": "S-12",
+   "weight": 1,
+   "any": [
+    "\\blight\\b",
+    "\\bray diagrams?",
+    "\\breflect\\w+",
+    "\\brefract\\w+",
+    "\\blenses?|\\bconvex|\\bconcave",
+    "\\bmirrors?\\b",
+    "\\bshadows?\\b",
+    "\\bopaque|transparent|translucent\\b",
+    "\\bluminous|light sources?",
+    "\\bcolours? of light|spectrum of light|prism|dispersion",
+    "\\bsee(ing)? (objects|things)|\\bvision\\b",
+    "\\bcolour filters?|absorb\\w* (and|or) reflect",
+    "\\bpinhole|camera",
+    "\\bsun\\b.{0,15}\\b(light|shadow)",
+    "\\btotal internal",
+    "\\bplane mirror|specular|diffuse",
+    "\\bdark\\b.{0,30}\\bsource",
+    "\\bseeing\\b"
+   ],
+   "none": [
+    "\\blight[- ]dependent",
+    "\\bphotosynthe\\w+",
+    "\\bplants?\\b",
+    "\\bgrowth\\b",
+    "\\bgeotropism|phototropism|phototropic",
+    "\\blight (intensity|energy).{0,30}(plant|leaf|leaves|photosynth)",
+    "\\bfood\\b",
+    "\\belectromagnetic",
+    "\\bspectrum\\b.{0,20}(electromagnetic)",
+    "\\blight-emitting|light emitting",
+    "\\bbiology"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-13.1",
+   "tool": "S-13",
+   "weight": 1,
+   "any": [
+    "\\bperiodic table\\b",
+    "\\bgroup [0-9]\\b|\\bgroups?\\b.{0,20}\\b(elements|metals|halogens|noble)",
+    "\\bhalogens?\\b|\\bnoble gas\\w*|\\balkali metals?\\b",
+    "\\btransition metals?\\b",
+    "\\belements?\\b",
+    "\\bmetals?\\b|\\bnon-?metals?\\b",
+    "\\bmendeleev|\\bperiods?\\b.{0,15}\\b(table|group)",
+    "\\breactivity series|reactivity\\b",
+    "\\bmetalloids?",
+    "\\bcompounds?\\b",
+    "\\bproperties of (metals|elements)",
+    "\\balloys?\\b",
+    "\\bfirst 20|electronic (structure|configuration)",
+    "\\bcarbon\\b",
+    "\\bextract\\w+ (of )?(metals?|iron|aluminium)",
+    "\\bthe atmosphere|noble"
+   ],
+   "none": [
+    "\\bmetals? (in|for) (rocks)"
+   ],
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-14.1",
+   "tool": "S-14",
+   "weight": 1,
+   "any": [
+    "\\batoms?\\b|\\batomic\\b",
+    "\\belectrons?\\b",
+    "\\bbond(s|ing)?\\b",
+    "\\bionic|covalent|metallic bonding",
+    "\\bisotopes?\\b",
+    "\\bprotons?|neutrons?|nucle\\w+",
+    "\\bions?\\b",
+    "\\bmolecules?\\b",
+    "\\bgiant (covalent|ionic|structures?)|simple molecular",
+    "\\bdot.and.cross|electronic structure",
+    "\\bdiamond|graphite|graphene|fullerene|nanoparticle",
+    "\\bstructure and (bonding|properties)",
+    "\\bradioactiv\\w+|\\bradiation\\b|\\bhalf-life|\\bdecay\\b",
+    "\\bnuclear (fission|fusion|equations?|power|radiation)",
+    "\\bplum pudding|rutherford|bohr|model of the atom",
+    "\\balpha|beta|gamma\\b",
+    "\\bcompounds?\\b",
+    "\\bstructures? (of|and)\\b.{0,30}\\b(substances?|materials?|solids?)",
+    "\\belectrolysis\\b",
+    "\\bpolymers?\\b",
+    "\\bnanoscience|\\bnano"
+   ],
+   "none": [
+    "\\bion channel",
+    "\\bcation\\b.{0,5}exchange"
+   ],
+   "programme": "^chemistry|^physics|combined|science-secondary",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-15.1",
+   "tool": "S-15",
+   "weight": 1,
+   "any": [
+    "\\bclassif\\w+",
+    "\\bkeys?\\b.{0,20}\\b(identify|classif|use)|\\bidentification key|\\bbranching",
+    "\\bsort(ing)?\\b|\\bgroup(ing)?\\b.{0,20}\\b(materials|animals|living|objects|things|plants|rocks)",
+    "\\bmaterials?\\b",
+    "\\bproperties\\b",
+    "\\bconductors?|insulators?\\b",
+    "\\brocks?\\b|\\bsoils?\\b|\\bfossils?\\b|\\bminerals?\\b|\\bigneous|sedimentary|metamorphic",
+    "\\bvertebrates?|invertebrates?|mammals?|reptiles?|amphibians?|birds?|fish\\b",
+    "\\bliving (and|or) non-living|\\bliving things\\b",
+    "\\bidentify\\w*",
+    "\\bcompar\\w+ (and|or)? ?(group|sort|classif)",
+    "\\bhard|soft|flexible|rigid|waterproof|absorbent|transparent|magnetic\\b",
+    "\\bchromatography|separating|filtering|sieving|evaporating\\b",
+    "\\banimals\\b|\\bplants\\b",
+    "\\breversible|irreversible",
+    "\\bmixtures?\\b|\\bsolutions?\\b|\\bdissolv\\w+",
+    "\\bwood|metal|plastic|glass|fabric|paper\\b",
+    "\\bgroups? of (animals|plants|organisms)",
+    "\\bmagnets?\\b.{0,30}\\b(materials|attract)",
+    "\\bsimilarit\\w+|\\bdifferences?\\b",
+    "\\bnaming|name (the|and)",
+    "\\bcharacteristics\\b",
+    "\\bfeatures?\\b",
+    "\\bfood groups?|\\bnutrients?\\b|\\bdiet\\b",
+    "\\bseasons?\\b|\\bweather\\b"
+   ],
+   "none": [
+    "\\bsort(ing)? out\\b"
+   ],
+   "programme": "^science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-15.2",
+   "tool": "S-15",
+   "weight": 0.8,
+   "any": [
+    "\\bclassif\\w+",
+    "\\bbinomial|\\btaxonom\\w+|\\bkingdoms?|\\bspecies\\b",
+    "\\bevolution\\b.{0,20}\\bclassif",
+    "\\bidentify\\b.{0,20}\\b(unknown|substances?|ions?)",
+    "\\bcompar\\w+ .{0,25}(properties|types)"
+   ],
+   "programme": "^biology|combined|^chemistry",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-16.1",
+   "tool": "S-16",
+   "weight": 1,
+   "any": [
+    "\\blife cycles?\\b",
+    "\\bstages\\b",
+    "\\bsequence\\b",
+    "\\bmitosis|meiosis|cell cycle\\b",
+    "\\bdigest\\w+",
+    "\\bgrowth|develop\\w+|\\bgerminat\\w+",
+    "\\bmetamorpho\\w+",
+    "\\breproduc\\w+|\\bpollinat\\w+|\\bfertilis\\w+|\\bseed (dispersal|formation)",
+    "\\bmoon\\b|\\bday and night|\\bseasons?\\b|\\bearth.{0,10}\\bsun\\b|orbit",
+    "\\bwater cycle|\\bcarbon cycle|\\bnitrogen cycle|\\brock cycle",
+    "\\bmenstrual|puberty|pregnan\\w+|gestation|\\bfoetus|\\bfetus|embryo",
+    "\\bhumans? (grow|change)|\\bageing|\\bbaby|\\byoung\\b|\\badult\\b",
+    "\\bprocess(es)?\\b",
+    "\\bfood (journey|through)",
+    "\\bstarts?\\b.{0,15}\\bfinishes\\b",
+    "\\btimeline|\\bhistory of\\b",
+    "\\bnervous|reflex arc|\\bpathway",
+    "\\bhormone|endocrin\\w+|homeostasis|negative feedback",
+    "\\bdefen[cs]e|\\binfect\\w+|\\bvaccin\\w+|\\bimmune\\b",
+    "\\bphotosynthesis|respiration|\\btranspir\\w+",
+    "\\bdna\\b.{0,20}\\b(replicat|protein)|\\bprotein synthesis|\\btranscription|\\btranslation",
+    "\\bformation|\\bformed\\b",
+    "\\bevolution|\\bnatural selection|\\bselective breeding",
+    "\\bdevelopment of|\\bhow (a|the) .{0,20} (works|form)",
+    "\\bcycle\\b|\\bcycles\\b"
+   ],
+   "programme": "^biology|combined|science-|^physics",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-17.1",
+   "tool": "S-17",
+   "weight": 1,
+   "any": [
+    "\\bpunnett",
+    "\\binherit\\w+",
+    "\\bgenetic\\w*|\\bgenes?\\b|\\balleles?\\b",
+    "\\bdominant|recessive|heterozygous|homozygous|genotype|phenotype",
+    "\\bchromosomes?|\\bdna\\b|\\bgenome\\b",
+    "\\bfamily tree|pedigree",
+    "\\bvariation\\b",
+    "\\bselective breeding|genetic engineering|cloning\\b",
+    "\\bcystic fibrosis|huntington|polydactyly|\\bsex determination",
+    "\\bmutation\\w*",
+    "\\bevolution|natural selection\\b",
+    "\\boffspring|\\btraits?\\b|\\bcharacteristics? (are )?passed|\\binherited\\b",
+    "\\bparents\\b.{0,20}\\bchildren|\\bresembl\\w+ (their )?parents",
+    "\\bgamete|\\bzygote|\\bmeiosis|\\bsexual reproduction"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-18.1",
+   "tool": "S-18",
+   "weight": 1,
+   "any": [
+    "\\bph\\b",
+    "\\bindicators?\\b",
+    "\\bacids?\\b|\\balkali\\w*|\\bbases?\\b|\\bneutrali\\w+",
+    "\\btitrat\\w+",
+    "\\buniversal indicator|litmus\\b",
+    "\\bstrong (and|or) weak|\\bhydrochloric|\\bsulfuric|\\bnitric\\b",
+    "\\bsalts?\\b.{0,20}\\b(making|preparation|prepar)|\\bmaking salts",
+    "\\bhydroxide|\\bhydrogen ions?"
+   ],
+   "none": [
+    "\\bamino acids?",
+    "\\bacid rain\\b.{0,5}$",
+    "\\bnucleic acid|\\bfatty acids?|\\blactic acid|\\bstomach acid|\\bdeoxyribo|\\bbase (pairs?|sequence)|\\bbases? in dna"
+   ],
+   "programme": "^chemistry|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-19.1",
+   "tool": "S-19",
+   "weight": 0.9,
+   "any": [
+    "\\bpractical\\b",
+    "\\brequired practical",
+    "\\bexperiment\\w*",
+    "\\binvestigat\\w+",
+    "\\brate of reaction",
+    "\\btitrat\\w+",
+    "\\bdistillation|chromatography|crystallis\\w+|filtration",
+    "\\bmicroscop\\w+",
+    "\\bcore practical",
+    "\\bmeasur\\w+",
+    "\\bspecific heat|\\bdensity\\b.{0,30}\\b(practical|measure|investigat)",
+    "\\bmaking (a )?(soluble )?salts?",
+    "\\belectrolysis\\b",
+    "\\bwater (purif|treatment|analysis)",
+    "\\bosmosis|enzymes?\\b.{0,30}\\b(rate|activity|temperature|ph)",
+    "\\bphotosynthesis\\b.{0,30}\\b(rate|light)",
+    "\\bstretching|springs?\\b|\\bresistance\\b.{0,25}\\b(wire|length)|\\bI-V|\\bcooling|\\bthermal insulation"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "programme": "^chemistry|^biology|^physics|combined",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-19.2",
+   "tool": "S-19",
+   "weight": 0.6,
+   "any": [
+    "\\bpractical\\b",
+    "\\bexperiment\\w*"
+   ],
+   "programme": "^science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-20.1",
+   "tool": "S-20",
+   "weight": 1,
+   "any": [
+    "\\bheart rate|\\bpulse\\b",
+    "\\bbreath\\w*|\\brespirat\\w+|ventilat\\w+",
+    "\\bexercis\\w+|\\bfitness\\b|\\bfit\\b",
+    "\\bblood\\b",
+    "\\bcirculat\\w+",
+    "\\bcardiac|\\bcardiovascular",
+    "\\bmuscles?\\b|\\bjoints?\\b|\\bbones?\\b|\\bskeleton",
+    "\\bhealthy\\b|\\bhealth\\b|\\bdiet\\b|\\bnutri\\w+|\\bvitamins?|\\bminerals? and",
+    "\\bdrugs?\\b|\\balcohol|\\bsmok\\w+|\\bcaffeine|\\btobacco|\\bnicotine",
+    "\\bdisease\\b|\\bcommunicable|\\bpathogen|\\bbacteria|\\bviruses?\\b",
+    "\\bnervous system|\\bneurones?|\\bneurons?|\\breflex|\\bbrain\\b|\\bsenses?\\b|\\bhormones?\\b|\\bhomeostasis",
+    "\\bhuman body\\b|\\bbody systems?|\\borgan systems?",
+    "\\bwashing hands|\\bteeth|\\bsleep|\\bhygiene",
+    "\\bkidney|\\bdialysis|\\bglucose (level|regulation)|\\bdiabet\\w+|\\binsulin",
+    "\\bthermoregulation|\\bsweat",
+    "\\bcontracepti\\w+|\\bmenstrual|\\bpuberty|\\bpregnan\\w+",
+    "\\bimmune\\b|\\bvaccin\\w+|\\bantibiotic\\w*|\\bwhite blood"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-21.1",
+   "tool": "S-21",
+   "weight": 1,
+   "any": [
+    "\\bdistance.time",
+    "\\bvelocity.time|\\bspeed.time",
+    "\\bmotion\\b",
+    "\\bacceleration\\b",
+    "\\bspeed\\b",
+    "\\bvelocity\\b",
+    "\\bterminal velocity\\b",
+    "\\bstopping distances?\\b",
+    "\\bgraphs? of\\b.{0,30}\\b(motion|speed|distance)",
+    "\\bmoving\\b|\\bmovement of objects",
+    "\\bjourney",
+    "\\bdisplacement\\b",
+    "\\bfree fall|\\bfalling\\b",
+    "\\bmeasuring and calculating motion|\\bchanging speed",
+    "\\bkinematic|suvat|\\bv\\s?=\\s?u",
+    "\\bfast\\w*|\\bslow\\w*"
+   ],
+   "none": [
+    "\\bblood|\\bwave speed|\\brate of reaction",
+    "\\bspeed of (reaction|sound|light)|\\bspeed of the (wave|water)"
+   ],
+   "programme": "^physics|combined|science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-22.1",
+   "tool": "S-22",
+   "weight": 1,
+   "any": [
+    "\\bmagnet\\w*",
+    "\\bmagnetic (field|force|poles?|materials?|attraction)",
+    "\\belectromagnet\\w*",
+    "\\bsolenoid|\\bmotor effect|\\bgenerator effect|\\btransformers?\\b|\\binduc\\w+",
+    "\\bcompass\\b",
+    "\\bpoles?\\b.{0,15}\\b(north|south|attract|repel)|\\battract\\w*|\\brepel\\w*",
+    "\\bfleming|\\bloudspeaker|\\bmotors?\\b",
+    "\\bmagnetis\\w+"
+   ],
+   "none": [
+    "\\belectromagnetic (waves?|spectrum|radiation)",
+    "\\bmagnetic resonance",
+    "\\bpolar (bond|molecule)"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-23.1",
+   "tool": "S-23",
+   "weight": 1,
+   "any": [
+    "\\bspace\\b|\\bplanets?\\b|\\bsolar system|\\bstars?\\b|\\bgalax\\w+|\\buniverse\\b|\\bbig bang|\\bcosmology|\\bred.?shift",
+    "\\borbit\\w*",
+    "\\bseasons?\\b|\\bday and night|\\btilt|\\bearth,? sun|\\bearth.{0,15}\\b(spin|rotat)",
+    "\\bmoon\\b|\\blunar|\\beclipse",
+    "\\bsun\\b.{0,25}\\b(moves?|position|sky|apparent)|\\bsunrise|\\bsunset",
+    "\\bsatellites?|\\bcomets?|\\basteroids?|\\bmercury|venus|mars|jupiter|saturn|neptune|uranus\\b",
+    "\\bgravitational field|\\bgravity\\b.{0,30}\\b(planets?|orbit|moon|earth|mass)|\\bweight on (the )?(moon|earth|planets)",
+    "\\blife cycle of a star|\\bnuclear fusion\\b.{0,30}\\bstars?|\\bblack hole|\\bsupernova"
+   ],
+   "none": [
+    "\\borbital\\b.{0,15}\\belectron",
+    "\\bfood\\b",
+    "\\bplants?\\b.{0,30}\\b(sun|space)",
+    "\\bspace (between|in)\\b.{0,15}(particles|atoms)"
+   ],
+   "programme": "^physics|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-24.1",
+   "tool": "S-24",
+   "weight": 0.9,
+   "any": [
+    "\\bunits?\\b",
+    "\\bconvert\\w*",
+    "\\bprefix\\w*",
+    "\\bmeasur\\w+ (of )?(length|mass|volume|temperature|time)",
+    "\\bkilo\\w*|\\bmilli\\w*|\\bmicro\\w*|\\bnano\\w*|\\bmega\\b|\\bgiga\\b",
+    "\\bstandard form",
+    "\\bSI\\b|\\bnewtons?\\b|\\bjoules?\\b|\\bwatts?\\b",
+    "\\bvolume\\b|\\bmass\\b|\\bcm3|dm3|\\bg/",
+    "\\bmole|\\bconcentration",
+    "\\bpower\\b|\\bcharge\\b|\\bcurrent\\b|\\bfrequency\\b"
+   ],
+   "none": [
+    "\\bmass extinction|\\bmass number\\b(?!.*calc)|\\bcurrent (affairs|species)|\\bcharge(d)? (particle|ion)"
+   ],
+   "programme": "^physics|^chemistry|combined|science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-25.1",
+   "tool": "S-25",
+   "weight": 1,
+   "any": [
+    "\\bbody systems?|\\borgan systems?",
+    "\\borgans?\\b",
+    "\\bdigest\\w+|\\bcirculat\\w+|\\brespirat\\w+|\\bbreath\\w*|\\bexcret\\w+|\\bnervous\\b",
+    "\\bheart|\\blungs?|\\bstomach|\\bintestine|\\bliver|\\bkidney|\\bbrain",
+    "\\bhuman body",
+    "\\bskeleton|\\bmuscles?|\\bjoints?|\\bbones?",
+    "\\bhealth\\w*|\\bdiet\\b|\\bnutri\\w+|\\bfood\\b.{0,25}\\bbody",
+    "\\bexchange surfaces|\\bgas exchange|\\balveoli|\\bvilli",
+    "\\btissues?|\\bcells,? tissues",
+    "\\breproductive (system|organs)",
+    "\\bhormon\\w+|\\bendocrine|\\bhomeostasis",
+    "\\btransport in|\\bxylem|\\bphloem|\\bplant (organs|tissues|systems)",
+    "\\bhow (our|the) bod\\w+"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-26.1",
+   "tool": "S-26",
+   "weight": 1,
+   "any": [
+    "\\bmicroscop\\w+",
+    "\\bmagnification\\b|\\bmagnified\\b",
+    "\\bcells?\\b",
+    "\\bresolution\\b|\\bslides?\\b|\\bstain\\w*|\\bstomata|\\bepiderm\\w+",
+    "\\bmitosis|\\bstem cells|\\bspecialis\\w+|\\bdifferentiat\\w+|\\bdiffusion|\\bosmosis",
+    "\\bbacteri\\w+|\\bfung\\w+|\\byeast|\\bmicro-?organisms?|\\bmicrobes?|\\bviruses?",
+    "\\bnucleus|\\bcytoplasm|\\bmitochondri\\w+|\\bchloroplasts?|\\bcell (membrane|wall)|\\borganelles?|\\bribosomes?",
+    "\\bsize (of|and)\\b.{0,25}\\bcells?|\\bscale of|\\bstandard form.{0,30}cell",
+    "\\bcell (structure|biology|division|growth|organisation)",
+    "\\bunicellular|\\bmulticellular"
+   ],
+   "none": [
+    "\\bsolar cell|\\belectrical cell|\\bfuel cell|\\bchemical cell|\\bcell (and|or) batter|\\belectrochemical|\\bcells? in (a )?(series|circuit)"
+   ],
+   "programme": "^biology|combined|science-",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-27.1",
+   "tool": "S-27",
+   "weight": 1,
+   "any": [
+    "\\bchemical tests?\\b",
+    "\\bflame tests?\\b",
+    "\\btests? for (gases|gas|ions?|hydrogen|oxygen|carbon dioxide|chlorine|water|starch|sugars?|protein)",
+    "\\bidentif\\w+ (ions?|gases|unknown|substances|cations|anions|compounds)",
+    "\\bprecipitate\\b|\\bhydroxide\\b.{0,20}\\b(test|precipit)",
+    "\\banalys\\w+ (of )?(substances?|samples?|chemicals?|water|ions)",
+    "\\bchromatograph\\w+|\\brf value",
+    "\\bpurity|\\bpure\\b|\\bformulations?\\b",
+    "\\bwater (test|purif|treat|potable)",
+    "\\bpollutants?|\\batmospheric",
+    "\\binstrumental|\\bspectroscop\\w+|\\bspectrometry",
+    "\\bcarbon dioxide.{0,30}(limewater|test)|limewater",
+    "\\bion (test|identification)|\\bsulfate|\\bhalide|\\bcarbonate\\b.{0,20}\\btest",
+    "\\bbenedict|\\biodine|\\bbiuret|\\bfood tests?"
+   ],
+   "programme": "^chemistry|combined|^biology",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-28.1",
+   "tool": "S-28",
+   "weight": 0.95,
+   "any": [
+    "\\bconclu\\w+",
+    "\\bevaluat\\w+",
+    "\\banalys\\w+",
+    "\\bimprove\\w*.{0,20}\\b(method|investigation|experiment|practical)",
+    "\\baccura\\w+|\\bprecis\\w+|\\brepeatab\\w+|\\bvalidity|\\breproducib\\w+|\\buncertaint\\w+|\\banomal\\w+|\\bcompar\\w+ (results|data)",
+    "\\bpractical\\b",
+    "\\binvestigat\\w+",
+    "\\bexplain\\b.{0,30}\\b(results|findings|pattern|trend)",
+    "\\bpatterns? in\\b.{0,20}\\b(data|results)",
+    "\\brequired practical",
+    "\\bmethod\\b"
+   ],
+   "programme": "^physics|combined|^chemistry|^biology|^science-secondary-ks3",
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.S-28.2",
+   "tool": "S-28",
+   "weight": 0.6,
+   "any": [
+    "\\bfindings\\b|\\bresults\\b|\\bpatterns?\\b|\\bwhat (we|you) found"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-05.1",
+   "tool": "X-05",
+   "weight": 0.6,
+   "any": [
+    "\\bclassif\\w+",
+    "\\bsort\\w*",
+    "\\bmatch\\w*",
+    "\\bcategoris\\w+",
+    "\\bgroup(ing|s)? (of )?(animals|plants|materials|organisms|elements)"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-07.1",
+   "tool": "X-07",
+   "weight": 0.5,
+   "any": [
+    "\\bcompar\\w+",
+    "\\bdifferences?\\b|\\bsimilarit\\w+",
+    "\\bpros and cons|\\badvantages?|\\bdisadvantages?"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-11.1",
+   "tool": "X-11",
+   "weight": 0.55,
+   "any": [
+    "\\bexplain\\b",
+    "\\bdescribe\\b",
+    "\\bevaluate\\b",
+    "\\bcompare\\b",
+    "\\bjustify\\b|\\bsuggest\\b|\\bdiscuss\\b|\\bassess\\b|\\bpredict\\b|\\bdesign\\b"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-13.1",
+   "tool": "X-13",
+   "weight": 0.4,
+   "any": [
+    "\\bre(vise|vision|call|view|cap)\\b",
+    "\\bconsolidat\\w+|\\bretrieval|\\bexam\\b|\\bquestions?\\b|\\bassessment\\b|\\bquiz"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-16.1",
+   "tool": "X-16",
+   "weight": 0.5,
+   "any": [
+    "\\bkey (words?|vocabulary|terms?)",
+    "\\bvocabulary\\b|\\bterminology|\\bdefin\\w+|\\bnaming|\\bname (the|and)|\\bidentify (and name)",
+    "\\bdescribe\\b|\\bexplain\\b|\\bwhat is\\b|\\bwhat are\\b|\\bknow\\b|\\bunderstand\\b"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-12.1",
+   "tool": "X-12",
+   "weight": 0.4,
+   "any": [
+    "\\bexplain\\b",
+    "\\bdescribe\\b|\\bcompare\\b|\\bevaluate\\b|\\bsuggest\\b|\\bunderstand\\b|\\bidentify\\b|\\bknow\\b|\\bbeneficial|\\bimpact\\b|\\bimportan\\w+|\\bwhy\\b|\\bhow\\b"
+   ],
+   "subject": [
+    "science"
+   ]
+  },
+  {
+   "id": "science.X-17.1",
+   "tool": "X-17",
+   "weight": 0.4,
+   "any": [
+    "\\bresults\\b|\\bdata\\b|\\bobservations?\\b|\\btable\\b|\\bmeasure\\w*|\\brecord\\w*|\\bfrequency\\b|\\bcollect\\w*"
+   ],
+   "subject": [
+    "science"
+   ]
+  }
+ ],
+ "fallback": {
+  "science": [
+   "S-07",
+   "S-02",
+   "S-15",
+   "X-16",
+   "X-11",
+   "X-13"
+  ]
+ }
+}

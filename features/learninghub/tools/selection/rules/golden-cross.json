@@ -1,0 +1,464 @@
+[
+ {
+  "t": "Revising sentence and punctuation types for a dystopian description",
+  "s": "english",
+  "y": 7,
+  "u": "",
+  "o": "I can recall and practise how to write a technically accurate description.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Revising key strategies to write effective descriptions",
+  "s": "english",
+  "y": 10,
+  "u": "",
+  "o": "I can revise and apply skills for effective descriptive writing.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Revising key themes in the ‘Power and Conflict’ anthology",
+  "s": "english",
+  "y": 11,
+  "u": "",
+  "o": "I can identify and compare themes across poems from the Power and Conflict anthology.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Review comparing unit fractions",
+  "s": "maths",
+  "y": 3,
+  "u": "",
+  "o": "I can compare unit fractions.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ],
+  "not": [
+   "X-14",
+   "X-11"
+  ]
+ },
+ {
+  "t": "Review adding 2-digit numbers using column addition without regrouping",
+  "s": "maths",
+  "y": 4,
+  "u": "",
+  "o": "I can add 2-digit numbers using column addition.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Review understanding and identification of right angles",
+  "s": "maths",
+  "y": 5,
+  "u": "",
+  "o": "I can recall understanding and identification of right angles.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Transparent and opaque materials: review",
+  "s": "science",
+  "y": 1,
+  "u": "",
+  "o": "I can name transparent and opaque materials and talk about how they are useful.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Changing shape: review",
+  "s": "science",
+  "y": 2,
+  "u": "",
+  "o": "I can find out how the shapes of solid objects made from some materials can be changed.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "What is important to you? Revisit subject and object pronouns",
+  "s": "languages",
+  "y": 8,
+  "u": "",
+  "o": "I can identify and use subject and object pronouns in spoken and written German.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Volunteering: revisit perfect tense",
+  "s": "languages",
+  "y": 9,
+  "u": "",
+  "o": "I can form the perfect tense and use it in the context of texts about volunteering.",
+  "p": "",
+  "expect": [
+   "X-13"
+  ]
+ },
+ {
+  "t": "Exploring vocabulary in 'Leaf'",
+  "s": "english",
+  "y": 2,
+  "u": "",
+  "o": "I can understand and use the vocabulary used in the story.",
+  "p": "",
+  "expect": [
+   "X-16"
+  ]
+ },
+ {
+  "t": "Developing vocabulary associated with anger",
+  "s": "english",
+  "y": 2,
+  "u": "",
+  "o": "I can effectively use new vocabulary associated with anger.",
+  "p": "",
+  "expect": [
+   "X-16"
+  ]
+ },
+ {
+  "t": "Evaluating the character of Lady Macbeth in ‘Macbeth’",
+  "s": "english",
+  "y": 10,
+  "u": "",
+  "o": "I can evaluate Shakespeare’s presentation of Lady Macbeth.",
+  "p": "",
+  "expect": [
+   "X-11"
+  ]
+ },
+ {
+  "t": "Evaluating and improving model essays on 'Animal Farm'",
+  "s": "english",
+  "y": 10,
+  "u": "",
+  "o": "I can use model essays to identify areas of strength and weakness to improve my own writing.",
+  "p": "",
+  "expect": [
+   "X-11"
+  ]
+ },
+ {
+  "t": "Using critical quotations and evaluating the leadership of 'Animal Farm'",
+  "s": "english",
+  "y": 11,
+  "u": "",
+  "o": "I can evaluate how different types of leadership are presented in ‘Animal Farm’.",
+  "p": "",
+  "expect": [
+   "X-11"
+  ]
+ },
+ {
+  "t": "Timeline of the Norman Conquest",
+  "s": "history",
+  "y": 7,
+  "u": "",
+  "o": "I can place the key events of 1066 in chronological order.",
+  "p": "",
+  "expect": [
+   "H-H01"
+  ]
+ },
+ {
+  "t": "How reliable is this source about the Great Fire of London?",
+  "s": "history",
+  "y": 8,
+  "u": "",
+  "o": "I can judge the reliability of a primary source using its provenance.",
+  "p": "",
+  "expect": [
+   "H-H03"
+  ]
+ },
+ {
+  "t": "Causes of the First World War",
+  "s": "history",
+  "y": 9,
+  "u": "",
+  "o": "I can explain the long- and short-term causes of the war.",
+  "p": "",
+  "expect": [
+   "H-H05"
+  ]
+ },
+ {
+  "t": "Did the Black Death cause the end of feudalism?",
+  "s": "history",
+  "y": 8,
+  "u": "",
+  "o": "I can explain the consequences of the Black Death.",
+  "p": "",
+  "expect": [
+   "H-H05"
+  ]
+ },
+ {
+  "t": "How far do you agree that Elizabeth I was a successful ruler?",
+  "s": "history",
+  "y": 10,
+  "u": "",
+  "o": "I can plan a balanced judgement about Elizabeth I.",
+  "p": "",
+  "expect": [
+   "H-H09",
+   "H-R01"
+  ]
+ },
+ {
+  "t": "Historians and the Battle of Hastings: different interpretations",
+  "s": "history",
+  "y": 9,
+  "u": "",
+  "o": "I can compare two interpretations of why Harold lost.",
+  "p": "",
+  "expect": [
+   "H-H04"
+  ]
+ },
+ {
+  "t": "Using 4-figure and 6-figure grid references",
+  "s": "geography",
+  "y": 7,
+  "u": "",
+  "o": "I can give a six-figure grid reference on an OS map.",
+  "p": "",
+  "expect": [
+   "H-G02"
+  ]
+ },
+ {
+  "t": "Drawing and reading a climate graph for Kenya",
+  "s": "geography",
+  "y": 8,
+  "u": "",
+  "o": "I can describe the rainfall and temperature pattern shown on a climate graph.",
+  "p": "",
+  "expect": [
+   "H-G06"
+  ]
+ },
+ {
+  "t": "Reading contour lines and drawing a cross-section",
+  "s": "geography",
+  "y": 9,
+  "u": "",
+  "o": "I can draw a cross-section of a valley from contour lines.",
+  "p": "",
+  "expect": [
+   "H-G04"
+  ]
+ },
+ {
+  "t": "Population pyramids: Japan and Nigeria",
+  "s": "geography",
+  "y": 9,
+  "u": "",
+  "o": "I can compare the population structure of two countries.",
+  "p": "",
+  "expect": [
+   "H-G07"
+  ]
+ },
+ {
+  "t": "Map skills: compass points and map symbols",
+  "s": "geography",
+  "y": 5,
+  "u": "",
+  "o": "I can use the eight points of the compass and a key.",
+  "p": "",
+  "expect": [
+   "H-G12",
+   "H-G05"
+  ]
+ },
+ {
+  "t": "Fieldwork enquiry: measuring river width and depth",
+  "s": "geography",
+  "y": 10,
+  "u": "",
+  "o": "I can plan a hypothesis and data collection for a river study.",
+  "p": "",
+  "expect": [
+   "H-G09"
+  ]
+ },
+ {
+  "t": "Beliefs and teachings about the Trinity",
+  "s": "religious education",
+  "y": 10,
+  "u": "",
+  "o": "I can explain Christian beliefs and teachings about God.",
+  "p": "",
+  "expect": [
+   "H-R05"
+  ]
+ },
+ {
+  "t": "Sources of wisdom and authority in Islam",
+  "s": "re",
+  "y": 10,
+  "u": "",
+  "o": "I can explain how Muslims use the Qur'an as a source of authority.",
+  "p": "",
+  "expect": [
+   "H-R04",
+   "H-R05"
+  ]
+ },
+ {
+  "t": "Different viewpoints on euthanasia",
+  "s": "re",
+  "y": 11,
+  "u": "",
+  "o": "I can explain different views and evaluate them.",
+  "p": "",
+  "expect": [
+   "H-R03",
+   "H-R01"
+  ]
+ },
+ {
+  "t": "Sikh worship and festivals",
+  "s": "re",
+  "y": 7,
+  "u": "",
+  "o": "I can describe the practice of worship in the gurdwara.",
+  "p": "",
+  "expect": [
+   "H-R05"
+  ]
+ },
+ {
+  "t": "Change and continuity in medicine through time",
+  "s": "history",
+  "y": 10,
+  "u": "",
+  "o": "I can explain change and continuity in medicine from 1250 to 1900.",
+  "p": "",
+  "expect": [
+   "H-H06",
+   "H-H01"
+  ]
+ },
+ {
+  "t": "Ancient Egypt: sequencing events on a timeline",
+  "s": "history",
+  "y": 4,
+  "u": "",
+  "o": "I can order events across ancient Egypt on a timeline with BC dates.",
+  "p": "",
+  "expect": [
+   "H-H01"
+  ]
+ },
+ {
+  "t": "Revision: forces and motion",
+  "s": "science",
+  "y": 11,
+  "u": "",
+  "o": "I can revise the key ideas before the exam.",
+  "p": "",
+  "expect": [
+   "X-13",
+   "X-14"
+  ]
+ },
+ {
+  "t": "Exam technique: timing your extended response",
+  "s": "english",
+  "y": 11,
+  "u": "",
+  "o": "I can plan my time in an exam paper for a 20-mark question.",
+  "p": "",
+  "expect": [
+   "X-14"
+  ]
+ },
+ {
+  "t": "Timed retrieval sprint: number facts",
+  "s": "maths",
+  "y": 3,
+  "u": "",
+  "o": "I can recall number facts against the clock.",
+  "p": "",
+  "expect": [
+   "X-03"
+  ]
+ },
+ {
+  "t": "Recording results in a table of results",
+  "s": "science",
+  "y": 7,
+  "u": "",
+  "o": "I can record data in a results table.",
+  "p": "",
+  "expect": [
+   "X-17"
+  ]
+ },
+ {
+  "t": "Sorting and classifying living things",
+  "s": "science",
+  "y": 6,
+  "u": "",
+  "o": "I can sort animals into groups.",
+  "p": "",
+  "expect": [
+   "X-05"
+  ]
+ },
+ {
+  "t": "Comparing two poems: similarities and differences",
+  "s": "english",
+  "y": 9,
+  "u": "",
+  "o": "I can contrast two poems.",
+  "p": "",
+  "expect": [
+   "X-07"
+  ]
+ },
+ {
+  "t": "Recap: key vocabulary for the town topic",
+  "s": "languages",
+  "y": 8,
+  "u": "",
+  "o": "I can recall key vocabulary from the unit.",
+  "p": "",
+  "expect": [
+   "X-13",
+   "X-16"
+  ]
+ },
+ {
+  "t": "Brainstorm ideas with a mind map for a story",
+  "s": "english",
+  "y": 6,
+  "u": "",
+  "o": "I can generate ideas for my story.",
+  "p": "",
+  "expect": [
+   "X-12"
+  ]
+ }
+]

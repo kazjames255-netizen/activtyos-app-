@@ -1,0 +1,1324 @@
+[
+ {
+  "t": "Writing the second half of the climax and resolution of 'Beowulf and the dragon'",
+  "s": "english",
+  "y": 6,
+  "u": "beowulf narrative writing",
+  "o": "I can write the second half of the climax and resolution of ‘Beowulf and the dragon’, using a range of cohesive devices to connect ideas and using techniques to increase pace and tension.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06",
+   "E-06"
+  ],
+  "not": [
+   "E-09"
+  ]
+ },
+ {
+  "t": "Reading the climax of 'The Firework Maker's Daughter'",
+  "s": "english",
+  "y": 3,
+  "u": "the firework makers daughter reading and narrative writing",
+  "o": "I can summarise the climax of 'The Firework Maker's Daughter’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-16",
+   "N-06"
+  ],
+  "not": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "Using punctuation in poetry",
+  "s": "english",
+  "y": 7,
+  "u": "poetry about place and home",
+  "o": "I can use a range of punctuation for effect in poetry.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-08",
+   "E-13"
+  ]
+ },
+ {
+  "t": "Using language techniques and precise vocabulary to write excellent descriptions",
+  "s": "english",
+  "y": 11,
+  "u": "writing masters",
+  "o": "I can write an excellent description which meets the ambitious success criteria.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-06",
+   "E-12",
+   "N-11"
+  ]
+ },
+ {
+  "t": "Character, setting and plot in 'And Tango Makes Three'",
+  "s": "english",
+  "y": 2,
+  "u": "and tango makes three book club",
+  "o": "I can explore the story through discussing the characters, setting and plot.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-07",
+   "E-16"
+  ]
+ },
+ {
+  "t": "Exploring and performing 'Say How You Feel' by Joseph Coelho",
+  "s": "english",
+  "y": 2,
+  "u": "performance poetry",
+  "o": "I can perform a poem about emotions.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-09",
+   "E-13",
+   "N-12"
+  ]
+ },
+ {
+  "t": "Planning an 'Animal Farm' Essay",
+  "s": "english",
+  "y": 10,
+  "u": "modern text first study",
+  "o": "I can create topic sentences and plan effectively.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-05",
+   "E-04"
+  ],
+  "not": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "Writing the first section of a report on the Great Fire of London",
+  "s": "english",
+  "y": 2,
+  "u": "the great fire of london non chronological report",
+  "o": "I can write a section of a report on the Great Fire of London.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Simple and compound sentences revision",
+  "s": "english",
+  "y": 6,
+  "u": "review including word class sentence types tense commas and colons",
+  "o": "I can practise simple and compound sentence test questions.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-07",
+   "N-03"
+  ],
+  "not": [
+   "E-13"
+  ]
+ },
+ {
+  "t": "Analysing a persuasive speech",
+  "s": "english",
+  "y": 10,
+  "u": "spoken language the language of change",
+  "o": "I can analyse the writer's choices of rhetorical and persuasive devices.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-02",
+   "E-01",
+   "N-08"
+  ]
+ },
+ {
+  "t": "Writing a section about Mary Seacole in a non-chronological report",
+  "s": "english",
+  "y": 2,
+  "u": "florence nightingale and mary seacole non chronological report",
+  "o": "I can write a section about Mary Seacole in a non-chronological report.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "'The War of the Worlds': How punctuation and sentence structures create impact",
+  "s": "english",
+  "y": 10,
+  "u": "fiction science fiction writing",
+  "o": "I can explain how a writer uses punctuation and sentence structures to create impact.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-08",
+   "E-01",
+   "E-04"
+  ]
+ },
+ {
+  "t": "A new subordinate clause: the relative clause",
+  "s": "english",
+  "y": 4,
+  "u": "simple compound adverbial and relative complex sentences",
+  "o": "I can identify that a relative clause is a type of subordinate clause.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-07",
+   "N-03"
+  ]
+ },
+ {
+  "t": "Subordination with 'so' and 'that'",
+  "s": "english",
+  "y": 2,
+  "u": "adverbial complex sentences",
+  "o": "I can stretch a simple sentence with 'so' and 'that' subordination.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-03",
+   "E-07"
+  ]
+ },
+ {
+  "t": "Reading 'The Children of Lir' with expression",
+  "s": "english",
+  "y": 2,
+  "u": "the children of lir reading",
+  "o": "I can use different strategies to read with expression.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-09",
+   "X-08"
+  ]
+ },
+ {
+  "t": "An introduction to 'Jane Eyre': Analysing an unseen extract",
+  "s": "english",
+  "y": 8,
+  "u": "a monster within reading gothic fiction",
+  "o": "I can confidently analyse an unseen extract from Charlotte Brontë's novel ‘Jane Eyre’.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01"
+  ]
+ },
+ {
+  "t": "'The Twisted Tree': how the writer builds tension",
+  "s": "english",
+  "y": 7,
+  "u": "the twisted tree fiction reading",
+  "o": "I can explain how tension is built in 'The Twisted Tree'.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Planning to write the opening of the animated story 'Otherwise'",
+  "s": "english",
+  "y": 2,
+  "u": "otherwise narrative writing",
+  "o": "I can plan the opening of ‘Otherwise’.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-06"
+  ]
+ },
+ {
+  "t": "More rich vocabulary associated with wind words",
+  "s": "english",
+  "y": 4,
+  "u": "weather wind and hot words",
+  "o": "I can use the words 'howl', 'whirlwind' and 'windswept' effectively in multiple contexts.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-12"
+  ],
+  "not": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "The fourth join: rl, rk and rt with no lead in",
+  "s": "english",
+  "y": 2,
+  "u": "the four joins",
+  "o": "I can correctly form the fourth join.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02"
+  ],
+  "not": [
+   "N-06"
+  ]
+ },
+ {
+  "t": "Considering and emulating the use of anaphora in speech writing",
+  "s": "english",
+  "y": 10,
+  "u": "non fiction changing views",
+  "o": "I can use anaphora and a refrain to write an engaging speech that reinforces a central message throughout.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-08",
+   "E-02",
+   "E-06"
+  ]
+ },
+ {
+  "t": "Comparing the Lord's Prayer over time",
+  "s": "english",
+  "y": 8,
+  "u": "a history of language",
+  "o": "I can compare different versions of the Lord’s Prayer and explain how language has changed over time.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-14",
+   "E-11",
+   "X-07"
+  ]
+ },
+ {
+  "t": "Writing the first entry of Florence Nightingale's diary",
+  "s": "english",
+  "y": 2,
+  "u": "florence nightingale diary writing",
+  "o": "I can write the first entry of Florence Nightingale's diary.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Understanding the poem 'My Last Duchess'",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain the events of 'My Last Duchess' and the relevant contextual ideas that surround it.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03",
+   "E-01"
+  ]
+ },
+ {
+  "t": "Developing a character profile for 'Mulan'",
+  "s": "english",
+  "y": 3,
+  "u": "mulan reading",
+  "o": "I can understand and describe the character of Mulan.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-07"
+  ]
+ },
+ {
+  "t": "Understanding the setting and characters in 'The Borrowers'",
+  "s": "english",
+  "y": 4,
+  "u": "the borrowers narrative writing and reading",
+  "o": "I can understand the setting and characters in ‘The Borrowers’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-07"
+  ]
+ },
+ {
+  "t": "Analysing and improving an article",
+  "s": "english",
+  "y": 11,
+  "u": "non fiction teenage kicks",
+  "o": "I can identify and use a range of effective linguistic devices in an article.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-01",
+   "E-02",
+   "N-11"
+  ]
+ },
+ {
+  "t": "'A Christmas Carol': Dickens’ depictions of Victorian values",
+  "s": "english",
+  "y": 11,
+  "u": "nineteenth century text third deep dive",
+  "o": "I can analyse how Dickens’ depiction of Scrooge in Stave 1 and 5 critiques common Victorian values.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-04",
+   "E-01"
+  ],
+  "not": [
+   "N-06"
+  ]
+ },
+ {
+  "t": "Exploring vocabulary in 'Leaf'",
+  "s": "english",
+  "y": 2,
+  "u": "leaf book club",
+  "o": "I can understand and use the vocabulary used in the story.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "E-12"
+  ]
+ },
+ {
+  "t": "Analysing the poem 'Follower' by Seamus Heaney",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explore how Heaney presents the admiration found in a parental relationship and how this changes over time.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-01"
+  ]
+ },
+ {
+  "t": "Understanding what makes a powerful speech",
+  "s": "english",
+  "y": 10,
+  "u": "spoken language the language of change",
+  "o": "I can identify and explain what makes a powerful speech.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-08",
+   "N-12"
+  ]
+ },
+ {
+  "t": "Comparing the victims in ‘The Speckled Band’ and ‘The Boscombe Valley Mystery’",
+  "s": "english",
+  "y": 7,
+  "u": "sherlock holmes short stories",
+  "o": "I can compare the victims of ‘The Speckled Band’ and ‘The Boscombe Valley Mystery’.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-14",
+   "X-07"
+  ]
+ },
+ {
+  "t": "Identifying the features of an information text to prepare for writing our own",
+  "s": "english",
+  "y": 2,
+  "u": "atinuke and other authors information text",
+  "o": "I can identify features of an information text through exploring a model text about the author Atinuke.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08",
+   "E-16"
+  ]
+ },
+ {
+  "t": "Sentences in the simple present, past and future tense",
+  "s": "english",
+  "y": 4,
+  "u": "tense forms simple progressive and perfect consolidation",
+  "o": "I can write a range of sentence types in the simple present, past or future tense.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-04",
+   "E-07"
+  ]
+ },
+ {
+  "t": "New 'oo' spellings, including 'ue', 'ui' and 'ou'",
+  "s": "english",
+  "y": 2,
+  "u": "alternative gpcs for long vowels",
+  "o": "I can know three new spellings for the 'oo' phoneme: 'ue', 'ui' and 'ou'.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-01",
+   "E-10",
+   "E-09"
+  ]
+ },
+ {
+  "t": "Using figurative language in non-fiction writing",
+  "s": "english",
+  "y": 10,
+  "u": "non fiction crime and punishment",
+  "o": "I can show understanding of figurative language by exploring its effects and using it in my own writing.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-02",
+   "E-06",
+   "N-11"
+  ]
+ },
+ {
+  "t": "Practise and apply spelling homophones",
+  "s": "english",
+  "y": 3,
+  "u": "prefixes homonyms and homophones",
+  "o": "I can use a range of strategies to practise spelling homophones.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09"
+  ],
+  "not": [
+   "N-01"
+  ]
+ },
+ {
+  "t": "More rich vocabulary associated with smell",
+  "s": "english",
+  "y": 5,
+  "u": "taste and smell words",
+  "o": "I can effectively use the words 'reek', 'stench' and other rich vocabulary associated with smell.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-12"
+  ]
+ },
+ {
+  "t": "'The Twisted Tree': planning a newspaper article about the dreadful draugr",
+  "s": "english",
+  "y": 7,
+  "u": "the twisted tree fiction reading",
+  "o": "I can plan a newspaper article about the draugr's death in 'The Twisted Tree'.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Publishing a narrative based on 'The BFG'",
+  "s": "english",
+  "y": 3,
+  "u": "the bfg reading and narrative writing",
+  "o": "I can publish a piece of narrative writing based on 'The BFG'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06",
+   "E-06"
+  ]
+ },
+ {
+  "t": "'Jekyll and Hyde': examining Lanyon as a foil to Jekyll",
+  "s": "english",
+  "y": 10,
+  "u": "nineteenth century text first study",
+  "o": "I can explain how Dr. Lanyon acts as a foil to Henry Jekyll.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-04",
+   "E-01"
+  ]
+ },
+ {
+  "t": "Writing the conclusion of a non-chronological report about healthy lifestyle",
+  "s": "english",
+  "y": 3,
+  "u": "king tut or healthy lifestyle non chronological report",
+  "o": "I can write the conclusion of a non-chronological report about healthy lifestyle.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Comparing liminality, physicality and voice in AQA Worlds and Lives poetry",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain and compare how Mundair, Berry, and Femi express concepts of liminality, physicality and voice.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-14",
+   "E-13"
+  ]
+ },
+ {
+  "t": "Generating vocabulary to describe a character in 'The Viewer'",
+  "s": "english",
+  "y": 5,
+  "u": "the viewer narrative writing",
+  "o": "I can generate vocabulary to describe a character in ‘The Viewer’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-12",
+   "N-07"
+  ]
+ },
+ {
+  "t": "Analysing the poem 'Bayonet Charge'",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explore how Hughes uses language and structure to present the multi-faceted destructive impact of war.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Planning a section about Ancient Greek religion for a non-chronological report",
+  "s": "english",
+  "y": 4,
+  "u": "ancient greeks or anglo saxons non chronological report",
+  "o": "I can plan the religion section of a non-chronological report about Ancient Greeks.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Reviewing handwriting using a poem",
+  "s": "english",
+  "y": 3,
+  "u": "building fluency in silent letters homophones and common exception words",
+  "o": "I can correctly copy out a poem in cursive handwriting.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "Understanding the poem ‘Love’s Philosophy’ by Percy Bysshe Shelley",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain how ‘Love’s Philosophy’ reflects on the emotional power of love.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Exploring connections and ideas across the AQA Worlds and Lives anthology",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explore the big ideas and connections between the poems in the AQA World and Lives anthology.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-14",
+   "E-13"
+  ]
+ },
+ {
+  "t": "Comparing ideas of nature and identity in Robinson, Nichols, and Antrobus' poems",
+  "s": "english",
+  "y": 11,
+  "u": "poetry anthology continued study",
+  "o": "I can compare how Robinson, Nichols, and Antrobus use language, form and structure to explore ideas of nature and identity in their poems.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-14"
+  ]
+ },
+ {
+  "t": "Reviewing and writing homophones",
+  "s": "english",
+  "y": 4,
+  "u": "building fluency in the four joins suffixes and common exception words",
+  "o": "I can correctly write homophones in cursive handwriting.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-02",
+   "E-09"
+  ]
+ },
+ {
+  "t": "Writing the second half of the duel scene",
+  "s": "english",
+  "y": 6,
+  "u": "shakespeares romeo and juliet diary and narrative writing",
+  "o": "I can write the second half of the duel scene, using a range of cohesive devices and all the elements of a narrative.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06",
+   "E-06",
+   "N-10"
+  ]
+ },
+ {
+  "t": "'A Christmas Carol': Scrooge as a very Victorian character",
+  "s": "english",
+  "y": 10,
+  "u": "nineteenth century text first study",
+  "o": "I can use context to explain the characterisation of Scrooge as a misanthropic character.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Generating vocabulary to describe the characters in the story ‘Lucky Dip'",
+  "s": "english",
+  "y": 2,
+  "u": "lucky dip narrative writing",
+  "o": "I can generate vocabulary to describe the characters in the story ‘Lucky Dip’.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "E-12",
+   "N-07"
+  ]
+ },
+ {
+  "t": "Understanding the poem 'Bayonet Charge'",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain how Hughes presents the enduring impact of war.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13"
+  ]
+ },
+ {
+  "t": "Character, setting and plot in 'Grandad's Island'",
+  "s": "english",
+  "y": 2,
+  "u": "grandads island book club",
+  "o": "I can respond to the story by thinking from the characters' perspectives.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-07",
+   "E-16"
+  ]
+ },
+ {
+  "t": "Considering Stevenson's use of time and weather in 'Jekyll and Hyde'",
+  "s": "english",
+  "y": 11,
+  "u": "nineteenth century text first deep dive",
+  "o": "I can explain Stevenson’s purpose in linking setting to characters in ‘The Strange Case of Dr Jekyll and Mr Hyde’.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Writing the recount section of a journalistic report",
+  "s": "english",
+  "y": 4,
+  "u": "little red riding hood journalistic report",
+  "o": "I can write the recount section of a journalistic report.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Creating comparative analytical paragraphs",
+  "s": "english",
+  "y": 9,
+  "u": "womens rights across the ages non fiction reading and writing",
+  "o": "I can write comparative paragraphs exploring the presentation of exploration and survival.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-04",
+   "E-14"
+  ]
+ },
+ {
+  "t": "'Animal Farm': reading Chapter 2 and exploring the three pigs",
+  "s": "english",
+  "y": 10,
+  "u": "modern text first study",
+  "o": "I can explain the events of chapter 2 and the role of the three pigs",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-16",
+   "N-07"
+  ]
+ },
+ {
+  "t": "Analysing Puck's epilogue in Act 5 of 'A Midsummer Night's Dream'",
+  "s": "english",
+  "y": 8,
+  "u": "a midsummer nights dream",
+  "o": "I can explore the language of Puck’s epilogue, linking it to other moments in the play.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-10",
+   "E-01"
+  ]
+ },
+ {
+  "t": "Using the suffix -tion to represent /shun/",
+  "s": "english",
+  "y": 5,
+  "u": "verb adjective and noun suffixes",
+  "o": "I can spell words using the suffix -tion",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11"
+  ]
+ },
+ {
+  "t": "Letter writing: planning, using Wilfred Owen’s 1917 letter as stimulus",
+  "s": "english",
+  "y": 9,
+  "u": "a world at war short stories",
+  "o": "I can plan an imaginative letter that recounts an experience in the trenches of World War One using Wilfred Owen’s 1917 letter to his mother as stimulus.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08",
+   "N-06"
+  ]
+ },
+ {
+  "t": "Finding my own voice: writing a poem inspired by Maya Angelou",
+  "s": "english",
+  "y": 8,
+  "u": "single poet study maya angelou",
+  "o": "I can write a poem inspired by the ideas and methods in Angelou's poetry.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-13",
+   "E-06"
+  ]
+ },
+ {
+  "t": "Bullet points",
+  "s": "english",
+  "y": 6,
+  "u": "punctuation",
+  "o": "I can use bullet points to lay out key information clearly in a non-fiction text.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-08",
+   "N-08"
+  ]
+ },
+ {
+  "t": "Analysing stanzas three and four of 'The Highwayman'",
+  "s": "english",
+  "y": 5,
+  "u": "the highwayman narrative writing",
+  "o": "I can analyse and understand the events in Stanzas Three and Four of ‘The Highwayman’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-13",
+   "E-01",
+   "E-16"
+  ]
+ },
+ {
+  "t": "Practising handwriting with more famous quotations",
+  "s": "english",
+  "y": 5,
+  "u": "building handwriting fluency through speed choices and writing dialogue",
+  "o": "I can correctly copy out famous quotations in cursive handwriting.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "Writing the introduction of a non-chronological report about Anglo-Saxons",
+  "s": "english",
+  "y": 4,
+  "u": "ancient greeks or anglo saxons non chronological report",
+  "o": "I can write the introduction of a non-chronological report about Anglo-Saxons.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Writing a narrative scene with direct speech in 'Whale Rider'",
+  "s": "english",
+  "y": 4,
+  "u": "whale rider narrative writing",
+  "o": "I can write a narrative scene with direct speech in 'Whale Rider'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06",
+   "E-08"
+  ],
+  "not": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Doubling the consonant with suffixes: -ing, -ed, -er, -est and -y",
+  "s": "english",
+  "y": 2,
+  "u": "suffixes",
+  "o": "I can spell words by doubling the consonant with suffixes: -ing, -ed, -er, -est and -y.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "E-09"
+  ]
+ },
+ {
+  "t": "Understanding mankind and nature in Wordsworth's 'Lines Written in Early Spring'",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain how Wordsworth presents the relationship between man and nature in 'Lines Written in Early Spring'.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Editing the speech section of ‘The Highwayman’",
+  "s": "english",
+  "y": 5,
+  "u": "the highwayman narrative writing",
+  "o": "I can edit the speech section of my narrative writing.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-06",
+   "E-08",
+   "E-15"
+  ]
+ },
+ {
+  "t": "Winsome Pinnock on the characters in 'Leave Taking'",
+  "s": "english",
+  "y": 10,
+  "u": "modern text first study",
+  "o": "I can use Winsome Pinnock’s insights to explore and develop my understanding of the characters in 'Leave Taking'.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "N-07"
+  ]
+ },
+ {
+  "t": "Watching and discussing 'Small Island' Act 2 Scenes 2 to 6 with Rufus Norris",
+  "s": "english",
+  "y": 9,
+  "u": "small island",
+  "o": "I can use Rufus Norris' comments to explore the contrast of Act 2 and the use of theatrical techniques.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-03",
+   "N-12"
+  ]
+ },
+ {
+  "t": "Parenthesis: brackets, dashes and commas",
+  "s": "english",
+  "y": 6,
+  "u": "key terminology including determiners fronted adverbials and parenthesis",
+  "o": "I can choose when to use brackets, dashes or commas for most effective parenthesis.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-08"
+  ]
+ },
+ {
+  "t": "Writing inspired by ‘Skin of the Sea’: varying sentence types to create rhythm",
+  "s": "english",
+  "y": 8,
+  "u": "myths and legends re told poetry and short stories",
+  "o": "I can vary my sentence types and lengths to improve the rhythm of a paragraph of creative writing inspired by Natasha Bowen’s ‘Skin of the Sea’.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-15",
+   "E-06",
+   "E-13"
+  ]
+ },
+ {
+  "t": "Parenthesis: dashes",
+  "s": "english",
+  "y": 5,
+  "u": "speech punctuation parenthesis and apostrophes",
+  "o": "I can use dashes to cause a dramatic effect for the reader.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-08"
+  ]
+ },
+ {
+  "t": "The presentation of the matriarchy in Winsome Pinnock's 'Leave Taking'",
+  "s": "english",
+  "y": 11,
+  "u": "modern text second deep dive",
+  "o": "I can explain the ways in which ‘Leave Taking’ is a social commentary on the experiences of women.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-03",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Pre-cursive formation of b, p, h and k",
+  "s": "english",
+  "y": 2,
+  "u": "pre cursive lower case letters or lower case letters revision",
+  "o": "I can form the pre-cursive letters b, p, h and k.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02"
+  ]
+ },
+ {
+  "t": "Writing the introduction of a non-chronological report about healthy lifestyle",
+  "s": "english",
+  "y": 3,
+  "u": "king tut or healthy lifestyle non chronological report",
+  "o": "I can write the opening of a non-chronological report about healthy lifestyle.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Exploring symbolism in Romeo and Juliet's last meeting in Act 3, Scene 5",
+  "s": "english",
+  "y": 10,
+  "u": "macbeth lady macbeth as a machiavellian villain",
+  "o": "I can explain the significance of the symbolism in Romeo and Juliet’s last meeting in Act 3, Scene 5.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-10",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Writing a section on Portia spiders' appearance for a non-chronological report",
+  "s": "english",
+  "y": 3,
+  "u": "the portia spider non chronological report",
+  "o": "I can use my plan to write a detailed section about the appearance of the Portia spider.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Spelling words with the superlative suffix -est",
+  "s": "english",
+  "y": 6,
+  "u": "homophones and tense",
+  "o": "I can apply spelling rules to spell words with the superlative suffix -est.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11"
+  ]
+ },
+ {
+  "t": "Writing part 2 of the build-up in 'The Firework Maker's Daughter'",
+  "s": "english",
+  "y": 3,
+  "u": "the firework makers daughter reading and narrative writing",
+  "o": "I can write a well-structured paragraph for part 2 of the build-up.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06"
+  ]
+ },
+ {
+  "t": "'Small Island': reading Act 2, Scenes 5 to 6",
+  "s": "english",
+  "y": 9,
+  "u": "small island",
+  "o": "I can explain how Edmundson uses the description of characters and settings to explore key themes in Act 2, Scenes 5-6.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-03",
+   "E-01"
+  ]
+ },
+ {
+  "t": "Reading 'The Twisted Tree': the climax",
+  "s": "english",
+  "y": 7,
+  "u": "the twisted tree fiction reading",
+  "o": "I can understand what the climax of the novel is.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-16",
+   "E-01",
+   "N-06"
+  ]
+ },
+ {
+  "t": "Silent letters: the 'kn' spelling",
+  "s": "english",
+  "y": 2,
+  "u": "alternative gpcs for consonants and homophones",
+  "o": "I can spell words with 'kn' representing the 'n' phoneme.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "E-09",
+   "E-10"
+  ]
+ },
+ {
+  "t": "Reviewing common exception words, no lead-ins",
+  "s": "english",
+  "y": 2,
+  "u": "review using lead ins or no lead ins",
+  "o": "I can write common exception words using cursive handwriting.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-02",
+   "E-09"
+  ]
+ },
+ {
+  "t": "Considering and using active and passive voice in persuasive letter writing",
+  "s": "english",
+  "y": 10,
+  "u": "non fiction letter writing v3731",
+  "o": "I can identify and analyse the effects of active and passive voice and consider in which circumstances which is more effective.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-07",
+   "N-08"
+  ]
+ },
+ {
+  "t": "Understanding how Shelley critiques powerful institutions in 'England in 1819'",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain how Shelley presents powerful institutions through a consideration of the language and Romantic context.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Using the suffix -ed to make the past tense",
+  "s": "english",
+  "y": 5,
+  "u": "verb adjective and noun suffixes",
+  "o": "I can spell a verb in the past tense using the suffix -ed.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11",
+   "N-04"
+  ]
+ },
+ {
+  "t": "Spelling words including the suffix -al",
+  "s": "english",
+  "y": 6,
+  "u": "homophones and tense",
+  "o": "I can spell words that use the suffix -al.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-09",
+   "E-11"
+  ]
+ },
+ {
+  "t": "Identifying features of a model non-chronological report about a shark",
+  "s": "english",
+  "y": 6,
+  "u": "pandas or antarctic animals non chronological report",
+  "o": "I can identify the features of a non-chronological report about a shark.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "'Macbeth' Act 2 Scene 1: the dagger hallucination",
+  "s": "english",
+  "y": 11,
+  "u": "macbeth a tragic hero",
+  "o": "I can use Macbeth’s soliloquy in Act 2, Scene 1 to justify my opinions on Macbeth.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "N-10",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Creating layered language analysis",
+  "s": "english",
+  "y": 9,
+  "u": "womens rights across the ages non fiction reading and writing",
+  "o": "I can find the best words in a text to create a layered analysis.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-01",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Understanding 'Winter Swans' by Owen Sheers",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can explain how Sheers presents a change in the speaker’s romantic relationship with another person.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13"
+  ]
+ },
+ {
+  "t": "Expressing convictions",
+  "s": "english",
+  "y": 8,
+  "u": "taking a stand",
+  "o": "I can explain how writers express their convictions with passion.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-08",
+   "E-05",
+   "N-12"
+  ]
+ },
+ {
+  "t": "Editing your climax and a pre-written resolution of the animated story 'Otherwise'",
+  "s": "english",
+  "y": 2,
+  "u": "otherwise narrative writing",
+  "o": "I can edit the climax and resolution of 'Otherwise'.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-06",
+   "E-15",
+   "E-06"
+  ]
+ },
+ {
+  "t": "Planning the second section of a report on the Great Fire of London",
+  "s": "english",
+  "y": 2,
+  "u": "the great fire of london non chronological report",
+  "o": "I can make a plan for writing about how the Great Fire of London spread and stopped.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08"
+  ]
+ },
+ {
+  "t": "Inferring meaning from images in 'Mirror'",
+  "s": "english",
+  "y": 5,
+  "u": "mirror reading",
+  "o": "I can infer meaning from images in ‘Mirror’.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "E-16",
+   "E-13"
+  ]
+ },
+ {
+  "t": "Exploring Simon's role as an outsider and as Jack's foil in 'Lord of the Flies'",
+  "s": "english",
+  "y": 9,
+  "u": "lord of the flies",
+  "o": "I can explain what Simon represents in 'Lord of the Flies'.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "E-03",
+   "E-04"
+  ]
+ },
+ {
+  "t": "Editing instructions for how to make a monster pizza",
+  "s": "english",
+  "y": 2,
+  "u": "monster pizza instructions writing",
+  "o": "I can edit and improve my instructions for making a monster pizza.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "N-08",
+   "E-15"
+  ]
+ },
+ {
+  "t": "Reading and responding to 'Home Time' by Rachel Rooney",
+  "s": "english",
+  "y": 2,
+  "u": "humorous poetry",
+  "o": "I can give a personal response to the poem and read it aloud.",
+  "p": "english-primary-ks1",
+  "expect": [
+   "E-13",
+   "N-09"
+  ]
+ },
+ {
+  "t": "Writing the opening of 'The Viewer'",
+  "s": "english",
+  "y": 5,
+  "u": "the viewer narrative writing",
+  "o": "I can write the opening of 'The Viewer'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-06"
+  ]
+ },
+ {
+  "t": "Explaining comparative imagery in unseen poetry",
+  "s": "english",
+  "y": 11,
+  "u": "unseen poetry",
+  "o": "I can understand and explain the use of comparative imagery in a poem.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-02"
+  ]
+ },
+ {
+  "t": "Analysing the poem ‘Letters from Yorkshire’ by Maura Dooley",
+  "s": "english",
+  "y": 10,
+  "u": "poetry anthology first study",
+  "o": "I can analyse how Maura Dooley presents the emotional effects of a long-distance relationship.",
+  "p": "english-secondary-ks4-aqa",
+  "expect": [
+   "E-13",
+   "E-03"
+  ]
+ },
+ {
+  "t": "Hanan Al-Shaykh's ‘The Fisherman and the Jinni’: understanding the story",
+  "s": "english",
+  "y": 8,
+  "u": "myths and legends re told poetry and short stories",
+  "o": "I can explain what happens in Hanan Al-Shaykh's ‘The Fisherman and the Jinni’.",
+  "p": "english-secondary-ks3",
+  "expect": [
+   "N-06",
+   "E-16"
+  ]
+ },
+ {
+  "t": "Identifying the features of a soliloquy",
+  "s": "english",
+  "y": 5,
+  "u": "shakespeares macbeth narrative and soliloquy writing",
+  "o": "I can explain what a soliloquy is and identify its features.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-10"
+  ]
+ },
+ {
+  "t": "Writing the first half of a journalistic report based on 'When The Sky Falls'",
+  "s": "english",
+  "y": 6,
+  "u": "when the sky falls narrative and diary writing",
+  "o": "I can write the introduction and first two main paragraphs of a journalistic report about the events in the resolution of 'When the Sky Falls'.",
+  "p": "english-primary-ks2",
+  "expect": [
+   "N-08"
+  ]
+ }
+]

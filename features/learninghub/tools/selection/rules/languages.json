@@ -1,0 +1,770 @@
+{
+ "version": "1",
+ "rules": [
+  {
+   "id": "languages.L-03.1",
+   "tool": "L-03",
+   "weight": 0.85,
+   "any": [
+    "\\b(tenses?|perfect|imperfect|preterit\\w*|pluperfect|future|conditional|imperative|infinitive|conjugat\\w*|modal verbs?|reflexive|subjunctive|participles?|verbs?|-er|-ar|-ir|-re)\\b|'(estar|ser|tener|ir|aller|avoir|être|etre|haben|sein|werden|querer|poder|deber|hacer|faire|pouvoir|vouloir|devoir|mögen|möchten|können|müssen|dürfen|sollen|wollen|jugar|dar|ver|decir|venir|prendre|gustar)'"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-03.2",
+   "tool": "L-03",
+   "weight": 0.6,
+   "any": [
+    "\\b(tenses?|perfect|imperfect|preterit\\w*|future|conditional|conjugat\\w*|modal verbs?|verbs?|infinitive|persons?)\\b"
+   ],
+   "fields": [
+    "unit",
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-03.3",
+   "tool": "L-03",
+   "weight": 0.85,
+   "any": [
+    "separable|strong verbs|irregular|stem-chang|present tense|past participles?"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-04.1",
+   "tool": "L-04",
+   "weight": 0.8,
+   "any": [
+    "word order|sentences?|questions?|negati\\w*|because|connectives?|conjunctions?|adverbs?|comparatives?|superlatives?|pronouns?|intensifiers?|opinions?|inversion|clauses?|weil|dass|obwohl|denn|wenn"
+   ],
+   "none": [
+    "^\\W*poem"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-04.2",
+   "tool": "L-04",
+   "weight": 0.9,
+   "any": [
+    "word order|subordinat|\\bweil\\b|\\bdass\\b|obwohl|inversion|verb.?second|verb.?final|2-verb|two-verb|time,? manner,? place|manner before place|modal"
+   ],
+   "programme": "^german",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-04.3",
+   "tool": "L-04",
+   "weight": 0.55,
+   "any": [
+    "\\b(sentences?|questions?|connectives?|conjunctions?|opinions?|word order|clauses?)\\b"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-05.1",
+   "tool": "L-05",
+   "weight": 0.6,
+   "any": [
+    "\\b(vocabulary|words?|family|school|food|drinks?|hobbies|holidays?|town|house|home|animals?|clothes|weather|colou?rs?|body|jobs?|sports?|music|travel|shopping|health|environment|technology|festivals?|celebrat\\w+|free time|routine|city|region|work|friends?|pets?|classroom|fruit|toys|rooms?|bedroom|breakfast|lunch|café|restaurant|transport|countries|country|nationalit\\w+|hair|eyes|feelings?|illness|leisure|media|internet|social|charity|volunteer\\w*|education|career|future plans|tourism|cities|hotel|accommodation|holiday|party|zoo|farm|garden|park|shops?|cinema|television|tv|film|books?|reading|celebrations?)\\b"
+   ],
+   "fields": [
+    "unit",
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-05.2",
+   "tool": "L-05",
+   "weight": 0.5,
+   "any": [
+    "vocabulary|words? (for|to)|new words|topic"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-06.1",
+   "tool": "L-06",
+   "weight": 0.95,
+   "any": [
+    "\\b(dictation|dictado|dictée|diktat|transcri\\w+)\\b|write what you hear"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-07.1",
+   "tool": "L-07",
+   "weight": 0.9,
+   "any": [
+    "\\b(sounds?|pronunciation|pronounce|phonics|silent|liaison|vowels?|consonants?|alphabet|SSCs?|sound-symbol|umlaut|nasal|accents?)\\b"
+   ],
+   "none": [
+    "\\bsounds? like\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-07.2",
+   "tool": "L-07",
+   "weight": 0.7,
+   "any": [
+    "pronunc\\w+|silent letters?|sound-symbol|phonics|liaison|alphabet|spell(ing)? (out|words|names)"
+   ],
+   "fields": [
+    "objective",
+    "unit"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-08.1",
+   "tool": "L-08",
+   "weight": 0.9,
+   "any": [
+    "read(ing)? (it |text |the text |them )?aloud|read out|reading aloud"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-09.1",
+   "tool": "L-09",
+   "weight": 0.85,
+   "any": [
+    "\\b(listen\\w*|hear|audio|recordings?|interviews?|contrôle d'écoute)\\b|conversation"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-09.2",
+   "tool": "L-09",
+   "weight": 0.6,
+   "any": [
+    "\\b(listen\\w*|hear|audio|recordings?|understand (a |the )?(spoken|conversation|dialogue|interview))\\b"
+   ],
+   "fields": [
+    "objective",
+    "unit"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-10.1",
+   "tool": "L-10",
+   "weight": 0.85,
+   "any": [
+    "\\b(gender|articles?|masculine|feminine|neuter|possessive|possessives|demonstrative|nouns?|definite articles?|indefinite articles?|partitive)\\b|'(un|une|una|el|la|le|los|las|der|die|das|ein|eine|mi|tu|mon|ma|mes|ton|ta|mein|meine|dein|deine|ce|cet|cette|ces|du|de la)'|plural nouns|noun plurals"
+   ],
+   "none": [
+    "persons? plural|1st and 2nd persons|verbs?\\b.*plural|plural .{0,15}(-er|-re|-ir|-ar) verbs|'(ils|elles|nous|vous|ellos|ellas|wir|ihr|sie)'"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-10.2",
+   "tool": "L-10",
+   "weight": 0.6,
+   "any": [
+    "\\b(gender|articles?|masculine|feminine|neuter|possessive adjectives?|demonstrative)\\b"
+   ],
+   "none": [
+    "verbs?"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-11.1",
+   "tool": "L-11",
+   "weight": 0.95,
+   "any": [
+    "\\b(accusative|dative|genitive|nominative|cases?|prepositions?|relative pronouns?|wo- and da|mit|für|ohne|seit|zu)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "programme": "^german",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-11.2",
+   "tool": "L-11",
+   "weight": 0.8,
+   "any": [
+    "\\b(accusative|dative|genitive|nominative|cases?|prepositions?|relative pronouns?)\\b|\\b(in|auf|an) (and|or) (in|auf|an)\\b|der,? die,? das|ein,? eine|kein\\w*|dem|den\\b"
+   ],
+   "fields": [
+    "unit",
+    "objective"
+   ],
+   "programme": "^german",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-12.1",
+   "tool": "L-12",
+   "weight": 0.9,
+   "any": [
+    "\\b(adjectiv\\w*|agreement|agree|agreeing|adjectival)\\b"
+   ],
+   "none": [
+    "possessive|demonstrative|indefinite|interrogative|comparative"
+   ],
+   "fields": [
+    "title"
+   ],
+   "years": [
+    3,
+    13
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-12.2",
+   "tool": "L-12",
+   "weight": 0.7,
+   "any": [
+    "adjectives? (agreement|endings|position)|agreement|agreeing|adjectival|feminine adjectives?|adjectives? (must|to) agree|describe (people|things).{0,30}adjectives"
+   ],
+   "none": [
+    "possessive|demonstrative|indefinite"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-13.1",
+   "tool": "L-13",
+   "weight": 0.9,
+   "any": [
+    "\\btranslat\\w+"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-13.2",
+   "tool": "L-13",
+   "weight": 0.7,
+   "any": [
+    "\\btranslat\\w+"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "years": [
+    8,
+    13
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-14.1",
+   "tool": "L-14",
+   "weight": 0.8,
+   "any": [
+    "\\b(writ(e|ing)|extended|article|blog|email|letter|essay|paragraph|postcard|poster|diary|profile|review)\\b"
+   ],
+   "none": [
+    "\\bwrite (a )?poem\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-14.2",
+   "tool": "L-14",
+   "weight": 0.6,
+   "any": [
+    "\\b(writ(e|ing)|extended (writing|answer)|blog|email|letter|essay|paragraph|postcard|diary)\\b"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-15.1",
+   "tool": "L-15",
+   "weight": 0.85,
+   "any": [
+    "\\b(role.?play|photo ?card|photo description|photos?|picture task|speaking|conversation|oral|speak|presentation|interview|(AQA))\\b|\\(AQA\\)"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-15.2",
+   "tool": "L-15",
+   "weight": 0.45,
+   "any": [
+    "\\(AQA\\)"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-15.3",
+   "tool": "L-15",
+   "weight": 0.65,
+   "any": [
+    "\\b(role.?play|photo ?card|conversation|oral|speak|presentation|interview|picture task)\\b"
+   ],
+   "fields": [
+    "objective",
+    "unit"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-16.1",
+   "tool": "L-16",
+   "weight": 0.9,
+   "any": [
+    "\\b(numbers?|dates?|telling the time|clock|days of the week|days|months|birthdays?|age|prices?|money|how (many|much|old)|ordinal|calendar|seasons?|the time|time expressions?|quantit\\w+|counting)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-16.2",
+   "tool": "L-16",
+   "weight": 0.65,
+   "any": [
+    "\\b(numbers? (up to|from|\\d)|dates?|telling the time|days of the week|months|birthdays?|prices?|how old|ordinal|counting)\\b|\\bage\\b"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-17.1",
+   "tool": "L-17",
+   "weight": 0.8,
+   "any": [
+    "\\b(cognates?|false friends?|faux amis)\\b|similar (to )?english|words? that look like"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-18.1",
+   "tool": "L-18",
+   "weight": 0.5,
+   "any": [
+    "\\b(texts?|article|story|stories|poem|poems|passage|comprehension|letter|blog|song|reading|read)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-19.1",
+   "tool": "L-19",
+   "weight": 0.55,
+   "any": [
+    "\\b(vocabulary|revis\\w+|review|consolidat\\w+|recogni\\w+|game|quiz|recap)\\b|words?"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-20.1",
+   "tool": "L-20",
+   "weight": 0.95,
+   "any": [
+    "\\bser\\b|\\bestar\\b|'(es|está|esta|soy|estoy|eres|estás|son|están)'|ser and estar|ser vs"
+   ],
+   "fields": [
+    "title"
+   ],
+   "programme": "^spanish",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-20.2",
+   "tool": "L-20",
+   "weight": 0.75,
+   "any": [
+    "\\bser\\b|\\bestar\\b|'(es|está)'"
+   ],
+   "fields": [
+    "unit",
+    "objective"
+   ],
+   "programme": "^spanish",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-21.1",
+   "tool": "L-21",
+   "weight": 0.95,
+   "any": [
+    "negat\\w*|\\bne\\b.{0,20}\\bpas\\b|\\bnicht\\b|\\bkein\\w*\\b|\\bjamais\\b|\\brien\\b|\\bno\\b.{0,5}\\bnunca\\b|\\bnunca\\b|\\bnadie\\b|\\bnada\\b"
+   ],
+   "none": [
+    "negatively"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-21.2",
+   "tool": "L-21",
+   "weight": 0.7,
+   "any": [
+    "negat\\w*|\\bne\\b.{0,20}\\bpas\\b|\\bnicht\\b|\\bkein\\w*\\b|\\bjamais\\b|\\bnunca\\b"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-22.1",
+   "tool": "L-22",
+   "weight": 0.95,
+   "any": [
+    "(?<!im)perfect\\b.{0,40}\\b(être|etre|avoir|haben|sein|haber)\\b|\\b(être|etre|avoir|haben|sein|haber)\\b.{0,40}\\b(?<!im)perfect|passé composé|perfect tense|past participles?|auxiliar\\w+|pretérito perfecto|present perfect"
+   ],
+   "none": [
+    "\\bimperfect\\b(?!.*perfect tense)(?!.*participle)"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-22.2",
+   "tool": "L-22",
+   "weight": 0.8,
+   "any": [
+    "perfect tense|passé composé|past participles?|auxiliar\\w+|perfect and imperfect|perfect\\b"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-23.1",
+   "tool": "L-23",
+   "weight": 0.6,
+   "any": [
+    "gap.?fill|cloze|grammar|complete the|fill in"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-23.2",
+   "tool": "L-23",
+   "weight": 0.4,
+   "any": [
+    "\\b(verbs?|tenses?|adjectiv\\w*|articles?|pronouns?|prepositions?|cases?|agreement|word order|negati\\w*|comparatives?|possessive\\w*)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-24.1",
+   "tool": "L-24",
+   "weight": 0.8,
+   "any": [
+    "comprehension|understand (a |an |the )?(longer |short |simple )?(text|article|story|letter|blog|poem|passage|email|extract)|\\b(read|reading)\\b|\\b(text|texts|article|story|poem|passage|blog|letter|extract)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-24.2",
+   "tool": "L-24",
+   "weight": 0.65,
+   "any": [
+    "understand (a |an |the )?(longer |short |simple |written )?(text|article|story|letter|blog|poem|passage|email|extract)|reading comprehension|read (a |an |the |short )?(text|article|story|letter|blog|poem|passage|email)"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-25.1",
+   "tool": "L-25",
+   "weight": 0.85,
+   "any": [
+    "dialogues?|conversations?|role.?play|\\bat the (café|shop|restaurant|market|station|hotel)\\b|ordering|asking for|booking|shopping"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-25.2",
+   "tool": "L-25",
+   "weight": 0.6,
+   "any": [
+    "dialogues?|conversations?|role.?play|order|book|buy|ask for|shopping"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-03.4",
+   "tool": "L-03",
+   "weight": 0.75,
+   "any": [
+    "'(j'ai|tengo|tiene|tienen|hay|il y a|il n'y a pas|hay que|se puede|se debe|se necesita)'|commands?|imperatives?|\\bhave\\b|'(tú|usted|Sie|Ihnen)'"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-10.3",
+   "tool": "L-10",
+   "weight": 0.6,
+   "any": [
+    "prepositions? (à|de|a)\\b|'(à l'|aux|au)'|plural nouns|singular and plural"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ],
+   "programme": "^french",
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-04.4",
+   "tool": "L-04",
+   "weight": 0.5,
+   "any": [
+    "'(tú|usted|Sie|Ihnen|tu|vous)'|polite|formal and informal|interrogatives|question words"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-25.3",
+   "tool": "L-25",
+   "weight": 0.5,
+   "any": [
+    "polite|shops|restaurant|directions|instructions"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-03.5",
+   "tool": "L-03",
+   "weight": 0.75,
+   "any": [
+    "desde hace|llevar|\\bseit\\b|depuis|how long"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-05.3",
+   "tool": "L-05",
+   "weight": 0.75,
+   "any": [
+    "creating nouns|noun suffix\\w*|suffix\\w*|word families|-keit|-heit|-ion or -ation|prefix\\w*|word formation"
+   ],
+   "fields": [
+    "title"
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-01.1",
+   "tool": "L-01",
+   "weight": 0.25,
+   "any": [
+    "."
+   ],
+   "subject": [
+    "languages"
+   ]
+  },
+  {
+   "id": "languages.L-02.1",
+   "tool": "L-02",
+   "weight": 0.24,
+   "any": [
+    "."
+   ],
+   "subject": [
+    "languages"
+   ]
+  }
+ ],
+ "fallback": {
+  "languages": [
+   "L-03",
+   "L-05",
+   "L-04",
+   "L-01"
+  ]
+ }
+}

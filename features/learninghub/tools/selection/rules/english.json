@@ -1,0 +1,1334 @@
+{
+ "version": "1",
+ "rules": [
+  {
+   "id": "english.N-01.1",
+   "tool": "N-01",
+   "weight": 0.95,
+   "any": [
+    "\\bgpcs?\\b",
+    "phoneme",
+    "grapheme",
+    "digraph",
+    "trigraph",
+    "split digraph",
+    "\\bblend",
+    "sound button",
+    "\\bdecod",
+    "tricky word",
+    "phonic",
+    "alternative gpcs?",
+    "long vowel"
+   ],
+   "years": [
+    1,
+    2
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-10.1",
+   "tool": "E-10",
+   "weight": 0.9,
+   "any": [
+    "\\bgpcs?\\b",
+    "grapheme",
+    "digraph",
+    "trigraph",
+    "silent letter",
+    "letter strings?",
+    "phoneme",
+    "spelling .{0,25}\\bsound\\b",
+    "\\bsound\\b.{0,25}spell",
+    "alternative (gpcs?|spellings?)"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-09.1",
+   "tool": "E-09",
+   "weight": 0.9,
+   "any": [
+    "\\bspell",
+    "suffix",
+    "prefix",
+    "homophone",
+    "homonym",
+    "silent letter",
+    "letter strings?",
+    "curriculum words",
+    "plurals?\\b",
+    "\\b(ed|ing) (and|or) (ed|ing)\\b",
+    "adding (-|‘|')?(ed|ing|ly|er|est)\\b",
+    "\\bgpcs?\\b",
+    "tricky words?",
+    "common exception"
+   ],
+   "none": [
+    "\\bcharacter"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-17.1",
+   "tool": "E-17",
+   "weight": 0.5,
+   "any": [
+    "\\bspell",
+    "homophone",
+    "silent letter",
+    "curriculum words"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-11.1",
+   "tool": "E-11",
+   "weight": 0.9,
+   "any": [
+    "suffix",
+    "prefix",
+    "etymolog",
+    "\\broots?\\b",
+    "morpholog",
+    "word famil",
+    "history of (the )?(english )?language",
+    "\\blatin\\b",
+    "greek roots",
+    "word origins?"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-11.2",
+   "tool": "E-11",
+   "weight": 0.8,
+   "any": [
+    "\\bprefix",
+    "\\bsuffix",
+    "\\bmorpheme"
+   ],
+   "years": [
+    1,
+    2
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-02.1",
+   "tool": "N-02",
+   "weight": 0.95,
+   "any": [
+    "handwriting",
+    "letter formation",
+    "pre-?cursive",
+    "cursive",
+    "four joins",
+    "\\bjoins?\\b.{0,20}letters",
+    "lower.?case letters",
+    "capital letters and numerals",
+    "\\bnumerals\\b",
+    "formation of",
+    "writing lower",
+    "forming (letters|capital)",
+    "writing capital letters"
+   ],
+   "none": [
+    "capital letters? (for|to) (start|mark)"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-07.1",
+   "tool": "E-07",
+   "weight": 0.85,
+   "any": [
+    "word class",
+    "\\bnouns?\\b",
+    "\\bverbs?\\b",
+    "adjective",
+    "adverb",
+    "pronoun",
+    "preposition",
+    "conjunction",
+    "determiner",
+    "\\bclauses?\\b",
+    "subordinat",
+    "relative (clause|pronoun)",
+    "sentence types?",
+    "simple sentence",
+    "compound sentence",
+    "complex sentence",
+    "fronted adverbial",
+    "modal",
+    "\\bpassive",
+    "active voice",
+    "\\bnoun phrase",
+    "expanded noun",
+    "\\btense",
+    "parts? of speech",
+    "sentence structure"
+   ],
+   "none": [
+    "\\bnon-?chronological"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-07.2",
+   "tool": "E-07",
+   "weight": 0.7,
+   "any": [
+    "word class",
+    "\\bnouns?\\b",
+    "\\bverbs?\\b",
+    "adjective",
+    "adverb",
+    "pronoun",
+    "preposition",
+    "conjunction",
+    "determiner",
+    "\\bclauses?\\b",
+    "subordinat",
+    "relative (clause|pronoun)",
+    "sentence types?",
+    "simple sentence",
+    "compound sentence",
+    "complex sentence",
+    "fronted adverbial",
+    "modal",
+    "\\bpassive",
+    "active voice",
+    "\\bnoun phrase",
+    "expanded noun",
+    "\\btense",
+    "parts? of speech",
+    "sentence structure"
+   ],
+   "none": [
+    "\\bwrite (a|an|the|your) ",
+    "non-?chronological"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-03.1",
+   "tool": "N-03",
+   "weight": 0.9,
+   "any": [
+    "compound sentence",
+    "complex sentence",
+    "simple sentence",
+    "coordinat",
+    "subordinat",
+    "conjunction",
+    "expanded noun",
+    "relative clause",
+    "combin(e|ing) (sentences|clauses)",
+    "sentence types?",
+    "joining (sentences|clauses)",
+    "\\bclauses?\\b"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-04.1",
+   "tool": "N-04",
+   "weight": 0.9,
+   "any": [
+    "\\btense",
+    "verb forms?",
+    "perfect form",
+    "progressive",
+    "modal verb",
+    "subjunctive",
+    "past,? present",
+    "present perfect",
+    "past simple"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-08.1",
+   "tool": "E-08",
+   "weight": 0.9,
+   "any": [
+    "punctuat",
+    "capital letters? (for|to|at)",
+    "full stops?",
+    "question marks?",
+    "exclamation",
+    "\\bcommas?\\b",
+    "apostrophe",
+    "speech marks",
+    "inverted commas",
+    "direct speech",
+    "parenthes",
+    "brackets",
+    "\\bdash",
+    "\\bcolons?\\b",
+    "semi-?colon",
+    "hyphen",
+    "ellipsis"
+   ],
+   "none": [
+    "\\bcharacters? (uses|use|presents)"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-08.2",
+   "tool": "E-08",
+   "weight": 0.85,
+   "any": [
+    "punctuat",
+    "apostrophe",
+    "speech marks",
+    "\\bcommas?\\b"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-12.1",
+   "tool": "E-12",
+   "weight": 0.85,
+   "any": [
+    "vocabular",
+    "word meaning",
+    "synonym",
+    "antonym",
+    "tier 2",
+    "definition",
+    "word choice",
+    "thesaurus",
+    "dictionary",
+    "connotation",
+    "ambitious words",
+    "precise (words|verbs)"
+   ],
+   "none": [
+    "vocabulary to describe the setting"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-05.1",
+   "tool": "N-05",
+   "weight": 0.5,
+   "any": [
+    "dictionar",
+    "thesaurus"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-06.1",
+   "tool": "N-06",
+   "weight": 0.9,
+   "any": [
+    "narrative",
+    "\\bplot\\b",
+    "story ?(mountain|plan|structure|map|arc)",
+    "creative writing",
+    "short stor",
+    "\\bopening\\b",
+    "build-?up",
+    "climax",
+    "resolution",
+    "\\bending\\b",
+    "recount",
+    "fairy tale",
+    "\\bmyths?\\b",
+    "legends?",
+    "plan(ning)? (a|the|your|my) (story|narrative|opening|ending)",
+    "writing (the|a|an) (opening|ending|story|narrative|beginning)",
+    "story ?telling",
+    "\\bretell"
+   ],
+   "none": [
+    "non-?chronological",
+    "analy[sz]",
+    "\\bsoliloquy"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-06.2",
+   "tool": "N-06",
+   "weight": 0.7,
+   "any": [
+    "narrative",
+    "\\bplot\\b",
+    "\\bwrite (a|an|the|my|your) (story|narrative|opening|ending)",
+    "climax",
+    "resolution"
+   ],
+   "none": [
+    "non-?chronological"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-07.1",
+   "tool": "N-07",
+   "weight": 0.9,
+   "any": [
+    "character (description|profile|map|study|trait)",
+    "describ\\w+ (the |a |my )?(character|setting)",
+    "\\bsettings?\\b",
+    "atmosphere",
+    "villain",
+    "protagonist",
+    "descriptive writing",
+    "\\bdescribing\\b",
+    "characteri[sz]",
+    "mind map",
+    "\\bcharacters?\\b"
+   ],
+   "none": [
+    "\\bmacbeth",
+    "inspector calls",
+    "\\banalys"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-07.2",
+   "tool": "N-07",
+   "weight": 0.7,
+   "any": [
+    "character (description|profile|map)",
+    "describ\\w+ (the )?(setting|character)",
+    "\\bsetting\\b",
+    "atmosphere"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-08.1",
+   "tool": "N-08",
+   "weight": 0.95,
+   "any": [
+    "non-?chronological",
+    "\\breports?\\b",
+    "information text",
+    "\\binstructions?\\b",
+    "\\bletters?\\b",
+    "persuasi",
+    "\\bspeech(es)?\\b(?! (section|marks))",
+    "\\barticle",
+    "journalistic",
+    "leaflet",
+    "newspaper",
+    "\\bdebate",
+    "rhetoric",
+    "transactional",
+    "explanation text",
+    "biograph",
+    "\\bdiary",
+    "\\bblog",
+    "\\bposter",
+    "\\badvert",
+    "\\bnews\\b"
+   ],
+   "none": [
+    "speech marks",
+    "direct speech",
+    "\\breport(ed)? speech",
+    "soliloquy",
+    "macbeth",
+    "reporting verb"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-08.2",
+   "tool": "N-08",
+   "weight": 0.75,
+   "any": [
+    "non-?chronological",
+    "persuasi",
+    "\\bwrite (a|an|the|your) (letter|report|speech|article|diary|leaflet|instructions)"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-05.1",
+   "tool": "E-05",
+   "weight": 0.9,
+   "any": [
+    "\\bessay",
+    "\\bargument",
+    "taking a stand",
+    "thesis",
+    "extended response",
+    "analytical response",
+    "writing about",
+    "introductions? (and|for)",
+    "conclusions? (and|for)",
+    "writing (an? )?(introduction|conclusion)",
+    "thesis statement"
+   ],
+   "none": [
+    "non-?chronological",
+    "\\breport\\b",
+    "\\bletter"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-16.1",
+   "tool": "E-16",
+   "weight": 0.4,
+   "any": [
+    "\\breading\\b",
+    "comprehension",
+    "retriev",
+    "\\binfer",
+    "summari[sz]",
+    "\\bpredict",
+    "paper [12]",
+    "\\bextract",
+    "understanding",
+    "\\bexplor"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-16.2",
+   "tool": "E-16",
+   "weight": 0.85,
+   "any": [
+    "comprehension",
+    "retriev\\w+ (information|facts|details)",
+    "\\binfer",
+    "summari[sz]",
+    "\\bpredict",
+    "reading (for|and) (understanding|comprehension)",
+    "vocabulary in context"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-01.1",
+   "tool": "E-01",
+   "weight": 0.3,
+   "any": [
+    "\\btext\\b",
+    "\\bpoe(m|try)",
+    "\\bextract",
+    "analy[sz]",
+    "\\bchapter",
+    "\\bscene\\b",
+    "\\bact \\d",
+    "stanza",
+    "reading",
+    "unseen",
+    "first study",
+    "deep dive",
+    "continued study",
+    "language and structure"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-01.2",
+   "tool": "E-01",
+   "weight": 0.85,
+   "any": [
+    "\\bextracts?\\b",
+    "unseen",
+    "analys",
+    "imagery",
+    "figurative",
+    "\\bsimile",
+    "metaphor",
+    "personif",
+    "writer.s (methods|choices|craft|techniques)",
+    "language and structure",
+    "methods",
+    "presentation of",
+    "how (does|do) .{0,40}(present|create|use)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-01.3",
+   "tool": "E-01",
+   "weight": 0.75,
+   "any": [
+    "\\bpoem",
+    "poetry",
+    "anthology",
+    "soliloquy",
+    "stanza",
+    "reading (and|gothic)",
+    "first study",
+    "deep dive"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-02.1",
+   "tool": "E-02",
+   "weight": 0.85,
+   "any": [
+    "\\bsimile",
+    "metaphor",
+    "personif",
+    "alliteration",
+    "onomatopoeia",
+    "imagery",
+    "figurative",
+    "techniques?",
+    "language features",
+    "\\bsibilance",
+    "\\bhyperbole",
+    "\\banaphora",
+    "rhetorical"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-03.1",
+   "tool": "E-03",
+   "weight": 0.85,
+   "any": [
+    "quotation",
+    "\\bquote",
+    "set text",
+    "macbeth",
+    "romeo",
+    "tempest",
+    "midsummer",
+    "othello",
+    "christmas carol",
+    "jekyll",
+    "inspector calls",
+    "lord of the flies",
+    "small island",
+    "animal farm",
+    "anthology",
+    "nineteenth.century",
+    "modern text",
+    "first study",
+    "continued study",
+    "deep dive",
+    "leave taking"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-04.1",
+   "tool": "E-04",
+   "weight": 0.85,
+   "any": [
+    "paragraph",
+    "point,? evidence",
+    "\\bevidence",
+    "analytical",
+    "\\bPEE\\b",
+    "\\bPETAL",
+    "how does",
+    "first study",
+    "continued study",
+    "deep dive",
+    "writing about",
+    "explain how",
+    "how .{0,30}(presents|shows|creates|uses)"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-13.1",
+   "tool": "E-13",
+   "weight": 0.9,
+   "any": [
+    "\\bpoems?\\b",
+    "poetry",
+    "\\bpoet\\b",
+    "\\brhym",
+    "rhythm",
+    "stanza",
+    "\\bverses?\\b",
+    "\\bmetre",
+    "sonnet",
+    "ballad",
+    "haiku",
+    "alliteration",
+    "onomatopoeia",
+    "enjamb",
+    "caesura",
+    "anthology",
+    "slam",
+    "nursery rhyme",
+    "limerick",
+    "jabberwocky",
+    "highwayman",
+    "calligram",
+    "\\bodes?\\b"
+   ],
+   "none": [
+    "\\bwrite (a|an) (story|letter)"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-13.2",
+   "tool": "E-13",
+   "weight": 0.7,
+   "any": [
+    "\\bpoems?\\b",
+    "poetry",
+    "rhyme",
+    "stanza",
+    "sonnet"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-14.1",
+   "tool": "E-14",
+   "weight": 0.9,
+   "any": [
+    "compar",
+    "contrast",
+    "similarit",
+    "both (poems|texts)",
+    "two (poems|texts)",
+    "cluster",
+    "anthology",
+    "first study",
+    "across (texts|time)",
+    "differences?"
+   ],
+   "none": [
+    "comparative (adjective|form)",
+    "compare (numbers|quantit)",
+    "comparative and superlative"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-14.2",
+   "tool": "E-14",
+   "weight": 0.7,
+   "any": [
+    "compar",
+    "contrast",
+    "similarit",
+    "two (poems|texts)",
+    "both (poems|texts)"
+   ],
+   "none": [
+    "comparative (adjective|form)|comparative and superlative"
+   ],
+   "fields": [
+    "objective"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-15.1",
+   "tool": "E-15",
+   "weight": 0.85,
+   "any": [
+    "^(editing|proofreading|improving|redrafting|upgrading)\\b"
+   ],
+   "fields": [
+    "title"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-15.2",
+   "tool": "E-15",
+   "weight": 0.5,
+   "any": [
+    "sentence (variety|length|opener)",
+    "varying",
+    "\\bediting",
+    "proofread",
+    "redraft",
+    "improv(e|ing) (your|my|a) writing",
+    "cohesi",
+    "paragraphing",
+    "sentence starters",
+    "\\bupgrad",
+    "self-?assess"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-10.1",
+   "tool": "N-10",
+   "weight": 0.95,
+   "any": [
+    "shakespeare",
+    "macbeth",
+    "romeo",
+    "tempest",
+    "midsummer",
+    "othello",
+    "soliloquy",
+    "iambic",
+    "blank verse",
+    "jacobean",
+    "elizabethan",
+    "julius caesar",
+    "much ado",
+    "twelfth night",
+    "prospero",
+    "lady macbeth",
+    "\\bhamlet"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-11.1",
+   "tool": "N-11",
+   "weight": 0.95,
+   "any": [
+    "language paper",
+    "paper [12]",
+    "question [1-6]\\b",
+    "\\bq[1-6]\\b",
+    "read around",
+    "changing views",
+    "teenage kicks",
+    "crime and punishment",
+    "explorers",
+    "inner musings",
+    "books that changed",
+    "ending stories",
+    "science fiction",
+    "writing masters",
+    "transactional",
+    "exam (question|response|technique)",
+    "gcse"
+   ],
+   "none": [
+    "dostoevsky",
+    "anthology",
+    "inspector calls",
+    "macbeth"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-09.1",
+   "tool": "N-09",
+   "weight": 0.9,
+   "any": [
+    "\\blisten",
+    "read aloud",
+    "fluen",
+    "expression",
+    "\\brecit",
+    "nursery rhyme",
+    "\\bsongs?\\b",
+    "choral",
+    "performance poetry",
+    "slam",
+    "story ?time",
+    "learn .{0,30}(poem|rhyme|by heart)",
+    "performing",
+    "\\bperform\\b",
+    "reading (with|aloud)"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.N-12.1",
+   "tool": "N-12",
+   "weight": 0.9,
+   "any": [
+    "drama",
+    "hot.?seat",
+    "role.?play",
+    "oracy",
+    "\\bspoken",
+    "speaking",
+    "dialogue",
+    "monologue",
+    "\\bpresentations?\\b(?! of)",
+    "show and tell",
+    "talking",
+    "\\bdiscuss",
+    "debate",
+    "\\bperform",
+    "slam",
+    "\\bpanel",
+    "in role",
+    "conscience alley",
+    "freeze.?frame",
+    "\\bimprovis"
+   ],
+   "none": [
+    "speech marks",
+    "direct speech"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-05.1",
+   "tool": "X-05",
+   "weight": 0.6,
+   "any": [
+    "sequenc",
+    "ordering",
+    "\\bsort",
+    "categori[sz]",
+    "\\bmatch",
+    "retell",
+    "story map",
+    "chronolog",
+    "classif",
+    "organis(e|ing) (ideas|information)"
+   ],
+   "none": [
+    "non-?chronological"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-07.1",
+   "tool": "X-07",
+   "weight": 0.6,
+   "any": [
+    "compar",
+    "contrast",
+    "similarit",
+    "venn",
+    "for and against",
+    "perspectives?",
+    "viewpoints?",
+    "differences?"
+   ],
+   "none": [
+    "comparative"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-11.1",
+   "tool": "X-11",
+   "weight": 0.6,
+   "any": [
+    "command words?",
+    "exam (question|technique|response)",
+    "paper [12]",
+    "question [1-6]\\b"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-15.1",
+   "tool": "X-15",
+   "weight": 0.5,
+   "any": [
+    "discuss",
+    "talk",
+    "sentence stems?",
+    "oracy",
+    "debate"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-08.1",
+   "tool": "X-08",
+   "weight": 0.35,
+   "any": [
+    "\\breading\\b",
+    "\\bread\\b",
+    "story",
+    "\\btext\\b",
+    "listen",
+    "poem"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-06.1",
+   "tool": "E-06",
+   "weight": 0.3,
+   "any": [
+    "writ(e|ing)",
+    "narrative",
+    "descriptive",
+    "composition",
+    "extended",
+    "paper [12]",
+    "question [56]",
+    "planning",
+    "proofread",
+    "redraft",
+    "\\bdraft"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.E-06.2",
+   "tool": "E-06",
+   "weight": 0.85,
+   "any": [
+    "question [56]\\b",
+    "timed",
+    "\\bwrite (a|an|the|your) .{0,30}(story|description|letter|article|speech|essay)",
+    "crafting",
+    "transactional",
+    "descriptive writing",
+    "narrative writing"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-12.1",
+   "tool": "X-12",
+   "weight": 0.5,
+   "any": [
+    "mind map",
+    "brainstorm",
+    "generat(e|ing) ideas",
+    "\\bplanning\\b"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-16.1",
+   "tool": "X-16",
+   "weight": 0.4,
+   "any": [
+    "key words",
+    "glossary",
+    "flashcards"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  },
+  {
+   "id": "english.X-13.1",
+   "tool": "X-13",
+   "weight": 0.5,
+   "any": [
+    "\\brevis",
+    "recap",
+    "retrieval",
+    "consolidat",
+    "\\breview\\b"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "english"
+   ]
+  }
+ ],
+ "fallback": {
+  "english": [
+   "E-01",
+   "E-06",
+   "E-16",
+   "N-06",
+   "E-09",
+   "N-08",
+   "X-08",
+   "E-12"
+  ]
+ }
+}

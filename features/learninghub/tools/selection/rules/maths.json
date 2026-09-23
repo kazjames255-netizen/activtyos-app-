@@ -1,0 +1,1545 @@
+{
+ "version": "1",
+ "rules": [
+  {
+   "id": "maths.M-01.1",
+   "tool": "M-01",
+   "weight": 0.85,
+   "any": [
+    "\\bruler\\b",
+    "measur\\w* (the )?(length|lines?|distance|sides?)",
+    "centimetres? and millimetres",
+    "\\bmeasuring length"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-01.2",
+   "tool": "M-01",
+   "weight": 0.3,
+   "any": [
+    "\\bmeasur\\w*\\b",
+    "\\blength\\b"
+   ],
+   "none": [
+    "angle",
+    "probab|data|statistic"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-02.1",
+   "tool": "M-02",
+   "weight": 0.9,
+   "any": [
+    "protractor",
+    "(measure|draw|estimate|compare|name)\\w*,? (and |or )?(name |estimate |measure |draw )?(the )?(size of )?angles?",
+    "angles compare name estimate and measure",
+    "accurate\\w* draw"
+   ],
+   "none": [
+    "trigonom"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-03.1",
+   "tool": "M-03",
+   "weight": 0.7,
+   "any": [
+    "reflex",
+    "angles? (around|at) a point",
+    "360"
+   ],
+   "none": [
+    "trigonom|sine|cosine|degrees? (celsius)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-04.1",
+   "tool": "M-04",
+   "weight": 0.9,
+   "any": [
+    "\\bcompasses\\b",
+    "construct\\w*\\b",
+    "\\bloci\\b|\\blocus\\b",
+    "bisect\\w*",
+    "loci and construction"
+   ],
+   "none": [
+    "scatter|time series|graph|chart|table|coordinates|plotting|from a rule|deconstruct|instruct|reconstruct|stem|leaf|diagram"
+   ],
+   "years": [
+    6,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-07.1",
+   "tool": "M-07",
+   "weight": 0.85,
+   "any": [
+    "\\bconstructions?\\b",
+    "constructing (a |an )?(triangle|perpendicular|angle|bisector|locus|loci|\\d)",
+    "bisect\\w*",
+    "\\bloci\\b|\\blocus\\b"
+   ],
+   "none": [
+    "scatter|time series|graph|chart|table|coordinates|plotting|from a rule|deconstruct|instruct|reconstruct|stem|leaf|diagram"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-06.1",
+   "tool": "M-06",
+   "weight": 0.6,
+   "any": [
+    "straight edge|straightedge",
+    "perpendicular bisector"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-24.1",
+   "tool": "M-24",
+   "weight": 0.85,
+   "any": [
+    "\\bloci\\b|\\blocus\\b",
+    "regions? (that|which)"
+   ],
+   "none": [
+    "locate"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-05.1",
+   "tool": "M-05",
+   "weight": 0.6,
+   "any": [
+    "parallel and perpendicular",
+    "perpendicular (lines|sides)",
+    "parallel (lines|sides)",
+    "draw parallel"
+   ],
+   "none": [
+    "angle"
+   ],
+   "years": [
+    3,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-09.1",
+   "tool": "M-09",
+   "weight": 0.85,
+   "any": [
+    "angles? (in|on|around|at|facts|between|sum|properties|of)\\b",
+    "missing angles?",
+    "alternate|corresponding|vertically opposite|co-?interior",
+    "(interior|exterior) angles?",
+    "angles from ks2",
+    "\\bangles\\b"
+   ],
+   "none": [
+    "trigonom|sine|cosine|tangent|circle theorem|bearing|construct|protractor|reflex"
+   ],
+   "fields": [
+    "title",
+    "unit",
+    "objective"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-09.2",
+   "tool": "M-09",
+   "weight": 0.8,
+   "any": [
+    "geometrical properties polygons",
+    "properties of (polygons|triangles|quadrilaterals)",
+    "\\bpolygons?\\b",
+    "\\bisosceles\\b|\\bequilateral\\b|\\bparallelogram|\\btrapezium|\\brhombus|\\bkite\\b"
+   ],
+   "none": [
+    "area|perimeter|volume|similar|congruen|reflect|rotat|translat"
+   ],
+   "years": [
+    6,
+    10
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-09.3",
+   "tool": "M-09",
+   "weight": 0.35,
+   "any": [
+    "right angles?",
+    "\\bangles?\\b"
+   ],
+   "none": [
+    "trigonom|sine|cosine|tangent"
+   ],
+   "years": [
+    3,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-10.1",
+   "tool": "M-10",
+   "weight": 0.95,
+   "any": [
+    "\\bbearings?\\b"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-11.1",
+   "tool": "M-11",
+   "weight": 0.95,
+   "any": [
+    "circle theorems?",
+    "cyclic quadrilateral",
+    "alternate segment",
+    "semi-?circle",
+    "\\btangents? (to|and) (a )?circle",
+    "\\bchords?\\b"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-12.1",
+   "tool": "M-12",
+   "weight": 0.9,
+   "any": [
+    "pythagoras",
+    "trigonometr\\w+",
+    "\\bsohcahtoa\\b|sine rule|cosine rule|sine and cosine|\\bhypotenuse\\b",
+    "right angled trig"
+   ],
+   "years": [
+    8,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-20.1",
+   "tool": "M-20",
+   "weight": 0.7,
+   "any": [
+    "squared paper|dotted paper|isometric|graph paper|tessellat\\w+"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-21.1",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "coordinates?",
+    "plotting",
+    "\\bquadrants?\\b",
+    "position and direction",
+    "midpoint of"
+   ],
+   "none": [
+    "scatter|time series"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-21.2",
+   "tool": "M-21",
+   "weight": 0.6,
+   "any": [
+    "\\bvectors?\\b",
+    "column vectors?"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-22.1",
+   "tool": "M-22",
+   "weight": 0.9,
+   "any": [
+    "linear (graphs?|functions|relationships)",
+    "straight.line",
+    "gradient",
+    "y ?= ?mx",
+    "(non.linear|quadratic|cubic|reciprocal|exponential) (graphs?|relationships|functions)",
+    "real.life graphs",
+    "transform\\w* graphs|transformations of graphs",
+    "equation of a (line|straight)",
+    "graphical representations of linear equations",
+    "non.?linear",
+    "graphically",
+    "simultaneous equations"
+   ],
+   "none": [
+    "scatter"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-22.2",
+   "tool": "M-22",
+   "weight": 0.5,
+   "any": [
+    "\\bgraphs?\\b"
+   ],
+   "none": [
+    "scatter|time series|bar|line graphs?|pie|frequency|histogram|chart|data|statistic|cumulative|box"
+   ],
+   "years": [
+    8,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-23.1",
+   "tool": "M-23",
+   "weight": 0.9,
+   "any": [
+    "\\b(reflect\\w*|rotat\\w*|translat\\w*|enlarg\\w*)\\b",
+    "\\btransformations?\\b",
+    "\\bsymmetr\\w+"
+   ],
+   "none": [
+    "transformations? of graphs|transforming graphs|graph"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-25.1",
+   "tool": "M-25",
+   "weight": 0.85,
+   "any": [
+    "\\bnets?\\b",
+    "3d shapes?|2d and 3d|\\b3-d\\b",
+    "plans? and elevations?",
+    "\\b(prisms?|cylinders?|cones?|spheres?|pyramids?|cuboids?|cubes?|faces|vertices|edges)\\b",
+    "surface area"
+   ],
+   "none": [
+    "cube (numbers?|roots?)|cubes? and|squares? and cubes"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-25.2",
+   "tool": "M-25",
+   "weight": 0.45,
+   "any": [
+    "2d shapes?|shapes"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-27.1",
+   "tool": "M-27",
+   "weight": 0.5,
+   "any": [
+    "recognise compose and decompose|compose and decompose|draw compose",
+    "tangram|pentomino|pattern blocks?"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-26.1",
+   "tool": "M-26",
+   "weight": 0.4,
+   "any": [
+    "geoboard"
+   ],
+   "years": [
+    2,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-40.1",
+   "tool": "M-40",
+   "weight": 0.9,
+   "any": [
+    "number lines?",
+    "negative numbers?",
+    "ordering|comparing and ordering|compare and order|comparing ordering",
+    "positioning",
+    "round\\w*|estimat\\w+",
+    "\\binequalit\\w+",
+    "positive and negative"
+   ],
+   "none": [
+    "probab"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-40.2",
+   "tool": "M-40",
+   "weight": 0.4,
+   "any": [
+    "comparing quantities|counting recognising and comparing|comparing"
+   ],
+   "years": [
+    1,
+    2
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-41.1",
+   "tool": "M-41",
+   "weight": 0.85,
+   "any": [
+    "place value",
+    "tens and ones",
+    "\\bpartition\\w*",
+    "multiplied or divided by 10",
+    "decimal fractions|hundredths|tenths|decimals?",
+    "digit numbers"
+   ],
+   "none": [
+    "column"
+   ],
+   "years": [
+    1,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-42.1",
+   "tool": "M-42",
+   "weight": 0.75,
+   "any": [
+    "\\b(dienes|base 10|base ten)\\b",
+    "multiples of (10|ten)\\b|numerals",
+    "tens and ones",
+    "2 digit numbers|two 2 digit|3 digit numbers"
+   ],
+   "years": [
+    1,
+    4
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-43.1",
+   "tool": "M-43",
+   "weight": 0.85,
+   "any": [
+    "bar model",
+    "part.whole|part and whole|parts and wholes",
+    "missing part",
+    "additive (structures|relationships)|multiplicative structures",
+    "two unknowns",
+    "word problems?",
+    "comparison and change"
+   ],
+   "years": [
+    1,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-44.1",
+   "tool": "M-44",
+   "weight": 0.9,
+   "any": [
+    "\\bfractions?\\b(?! of turns)",
+    "\\b(halves|quarters|thirds|fifths|sixths|eighths)\\b",
+    "equivalen\\w+ fractions",
+    "mixed numbers?",
+    "numerator|denominator",
+    "unit fractions?|non unit"
+   ],
+   "none": [
+    "algebraic fractions"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-44.2",
+   "tool": "M-44",
+   "weight": 0.5,
+   "any": [
+    "equal parts|halving|doubling halving"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-45.1",
+   "tool": "M-45",
+   "weight": 0.85,
+   "any": [
+    "counting in (tens|2s|5s|10s|threes|fours)|counting in \\d+s",
+    "count (on|back|to|forwards|backwards)|skip count|hundred square|10 more|10 less|counting to and from|pattern in counting|counting and representing",
+    "number patterns?"
+   ],
+   "years": [
+    1,
+    4
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-46.1",
+   "tool": "M-46",
+   "weight": 0.9,
+   "any": [
+    "times tables?",
+    "multiplication facts|division facts",
+    "\\bmultiples\\b",
+    "divisibility",
+    "grouping objects .* multiplication",
+    "introduction to division|quotative|partitive",
+    "\\b[2-9] times"
+   ],
+   "none": [
+    "factors? and multiples|common (factors|multiples)|multiples of (10|ten|1)\\b"
+   ],
+   "years": [
+    1,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-46.2",
+   "tool": "M-46",
+   "weight": 0.5,
+   "any": [
+    "multiply\\w*|dividing|division|multiplication"
+   ],
+   "years": [
+    2,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-47.1",
+   "tool": "M-47",
+   "weight": 0.85,
+   "any": [
+    "negative numbers?|directed numbers?|integers?",
+    "positive and negative"
+   ],
+   "years": [
+    3,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-48.1",
+   "tool": "M-48",
+   "weight": 0.9,
+   "any": [
+    "\\bexpand\\w*",
+    "factoris\\w*",
+    "brackets",
+    "completing the square",
+    "like terms",
+    "quadratic (expressions|equations)",
+    "algebraic manipulation",
+    "distributive law"
+   ],
+   "none": [
+    "factorisation square and prime|prime|hcf"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-49.1",
+   "tool": "M-49",
+   "weight": 0.5,
+   "any": [
+    "like terms|simplif\\w+ expressions"
+   ],
+   "years": [
+    7,
+    10
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-50.1",
+   "tool": "M-50",
+   "weight": 0.9,
+   "any": [
+    "solv\\w* (linear |one.step |two.step |complex )?equations?",
+    "linear equations",
+    "inverse operations",
+    "both sides",
+    "rearrang\\w+",
+    "changing the subject",
+    "expressions and equations",
+    "additive relationships and apply them to rearrange",
+    "simultaneous equations"
+   ],
+   "none": [
+    "graphical"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-51.1",
+   "tool": "M-51",
+   "weight": 0.9,
+   "any": [
+    "prime factors?|prime numbers?|\\bprimes?\\b|\\bhcf\\b|\\blcm\\b|highest common|lowest common|factor trees?|factors? and multiples|common (factors|multiples)|square numbers|cube numbers|factorisation|properties of number"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-52.1",
+   "tool": "M-52",
+   "weight": 0.9,
+   "any": [
+    "\\bratios?\\b(?!.*(sine|cosine|trigon))",
+    "proportion\\w*",
+    "scale factor|scale drawings?|map scale",
+    "unit price|best buy|recipes?|exchange rates?",
+    "multiplicative relationships",
+    "similar\\w*|congruen\\w+"
+   ],
+   "none": [
+    "probab"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-52.2",
+   "tool": "M-52",
+   "weight": 0.5,
+   "any": [
+    "\\bspeed\\b|\\bdensity\\b|compound measures?"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-53.1",
+   "tool": "M-53",
+   "weight": 0.4,
+   "any": [
+    "cuisenaire"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-54.1",
+   "tool": "M-54",
+   "weight": 0.9,
+   "any": [
+    "within (5|10|15|20)\\b",
+    "number (pairs|bonds)",
+    "composition of numbers",
+    "make ten|bridg\\w+|crossing the tens|10 and a bit",
+    "numbers 0 to 20|numbers to 20",
+    "\\baddition and subtraction facts",
+    "fluency of addition"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-54.2",
+   "tool": "M-54",
+   "weight": 0.6,
+   "any": [
+    "additive structures|add and subtract|adding and subtracting|addition and subtraction|\\badd\\w*\\b|\\bsubtract\\w*\\b|calculating within|doubl\\w+"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-55.1",
+   "tool": "M-55",
+   "weight": 0.35,
+   "any": [
+    "\\bequations?\\b",
+    "\\bexpressions?\\b",
+    "\\balgebra\\w*\\b",
+    "formulae|formula|substitut\\w+",
+    "order of operations",
+    "functions and proof|algebraic fractions"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-60.1",
+   "tool": "M-60",
+   "weight": 0.9,
+   "any": [
+    "\\b(bar (charts?|graphs?)|pictograms?|pie charts?|line graphs?|scatter|histograms?|box plots?|cumulative frequency|stem.and.leaf|time series|tally|frequency polygons?)\\b",
+    "graphical representations",
+    "\\bstatistics\\b",
+    "data\\b"
+   ],
+   "none": [
+    "probab"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-61.1",
+   "tool": "M-61",
+   "weight": 0.85,
+   "any": [
+    "frequency tables?|grouped data|numerical summaries|quartiles?|interquartile|comparisons? of numerical summaries|\\bsampling\\b|comparing summaries",
+    "data\\b"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.D.tally.1",
+   "tool": "D.tally",
+   "weight": 0.6,
+   "any": [
+    "\\btally\\b"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-65.1",
+   "tool": "M-65",
+   "weight": 0.9,
+   "any": [
+    "\\b(mean|median|mode|averages?)\\b",
+    "(?<!a )\\brange\\b(?! of)",
+    "numerical summaries"
+   ],
+   "none": [
+    "unit"
+   ],
+   "fields": [
+    "title",
+    "objective",
+    "unit"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-62.1",
+   "tool": "M-62",
+   "weight": 0.9,
+   "any": [
+    "tree diagrams?|outcome tree|conditional",
+    "independent events|dependent events"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-62.2",
+   "tool": "M-62",
+   "weight": 0.75,
+   "any": [
+    "probabilit\\w+",
+    "outcomes?"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-63.1",
+   "tool": "M-63",
+   "weight": 0.85,
+   "any": [
+    "sample space|venn|two.way tables?|frequency trees?|possible outcomes|probabilit\\w+"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-64.1",
+   "tool": "M-64",
+   "weight": 0.85,
+   "any": [
+    "\\b(dice|die|spinner|coin toss|relative frequency|theoretical probabilit\\w+|experimental)\\b",
+    "probabilit\\w+"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.D.spinner.1",
+   "tool": "D.spinner",
+   "weight": 0.5,
+   "any": [
+    "\\bspinner\\b|likelihood|chance"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.X-07.1",
+   "tool": "X-07",
+   "weight": 0.4,
+   "any": [
+    "\\bvenn\\b",
+    "two.way table"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-80.1",
+   "tool": "M-80",
+   "weight": 0.85,
+   "any": [
+    "calculator",
+    "standard form",
+    "\\bsurds?\\b|rationalis\\w+",
+    "\\bindex laws?|indices|powers and roots|square roots?",
+    "compound interest|error intervals?",
+    "trigonometr\\w+"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-82.1",
+   "tool": "M-82",
+   "weight": 0.9,
+   "any": [
+    "o.clock|telling the time|tell the time|write and tell the time|analogue|digital|24.hour|12.hour|minutes past|time intervals?|\\bclocks?\\b|the time to|units of time|sequencing events"
+   ],
+   "years": [
+    1,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-83.1",
+   "tool": "M-83",
+   "weight": 0.9,
+   "any": [
+    "\\bcoins?\\b|\\bmoney\\b|change from|\\bpounds?\\b|pence|coin recognition"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-84.1",
+   "tool": "M-84",
+   "weight": 0.85,
+   "any": [
+    "reading (a )?(scale|thermometer)|thermometer|\\bmass\\b|capacity|measuring (cylinder|jug)|\\blitres?\\b|millilitres?|\\bgrams?\\b|kilograms?|sense of measure|measures?\\b|measurements?"
+   ],
+   "none": [
+    "surface|prisms?|pyramids"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-84.2",
+   "tool": "M-84",
+   "weight": 0.6,
+   "any": [
+    "volume"
+   ],
+   "none": [
+    "surface|prisms?|pyramids"
+   ],
+   "years": [
+    2,
+    4
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-25.3",
+   "tool": "M-25",
+   "weight": 0.85,
+   "any": [
+    "volume"
+   ],
+   "none": [
+    "cube"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-85.1",
+   "tool": "M-85",
+   "weight": 0.9,
+   "any": [
+    "\\bperimeter\\b|\\barea\\b|rectilinear|compound shapes?"
+   ],
+   "none": [
+    "probab"
+   ],
+   "years": [
+    2,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-85.2",
+   "tool": "M-85",
+   "weight": 0.5,
+   "any": [
+    "circumference|\\bsectors?\\b|\\barcs?\\b"
+   ],
+   "years": [
+    6,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-86.1",
+   "tool": "M-86",
+   "weight": 0.85,
+   "any": [
+    "convert\\w*|conversion|compound measures?|metric units?|units? of (measure|time)|kilometres|speed|density|calculation and conversion"
+   ],
+   "none": [
+    "improper|mixed|fractions|decimals? to|percentage"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-87.1",
+   "tool": "M-87",
+   "weight": 0.9,
+   "any": [
+    "column (addition|subtraction|method)|\\bcolumn\\b",
+    "short (division|multiplication)|long (division|multiplication)",
+    "written (method|calculation)",
+    "partitioning leading to|division with remainders|multiplying and dividing by 2 digit",
+    "arithmetic procedures"
+   ],
+   "years": [
+    2,
+    8
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-87.2",
+   "tool": "M-87",
+   "weight": 0.5,
+   "any": [
+    "\\bmultiply\\w*|\\bdivid\\w+|calculat\\w+|mental strateg\\w+"
+   ],
+   "none": [
+    "fraction"
+   ],
+   "years": [
+    2,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-88.1",
+   "tool": "M-88",
+   "weight": 0.9,
+   "any": [
+    "round\\w*|estimat\\w+|\\bbounds?\\b|significant figures?|error intervals?|truncat\\w+"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-89.1",
+   "tool": "M-89",
+   "weight": 0.9,
+   "any": [
+    "percent\\w*|%|\\binterest\\b|\\bvat\\b|\\bdiscount\\b|\\bprofit\\b|depreciation|reverse percentage"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-90.1",
+   "tool": "M-90",
+   "weight": 0.9,
+   "any": [
+    "\\bsequences?\\b|nth term|term.to.term|position.to.term|fibonacci|number patterns?"
+   ],
+   "years": [
+    3,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-91.1",
+   "tool": "M-91",
+   "weight": 0.85,
+   "any": [
+    "function machines?|composite functions?|inverse functions?|functions and proof|\\bfunctions?\\b"
+   ],
+   "none": [
+    "linear function|graph"
+   ],
+   "years": [
+    6,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-92.1",
+   "tool": "M-92",
+   "weight": 0.9,
+   "any": [
+    "standard form",
+    "\\bsurds?\\b|rationalis\\w+",
+    "index laws?|indices|negative indices|powers"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-81.1",
+   "tool": "M-81",
+   "weight": 0.4,
+   "any": [
+    "calculator functionality"
+   ],
+   "years": [
+    2,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-48.2",
+   "tool": "M-48",
+   "weight": 0.5,
+   "any": [
+    "algebraic fractions"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-52.3",
+   "tool": "M-52",
+   "weight": 0.5,
+   "any": [
+    "direct and inverse proportion"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-22.3",
+   "tool": "M-22",
+   "weight": 0.6,
+   "any": [
+    "iteration|inequalities|functions and proof|simultaneous"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-21.3",
+   "tool": "M-21",
+   "weight": 0.25,
+   "any": [
+    "\\b(position|direction|turns?)\\b"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-40.3",
+   "tool": "M-40",
+   "weight": 0.25,
+   "any": [
+    "\\bnumbers?\\b|calculat\\w+"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-52.4",
+   "tool": "M-52",
+   "weight": 0.25,
+   "any": [
+    "multiplicative|equivalence|compensation"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-43.2",
+   "tool": "M-43",
+   "weight": 0.3,
+   "any": [
+    "additive|multiplicative|problems? (with|involving)|solving problems"
+   ],
+   "years": [
+    3,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-85.3",
+   "tool": "M-85",
+   "weight": 0.3,
+   "any": [
+    "shapes?|polygons?"
+   ],
+   "years": [
+    6,
+    10
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-40.4",
+   "tool": "M-40",
+   "weight": 0.2,
+   "any": [
+    "arithmetic|digit"
+   ],
+   "years": [
+    5,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-60.2",
+   "tool": "M-60",
+   "weight": 0.25,
+   "any": [
+    "thinking critically|environment|workplace|context"
+   ],
+   "years": [
+    9,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-55.2",
+   "tool": "M-55",
+   "weight": 0.25,
+   "any": [
+    "thinking critically|maths in the workplace|maths and the environment|workplace|environment"
+   ],
+   "years": [
+    9,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "maths.M-80.2",
+   "tool": "M-80",
+   "weight": 0.3,
+   "any": [
+    "workplace|environment|thinking critically"
+   ],
+   "years": [
+    9,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  }
+ ],
+ "fallback": {
+  "maths": [
+   "M-40",
+   "M-44",
+   "M-43",
+   "M-21",
+   "M-85",
+   "M-55"
+  ]
+ }
+}

@@ -1,0 +1,1158 @@
+[
+ {
+  "t": "De compras: comparatives, conversation with modal verbs (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "media and technology repaso la vida diaria y en linea",
+  "o": "I can communicate future hopes and plans in conversation using modal verbs.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-15",
+   "L-25",
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "What people do: 'faire', meaning 'go'",
+  "s": "languages",
+  "y": 7,
+  "u": "activities singular verbs in the present tense",
+  "o": "I can use 'faire' to mean 'to go' and for other present tense activities.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "What someone else is like: 'soy' and 'es'",
+  "s": "languages",
+  "y": 3,
+  "u": "me and others ser for traits",
+  "o": "I can use 'soy' and 'es' with a range of adjectives to describe what I and someone else are like in general.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-20",
+   "L-12"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Explain likes and dislikes: 'weil' vs 'denn', word order after 'weil'",
+  "s": "languages",
+  "y": 8,
+  "u": "who am i adjective agreement weil and denn",
+  "o": "I can explain what I like and don't like, giving reasons using the correct word order with 'denn' and 'weil'.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "An exchange: 'haben' and 'sein', 'Sie' vs 'du', infinitive clauses with 'zu'",
+  "s": "languages",
+  "y": 8,
+  "u": "an exchange perfect tense formal sie vs du",
+  "o": "I can distinguish between and use 'du', 'Sie' (you) and 'sie' (they), and use two-verb structures with 'zu' plus infinitive.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-04",
+   "L-22"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "In the headlines: pre- and postnominal adjectives",
+  "s": "languages",
+  "y": 8,
+  "u": "in the news plural adjectives",
+  "o": "I can use prenominal and postnominal adjectives in the context of news headlines.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-12"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "What you can and can't do: 'pouvoir' and 'savoir' singular persons",
+  "s": "languages",
+  "y": 7,
+  "u": "summer activities modal verbs in two verb structures",
+  "o": "I can use the modal verbs 'pouvoir' and 'savoir' in the singular persons to say what summer activities I can do.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "The weather: 'hacer' meaning 'be'",
+  "s": "languages",
+  "y": 6,
+  "u": "what i and others do the verb hacer",
+  "o": "I can use ‘hacer’ to describe the weather and say what I and others are doing.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-03",
+   "L-16"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "La fiesta del pueblo: -er/-ir preterite 3rd person singular and plural",
+  "s": "languages",
+  "y": 10,
+  "u": "travel and tourism fiestas y costumbres",
+  "o": "I can use -er and -ir verbs to ask and answer questions about a local festival.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-03",
+   "L-22"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "What do they have? 'Tiene' vs 'tienen'",
+  "s": "languages",
+  "y": 5,
+  "u": "what i and others have singular and plural tener",
+  "o": "I can say what others have using 'tiene' and 'tienen'.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Avec des si ... : future and conditional with -er verbs (plural)",
+  "s": "languages",
+  "y": 11,
+  "u": "studying and my future a lavenir",
+  "o": "I can use the present, future and conditional to compare where I currently live and would ideally like to live in the future.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "C'est ma passion: comparative and superlative adjectives",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle au college",
+  "o": "I can use regular and irregular comparative and superlative adjectives to express my preferences about school subjects.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-04",
+   "L-12"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "What my friends and I have: 'tengo' and 'tiene'",
+  "s": "languages",
+  "y": 3,
+  "u": "what i and others have tener and singular nouns",
+  "o": "I can use ‘tengo’ and ‘tiene’ with nouns to speak and write about belongings I and my friends have. I can distinguish between [ci] and [ca], [co], and [cu] sounds.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "A party: intonation questions, nouns and adjectives",
+  "s": "languages",
+  "y": 3,
+  "u": "what i and others have tener and singular nouns",
+  "o": "I can ask and answer questions about party items. I can differentiate [z] sounds correctly.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-07",
+   "L-04",
+   "L-05"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Sports: intonation questions with 'quel' and 'quelle'",
+  "s": "languages",
+  "y": 6,
+  "u": "what i and others do faire singular persons quest ce que",
+  "o": "I can use 'quel' and 'quelle' before a range of nouns to ask questions about what I and others are doing.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Today and yesterday: perfect tense with 1st person -er verbs + avoir",
+  "s": "languages",
+  "y": 8,
+  "u": "everyday life er verbs in the present and past",
+  "o": "I can use the perfect tense with avoir and -er verbs to say what I did.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-22",
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "School is out! Adverb placement and translation of the perfect tense",
+  "s": "languages",
+  "y": 8,
+  "u": "past events the perfect tense questions",
+  "o": "I can translate 'le passé compose' into both the perfect tense and the simple past in English, whilst placing adverbs correctly in French.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-13",
+   "L-22"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "En una fiesta de cumpleaños: modals, direct object pronouns in 2-verb structures",
+  "s": "languages",
+  "y": 10,
+  "u": "lifestyle and wellbeing la vida de todos los dias",
+  "o": "I can use use the modal verbs ‘querer’, ‘poder’, ‘deber’ and ‘tener que' to talk about a birthday party.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-03",
+   "L-04"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Das Wattenmeer: present tense weak and strong verbs, reflexives",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us mein wohnort",
+  "o": "I can use a range of weak, strong and reflexive verbs in the present tense to understand texts about and to describe new places.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Activities: -ar infinitive verbs",
+  "s": "languages",
+  "y": 3,
+  "u": "what i and others do singular regular verbs in the present tense",
+  "o": "I can use a number of -ar infinitive verbs to talk about activities in the classroom.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-03",
+   "L-05"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Des francophones célèbres : reading aloud, reading comprehension (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us revisions personnes et lieux",
+  "o": "I can understand reading comprehension texts about famous French speakers.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-24",
+   "L-08"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Castellón: write about where you live",
+  "s": "languages",
+  "y": 7,
+  "u": "places definite articles plural adjective agreement",
+  "o": "I can write a text about where I live using definite, indefinite articles and adjective agreements.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-14",
+   "L-10",
+   "L-12"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Good and bad experiences: feminine adjective agreement",
+  "s": "languages",
+  "y": 8,
+  "u": "friends and family comparison with adjectives and adverbs",
+  "o": "I know how to make adjectives feminine, in order to accurately describe and compare masculine and feminine nouns.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-12"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "On peut acheter : present tense modal verbs",
+  "s": "languages",
+  "y": 11,
+  "u": "popular culture la vie quotidienne",
+  "o": "I can use modals in the present tense to describe what we can, want and must do on a shopping trip.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Free time: -er and -ir verbs 2nd person singular",
+  "s": "languages",
+  "y": 8,
+  "u": "activities in and out of school er and ir verbs",
+  "o": "I can use the preterite of -er and -ir verbs to talk about free time.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "What you are like: singular regular adjective agreement",
+  "s": "languages",
+  "y": 3,
+  "u": "me and others singular etre and regular adjectives",
+  "o": "I can use 'être' with adjectives to make simple statements about myself and questions about others.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-12",
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Improve your lifestyle: modal 2-verb structures and pronoun 'man'",
+  "s": "languages",
+  "y": 7,
+  "u": "improve your lifestyle modal verbs mussen durfen wollen",
+  "o": "I can differentiate between uses of 'können' and 'dürfen' to express 'can', and discuss healthy lifestyles with others using modal verbs and 'man'.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-04",
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "New daily routines: reflexive pronoun 'se'",
+  "s": "languages",
+  "y": 9,
+  "u": "refugees in france reflexive verbs",
+  "o": "I can use a range of vocabulary, direct object pronouns and reflexive pronouns in the singular form to describe daily life for refugees in France.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Food shopping: partitive articles 'du, de la, de l', des'",
+  "s": "languages",
+  "y": 8,
+  "u": "everyday activities preposition de partitive frequent ir and re verbs",
+  "o": "I can describe what I buy and eat using the partitive and indefinite articles.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-10"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Sports: 'faire' singular persons with sports",
+  "s": "languages",
+  "y": 6,
+  "u": "what i and others do faire singular persons quest ce que",
+  "o": "I can use singular ‘faire’ to express which sports and activities I and others do or make.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "At a market: demonstrative adjectives 'esos' and 'esas'",
+  "s": "languages",
+  "y": 9,
+  "u": "friends ser estar and demonstrative adjectives",
+  "o": "I can use singular and plural demonstrative adjectives to ask and answer questions while shopping at the market.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-10",
+   "L-25"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "A trip to Barcelona: 'voy', 'vas' and 'estás' with 'en', 'al' and 'a la'",
+  "s": "languages",
+  "y": 6,
+  "u": "cities and festivals to go to have present tense",
+  "o": "I can use the verbs ‘ir’ and ‘estar’ followed by the correct preposition to describe a trip to Barcelona.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-03",
+   "L-20"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Past and future goals: revisiting tenses and word order, translation skills",
+  "s": "languages",
+  "y": 9,
+  "u": "past ambitions and future goals past present and word order",
+  "o": "I can understand and translate texts on past achievements and future goals, applying knowledge of perfect and present tenses, present and imperfect modals, and word order.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-13",
+   "L-04",
+   "L-22"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Freiwilligenarbeit: direct and indirect object pronouns, position of objects",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us mein wohnort",
+  "o": "I can understand and use direct and indirect object pronouns and nouns in the context of voluntary work and adventures abroad.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "A new home and new neighbours: word patterns and word order",
+  "s": "languages",
+  "y": 8,
+  "u": "new home adjective endings in nominative accusative and dative",
+  "o": "I can use a growing vocabulary to talk about a new home and new neighbours, varying word order to emphasise specific ideas in my responses to questions.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Un evento deportivo: -er/-ir preterite, 'tú/vosotros', 'tu/vuestro'",
+  "s": "languages",
+  "y": 10,
+  "u": "my personal world la vida fuera y dentro del colegio",
+  "o": "I can use regular and irregular verbs in the preterite to describe sports events.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "People and places in Mexico: possessive adjective 'su'",
+  "s": "languages",
+  "y": 9,
+  "u": "everyday life possessive adjectives pronouns",
+  "o": "I can understand the different uses of the possessive adjective 'su' in the context of learning about people and places in Mexico.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-10"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Today vs. in general: 'son' and 'están'",
+  "s": "languages",
+  "y": 5,
+  "u": "me and others plural estar for states and ser for traits",
+  "o": "I can say how people are, today and in general.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-20"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Barcelona: 'desde', 'desde hace' vs 'hace', phrases with 'llevar'",
+  "s": "languages",
+  "y": 10,
+  "u": "travel and tourism nuevos lugares",
+  "o": "I can understand a range of structures to talk about how long I've been doing something.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-03",
+   "L-04"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Festival experiences: comparatives 'más que' and 'menos que'",
+  "s": "languages",
+  "y": 8,
+  "u": "family and friends possessive adjectives comparatives",
+  "o": "I can use the comparatives 'más … que' and 'menos … que' to compare other people's experiences at a music festival.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "De compras: conversation practice, role-play",
+  "s": "languages",
+  "y": 11,
+  "u": "lifestyle and wellbeing de compras",
+  "o": "I can perform a role-play in a shop and answer questions about shopping.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-15",
+   "L-25"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Deutschland: adjective endings, conversation (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "people and lifestyle menschen und orte",
+  "o": "I can categorise vocabulary to aid mastery, accurately apply adjective endings and take part confidently in a conversation about places to live.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-11",
+   "L-12",
+   "L-15"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Une démocratie : creating nouns by adding -ion or -ation to the verb stem",
+  "s": "languages",
+  "y": 11,
+  "u": "popular culture communication and the world around us la culture francophone",
+  "o": "I can recognise new nouns by relating them to known verbs and can begin to use both to understand political contexts.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-05"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "What there is at home and school: 'hay', 'unos' and 'unas'",
+  "s": "languages",
+  "y": 7,
+  "u": "life at school and home negation with no plural nouns",
+  "o": "I can use ‘hay’ and ‘tener’ to describe what there is around me.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-10",
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "In the classroom: 'ils' and 'elles' meaning 'they' for nouns",
+  "s": "languages",
+  "y": 5,
+  "u": "me and others plural etre and regular adjectives",
+  "o": "I can write sentences describing nouns using the pronouns 'ils' and 'elles'.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-10",
+   "L-04",
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Friendship: plural definite article 'les'",
+  "s": "languages",
+  "y": 4,
+  "u": "what i and others like doing 2 verb phrases",
+  "o": "I can give my opinion in French using the plural definite article 'les'.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-10"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Pequeños grandes cambios: perfect and present tenses",
+  "s": "languages",
+  "y": 11,
+  "u": "travel and tourism lugares y personas famosos",
+  "o": "I can use the present and perfect tenses to talk about small changes that have a big impact on our lives.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-22",
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Summer experiences: -ar verbs 1st person present and past",
+  "s": "languages",
+  "y": 8,
+  "u": "contrasting past and present events ar verbs singular persons",
+  "o": "I can say what I normally do and what I did in the summer.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "How are you today and usually? 'Estar' for states and 'ser' for traits",
+  "s": "languages",
+  "y": 5,
+  "u": "me and others singular estar for states and ser for traits",
+  "o": "I can say how I and others are today and usually using 'estar' and 'ser'.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-20"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Magst du Musik? Nominalisation of infinitives with 'beim' and 'am'",
+  "s": "languages",
+  "y": 10,
+  "u": "communication and the world around us mein leben online",
+  "o": "I can use infinitive verbs as nouns with 'beim' and 'am' alongside a wide range of vocabulary to discuss musical preferences and understand texts about German music.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-11",
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Una vida más sana: read aloud, picture task, conversation (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "lifestyle and wellbeing repaso consejos de vida",
+  "o": "I can confidently complete two parts of the Spanish speaking exam: read aloud and photo description.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-08",
+   "L-15"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "What you used to do: perfect tense with 'ihr' (you, familiar pl.) and 'früher'",
+  "s": "languages",
+  "y": 9,
+  "u": "past lives perfect and imperfect tenses",
+  "o": "I know how to form and use the perfect tense in German, including the 'ihr' form, to discuss past events with other people.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-22",
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Greetings and location:  'wo' and singular definite articles",
+  "s": "languages",
+  "y": 7,
+  "u": "in the classroom sein nouns indefinite articles questions",
+  "o": "I can greet a teacher or friend, ask and answer about where someone is, and recognise the definite article 'the'.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-10",
+   "L-04",
+   "L-09"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "A school exchange: verbs with 'an', 'auf', 'für', 'vor', reflexive verbs",
+  "s": "languages",
+  "y": 9,
+  "u": "school exchange verbs with prepositions",
+  "o": "I can use reflexive pronouns with reflexive verbs, and understand that some verbs need prepositions to link them to a noun.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-11"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Fairy tales: diminutives, singular imperfect tense",
+  "s": "languages",
+  "y": 9,
+  "u": "narrating a story imperfect tense",
+  "o": "I can use strong and weak verbs in the imperfect tense for storytelling.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Poem: understand and respond creatively",
+  "s": "languages",
+  "y": 7,
+  "u": "what we have tener plural persons plural adjectives",
+  "o": "I can use ‘dar’, ‘querer’ and other language I know to adapt a poem in my speaking and writing.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-24",
+   "L-18",
+   "L-14"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "What you did when on Sylt: perfect tense, telling the time: half past the hour",
+  "s": "languages",
+  "y": 8,
+  "u": "past events perfect and imperfect tenses adjective agreement and comparatives",
+  "o": "I can talk about what happened in the past and give the time it happened using ‘halb’ to mean half past.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-22",
+   "L-16"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Una comida española: subjunctive after commands and requests",
+  "s": "languages",
+  "y": 11,
+  "u": "my personal world influencias",
+  "o": "I can use the subjunctive after verbs of command and request to suggest or ask others to do something, especially when planning a meal.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "All about me: presenting myself in French",
+  "s": "languages",
+  "y": 5,
+  "u": "what i and others have plural avoir and nouns",
+  "o": "I can present myself in French, sharing my age, my birthday, where I live and what I look like.",
+  "p": "french-primary-ks2",
+  "expect": [
+   "L-16",
+   "L-14",
+   "L-15"
+  ],
+  "not": [
+   "L-20",
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Du siehst nicht krank aus: word order in 2-verb structures with conjunctions",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us meine welt",
+  "o": "I can use word order 1 and 3 with two-verb structures when talking about the challenges of daily life for people with illnesses whose symptoms are often unseen.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Una vida más sana: impersonal verbs, conditional, extended writing (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "lifestyle and wellbeing repaso consejos de vida",
+  "o": "I can complete a range writing tasks on the topic of healthy lifestyles.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-14"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Opinions about school: singular 'finden', 'ihn', 'sie', 'es', 'sie' (plural)",
+  "s": "languages",
+  "y": 7,
+  "u": "opinions about school mogen finden and object pronouns",
+  "o": "I can say what I, you or another person think about school using the verb 'finden' and object pronouns.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-04",
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "How's it going? 'Wie' and the singular indefinite articles 'ein', 'eine', 'ein'",
+  "s": "languages",
+  "y": 7,
+  "u": "in the classroom sein nouns indefinite articles questions",
+  "o": "I can use the question word 'Wie?' to ask how things are going and can use the indefinite articles 'ein', 'eine' and 'ein' in contrast to the definite articles 'der', 'die', 'das'.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-10"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Berufe: 'werden' + infinitive, wh-questions in future and conditional tenses",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle aufwachsen altersgrenzen und zukunftsplane",
+  "o": "I can use 'werden' with the infinitive to discuss my future plans.",
+  "p": "german-secondary-ks4-aqa",
+  "expect": [
+   "L-03",
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Where are my things? 'mi', 'tu' and adverbs of position",
+  "s": "languages",
+  "y": 9,
+  "u": "everyday life possessive adjectives pronouns",
+  "o": "I can use possessive adjectives and adverbs of position to ask and answer questions about where my and your things are.",
+  "p": "spanish-secondary-ks3",
+  "expect": [
+   "L-10",
+   "L-04"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "Places and people: now or then? Imperfect tense: 'war', 'hatte', 'gab'",
+  "s": "languages",
+  "y": 8,
+  "u": "then and now imperfect tense and comparatives",
+  "o": "I can compare the past with now using the imperfect tense words ‘war’, ‘hatte’ and ‘es gab’.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "De compras: direct object pronouns, role-play (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "media and technology repaso la vida diaria y en linea",
+  "o": "I can use direct object pronouns and respond to role-play scenarios in the context of shopping.",
+  "p": "spanish-secondary-ks4-aqa",
+  "expect": [
+   "L-15",
+   "L-04"
+  ],
+  "not": [
+   "L-11"
+  ]
+ },
+ {
+  "t": "L'histoire du Québec : pronouns, extended reading (AQA)",
+  "s": "languages",
+  "y": 11,
+  "u": "communication and the world around us revisions la vie en francophonie",
+  "o": "I can understand a range of different pronouns describing different people's and places' roles in the history of Quebec.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-24",
+   "L-04"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Weekday routine: inversion questions, negation",
+  "s": "languages",
+  "y": 8,
+  "u": "everyday life er verbs in the present and past",
+  "o": "I can use inversion and negation to ask and answer questions about my everyday activities.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-21",
+   "L-04"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "School in France - then and now: -er verbs imperfect tense",
+  "s": "languages",
+  "y": 9,
+  "u": "how things used to be imperfect tense ordinal numbers",
+  "o": "I can understand and use the imperfect tense in the 1st person to describe what I do now and used to do in the context of school.",
+  "p": "french-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "The vowels: [a] [e] [i] [o] [u]: classroom instructions",
+  "s": "languages",
+  "y": 4,
+  "u": "in class infinitive verbs estar plus location state",
+  "o": "I can recognise and understand instructions in the classroom.",
+  "p": "spanish-primary-ks2",
+  "expect": [
+   "L-07",
+   "L-09"
+  ],
+  "not": [
+   "L-11",
+   "L-13"
+  ]
+ },
+ {
+  "t": "Le chef : voir, boire, croire and faire in present, the imperative",
+  "s": "languages",
+  "y": 10,
+  "u": "people and lifestyle au boulot",
+  "o": "I can use a range of irregular present tense verbs to describe people's roles at work and I can recognise the imperative.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Mon temps libre: subject pronouns, -er verbs and 'aimer' + infinitive",
+  "s": "languages",
+  "y": 10,
+  "u": "popular culture mes interets",
+  "o": "I can talk about what I do and what I like doing in my free time.",
+  "p": "french-secondary-ks4-aqa",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20",
+   "L-11"
+  ]
+ },
+ {
+  "t": "Compare lifestyles: present tense strong verbs 1st and 3rd person singular",
+  "s": "languages",
+  "y": 7,
+  "u": "friends and family weak and strong verbs singular and 3rd person plural",
+  "o": "I can recognise stem changes in strong verbs between the 1st and 3rd person singular forms, and I can understand short texts which contain familiar weak, irregular and strong verbs.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Places you like and prefer: verbs + indirect object, 'gefallen', 'mögen'",
+  "s": "languages",
+  "y": 9,
+  "u": "ambitions and destinations mogen mocht past tenses",
+  "o": "I can express likes and preferences using 'mögen' with a subject and 'gefallen' with an indirect object.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-03",
+   "L-04"
+  ],
+  "not": [
+   "L-20"
+  ]
+ },
+ {
+  "t": "Migrant experiences: noun suffixes, ‘welch-’",
+  "s": "languages",
+  "y": 9,
+  "u": "past lives and experiences imperfect modal verbs",
+  "o": "I can use the suffix '-keit', and can read and respond to texts in the context of migrant experiences in Germany.",
+  "p": "german-secondary-ks3",
+  "expect": [
+   "L-05",
+   "L-24",
+   "L-10"
+  ],
+  "not": [
+   "L-20"
+  ]
+ }
+]

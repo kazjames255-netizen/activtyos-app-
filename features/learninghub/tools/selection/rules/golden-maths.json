@@ -1,0 +1,1267 @@
+[
+ {
+  "t": "Explore the numbers 6 to 10 using the parts and wholes on a number line",
+  "s": "maths",
+  "y": 1,
+  "u": "composition of numbers 6 to",
+  "o": "I can identify the whole and parts of the numbers 6 to 10 using a part-part-whole model and number line.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54",
+   "M-43"
+  ]
+ },
+ {
+  "t": "Partition the numbers 6 and 7 in different ways",
+  "s": "maths",
+  "y": 1,
+  "u": "composition of numbers 6 to",
+  "o": "I can partition the numbers 6 and 7 in different ways.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54",
+   "M-41",
+   "M-42"
+  ]
+ },
+ {
+  "t": "Finding the missing numbers",
+  "s": "maths",
+  "y": 1,
+  "u": "counting recognising and comparing numbers 0",
+  "o": "You can work out what the missing number is on a number track or number line.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-40",
+   "M-45"
+  ]
+ },
+ {
+  "t": "One less with manipulatives and counting",
+  "s": "maths",
+  "y": 1,
+  "u": "counting recognising and comparing numbers 0",
+  "o": "I can find one less from a group using manipulatives and counting.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-45",
+   "M-40",
+   "M-54"
+  ]
+ },
+ {
+  "t": "Measure items using centimetre cubes and record results in a table",
+  "s": "maths",
+  "y": 1,
+  "u": "numbers 0 to 20 in different contexts",
+  "o": "I can measure length accurately and efficiently using centimetre cubes and record my measurements in a table.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-01",
+   "M-84"
+  ]
+ },
+ {
+  "t": "Measure length using objects",
+  "s": "maths",
+  "y": 1,
+  "u": "numbers 0 to 20 in different contexts",
+  "o": "I can measure length, including height, by using different objects and explain how to do this accurately.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-01",
+   "M-84"
+  ]
+ },
+ {
+  "t": "Crossing the tens boundary counting backwards",
+  "s": "maths",
+  "y": 1,
+  "u": "pattern in counting from 20 to",
+  "o": "I can count backwards within 100, crossing the tens boundary.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-45",
+   "M-40"
+  ]
+ },
+ {
+  "t": "Recognise, describe and sort 3D shapes",
+  "s": "maths",
+  "y": 1,
+  "u": "recognise compose decompose and manipulate 2d and 3d shapes",
+  "o": "I can recognise, describe and sort 3D shapes.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-25"
+  ]
+ },
+ {
+  "t": "Tetrominoes and pentominoes",
+  "s": "maths",
+  "y": 1,
+  "u": "recognise compose decompose and manipulate 2d and 3d shapes",
+  "o": "I can explore, discuss and compare tetrominoes and pentominoes.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-27"
+  ]
+ },
+ {
+  "t": "Use language relating to days, weeks, months and years",
+  "s": "maths",
+  "y": 1,
+  "u": "time sequencing events and telling the time to the hour and half hour",
+  "o": "I can use weeks, months and years to describe events.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-82"
+  ]
+ },
+ {
+  "t": "Calculate the total value of the coins in a set of 10p coins",
+  "s": "maths",
+  "y": 1,
+  "u": "unitising and coin recognition value of a set of coins",
+  "o": "I can skip count in tens to find the value of a set of 10 p coins.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-83",
+   "M-45"
+  ]
+ },
+ {
+  "t": "Count efficiently in groups of ten",
+  "s": "maths",
+  "y": 1,
+  "u": "unitising and coin recognitions counting in 2s 5s and 10s",
+  "o": "I can count in groups of ten and identify how many groups there are.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-45",
+   "M-42",
+   "M-41"
+  ]
+ },
+ {
+  "t": "Add and subtract 1 to and from a 2-digit number crossing the tens boundary",
+  "s": "maths",
+  "y": 2,
+  "u": "adding and subtracting ones and tens to and from 2 digit numbers",
+  "o": "I can add and subtract one to and from a two-digit number crossing the tens boundary.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54",
+   "M-40",
+   "M-45"
+  ]
+ },
+ {
+  "t": "Subtract by bridging a multiple of ten",
+  "s": "maths",
+  "y": 2,
+  "u": "adding and subtracting ones and tens to and from 2 digit numbers",
+  "o": "I can bridge ten to subtract single digit numbers from two-digit numbers.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54",
+   "M-40"
+  ]
+ },
+ {
+  "t": "Represent multiples of ten using their numerals and names",
+  "s": "maths",
+  "y": 2,
+  "u": "composition of multiples of",
+  "o": "I can represent multiples of ten using numbers and names.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-42",
+   "M-41",
+   "M-45"
+  ]
+ },
+ {
+  "t": "Recognise and name the fraction \u2018one-third\u2019",
+  "s": "maths",
+  "y": 2,
+  "u": "fractions identify equal parts and be familiar with halves thirds and quarters",
+  "o": "I can name the fraction \u2018one-third\u2019 in relation to a fraction of an object, shape or set of objects and explain how I know that it is a third.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Explore combinations of coins that total the same amount",
+  "s": "maths",
+  "y": 2,
+  "u": "money recognise coins and use and p symbols",
+  "o": "I can recognise and find different combinations of coins that total the same amount.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-83"
+  ]
+ },
+ {
+  "t": "Solve problems involving position, direction and rotation",
+  "s": "maths",
+  "y": 2,
+  "u": "position and direction",
+  "o": "I can give and follow directions involving movements to the left and right, forwards and backwards and turning clockwise and anticlockwise.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-21",
+   "M-23"
+  ]
+ },
+ {
+  "t": "Compare and order measurements of volume and capacity",
+  "s": "maths",
+  "y": 2,
+  "u": "sense of measure capacity volume and mass",
+  "o": "I can compare and order measurements of volume and capacity.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-84"
+  ]
+ },
+ {
+  "t": "Scale known multiplication facts by 10",
+  "s": "maths",
+  "y": 3,
+  "u": "2 4 and 8 times tables using times tables to solve problems",
+  "o": "I can use unitising and multiplying by 10 to scale multiplication facts.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-46"
+  ]
+ },
+ {
+  "t": "Use knowledge of the divisibility rules for divisors 8 to solve problems",
+  "s": "maths",
+  "y": 3,
+  "u": "2 4 and 8 times tables using times tables to solve problems",
+  "o": "I can solve problems using knowledge of the divisibility rules for 8",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-46"
+  ]
+ },
+ {
+  "t": "Use parts and wholes to find a unit fraction of a set of objects",
+  "s": "maths",
+  "y": 3,
+  "u": "calculate the value of a part fractions as operators",
+  "o": "I can use knowledge of parts and wholes to find a unit fraction of a set of objects.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-43"
+  ]
+ },
+ {
+  "t": "Understanding capacity and volume",
+  "s": "maths",
+  "y": 3,
+  "u": "measures mass and capacity",
+  "o": "I can understand and use capacity and volume.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-84"
+  ]
+ },
+ {
+  "t": "Compare non-unit fractions with the same denominator",
+  "s": "maths",
+  "y": 3,
+  "u": "non unit fractions",
+  "o": "I can compare non-unit fractions with the same denominator.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Review comparing unit fractions",
+  "s": "maths",
+  "y": 3,
+  "u": "non unit fractions",
+  "o": "I can compare unit fractions.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Subtracting numbers that bridge through 10",
+  "s": "maths",
+  "y": 3,
+  "u": "review strategies for adding and subtracting across",
+  "o": "I can subtract through 10 using bridging.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-54",
+   "M-40"
+  ]
+ },
+ {
+  "t": "Investigate the shapes made when rectangles are cut on the diagonal",
+  "s": "maths",
+  "y": 3,
+  "u": "right angles",
+  "o": "I can describe the shapes made when rectangles are cut on the diagonal.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-05",
+   "M-09",
+   "M-25"
+  ]
+ },
+ {
+  "t": "Composition of 100 in 50s, 25s and 20s",
+  "s": "maths",
+  "y": 3,
+  "u": "securing place value to 100 and applying to addition and subtraction",
+  "o": "I can compose 100 in 50s, 25s and 20s.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-41",
+   "M-42",
+   "M-83"
+  ]
+ },
+ {
+  "t": "Explain how a mixed number is converted into an improper fraction",
+  "s": "maths",
+  "y": 4,
+  "u": "convert improper fractions to mixed numbers and vice versa",
+  "o": "I can explain how a mixed number is converted into an improper fraction.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Describe translations of polygons drawn on a square grid",
+  "s": "maths",
+  "y": 4,
+  "u": "coordinates",
+  "o": "I can describe translations of polygons drawn on a square grid.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-23",
+   "M-21"
+  ]
+ },
+ {
+  "t": "Choose efficient approaches when subtracting mixed numbers",
+  "s": "maths",
+  "y": 4,
+  "u": "efficient strategies for adding and subtracting mixed numbers crossing a whole",
+  "o": "I can choose efficient approaches when subtracting mixed numbers.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Know that the perimeter is the distance around a 2D shape",
+  "s": "maths",
+  "y": 4,
+  "u": "perimeter",
+  "o": "I know that the perimeter is the distance around a 2D shape.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-85"
+  ]
+ },
+ {
+  "t": "Explain the relationship between pairs of 3 and 9 times table facts that have the same product",
+  "s": "maths",
+  "y": 4,
+  "u": "relationship between the 3 and 9 times tables",
+  "o": "I can explain the relationship between pairs of 3 and 9 times table facts that have the same product.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-46"
+  ]
+ },
+ {
+  "t": "Review using column addition to add 2- and 3-digit numbers by regrouping ones",
+  "s": "maths",
+  "y": 4,
+  "u": "review of column addition and subtraction roman numerals",
+  "o": "I can use column addition including regrouping ones.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-87"
+  ]
+ },
+ {
+  "t": "Explain which is the most efficient factor to partition to solve a multiplication problem",
+  "s": "maths",
+  "y": 4,
+  "u": "understand and represent multiplicative structures",
+  "o": "I can explain which is the most efficient factor to partition to solve a multiplication problem.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-87",
+   "M-46"
+  ]
+ },
+ {
+  "t": "Explain how making a factor 100 times the size affects the product",
+  "s": "maths",
+  "y": 4,
+  "u": "understand what happens when a number is multiplied or divided by 10 and",
+  "o": "I can explain how making a factor 100 times the size affects the product.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-41",
+   "M-46"
+  ]
+ },
+ {
+  "t": "Multiply tenths by whole numbers",
+  "s": "maths",
+  "y": 5,
+  "u": "calculating with decimal fractions",
+  "o": "I can use known multiplication facts and unitising to multiply tenths by whole numbers.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-41",
+   "M-87"
+  ]
+ },
+ {
+  "t": "Recall common fraction-decimal equivalents",
+  "s": "maths",
+  "y": 5,
+  "u": "comparing fractions using equivalence and decimals",
+  "o": "I can recall common fraction - decimal equivalents.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-41"
+  ]
+ },
+ {
+  "t": "Find the whole when the size of a non-unit fraction is known",
+  "s": "maths",
+  "y": 5,
+  "u": "find unit and non unit fractions of whole numbers exploring parts and wholes",
+  "o": "I can find the whole when the size of a non-unit fraction is known.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44",
+   "M-43"
+  ]
+ },
+ {
+  "t": "Calculate missing dimensions in rectangles and compound rectilinear shapes",
+  "s": "maths",
+  "y": 5,
+  "u": "link area of rectangles to multiplication",
+  "o": "I can calculate missing dimensions in rectangles and compound rectilinear shapes.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-85"
+  ]
+ },
+ {
+  "t": "Interpret sets of negative and positive numbers in a range of contexts",
+  "s": "maths",
+  "y": 5,
+  "u": "negative numbers",
+  "o": "I can interpret sets of negative and positive numbers in a range of contexts.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-40",
+   "M-47"
+  ]
+ },
+ {
+  "t": "Explain how to identify a prime factor of a number",
+  "s": "maths",
+  "y": 5,
+  "u": "understand and use the concept of factorisation square and prime numbers",
+  "o": "I can explain how to identify a prime factor of a number.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-51"
+  ]
+ },
+ {
+  "t": "Describe and write decimal numbers with hundredths in different ways",
+  "s": "maths",
+  "y": 5,
+  "u": "understand hundredths as parts of a whole and represent",
+  "o": "I can describe and write decimal numbers with hundredths in different ways.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-41",
+   "M-44"
+  ]
+ },
+ {
+  "t": "Explain how to identify common factors between two or more numbers",
+  "s": "maths",
+  "y": 5,
+  "u": "use common factors and multiples to solve calculations efficiently",
+  "o": "I can explain how to identify common factors between two or more numbers.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-51"
+  ]
+ },
+ {
+  "t": "Solve problems involving missing coordinates",
+  "s": "maths",
+  "y": 6,
+  "u": "area perimeter position and direction",
+  "o": "I can solve problems involving missing coordinates",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-21"
+  ]
+ },
+ {
+  "t": "Explain how to compare pairs of non-related fractions by comparing to a half",
+  "s": "maths",
+  "y": 6,
+  "u": "comparing fractions",
+  "o": "I can explain how to compare pairs of non-related fractions by comparing to a half.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Position five-digit multiples of 1,000 on a marked but unlabelled number line",
+  "s": "maths",
+  "y": 6,
+  "u": "multiples of 1",
+  "o": "I can position five-digit multiples of one thousand on a marked but unlabelled number line.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-40",
+   "M-88"
+  ]
+ },
+ {
+  "t": "Use multiplication and division to calculate unknown values in ratio problems",
+  "s": "maths",
+  "y": 6,
+  "u": "ratio and proportion",
+  "o": "You can use multiplication and division to calculate unknown values in ratio problems.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-52"
+  ]
+ },
+ {
+  "t": "Use a bar model to represent spatial problems with two unknowns",
+  "s": "maths",
+  "y": 6,
+  "u": "solving problems with two unknowns",
+  "o": "I can use a bar model to represent spatial problems with two unknowns.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-43"
+  ]
+ },
+ {
+  "t": "Deepening understanding of multiplication with fractions",
+  "s": "maths",
+  "y": 7,
+  "u": "arithmetic procedures with fractions",
+  "o": "I can generalise and fluently use strategies to multiply with mixed numbers.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-44"
+  ]
+ },
+ {
+  "t": "Multiplication and division where only one value is negative",
+  "s": "maths",
+  "y": 7,
+  "u": "arithmetic procedures with integers and decimals",
+  "o": "I can use the mathematical structures that underpin multiplication and division of one or more positive integers with one negative integer.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-47",
+   "M-40"
+  ]
+ },
+ {
+  "t": "Generalised algebraic statements",
+  "s": "maths",
+  "y": 7,
+  "u": "expressions and equations",
+  "o": "I can use relationships that have been generalised using algebraic statements.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-55"
+  ]
+ },
+ {
+  "t": "Checking understanding of perimeter and area",
+  "s": "maths",
+  "y": 7,
+  "u": "perimeter and area",
+  "o": "I can explain the properties of various polygons.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-85"
+  ]
+ },
+ {
+  "t": "Perimeter with composite rectilinear shapes",
+  "s": "maths",
+  "y": 7,
+  "u": "perimeter and area",
+  "o": "I can use the properties of a range of polygons to deduce the perimeters of compound shapes, including generalising a perimeter formula where appropriate.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-85"
+  ]
+ },
+ {
+  "t": "Checking understanding of place value in integers",
+  "s": "maths",
+  "y": 7,
+  "u": "place value",
+  "o": "I can use my understanding of place value to create numbers that meet certain conditions.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-41",
+   "M-40"
+  ]
+ },
+ {
+  "t": "Plotting a relationship",
+  "s": "maths",
+  "y": 7,
+  "u": "plotting coordinates",
+  "o": "I can use a graphical representation to show all of the points (within a range) that satisfy a relationship.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-21",
+   "M-22"
+  ]
+ },
+ {
+  "t": "Divisibility tests for 5 and 10",
+  "s": "maths",
+  "y": 7,
+  "u": "properties of number factors multiples squares and cubes",
+  "o": "I can identify and explain whether a number is or is not a multiple of a given integer.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-51",
+   "M-46"
+  ]
+ },
+ {
+  "t": "Highest common factor",
+  "s": "maths",
+  "y": 7,
+  "u": "properties of number factors multiples squares and cubes",
+  "o": "I can use the prime factorisation of two or more positive integers to efficiently identify the highest common factor.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-51"
+  ]
+ },
+ {
+  "t": "Lowest common multiple",
+  "s": "maths",
+  "y": 7,
+  "u": "properties of number factors multiples squares and cubes",
+  "o": "I can use the prime factorisation of two or more positive integers to efficiently find their lowest common multiple.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-51"
+  ]
+ },
+ {
+  "t": "Square and cube numbers",
+  "s": "maths",
+  "y": 7,
+  "u": "properties of number factors multiples squares and cubes",
+  "o": "I can explain the concept of squared and cubed numbers and calculate them.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-51",
+   "M-92"
+  ]
+ },
+ {
+  "t": "Introduction to rotations",
+  "s": "maths",
+  "y": 7,
+  "u": "transformations",
+  "o": "I can understand the nature of rotations and appreciate what changes and what is invariant.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-23"
+  ]
+ },
+ {
+  "t": "Translating objects",
+  "s": "maths",
+  "y": 7,
+  "u": "transformations",
+  "o": "I can translate objects from information given in a variety of forms.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-23"
+  ]
+ },
+ {
+  "t": "Co-interior angles",
+  "s": "maths",
+  "y": 8,
+  "u": "geometrical properties polygons",
+  "o": "I can recognise that a pair of parallel lines traversed by a straight line produces supplementary co-interior angles.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-09"
+  ]
+ },
+ {
+  "t": "Interpreting scatter graphs",
+  "s": "maths",
+  "y": 8,
+  "u": "graphical representations of data",
+  "o": "I can interpret scatter graphs using the data points shown.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-60"
+  ]
+ },
+ {
+  "t": "The intercept point",
+  "s": "maths",
+  "y": 8,
+  "u": "graphical representations of linear equations",
+  "o": "I can calculate the intercept point from a graph and from two coordinate pairs.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-22"
+  ]
+ },
+ {
+  "t": "Checking understanding of the mean",
+  "s": "maths",
+  "y": 8,
+  "u": "numerical summaries of data",
+  "o": "I can understand what the mean is measuring, how it is measuring it and calculate the mean from data presented in a list.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-65"
+  ]
+ },
+ {
+  "t": "Checking understanding of perimeter",
+  "s": "maths",
+  "y": 8,
+  "u": "perimeter area and volume",
+  "o": "I can find the perimeter of many polygons or compound shapes.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-85"
+  ]
+ },
+ {
+  "t": "Brackets in equations",
+  "s": "maths",
+  "y": 8,
+  "u": "solving linear equations",
+  "o": "I can appreciate the significance of the bracket in an equation.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-50"
+  ]
+ },
+ {
+  "t": "Using the fx-991CW for number and algebra",
+  "s": "maths",
+  "y": 9,
+  "u": "calculator functionality",
+  "o": "I can use the fx-991CW to perform calculations with numbers and solve equations numerically.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-80"
+  ]
+ },
+ {
+  "t": "Demonstrating Pythagoras' theorem",
+  "s": "maths",
+  "y": 9,
+  "u": "geometrical properties similarity and pythagoras theorem",
+  "o": "I can appreciate there is a relationship between the lengths of the sides of a right-angled triangle.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-12"
+  ]
+ },
+ {
+  "t": "Length of a shorter side",
+  "s": "maths",
+  "y": 9,
+  "u": "geometrical properties similarity and pythagoras theorem",
+  "o": "I can use Pythagoras' theorem to find the length of one of the shorter sides.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-12"
+  ]
+ },
+ {
+  "t": "Using an outcome tree to display outcomes for two events",
+  "s": "maths",
+  "y": 9,
+  "u": "probability possible outcomes",
+  "o": "I can systematically find all the possible outcomes for two events by using an outcome tree diagram.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-62",
+   "M-63"
+  ]
+ },
+ {
+  "t": "Sine and cosine ratios",
+  "s": "maths",
+  "y": 9,
+  "u": "trigonometry",
+  "o": "I can derive the sine and cosine ratios from the sides of a right-angled triangle.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-12"
+  ],
+  "not": [
+   "M-09"
+  ]
+ },
+ {
+  "t": "Reverse bearings",
+  "s": "maths",
+  "y": 10,
+  "u": "bearings",
+  "o": "I can work out the bearing of point A from point B, given the bearing of point B from point A.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-10"
+  ]
+ },
+ {
+  "t": "Checking and securing understanding of congruence and similarity",
+  "s": "maths",
+  "y": 10,
+  "u": "further transformations",
+  "o": "I can identify (by eye) which shapes are congruent, similar or neither.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-52",
+   "M-23"
+  ]
+ },
+ {
+  "t": "Drawing cubic graphs",
+  "s": "maths",
+  "y": 10,
+  "u": "non linear graphs",
+  "o": "I can generate coordinate pairs for a cubic graph from its equation and then draw the graph.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-22"
+  ]
+ },
+ {
+  "t": "Checking and securing understanding of percentage increase",
+  "s": "maths",
+  "y": 10,
+  "u": "percentages",
+  "o": "I can increase an amount by a given percentage.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-89"
+  ]
+ },
+ {
+  "t": "Combining ratios",
+  "s": "maths",
+  "y": 10,
+  "u": "ratio",
+  "o": "I can combine ratios.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-52"
+  ]
+ },
+ {
+  "t": "Checking and securing understanding of the unit circle",
+  "s": "maths",
+  "y": 10,
+  "u": "right angled trigonometry",
+  "o": "I can see how the trigonometric functions are derived from measurements within a unit circle and how this can be utilised.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-12"
+  ]
+ },
+ {
+  "t": "Solving complex quadratic equations by completing the square",
+  "s": "maths",
+  "y": 10,
+  "u": "algebraic manipulation",
+  "o": "I can solve more complex quadratic equations algebraically by completing the square.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-48",
+   "M-50"
+  ]
+ },
+ {
+  "t": "The product of three binomials",
+  "s": "maths",
+  "y": 10,
+  "u": "algebraic manipulation",
+  "o": "I can use the distributive law to find the product of three binomials.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-48"
+  ]
+ },
+ {
+  "t": "Problem solving with circle theorems",
+  "s": "maths",
+  "y": 10,
+  "u": "circle theorems",
+  "o": "I can use my knowledge of circle theorems to solve problems.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-11"
+  ]
+ },
+ {
+  "t": "Enlargement using a negative scale factor",
+  "s": "maths",
+  "y": 10,
+  "u": "further transformations",
+  "o": "I can perform a given enlargement on an object.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-23"
+  ]
+ },
+ {
+  "t": "Checking and securing understanding of simultaneous equations",
+  "s": "maths",
+  "y": 11,
+  "u": "inequalities",
+  "o": "I can recognise that the point of intersection of two linear graphs satisfies both relationships and hence represents the solution to both those equations.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-22",
+   "M-50"
+  ]
+ },
+ {
+  "t": "Checking and securing understanding of compound interest calculations",
+  "s": "maths",
+  "y": 11,
+  "u": "iteration",
+  "o": "I can calculate compound interest.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-89",
+   "M-80"
+  ]
+ },
+ {
+  "t": "Estimating journeys from non-linear graphs",
+  "s": "maths",
+  "y": 11,
+  "u": "real life graphs",
+  "o": "I can estimate the distance travelled for non-linear speed-time graphs.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-22"
+  ]
+ },
+ {
+  "t": "Constructing scatter graphs",
+  "s": "maths",
+  "y": 8,
+  "u": "graphical representations of data",
+  "o": "I can construct scatter graphs from data presented in a number of different ways.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-60"
+  ],
+  "not": [
+   "M-04",
+   "M-07"
+  ]
+ },
+ {
+  "t": "Constructing loci",
+  "s": "maths",
+  "y": 11,
+  "u": "loci and construction",
+  "o": "I can construct a set of points that satisfy a set of conditions.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-24",
+   "M-07",
+   "M-04"
+  ]
+ },
+ {
+  "t": "Measure the size of angles accurately using a protractor",
+  "s": "maths",
+  "y": 5,
+  "u": "angles compare name estimate and measure angles",
+  "o": "I can measure the size of angles accurately using a protractor.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-02"
+  ]
+ },
+ {
+  "t": "Angles in triangles",
+  "s": "maths",
+  "y": 5,
+  "u": "angles compare name estimate and measure angles",
+  "o": "I know that the angles in a triangle sum to 180\u00b0.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-09"
+  ]
+ },
+ {
+  "t": "Missing angles",
+  "s": "maths",
+  "y": 8,
+  "u": "geometrical properties polygons",
+  "o": "I can solve problems that require a combination of angle facts to identify values of missing angles, providing explanations of reasoning and logic used.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-09"
+  ]
+ },
+ {
+  "t": "Finding a bearing",
+  "s": "maths",
+  "y": 10,
+  "u": "bearings",
+  "o": "I can find a bearing between the points on a map or scaled plan.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-10"
+  ]
+ },
+ {
+  "t": "Measure length using a ruler",
+  "s": "maths",
+  "y": 1,
+  "u": "numbers 0 to 20 in different contexts",
+  "o": "I can use a ruler to measure length.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-01"
+  ]
+ },
+ {
+  "t": "Constructing a triangle given two angles and the side length between them",
+  "s": "maths",
+  "y": 11,
+  "u": "loci and construction",
+  "o": "I can construct a triangle given two angles and the side length between them.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-07",
+   "M-04",
+   "M-02"
+  ]
+ },
+ {
+  "t": "The equation of a straight line",
+  "s": "maths",
+  "y": 8,
+  "u": "graphical representations of linear equations",
+  "o": "I can appreciate that writing linear equations in the form y = mx + c helps to reveal the structure.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-22"
+  ]
+ },
+ {
+  "t": "Transforming graphs: combinations of transformations",
+  "s": "maths",
+  "y": 11,
+  "u": "transformations of graphs",
+  "o": "I can recognise the effect of applying a combination of transformations to a function.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-22"
+  ],
+  "not": [
+   "M-23"
+  ]
+ },
+ {
+  "t": "Comparing box plots",
+  "s": "maths",
+  "y": 11,
+  "u": "graphical representations of data cumulative frequency and histograms",
+  "o": "I can interpret a box plot and compare two box plots.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-60",
+   "M-61"
+  ]
+ },
+ {
+  "t": "Factorising quadratics of the form ax^2 + bx + c",
+  "s": "maths",
+  "y": 10,
+  "u": "algebraic manipulation",
+  "o": "I can factorise quadratics of the form ax\u00b2 + bx + c.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-48"
+  ]
+ },
+ {
+  "t": "Expressing an arithmetic sequence",
+  "s": "maths",
+  "y": 8,
+  "u": "sequences",
+  "o": "I can appreciate that any term in an arithmetic sequence can be expressed in terms of its position in the sequence.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-90"
+  ]
+ },
+ {
+  "t": "Ordering numbers in standard form",
+  "s": "maths",
+  "y": 9,
+  "u": "standard form",
+  "o": "I can compare and order numbers written in a mixture of standard, non-standard and not quite standard form.",
+  "p": "maths-secondary-ks3",
+  "expect": [
+   "M-92",
+   "M-80"
+  ]
+ },
+ {
+  "t": "Addition with surds",
+  "s": "maths",
+  "y": 10,
+  "u": "surds",
+  "o": "I can appreciate the structure that underpins addition of surds.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-92",
+   "M-80"
+  ]
+ },
+ {
+  "t": "Reflect polygons in a line of symmetry",
+  "s": "maths",
+  "y": 4,
+  "u": "symmetry in 2d shapes",
+  "o": "I can reflect polygons in a line of symmetry, including when there are no sides parallel to the line of symmetry.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-23"
+  ]
+ },
+ {
+  "t": "3D shapes can be composed from 2D nets",
+  "s": "maths",
+  "y": 6,
+  "u": "draw compose and decompose shapes",
+  "o": "I can compose 3D shapes from 2D nets and identify the 2D net which will create a 3D shape.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-25"
+  ]
+ },
+ {
+  "t": "Interpret line graphs representing two variables in familiar contexts",
+  "s": "maths",
+  "y": 6,
+  "u": "statistics",
+  "o": "I can interpret line graphs representing two variables.",
+  "p": "maths-primary-ks2",
+  "expect": [
+   "M-60"
+  ],
+  "not": [
+   "M-22"
+  ]
+ },
+ {
+  "t": "Constructing histograms and box plots using technology",
+  "s": "maths",
+  "y": 11,
+  "u": "graphical representations of data cumulative frequency and histograms",
+  "o": "I can construct histograms and box plots utilising technology.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-60"
+  ]
+ },
+ {
+  "t": "Constructing a cumulative frequency graph",
+  "s": "maths",
+  "y": 11,
+  "u": "graphical representations of data cumulative frequency and histograms",
+  "o": "I can construct a cumulative frequency graph.",
+  "p": "maths-secondary-ks4-higher",
+  "expect": [
+   "M-60"
+  ]
+ },
+ {
+  "t": "Addition with vectors",
+  "s": "maths",
+  "y": 11,
+  "u": "vectors",
+  "o": "I can sum vectors.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-21"
+  ]
+ },
+ {
+  "t": "Compound interest calculations",
+  "s": "maths",
+  "y": 10,
+  "u": "percentages",
+  "o": "I can carry out compound interest calculations.",
+  "p": "maths-secondary-ks4-foundation",
+  "expect": [
+   "M-89"
+  ]
+ },
+ {
+  "t": "Count a set of objects and match the spoken number to the written numeral and number name",
+  "s": "maths",
+  "y": 1,
+  "u": "composition of numbers 6 to",
+  "o": "I can count sets of objects within the numbers 6 to 10 set and record the numeral to show the quantity in each set.",
+  "p": "maths-primary-ks1",
+  "expect": [
+   "M-54",
+   "M-42",
+   "M-45"
+  ]
+ }
+]

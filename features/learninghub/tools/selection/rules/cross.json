@@ -1,0 +1,956 @@
+{
+ "version": "1",
+ "rules": [
+  {
+   "id": "cross.recap",
+   "tool": "X-13",
+   "weight": 0.42,
+   "any": [
+    "\\brevis(e|ing|ion)\\b",
+    "\\brecap\\b",
+    "\\bretrieval\\b",
+    "\\bconsolidat",
+    "\\breview(ing)?\\b",
+    "\\brevisit",
+    "\\bretrieve\\b"
+   ],
+   "none": [
+    "(do|make|plan) and review",
+    "\\bpeer review",
+    "book review"
+   ],
+   "fields": [
+    "title",
+    "unit"
+   ]
+  },
+  {
+   "id": "cross.timer",
+   "tool": "X-03",
+   "weight": 0.3,
+   "any": [
+    "\\btimed\\b",
+    "against the clock",
+    "\\bstopwatch",
+    "\\bcountdown",
+    "\\bsprint\\b",
+    "\\bspeed round"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.cardsort",
+   "tool": "X-05",
+   "weight": 0.3,
+   "any": [
+    "\\bsort(ing)? (the |and |into |by )",
+    "\\bclassif(y|ying|ication)\\b",
+    "\\bcategori[sz]",
+    "\\bmatch(ing)? (the |each |words|pairs)",
+    "\\bgroup(ing)? (the|words|items)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.venn",
+   "tool": "X-07",
+   "weight": 0.3,
+   "any": [
+    "\\bvenn\\b",
+    "\\bt-chart\\b",
+    "\\bcompar(e|ing|ison) and contrast",
+    "\\bsimilarit",
+    "\\bdifferences? between",
+    "\\bcontrast(ing)?\\b"
+   ],
+   "subject": [
+    "english",
+    "science",
+    "languages",
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.mindmap",
+   "tool": "X-12",
+   "weight": 0.25,
+   "any": [
+    "\\bmind ?map",
+    "\\bbrainstorm",
+    "\\bgenerate ideas",
+    "\\bspider diagram",
+    "\\bconcept map"
+   ]
+  },
+  {
+   "id": "cross.mindmap.plan",
+   "tool": "X-12",
+   "weight": 0.22,
+   "any": [
+    "\\bplan(ning)? (a|an|your|my|the) (essay|story|piece|speech|argument|writing|response|answer)",
+    "\\bplan and (write|draft)"
+   ],
+   "subject": [
+    "english",
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "fields": [
+    "title"
+   ]
+  },
+  {
+   "id": "cross.table",
+   "tool": "X-17",
+   "weight": 0.3,
+   "any": [
+    "results table",
+    "table of results",
+    "\\brecord(ing)? (data|results|measurements|observations)",
+    "\\bcollect(ing)? data",
+    "\\bdata collection",
+    "\\bsurvey\\b",
+    "\\benter (the )?(data|results)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.cmdword",
+   "tool": "X-11",
+   "weight": 0.3,
+   "any": [
+    "\\bevaluat",
+    "\\bjustify",
+    "\\bto what extent",
+    "\\bhow far\\b",
+    "\\bcommand words?",
+    "\\banalys[ei]",
+    "\\bassess\\b"
+   ],
+   "years": [
+    10,
+    13
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.examtimer",
+   "tool": "X-14",
+   "weight": 0.35,
+   "any": [
+    "\\bexams?\\b",
+    "past paper",
+    "\\bmock\\b",
+    "\\bpaper [12]\\b",
+    "\\b\\d+[- ]mark",
+    "exam (technique|question|practice|skills)",
+    "timed (essay|response|question|assessment|write)"
+   ],
+   "years": [
+    10,
+    13
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.glossary",
+   "tool": "X-16",
+   "weight": 0.3,
+   "any": [
+    "\\bkey (words?|vocabulary|terms?)\\b",
+    "\\bglossary",
+    "\\bkeyword",
+    "\\bvocabulary\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.rank",
+   "tool": "X-06",
+   "weight": 0.25,
+   "any": [
+    "\\brank(ing)?\\b",
+    "\\bprioriti[sz]",
+    "\\border of importance",
+    "\\bmost important\\b",
+    "\\bdiamond ?9"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.timeline",
+   "tool": "H-H01",
+   "weight": 0.7,
+   "any": [
+    "\\btimeline",
+    "(?<!non-)\\bchronolog",
+    "\\bcenturies\\b|\\bcentury\\b",
+    "\\bera\\b|\\bperiod\\b",
+    "\\bdates?\\b",
+    "\\bBC\\b|\\bAD\\b|\\bBCE\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "none": [
+    "non-chronolog"
+   ]
+  },
+  {
+   "id": "cross.word.timeline",
+   "tool": "H-H01",
+   "weight": 0.32,
+   "any": [
+    "\\btimeline\\b",
+    "(?<!non-)\\bchronolog\\w* (order|sequence|timeline)"
+   ],
+   "none": [
+    "non-chronolog"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.chronsort",
+   "tool": "H-H02",
+   "weight": 0.7,
+   "any": [
+    "(?<!non-)\\bchronolog",
+    "\\bsequence (of )?events",
+    "\\bbefore and after",
+    "\\border of events"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "none": [
+    "non-chronolog"
+   ]
+  },
+  {
+   "id": "cross.hum.source",
+   "tool": "H-H03",
+   "weight": 0.7,
+   "any": [
+    "\\bsources?\\b",
+    "\\bprovenance",
+    "\\binfer(ence|ring)?\\b",
+    "\\breliab",
+    "\\butility\\b",
+    "\\bNOP\\b",
+    "\\bprimary source",
+    "\\bcontemporary account"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.source",
+   "tool": "H-H03",
+   "weight": 0.32,
+   "any": [
+    "\\bprovenance\\b",
+    "\\bprimary sources?\\b",
+    "\\breliability of (a |the )?sources?"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.interp",
+   "tool": "H-H04",
+   "weight": 0.7,
+   "any": [
+    "\\binterpretations?\\b",
+    "\\bhistorians?\\b",
+    "\\bhistoriography",
+    "\\bhow far do you agree with (the )?(interpretation|historian)"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.interp",
+   "tool": "H-H04",
+   "weight": 0.32,
+   "any": [
+    "\\bhistorians? (disagree|interpret|argue)",
+    "\\binterpretations? of"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.cause",
+   "tool": "H-H05",
+   "weight": 0.7,
+   "any": [
+    "\\bcauses?\\b",
+    "\\bconsequences?\\b",
+    "\\bcausation",
+    "\\bresults? of (the|a)\\b",
+    "\\bwhy did\\b",
+    "\\bimpact of\\b",
+    "\\breasons? for\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.cause",
+   "tool": "H-H05",
+   "weight": 0.32,
+   "any": [
+    "\\bcausation\\b",
+    "\\bcauses and consequences\\b",
+    "\\bshort- and long-term (causes|consequences)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.judge",
+   "tool": "H-H09",
+   "weight": 0.7,
+   "any": [
+    "\\bhow far do you agree",
+    "\\bto what extent",
+    "\\bjudgement",
+    "\\bfor and against",
+    "\\bwas .{3,40} the (main|most important)",
+    "\\b(12|16)[- ]mark"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "years": [
+    7,
+    13
+   ]
+  },
+  {
+   "id": "cross.word.judge",
+   "tool": "H-H09",
+   "weight": 0.32,
+   "any": [
+    "\\bjudgement planner\\b",
+    "\\bhow far do you agree\\b"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.keydates",
+   "tool": "H-H13",
+   "weight": 0.7,
+   "any": [
+    "\\bkey dates?\\b",
+    "\\bdates?\\b",
+    "\\bfactfile",
+    "\\bkey events\\b",
+    "\\bretrieval\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.hum.gridref",
+   "tool": "H-G02",
+   "weight": 0.7,
+   "any": [
+    "\\bgrid references?\\b",
+    "\\b[46][- ]figure",
+    "\\bos map",
+    "\\bordnance survey",
+    "\\beastings|northings"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.gridref",
+   "tool": "H-G02",
+   "weight": 0.32,
+   "any": [
+    "\\bgrid references?\\b",
+    "\\b(4|6|four|six)[- ]figure (grid )?references?",
+    "\\bordnance survey\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.scale",
+   "tool": "H-G03",
+   "weight": 0.7,
+   "any": [
+    "\\bmap scale",
+    "\\bscale (bar|line)",
+    "\\bdistance on (a |the )?map",
+    "\\bmeasur\\w* distance",
+    "\\bscale\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.scale",
+   "tool": "H-G03",
+   "weight": 0.32,
+   "any": [
+    "\\bmap scale\\b",
+    "\\bscale bar\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.contours",
+   "tool": "H-G04",
+   "weight": 0.7,
+   "any": [
+    "\\bcontours?\\b",
+    "\\bcross[- ]sections?\\b",
+    "\\brelief\\b",
+    "\\bslope\\b",
+    "\\bgradient of (a )?(hill|slope)"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.contours",
+   "tool": "H-G04",
+   "weight": 0.32,
+   "any": [
+    "\\bcontour lines?\\b",
+    "\\bcross[- ]section of (a |the )?(valley|hill|coast|river)"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.compass",
+   "tool": "H-G05",
+   "weight": 0.7,
+   "any": [
+    "\\bcompass (rose|points?|directions?)",
+    "\\bpoints of the compass",
+    "\\bcardinal (points|directions)",
+    "\\bdirections?\\b",
+    "\\bnorth\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.compass",
+   "tool": "H-G05",
+   "weight": 0.32,
+   "any": [
+    "\\bcompass (rose|points)\\b",
+    "\\bpoints of the compass\\b",
+    "\\beight (compass )?points\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.climate",
+   "tool": "H-G06",
+   "weight": 0.7,
+   "any": [
+    "\\bclimate graphs?",
+    "\\bclimate\\b",
+    "\\brainfall\\b",
+    "\\btemperature\\b",
+    "\\bweather\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.climate",
+   "tool": "H-G06",
+   "weight": 0.32,
+   "any": [
+    "\\bclimate graphs?\\b",
+    "\\brainfall and temperature\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.pyramid",
+   "tool": "H-G07",
+   "weight": 0.7,
+   "any": [
+    "\\bpopulation pyramid",
+    "\\bdemograph",
+    "\\bpopulation (structure|distribution)",
+    "\\bage[- ]sex"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.pyramid",
+   "tool": "H-G07",
+   "weight": 0.32,
+   "any": [
+    "\\bpopulation pyramids?\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.fieldwork",
+   "tool": "H-G09",
+   "weight": 0.7,
+   "any": [
+    "\\bfieldwork\\b",
+    "\\benquiry\\b",
+    "\\bhypothesis\\b",
+    "\\bsurvey\\b",
+    "\\bfield (study|trip)",
+    "\\bdata collection"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.fieldwork",
+   "tool": "H-G09",
+   "weight": 0.32,
+   "any": [
+    "\\bfieldwork\\b",
+    "\\bgeographical enquiry\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.sketch",
+   "tool": "H-G11",
+   "weight": 0.7,
+   "any": [
+    "\\bfield sketch",
+    "\\bsketch map",
+    "\\bannotat\\w* (a )?(photo|photograph|map|sketch|image)",
+    "\\blabel(l?ing)? (a )?(photo|photograph|map|sketch)",
+    "\\blandscape\\b",
+    "\\bphotograph"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.sketch",
+   "tool": "H-G11",
+   "weight": 0.32,
+   "any": [
+    "\\bsketch maps?\\b",
+    "\\bfield sketch"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.mapskills",
+   "tool": "H-G12",
+   "weight": 0.7,
+   "any": [
+    "\\bmap skills",
+    "\\bmap symbols",
+    "\\bmap key\\b",
+    "\\batlas\\b",
+    "\\bmaps?\\b",
+    "\\blatitude|longitude",
+    "\\bcontinents?|oceans?\\b",
+    "\\blocat(e|ion|ing)\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.mapskills",
+   "tool": "H-G12",
+   "weight": 0.32,
+   "any": [
+    "\\bmap skills\\b",
+    "\\bmap symbols\\b",
+    "\\batlas\\b",
+    "\\blatitude and longitude\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.evalplan",
+   "tool": "H-R01",
+   "weight": 0.7,
+   "any": [
+    "\\bevaluat",
+    "\\bfor and against",
+    "\\bhow far do you agree",
+    "\\bto what extent",
+    "\\bconclusion\\b",
+    "\\b(12|15)[- ]mark",
+    "\\bdo you agree\\b",
+    "\\bargue\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ],
+   "years": [
+    7,
+    13
+   ]
+  },
+  {
+   "id": "cross.word.evalplan",
+   "tool": "H-R01",
+   "weight": 0.32,
+   "any": [
+    "\\b(12|15)[- ]mark (question|evaluation|response)",
+    "\\bevaluat\\w* (the )?(statement|view|claim)"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.belief",
+   "tool": "H-R05",
+   "weight": 0.7,
+   "any": [
+    "\\bbeliefs?\\b",
+    "\\bteachings?\\b",
+    "\\bpractices?\\b",
+    "\\bfaith\\b",
+    "\\bworship\\b",
+    "\\bfestivals?\\b",
+    "\\bchristian|muslim|islam|jewish|judaism|hindu|sikh|buddhis"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.belief",
+   "tool": "H-R05",
+   "weight": 0.32,
+   "any": [
+    "\\b(christian|muslim|islamic|jewish|hindu|sikh|buddhist)s?\\b (belief|teaching|practice|worship)",
+    "\\bbeliefs?,? teachings?"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.viewpoints",
+   "tool": "H-R03",
+   "weight": 0.7,
+   "any": [
+    "\\bviewpoints?\\b",
+    "\\bperspectives?\\b",
+    "\\bdifferent (views|opinions|beliefs)",
+    "\\bpoints? of view\\b",
+    "\\bdo you agree\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.hum.wisdom",
+   "tool": "H-R04",
+   "weight": 0.7,
+   "any": [
+    "\\bsources? of (wisdom|authority)",
+    "\\bscripture",
+    "\\bbible\\b|\\bquran\\b|\\btorah\\b|\\bgita\\b|\\bguru granth",
+    "\\bholy (book|text)",
+    "\\bquotations?\\b"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.wisdom",
+   "tool": "H-R04",
+   "weight": 0.32,
+   "any": [
+    "\\bsources? of (wisdom|authority)\\b",
+    "\\bholy (book|text)s?\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.changecont",
+   "tool": "H-H06",
+   "weight": 0.7,
+   "any": [
+    "\\bchange and continuity",
+    "\\bcontinuity\\b",
+    "\\bprogress\\b",
+    "\\bturning point"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.changecont",
+   "tool": "H-H06",
+   "weight": 0.32,
+   "any": [
+    "\\bchange and continuity\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  },
+  {
+   "id": "cross.hum.signif",
+   "tool": "H-H07",
+   "weight": 0.7,
+   "any": [
+    "\\bsignifican(ce|t)\\b",
+    "\\bwhy is .{3,40} important\\b",
+    "\\bhistorical significance"
+   ],
+   "subject": [
+    "history",
+    "geography",
+    "re",
+    "religious education",
+    "humanities"
+   ]
+  },
+  {
+   "id": "cross.word.signif",
+   "tool": "H-H07",
+   "weight": 0.32,
+   "any": [
+    "\\bhistorical significance\\b"
+   ],
+   "fields": [
+    "title",
+    "objective"
+   ]
+  }
+ ],
+ "fallback": {
+  "maths": [
+   "M-40",
+   "M-80",
+   "X-03",
+   "D.tally"
+  ],
+  "english": [
+   "E-09",
+   "X-03",
+   "X-12",
+   "X-16"
+  ],
+  "science": [
+   "S-13",
+   "X-17",
+   "S-15",
+   "X-03"
+  ],
+  "languages": [
+   "L-01",
+   "L-05",
+   "X-16",
+   "X-03"
+  ],
+  "*": [
+   "X-03",
+   "D.tally",
+   "X-05",
+   "X-12"
+  ]
+ }
+}
