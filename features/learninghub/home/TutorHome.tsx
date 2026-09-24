@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../kit";
 import { requestHomeworkFilter, setHubIntent } from "../hubIntent";
 import { InPersonApp } from "../inperson/InPersonApp";
@@ -73,6 +73,10 @@ interface FeedItem { id: string; at: number; who: string; text: string; sub?: st
 export function TutorHome(props: PanelProps) {
   const { qs, students, config, onError, goTo } = props;
   const go: Go = goTo ?? (() => undefined);
+  const [more, setMore] = useState(false); // phones: activity feed + chart behind one toggle, remembered per device
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- read the per-device preference after mount (SSR-safe)
+  useEffect(() => { try { if (localStorage.getItem("hub.home.more") === "1") setMore(true); } catch { /* private mode */ } }, []);
+  const toggleMore = () => setMore((m) => { const n = !m; try { localStorage.setItem("hub.home.more", n ? "1" : "0"); } catch { /* ignore */ } return n; });
   const [teaching, setTeaching] = useState(false); // "Teach in person" (a lesson with the children beside you, no video)
   const { ready, parts, failed, reload } = useTutorHome(qs, onError);
   const now = useNow(30_000);
@@ -199,7 +203,12 @@ export function TutorHome(props: PanelProps) {
         <Callouts improvers={d.gains} nudges={d.nudges} hasResults={d.hasResults} onGo={go} onNudge={props.readOnly ? undefined : (id) => { setHubIntent({ kind: "homework", groupId: "", childIds: [id] }); go("homework"); }} delay={4 * 60} />
       </div>}
 
-      {!firstRun && <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      {!firstRun && <button type="button" onClick={toggleMore} aria-expanded={more} aria-controls="hub-home-more" data-testid="home-more-toggle"
+        className={`flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-extrabold text-[var(--ink-2)] lg:hidden ${FOCUS}`}>
+        <Icon name="chevronDown" size={14} strokeWidth={2.4} className={`transition-transform ${more ? "rotate-180" : ""}`} />{more ? "Less" : "More: recent activity and chart"}
+      </button>}
+
+      {!firstRun && <div id="hub-home-more" className={`${more ? "grid" : "hidden lg:grid"} gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]`}>
         <Card title="Recent activity" icon="sparkle" tone="brand" style={rise(5)}>
           {d.feed.length === 0 ? (
             <EmptyState icon="sparkle" title="It's quiet — for now" body="Quiz results, hand-ins and marked work land here as they happen, live." />
