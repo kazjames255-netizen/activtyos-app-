@@ -21,21 +21,27 @@ export function TutorLiveBanner({ qs, goTo }: { qs: string; goTo?: (tab: "notes"
   const [ending, setEnding] = useState<{ id: string; title: string } | null>(null);
   const [endErr, setEndErr] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const pendingId = useRef<string | null>(null);
+  // Leaving the tab (unmount) inside the Undo window must still END the lesson, never silently cancel it (safeguarding).
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    if (pendingId.current) { const id = pendingId.current; pendingId.current = null; endRemoteSync(qs, id).catch(() => undefined); }
+  }, [qs]);
 
   const poll = useCallback(() => { listLiveRemoteSync(qs).then((r) => setLive(Array.isArray(r) ? r : [])).catch(() => undefined); }, [qs]);
   useEffect(() => { poll(); const t = setInterval(poll, POLL_MS); return () => clearInterval(t); }, [poll]);
   useRealtime(["hubLessons"], poll);
 
   const endNow = (id: string) => {
-    timer.current = null;
+    timer.current = null; pendingId.current = null;
     endRemoteSync(qs, id).then(() => { setEnding(null); poll(); }).catch(() => { setEnding(null); setEndErr("Couldn't end the lesson. Please try again."); });
   };
   const endLesson = (id: string, title: string) => {
-    setEndErr(null); setEnding({ id, title });
+    setEndErr(null); setEnding({ id, title }); pendingId.current = id;
     timer.current = setTimeout(() => endNow(id), UNDO_MS);
   };
-  const undo = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; setEnding(null); };
+  const undo = () => { if (timer.current) clearTimeout(timer.current); timer.current = null; pendingId.current = null; setEnding(null); };
 
   if (ending) {
     return (
