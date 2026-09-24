@@ -207,6 +207,10 @@ export function warmLeads() {
   // The saved copy is only a shortcut. An older build wrote all 71k leads into
   // it, and parsing THAT is its own out-of-memory crash — so check the size
   // first, drop it if it's from the uncapped era, and cap whatever we load.
+  // Nothing at all on a cold start unless asked: this runs in a container with
+  // a few hundred MB of heap, and both the Firestore read and the saved copy
+  // are hundreds of MB at 71k leads. HQ's first request fills the cache.
+  if (process.env.LEADS_WARM !== "1") return;
   stat(DISK)
     .then(({ size }) => {
       if (size > DISK_MAX_BYTES) return rm(DISK, { force: true }).then(() => null);
@@ -220,7 +224,6 @@ export function warmLeads() {
     })
     .catch(() => {})
     .finally(() => {
-      if (process.env.LEADS_WARM !== "1") return;
       if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
     });
 }
