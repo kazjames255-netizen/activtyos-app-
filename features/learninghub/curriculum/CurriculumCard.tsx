@@ -126,6 +126,12 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson, onSetHome
     return () => { live = false; };
   }, [lens, open, yr, qs, fw, mode, data]);
   const pickLens = (id: string | null) => { setLens(id); const y = students?.find((x) => x.id === id)?.year; if (y && yearList.includes(y)) pickYear(y); };
+  const [strandPick, setStrandPick] = useState<string | null>(null);
+  const strandList = useMemo(() => byStrand(yShown.map((i) => i.area)).map(([x]) => x).filter((x, i, a) => a.indexOf(x) === i), [yShown]);
+  const tileItems = useMemo(() => {
+    const order = new Map(strandList.map((x, i) => [x, i]));
+    return yShown.filter((i) => !strandPick || i.area.strand === strandPick).sort((a, b) => (order.get(a.area.strand) ?? 0) - (order.get(b.area.strand) ?? 0) || a.area.area.localeCompare(b.area.area));
+  }, [yShown, strandPick, strandList]);
   const pickYear = (y: number) => { setYearPick(y); writePref({ year: y }); };
   const sum = useMemo(() => summarise(data?.rows ?? [], new Set(inGroup.map((a) => a.id))), [data, inGroup]);
   const placed = useMemo(() => inGroup.reduce((n, a) => n + a.y.reduce((x, y) => x + y, 0), 0), [inGroup]);
@@ -194,15 +200,13 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson, onSetHome
               {mode === "child" ? (
                 <ChildBook items={kidItems} year={kidYear} name={me?.name ?? ""} band={kidBand} stars={kidStars} calm={!!me?.calm} onPick={(a) => setCell({ area: a, year: kidYear })} />
               ) : (<>
-              {students && students.length > 0 && (
-                <StudentPills students={students} value={lens} onPick={pickLens} />
-              )}
-              {yr !== null && (
-                <YearPills years={yearList} value={yr} onPick={pickYear} />
-              )}
+              <div className="mb-1 flex flex-wrap items-start gap-x-4 gap-y-0">
+                {students && students.length > 0 && <div className="min-w-0 flex-1 basis-[300px]"><StudentPills students={students} value={lens} onPick={pickLens} /></div>}
+                {yr !== null && <div className="min-w-0 flex-1 basis-[300px]"><YearPills years={yearList} value={yr} onPick={pickYear} /></div>}
+              </div>
               {/* headline */}
-              <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl bg-[var(--panel)] p-3.5">
-                <Ring pct={mode === "tutor" ? ySum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
+              <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl bg-[var(--panel)] px-3.5 py-2.5">
+                <Ring size={64} pct={mode === "tutor" ? ySum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
                 <div className="grid gap-1.5">
                   {mode === "tutor" ? (
                     noList ? (
@@ -229,12 +233,10 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson, onSetHome
                 )}
               </div>
 
-              {lens ? (
-                <StudentList items={yShown} ov={ov} name={students?.find((x) => x.id === lens)?.name ?? ""} year={yr} error={ovErr} onPick={(a) => setCell({ area: a, year: yr })} onOpen={onOpenLesson}
-                  onSet={(pick) => onSetHomework?.(lens, pick.id, pick.title)} onNew={onNewLesson} canNew={mayAuthor && !!onNewLesson} canSet={!!onSetHomework} />
-              ) : (
-                <YearList items={yShown} year={yr} empty={onlyGaps && yItems.length > 0 ? `No gaps or thin spots in ${GROUP_LABEL[g]} · Year ${yr} 🎉` : `Nothing in ${GROUP_LABEL[g]} is expected in this year.`} neutral={noList} extra={yExtra} onPick={(a) => setCell({ area: a, year: yr })} />
-              )}
+              <StrandChips strands={strandList} value={strandPick && strandList.includes(strandPick) ? strandPick : null} onPick={setStrandPick} />
+              <TutorTiles items={tileItems} year={yr} neutral={noList} extra={yExtra} lens={lens ? { name: students?.find((x) => x.id === lens)?.name ?? "" } : null} ov={ov} error={ovErr}
+                empty={onlyGaps && yItems.length > 0 ? `No gaps or thin spots in ${GROUP_LABEL[g]} · Year ${yr} 🎉` : `Nothing in ${GROUP_LABEL[g]} is expected in this year.`}
+                onPick={(a) => setCell({ area: a, year: yr })} onOpen={onOpenLesson} onSet={(pick) => lens && onSetHomework?.(lens, pick.id, pick.title)} onNew={onNewLesson} canNew={mayAuthor && !!onNewLesson} canSet={!!onSetHomework} />
 
               {/* legend + honesty */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-semibold text-[var(--ink-2)]">
@@ -264,14 +266,11 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson, onSetHome
 /** "Geometry – position and direction" reads as "Position and direction" under its strand header. */
 const shortArea = (area: string) => { const t = area.includes(" – ") ? area.split(" – ").slice(1).join(" – ") : area; return t.charAt(0).toUpperCase() + t.slice(1); };
 
-const STATUS: Record<string, { word: string; glyph: string; var: string }> = {
-  covered: { word: "Covered", glyph: "✓", var: "--sem-ok" }, thin: { word: "Thin", glyph: "!", var: "--sem-warn" }, gap: { word: "Gap", glyph: "✕", var: "--sem-crit" },
-};
 
 /** Y1…Y11 pills (a tablist): scroll sideways at phone width with an edge fade; each is a 44px target. */
 function YearPills({ years, value, onPick }: { years: number[]; value: number; onPick: (y: number) => void }) {
   return (
-    <div className="relative mb-3">
+    <div className="relative mb-2">
       <div role="tablist" aria-label="Year" data-testid="curriculum-years" className="flex gap-1.5 overflow-x-auto pb-1 pr-8 [scrollbar-width:none]"
         onKeyDown={(e) => {
           const i = years.indexOf(value);
@@ -286,42 +285,6 @@ function YearPills({ years, value, onPick }: { years: number[]; value: number; o
         ))}
       </div>
       <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--surface)] to-transparent" />
-    </div>
-  );
-}
-
-/** Only what this year expects, grouped by strand. Bar = lessons (full at 5+); the word + glyph say the same thing without colour. */
-function YearList({ items, year, empty, neutral, extra, onPick }: { items: YearItem[]; year: number | null; empty: string; neutral: boolean; extra: number; onPick: (a: MapArea) => void }) {
-  return (
-    <div id="hub-cur-year-list" data-testid="curriculum-year-list">
-      {items.length === 0 && <p className="m-0 py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">{empty}</p>}
-      {byStrand(items.map((i) => i.area)).map(([strand, list]) => (
-        <section key={strand} aria-label={strand} className="mb-3">
-          <h4 className="m-0 mb-1 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-2)]">{strand}</h4>
-          <ul className="m-0 grid list-none gap-1.5 p-0">
-            {list.map((a) => {
-              const it = items.find((i) => i.area.id === a.id)!, k = it.cell.kind, st = STATUS[k], n = it.count;
-              const span = it.cell.span && it.cell.span.to > it.cell.span.from ? ` · Years ${it.cell.span.from}–${it.cell.span.to} together: ${it.cell.span.lessons}` : "";
-              const label = `${a.area}: ${n} ${n === 1 ? "lesson" : "lessons"}${neutral ? "" : `, ${st?.word.toLowerCase() ?? ""}`}`;
-              return (
-                <li key={a.id}>
-                  <button type="button" onClick={() => onPick(a)} aria-label={label} data-area={a.id} data-kind={k} data-count={n} className={`grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left hover:bg-[var(--panel)] ${FOCUS}`}>
-                    <span className="min-w-0 text-[13.5px] font-bold leading-tight text-[var(--ink)]">{shortArea(a.area)}{span && <span className="block text-[11.5px] font-semibold text-[var(--ink-3)]">{span.slice(3)}</span>}</span>
-                    <span className="inline-flex items-center gap-1.5 justify-self-end text-[12.5px] font-extrabold tabular-nums text-[var(--ink)]">
-                      {!neutral && st && <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full text-[11px] text-[var(--on-brand,#fff)]" style={{ background: `var(${st.var})` }}>{st.glyph}</span>}
-                      {n}<span className="sr-only"> lessons</span>{!neutral && st && <span className="font-bold text-[var(--ink-2)]">{st.word}</span>}
-                    </span>
-                    <span aria-hidden className="col-span-2 h-2.5 overflow-hidden rounded-full" style={{ background: k === "gap" ? "repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--sem-crit) 30%, transparent) 5px 7px), var(--panel)" : "var(--panel)", boxShadow: k === "gap" ? `inset 0 0 0 1.5px ${TINT("--sem-crit", 60)}` : "inset 0 0 0 1px var(--line)" }}>
-                      <span className="block h-full rounded-full" style={{ width: `${Math.min(1, n / 5) * 100}%`, background: neutral ? "var(--brand-2)" : st ? `var(${st.var})` : "var(--brand-2)", backgroundImage: k === "thin" ? "repeating-linear-gradient(90deg, transparent 0 4px, rgba(255,255,255,.45) 4px 6px)" : undefined }} />
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-      {extra > 0 && year !== null && <p className="m-0 mt-1 text-[12px] font-semibold text-[var(--ink-3)]" data-testid="curriculum-extra">Also in this year: {extra} extra {extra === 1 ? "lesson" : "lessons"} on topics beyond the curriculum for Year {year}.</p>}
     </div>
   );
 }
@@ -342,42 +305,93 @@ function StudentPills({ students, value, onPick }: { students: PickStudent[]; va
   );
 }
 
-const STATE: Record<string, { word: string; glyph: string; tint: string }> = {
-  done: { word: "Done", glyph: "✓", tint: "--sem-ok" }, assigned: { word: "Assigned", glyph: "•", tint: "--brand" }, ready: { word: "Ready to set", glyph: "+", tint: "--ink-3" }, none: { word: "No lesson yet", glyph: "∅", tint: "--sem-crit" },
+type TileKind = "got" | "next" | "covered" | "thin" | "gap" | "neutral";
+const TILE_LOOK: Record<TileKind, { border: string; bg: string; cue: string; cueVar: string }> = {
+  got: { border: "3px solid var(--sem-ok)", bg: TINT("--sem-ok", 18), cue: "✓", cueVar: "--sem-ok" },
+  next: { border: "3px dashed var(--line)", bg: "var(--panel)", cue: "", cueVar: "--ink-3" },
+  covered: { border: "3px solid var(--sem-ok)", bg: TINT("--sem-ok", 22), cue: "✓", cueVar: "--sem-ok" },
+  thin: { border: "3px dashed var(--sem-warn)", bg: TINT("--sem-warn", 18), cue: "!", cueVar: "--sem-warn" },
+  gap: { border: "3px dashed var(--sem-crit)", bg: `repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--sem-crit) 22%, transparent) 6px 8px), ${TINT("--sem-crit", 10)}`, cue: "＋", cueVar: "--sem-crit" },
+  neutral: { border: "3px solid var(--brand-2)", bg: TINT("--brand-2", 12), cue: "", cueVar: "--brand-2" },
 };
-
-/** One student, one year: a card per expected area with its state and ONE action. Tutor-private; only this student's data. */
-function StudentList({ items, ov, name, year, error, onPick, onOpen, onSet, onNew, canNew, canSet }: {
-  items: YearItem[]; ov: StudentArea[] | null; name: string; year: number | null; error: string | null; onPick: (a: MapArea) => void; onOpen: (id: string) => void;
-  onSet: (p: { id: string; title: string }) => void; onNew?: () => void; canNew: boolean; canSet: boolean;
-}) {
-  if (error) return <p role="alert" className="m-0 rounded-xl border border-[var(--sem-crit)] px-3 py-2 text-[13px] font-semibold text-[var(--ink)]">{error}</p>;
-  if (!ov) return <SkeletonRows rows={3} label={`Loading ${name}’s year`} variant="card" />;
-  const by = new Map(ov.map((o) => [o.areaId, o]));
-  const counts = { done: 0, assigned: 0, ready: 0, none: 0 };
-  for (const i of items) counts[studentState(by.get(i.area.id))]++;
+/** ONE sticker tile, shared by the child's sticker book (no number) and the provider's map (lesson count inside). Status is the border style + a corner glyph + a word, never colour alone. */
+function Tile({ area, kind, count, word, sub, badge, label, onClick }: { area: MapArea; kind: TileKind; count?: number; word: string; sub?: string; badge?: string; label: string; onClick: () => void }) {
+  const l = TILE_LOOK[kind], dim = kind === "next", emoji = emojiFor(area.area, area.strand);
+  if (count === undefined) { // child sticker: big picture, centred
+    return (
+      <button type="button" onClick={onClick} aria-label={label} data-sticker={kind === "got" || kind === "next" ? kind : undefined} data-tile={kind} data-area={area.id}
+        className={`grid min-h-[120px] w-full place-content-center place-items-center gap-0.5 rounded-[22px] px-2 py-3 text-center ${FOCUS}`} style={{ border: l.border, background: l.bg }}>
+        <span aria-hidden className="text-[44px] leading-none" style={dim ? { filter: "grayscale(1)", opacity: 0.35 } : undefined}>{emoji}</span>
+        <span className="text-[14px] font-extrabold leading-tight text-[var(--ink)]">{shortArea(area.area)}</span>
+        <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{word}</span>
+      </button>
+    );
+  }
+  // provider tile: strand tag + cue on top, name, big lesson count. Left-aligned so ~120px tall packs into one wrapping grid.
   return (
-    <div data-testid="curriculum-student-list">
-      <p className="m-0 mb-2 text-[13px] font-bold text-[var(--ink-2)]" aria-live="polite">{name}, Year {year}: {counts.done} done · {counts.assigned} assigned · {counts.ready} ready to set · {counts.none} with no lesson yet</p>
-      {items.length === 0 && <p className="m-0 py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">Nothing to show for this year.</p>}
-      <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2">
-        {items.map((i) => {
-          const o = by.get(i.area.id), st = studentState(o), sd = STATE[st]!;
-          const act = st === "done" && o?.review ? { label: "Review", run: () => onOpen(o.review!.id) }
-            : st === "assigned" && o?.open ? { label: "View", run: () => onOpen(o.open!.id) }
-            : st === "ready" && o?.next && canSet ? { label: "Set homework", run: () => onSet(o.next!) }
-            : st === "none" && canNew ? { label: "＋ New lesson", run: () => onNew?.() } : null;
+    <button type="button" onClick={onClick} aria-label={label} title={sub ? `${shortArea(area.area)} · ${sub}` : undefined} data-tile={kind} data-area={area.id} data-count={count}
+      className={`relative grid min-h-[112px] w-full content-between gap-1 rounded-[20px] px-3 pb-2.5 pt-2 text-left ${FOCUS}`} style={{ border: l.border, background: l.bg }}>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="text-[20px] leading-none">{emoji}</span>
+        <span className="min-w-0 flex-1 truncate rounded-full bg-[color-mix(in_srgb,var(--brand-2)_14%,transparent)] px-1.5 py-px text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-2)]">{area.strand}</span>
+        {l.cue && <span aria-hidden className="grid h-5 w-5 flex-none place-items-center rounded-full text-[12px] font-extrabold text-[var(--on-brand,#fff)]" style={{ background: `var(${l.cueVar})` }}>{l.cue}</span>}
+      </span>
+      <span className="line-clamp-2 text-[13px] font-extrabold leading-tight text-[var(--ink)]">{shortArea(area.area)}</span>
+      <span className="flex flex-wrap items-baseline gap-x-1.5">
+        <span className="text-[30px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }} aria-hidden>{count}</span>
+        <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{count === 1 ? "lesson" : "lessons"} · {word}</span>
+        {sub && <span className="rounded-full border border-[var(--line)] px-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">{sub}</span>}
+        {badge && <span className="rounded-full bg-[var(--surface)] px-1.5 text-[10.5px] font-extrabold text-[var(--ink)] shadow-[inset_0_0_0_1px_var(--line)]">{badge}</span>}
+      </span>
+    </button>
+  );
+}
+const TILE_GRID = "m-0 grid list-none gap-2.5 p-0 [grid-template-columns:repeat(auto-fill,minmax(148px,1fr))]";
+const KIND_WORD: Record<string, string> = { covered: "covered", thin: "thin", gap: "gap ＋" };
+const BADGE: Record<string, string> = { done: "Done ✓", assigned: "Assigned", ready: "Ready" };
+
+/** Compact strand filter (All · Number · Algebra …) instead of headings that break the tile flow. */
+function StrandChips({ strands, value, onPick }: { strands: string[]; value: string | null; onPick: (s: string | null) => void }) {
+  if (strands.length < 2) return null;
+  const chip = (on: boolean) => `min-h-[36px] flex-none rounded-full border px-3 text-[12.5px] font-extrabold ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand,#fff)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`;
+  return (
+    <div role="group" aria-label="Strand" data-testid="curriculum-strands" className="mb-2.5 flex flex-wrap gap-1.5">
+      <button type="button" aria-pressed={value === null} onClick={() => onPick(null)} className={chip(value === null)}>All</button>
+      {strands.map((x) => <button key={x} type="button" aria-pressed={value === x} onClick={() => onPick(x)} className={chip(value === x)}>{x}</button>)}
+    </div>
+  );
+}
+
+/** The provider's map for one year (and optionally one student): sticker tiles for ONLY the areas the curriculum expects, lesson count inside. */
+function TutorTiles({ items, year, empty, neutral, extra, lens, ov, error, onPick, onOpen, onSet, onNew, canNew, canSet }: {
+  items: YearItem[]; year: number | null; empty: string; neutral: boolean; extra: number;
+  lens: { name: string } | null; ov: StudentArea[] | null; error: string | null;
+  onPick: (a: MapArea) => void; onOpen: (id: string) => void; onSet: (p: { id: string; title: string }) => void; onNew?: () => void; canNew: boolean; canSet: boolean;
+}) {
+  if (lens && error) return <p role="alert" className="m-0 rounded-xl border border-[var(--sem-crit)] px-3 py-2 text-[13px] font-semibold text-[var(--ink)]">{error}</p>;
+  if (lens && !ov) return <SkeletonRows rows={3} label={`Loading ${lens.name}’s year`} variant="card" />;
+  const by = new Map((ov ?? []).map((o) => [o.areaId, o]));
+  return (
+    <div id="hub-cur-year-list" data-testid="curriculum-year-list">
+      {items.length === 0 && <p className="m-0 py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">{empty}</p>}
+      <ul className={TILE_GRID}>
+        {items.map((it) => {
+          const a = it.area, k = (neutral ? "neutral" : it.cell.kind) as TileKind, n = it.count;
+          const o = by.get(a.id), st = lens ? studentState(o) : null;
+          const sp = it.cell.span, span = sp && sp.to > sp.from && sp.lessons !== n ? `Y${sp.from}–${sp.to}: ${sp.lessons}` : undefined;
+          const word = neutral ? "placed" : KIND_WORD[k] ?? "";
+          const label = `${shortArea(a.area)}, ${n} ${n === 1 ? "lesson" : "lessons"}${neutral ? "" : `, ${(KIND_WORD[k] ?? "").split(" ")[0]}`}${st ? `, ${st === "none" ? "no lesson yet" : st === "ready" ? "ready to set" : st}` : ""}`;
+          const act = !lens || !st ? null : st === "done" && o?.review ? { label: "Review", run: () => onOpen(o.review!.id) } : st === "assigned" && o?.open ? { label: "View", run: () => onOpen(o.open!.id) }
+            : st === "ready" && o?.next && canSet ? { label: "Set homework", run: () => onSet(o.next!) } : st === "none" && canNew ? { label: "＋ New lesson", run: () => onNew?.() } : null;
           return (
-            <li key={i.area.id} data-area={i.area.id} data-state={st} className="flex min-h-[64px] flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border bg-[var(--surface)] px-3 py-2.5" style={{ borderColor: st === "none" ? TINT("--sem-crit", 55) : "var(--line)", borderStyle: st === "none" || st === "ready" ? "dashed" : "solid" }}>
-              <button type="button" onClick={() => onPick(i.area)} className={`min-h-[44px] min-w-0 flex-1 basis-[150px] text-left ${FOCUS}`}>
-                <span className="block text-[13.5px] font-bold leading-tight text-[var(--ink)]">{shortArea(i.area.area)}</span>
-                <span className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink-2)]"><span aria-hidden className="grid h-5 w-5 place-items-center rounded-full text-[11px] text-[var(--on-brand,#fff)]" style={{ background: `var(${sd.tint})` }}>{sd.glyph}</span>{sd.word}{st !== "none" && o ? <span className="font-semibold text-[var(--ink-3)]"> · {o.library} in library</span> : null}</span>
-              </button>
-              {act && <button type="button" onClick={act.run} className={`min-h-[44px] flex-none rounded-full border border-[var(--brand)] px-4 text-[13px] font-extrabold text-[var(--brand)] ${FOCUS}`}>{act.label}<span className="sr-only"> for {shortArea(i.area.area)}</span></button>}
+            <li key={a.id} data-state={st ?? undefined} className="grid content-start gap-1">
+              <Tile area={a} kind={k} count={n} word={word} sub={span} badge={st ? (st === "none" ? undefined : BADGE[st]) : undefined} label={label} onClick={() => onPick(a)} />
+              {act && <button type="button" onClick={act.run} className={`min-h-[44px] rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] ${FOCUS}`}>{act.label}<span className="sr-only"> for {shortArea(a.area)}</span></button>}
             </li>
           );
         })}
       </ul>
+      {extra > 0 && year !== null && <p className="m-0 mt-1 text-[12px] font-semibold text-[var(--ink-3)]" data-testid="curriculum-extra">Also in this year: {extra} extra {extra === 1 ? "lesson" : "lessons"} on topics beyond the curriculum for Year {year}.</p>}
     </div>
   );
 }
@@ -412,17 +426,9 @@ function ChildBook({ items, year, name, band, stars, calm, onPick }: { items: Ye
         <div><h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{name ? STICKER_COPY.title(name, year) : STICKER_COPY.titleNoName(year)}</h3><p className="m-0 text-[13px] font-semibold text-[var(--ink-2)]">{STICKER_COPY.intro}</p></div>
         <span className="text-[24px] leading-none" role="img" aria-label={STICKER_COPY.stars(stars)} data-testid="curriculum-book-stars">{[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden style={{ color: i < stars ? "var(--sem-warn)" : "var(--ink-3)" }}>{i < stars ? "★" : "☆"}</span>)}</span>
       </div>
-      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className={TILE_GRID}>
         {items.map((it) => { const d = got(it); return (
-          <li key={it.area.id}>
-            <button type="button" onClick={() => onPick(it.area)} data-sticker={d ? "got" : "next"} aria-label={`${shortArea(it.area.area)}: ${d ? STICKER_COPY.got : STICKER_COPY.next}`}
-              className={`grid min-h-[120px] w-full place-items-center gap-1 rounded-[22px] px-2 py-3 text-center ${FOCUS}`}
-              style={{ border: d ? "3px solid var(--sem-ok)" : "3px dashed var(--line)", background: d ? TINT("--sem-ok", 18) : "var(--panel)" }}>
-              <span aria-hidden className="text-[44px] leading-none" style={d ? undefined : { filter: "grayscale(1)", opacity: 0.35 }}>{emojiFor(it.area.area, it.area.strand)}</span>
-              <span className="text-[14px] font-extrabold leading-tight text-[var(--ink)]">{shortArea(it.area.area)}</span>
-              <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{d ? `✓ ${STICKER_COPY.got}` : STICKER_COPY.next}</span>
-            </button>
-          </li>
+          <li key={it.area.id}><Tile area={it.area} kind={d ? "got" : "next"} word={d ? `✓ ${STICKER_COPY.got}` : STICKER_COPY.next} label={`${shortArea(it.area.area)}: ${d ? STICKER_COPY.got : STICKER_COPY.next}`} onClick={() => onPick(it.area)} /></li>
         ); })}
       </ul>
     </div>

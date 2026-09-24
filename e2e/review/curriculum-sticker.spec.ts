@@ -45,6 +45,7 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
         await expect(book).toContainText("Got it!");
         await expect(book).toContainText("Next up");
         await expect(body).not.toContainText(/%|overdue|gap|behind/i);
+        await expect(book.locator("[data-count]")).toHaveCount(0);
         const box = await book.locator("[data-sticker]").first().boundingBox();
         expect(box!.height).toBeGreaterThanOrEqual(96);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);

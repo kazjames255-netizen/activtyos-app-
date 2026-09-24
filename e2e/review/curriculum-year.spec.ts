@@ -44,7 +44,7 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
     await expect(list).toContainText("Fractions");
     await expect(list).not.toContainText("Equations");
     await expect(list).not.toContainText("Algebra");
-    expect(await list.locator("[data-kind]").count()).toBe(3);
+    expect(await list.locator("[data-tile]").count()).toBe(3);
     await page.screenshot({ path: path.join(OUT, `year5-${vpName}.png`), fullPage: true });
 
     await card.getByRole("tab", { name: "Year 8" }).click();
@@ -59,13 +59,27 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
     await page.screenshot({ path: path.join(OUT, `year8-gaps-${vpName}.png`), fullPage: true });
     await card.getByLabel("Show only gaps & thin spots").uncheck();
 
-    // No blank cells: every row is a real, labelled area with a count.
+    // No blank cells: every tile is a real, labelled area with a count, at least 96px tall, 2 across at 390.
+    for (const b of await list.locator("[data-tile]").all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(96);
     expect(await card.locator("table").count()).toBe(0);
-    for (const b of await list.locator("[data-kind]").all()) expect(await b.getAttribute("data-count")).not.toBeNull();
+    for (const b of await list.locator("[data-tile]").all()) expect(await b.getAttribute("data-count")).not.toBeNull();
+    // Packed grid: one wrapping grid across the width (2+ across at 390, 4+ at 1440), strand filter row instead of headings.
+    const tiles = list.locator("[data-tile]");
+    const b0 = (await tiles.nth(0).boundingBox())!, b1 = (await tiles.nth(1).boundingBox())!;
+    expect(Math.abs(b0.y - b1.y)).toBeLessThan(4);
+    if (vpName === "1440") expect((await list.boundingBox())!.width).toBeGreaterThan(700);
+    await card.getByRole("tab", { name: "Year 8" }).click();
+    await card.getByTestId("curriculum-strands").getByRole("button", { name: "Algebra" }).click();
+    await expect(list).toContainText("Equations");
+    await expect(list).not.toContainText("Place value");
+    await card.getByTestId("curriculum-strands").getByRole("button", { name: "All" }).click();
+    await card.getByRole("tab", { name: "Year 5" }).click();
     // 390: no sideways page scroll
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
 
     await card.getByRole("tab", { name: "Year 5" }).click();
+    await expect(list.getByRole("button", { name: "Fractions, 4 lessons, covered" })).toBeVisible();
+    await expect(list.getByRole("button", { name: "Perimeter, 0 lessons, gap" })).toBeVisible();
     await list.getByRole("button", { name: /Fractions/ }).click();
     await expect(page.getByText("Adding fractions")).toBeVisible();
     await page.screenshot({ path: path.join(OUT, `drawer-${vpName}.png`) });

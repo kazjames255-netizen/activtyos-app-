@@ -83,3 +83,10 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - Multi-year key-stage rows (e.g. Years 3-6) are judged as a whole, so a Year 5 row shows its span total as a sub-line, not a per-year verdict.
 - Pre-existing lint errors (react-hooks set-state-in-effect) in AreaDrawer/CurriculumCard/CurriculumRings left as they were.
 - `--on-brand` token does not exist in the CSS; pills use it with a #fff fallback.
+
+## P: year reminder (undone / notes)
+- Reminder state (dismissed, handled rows) is per browser (localStorage), not shared between tutors or devices.
+- Students with no next label (last year in the list) show "Leave or left school?" with Keep only; there is no archive action from the dialog.
+- Rows are not filtered to "my students" for staff in a multi-tutor business; all editable roster rows are listed.
+- (O, sticker) No confetti or animation was added to the sticker book, so calm mode / reduced motion have nothing to switch off; if a "pop" on earning a sticker is wanted, gate it on `data-calm` and `prefers-reduced-motion`.
+- (O, lens) The student overlay counts lessons placed in the student's exact year; a key-stage row's other years are not merged.
