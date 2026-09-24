@@ -8,6 +8,8 @@ import { ToolQuestion, type ToolAnswerValue } from "../tools/ToolQuestion";
 import type { PublicProblem } from "../tools/problems";
 import { Lightbox, QImage } from "./QuestionImage";
 import { display } from "./ui";
+import { SpeakButton } from "../speak";
+import { useSupport } from "../family/FamilyContext";
 
 // One question as a student answers it. Used by the quiz runner and by the
 // tutor's live preview in the question editor — so what a tutor previews is
@@ -26,14 +28,19 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
   const matchVal = value && typeof value === "object" && !Array.isArray(value) && value.kind === "match" ? value : undefined;
   const orderVal = value && typeof value === "object" && !Array.isArray(value) && value.kind === "order" ? value : undefined;
 
+  const support = useSupport();
+  const spoken = support.readAloudDefault && q.options?.length ? `${q.prompt}. ${q.options.map((o, i) => `${String.fromCharCode(65 + i)}: ${o.text}`).join(". ")}` : q.prompt;
   const pictured = (q.options ?? []).some((o) => o.image?.url);
   const field = "w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[16px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--ink-3)] focus:border-[var(--brand)] disabled:opacity-60";
 
   return (
     <fieldset disabled={disabled} className="m-0 min-w-0 border-0 p-0">
       <legend className="mb-4 w-full p-0">
-        <span className="block text-[19px] font-extrabold leading-snug text-[var(--ink)] sm:text-[21px]" style={display}>
-          <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{q.prompt || "Your question will appear here"}</span>
+        <span className="flex items-start gap-2.5">
+          <span className="block min-w-0 flex-1 text-[19px] font-extrabold leading-snug text-[var(--ink)] sm:text-[21px]" style={display}>
+            <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{q.prompt || "Your question will appear here"}</span>
+          </span>
+          {q.prompt && <SpeakButton text={spoken} label="Read the question aloud" testId="hub-read-question" />}
         </span>
         <span className="mt-2 inline-flex items-center gap-2 text-[11.5px] font-bold text-[var(--ink-3)]">
           <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5">{q.marks} {q.marks === 1 ? "mark" : "marks"}</span>

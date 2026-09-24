@@ -5,6 +5,7 @@ import { Icon } from "../kit";
 import { useFamily } from "../family/FamilyContext";
 import { NEUTRAL, OK, type Tone } from "./format";
 import { useReducedMotion } from "./motion";
+import { SpeakButton } from "../speak";
 import { Chip, display, HourglassIcon, ScoreRing } from "./ui";
 
 // THE pass moment. A full-width banner that opens every scored result: a big ring
@@ -74,7 +75,10 @@ export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headli
         </div>
         <div className="min-w-0 flex-1" role="status" aria-live="polite">
           {eyebrow && <div className="mb-1 text-[12px] font-bold text-[var(--ink-3)] [overflow-wrap:anywhere]">{eyebrow}</div>}
-          <h3 className="m-0 text-[26px] font-extrabold leading-tight text-[var(--ink)] sm:text-[30px]" style={display} data-testid="hub-result-headline">{headline}</h3>
+          <div className="flex items-start justify-center gap-2.5 sm:justify-start">
+            <h3 className="m-0 text-[26px] font-extrabold leading-tight text-[var(--ink)] sm:text-[30px]" style={display} data-testid="hub-result-headline">{headline}</h3>
+            <SpeakButton text={`${headline}. ${sub}`} label="Read your result aloud" testId="hub-read-result" />
+          </div>
           <p className="m-0 mt-2 max-w-[520px] text-[14px] leading-relaxed text-[var(--ink-2)]">{sub}</p>
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             {kind === "partial" && partial

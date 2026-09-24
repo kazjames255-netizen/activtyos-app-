@@ -2,6 +2,7 @@
 
 import { RetryFace } from "../homework/RetryFace";
 import { kidTitle, type KidBand } from "../family/kidCopy";
+import { SpeakButton } from "../speak";
 import { DISPLAY, FOCUS, Icon, type IconName } from "./homeKit";
 
 // A child's Home (P-03): ONE big next-step card, at most six words, one "Go" button. No streak, level, stats or
@@ -24,6 +25,7 @@ export function KidHome({ name, band, step, rows, failedHomework, onRetry, go }:
         <section aria-label="What to do next" data-testid="hub-kid-next" data-ui="card" className="flex min-h-[96px] flex-wrap items-center gap-4 rounded-3xl border border-[var(--brand-line)] bg-[var(--brand-soft)] p-5 shadow-[var(--shadow-sm)]">
           <span aria-hidden className="grid h-[72px] w-[72px] flex-none place-items-center rounded-3xl bg-[var(--surface)] text-[var(--brand)]"><Icon name={step?.icon ?? "check"} size={38} strokeWidth={2.2} /></span>
           <p className="m-0 min-w-0 flex-1 basis-[180px] text-[26px] font-extrabold leading-tight text-[var(--ink)]" style={DISPLAY}>{step?.text ?? "All done. Well done!"}</p>
+          <SpeakButton text={step?.text ?? "All done. Well done!"} label="Read this aloud" size={56} testId="hub-read-next" />
           {step && (
             <button type="button" onClick={() => go(step.to)} data-testid="hub-kid-go" aria-label={`Go: ${step.text}`}
               className={`inline-flex min-h-[56px] min-w-[110px] items-center justify-center rounded-full bg-[var(--brand)] px-8 text-[20px] font-extrabold text-white ${FOCUS}`}>Go</button>
