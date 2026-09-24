@@ -20,6 +20,7 @@ const only = process.env.RULES_ONLY;
 const files = readdirSync(path.join(here, "rules")).filter((f) => f.endsWith(".json") && !f.includes("golden") && (!only || f === `${only}.json`)).sort();
 const sets: RuleSet[] = files.map((f) => JSON.parse(readFileSync(path.join(here, "rules", f), "utf8")));
 const rules = mergeRules(sets, "test");
+if (process.env.SKIP_ASSIGN) rules.rules = rules.rules.filter((r) => !r.id.endsWith(".assign")); // dev toggle: measure the golden set without the assignment rules
 ok(files.length > 0, "at least one rules file");
 const ids = new Set<string>();
 for (const r of rules.rules) {
@@ -67,7 +68,9 @@ let gTotal = 0, gHit = 0;
 for (const f of goldenFiles) {
   for (const g of JSON.parse(readFileSync(path.join(here, "rules", f), "utf8")) as Golden[]) {
     gTotal++;
-    const top = selectTools({ subject: g.s, year: g.y, title: g.t, unit: g.u ?? "", objective: g.o ?? "", programme: g.p }, rules, () => true, { max: 3 }).map((x) => x.tool);
+    // Golden labels name the IDEAL tool from the plan. The live lesson-widget / drawer alternates (w.*, D.*) are second-line duplicates of those
+    // ideals, so they are left out here (they are covered by the coverage + orphan checks above) — otherwise they would crowd the planned tool out of the top 3.
+    const top = selectTools({ subject: g.s, year: g.y, title: g.t, unit: g.u ?? "", objective: g.o ?? "", programme: g.p }, rules, (id) => !/^(w|D)\./.test(id), { max: 3 }).map((x) => x.tool);
     const hit = g.expect.some((e) => top.includes(e)), banned = (g.not ?? []).filter((x) => top.includes(x));
     if (hit && banned.length === 0) gHit++; else console.error(`golden miss: "${g.t}" (${g.s} Y${g.y}) expected one of [${g.expect}] got [${top}]${banned.length ? ` — must NOT include ${banned}` : ""}`);
   }

@@ -1528,6 +1528,60 @@
    "subject": [
     "english"
    ]
+  },
+  {
+   "id": "english.w.storyMountain.assign",
+   "tool": "w.storyMountain",
+   "weight": 0.7,
+   "any": [
+    "story (mountain|structure|plan\\w*)",
+    "narrative",
+    "plot",
+    "\\bstory\\b.*\\b(write|writing|plan)"
+   ],
+   "subject": [
+    "english"
+   ],
+   "why": "Climb the story mountain to plan the plot"
+  },
+  {
+   "id": "english.w.wordClass.assign",
+   "tool": "w.wordClass",
+   "weight": 0.7,
+   "any": [
+    "word class(es)?",
+    "\\bnouns?\\b",
+    "\\bverbs?\\b",
+    "adjectives?",
+    "adverbs?",
+    "pronouns?",
+    "prepositions?",
+    "conjunctions?",
+    "determiners?",
+    "\\bgrammar\\b"
+   ],
+   "subject": [
+    "english"
+   ],
+   "why": "Colour words by class to practise grammar"
+  },
+  {
+   "id": "english.H-H02.assign",
+   "tool": "H-H02",
+   "weight": 0.5,
+   "any": [
+    "chronolog\\w+",
+    "order of events",
+    "sequenc\\w+ (the )?events"
+   ],
+   "none": [
+    "non.chronological",
+    "timeline"
+   ],
+   "subject": [
+    "english"
+   ],
+   "why": "Put events in order on a chronology sort"
   }
  ],
  "fallback": {

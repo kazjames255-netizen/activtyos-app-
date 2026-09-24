@@ -1534,6 +1534,446 @@
    "subject": [
     "maths"
    ]
+  },
+  {
+   "id": "maths.w.placeValue.assign",
+   "tool": "w.placeValue",
+   "weight": 0.7,
+   "any": [
+    "place value",
+    "column (addition|subtraction)",
+    "\\b\\d+ ?digit",
+    "composition of numbers",
+    "\\btens\\b",
+    "\\bones\\b",
+    "hundreds",
+    "decompos",
+    "\\bdecimals?\\b"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Place-value counters show what each digit is worth"
+  },
+  {
+   "id": "maths.w.tenFrame.assign",
+   "tool": "w.tenFrame",
+   "weight": 0.5,
+   "any": [
+    "within (10|20)",
+    "numbers? (0|1|6|11|20)\\b",
+    "composition of numbers",
+    "number bonds?",
+    "addition and subtraction facts",
+    "counting (to|and|recognising)",
+    "bridging"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A ten frame makes number bonds and counting visible"
+  },
+  {
+   "id": "maths.w.numberLine.assign",
+   "tool": "w.numberLine",
+   "weight": 0.5,
+   "any": [
+    "number line",
+    "counting",
+    "bridging",
+    "additive (structures|relationships)",
+    "compensation",
+    "\\baddition\\b",
+    "\\bsubtraction\\b",
+    "adding and subtracting",
+    "sequenc"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Hopping on a number line models addition and subtraction"
+  },
+  {
+   "id": "maths.w.clockFace.assign",
+   "tool": "w.clockFace",
+   "weight": 0.85,
+   "any": [
+    "\\bclocks?\\b",
+    "\\btelling the time\\b",
+    "\\btell the time\\b",
+    "time (write|convert|sequencing)",
+    "o'clock",
+    "half past",
+    "12 and 24 hour"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A clock face to set and read times"
+  },
+  {
+   "id": "maths.w.measure.assign",
+   "tool": "w.measure",
+   "weight": 0.5,
+   "any": [
+    "\\bmeasures?\\b",
+    "\\bmass\\b",
+    "capacity",
+    "\\bvolume\\b",
+    "converting units",
+    "compound measures",
+    "sense of measure",
+    "conversion of measures"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Reading a scale is the core skill in measures"
+  },
+  {
+   "id": "maths.w.areaPerimeter.assign",
+   "tool": "w.areaPerimeter",
+   "weight": 0.85,
+   "any": [
+    "\\bperimeter\\b",
+    "\\barea\\b",
+    "compound shapes"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Build shapes on a grid to explore area and perimeter"
+  },
+  {
+   "id": "maths.w.arrayBuilder.assign",
+   "tool": "w.arrayBuilder",
+   "weight": 0.5,
+   "any": [
+    "multipl\\w+",
+    "\\barrays?\\b",
+    "times tables?",
+    "\\bfactors?\\b",
+    "\\bmultiples?\\b",
+    "distributive",
+    "commutative",
+    "associative",
+    "doubling and halving"
+   ],
+   "none": [
+    "multiplicative relationships",
+    "vectors?"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "An array turns multiplication into a picture"
+  },
+  {
+   "id": "maths.w.sharing.assign",
+   "tool": "w.sharing",
+   "weight": 0.5,
+   "any": [
+    "\\bdivi(sion|de|ding)\\b",
+    "\\bsharing\\b",
+    "grouping",
+    "part.whole"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Share and group objects to see division"
+  },
+  {
+   "id": "maths.w.fractionWall.assign",
+   "tool": "w.fractionWall",
+   "weight": 0.7,
+   "any": [
+    "fractions?",
+    "\\btenths\\b",
+    "hundredths",
+    "parts and wholes",
+    "part.whole",
+    "equivalen\\w+ fractions?"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "The fraction wall compares fractions side by side"
+  },
+  {
+   "id": "maths.w.percentGrid.assign",
+   "tool": "w.percentGrid",
+   "weight": 0.75,
+   "any": [
+    "percent\\w*",
+    "proportionality",
+    "decimals? and",
+    "fractions,? decimals"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A 100-grid links fractions, decimals and percentages"
+  },
+  {
+   "id": "maths.w.ratioBar.assign",
+   "tool": "w.ratioBar",
+   "weight": 0.75,
+   "any": [
+    "\\bratios?\\b",
+    "proportion",
+    "multiplicative relationships",
+    "comparing quantities"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A bar model shows how a ratio splits a whole"
+  },
+  {
+   "id": "maths.w.balance.assign",
+   "tool": "w.balance",
+   "weight": 0.5,
+   "any": [
+    "equations?",
+    "solving",
+    "unknowns?",
+    "simultaneous",
+    "rearrang\\w+",
+    "equivalence",
+    "expressions",
+    "algebra\\w*"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Balancing scales models solving an equation"
+  },
+  {
+   "id": "maths.w.functionMachine.assign",
+   "tool": "w.functionMachine",
+   "weight": 0.5,
+   "any": [
+    "\\bfunctions?\\b",
+    "sequences",
+    "formulae",
+    "\\binverse\\b",
+    "expressions and"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A function machine shows input, rule and output"
+  },
+  {
+   "id": "maths.w.linearGraph.assign",
+   "tool": "w.linearGraph",
+   "weight": 0.5,
+   "any": [
+    "linear graphs?",
+    "straight.line",
+    "\\bgradient\\b",
+    "real life graphs",
+    "graphs?",
+    "y ?= ?mx",
+    "non linear"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Drag m and c to see how the line changes"
+  },
+  {
+   "id": "maths.w.angleExplorer.assign",
+   "tool": "w.angleExplorer",
+   "weight": 0.7,
+   "any": [
+    "\\bangles?\\b",
+    "right angles",
+    "turns?\\b",
+    "position and direction"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Explore angles and turns hands-on"
+  },
+  {
+   "id": "maths.w.averagesDots.assign",
+   "tool": "w.averagesDots",
+   "weight": 0.8,
+   "any": [
+    "\\bmean\\b",
+    "\\bmedian\\b",
+    "\\bmode\\b",
+    "averages?",
+    "\\brange\\b"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Dot plots show mean, median, mode and range"
+  },
+  {
+   "id": "maths.w.chartBuilder.assign",
+   "tool": "w.chartBuilder",
+   "weight": 0.5,
+   "any": [
+    "charts?",
+    "pictograms?",
+    "bar (chart|graph)",
+    "\\bdata\\b",
+    "statistics",
+    "tables? and"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Build a chart from the data"
+  },
+  {
+   "id": "maths.M-21.assign",
+   "tool": "M-21",
+   "weight": 0.5,
+   "any": [
+    "transformations?",
+    "position and direction",
+    "translat\\w+",
+    "reflect\\w+",
+    "enlarge\\w+"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A coordinate grid to plot the shape and its image"
+  },
+  {
+   "id": "maths.M-20.assign",
+   "tool": "M-20",
+   "weight": 0.5,
+   "any": [
+    "symmetry",
+    "plans and elevations",
+    "\\bshapes?\\b",
+    "compound shapes",
+    "draw"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Squared or isometric paper to draw on"
+  },
+  {
+   "id": "maths.M-01.assign",
+   "tool": "M-01",
+   "weight": 0.5,
+   "any": [
+    "similarity",
+    "pythagoras",
+    "parallel and perpendicular"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A ruler to measure lengths and sides"
+  },
+  {
+   "id": "maths.M-04.assign",
+   "tool": "M-04",
+   "weight": 0.5,
+   "any": [
+    "circle theorems?",
+    "\\bcircles?\\b",
+    "loci"
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Compasses to draw circles and arcs"
+  },
+  {
+   "id": "maths.M-80.assign",
+   "tool": "M-80",
+   "weight": 0.5,
+   "any": [
+    "surface area",
+    "volume of",
+    "pyramids",
+    "compound measures",
+    "iteration",
+    "order of operations",
+    "percentages",
+    "maths in the workplace",
+    "maths and the environment",
+    "thinking critically",
+    "proof",
+    "algebraic manipulation",
+    "converting units",
+    "arithmetic procedures",
+    "direct and inverse",
+    "understanding percentages"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A scientific calculator for multi-step calculations"
+  },
+  {
+   "id": "maths.M-40.assign",
+   "tool": "M-40",
+   "weight": 0.5,
+   "any": [
+    "\\bmoney\\b",
+    "\\bcoins?\\b",
+    "unitising",
+    "counting in (2s|5s|10s)",
+    "multiples of"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "A number line to count in steps and add amounts of money"
+  },
+  {
+   "id": "maths.X-05.assign",
+   "tool": "X-05",
+   "weight": 0.5,
+   "any": [
+    "\\bmoney\\b",
+    "\\bcoins?\\b",
+    "unitising",
+    "\\bcompar\\w+",
+    "\\bmatch\\w*",
+    "\\bsort\\w*"
+   ],
+   "years": [
+    1,
+    6
+   ],
+   "subject": [
+    "maths"
+   ],
+   "why": "Sort and match cards to compare values"
   }
  ],
  "fallback": {

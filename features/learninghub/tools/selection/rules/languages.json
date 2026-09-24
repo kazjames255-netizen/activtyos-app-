@@ -817,6 +817,103 @@
    "subject": [
     "languages"
    ]
+  },
+  {
+   "id": "languages.w.langAgree.assign",
+   "tool": "w.langAgree",
+   "weight": 0.5,
+   "any": [
+    "agree\\w*",
+    "adjectives?",
+    "gender"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Adjective agreement practice"
+  },
+  {
+   "id": "languages.w.langVerbs.assign",
+   "tool": "w.langVerbs",
+   "weight": 0.5,
+   "any": [
+    "\\bverbs?\\b",
+    "conjugat\\w+",
+    "\\btenses?\\b",
+    "infinitive"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Build a verb table"
+  },
+  {
+   "id": "languages.w.langFlash.assign",
+   "tool": "w.langFlash",
+   "weight": 0.5,
+   "any": [
+    "vocabular\\w+",
+    "\\bfamily\\b",
+    "colours?",
+    "animals?",
+    "\\bfood\\b",
+    "school",
+    "home",
+    "hobbies",
+    "weather"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Flip, hear and remember the words"
+  },
+  {
+   "id": "languages.w.langGender.assign",
+   "tool": "w.langGender",
+   "weight": 0.5,
+   "any": [
+    "gender",
+    "\\barticles?\\b",
+    "masculine",
+    "feminine",
+    "\\bder\\b|\\bdie\\b|\\bdas\\b|\\bel\\b|\\bla\\b|\\ble\\b"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Sort nouns by gender"
+  },
+  {
+   "id": "languages.w.langNumbers.assign",
+   "tool": "w.langNumbers",
+   "weight": 0.5,
+   "any": [
+    "numbers?",
+    "\\bdates?\\b",
+    "\\btime\\b",
+    "\\bage\\b",
+    "birthday"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Say it with numbers"
+  },
+  {
+   "id": "languages.w.langOrder.assign",
+   "tool": "w.langOrder",
+   "weight": 0.5,
+   "any": [
+    "word order",
+    "sentence (structure|building)",
+    "\\bquestions?\\b",
+    "negati\\w+",
+    "opinions?"
+   ],
+   "subject": [
+    "languages"
+   ],
+   "why": "Word-order workshop for building sentences"
   }
  ],
  "fallback": {

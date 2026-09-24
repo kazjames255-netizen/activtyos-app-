@@ -63,7 +63,7 @@ export function selectTools(sig: Signal, rules: RuleSet, isAvailable: (toolId: s
   const ranked: Suggestion[] = [...per.entries()].map(([tool, hits]) => {
     hits.sort((a, b) => b.score - a.score);
     const bonus = Math.min(0.15, 0.05 * (hits.length - 1));
-    return { tool, score: Math.round((hits[0]!.score + bonus) * 1000) / 1000, why: { rule: hits[0]!.rule.id, field: hits[0]!.field, match: hits[0]!.match }, source: "rule" as const };
+    return { tool, score: Math.round((hits[0]!.score + bonus) * 1000) / 1000, why: { rule: hits[0]!.rule.id, field: hits[0]!.field, match: hits[0]!.match, ...(hits[0]!.rule.why ? { text: hits[0]!.rule.why } : {}) }, source: "rule" as const };
   }).sort((a, b) => b.score - a.score || a.tool.localeCompare(b.tool));
 
   const out: Suggestion[] = [];

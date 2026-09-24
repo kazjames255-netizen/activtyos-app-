@@ -1401,6 +1401,123 @@
    "subject": [
     "science"
    ]
+  },
+  {
+   "id": "science.w.equationBalancer.assign",
+   "tool": "w.equationBalancer",
+   "weight": 0.7,
+   "any": [
+    "balanc\\w+ (chemical |symbol )?equations?",
+    "conservation of mass",
+    "word equations?",
+    "chemical equations?"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Balance the atoms on each side of the equation"
+  },
+  {
+   "id": "science.w.lightRays.assign",
+   "tool": "w.lightRays",
+   "weight": 0.7,
+   "any": [
+    "\\blight\\b",
+    "refract\\w+",
+    "reflect\\w+",
+    "\\blenses?\\b",
+    "\\brays?\\b"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Bend a light ray to see reflection and refraction"
+  },
+  {
+   "id": "science.w.atomBuilder.assign",
+   "tool": "w.atomBuilder",
+   "weight": 0.75,
+   "any": [
+    "\\batom\\w*",
+    "protons?",
+    "electrons?",
+    "neutrons?",
+    "electron (shells?|configuration)",
+    "isotopes?"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Build an atom to see its particles"
+  },
+  {
+   "id": "science.w.cellExplorer.assign",
+   "tool": "w.cellExplorer",
+   "weight": 0.75,
+   "any": [
+    "\\bcells?\\b",
+    "organelles?",
+    "microscop\\w+",
+    "mitochondria",
+    "nucleus"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Explore the parts inside a cell"
+  },
+  {
+   "id": "science.w.separation.assign",
+   "tool": "w.separation",
+   "weight": 0.75,
+   "any": [
+    "mixtures?",
+    "filtration",
+    "distillation",
+    "chromatography",
+    "evaporat\\w+",
+    "separat\\w+",
+    "dissolv\\w+"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Choose the right method to separate a mixture"
+  },
+  {
+   "id": "science.w.neurone.assign",
+   "tool": "w.neurone",
+   "weight": 0.75,
+   "any": [
+    "neurones?",
+    "neurons?",
+    "nervous system",
+    "nerve",
+    "reflex",
+    "synapse"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Send a nerve impulse along a neurone"
+  },
+  {
+   "id": "science.D.apparatus.assign",
+   "tool": "D.apparatus",
+   "weight": 0.5,
+   "any": [
+    "apparatus",
+    "equipment",
+    "required practical",
+    "practical",
+    "investigat\\w+",
+    "experiment\\w*",
+    "method\\b"
+   ],
+   "subject": [
+    "science"
+   ],
+   "why": "Lab equipment to name and choose for the practical"
   }
  ],
  "fallback": {

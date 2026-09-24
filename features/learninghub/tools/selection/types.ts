@@ -36,6 +36,8 @@ export interface Rule {
   years?: [number, number];
   /** Only when the Oak programme slug matches this regex (e.g. "^biology|combined"). */
   programme?: string;
+  /** Plain-words reason shown to the tutor ("Suggested because…"); optional — falls back to the matched words. */
+  why?: string;
 }
 
 export interface RuleSet {
@@ -49,7 +51,7 @@ export interface Suggestion {
   tool: string;
   score: number;
   /** Why: the rule, the field it matched and the words that matched — shown as "Suggested because…". */
-  why: { rule: string; field: Field | "fallback" | "pinned"; match: string };
+  why: { rule: string; field: Field | "fallback" | "pinned"; match: string; text?: string };
   source: "rule" | "fallback" | "pinned";
 }
 

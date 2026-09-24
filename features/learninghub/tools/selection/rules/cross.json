@@ -931,6 +931,66 @@
     "title",
     "objective"
    ]
+  },
+  {
+   "id": "cross.w.fractionBar.assign",
+   "tool": "w.fractionBar",
+   "weight": 0.7,
+   "any": [
+    "simplif\\w+ fractions?",
+    "equivalent fractions?",
+    "lowest terms",
+    "algebraic fractions",
+    "\\bfractions?\\b"
+   ],
+   "years": [
+    3,
+    13
+   ],
+   "why": "Simplify a fraction by dividing top and bottom together"
+  },
+  {
+   "id": "cross.X-03.assign",
+   "tool": "X-03",
+   "weight": 0.5,
+   "any": [
+    "\\btimers?\\b",
+    "stopwatch",
+    "reaction time",
+    "timed",
+    "speed",
+    "\\bseconds\\b",
+    "time taken"
+   ],
+   "why": "A timer for timed activities and time measurements"
+  },
+  {
+   "id": "cross.D.tally.assign",
+   "tool": "D.tally",
+   "weight": 0.5,
+   "any": [
+    "\\btally\\b",
+    "frequency tables?",
+    "survey",
+    "\\bcount\\w* (the )?(number|how many)",
+    "\\bdata (collection|handling)",
+    "pictograms?"
+   ],
+   "why": "Tally counter to record counts as you go"
+  },
+  {
+   "id": "cross.D.symbols.assign",
+   "tool": "D.symbols",
+   "weight": 0.5,
+   "any": [
+    "symbols?",
+    "\\bsigns?\\b",
+    "greater than|less than",
+    "inequalit\\w+",
+    "notation",
+    "\\bkey\\b"
+   ],
+   "why": "A symbols palette for maths and science notation"
   }
  ],
  "fallback": {
