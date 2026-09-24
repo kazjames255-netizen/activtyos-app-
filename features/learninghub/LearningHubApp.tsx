@@ -15,6 +15,8 @@ import { TopicFilter } from "./TopicFilter";
 import { useHubData, useLiveNow } from "./useHubData";
 import { coveredTopicIds, type HubFilter } from "./types";
 import { FamilyBar, FamilyProvider, type FamilyCtx } from "./family/FamilyContext";
+import { KidIconTabs } from "./family/KidIconTabs";
+import { bandOrDefault } from "./family/kidCopy";
 import { KID_STRIP_HIDDEN, KID_TABS, KID_TAB_LABEL, KidBar, readKid, useKidGuards, writeKid } from "./family/KidMode";
 import { setLinkParams, useLinkSearch } from "./family/link";
 import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
@@ -271,7 +273,8 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
         {!focus && !kid && !tutor && <FamilyBar />}
         {!tutor && hub.childId && <p role="status" aria-live="polite" aria-busy={!settled || undefined} className="sr-only" id="hub-child-live">{settled ? `Showing ${hub.children.find((c) => c.childId === hub.childId)?.childName ?? "your child"}` : "Loading"}</p>}
 
-        {!focus && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
+        {!focus && kid && bandOrDefault(hub.child?.yearGroup) === "ks1" ? <KidIconTabs active={active} onSelect={(k) => go(k as TabKey)} /> : null}
+        {!focus && !(kid && bandOrDefault(hub.child?.yearGroup) === "ks1") && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
 
         {chips && !focus && topicFilter("chips")}
 

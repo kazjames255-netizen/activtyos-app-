@@ -113,7 +113,11 @@ learningHub.get("/students", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx) return;
   if (!ctx.canEdit) {
-    res.json(scopedChildren(ctx).map((c) => ({ childId: c.childId, childName: c.childName, subjects: c.subjects, franchiseId: c.franchiseId, ...(c.support ? { support: c.support } : {}) }))); // support is read-only for a family: only PUT/POST /students (tutors, requireEdit) can change it
+    // R-6: a family also gets its OWN child's year group (display only: picks the age band); never anyone else's.
+    const kids = scopedChildren(ctx);
+    const [dobs, cfg, docs] = await Promise.all([childDobs(kids.map((c) => c.childId)), hubConfig(ctx.tenantId, ctx.franchiseId), enrolmentsForParent(ctx.uid)]);
+    const yg = (id: string) => { const e = docs.find((d) => d.tenantId === ctx.tenantId && d.childId === id); return e ? effectiveYearGroup(e, dobs.get(id) ?? null, cfg.yearGroups) : null; };
+    res.json(kids.map((c) => ({ childId: c.childId, childName: c.childName, subjects: c.subjects, franchiseId: c.franchiseId, yearGroup: yg(c.childId), ...(c.support ? { support: c.support } : {}) }))); // support is read-only for a family: only PUT/POST /students (tutors, requireEdit) can change it
     return;
   }
   const mine = (await tenantRoster(ctx.tenantId)).filter((e) => canSeeStudent(ctx, e.franchiseId));

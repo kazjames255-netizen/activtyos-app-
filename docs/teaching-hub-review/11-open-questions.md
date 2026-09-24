@@ -61,3 +61,10 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - Lesson-quiz (QuizStep) and warm-up questions do not show question tools yet (lessons already have the Tools drawer).
 - H-H02 (chronology sort) and the humanities tools have no Oak history/geography lessons to assign against; only English "chronological order" wording assigns them.
 - Topic-name matches can add a loosely related tool (e.g. a Fractions topic suggests the fraction wall for an angles question); the reason line says "the topic mentions".
+
+## R-6 age bands (open)
+- Per-child display-band override (Little/Junior/Teen) not built: needs an enrolment field `displayBand` plus a tutor/parent control.
+- KS1 "Play & learn" opens Quizzes; Homework, Lessons and Flashcards are reached from the Home card only. Confirm this is enough or add a sub-row.
+- KS1 icon tabs have no spoken labels or arrow-key roving yet (read-aloud nav is R-4 scope).
+- Teen Home has no "Next lesson" row or 3 topic buttons; "Revise weakest" opens Quizzes (no weakest-filtered quiz yet).
+- Teen quiz/homework result screens still use kid tone in places outside Home; only Home and the P-13 string table were switched.

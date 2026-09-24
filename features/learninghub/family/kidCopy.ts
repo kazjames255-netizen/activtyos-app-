@@ -19,11 +19,11 @@ export function bandOfYear(yearGroup: string | null | undefined): KidBand | null
 /** Graceful fallback: an unknown year is treated as KS2 (kind wording, a short list). */
 export const bandOrDefault = (yearGroup: string | null | undefined): KidBand => bandOfYear(yearGroup) ?? "ks2";
 
-/** Kind wording is on for a child's screen (kid mode) below Year 10. */
+/** Kind wording is on for a child's screen (kid mode) in KS1/KS2 (below Year 7); Year 7+ get the plain grown-up words (R-6). */
 export function useKidCopy(yearGroup?: string | null): { kind: boolean; band: KidBand } {
   const kid = useFamily().kid;
   const band = bandOrDefault(yearGroup);
-  return { kind: kid && band !== "teen", band };
+  return { kind: kid && (band === "ks1" || band === "ks2"), band };
 }
 
 export const KID_COPY = {
