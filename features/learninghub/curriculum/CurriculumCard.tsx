@@ -105,7 +105,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
               {[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden style={{ color: i < starsOn ? "var(--sem-warn)" : "var(--ink-3)" }}>{i < starsOn ? "★" : "☆"}</span>)}
             </span>
           ) : (
-            <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{data ? `${data.summary.covered} of ${data.summary.checked} curriculum areas covered · ${data.summary.thin} thin · ${data.summary.gaps} gaps` : "National curriculum & GCSE, at a glance"}</span>
+            <span className="line-clamp-2 block text-[12.5px] font-semibold text-[var(--ink-2)]">{data ? `${data.summary.covered} of ${data.summary.checked} curriculum areas covered · ${data.summary.thin} thin · ${data.summary.gaps} gaps` : "National curriculum & GCSE, at a glance"}</span>
           )}
         </span>
         <Icon name={open ? "chevronDown" : "chevronRight"} size={18} className="flex-none text-[var(--ink-2)]" />
