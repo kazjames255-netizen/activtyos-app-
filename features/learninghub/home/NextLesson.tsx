@@ -80,7 +80,7 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
 
   return (
     <section aria-label="Next lesson" data-ui="card"
-      className={`home-rise relative flex h-full min-w-0 flex-col overflow-hidden text-white ${embedded ? "" : "min-h-[240px] rounded-3xl p-6 sm:p-7"}`}
+      className={`home-rise relative flex h-full min-w-0 flex-col overflow-hidden text-white ${embedded ? "" : "min-h-[200px] rounded-3xl p-5 sm:p-6"}`}
       style={embedded ? undefined : { ...HERO_BG, ...rise(0) }}>
       {!embedded && <Icon name="video" size={190} strokeWidth={1} className="pointer-events-none absolute -bottom-10 -right-8 text-white opacity-[0.07]" />}
       <div className="relative flex items-start gap-4">
@@ -127,7 +127,7 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
         </div>
       )}
 
-      <div className="relative mt-auto flex flex-wrap items-end justify-between gap-4 pt-5">
+      <div className="relative mt-auto flex flex-wrap items-end justify-between gap-4 pt-3">
         {open ? (
           <div className="text-[13px] font-semibold text-white/90">
             {live ? `Ends in ${humanSpan(t.endMs - now)}` : overrun ? (lesson.status === "ended" ? (!isTutor && lesson.waitingForTutor ? "Ended — waiting for your tutor to reopen it" : `Ended — you can rejoin for ${humanSpan(t.closesMs - now)}`) : `Finished — you can still join for ${humanSpan(t.closesMs - now)}`) : `Starts in ${humanSpan(untilStart)}`}
