@@ -22,6 +22,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
   const list = useRef<HTMLDivElement>(null);
   const [pill, setPill] = useState<{ x: number; w: number; h: number } | null>(null);
   const [animate, setAnimate] = useState(false);
+  const firstScroll = useRef(true);
   const [edges, setEdges] = useState({ l: false, r: false });
 
   const measure = useCallback(() => {
@@ -57,10 +58,12 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
     if (!s || !el) return;
     // Only move when the tab is actually clipped (then bring it just into view, with a little
     // context either side) — always centring pushed Home off the edge on a wide strip.
-    const pad = 28, from = el.offsetLeft - pad, to = el.offsetLeft + el.offsetWidth + pad;
-    if (from >= s.scrollLeft && to <= s.scrollLeft + s.clientWidth) return;
-    const left = from < s.scrollLeft ? Math.max(0, from) : to - s.clientWidth;
-    s.scrollTo({ left, behavior: reducedMotion() ? "auto" : "smooth" });
+        const first = firstScroll.current; firstScroll.current = false;
+    // Leave room for the edge fade (56px) so the active tab is never sitting under it.
+    const fromF = el.offsetLeft - 60, toF = el.offsetLeft + el.offsetWidth + 60;
+    if (fromF >= s.scrollLeft && toF <= s.scrollLeft + s.clientWidth) return;
+    const left = fromF < s.scrollLeft ? Math.max(0, fromF) : toF - s.clientWidth;
+    s.scrollTo({ left, behavior: first || reducedMotion() ? "auto" : "smooth" });
   }, [active]);
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -77,7 +80,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
     refs.current.get(keys[n])?.focus();
   };
 
-  const fade = { "--hub-fade-l": edges.l ? "36px" : "0px", "--hub-fade-r": edges.r ? "36px" : "0px" } as CSSProperties;
+  const fade = { "--hub-fade-l": edges.l ? "56px" : "0px", "--hub-fade-r": edges.r ? "56px" : "0px" } as CSSProperties;
 
   return (
     <div className="relative mb-4">
@@ -108,9 +111,9 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
                 aria-disabled={soon || undefined} tabIndex={on ? 0 : -1}
                 data-panel={meta.key} data-status={meta.status}
                 onClick={() => onSelect(meta.key)}
-                className={`relative z-10 motion-safe:active:scale-[.97] inline-flex min-h-[44px] flex-none snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] lg:px-3 transition-[color,background-color,border-color,transform] duration-200 ${on ? "" : "hover:border-[var(--ink-3)] motion-safe:hover:-translate-y-px"} ${main || on ? "font-extrabold" : "font-bold"} ${FOCUS}`}
+                className={`relative z-10 motion-safe:active:scale-[.97] inline-flex min-h-[44px] flex-none snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] transition-[color,background-color,border-color,transform] duration-200 ${on ? "" : "hover:border-[var(--ink-3)] motion-safe:hover:-translate-y-px"} ${main || on ? "font-extrabold" : "font-bold"} ${FOCUS}`}
                 style={style}>
-                <span className="hidden lg:inline-flex"><Icon name={PANEL_ICON[meta.key] ?? "sparkle"} size={16} /></span>
+                <span className="hidden 2xl:inline-flex"><Icon name={PANEL_ICON[meta.key] ?? "sparkle"} size={16} /></span>
                 {meta.label}
                 {dot && (
                   <span className="relative ml-0.5 flex h-2.5 w-2.5" aria-hidden="true">
