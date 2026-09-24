@@ -57,6 +57,10 @@ export interface PanelProps {
   groups?: HubGroup[];
   /** Refetch the groups (after the panel changed one). */
   refreshGroups?: () => void;
+  /** Grouped tutor strip: the view the shell's sub-tab row asks the panel to show (Homework: "mark" | "inbox" | "assignments"), and how
+   *  the panel reports the view it is actually on (so the sub-tab highlight never disagrees with the screen). */
+  subView?: string;
+  onSubView?: (v: string) => void;
 }
 
 export interface PanelMeta {

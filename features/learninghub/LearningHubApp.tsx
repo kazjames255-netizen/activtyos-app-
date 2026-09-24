@@ -23,7 +23,10 @@ import { FamilyInviteClaim } from "./family/FamilyInviteClaim";
 import { useRealtime } from "@/lib/realtime";
 import { listDoubts } from "./lesson/doubts/api";
 import { useOnBrand } from "./onBrand";
-import { resolveTab } from "./tabAlias";
+import { resolveTarget } from "./tabAlias";
+import { TUTOR_TOPS, rememberSub, rememberedSub, subById, subFor, topOfKey, type SubDef } from "./tabGroups";
+import { InPersonApp } from "./inperson/InPersonApp";
+import { setHubIntent } from "./hubIntent";
 import { useMarkItems } from "./mark/useMarkItems";
 
 // Learning Hub — the tutoring vertical's page. One shell, two audiences: a
@@ -38,6 +41,8 @@ import { useMarkItems } from "./mark/useMarkItems";
 
 type TabKey = PanelMeta["key"];
 type TabModule = { meta: PanelMeta; Panel: ComponentType<PanelProps> | null };
+const HW_VIEW: Record<string, string> = { mark: "mark", inbox: "inbox", set: "assignments" };
+const HW_SUB: Record<string, string> = { mark: "mark", inbox: "inbox", assignments: "set" };
 const NONE: HubFilter = { subject: null, topicId: null };
 
 export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
@@ -45,7 +50,12 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const { providers, provider, tenantId, qs, childQs, ready, topics, noteStats, notesVersion, students, groups, config, error, setError, refresh } = hub;
   const [filter, setFilter] = useState<HubFilter>(NONE);
   // The active tab lives in the URL (?tab=quizzes) so a reload or Back doesn't drop you on Home mid-task.
-  const [picked, setPicked] = useState<TabKey | null>(() => (typeof window === "undefined" ? null : resolveTab(new URLSearchParams(window.location.search).get("tab"))));
+  const initial = () => { if (typeof window === "undefined") return null; const q = new URLSearchParams(window.location.search); return resolveTarget(q.get("tab"), q.get("sub")); };
+  const [picked, setPicked] = useState<TabKey | null>(() => initial()?.key ?? null);
+  // Tutor hub: the sub-tab under the top tab (?sub=). Null = the panel's default sub-tab. `nonce` remounts a panel so an action sub-tab
+  // ("Schedule video lesson", "Enrol a student"…) opens its existing dialog even when that panel is already showing.
+  const [sub, setSub] = useState<string | null>(() => initial()?.sub ?? null);
+  const [nonce, setNonce] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [addSignal, setAddSignal] = useState(0);
   // Focus mode is stored AS the tab that asked for it, so it can never outlive
@@ -89,8 +99,12 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const wanted: TabKey = picked && modules.some((m) => m.meta.key === picked) ? picked : defaultTab;
   const active: TabKey = kid && !(KID_TABS as readonly string[]).includes(wanted) ? "home" : wanted;
   const current = modules.find((m) => m.meta.key === active)!;
+  // Tutor hub: which top tab / sub-tab the panel key sits under (a presentation grouping; `active` stays the panel key everywhere).
+  const activeSub: SubDef | null = tutor ? subFor(active, sub) : null;
+  const activeTop = tutor ? topOfKey(active) : null;
   const activeRef = useRef<TabKey>(active);
   useLayoutEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { if (activeTop && activeSub) rememberSub(activeTop, activeSub); }, [activeTop, activeSub]);
   const setFocus = useCallback((on: boolean, opts?: { bare?: boolean }) => { setFocusFor(on ? activeRef.current : null); setFocusBare(on && !!opts?.bare); }, []);
   const focus = focusFor === active;
   // A tab switched by click / Enter / a link moves focus to the panel heading (arrow-key roving keeps focus on the strip) and titles the page.
@@ -113,7 +127,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
       target.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(t);
-  }, [active]);
+  }, [active, activeSub?.id]);
   const liveNow = useLiveNow(hub.childQs, !!tenantId && (!tutor ? !!hub.childId : true));
 
   // The Questions tab's unread badge — either side should see "someone's waiting" without opening the tab.
@@ -130,13 +144,30 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
 
   // Navigating clears any stale error banner.
   const go = useCallback((k: TabKey) => {
-    setError(null); setFocusFor(null); moveFocus.current = true; setPicked(k);
-    setLinkParams({ tab: k }, true); // a different tab never keeps the old lesson / quiz / homework open
+    setError(null); setFocusFor(null); moveFocus.current = true; setPicked(k); setSub(null);
+    setLinkParams({ tab: k, sub: null }, true); // a different tab never keeps the old lesson / quiz / homework open
   }, [setError]);
+  // Grouped strip: a sub-tab opens its panel (and, for an action sub-tab, the existing dialog / overlay the old Home tile opened).
+  const selectSub = useCallback((d: SubDef, opts?: { focus?: boolean }) => {
+    setError(null); setFocusFor(null); moveFocus.current = opts?.focus !== false;
+    setPicked(d.key); setSub(d.id);
+    if (d.action === "intent" && d.intent) { setHubIntent(d.intent); setNonce((n) => n + 1); }
+    setLinkParams({ tab: d.key, sub: d.id }, true);
+  }, [setError]);
+  // A top tab opens the sub-tab last used under it (never an action one: that would pop a dialog on every visit).
+  const selectTop = useCallback((id: string, how?: "arrow") => {
+    const top = TUTOR_TOPS.find((t) => t.id === id);
+    if (!top) return;
+    const d = rememberedSub(top);
+    selectSub(d, { focus: top.subs.length === 1 && how !== "arrow" });
+  }, [selectSub]);
+  // The Homework panel reports the view it is on (its own default, a Home deep link, or a sub-tab click): keep sub-tab + URL in step.
+  const onHwSubView = useCallback((v: string) => { const id = HW_SUB[v]; if (id) { setSub(id); setLinkParams({ sub: id }); } }, []);
   // Back / a link that names a tab (a notification, "Start the lesson" from a homework) moves the tab too.
   useEffect(() => {
-    const t = resolveTab(new URLSearchParams(linkSearch).get("tab"));
-    if (t) setPicked((cur) => (cur === t ? cur : t));
+    const q = new URLSearchParams(linkSearch);
+    const t = resolveTarget(q.get("tab"), q.get("sub"));
+    if (t) { setPicked((cur) => (cur === t.key ? cur : t.key)); setSub((cur) => (cur === t.sub ? cur : t.sub)); }
   }, [linkSearch]);
   const onFilter = useCallback((f: HubFilter) => { setError(null); setFilter(f); }, [setError]);
   const onProvider = (id: string) => {
@@ -202,7 +233,17 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const panelProps: PanelProps = {
     tenantId, qs, canEdit, readOnly, franchiseId: provider.franchiseId ?? null, me: tutor && provider.uid ? { uid: provider.uid, role: provider.role ?? "" } : null, topics, filter, covered, students, childId: hub.childId, config,
     onError: setError, mode, providerName: provider.name, child: hub.child, refreshStudents: refresh, goTo: go, childQs, setFocus, groups, refreshGroups: refresh,
+    subView: tutor && active === "homework" && sub && subById(sub)?.key === "homework" ? HW_VIEW[sub] : undefined,
+    onSubView: tutor ? onHwSubView : undefined,
   };
+  const meta0 = (k: TabKey, label: string) => ({ ...(modules.find((m) => m.meta.key === k)?.meta ?? current.meta), label, status: "live" as const });
+  const subBadge = (id: string): Pick<HubTab, "badge" | "dot" | "sr"> => id === "lessons" && dirty ? { badge: "Unsaved" } : id === "live" ? { dot: liveNow } : id === "mark" && toMark.count > 0 ? { badge: String(toMark.count) } : {};
+  const topTabs: HubTab[] = tutor ? TUTOR_TOPS.filter((t) => t.subs.some((x) => modules.some((m) => m.meta.key === x.key))).map((t) => ({
+    id: t.id, emoji: t.emoji, meta: meta0(t.subs[0].key, t.label),
+    badge: t.id === "lessons" && dirty ? "Unsaved" : t.id === "messages" && unreadQuestions > 0 ? String(unreadQuestions) : t.id === "homework" && toMark.count > 0 ? String(toMark.count) : undefined,
+    dot: t.id === "lessons" ? liveNow : undefined, sr: t.id === "lessons" && liveNow ? "live now" : undefined,
+  })) : [];
+  const subTabs: HubTab[] = activeTop ? activeTop.subs.filter((d) => !(d.action && readOnly)).map((d) => ({ id: d.id, emoji: d.emoji, meta: meta0(d.key, d.label), action: !!d.action, ...subBadge(d.id) })) : [];
   const tabs: HubTab[] = modules.filter((m) => !kid || ((KID_TABS as readonly string[]).includes(m.meta.key) && !KID_STRIP_HIDDEN.includes(m.meta.key))).map((m) => ({
     // One vocabulary: "Messages" and "Starting quizzes" for everyone; a child's own words (KID_TAB_LABEL) win on their screens.
     meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : m.meta,
@@ -274,7 +315,18 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
         {!tutor && hub.childId && <p role="status" aria-live="polite" aria-busy={!settled || undefined} className="sr-only" id="hub-child-live">{settled ? `Showing ${hub.children.find((c) => c.childId === hub.childId)?.childName ?? "your child"}` : "Loading"}</p>}
 
         {!focus && kid && bandOrDefault(hub.child?.yearGroup) === "ks1" ? <KidIconTabs active={active} onSelect={(k) => go(k as TabKey)} /> : null}
-        {!focus && !(kid && bandOrDefault(hub.child?.yearGroup) === "ks1") && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
+        {!focus && tutor && activeTop && (
+          <>
+            <HubTabs variant="top" tabs={topTabs} active={activeTop.id} onSelect={selectTop} label="Sections" className={subTabs.length > 1 ? "mb-1" : "mb-4"}
+              controls={(id) => (TUTOR_TOPS.find((t) => t.id === id)!.subs.length > 1 ? `hub-subtabs-${id}` : `hub-tabpanel-${active}`)} />
+            {subTabs.length > 1 && activeSub && (
+              <HubTabs key={activeTop.id} variant="sub" idPrefix="hub-subtab-" listId={`hub-subtabs-${activeTop.id}`} tabs={subTabs} active={activeSub.id} label={`${activeTop.label} sections`} className="mb-4"
+                controls={() => `hub-tabpanel-${active}`}
+                onSelect={(id, how) => { const d = subById(id); if (d) selectSub(d, { focus: how !== "arrow" }); }} />
+            )}
+          </>
+        )}
+        {!focus && !tutor && !(kid && bandOrDefault(hub.child?.yearGroup) === "ks1") && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k as TabKey); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
 
         {chips && !focus && topicFilter("chips")}
 
@@ -284,19 +336,20 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
           <main className="min-w-0">
             {/* Notes stays mounted (hidden) on other tabs so an unsaved draft survives a tab switch. */}
             {settled && (
-              <div role="tabpanel" id="hub-tabpanel-notes" data-hub-panel aria-labelledby="hub-tab-notes" hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
+              <div role="tabpanel" id="hub-tabpanel-notes" data-hub-panel aria-labelledby={tutor ? "hub-subtab-lessons" : "hub-tab-notes"} hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
                 <NotesPanel topics={topics} version={notesVersion} listQs={childQs} covered={covered} filter={filter} canEdit={canEdit} readOnly={readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError}
                   onAddTopic={() => setAddSignal((n) => n + 1)} onDirtyChange={setDirty} onClearFilter={() => onFilter(NONE)} active={active === "notes"}
                   childId={hub.childId} config={config} setFocus={setFocus} goTo={go as (k: "flashcards" | "homework") => void} years={hub.years} onYearsChange={hub.setYears} />
               </div>
             )}
             {active !== "notes" && (
-              <div role="tabpanel" id={`hub-tabpanel-${active}`} data-hub-panel aria-busy={!settled || undefined} aria-labelledby={`hub-tab-${active}`} tabIndex={-1} className="hub-rise outline-none" key={active}>{body}</div>
+              <div role="tabpanel" id={`hub-tabpanel-${active}`} data-hub-panel aria-busy={!settled || undefined} aria-labelledby={tutor && activeTop ? (activeTop.subs.length > 1 && activeSub ? `hub-subtab-${activeSub.id}` : `hub-tab-${activeTop.id}`) : `hub-tab-${active}`} tabIndex={-1} className="hub-rise outline-none" key={`${active}:${nonce}`}>{body}</div>
             )}
             {active === "notes" && !settled && <SkeletonRows rows={4} label="Loading lessons" variant="card" grid />}
           </main>
         </div>
       </div>
+      {tutor && !readOnly && active === "notes" && activeSub?.id === "teach" && <InPersonApp qs={qs} config={config} goTo={go} onClose={() => selectSub(subById("lessons")!)} />}
       </CallProvider>
       </FamilyProvider>
     </div>

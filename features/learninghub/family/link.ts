@@ -78,7 +78,7 @@ export function closeLink() {
 }
 
 /** Switch tab (or child) in place: drops any `open=` (a different tab never shows the old lesson) without adding history. */
-export function setLinkParams(patch: { tab?: string | null; child?: string | null }, dropOpen = false) {
+export function setLinkParams(patch: { tab?: string | null; sub?: string | null; child?: string | null }, dropOpen = false) {
   if (typeof window === "undefined") return;
   const u = new URL(window.location.href);
   for (const [k, v] of Object.entries(patch)) { if (v) u.searchParams.set(k, v); else if (v === null) u.searchParams.delete(k); }

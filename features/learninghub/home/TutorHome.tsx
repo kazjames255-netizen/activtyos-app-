@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../kit";
 import { requestHomeworkFilter, requestMarkQueue, setHubIntent } from "../hubIntent";
-import { InPersonApp } from "../inperson/InPersonApp";
 import { pctOf } from "../homework/hwTypes";
 import { lessonTiming } from "../live/lessonTypes";
 import type { PanelProps } from "../panelTypes";
@@ -44,30 +43,6 @@ function Attention({ icon, tone, count, label, hint, onClick }: { icon: IconName
   );
 }
 
-const ACTIONS: { key: "notes" | "quizzes" | "homework" | "live" | "students"; label: string; hint: string; icon: IconName; tone: Tone }[] = [
-  { key: "notes", label: "New lesson", hint: "Share a lesson or worksheet", icon: "notes", tone: "brand" },
-  { key: "quizzes", label: "New quiz", hint: "Build a test", icon: "quiz", tone: "violet" },
-  { key: "homework", label: "Set homework", hint: "Set the next task", icon: "homework", tone: "gold" },
-  { key: "live", label: "Schedule video lesson", hint: "Pick a time", icon: "video", tone: "green" },
-  { key: "students", label: "Enrol student", hint: "Add to your roster", icon: "users", tone: "red" },
-];
-
-// Each quick action lands ON the form it promises (the destination panel opens it on arrival), not just on the tab.
-const QUICK_INTENT: Partial<Record<(typeof ACTIONS)[number]["key"], Parameters<typeof setHubIntent>[0]>> = {
-  quizzes: { kind: "newQuiz", groupId: "" },
-  homework: { kind: "homework", groupId: "" },
-  live: { kind: "lesson", groupId: "" },
-  students: { kind: "enrol", groupId: "" },
-};
-
-/** The Lessons panel stays mounted (hidden) behind the other tabs, so its own "New lesson" button is there to press once the tab is shown. */
-const openNewLesson = () => {
-  setTimeout(() => {
-    const b = [...document.querySelectorAll<HTMLButtonElement>("#hub-tabpanel-notes button")].find((x) => /^\s*New lesson\s*$/.test(x.textContent ?? ""));
-    b?.click();
-  }, 60);
-};
-
 interface FeedItem { id: string; at: number; who: string; text: string; sub?: string; icon: IconName; tone: Tone; go: "quizzes" | "homework" }
 
 export function TutorHome(props: PanelProps) {
@@ -77,7 +52,6 @@ export function TutorHome(props: PanelProps) {
   // eslint-disable-next-line react-hooks/set-state-in-effect -- read the per-device preference after mount (SSR-safe)
   useEffect(() => { try { if (localStorage.getItem("hub.home.more") === "1") setMore(true); } catch { /* private mode */ } }, []);
   const toggleMore = () => setMore((m) => { const n = !m; try { localStorage.setItem("hub.home.more", n ? "1" : "0"); } catch { /* ignore */ } return n; });
-  const [teaching, setTeaching] = useState(false); // "Teach in person" (a lesson with the children beside you, no video)
   const { ready, parts, failed, reload } = useTutorHome(qs, onError);
   const now = useNow(30_000);
   // F11: a tutor in a multi-tutor business sees their own next lessons by default (Everyone is one tap away).
@@ -182,21 +156,6 @@ export function TutorHome(props: PanelProps) {
         </Card>}
       </div>
 
-      {!props.readOnly && <nav aria-label="Quick actions" className="home-rise grid grid-cols-2 gap-2.5 sm:grid-cols-3 2xl:grid-cols-6" style={rise(2)}>
-        {ACTIONS.map((a) => (
-          <button key={a.key} type="button" onClick={() => { const i = QUICK_INTENT[a.key]; if (i) setHubIntent(i); go(a.key); if (a.key === "notes") openNewLesson(); }} data-action={a.key}
-            className={`home-lift flex min-h-[64px] items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 text-left shadow-[var(--shadow-sm)] hover:border-[var(--brand-line)] ${FOCUS}`}>
-            <IconTile icon={a.icon} tone={a.tone} size={40} />
-            <span className="min-w-0"><span className="block text-[13px] font-extrabold leading-tight text-[var(--ink)]">{a.label}</span><span className="block text-[11px] font-semibold leading-snug text-[var(--ink-3)]">{a.hint}</span></span>
-          </button>
-        ))}
-        <button type="button" onClick={() => setTeaching(true)} data-action="teach-in-person" data-testid="home-teach-in-person"
-          className={`home-lift flex min-h-[64px] items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 text-left shadow-[var(--shadow-sm)] hover:border-[var(--brand-line)] ${FOCUS}`}>
-          <IconTile icon="users" tone="brand" size={40} />
-          <span className="min-w-0"><span className="block text-[13px] font-extrabold leading-tight text-[var(--ink)]">Teach in person</span><span className="block text-[11px] font-semibold leading-snug text-[var(--ink-3)]">No video call</span></span>
-        </button>
-      </nav>}
-      {teaching && <InPersonApp qs={qs} config={config} goTo={goTo} onClose={() => setTeaching(false)} />}
 
       {!firstRun && <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <ClassSnapshot overview={parts.overview} roster={students} bands={config.masteryBands} failed={failed.overview} onGo={go} delay={3 * 60} />

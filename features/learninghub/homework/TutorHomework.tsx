@@ -49,7 +49,13 @@ export function TutorHomework(p: PanelProps) {
   const requestedFilter = useRef<Filter | null>(takeHomeworkFilter());
   const wantsQueue = useRef(takeMarkQueue());
   // eslint-disable-next-line react-hooks/refs -- one-shot intents read once, for the first view only
-  const [view, setView] = useState<"mark" | "inbox" | "assignments">(() => (viewGroup || (requestedFilter.current && !wantsQueue.current) ? "inbox" : "mark"));
+  const [view, setView] = useState<"mark" | "inbox" | "assignments">(() => (p.subView === "mark" || p.subView === "inbox" || p.subView === "assignments" ? p.subView : viewGroup || (requestedFilter.current && !wantsQueue.current) ? "inbox" : "mark"));
+  // Grouped tutor strip: the shell's sub-tabs (To mark / Inbox / Set homework) drive the view and this panel reports the one it is on.
+  const prevSubView = useRef(p.subView);
+  const groupedRef = useRef(!!p.onSubView);
+  const { subView, onSubView } = p;
+  useEffect(() => { if (subView && subView !== prevSubView.current) { prevSubView.current = subView; setView(subView as "mark" | "inbox" | "assignments"); } }, [subView]);
+  useEffect(() => { onSubView?.(view); }, [view, onSubView]);
   const mq = useMarkItems(qs, students);
   const [filter, setFilter] = useState<Filter>("submitted");
   const [hwFilter, setHwFilter] = useState<string | null>(null);
@@ -62,7 +68,7 @@ export function TutorHomework(p: PanelProps) {
   useEffect(() => {
     if (tookIntent.current) return;
     const i = takeHubIntent(["homework", "quiz"]);
-    if (i) { tookIntent.current = true; setPreset({ groupId: i.groupId, quiz: i.kind === "quiz", assessmentId: i.assessmentId, noteIds: i.noteIds, title: i.title, instructions: i.instructions, childIds: i.childIds, packNoteId: i.packNoteId }); setEditor("new"); }
+    if (i) { tookIntent.current = true; setPreset({ groupId: i.groupId, quiz: i.kind === "quiz", assessmentId: i.assessmentId, noteIds: i.noteIds, title: i.title, instructions: i.instructions, childIds: i.childIds, packNoteId: i.packNoteId }); setEditor("new"); if (groupedRef.current) setView("assignments"); }
   }, []);
   const groupById = useMemo(() => new Map<string, HubGroup>(groups.map((g) => [g.id, g])), [groups]);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
@@ -134,7 +140,7 @@ export function TutorHomework(p: PanelProps) {
           action={students.length && !readOnly ? newBtn : undefined} />
       ) : (
         <>
-          <Segmented label="Homework views" value={view} onChange={setView} options={[{ v: "mark", label: "To mark", count: mq.count }, { v: "inbox", label: "Inbox", count: toMark }, { v: "assignments", label: "Set homework", count: homework.length }]} />
+          {!p.onSubView && <Segmented label="Homework views" value={view} onChange={setView} options={[{ v: "mark", label: "To mark", count: mq.count }, { v: "inbox", label: "Inbox", count: toMark }, { v: "assignments", label: "Set homework", count: homework.length }]} />}
 
           {view === "mark" && <MarkQueue p={p} q={mq} />}
 

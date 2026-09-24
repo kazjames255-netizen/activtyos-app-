@@ -12,11 +12,24 @@ import type { PanelMeta } from "./panelTypes";
 // so in words, not just opacity. A pulsing green dot marks Live lessons only
 // while a lesson is actually running.
 
-export interface HubTab { meta: PanelMeta; /** Unsaved-work marker (the notes editor). */ badge?: string }
+export interface HubTab {
+  meta: PanelMeta; /** Unsaved-work marker (the notes editor). */ badge?: string;
+  /** Grouped tutor strip: the tab's own id (a top-tab or sub-tab id) when it is not the panel key. */ id?: string;
+  emoji?: string; /** Show the live pulse (a lesson is running). */ dot?: boolean;
+  /** Sub-tab pill that opens an existing create flow rather than a plain view. */ action?: boolean;
+  /** Extra accessible text after the label (e.g. "3 to mark"). */ sr?: string;
+}
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections" }: { tabs: HubTab[]; active: PanelMeta["key"]; onSelect: (k: PanelMeta["key"], how?: "arrow") => void; liveNow?: boolean; label?: string }) {
+export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections", variant = "flat", idPrefix = "hub-tab-", controls, className = "mb-4", listId }: {
+  tabs: HubTab[]; active: string; onSelect: (k: string, how?: "arrow") => void; liveNow?: boolean; label?: string;
+  /** "flat": the parent / child strip (unchanged). "top" / "sub": the grouped tutor strip and the row of sub-tabs under it. */
+  variant?: "flat" | "top" | "sub"; idPrefix?: string;
+  /** id of the element the ACTIVE tab controls (defaults to its tabpanel). */ controls?: (id: string) => string | undefined;
+  className?: string; listId?: string;
+}) {
+  const idOf = (t: HubTab) => t.id ?? t.meta.key;
   const refs = useRef(new Map<string, HTMLButtonElement>());
   const scroller = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
@@ -67,7 +80,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
   }, [active]);
 
   const onKey = (e: React.KeyboardEvent) => {
-    const keys = tabs.map((t) => t.meta.key);
+    const keys = tabs.map(idOf);
     const i = keys.indexOf(active);
     let n = -1;
     if (e.key === "ArrowRight") n = (i + 1) % keys.length;
@@ -83,21 +96,23 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
   const fade = { "--hub-fade-l": edges.l ? "56px" : "0px", "--hub-fade-r": edges.r ? "56px" : "0px" } as CSSProperties;
 
   return (
-    <div className="relative mb-4">
+    <div className={`relative ${className}`}>
       <div ref={scroller} onScroll={readEdges} style={fade}
         className="hub-fade-x -mx-3 snap-x snap-proximity overflow-x-auto scroll-px-10 px-3 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
-        <div ref={list} role="tablist" aria-label={label} onKeyDown={onKey} className="relative flex w-max min-w-full gap-1 pb-2 pt-1">
+        <div ref={list} role="tablist" id={listId} aria-label={label} onKeyDown={onKey} className="relative flex w-max min-w-full gap-1 pb-2 pt-1">
           <span aria-hidden="true" className={`pointer-events-none absolute left-0 top-1 rounded-full motion-reduce:transition-none ${animate ? "transition-[transform,width] duration-300 ease-[cubic-bezier(.3,.7,.2,1)]" : ""}`}
             style={{
               width: pill?.w ?? 0, height: pill?.h ?? 0, transform: `translateX(${pill?.x ?? 0}px)`, opacity: pill ? 1 : 0,
               background: "linear-gradient(180deg, var(--brand-2), var(--brand))",
               boxShadow: "0 6px 16px -6px color-mix(in srgb, var(--brand) 70%, transparent)",
             }} />
-          {tabs.map(({ meta, badge }) => {
-            const on = meta.key === active;
+          {tabs.map((tab) => {
+            const { meta, badge, emoji } = tab;
+            const id = idOf(tab);
+            const on = id === active;
             const soon = meta.status === "soon";
-            const main = meta.key === "live" && !soon; // the headline function (Live lessons) gets presence
-            const dot = meta.key === "live" && liveNow;
+            const main = variant === "flat" && meta.key === "live" && !soon; // the headline function (Live lessons) gets presence
+            const dot = tab.dot ?? (variant === "flat" && meta.key === "live" && liveNow);
             const style: CSSProperties = on
               ? { background: "transparent", color: "var(--on-brand, #fff)", borderColor: "transparent" }
               : soon
@@ -106,15 +121,17 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
                   ? { background: "var(--brand-soft)", color: "var(--brand-strong)", borderColor: "var(--brand-line)" }
                   : { background: "var(--surface)", color: "var(--ink)", borderColor: "var(--line)" };
             return (
-              <button key={meta.key} ref={(el) => { if (el) refs.current.set(meta.key, el); else refs.current.delete(meta.key); }}
-                type="button" role="tab" id={`hub-tab-${meta.key}`} aria-selected={on} aria-controls={on ? `hub-tabpanel-${meta.key}` : undefined}
+              <button key={id} ref={(el) => { if (el) refs.current.set(id, el); else refs.current.delete(id); }}
+                type="button" role="tab" id={`${idPrefix}${id}`} aria-selected={on} aria-controls={on ? (controls ? controls(id) : `hub-tabpanel-${meta.key}`) : undefined}
                 aria-disabled={soon || undefined} tabIndex={on ? 0 : -1}
-                data-panel={meta.key} data-status={meta.status}
-                onClick={() => onSelect(meta.key)}
-                className={`relative z-10 motion-safe:active:scale-[.97] inline-flex min-h-[44px] flex-none snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-[13px] transition-[color,background-color,border-color,transform] duration-200 ${on ? "" : "hover:border-[var(--ink-3)] motion-safe:hover:-translate-y-px"} ${main || on ? "font-extrabold" : "font-bold"} ${FOCUS}`}
+                data-panel={variant === "top" ? undefined : meta.key} data-top={variant === "top" ? id : undefined} data-sub={variant === "sub" ? id : undefined} data-status={meta.status} data-action={tab.action ? "1" : undefined}
+                onClick={() => onSelect(id)}
+                className={`relative z-10 motion-safe:active:scale-[.97] inline-flex min-h-[44px] ${variant === "sub" ? "lg:min-h-[38px] px-3 text-[12.5px]" : "px-2.5 text-[13px]"} flex-none snap-start items-center gap-1.5 whitespace-nowrap rounded-full border transition-[color,background-color,border-color,transform] duration-200 ${on ? "" : "hover:border-[var(--ink-3)] motion-safe:hover:-translate-y-px"} ${main || on ? "font-extrabold" : "font-bold"} ${FOCUS}`}
                 style={style}>
-                <span className="hidden 2xl:inline-flex"><Icon name={PANEL_ICON[meta.key] ?? "sparkle"} size={16} /></span>
+                {emoji ? <span aria-hidden="true" className="text-[15px] leading-none">{emoji}</span>
+                  : <span className="hidden 2xl:inline-flex"><Icon name={PANEL_ICON[meta.key] ?? "sparkle"} size={16} /></span>}
                 {meta.label}
+                {tab.sr && <span className="sr-only"> ({tab.sr})</span>}
                 {dot && (
                   <span className="relative ml-0.5 flex h-2.5 w-2.5" aria-hidden="true">
                     <span className="hub-ping absolute inline-flex h-full w-full rounded-full" style={{ background: "var(--green)" }} />
