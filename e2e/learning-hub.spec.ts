@@ -311,6 +311,8 @@ test.describe("a family reads it (the student side)", () => {
     await apiPost("/api/learning-hub/notes", t, { topicId: topic.id, title: `Draft ${stamp}`, body: "not yet", published: false, attachments: [] });
     const notes = await apiFetch<{ id: string; title: string }[]>("/api/learning-hub/notes", t);
     noteId = notes.find((n) => n.title === noteTitle)!.id;
+    // A family's Lessons tab lists only lessons the tutor has assigned (via homework), so assign this one to the enrolled child.
+    await apiPost("/api/learning-hub/homework", t, { title: `Read ${stamp}`, instructions: "Read the lesson.", noteIds: [noteId], assignedChildIds: [childId], dueAt: new Date(Date.now() + 3 * 86_400_000).toISOString() });
   });
 
   test("sees published notes read-only, never drafts or edit controls", async ({ page }) => {

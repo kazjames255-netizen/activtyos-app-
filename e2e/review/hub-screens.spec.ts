@@ -7,7 +7,7 @@ import { buildFixture, ensureFixture, ctxFor, probe, settle, bannerText, skeleto
 // Screenshot + metrics sweep: tutor / parent / kid x every tab x 3 viewports. Throwaway test accounts only.
 //   npx playwright test e2e/review/hub-screens.spec.ts --project=e2e --workers=1
 const OUT = path.join(ROOT, "docs/teaching-hub-review/screenshots/before");
-test.describe.configure({ mode: "serial" });
+
 let fx: Fx;
 const ROWS = path.join(OUT, ".rows");
 const order = (f: string) => { const [r, v] = f.replace(".json", "").split("-"); return ["tutor", "parent", "kid"].indexOf(r) * 10 + ["390", "768", "1440"].indexOf(v); };
@@ -18,7 +18,7 @@ test.beforeAll(async ({ browser }) => { test.setTimeout(500_000); fx = await bui
 for (const role of ["tutor", "parent", "kid"] as const) {
   for (const [vpName, vp] of Object.entries(VIEWPORTS)) {
     test(`${role} @${vpName}`, async ({ browser }) => {
-      test.setTimeout(900_000);
+      test.setTimeout(420_000);
       rows = [];
       fx = await ensureFixture(browser, fx, 8, true);
       const ctx = await ctxFor(browser, role === "tutor" ? "freelancer" : "parent", vp);

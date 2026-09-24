@@ -156,8 +156,10 @@ test.describe("set a lesson for children", () => {
     await expect(dlg.getByTestId("hub-hw-attached-lessons")).toContainText("interactive");
     await expect(dlg.locator("#hub-hw-quiz")).toHaveValue(L.quizId, { timeout: 20_000 }); // the lesson's exit quiz, preselected
 
-    await dlg.getByRole("button", { name: childName, exact: true }).click();
-    await expect(dlg.getByRole("button", { name: childName, exact: true })).toHaveAttribute("aria-pressed", "true");
+    // A tenant with exactly one student has them preselected (redesign: one less tap), so only tap when not yet chosen.
+    const kidBtn = dlg.getByRole("button", { name: childName, exact: true });
+    if ((await kidBtn.getAttribute("aria-pressed")) !== "true") await kidBtn.click();
+    await expect(kidBtn).toHaveAttribute("aria-pressed", "true");
     const due = new Date(Date.now() + 3 * 86_400_000);
     const dueStr = `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
     await dlg.locator("#hub-hw-due").fill(dueStr);
@@ -305,6 +307,9 @@ test.describe("set a lesson for children", () => {
     // Everything stays editable: give it this run's own title.
     const mine = `${hwTitle(L.title)} — whole year ${stamp}`;
     await dlg.getByLabel("Title").fill(mine);
+    // A lone student is preselected (redesign), which hides the year shortcut: untick them first so the shortcut has work to do.
+    const kid = dlg.getByRole("button", { name: childName, exact: true });
+    if ((await kid.getAttribute("aria-pressed")) === "true") await kid.click();
     // One click ticks every student of that year.
     const yearBtn = dlg.getByTestId("hub-hw-year-all");
     await expect(yearBtn).toContainText(`Year ${pack.year}`);
@@ -338,7 +343,9 @@ test.describe("set a lesson for children", () => {
     });
     await openTutorLessons(page);
     const card = await searchLesson(page, L.title);
-    await card.getByRole("button", { name: `Set ${L.title} for children` }).click();
+    // H-01: the list icon is gone; the one form opens from the lesson reader.
+    await card.getByRole("button", { name: L.title, exact: true }).click();
+    await page.getByTestId("lesson-set-for-children").click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
     await expect(dlg.getByTestId("hub-hw-no-students")).toContainText(/haven.t added any students yet/);

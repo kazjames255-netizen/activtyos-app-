@@ -123,7 +123,7 @@ test.beforeAll(async () => {
   quizId = (await apiPost<{ id: string }>(`${HUB}/assessments`, t, { type: "quiz", title: QUIZ, subject, topicIds: [topicId], questionIds: [qShort.id], timeLimitMins: null, passMarkPct: 50, published: true, retakePolicy: "unlimited" })).id;
   writtenQuizId = (await apiPost<{ id: string }>(`${HUB}/assessments`, t, { type: "quiz", title: WRITTEN_QUIZ, subject, topicIds: [topicId], questionIds: [qWritten.id], timeLimitMins: null, passMarkPct: 50, published: true, retakePolicy: "unlimited" })).id;
   L = await seedOakLesson(t, { stamp, subject, topicId, widget: "neurone" });
-  hwId = (await apiPost<{ id: string }>(`${HUB}/homework`, t, { title: HW_TITLE, instructions: "Take the family quiz.", assessmentId: quizId, assignedChildIds: [avaId], dueAt: new Date(Date.now() + 3 * 86_400_000).toISOString() })).id;
+  hwId = (await apiPost<{ id: string }>(`${HUB}/homework`, t, { title: HW_TITLE, instructions: "Take the family quiz.", noteIds: [L.noteId], /* a family only sees lessons its tutor has assigned */ assessmentId: quizId, assignedChildIds: [avaId], dueAt: new Date(Date.now() + 3 * 86_400_000).toISOString() })).id;
 });
 test.beforeEach(async () => { await setHub(accounts.freelancer, true); });
 
