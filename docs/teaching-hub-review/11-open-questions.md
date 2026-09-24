@@ -32,3 +32,18 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - End lesson: chose flush-on-unmount rather than a Re-open (no reopen API); no new spec for the tab-switch case.
 - kidTitle strips only overdue/late words; row notes from h.st.label not audited.
 - Ended-lesson Set homework button not covered by a spec; tsc shows unrelated server error (learningHub.ts EnrolledChild.support).
+
+## Builder I leftovers (read-aloud, R-5)
+- Additive schema change: optional `support` map on `hubEnrolments` docs (noTimer, extraTimePercent 0|25|50, calm, readAloudDefault, textSize). No migration; absent = defaults. Not yet in `server/openapi.yaml`.
+- Not built from the 0.7 table: parent-editable controls and "request extra time", child-side Calm toggle, pause timer, change audit log (who/when), per-band defaults (KS1 read-aloud on), highlight-the-sentence, speakers on answer options / lesson steps / flashcards (only `readAloudDefault` adds options to the question read-out), sound.
+- `textSize: large` is a CSS `zoom` on the family hub (fine on current Chrome/Safari/Firefox 126+; older Firefox ignores it).
+- `readAloudDefault` never auto-plays by design (owner rule: no auto-play).
+- Extra time is snapshotted at attempt start: changing a profile mid-attempt does not change a running paper. The child's list/intro time label is computed client-side with the same pure function.
+- In-person quiz attempts are already untimed; homework packs untouched.
+
+## R-2 (One Mark queue), left undone
+- Batch "give full marks to all" with a review-then-confirm step (C-4) is not built; the queue is where it would live.
+- In-person Results "written to mark" (T3-08) still does not link to the queue.
+- A homework hand-in with a linked quiz shows as two rows (homework score, quiz written answers). Merging them into one row needs a decision on which mark comes first.
+- Tab badge and the queue each fetch the inbox and pending attempts (duplicate GETs). A read-only aggregate endpoint (`/mark-queue`) would halve it; not added to keep the change client-only.
+- Home still shows three to-mark rows (counts differ by kind); all land on the queue. Collapsing to one "To mark" row would change the label the `learning-hub-home` spec asserts.
