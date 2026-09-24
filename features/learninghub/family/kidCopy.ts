@@ -36,3 +36,11 @@ export const KID_COPY = {
   homeworkWaiting: (n: number) => `${n} homework waiting for you`,
   loadFailed: "Oops! Let's try again.",
 } as const;
+
+/** Display only: a tutor's free-text title can carry shame words ("Overdue reading", "Late maths"); on a child's screen
+ *  (below Year 10) drop them. Never used to change stored data. */
+export const kidTitle = (title: string, kind: boolean): string => {
+  if (!kind) return title;
+  const t = title.replace(/\b(overdue|late)\b[\s:\-–—]*/gi, "").replace(/[\s:\-–—]*\((overdue|late)\)/gi, "").replace(/\s{2,}/g, " ").trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : title;
+};

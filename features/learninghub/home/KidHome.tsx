@@ -1,7 +1,7 @@
 "use client";
 
 import { RetryFace } from "../homework/RetryFace";
-import type { KidBand } from "../family/kidCopy";
+import { kidTitle, type KidBand } from "../family/kidCopy";
 import { DISPLAY, FOCUS, Icon, type IconName } from "./homeKit";
 
 // A child's Home (P-03): ONE big next-step card, at most six words, one "Go" button. No streak, level, stats or
@@ -14,7 +14,7 @@ export interface KidRow { key: string; icon: IconName; title: string; note?: str
 export function KidHome({ name, band, step, rows, failedHomework, onRetry, go }: {
   name: string; band: KidBand; step: KidStep | null; rows: KidRow[]; failedHomework: boolean; onRetry: () => void; go: (k: KidStep["to"]) => void;
 }) {
-  const list = band === "ks1" ? [] : band === "ks2" ? rows.slice(0, 4) : rows.slice(0, 6);
+  const list = band === "ks1" ? [] : band === "ks2" ? rows.slice(0, 3) : rows.slice(0, 6);
   return (
     <div id="hub-home-kid" data-testid="hub-home-kid" data-band={band} className="mx-auto grid w-full max-w-[720px] gap-4">
       <h2 className="m-0 text-[22px] font-extrabold text-[var(--ink)]" style={DISPLAY}>Hi {name}!</h2>
@@ -36,7 +36,7 @@ export function KidHome({ name, band, step, rows, failedHomework, onRetry, go }:
           {list.map((r) => (
             <button key={r.key} type="button" onClick={() => go(r.to)} className={`flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-left ${FOCUS}`}>
               <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[var(--brand)]"><Icon name={r.icon} size={20} /></span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-extrabold text-[var(--ink)]">{r.title}</span>{r.note && <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{r.note}</span>}</span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-extrabold text-[var(--ink)]">{kidTitle(r.title, band !== "teen")}</span>{r.note && <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{r.note}</span>}</span>
               <Icon name="chevronRight" size={16} className="flex-none text-[var(--ink-3)]" />
             </button>
           ))}
