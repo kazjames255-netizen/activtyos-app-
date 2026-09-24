@@ -18,7 +18,8 @@ import { retakeState, useTick } from "./retake";
 import { TakeAssessment } from "./TakeAssessment";
 import { closeLink, openLink, useLinkOpen } from "../family/link";
 import { sweepDrafts } from "./draft";
-import { useFamily } from "../family/FamilyContext";
+import { useFamily, useSupport } from "../family/FamilyContext";
+import { effectiveLimitMins } from "../support";
 import { CardGridSkeleton, Chip, display, EmptyState, HourglassIcon, MedalIcon, Notice, ScoreRing, ScrollTop, TAP } from "./ui";
 
 // The family-facing list of assessments (quizzes or placement tests) for the
@@ -42,7 +43,9 @@ interface Card_ { a: Assessment; marked: AttemptRow[]; count: number; best: numb
 export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) {
   const childId = p.childId;
   const diag = type === "diagnostic";
-  const { data, loading, error, reload } = useHubData<Assessment[]>(childId ? hubPath(p.qs, "/assessments", { type, childId }) : null, ["hubAssessments", "hubQuestions", "hubAttempts", "hubEnrolments"]);
+  const support = useSupport();
+  const { data: rawData, loading, error, reload } = useHubData<Assessment[]>(childId ? hubPath(p.qs, "/assessments", { type, childId }) : null, ["hubAssessments", "hubQuestions", "hubAttempts", "hubEnrolments"]);
+  const data = useMemo(() => rawData?.map((x) => ({ ...x, timeLimitMins: effectiveLimitMins(x.timeLimitMins, support) })) ?? rawData, [rawData, support]); // R-5
   const att = useHubData<AttemptRow[]>(childId ? hubPath(p.qs, "/attempts", { childId }) : null, ["hubAttempts"]);
   const [taking, setTaking] = useState<{ a: Assessment; resume: boolean; hw: string | null } | null>(null);
   const kidMode = useFamily().kid;

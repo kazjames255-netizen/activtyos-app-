@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { FOCUS } from "../kit";
+import { useSupport } from "../family/FamilyContext";
 
 // Small presentational pieces shared by the lesson steps. Colours are the hub's CSS variables only.
 
@@ -60,9 +61,10 @@ export function Confetti({ fire, scale = 1 }: { fire: number; scale?: number }) 
   const cv = useRef<HTMLCanvasElement>(null);
   const parts = useRef<{ x: number; y: number; vx: number; vy: number; s: number; c: string; r: number; vr: number; l: number }[]>([]);
   const raf = useRef(0);
+  const calm = useSupport().calm; // R-5: no confetti for a child whose tutor set Calm
 
   useEffect(() => {
-    if (!fire || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!fire || calm || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const c = cv.current;
     if (!c) return;
     c.width = window.innerWidth; c.height = window.innerHeight;

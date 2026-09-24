@@ -43,6 +43,7 @@ interface Props {
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra, welcome, resume, homeworkId }: Props) {
+  // R-5: `a.timeLimitMins` is already what THIS child gets (StudentAssess applies their support profile; the server applies it again at start).
   const [phase, setPhase] = useState<Phase>("intro");
   const [run, setRun] = useState<StartedAttempt | null>(null);
   const [idx, setIdx] = useState(0);

@@ -1,4 +1,5 @@
 import { Router, type Response } from "express";
+import { effectiveLimitMins } from "../../../../features/learninghub/support";
 import { cleanToolAnswer, isBlankToolAnswer, isGenerator, publicProblem, PROBLEM_GENERATORS } from "../../../../features/learninghub/tools/problems";
 import { z } from "zod";
 import { db } from "../../firebase";
@@ -263,7 +264,7 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   const doc: AttemptDoc = {
     tenantId: ctx.tenantId, franchiseId: child.franchiseId, assessmentId: aSnap.id, assessmentType: asm.type, assessmentTitle: asm.title, subject: asm.subject,
     passMarkPct: asm.passMarkPct, homeworkId, childId: child.childId, childName: child.childName, parentUid: child.parentUid, startedBy: ctx.uid, submittedBy: null,
-    startedAt: now, submittedAt: null, timeLimitMins: asm.timeLimitMins ?? null, late: false, status: "in_progress",
+    startedAt: now, submittedAt: null, timeLimitMins: effectiveLimitMins(asm.timeLimitMins, child.support), late: false, status: "in_progress", // R-5: noTimer -> untimed; extra time scales the limit (the server-side deadline + lateness use this snapshot)
     questions,
     answers: questions.map((q) => ({ questionId: q.id, topicId: q.topicId, response: null, correct: null, marksAwarded: 0, marksMax: q.marks, feedback: "", pending: false })),
     scoreMarks: 0, maxMarks: questions.reduce((n, q) => n + q.marks, 0), pct: null, byTopic: {}, markedBy: null, markedAt: null, baselineReset: false,

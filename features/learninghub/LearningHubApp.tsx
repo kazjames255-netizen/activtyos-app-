@@ -236,12 +236,13 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     pick: (id) => { setError(null); hub.setChildId(id); },
     handOver: (id) => { hub.setChildId(id); const v = { t: tenantId, c: id }; writeKid(v); setKidRaw(v); go("home"); },
     messageHref: `/${portal}/messages?compose=1&tenant=${encodeURIComponent(tenantId)}`,
+    support: hub.child?.support,
   };
   const exitKid = () => { writeKid(null); setKidRaw(null); };
   const kidName = hub.children.find((c) => c.childId === kidChildId)?.childName ?? "";
 
   return (
-    <div className={kid ? "fixed inset-0 z-[320] overflow-y-auto overscroll-contain p-3 sm:p-5" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5"} style={{ background: "var(--bg)", color: "var(--ink)" }} id="learning-hub" data-kid={kid ? "1" : undefined}>
+    <div className={kid ? "fixed inset-0 z-[320] overflow-y-auto overscroll-contain p-3 sm:p-5" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5"} style={{ background: "var(--bg)", color: "var(--ink)" }} id="learning-hub" data-kid={kid ? "1" : undefined} data-calm={!tutor && hub.child?.support?.calm ? "1" : undefined} data-text={!tutor && hub.child?.support?.textSize === "large" ? "large" : undefined}>
       <HubStyles />
       <FamilyProvider value={family}>
       <CallProvider p={panelProps} key={tenantId}>

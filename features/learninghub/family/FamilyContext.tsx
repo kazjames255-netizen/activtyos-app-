@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import Link from "next/link";
+import { cleanSupport, type SupportProfile } from "../support";
 import { Avatar, FOCUS } from "../kit";
 import { Ico } from "../teachIcons";
 
@@ -30,12 +31,16 @@ export interface FamilyCtx {
   handOver: (childId: string) => void;
   /** Where "Ask your tutor" goes (the parent's messages, pre-addressed to this provider). */
   messageHref: string | null;
+  /** R-5: this child's tutor-set support profile (defaults when none). */
+  support?: SupportProfile;
 }
 
 const OFF: FamilyCtx = { active: false, kids: [], childId: null, multi: false, confirmed: true, kid: false, providerName: "", tenantId: "", pick: () => undefined, handOver: () => undefined, messageHref: null };
 const Ctx = createContext<FamilyCtx>(OFF);
 export const FamilyProvider = ({ value, children }: { value: FamilyCtx; children: ReactNode }) => <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 export const useFamily = () => useContext(Ctx);
+/** The chosen child's support profile (R-5); the defaults outside a family hub. */
+export const useSupport = (): SupportProfile => cleanSupport(useContext(Ctx).support);
 
 /** May a runner start for `childId`? False while a multi-child family has not said who is learning. */
 export function useChildGate(childId: string | null): { ok: boolean; name: string | null } {

@@ -11,6 +11,8 @@ import { GroupChip } from "./groupKit";
 import { requestNewMessage, requestOpenStudent, setHubIntent, takeHubIntent } from "./hubIntent";
 import { errMsg, fmtDate, groupMemberIds, subjectsOf, type HubGroup, type Student } from "./types";
 import { ScopeToggle, useScope } from "./mineKit";
+import { SupportSection } from "./SupportSection";
+import { cleanSupport, isDefaultSupport, type SupportProfile } from "./support";
 
 // Students — the tutor's roster. A family only ever sees the Learning Hub for a
 // child that has been enrolled here, so this is where access is granted, paused
@@ -163,11 +165,12 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
   const [chosen, setChosen] = useState<string[]>([]);
   const [year, setYear] = useState("");
   const [tutor, setTutor] = useState(defaultTutor);
+  const [support, setSupport] = useState<SupportProfile>(cleanSupport(null));
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setQ(""); setPick(null); setChosen([]); setYear(""); setTutor(defaultTutor); setList(null); setFailed(false);
+    setQ(""); setPick(null); setChosen([]); setYear(""); setTutor(defaultTutor); setSupport(cleanSupport(null)); setList(null); setFailed(false);
     get<Candidate[]>("/api/children/lookup").then(setList).catch(() => { setFailed(true); setList([]); });
   }, [open]);
 
@@ -181,7 +184,7 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
     if (!pick) return;
     setBusy(true);
     try {
-      await post(`/api/learning-hub/students${qs}`, { childId: pick.childId, subjects: chosen, ...(year ? { yearGroup: year } : {}), ...(tutors.length > 1 ? { tutorUid: tutor || null } : {}) });
+      await post(`/api/learning-hub/students${qs}`, { childId: pick.childId, subjects: chosen, ...(year ? { yearGroup: year } : {}), ...(tutors.length > 1 ? { tutorUid: tutor || null } : {}), ...(isDefaultSupport(support) ? {} : { support }) });
       onDone(pick.name);
       onClose();
     } catch (e) { onError(errMsg(e, "Couldn't enrol that child")); }
@@ -206,6 +209,7 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
           <SubjectPicker subjects={subjects} value={chosen} onChange={setChosen} />
           <div className="mt-4"><YearGroupSelect id="hub-enrol-year" value={year} onChange={setYear} options={yearGroups} /></div>
           {tutors.length > 1 && <div className="mt-4"><TutorSelect id="hub-enrol-tutor" tutors={tutors} value={tutor} onChange={setTutor} /></div>}
+          <div className="mt-4"><SupportSection id="hub-enrol-support" value={support} onChange={setSupport} /></div>
           <p className="mt-4 rounded-xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-3.5 py-2.5 text-[12.5px] leading-snug text-[var(--ink)]">
             Their family will see My Classroom from now on, and get a notification when you publish new lessons.
           </p>
@@ -240,7 +244,7 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
                       {enrolled ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: "var(--green-soft)", color: "#0b6b3a" }}><Icon name="check" size={13} strokeWidth={2.6} /> Enrolled</span>
                       ) : (
-                        <Button sm className="!h-[44px] lg:!h-[38px] !px-4" aria-label={`${cur ? "Resume" : "Enrol"} ${c.name}`} onClick={() => { setPick(c); setChosen(cur?.subjects ?? []); setYear(cur && !cur.yearGroupAuto ? cur.yearGroup ?? "" : ""); if (cur) setTutor(cur.tutorUid ?? ""); }}>{cur ? "Resume" : "Enrol"}</Button>
+                        <Button sm className="!h-[44px] lg:!h-[38px] !px-4" aria-label={`${cur ? "Resume" : "Enrol"} ${c.name}`} onClick={() => { setPick(c); setChosen(cur?.subjects ?? []); setYear(cur && !cur.yearGroupAuto ? cur.yearGroup ?? "" : ""); setSupport(cleanSupport(cur?.support)); if (cur) setTutor(cur.tutorUid ?? ""); }}>{cur ? "Resume" : "Enrol"}</Button>
                       )}
                     </li>
                   );
@@ -319,6 +323,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
   const [editYear, setEditYear] = useState("");
   const [editGroups, setEditGroups] = useState<string[]>([]);
   const [editTutor, setEditTutor] = useState("");
+  const [editSupport, setEditSupport] = useState<SupportProfile>(cleanSupport(null));
   const tutors = useTutors(canEdit);
   // F11: in a business with more than one tutor, each tutor's own students come first (Everyone is one tap away).
   const myUid = me?.uid ?? null;
@@ -376,7 +381,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
   const openProgress = (s: Student) => { requestOpenStudent(s.childId, s.childName); goTo?.("dashboard"); };
   const openMessage = (s: Student) => { requestNewMessage(s.childId); goTo?.("questions"); };
   const setHomework = (s: Student) => { setHubIntent({ kind: "homework", groupId: "", childIds: [s.childId] }); goTo?.("homework"); };
-  const beginEdit = (s: Student) => { setEditing(s); setEditTutor(s.tutorUid ?? ""); setChosen(s.subjects ?? []); setEditYear(s.yearGroupAuto ? "" : s.yearGroup ?? ""); setEditGroups((groupsOf.get(s.childId) ?? []).map((g) => g.id)); };
+  const beginEdit = (s: Student) => { setEditing(s); setEditTutor(s.tutorUid ?? ""); setChosen(s.subjects ?? []); setEditYear(s.yearGroupAuto ? "" : s.yearGroup ?? ""); setEditSupport(cleanSupport(s.support)); setEditGroups((groupsOf.get(s.childId) ?? []).map((g) => g.id)); };
   const saveDetails = async () => {
     if (!editing) return;
     setBusy(editing.childId);
@@ -386,8 +391,8 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
     try {
       const prevYear = editing.yearGroupAuto ? { yearGroupAuto: true } : { yearGroup: editing.yearGroup ?? null };
       const tutorChanged = tutors.length > 1 && editTutor !== (editing.tutorUid ?? "");
-      await put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: chosen, ...(editYear ? { yearGroup: editYear } : { yearGroupAuto: true }), ...(tutorChanged ? { tutorUid: editTutor || null } : {}) });
-      undo.push(() => put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: editing.subjects ?? [], ...prevYear, ...(tutorChanged ? { tutorUid: editing.tutorUid ?? null } : {}) }));
+      await put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: chosen, ...(editYear ? { yearGroup: editYear } : { yearGroupAuto: true }), ...(tutorChanged ? { tutorUid: editTutor || null } : {}), support: editSupport });
+      undo.push(() => put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: editing.subjects ?? [], ...prevYear, support: cleanSupport(editing.support), ...(tutorChanged ? { tutorUid: editing.tutorUid ?? null } : {}) }));
       // Group membership lives on the group: write only the groups whose membership for this student changed.
       const was = new Set((groupsOf.get(editing.childId) ?? []).map((g) => g.id));
       const now = new Set(editGroups);
@@ -532,6 +537,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
           </div>
           <YearGroupSelect id="hub-edit-year" value={editYear} onChange={setEditYear} options={config.yearGroups} autoNote={editing?.yearGroupAuto && editing.yearGroup ? `now ${editing.yearGroup}` : undefined} />
           <TutorSelect id="hub-edit-tutor" tutors={tutors} value={editTutor} onChange={setEditTutor} />
+          <SupportSection id="hub-edit-support" value={editSupport} onChange={setEditSupport} />
           {groups.length > 0 && (
             <div>
               <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Groups</h3>

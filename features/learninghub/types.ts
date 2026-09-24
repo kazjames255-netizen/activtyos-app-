@@ -1,6 +1,7 @@
 // Learning Hub — shared client types + taxonomy helpers. The shapes mirror
 // server/src/routes/learningHub.ts (the API contract is server/openapi.yaml).
 
+import type { SupportProfile } from "./support";
 export interface Topic {
   id: string;
   subject: string;
@@ -81,6 +82,8 @@ export interface Student {
   yearGroup?: string | null;
   /** True when the year was filled in from the child's date of birth (kept current each September). */
   yearGroupAuto?: boolean;
+  /** R-5: the tutor-set support profile. Absent = defaults. Read-only for a family (only tutors can change it). */
+  support?: SupportProfile;
 }
 
 /** An optional tutor-made group of students (contract §7) — for one-click homework / quizzes / lessons. */

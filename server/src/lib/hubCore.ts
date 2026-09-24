@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { cleanSupport, type SupportProfile } from "../../../features/learninghub/support";
 import { db } from "../firebase";
 import { effectiveSettings } from "../middleware/access";
 import { customerAreaOn } from "./customerArea";
@@ -31,7 +32,7 @@ export const hubEnrolments = db.collection("hubEnrolments");
 
 const OPERATORS = new Set(["company", "freelancer", "franchise", "staff"]);
 
-export interface EnrolledChild { childId: string; childName: string; franchiseId: string | null; subjects: string[] }
+export interface EnrolledChild { childId: string; childName: string; franchiseId: string | null; subjects: string[]; support?: SupportProfile }
 
 export interface HubCtx {
   tenantId: string;
@@ -89,6 +90,8 @@ export interface EnrolmentDoc {
   diagnosticWaived?: string[];
   /** Assessment ids a tutor allowed ONE more attempt at (consumed on start). */
   retakeGrants?: string[];
+  /** R-5: optional per-child support profile (tutor-set only; absent = defaults). Additive, no migration. */
+  support?: SupportProfile;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -149,7 +152,7 @@ export async function resolveCtx(req: Request, res: Response): Promise<HubCtx | 
     const franchises = [...new Set(mine.map((e) => e.franchiseId ?? null))];
     const on = (await Promise.all(franchises.map((f) => customerAreaOn(tenantId, "learninghub", f)))).some(Boolean);
     if (!on) { res.status(403).json({ error: "This provider hasn't switched on My Classroom.", code: "feature_off", feature: "learninghub" }); return null; }
-    const children: EnrolledChild[] = mine.map((e) => ({ childId: e.childId, childName: e.childName, franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [] }));
+    const children: EnrolledChild[] = mine.map((e) => ({ childId: e.childId, childName: e.childName, franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [], ...(e.support ? { support: cleanSupport(e.support) } : {}) }));
     const wanted = typeof req.query.childId === "string" && req.query.childId ? req.query.childId : null;
     if (wanted && !children.some((c) => c.childId === wanted)) { res.status(404).json({ error: "Student not found" }); return null; }
     return { tenantId, uid, name: "", role: "parent", canEdit: false, franchiseId: null, children, childId: wanted };

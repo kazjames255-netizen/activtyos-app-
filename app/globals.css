@@ -326,3 +326,11 @@ html[data-ho-office="1"] .op-hero {
   -webkit-mask-image: radial-gradient(circle var(--side-notch) at 0 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
           mask-image: radial-gradient(circle var(--side-notch) at 0 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
 }
+
+/* Teaching Hub, family side. Anyone who asked the OS for reduced motion, and any child whose tutor set "Calm" (R-5),
+   gets no animation or transitions; a large-text profile scales the family screens. */
+@media (prefers-reduced-motion: reduce) {
+  #learning-hub *, #learning-hub *::before, #learning-hub *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+#learning-hub[data-calm="1"] *, #learning-hub[data-calm="1"] *::before, #learning-hub[data-calm="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+#learning-hub[data-text="large"] { zoom: 1.15; }

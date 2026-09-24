@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { cleanSupport, type SupportProfile } from "../../../../features/learninghub/support";
 import { db } from "../../firebase";
 import { ageInYears, canSee, canSeeStudent, childDobs, effectiveYearGroup, hubEnrolments, okId, registerTopicRef, subjectAllowed, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
 import type { Audience } from "../../lib/hubRules";
@@ -183,6 +184,8 @@ export interface ChildRef {
   /** Stored year-group fields (see EnrolmentDoc) and the assessments a tutor allowed one more attempt at. */
   yg: { yearGroup?: string | null; yearGroupAuto?: boolean };
   retakeGrants: string[];
+  /** R-5 support profile (defaults when the enrolment has none). */
+  support: SupportProfile;
 }
 
 /** What is known about a student for audience checks: their year group now, and their age. */
@@ -215,7 +218,7 @@ export async function childRefFor(ctx: HubCtx, childId: unknown, opts: { needAct
   return {
     childId, childName: e.childName ?? "", franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [],
     parentUid: e.parentUid, waived: (e.diagnosticWaived ?? []).map((s) => s.toLowerCase()), active,
-    yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto }, retakeGrants: Array.isArray(e.retakeGrants) ? e.retakeGrants : [],
+    yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto }, retakeGrants: Array.isArray(e.retakeGrants) ? e.retakeGrants : [], support: cleanSupport(e.support),
   };
 }
 

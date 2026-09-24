@@ -8,6 +8,7 @@ import { errMsg } from "../types";
 import { checkWarmup, fetchLessonQuestions, saveLessonSlides, type LessonQuestions } from "./api";
 import { DoneStep } from "./DoneStep";
 import { LearnStep } from "./LearnStep";
+import { useSupport } from "../family/FamilyContext";
 import { Btn, Confetti, LessonStyles, StepCard, display } from "./lessonUi";
 import { QuizStep, type QuizOutcome } from "./QuizStep";
 import { normalizeLesson } from "./types";
@@ -131,6 +132,7 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
   const pk = progKey(note.id, childId);
   const saved = useMemo(() => (readOnly || typeof window === "undefined" ? null : loadProg(pk)), [readOnly, pk]);
   const [step, setStep] = useState<StepId>(() => (saved?.step && saved.step in LABEL && saved.step !== "done" ? (saved.step as StepId) : "start"));
+  const calm = useSupport().calm; // R-5: no streak / XP / confetti in Calm
   const [xp, setXp] = useState(() => saved?.xp ?? 0);
   const [streak, setStreak] = useState(() => saved?.streak ?? 0);
   const gate = useChildGate(childId);
@@ -312,8 +314,8 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
             </button>
             {!readOnly && <span className="hidden flex-none sm:block"><ChildChip childId={childId} /></span>}
             <div className="min-w-0 flex-1 truncate text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{[lesson.subject, lesson.year && (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year), lesson.title].filter(Boolean).join(" · ")}</div>
-            {!inPerson && !driven && <span className="rounded-full px-3 py-1 text-[13px] font-extrabold" style={{ background: "var(--gold-soft)", color: "color-mix(in srgb, var(--gold) 40%, #000)" }} title="Correct in a row" aria-label={`${streak} correct in a row`} data-testid="lesson-streak">🔥 {streak}</span>}
-            {!inPerson && !driven && <span key={xpKey} className={`rounded-full px-3 py-1 text-[13px] font-extrabold ${xpKey ? "ls-pulse" : ""}`} style={{ background: "var(--brand-soft)", color: "var(--brand)" }} aria-label={`${xp} experience points`} data-testid="lesson-xp">⭐ {xp} XP</span>}
+            {!inPerson && !driven && !calm && <span className="rounded-full px-3 py-1 text-[13px] font-extrabold" style={{ background: "var(--gold-soft)", color: "color-mix(in srgb, var(--gold) 40%, #000)" }} title="Correct in a row" aria-label={`${streak} correct in a row`} data-testid="lesson-streak">🔥 {streak}</span>}
+            {!inPerson && !driven && !calm && <span key={xpKey} className={`rounded-full px-3 py-1 text-[13px] font-extrabold ${xpKey ? "ls-pulse" : ""}`} style={{ background: "var(--brand-soft)", color: "var(--brand)" }} aria-label={`${xp} experience points`} data-testid="lesson-xp">⭐ {xp} XP</span>}
           </div>
           <nav aria-label="Lesson progress" className="mt-2">
             <ol className="m-0 flex list-none gap-1.5 p-0">

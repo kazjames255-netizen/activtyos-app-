@@ -15,7 +15,7 @@ import { activeDays, bandTone, firstName, greeting, relTime, streakOf, weekDots,
 import { NextLessonHero, over } from "./NextLesson";
 import { Attainment } from "../progress/Attainment";
 import { useStudentHome } from "./useHomeData";
-import { AskTutorLink, useFamily } from "../family/FamilyContext";
+import { AskTutorLink, useFamily, useSupport } from "../family/FamilyContext";
 import { openLink } from "../family/link";
 import { kidBand } from "../family/KidMode";
 import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
@@ -41,6 +41,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const { ready, parts, failed, reload } = useStudentHome(qs, childId, onError);
   const now = useNow(30_000);
   const kidMode = useFamily().kid;
+  const calm = useSupport().calm; // R-5: no streak / flame for a child whose tutor set Calm
   const yearGroup = props.students.find((s) => s.childId === childId)?.yearGroup;
   const { kind } = useKidCopy(yearGroup);
   const kid = props.child ?? props.students.find((s) => s.childId === childId) ?? null;
@@ -173,7 +174,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
               {lead.length ? `You have ${lead.join(" and ")}. A few minutes today keeps it all fresh.` : failed.homework ? "We couldn't check your homework just now. Try again below." : "You're all caught up. Take a look at your progress or get ahead with a quiz."}
             </p>
             <div className="mt-4 max-w-[400px]" data-chip="attainment"><Attainment variant="hero" overall={parts.mastery?.overall} bands={config.masteryBands} subjects={parts.mastery?.subjects} maxSubjects={3} onEmptyAction={() => go("quizzes")} /></div>
-            <div className="mt-auto pt-4">
+            {!calm && <div className="mt-auto pt-4">
               <div data-chip="streak" title="Counts days with a finished quiz or a homework hand-in" className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-white/20 bg-white/10 p-3 pr-4 backdrop-blur-sm">
                 <Flame size={58} lit={d.streak >= 2} n={d.streak} />
                 <div className="min-w-0 flex-1">
@@ -182,7 +183,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
                 </div>
                 <WeekDots dots={d.week} />
               </div>
-            </div>
+            </div>}
           </div>
           <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm sm:p-5">
             <NextLessonHero embedded lesson={next} isTutor={false} attendees={[]} extraCount={Math.max(0, d.upcoming.length - 1)}

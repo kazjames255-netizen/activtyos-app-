@@ -25,6 +25,7 @@ import { cleanCanvasBlock, signCanvasSlides } from "../oak/canvasSchema";
 import { withSlideUrls } from "../lib/slideStorage";
 import { hubAssessmentsApi } from "./hub/assessmentsApi";
 import { hubTeachingApi } from "./hub/teachingApi";
+import { cleanSupport, isDefaultSupport, type SupportProfile } from "../../../features/learninghub/support";
 import { hubTutorsApi, resolveTutor } from "./hub/tutorsApi";
 
 // Learning Hub — the tutoring vertical's student-facing area. Contract, schemas
@@ -50,7 +51,7 @@ const commitChunked = async (ops: ((b: FirebaseFirestore.WriteBatch) => void)[])
 // A "student" is a parent's child ENROLLED by a tutor. The enrolment is what
 // lets that family into the hub (lib/hubCore.ts) — never the customer record.
 
-interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; audienceUnknown: boolean }
+interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; audienceUnknown: boolean; support?: SupportProfile }
 /** `dob` = the child's date of birth (never returned): it lets the row say which year group they are in NOW
  *  and whether year/age are both unknown (`audienceUnknown` — year-group-targeted quizzes will show for them, flagged). */
 const enrolmentOut = (e: EnrolmentDoc, yearGroups: string[], dob: string | null): EnrolmentRow => {
@@ -59,6 +60,7 @@ const enrolmentOut = (e: EnrolmentDoc, yearGroups: string[], dob: string | null)
     childId: e.childId, childName: e.childName, parentEmail: e.parentEmail, franchiseId: e.franchiseId ?? null,
     subjects: e.subjects ?? [], tutorUid: e.tutorUid ?? null, tutorName: e.tutorName ?? "", active: e.active !== false, createdAt: e.createdAt,
     yearGroup, yearGroupAuto: e.yearGroupAuto === true, audienceUnknown: !yearGroup && ageInYears(dob) === null,
+    ...(e.support ? { support: cleanSupport(e.support) } : {}),
   };
 };
 const enrolmentId = (tenantId: string, childId: string) => `${tenantId}__${childId}`;
@@ -111,7 +113,7 @@ learningHub.get("/students", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx) return;
   if (!ctx.canEdit) {
-    res.json(scopedChildren(ctx).map((c) => ({ childId: c.childId, childName: c.childName, subjects: c.subjects, franchiseId: c.franchiseId })));
+    res.json(scopedChildren(ctx).map((c) => ({ childId: c.childId, childName: c.childName, subjects: c.subjects, franchiseId: c.franchiseId, ...(c.support ? { support: c.support } : {}) }))); // support is read-only for a family: only PUT/POST /students (tutors, requireEdit) can change it
     return;
   }
   const mine = (await tenantRoster(ctx.tenantId)).filter((e) => canSeeStudent(ctx, e.franchiseId));
@@ -120,6 +122,15 @@ learningHub.get("/students", async (req, res) => {
   rows.sort((a, b) => a.childName.localeCompare(b.childName));
   res.json(rows);
 });
+
+// R-5: optional per-child support profile. Every field optional; strict so a typo is a 400, not silently ignored.
+const supportBody = z.object({
+  noTimer: z.boolean().optional(),
+  extraTimePercent: z.union([z.literal(0), z.literal(25), z.literal(50)]).optional(),
+  calm: z.boolean().optional(),
+  readAloudDefault: z.boolean().optional(),
+  textSize: z.enum(["normal", "large"]).optional(),
+}).strict();
 
 const enrolBody = z.object({
   childId: z.string().min(1).max(100),
@@ -130,6 +141,7 @@ const enrolBody = z.object({
   // current each September; a value = as tagged; null = unknown.
   yearGroup: z.string().trim().min(1).max(40).nullable().optional(),
   yearGroupAuto: z.boolean().optional(),
+  support: supportBody.optional(),
 });
 
 // POST /students {childId} — enrol a child (idempotent: re-enrols an inactive one).
@@ -183,9 +195,11 @@ learningHub.post("/students", async (req, res) => {
   const carried: Partial<EnrolmentDoc> = {};
   if (prev.exists && Array.isArray(prev.get("diagnosticWaived"))) carried.diagnosticWaived = prev.get("diagnosticWaived");
   if (prev.exists && Array.isArray(prev.get("retakeGrants"))) carried.retakeGrants = prev.get("retakeGrants");
+  if (prev.exists && prev.get("support")) carried.support = prev.get("support");
+  if (b.support) { const sp = cleanSupport({ ...(carried.support ?? {}), ...b.support }); if (isDefaultSupport(sp)) delete carried.support; else carried.support = sp; }
   await ref.set({ ...doc, ...carried });
   forgetHub(ctx.tenantId, "roster"); forgetEnrolments();
-  res.status(prev.exists ? 200 : 201).json(enrolmentOut(doc, cfg.yearGroups, dob));
+  res.status(prev.exists ? 200 : 201).json(enrolmentOut({ ...doc, ...carried }, cfg.yearGroups, dob));
 });
 
 const enrolPatch = z.object({
@@ -195,6 +209,7 @@ const enrolPatch = z.object({
   tutorName: z.string().trim().max(120).optional(),
   yearGroup: z.string().trim().min(1).max(40).nullable().optional(),
   yearGroupAuto: z.boolean().optional(),
+  support: supportBody.optional(),
 });
 
 // PUT /students/:childId — change subjects / tutor, or pause (active:false).
@@ -208,7 +223,7 @@ learningHub.put("/students/:childId", async (req, res) => {
   const snap = await ref.get();
   if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Student not found" }); return; }
   if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That student belongs to head office" }); return; }
-  const { yearGroup, yearGroupAuto, tutorUid, tutorName, ...rest } = parsed.data;
+  const { yearGroup, yearGroupAuto, tutorUid, tutorName, support, ...rest } = parsed.data;
   const cfg = await hubConfig(ctx.tenantId, (snap.get("franchiseId") as string | null) ?? null);
   const dob = (await childDobs([req.params.childId])).get(req.params.childId) ?? null;
   const next: EnrolmentDoc = { ...(snap.data() as EnrolmentDoc), ...rest, updatedAt: new Date().toISOString() };
@@ -222,6 +237,7 @@ learningHub.put("/students/:childId", async (req, res) => {
   if (yearGroupAuto === true) { next.yearGroupAuto = true; next.yearGroup = yearGroupFromDob(dob, cfg.yearGroups); }
   else if (yearGroup !== undefined) { next.yearGroupAuto = false; next.yearGroup = yearGroup === null ? null : inList(cfg.yearGroups, yearGroup) ?? yearGroup; }
   else if (yearGroupAuto === false) next.yearGroupAuto = false;
+  if (support) { const sp = cleanSupport({ ...(next.support ?? {}), ...support }); if (isDefaultSupport(sp)) delete next.support; else next.support = sp; }
   await ref.set(next);
   forgetHub(ctx.tenantId, "roster"); forgetEnrolments();
   if (parsed.data.active === false) await removeFromGroups(ctx.tenantId, req.params.childId); // groups hold active students only (awaited so a refetch right after the pause never sees them still in a group; never throws)

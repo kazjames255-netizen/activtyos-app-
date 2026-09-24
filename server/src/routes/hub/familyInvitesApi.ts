@@ -165,6 +165,7 @@ hubFamilyInvitesApi.post("/family-invites/:token/accept", async (req, res) => {
   const carried: Partial<EnrolmentDoc> = {};
   if (prev.exists && Array.isArray(prev.get("diagnosticWaived"))) carried.diagnosticWaived = prev.get("diagnosticWaived");
   if (prev.exists && Array.isArray(prev.get("retakeGrants"))) carried.retakeGrants = prev.get("retakeGrants");
+  if (prev.exists && prev.get("support")) carried.support = prev.get("support");
   await ref.set({ ...doc, ...carried });
   await u.snap.ref.update({
     claimedBy: uid, claimedAt: d.claimedAt ?? now,
