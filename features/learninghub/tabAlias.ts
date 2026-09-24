@@ -14,8 +14,6 @@ export const TAB_ALIAS: Record<string, TabKey> = {
   messages: "questions",
   message: "questions",
   "message-centre": "questions",
-  lessons: "notes",
-  progress: "dashboard",
 };
 
 /** The panel key a `?tab=` value means (alias, then as-is). Null for an empty value. */
