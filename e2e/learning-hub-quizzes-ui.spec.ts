@@ -437,7 +437,7 @@ test.describe("attainment + editable levels", () => {
       await openParentHub(ppage, /Progress/);
       const att = ppage.locator('[data-testid="hub-attainment"]').first();
       await expect(att).toBeVisible({ timeout: 30_000 });
-      await expect(att).toContainText("Attainment");
+      await expect(att).toContainText("Level"); // parent wording (was "Attainment"; parentCopy plain-language pass)
       await expect(att.locator('[data-testid="hub-attainment-band"]')).toBeVisible();
       await expect(att.locator('[data-testid="hub-attainment-marker"]')).toBeVisible();
       // No XP / level-N game bar any more.
