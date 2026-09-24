@@ -60,6 +60,7 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
   const subjectCount = noteStats?.lessonTopicIds
     ? new Set(topics.filter((t) => noteStats.lessonTopicIds!.includes(t.id)).map((t) => t.subject)).size
     : subjectsOf(topics).length;
+  const noLessons = !tutor && lessonCount === 0 && subjectCount === 0; // parent/child: show nothing rather than "0 lessons · 0 subjects"
   const val = (n: number) => (ready ? String(n) : "–");
 
   const [open, setOpen] = useState(true);
@@ -139,7 +140,7 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
             </h2>
             <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>
             <p className="mt-1 text-[12.5px] font-bold text-white/95" data-testid="hub-hero-summary">
-              {ready ? `${tutor ? `${activeStudents} ${activeStudents === 1 ? "student" : "students"} · ` : ""}${lessonCount} ${lessonCount === 1 ? "lesson" : "lessons"} · ${subjectCount} ${subjectCount === 1 ? "subject" : "subjects"}` : "Loading…"}
+              {ready ? [tutor ? `${activeStudents} ${activeStudents === 1 ? "student" : "students"}` : "", ...(noLessons ? [] : [`${lessonCount} ${lessonCount === 1 ? "lesson" : "lessons"}`, `${subjectCount} ${subjectCount === 1 ? "subject" : "subjects"}`])].filter(Boolean).join(" · ") : "Loading…"}
             </p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
@@ -152,7 +153,7 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
           </div>
         </div>
       </div>
-      {open && (
+      {open && !noLessons && (
         <div className="mb-3.5 -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&>*]:min-w-[156px] [&>*]:flex-1 [&>*]:snap-start lg:grid lg:grid-cols-3 lg:overflow-visible [&::-webkit-scrollbar]:hidden">
           <Stat label="Subjects" icon="layers" color={ACT_C[0]} value={val(subjectCount)} sub={ready ? "with lessons" : undefined} />
           <Stat label="Lessons" icon="notes" color={ACT_C[1]} value={noteStats ? val(lessonCount) : "–"} sub={tutor && drafts ? `${drafts} in draft` : fresh ? `${fresh} new this week` : undefined} />
