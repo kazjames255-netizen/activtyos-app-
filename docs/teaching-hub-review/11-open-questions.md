@@ -47,3 +47,17 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - A homework hand-in with a linked quiz shows as two rows (homework score, quiz written answers). Merging them into one row needs a decision on which mark comes first.
 - Tab badge and the queue each fetch the inbox and pending attempts (duplicate GETs). A read-only aggregate endpoint (`/mark-queue`) would halve it; not added to keep the change client-only.
 - Home still shows three to-mark rows (counts differ by kind); all land on the queue. Collapsing to one "To mark" row would change the label the `learning-hub-home` spec asserts.
+
+## Builder K (parent verdict, R-12 report)
+- "This term" in the printable report is the last 90 days of homework (no term dates exist in the data). Should tenants set term dates?
+- Multi-child parents: Home shows one verdict for the chosen child only (each child's homework is a separate fetch). A single all-children verdict needs a family-level endpoint.
+- Notifications for overdue homework and "lesson soon" (R-14) and the tutor nudge template (R-9) are NOT built: they need consent and tone design, and dev mail is live.
+- The report has no school-facing branding/logo or tutor sign-off; the tutor's own level names are used as-is (a tenant with jargon in its level names still shows it).
+- Some parent copy outside Home/Progress (quiz runner, live lessons, Setup) still has "diagnostic"/"mastery" wording.
+
+## L - tools assignment (undone / decisions)
+- Tutors cannot yet pin, hide or add tools per question (suggestions are automatic from the wording + topic + year). A stored per-question `tools` override needs an API/schema change.
+- Tools are offered in all non-diagnostic quizzes, including the scientific calculator (M-80) and other aids. Should a quiz have a "no tools" switch for test-like papers?
+- Lesson-quiz (QuizStep) and warm-up questions do not show question tools yet (lessons already have the Tools drawer).
+- H-H02 (chronology sort) and the humanities tools have no Oak history/geography lessons to assign against; only English "chronological order" wording assigns them.
+- Topic-name matches can add a loosely related tool (e.g. a Fractions topic suggests the fraction wall for an angles question); the reason line says "the topic mentions".

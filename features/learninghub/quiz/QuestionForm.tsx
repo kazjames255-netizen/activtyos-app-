@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import QuestionTools from "../tools/QuestionTools";
+import { yearFromLabel } from "../tools/yearLabel";
 import { GENERATOR_LABEL, publicProblem, PROBLEM_GENERATORS } from "../tools/problems";
 import { Button, FieldLabel, Input } from "@/components/ui";
 import { post, put } from "@/lib/api";
@@ -234,6 +236,7 @@ export function QuestionForm({ p, question, defaultTopicId, onClose, onSaved }: 
             <FieldLabel htmlFor="hq-prompt">Question</FieldLabel>
             <textarea id="hq-prompt" data-autofocus rows={3} value={d.prompt} onChange={(e) => set({ prompt: e.target.value })} placeholder="e.g. Solve x² − 5x + 6 = 0"
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[14px] leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+            {rule !== "tool" && (() => { const t = topics.find((x) => x.id === d.topicId); return t ? <QuestionTools variant="tutor" prompt={d.prompt} ctx={{ subject: t.subject, year: yearFromLabel(d.yearGroups[0]), unit: [t.topic, t.subtopic].filter(Boolean).join(" ") }} /> : null; })()}
           </div>
 
           <ImageField value={d.image} alt={d.imageAlt} onPic={(p) => set({ image: p, imageAlt: p ? d.imageAlt : "" })} onAlt={(a) => set({ imageAlt: a })} altError={!!d.image && !d.imageAlt.trim()} pasted={pasted} onPastedTaken={() => setPasted(null)} />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState } from "react";
+import { lazy, Suspense, useId, useState } from "react";
+import type { QuestionToolCtx } from "../tools/QuestionTools";
 import { Icon } from "../kit";
 import type { KindRule, MatchAnswer, Option, OrderAnswer, Piece, Pic } from "./api";
 import { MatchInput, OrderInput } from "./MatchOrder";
@@ -15,13 +16,15 @@ import { useSupport } from "../family/FamilyContext";
 // tutor's live preview in the question editor — so what a tutor previews is
 // exactly what a child gets. Rendering only: marking is the server's job.
 
+const QuestionTools = lazy(() => import("../tools/QuestionTools"));
+
 export type Answer = string | string[] | MatchAnswer | OrderAnswer | ToolAnswerValue;
 
 export interface QView { id: string; prompt: string; options?: Option[]; marks: number; image?: Pic | null; /** match */ terms?: Piece[]; definitions?: Piece[]; /** order */ items?: string[]; /** tool */ toolProblem?: PublicProblem }
 
 const LETTERS = "ABCDEFGHIJ";
 
-export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, onRefreshImages }: { q: QView; rule: KindRule; value: Answer | undefined; onChange: (v: Answer) => void; disabled?: boolean; autoFocus?: boolean; /** Signed picture links expire: refetch the paper's links (called once per failed picture). */ onRefreshImages?: () => Promise<unknown> | void }) {
+export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, onRefreshImages, toolCtx }: { q: QView; rule: KindRule; value: Answer | undefined; onChange: (v: Answer) => void; disabled?: boolean; autoFocus?: boolean; /** Signed picture links expire: refetch the paper's links (called once per failed picture). */ onRefreshImages?: () => Promise<unknown> | void; /** Where the question belongs (subject / year): when given, a child is offered the tools the selection rules pick for it. */ toolCtx?: QuestionToolCtx }) {
   const gid = useId();
   const multi = rule === "multi";
   const picked = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
@@ -34,6 +37,7 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
   const field = "w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[16px] text-[var(--ink)] outline-none transition-colors placeholder:text-[var(--ink-3)] focus:border-[var(--brand)] disabled:opacity-60";
 
   return (
+    <>
     <fieldset disabled={disabled} className="m-0 min-w-0 border-0 p-0">
       <legend className="mb-4 w-full p-0">
         <span className="flex items-start gap-2.5">
@@ -139,6 +143,8 @@ export function QuestionView({ q, rule, value, onChange, disabled, autoFocus, on
         </div>
       )}
     </fieldset>
+    {toolCtx && rule !== "tool" && !disabled && <Suspense fallback={null}><QuestionTools ctx={toolCtx} prompt={q.prompt} variant="child" /></Suspense>}
+    </>
   );
 }
 

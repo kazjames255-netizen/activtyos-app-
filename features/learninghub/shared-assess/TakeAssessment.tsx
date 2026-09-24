@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button, Card } from "@/components/ui";
 import { Icon } from "../kit";
+import { yearFromLabel } from "../tools/yearLabel";
 import { SubjectCover, SubjectGlyph } from "../subjectArt";
 import { ApiError, post } from "@/lib/api";
 import type { PanelProps } from "../panelTypes";
@@ -290,7 +291,8 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
       {phase === "taking" && q && (
         <Card className="p-4 sm:p-6">
           <div key={q.id} className="hub-q-in" onKeyDown={(e) => { if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT" && (e.target as HTMLInputElement).type === "text") { e.preventDefault(); if (idx < qs.length - 1) setIdx(idx + 1); else setPhase("review"); } }}>
-            <QuestionView q={q} rule={ruleOf(p.config.questionKinds, q.kind)} value={answers[q.id]} onChange={(v) => set(q.id, v)} onRefreshImages={refreshImages} />
+            <QuestionView q={q} rule={ruleOf(p.config.questionKinds, q.kind)} value={answers[q.id]} onChange={(v) => set(q.id, v)} onRefreshImages={refreshImages}
+              toolCtx={diag ? undefined : { subject: a.subject, year: yearFromLabel(p.students.find((s) => s.childId === childId)?.yearGroup), unit: a.title, qs: p.qs }} />
           </div>
           <div className="mt-6 flex items-center justify-between gap-2">
             <Button variant="ghost" className={`${TAP} !px-5`} disabled={idx === 0} onClick={() => setIdx(idx - 1)}>← Back</Button>
