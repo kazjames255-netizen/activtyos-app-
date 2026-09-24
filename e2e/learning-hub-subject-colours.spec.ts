@@ -29,7 +29,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 const envApi = (() => {
   try {
@@ -61,8 +61,7 @@ async function gotoHub(page: Page, url: string) {
 }
 async function openTutorQuizzes(page: Page) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, /Quizzes/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /Quizzes/).click();
+  await openTab(page, /Quizzes/);
   await expect(page.locator(`[data-subject-tile="${subject}"]`).first()).toBeAttached({ timeout: 30_000 });
 }
 /** The colour a subject's tile / cover is drawn in right now (a resolved rgb string). */
@@ -144,8 +143,7 @@ test("the tutor picks a subject's colour from its menu and every card for it cha
   const cfg = await apiFetch<{ hub: { subjectColours: Record<string, string> } }>("/api/learning-hub/config", t);
   expect(cfg.hub.subjectColours[subject.toLowerCase()]).toBe("orange");
   await page.reload();
-  await expect(tabOf(page, /Quizzes/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /Quizzes/).click();
+  await openTab(page, /Quizzes/);
   await expect(page.locator(`[data-subject-tile="${subject}"]`).first()).toBeAttached({ timeout: 30_000 });
   await expect.poll(() => tileColour(page, subject), { timeout: 15_000 }).toBe(ORANGE);
   await expect(page.locator(`[data-subject-cover="${subject}"]`).first()).toBeAttached({ timeout: 15_000 });
@@ -177,8 +175,7 @@ test("a family sees the tutor's colour in My Classroom, and a change reaches the
     const radio = page.getByRole("radio", { name: childName });
     if (await radio.isVisible().catch(() => false)) await radio.click();
   }
-  await expect(tabOf(page, /Quizzes/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /Quizzes/).click();
+  await openTab(page, /Quizzes/);
   await expect(page.locator(`[data-subject-tile="${subject}"]`).first()).toBeAttached({ timeout: 30_000 });
   await expect.poll(() => tileColour(page, subject), { timeout: 20_000 }).toBe(ORANGE);
 

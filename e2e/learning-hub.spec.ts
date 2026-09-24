@@ -36,7 +36,7 @@ async function raw(path: string, idToken: string, init?: RequestInit) {
   return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, unknown> };
 }
 
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 /** A dialog / sheet must be a LIGHT surface (perceived luminance well above mid-grey), not the app's dark :root fallback. */
 async function expectLight(el: import("@playwright/test").Locator) {
   const lum = await el.evaluate((n) => {
@@ -57,7 +57,7 @@ async function revealAll(page: Page) {
 }
 async function openNotes(page: Page) {
   await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
 
@@ -127,23 +127,27 @@ test.describe("tutor builds topics and notes", () => {
     test.setTimeout(120_000);
     await page.goto("/freelancer/learninghub");
     await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
-    const tabs = page.getByRole("tab");
-    await expect(tabs.first()).toHaveAttribute("data-panel", "home");
-    await expect(tabs.nth(1)).toHaveAttribute("data-panel", "live");
-    // Home is the default tab as soon as its panel is built; until then Live lessons, then Notes.
-    const homeStatus = await tabs.first().getAttribute("data-status");
-    const liveStatus = await tabs.nth(1).getAttribute("data-status");
-    await expect(tabOf(page, homeStatus === "live" ? /^Home$/ : liveStatus === "live" ? /Live lessons/ : /^Lessons/)).toHaveAttribute("aria-selected", "true");
-    // Unbuilt panels stay visible (never hidden), labelled "Soon" in words.
-    for (const p of ["home", "live", "students", "dashboard", "diagnostic", "quizzes", "homework", "notes", "flashcards"]) {
-      await expect(page.locator(`[role="tab"][data-panel="${p}"]`)).toBeVisible();
-    }
+    // The tutor strip is grouped: seven top tabs, Home first (the default), Lessons second, then a sub-tab row under most of them.
+    const tops = page.locator('[role="tab"][data-top]');
+    await expect(tops).toHaveCount(7);
+    await expect(tops.first()).toHaveAttribute("data-top", "home");
+    await expect(tops.nth(1)).toHaveAttribute("data-top", "lessons");
+    await expect(tops.first()).toHaveAttribute("aria-selected", "true");
+    // Every old panel is still one top tab (+ one sub-tab) away; nothing is hidden.
+    await tops.nth(1).click();
+    for (const sub of ["lessons", "live", "schedule", "teach", "tools", "flashcards"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    await page.locator('[role="tab"][data-top="students"]').click();
+    for (const sub of ["students", "enrol"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    await page.locator('[role="tab"][data-top="quizzes"]').click();
+    for (const sub of ["quizzes", "starting", "newquiz"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    await page.locator('[role="tab"][data-top="homework"]').click();
+    for (const sub of ["mark", "inbox", "set"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
     // Roving tabindex + arrow keys.
-    await tabs.first().focus();
+    await tops.first().focus();
     await page.keyboard.press("End");
-    await expect(tabOf(page, /Messages/)).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator('[role="tab"][data-top="messages"]')).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("Home");
-    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+    await expect(tops.first()).toHaveAttribute("aria-selected", "true");
   });
 
   test("topic → subtopic → note with a PDF worksheet", async ({ page }) => {
@@ -208,9 +212,9 @@ test.describe("tutor builds topics and notes", () => {
     await rowOf(page, subject).click();
     await page.getByRole("button", { name: /new lesson/i }).first().click();
     await page.getByLabel("Title", { exact: true }).fill(`Unsaved ${stamp}`);
-    await tabOf(page, /Students/).click();
-    await expect(tabOf(page, /^Lessons/)).toContainText("Unsaved");
-    await tabOf(page, /^Lessons/).click();
+    await openTab(page, /Students/);
+    await expect(page.locator('[role="tab"][data-top="lessons"]')).toContainText("Unsaved");
+    await openTab(page, /^Lessons/);
     await expect(page.getByLabel("Title", { exact: true })).toHaveValue(`Unsaved ${stamp}`);
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(page.getByText("Discard your changes?")).toBeVisible();
@@ -263,7 +267,7 @@ test.describe("tutor enrols a student (Students tab)", () => {
     test.setTimeout(180_000);
     await page.goto("/freelancer/learninghub");
     await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
-    await tabOf(page, /Students/).click();
+    await openTab(page, /Students/);
     await expect(page.locator("#hub-students")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Enrol a student/ }).first().click();
     const dlg = page.getByRole("dialog");

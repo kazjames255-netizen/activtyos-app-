@@ -44,7 +44,7 @@ const setHub = (op: TestAccount, on: boolean) => retry(async () => {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 });
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 const envApi = (() => {
   try {
@@ -96,8 +96,7 @@ async function gotoHub(page: Page, url: string) {
 }
 async function openTutorLessons(page: Page) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
 async function openParentHub(page: Page, tab: RegExp) {
@@ -109,8 +108,7 @@ async function openParentHub(page: Page, tab: RegExp) {
   const pill = page.getByRole("radio", { name: childName });
   if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
   else if (await pill.isVisible({ timeout: 8_000 }).catch(() => false)) await pill.click();
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function searchLesson(page: Page, title: string) {
   await page.getByLabel("Search lessons").fill(title);
@@ -177,7 +175,7 @@ test.describe("set a lesson for children", () => {
     expect(Date.parse(hw!.dueAt)).toBeGreaterThan(Date.now() + 2 * 86_400_000);
     // …and it lands on the Homework tab (Set homework) for the tutor.
     await expect(page.getByRole("tab", { name: /Set homework/ })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("tab", { name: /Set homework/ }).click();
+    await openTab(page, /Set homework/);
     await expect(cardWith(page, hwTitle(L.title), "Hand-ins (0/1)")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
   });
@@ -288,8 +286,7 @@ test.describe("set a lesson for children", () => {
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
     await gotoHub(page, "/freelancer/learninghub");
-    await expect(tabOf(page, /^Homework/)).toBeVisible({ timeout: 30_000 });
-    await tabOf(page, /^Homework/).click();
+    await openTab(page, /^Homework/);
     await expect(page.locator("#hub-new-homework")).toBeVisible({ timeout: 30_000 });
     await page.locator("#hub-new-homework").click();
     const dlg = page.locator("#hub-homework-form");
@@ -323,7 +320,7 @@ test.describe("set a lesson for children", () => {
     expect(hw!.assessmentId).toBe(L.quizId);
     expect(hw!.noteIds).toEqual([L.noteId]);
     expect(hw!.assignedChildIds).toContain(childId);
-    await page.getByRole("tab", { name: /Set homework/ }).click(); // the assignments list (the default view is the inbox)
+    await openTab(page, /Set homework/); // the assignments list (the default view is the inbox)
     await expect(cardWith(page, mine, "Hand-ins")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
     // The family side is unchanged: same payload, same quiz + lesson.
@@ -365,7 +362,7 @@ test.describe("set a lesson for children", () => {
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
     await gotoHub(page, "/freelancer/learninghub");
-    await tabOf(page, /Live lessons/).click();
+    await openTab(page, /Live lessons/);
     const row = cardWith(page, title);
     await expect(row).toBeVisible({ timeout: 30_000 });
     await row.locator('[data-action="add-notes"]').click();

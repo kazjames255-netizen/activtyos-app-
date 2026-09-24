@@ -54,7 +54,7 @@ const setHub = (op: TestAccount, on: boolean) => retry(async () => {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 });
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 const HUB = "/api/learning-hub";
 
 /** The dev API restarts (tsx watch) whenever a server file is saved: retry a dropped connection instead of failing the test. */
@@ -140,16 +140,14 @@ async function gotoHub(page: Page, url: string) {
 }
 async function openTutorTab(page: Page, tab: RegExp) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function openParentHub(page: Page, tab: RegExp) {
   await dismissParentWelcome(page);
   await gotoHub(page, `/custdash/learninghub?child=${childId}`);
   const provider = page.getByLabel("Provider");
   if (await provider.isVisible().catch(() => false)) await provider.selectOption(tenantId);
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function searchLesson(page: Page, title: string) {
   await page.getByLabel("Search lessons").fill(title);
@@ -401,7 +399,7 @@ test.describe("1b. tutor: set for children (homework) and add to a live lesson",
     expect(hw!.assignedChildIds).toEqual([childId]);
     hwId = hw!.id;
     await expect(page.getByRole("tab", { name: /Set homework/ })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("tab", { name: /Set homework/ }).click();
+    await openTab(page, /Set homework/);
     await expect(cardWith(page, L.title, "Hand-ins (0/1)")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
   });
@@ -480,7 +478,7 @@ test.describe("2 + 3. parent sees the homework; the child does the whole lesson 
     await expect(page.locator("#learning-hub")).toHaveAttribute("data-kid", "1", { timeout: 20_000 });
     await expect(page.getByTestId("hub-kid-bar")).toContainText(childName.split(" ")[0]);
     expect((await page.getByRole("tab").allInnerTexts()).join("|")).not.toMatch(/Progress|Live lessons/);
-    await tabOf(page, /Homework/).click();
+    await openTab(page, /Homework/);
     await cardWith(page, L.title).click();
     await page.locator("#hub-homework-detail").getByTestId("hub-hw-start-lesson").click();
     await expect(player(page)).toBeVisible({ timeout: 30_000 });
@@ -587,7 +585,7 @@ test.describe("4. tutor: results, marking, live progress", () => {
     const page = await ctx.newPage();
     await openTutorTab(page, /Set homework/);
     await expect(cardWith(page, L.title, "Hand-ins (1/1)")).toBeVisible({ timeout: 30_000 });
-    await tabOf(page, /Quizzes/).click();
+    await openTab(page, /Quizzes/);
     await page.getByRole("radio", { name: /^Marking/ }).click();
     const row = page.locator('[data-testid="hub-marking-row"]').filter({ hasText: L.quizTitle }).filter({ hasText: childName });
     await expect(row).toBeVisible({ timeout: 30_000 });

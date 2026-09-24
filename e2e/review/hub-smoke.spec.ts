@@ -20,7 +20,7 @@ for (const role of ["tutor", "parent", "kid"] as const) {
       if (role === "kid") await handOver(page, fx.kids[0].id);
       await settle(page);
       const { labels, keys } = await tabStrip(page);
-      expect(labels.length, "tabs found").toBeGreaterThanOrEqual(role === "tutor" ? 10 : 5);
+      expect(labels.length, "tabs found").toBeGreaterThanOrEqual(role === "tutor" ? 7 : 5);
       const fails: string[] = [];
       for (let i = 0; i < labels.length; i++) {
         pr.reset();

@@ -5,6 +5,7 @@ import { loadAccounts, statePath, API_URL, ROOT, type AccountManifest, type Test
 import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { cardWith } from "./helpers/ui";
+import { openTab } from "./helpers/hubTabs";
 
 // Learning Hub — the tutor-flow fixes from audit A1 (docs/hub-review/A1-tutor-flow.md):
 //  F1  /providers reports the caller's real level (+ franchise, business name) — regression for owner and default-caps staff
@@ -256,7 +257,7 @@ test.describe("the tutor's screens", () => {
     await expect(page.getByText(`${childName} hasn't taken a quiz yet`)).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Your progress starts with the first quiz")).toHaveCount(0);
     // F13 — no match in the enrol list → the page link for families who never booked.
-    await page.getByRole("tab", { name: /^Students/ }).click();
+    await openTab(page, /^Students/);
     await page.getByRole("button", { name: /Enrol a student|Enrol your first student/ }).first().click();
     await page.getByLabel("Search children").fill(`zzz-nobody-${stamp}`);
     const link = page.getByTestId("hub-family-link");
@@ -473,7 +474,7 @@ test.describe("G1 screens — schedule weekly, log a held lesson, invite a famil
     const held = (await lessonsOf(tutor)).find((l) => l.title === heldTitle)!;
     expect(held.held).toBe(true);
     expect(Object.keys(held.attendance)).toEqual([childId]);
-    await page.getByRole("tab", { name: /^Past/ }).click();
+    await openTab(page, /^Past/);
     const card = cardWith(page, heldTitle, "Logged after the fact");
     await expect(card).toBeVisible({ timeout: 30_000 });
     await expect(card).toContainText("Attended 1 of 1");

@@ -45,7 +45,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 // If .env.local points the web app at a tunnel that isn't up, send its API calls
 // to the local API instead (same trick as the teaching-ui spec).
@@ -115,13 +115,11 @@ async function openParentHub(page: Page, tab: RegExp) {
     const radio = page.getByRole("radio", { name: childName });
     if (await radio.isVisible().catch(() => false)) await radio.click();
   }
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function openTutorHub(page: Page, tab: RegExp) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 
 test.describe("tutor authors in the UI", () => {
@@ -268,7 +266,7 @@ test.describe("the tutor marks the written answer", () => {
     const qcard = cardWith(page, quizTitle, "Published");
     await expect(qcard).toContainText("1 attempt", { timeout: 30_000 });
     await expect(qcard).toContainText("100%");
-    await tabOf(page, /Progress/).click();
+    await openTab(page, /Progress/);
     const row = page.locator('[data-testid="hub-overview"] tbody tr').filter({ hasText: childName });
     await expect(row).toContainText("%", { timeout: 30_000 });
     await row.getByRole("button").click();
@@ -323,7 +321,7 @@ test.describe("the family sees the outcome", () => {
     // The answer key is shown because the tenant's revealAnswers allows it.
     await expect(result.locator('[data-testid="hub-review-item"]').filter({ hasText: Q.choice })).toContainText("7 only divides");
 
-    await tabOf(page, /Progress/).click();
+    await openTab(page, /Progress/);
     const prog = page.locator(`[id="hub-progress-${subject}"]`);
     await expect(prog).toBeVisible({ timeout: 30_000 });
     await expect(prog).toContainText("Sets");

@@ -4,6 +4,7 @@ import { test, expect } from "@playwright/test";
 import { ROOT } from "../helpers/env";
 import { apiFetch, apiPost, fbSignIn } from "../helpers/accounts";
 import { buildFixture, ctxFor, gotoHubPage, settle, HUB, type Fx } from "./fixture";
+import { openTab } from "../helpers/hubTabs";
 
 // R-2 One Mark queue: the Homework tab's first view lists hand-ins, written quiz answers and written starting-quiz answers together;
 // marking one advances to the next row (whatever its kind); the old entry points still open. Throwaway accounts only.
@@ -74,7 +75,7 @@ test("one list shows all three kinds, marking advances, old links still open", a
   await page.goto("/freelancer/learninghub?tab=quizzes");
   await expect(page.getByRole("radio", { name: /^Marking/ })).toBeVisible({ timeout: 45_000 });
   await page.goto("/freelancer/learninghub?tab=homework");
-  await page.getByRole("tab", { name: /^Inbox/ }).click();
+  await openTab(page, /^Inbox/);
   await expect(page.locator("#hub-inbox, #hub-homework").first()).toBeVisible();
   await ctx.close();
 

@@ -43,7 +43,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 const HUB = "/api/learning-hub";
 
 const envApi = (() => {
@@ -220,7 +220,7 @@ test.describe("kid mode", () => {
     expect(tabs.join("|")).toMatch(/Starting quiz/);
     expect(tabs.join("|")).not.toMatch(/Progress|Live lessons|Placement/);
     // The hub is forced onto Ava even though Ben was the child in the URL a moment ago.
-    await tabOf(page, /^Quizzes/).click();
+    await openTab(page, /^Quizzes/);
     await expect(cardWith(page, QUIZ)).toBeVisible({ timeout: 30_000 });
     await cardWith(page, QUIZ).getByTestId("hub-open-assessment").click();
     await expect(page.getByTestId("hub-who-line").getByTestId("hub-child-chip")).toHaveAttribute("data-child-id", avaId);

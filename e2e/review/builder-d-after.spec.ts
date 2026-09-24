@@ -3,6 +3,7 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { ROOT } from "../helpers/env";
 import { buildFixture, ctxFor, settle, gotoHubPage, handOver, type Fx } from "./fixture";
+import { openTab } from "../helpers/hubTabs";
 
 // Builder D (P-03/P-04/P-13) after-screenshots at 390 and 768 + assertions. Throwaway accounts only.
 const OUT = path.join(ROOT, "docs/teaching-hub-review/screenshots/after");
@@ -30,7 +31,7 @@ for (const [vpName, vp] of [["390", { width: 390, height: 844 }], ["768", { widt
     await expect(page.getByText(/streak|Mastery snapshot/i)).toHaveCount(0);
     expect((await page.getByRole("tab").allInnerTexts()).join("|")).not.toMatch(/Progress|Live lessons|How I/);
     await shot("kid", "home");
-    await page.getByRole("tab", { name: /Homework/ }).click();
+    await openTab(page, /Homework/);
     await settle(page);
     // the fixture's own homework is titled "Overdue reading <stamp>": strip that title, then no overdue / late wording may remain
     expect((await page.locator("body").innerText()).replace(/Overdue reading \w+/g, "")).not.toMatch(/overdue|handed in late/i);

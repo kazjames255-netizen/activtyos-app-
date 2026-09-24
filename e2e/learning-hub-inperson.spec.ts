@@ -6,6 +6,7 @@ import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { seedOakLesson, type SeedQ, type SeededLesson } from "./helpers/lessonFixture";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
+import { openTab } from "./helpers/hubTabs";
 
 // Learning Hub — IN-PERSON lessons (features/learninghub/inperson, server/src/routes/hub/inPersonApi.ts). A tutor runs a lesson on their own
 // device with two children beside them (no video), taps in each child's answers, and every child gets a REAL marked attempt that their
@@ -405,7 +406,7 @@ test.describe("setup: year filter + send to the children's portals", () => {
     // inline via GoLivePicker instead, which has no such setup step).
     await gotoHub(page, "/freelancer/learninghub?tab=home");
     await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId("home-teach-in-person").click();
+    await openTab(page, /Teach in person/);
     const app = page.getByTestId("inperson-app");
     await expect(app).toBeVisible();
 
@@ -443,7 +444,7 @@ test.describe("setup: year filter + send to the children's portals", () => {
     const page = await ctx.newPage();
     await gotoHub(page, "/freelancer/learninghub?tab=home");
     await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId("home-teach-in-person").click();
+    await openTab(page, /Teach in person/);
     const app = page.getByTestId("inperson-app");
     await expect(app).toBeVisible();
     await app.getByRole("tab", { name: "A quiz or placement test" }).click();

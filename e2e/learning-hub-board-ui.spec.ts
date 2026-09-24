@@ -5,6 +5,7 @@ import { loadAccounts, statePath, API_URL, ROOT, type AccountManifest, type Test
 import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { dismissParentWelcome } from "./helpers/ui";
+import { openTab } from "./helpers/hubTabs";
 
 type Level = "early" | "standard" | "advanced";
 
@@ -114,7 +115,7 @@ async function gotoHub(page: Page, url: string, who: "tutor" | "family") {
 async function enterBoard(page: Page, who: "tutor" | "family") {
   if (who === "family") await dismissParentWelcome(page);
   await gotoHub(page, who === "tutor" ? "/freelancer/learninghub" : "/custdash/learninghub", who);
-  await page.getByRole("tab", { name: /Live lessons/ }).click();
+  await openTab(page, /Live lessons/);
   const row = page.locator(`[data-lesson-id="${lessonId}"] [data-action="join"], #hub-next-lesson[data-lesson-id="${lessonId}"] #hub-join-btn`).first();
   await expect(row).toBeVisible({ timeout: 40_000 });
   await row.click();

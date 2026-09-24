@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 import { ROOT, API_URL } from "./helpers/env";
+import { openTab } from "./helpers/hubTabs";
 
 // X5: French / Spanish / German slide-picture review sheet (copy of e2e/f1-art-sheet.spec.ts with its own samples/output). Run ONLY via scripts/e2e-locked.sh e2e/x5-languages-sheet.spec.ts
 // Slide-picture review sheet (X5 languages): signs in as the Oak STAGING tutor (scratch/oak-staging.json), opens sampled lessons in the Lessons tab,
@@ -51,7 +52,7 @@ test("sampled slides render exactly their verified pictures (or no art panel)", 
   for (const [n, s] of samples.entries()) {
     try {
       await page.goto("/freelancer/learninghub");
-      await page.getByRole("tab", { name: /^Lessons/ }).click({ timeout: 60_000 });
+      await openTab(page, /^Lessons/);
       await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 60_000 });
       await page.getByLabel("Search lessons").fill(s.title);
       const btn = page.getByRole("button", { name: s.title, exact: true }).first();

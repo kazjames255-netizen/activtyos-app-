@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 import { ROOT, API_URL } from "./helpers/env";
+import { openTab } from "./helpers/hubTabs";
 
 // Lesson-factory visual check (dev tool): signs in as the Oak STAGING tutor (scratch/oak-staging.json), opens sample lessons in the
 // Lessons tab, plays the Preview, and screenshots the slide deck into scratch/factory-shots/. Asserts each deck renders every
@@ -46,7 +47,7 @@ test("factory decks render in the tutor preview", async ({ browser }) => {
   await login(page);
   const openLessons = async () => {
     await page.goto("/freelancer/learninghub");
-    await page.getByRole("tab", { name: /^Lessons/ }).click({ timeout: 60_000 });
+    await openTab(page, /^Lessons/);
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 60_000 });
   };
   for (const [n, s] of samples.entries()) {

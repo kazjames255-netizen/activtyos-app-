@@ -29,7 +29,7 @@ async function setHub(op: TestAccount, on: boolean) {
   const settings = { ...(lib.settings ?? {}), features: { ...(lib.settings?.features ?? {}), learninghub: on } };
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 async function tutorPage(browser: Browser) {
   const ctx = await browser.newContext({ storageState: statePath("freelancer") });
@@ -62,7 +62,7 @@ test.beforeAll(async () => {
 test("lessons: New lesson has a New / Edit existing strip; Edit existing finds and opens a lesson", async ({ browser }) => {
   test.setTimeout(300_000);
   const { ctx, page } = await tutorPage(browser);
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: /new lesson/i }).first().click();
 
@@ -104,7 +104,7 @@ test("lessons: New lesson has a New / Edit existing strip; Edit existing finds a
 test("lessons: the New tab starts blank again and asks first when the open lesson has unsaved changes", async ({ browser }) => {
   test.setTimeout(300_000);
   const { ctx, page } = await tutorPage(browser);
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: /new lesson/i }).first().click();
   const editor = page.locator("#hub-note-editor");
@@ -126,7 +126,7 @@ test("lessons: the New tab starts blank again and asks first when the open lesso
 test("quizzes: the New quiz builder has the strip; Edit existing opens a quiz in the builder", async ({ browser }) => {
   test.setTimeout(300_000);
   const { ctx, page } = await tutorPage(browser);
-  await tabOf(page, /^Quizzes/).click();
+  await openTab(page, /^Quizzes/);
   await page.getByTestId("hub-new-assessment").click();
   const dlg = page.locator("#hub-assessment-builder");
   await expect(dlg).toBeVisible({ timeout: 20_000 });
@@ -157,7 +157,7 @@ test("quizzes: the New quiz builder has the strip; Edit existing opens a quiz in
 test("flashcards: the New card dialog has the strip; Edit existing opens a card", async ({ browser }) => {
   test.setTimeout(300_000);
   const { ctx, page } = await tutorPage(browser);
-  await tabOf(page, /^Flashcards/).click();
+  await openTab(page, /^Flashcards/);
   await page.locator("#hub-add-card").click();
   const dlg = page.locator("#hub-card-dialog");
   await expect(dlg).toBeVisible({ timeout: 20_000 });

@@ -45,7 +45,7 @@ async function setHubOnce(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await net(() => fbSignIn(a.email))).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 const envApi = (() => {
   try {
@@ -140,13 +140,15 @@ test("tutor: Home is the first, default tab and reflects this run's work", async
   await page.getByRole("button", { name: "Show as table" }).click();
   await expect(page.getByRole("table").filter({ hasText: "Count" })).toBeVisible();
 
-  // Quick actions jump to the right tab.
-  await page.getByRole("button", { name: /Set homework Set the next task/ }).click();
-  await expect(tabOf(page, /^Homework$/)).toHaveAttribute("aria-selected", "true");
+  // The six quick-action tiles are gone: those jobs live under the top tabs (Lessons / Quizzes / Homework / Students).
+  await expect(page.getByRole("navigation", { name: "Quick actions" })).toHaveCount(0);
+  await expect(page.locator("#hub-home-tutor").getByRole("button", { name: /^(New lesson|New quiz|Set homework|Schedule video lesson|Enrol student|Teach in person)\b/ })).toHaveCount(0);
+  await openTab(page, /Set homework/);
+  await expect(tabOf(page, /Set homework/)).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Home", exact: true }).click();
   await expect(page.locator("#hub-home-tutor")).toBeVisible();
-  await page.getByRole("button", { name: /Schedule video lesson Pick a time/ }).click();
-  await expect(tabOf(page, /^Live lessons/)).toHaveAttribute("aria-selected", "true");
+  await openTab(page, /Schedule video lesson/);
+  await expect(page.locator('[role="tab"][data-sub="schedule"]')).toHaveAttribute("aria-selected", "true");
   await ctx.close();
 });
 

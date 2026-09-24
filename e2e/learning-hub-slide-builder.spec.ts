@@ -26,7 +26,7 @@ async function setHub(op: TestAccount, on: boolean) {
   const settings = { ...(lib.settings ?? {}), features: { ...(lib.settings?.features ?? {}), learninghub: on } };
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 test.beforeAll(async () => {
   test.setTimeout(120_000);
@@ -47,8 +47,7 @@ async function openNewLesson(page: Page) {
     await page.goto("/freelancer/learninghub");
     if (await heading.first().isVisible({ timeout: 25_000 }).catch(() => false)) break;
   }
-  await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
   await page.getByRole("button", { name: /new lesson/i }).first().click();
   await expect(page.locator("#hub-note-title")).toBeVisible({ timeout: 20_000 });

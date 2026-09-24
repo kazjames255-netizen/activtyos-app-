@@ -3,6 +3,7 @@ import { dismissParentWelcome } from "./helpers/ui";
 import { loadAccounts, API_URL, statePath, type AccountManifest, type TestAccount } from "./helpers/env";
 import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { openTab } from "./helpers/hubTabs";
 
 // Learning Hub — the child / parent leftovers (API level, one throwaway family):
 //  • the default reveal rule is "after_pass": a failed attempt shows which answers were wrong but never the key; a pass (or an earlier
@@ -208,7 +209,7 @@ test.describe("kid mode can take the placement test that unlocks a quiz", () => 
       await expect(page.getByTestId("hub-kid-bar")).toBeVisible();
       await expect(page.getByRole("tab", { name: /Starting quiz/ })).toBeVisible();
       await expect(page.getByRole("tab", { name: /Progress|Live lessons|Students/ })).toHaveCount(0);
-      await page.getByRole("tab", { name: /^Quizzes/ }).click();
+      await openTab(page, /^Quizzes/);
       const locked = page.locator(`#hub-assess-${lockedQuiz}`);
       await expect(locked).toContainText("starting quiz", { timeout: 30_000 });
       await expect(locked).not.toContainText(/placement|diagnostic/i);

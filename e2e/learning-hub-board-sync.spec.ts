@@ -5,6 +5,7 @@ import { loadAccounts, statePath, API_URL, ROOT, type AccountManifest, type Test
 import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { dismissParentWelcome } from "./helpers/ui";
+import { openTab } from "./helpers/hubTabs";
 
 // Learning Hub whiteboard — call-room behaviour that only shows with a real Daily room:
 //   • a family that JOINS LATE, while the tutor is presenting, lands on the board (layout + page + board + permission are re-sent),
@@ -104,7 +105,7 @@ async function joinRoom(page: Page, who: "tutor" | "family") {
   const row = page.locator(`[data-lesson-id="${lessonId}"] [data-action="join"], #hub-next-lesson[data-lesson-id="${lessonId}"] #hub-join-btn`).first();
   // the dev API can be slow while other work hot-reloads it: give the list a generous wait, and one fresh reload
   for (let attempt = 0; attempt < 2; attempt++) {
-    await page.getByRole("tab", { name: /Live lessons/ }).click();
+    await openTab(page, /Live lessons/);
     if (await appears(row, 150_000)) break;
     if (attempt === 0) await gotoHub(page, who === "tutor" ? "/freelancer/learninghub" : `/custdash/learninghub?child=${childId}`, who);
   }

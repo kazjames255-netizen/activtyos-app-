@@ -43,7 +43,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 /** A dialog / sheet must be a LIGHT surface (perceived luminance well above mid-grey), not the app's dark :root fallback. */
 async function expectLight(el: import("@playwright/test").Locator) {
   const lum = await el.evaluate((n) => {
@@ -123,13 +123,11 @@ async function openParentHub(page: Page, tab: RegExp) {
   const pill = page.getByRole("radio", { name: childName });
   if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
   else if (await pill.isVisible({ timeout: 8_000 }).catch(() => false)) await pill.click();
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function openTutorHub(page: Page, tab: RegExp) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 
 test.describe("homework: set → hand in → mark → see the mark", () => {
@@ -149,7 +147,7 @@ test.describe("homework: set → hand in → mark → see the mark", () => {
     await dlg.getByRole("button", { name: "Assign homework" }).click();
     expect((await saved).status()).toBe(201);
     await expect(dlg).toHaveCount(0);
-    await page.getByRole("tab", { name: /Set homework/ }).click();
+    await openTab(page, /Set homework/);
     await expect(cardWith(page, hwTitle, "Hand-ins (0/1)")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
   });
@@ -612,7 +610,7 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await page.waitForTimeout(1500);
     await expect(chip).toHaveCount(0);
     // With no quiz set, the Quiz tile's main click opens the set-a-quiz form for the group (today's behaviour).
-    await tabOf(page, /Students/).click();
+    await openTab(page, /Students/);
     await page.locator(`[data-group-card="${groupName}"] [data-group-tile="quiz"] [data-group-action]`).click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
@@ -644,7 +642,7 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await expect(frame).toHaveAttribute("loading", "lazy");
     await expect(frame).toHaveAttribute("title", /.+/);
     // The note carries a Video chip and an embed in its reading view.
-    await page.getByRole("tab", { name: /^Lessons/ }).click();
+    await openTab(page, /^Lessons/);
     const nc = cardWith(page, `Video note ${stamp}`);
     await expect(nc.locator("[data-video-chip]")).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: `Video note ${stamp}`, exact: true }).click();

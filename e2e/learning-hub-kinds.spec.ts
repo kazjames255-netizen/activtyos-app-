@@ -53,7 +53,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 const envApi = (() => {
   try {
@@ -94,13 +94,11 @@ async function openParentHub(page: Page, tab: RegExp) {
     const radio = page.getByRole("radio", { name: childName });
     if (await radio.isVisible().catch(() => false)) await radio.click();
   }
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 async function openTutorHub(page: Page, tab: RegExp) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, tab)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, tab).click();
+  await openTab(page, tab);
 }
 
 // ── raw API (tutor / parent) ─────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { test, expect } from "@playwright/test";
 import { ROOT } from "../helpers/env";
 import { apiFetch, apiPost, fbSignIn } from "../helpers/accounts";
 import { buildFixture, ctxFor, gotoHubPage, handOver, settle, HUB, type Fx } from "./fixture";
+import { openTab } from "../helpers/hubTabs";
 
 // Tools are ASSIGNED to questions by the selection rules: the tutor writing a maths question sees which tools pupils will be offered, and the
 // child answering it gets a button that opens the tool. Throwaway accounts only.
@@ -56,7 +57,7 @@ test("the child sees the tool button and it opens the tool", async ({ browser })
   await gotoHubPage(page, `/custdash/learninghub?tab=quizzes&child=${fx.kids[0].id}`, fx);
   await page.locator("[data-testid='hub-hand-over'],[data-testid='hub-hand-over-toggle']").first().waitFor({ timeout: 40_000 });
   await handOver(page, fx.kids[0].id);
-  await page.getByRole("tab", { name: /^Quizzes/ }).click();
+  await openTab(page, /^Quizzes/);
   const card = page.locator("[id^='hub-assess-']").filter({ hasText: title });
   await expect(card).toBeVisible({ timeout: 30_000 });
   await card.getByTestId("hub-open-assessment").click();

@@ -40,7 +40,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-const tabOf = (page: Page, name: RegExp) => page.getByRole("tab", { name });
+import { tabOf, openTab } from "./helpers/hubTabs";
 
 // If .env.local points the web app at a tunnel that isn't up, send its API calls to the local API instead.
 const envApi = (() => {
@@ -103,14 +103,12 @@ async function openParentLessons(page: Page) {
     const radio = page.getByRole("radio", { name: childName });
     if (await radio.isVisible().catch(() => false)) await radio.click();
   }
-  await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
 async function openTutorLessons(page: Page) {
   await gotoHub(page, "/freelancer/learninghub");
-  await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
-  await tabOf(page, /^Lessons/).click();
+  await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
 /** Find THIS run's lesson in the list (search is server-side) and open it. */
@@ -175,9 +173,9 @@ test.describe("tutor: lessons list, preview", () => {
     const page = await ctx.newPage();
     await gotoHub(page, "/freelancer/learninghub");
     await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
-    await expect(tabOf(page, /Live lessons/)).toBeVisible(); // the video tab stays distinct
+    await openTab(page, /^Lessons/);
+    await expect(tabOf(page, /Live lessons/)).toBeVisible(); // the video tab stays distinct (a sibling sub-tab under Lessons)
     await expect(tabOf(page, /Notes & resources/)).toHaveCount(0);
-    await tabOf(page, /^Lessons/).click();
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: /new lesson/i }).first()).toBeVisible();
 
