@@ -22,6 +22,7 @@ import { useRealtime } from "@/lib/realtime";
 import { listDoubts } from "./lesson/doubts/api";
 import { useOnBrand } from "./onBrand";
 import { resolveTab } from "./tabAlias";
+import { useMarkItems } from "./mark/useMarkItems";
 
 // Learning Hub — the tutoring vertical's page. One shell, two audiences: a
 // family sees their tutor's hub read-only for the chosen child; the tutor sees
@@ -122,6 +123,9 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   useEffect(() => { loadUnreadQuestions(); const t = setInterval(loadUnreadQuestions, 20_000); return () => clearInterval(t); }, [loadUnreadQuestions]);
   useRealtime(["hubDoubts"], loadUnreadQuestions);
 
+  // R-2: the Homework tab carries the count of everything waiting in the one Mark queue (all three kinds).
+  const toMark = useMarkItems(qs, students, tutor && !!tenantId);
+
   // Navigating clears any stale error banner.
   const go = useCallback((k: TabKey) => {
     setError(null); setFocusFor(null); moveFocus.current = true; setPicked(k);
@@ -200,7 +204,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const tabs: HubTab[] = modules.filter((m) => !kid || ((KID_TABS as readonly string[]).includes(m.meta.key) && !KID_STRIP_HIDDEN.includes(m.meta.key))).map((m) => ({
     // One vocabulary: "Messages" and "Starting quizzes" for everyone; a child's own words (KID_TAB_LABEL) win on their screens.
     meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : m.meta,
-    badge: m.meta.key === "notes" && dirty ? "Unsaved" : m.meta.key === "questions" && unreadQuestions > 0 ? String(unreadQuestions) : undefined,
+    badge: m.meta.key === "notes" && dirty ? "Unsaved" : m.meta.key === "questions" && unreadQuestions > 0 ? String(unreadQuestions) : m.meta.key === "homework" && tutor && toMark.count > 0 ? String(toMark.count) : undefined,
   }));
   // The roster is about people, not topics — give it the full width. Quizzes,
   // homework and placement are card grids that want the width too: their
