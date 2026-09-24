@@ -180,7 +180,7 @@ test("family: a child with no activity gets inviting empty states, not blanks", 
   const home = page.locator("#hub-home-student");
   await expect(home.getByRole("heading", { name: new RegExp(`${blankName}\\.`) })).toBeVisible();
   await expect(home.getByText("No results yet")).toBeVisible({ timeout: 45_000 });
-  await expect(home.getByText("Mastery builds with every quiz")).toBeVisible();
+  await expect(home.getByText("Progress builds with every quiz")).toBeVisible();
   await expect(home.getByText("Start a streak today")).toBeVisible();
   await ctx.close();
 });
