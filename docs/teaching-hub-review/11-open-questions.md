@@ -68,3 +68,5 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - KS1 icon tabs have no spoken labels or arrow-key roving yet (read-aloud nav is R-4 scope).
 - Teen Home has no "Next lesson" row or 3 topic buttons; "Revise weakest" opens Quizzes (no weakest-filtered quiz yet).
 - Teen quiz/homework result screens still use kid tone in places outside Home; only Home and the P-13 string table were switched.
+
+- Fixture fix (M): the support-profile @api spec picked qs[0]'s topic, which was not in the review kids' enrolled subjects, so childSubjectOk 404'd the parent's attempt start. Spec now picks a question from an enrolled subject. Product R-5 code was correct; spec and mark-queue green.

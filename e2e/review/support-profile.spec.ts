@@ -17,7 +17,9 @@ test.beforeAll(async () => {
   const t = (await fbSignIn(fx.accounts.freelancer.email)).idToken;
   const topics = await apiFetch<{ id: string; subject: string }[]>(`${HUB}/topics`, t);
   const qs = await apiFetch<{ id: string; topicId: string }[]>(`${HUB}/questions`, t);
-  const tid = qs[0].topicId;
+  // The quiz must be in a subject the review kids are enrolled in (childSubjectOk), not whichever question sorts first.
+  const enrolled = (await apiFetch<{ childId: string; subjects: string[] }[]>(`${HUB}/students`, t)).find((s) => s.childId === fx.kids[0].id)?.subjects ?? [];
+  const tid = qs.find((q) => enrolled.includes(topics.find((x) => x.id === q.topicId)?.subject ?? ""))!.topicId;
   const same = qs.filter((q) => q.topicId === tid);
   const a = await apiPost<{ id: string }>(`${HUB}/assessments`, t, { type: "quiz", title: `Timed support quiz ${Date.now().toString(36)}`, subject: topics.find((x) => x.id === tid)!.subject, topicIds: [tid], questionIds: same.slice(0, 2).map((q) => q.id), timeLimitMins: 15, passMarkPct: 50, published: true, retakePolicy: "unlimited" });
   quizId = a.id;

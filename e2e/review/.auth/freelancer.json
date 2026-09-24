@@ -1,0 +1,189 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:3000",
+      "localStorage": [],
+      "indexedDB": [
+        {
+          "name": "firebase-heartbeat-database",
+          "version": 1,
+          "stores": [
+            {
+              "name": "firebase-heartbeat-store",
+              "autoIncrement": false,
+              "records": [
+                {
+                  "key": "[DEFAULT]!1:78052655524:web:bbc003490940cd71c48131",
+                  "value": {
+                    "lastSentHeartbeatDate": "2026-09-24",
+                    "heartbeats": []
+                  }
+                }
+              ],
+              "indexes": []
+            }
+          ]
+        },
+        {
+          "name": "firebaseLocalStorageDb",
+          "version": 1,
+          "stores": [
+            {
+              "name": "firebaseLocalStorage",
+              "autoIncrement": false,
+              "keyPath": "fbase_key",
+              "records": [
+                {
+                  "valueEncoded": {
+                    "o": [
+                      {
+                        "k": "fbase_key",
+                        "v": "firebase:authUser:AIzaSyBRuvgODaTPQPvbFNRQbVYn1yJKmJ6ugys:[DEFAULT]"
+                      },
+                      {
+                        "k": "value",
+                        "v": {
+                          "o": [
+                            {
+                              "k": "uid",
+                              "v": "ohkKRyzOUgdbsJeeFc7MiScbUym1"
+                            },
+                            {
+                              "k": "email",
+                              "v": "e2e-freelancer-rvmuey8t5c@activityos-test.com"
+                            },
+                            {
+                              "k": "emailVerified",
+                              "v": false
+                            },
+                            {
+                              "k": "displayName",
+                              "v": {
+                                "v": "undefined"
+                              }
+                            },
+                            {
+                              "k": "isAnonymous",
+                              "v": false
+                            },
+                            {
+                              "k": "photoURL",
+                              "v": {
+                                "v": "undefined"
+                              }
+                            },
+                            {
+                              "k": "phoneNumber",
+                              "v": {
+                                "v": "undefined"
+                              }
+                            },
+                            {
+                              "k": "tenantId",
+                              "v": {
+                                "v": "undefined"
+                              }
+                            },
+                            {
+                              "k": "providerData",
+                              "v": {
+                                "a": [
+                                  {
+                                    "o": [
+                                      {
+                                        "k": "providerId",
+                                        "v": "password"
+                                      },
+                                      {
+                                        "k": "uid",
+                                        "v": "e2e-freelancer-rvmuey8t5c@activityos-test.com"
+                                      },
+                                      {
+                                        "k": "displayName",
+                                        "v": {
+                                          "v": "null"
+                                        }
+                                      },
+                                      {
+                                        "k": "email",
+                                        "v": "e2e-freelancer-rvmuey8t5c@activityos-test.com"
+                                      },
+                                      {
+                                        "k": "phoneNumber",
+                                        "v": {
+                                          "v": "null"
+                                        }
+                                      },
+                                      {
+                                        "k": "photoURL",
+                                        "v": {
+                                          "v": "null"
+                                        }
+                                      }
+                                    ],
+                                    "id": 4
+                                  }
+                                ],
+                                "id": 3
+                              }
+                            },
+                            {
+                              "k": "stsTokenManager",
+                              "v": {
+                                "o": [
+                                  {
+                                    "k": "refreshToken",
+                                    "v": "AMf-vBxsvN9TIWgpo6gTKYXzloF-_8j6MUPdL-jDBFuQ65bOqlXi0WYl_ooahWSQZf-ITy2ILvwHEhWnAGDp1Gx1tUEpnkX1zHI8C-X5pqbAwUfSg5fk-5cDB36xY2_XCogbuQb0bgqvtfQM7OMSguwxd3WOLdps4vWaTJo-JZkkjwPJ_Tz434AGCf_jfQ11L_vUL5ur1nJOyJjmWadQec2gYXmgecAzj6uLsofLyX0mjIh6TsIs3hu_1FRYl_pAY5N8nMnJar5r"
+                                  },
+                                  {
+                                    "k": "accessToken",
+                                    "v": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjgwMWQ0YTIwNzMwN2I0ZjM1NmFjZGI4NWNhNzE3ZWU3YmEwZGJmN2UiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vYWN0aXZpdHlvcy1iZWY4OSIsImF1ZCI6ImFjdGl2aXR5b3MtYmVmODkiLCJhdXRoX3RpbWUiOjE3OTAyMTkxMzQsInVzZXJfaWQiOiJvaGtLUnl6T1VnZGJzSmVlRmM3TWlTY2JVeW0xIiwic3ViIjoib2hrS1J5ek9VZ2Ric0plZUZjN01pU2NiVXltMSIsImlhdCI6MTc5MDIxOTEzNCwiZXhwIjoxNzkwMjIyNzM0LCJlbWFpbCI6ImUyZS1mcmVlbGFuY2VyLXJ2bXVleTh0NWNAYWN0aXZpdHlvcy10ZXN0LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJlbWFpbCI6WyJlMmUtZnJlZWxhbmNlci1ydm11ZXk4dDVjQGFjdGl2aXR5b3MtdGVzdC5jb20iXX0sInNpZ25faW5fcHJvdmlkZXIiOiJwYXNzd29yZCJ9fQ.IxWHyru4Ard3EBBZQJxGe75tgft12aap74xoF2INZkr0EZ62xMjoIHBC0LpUhY83eecpPDS5aVPh9LULaReXXA_5KWErf_69O4kh7KVDMKsgddbJ-CIcgDRBlCca1E5cMOA1yW8iFekkEDoLcyRiCll0Y9jUDZPdlU_HK2t2w6198ud7dw9UlJhyr9bc2pCyrTuDlzFlFOM9CLeUWiXcMxA2EoRA3JZPl4YoVj8nmU6kgZ2aSefstkT1USmdl8-WNA8okiPtkSZoZT9pPYIBBWgzTfhxkC_l9TlIdvyPqquLvB6j4lNHjbyZSZ3ASvSYMCltjvTJaRT1sAd_QGcWoQ"
+                                  },
+                                  {
+                                    "k": "expirationTime",
+                                    "v": 1790222734192
+                                  }
+                                ],
+                                "id": 5
+                              }
+                            },
+                            {
+                              "k": "_redirectEventId",
+                              "v": {
+                                "v": "undefined"
+                              }
+                            },
+                            {
+                              "k": "createdAt",
+                              "v": "1790219127079"
+                            },
+                            {
+                              "k": "lastLoginAt",
+                              "v": "1790219127079"
+                            },
+                            {
+                              "k": "apiKey",
+                              "v": "AIzaSyBRuvgODaTPQPvbFNRQbVYn1yJKmJ6ugys"
+                            },
+                            {
+                              "k": "appName",
+                              "v": "[DEFAULT]"
+                            }
+                          ],
+                          "id": 2
+                        }
+                      }
+                    ],
+                    "id": 1
+                  }
+                }
+              ],
+              "indexes": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
