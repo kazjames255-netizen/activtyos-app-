@@ -124,3 +124,9 @@ let hwFilter: "assigned" | null = null;
 export const requestHomeworkFilter = (f: "assigned") => { hwFilter = f; };
 /** Homework panel, once on mount: the inbox filter Home asked for (and clear it). */
 export function takeHomeworkFilter(): "assigned" | null { const f = hwFilter; hwFilter = null; return f; }
+
+// ── "Take me to the Mark queue" intent: Home's to-mark rows → Homework opens on its "To mark" view (all three kinds) ──
+let markQueue = false;
+export const requestMarkQueue = () => { markQueue = true; };
+/** Homework panel, once on mount: whether Home asked for the Mark queue (and clear it). */
+export function takeMarkQueue(): boolean { const m = markQueue; markQueue = false; return m; }

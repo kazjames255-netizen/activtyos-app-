@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../kit";
-import { requestHomeworkFilter, setHubIntent } from "../hubIntent";
+import { requestHomeworkFilter, requestMarkQueue, setHubIntent } from "../hubIntent";
 import { InPersonApp } from "../inperson/InPersonApp";
 import { pctOf } from "../homework/hwTypes";
 import { lessonTiming } from "../live/lessonTypes";
@@ -173,9 +173,9 @@ export function TutorHome(props: PanelProps) {
         {!firstRun && <Card title="Needs your attention" icon="warning" tone={attn ? "gold" : "green"} className="h-full" style={rise(1)}
           aside={<span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={attn ? { background: TONES.gold.bg, color: TONES.gold.fg } : { background: TONES.green.bg, color: TONES.green.fg }}>{attn ? plural(attn, "thing") : "All caught up"}</span>}>
           <div className="grid gap-2">
-            <Attention icon="homework" tone="brand" count={d.toMark.length} label="Homework to mark" hint={`${plural(d.toMark.length, "hand-in")} waiting`} onClick={() => go("homework")} />
-            <Attention icon="quiz" tone="violet" count={d.writtenQuiz} label="Written answers to mark" hint="Quiz answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("quizzes"); }} />
-            {d.writtenPlacement > 0 && <Attention icon="compass" tone="violet" count={d.writtenPlacement} label="Starting quizzes to mark" hint="Starting quiz answers need your marks" onClick={() => { setHubIntent({ kind: "marking", groupId: "" }); go("diagnostic"); }} />}
+            <Attention icon="homework" tone="brand" count={d.toMark.length} label="Homework to mark" hint={`${plural(d.toMark.length, "hand-in")} waiting`} onClick={() => { requestMarkQueue(); go("homework"); }} />
+            <Attention icon="quiz" tone="violet" count={d.writtenQuiz} label="Written answers to mark" hint="Quiz answers need your marks" onClick={() => { requestMarkQueue(); go("homework"); }} />
+            {d.writtenPlacement > 0 && <Attention icon="compass" tone="violet" count={d.writtenPlacement} label="Starting quizzes to mark" hint="Starting quiz answers need your marks" onClick={() => { requestMarkQueue(); go("homework"); }} />}
             <Attention icon="warning" tone="red" count={d.overdue.length} label="Overdue homework" hint="Past due and not handed in" onClick={() => { requestHomeworkFilter("assigned"); go("homework"); }} />
             <Attention icon="users" tone="gold" count={d.quiet.length} label="Quiet for 14+ days" hint={d.quiet.slice(0, 2).map((s) => s.childName.split(" ")[0]).join(", ") || "No recent activity"} onClick={() => go("students")} />
           </div>

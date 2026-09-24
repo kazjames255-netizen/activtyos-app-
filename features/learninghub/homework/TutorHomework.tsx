@@ -8,7 +8,9 @@ import type { PanelProps } from "../panelTypes";
 import { errMsg, type HubGroup } from "../types";
 import { GroupChip, GroupViewChip, useGroupView } from "../groupKit";
 import { isQuizHw, membersOf, relevantTo } from "../groupStatus";
-import { takeHomeworkFilter, takeHubIntent } from "../hubIntent";
+import { takeHomeworkFilter, takeHubIntent, takeMarkQueue } from "../hubIntent";
+import { MarkQueue } from "../mark/MarkQueue";
+import { useMarkItems } from "../mark/useMarkItems";
 import { VideoChip } from "../videoKit";
 import { Avatar, DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Overline, Pill, Segmented, Skeleton, fmtDayTime, useNow, withQs, type Tone } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
@@ -28,9 +30,9 @@ const FILTERS: { v: Filter; label: string }[] = [
 ];
 const TONE_OF: Record<string, Tone> = { red: "red", gold: "gold", neutral: "neutral", green: "green", brand: "brand" };
 
-export function TutorHomework({ qs, topics, students, config, onError, groups = [], readOnly = false }: PanelProps) {
+export function TutorHomework(p: PanelProps) {
+  const { qs, topics, students, config, onError, groups = [], readOnly = false } = p;
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
-  const [view, setView] = useState<"inbox" | "assignments">("inbox");
   const [inboxAll, setInbox] = useState<InboxRow[] | null>(null);
   const [homeworkAll, setHomework] = useState<HW[] | null>(null);
   // A group card's Homework tile lands here filtered to that group: only homework relevant to it (set for the group,
@@ -42,6 +44,13 @@ export function TutorHomework({ qs, topics, students, config, onError, groups = 
     const m = membersOf(viewGroup), ids = new Set(homework.map((h) => h.id));
     return inboxAll.filter((r) => ids.has(r.homeworkId) && m.has(r.childId));
   }, [inboxAll, homework, viewGroup]);
+  // R-2: the first view is the one Mark queue (all three kinds). A group card, Home's Overdue tile or an old inbox link still lands
+  // on the Inbox exactly as before; Home's to-mark rows ask for the queue.
+  const requestedFilter = useRef<Filter | null>(takeHomeworkFilter());
+  const wantsQueue = useRef(takeMarkQueue());
+  // eslint-disable-next-line react-hooks/refs -- one-shot intents read once, for the first view only
+  const [view, setView] = useState<"mark" | "inbox" | "assignments">(() => (viewGroup || (requestedFilter.current && !wantsQueue.current) ? "inbox" : "mark"));
+  const mq = useMarkItems(qs, students);
   const [filter, setFilter] = useState<Filter>("submitted");
   const [hwFilter, setHwFilter] = useState<string | null>(null);
   const [editor, setEditor] = useState<HW | "new" | null>(null);
@@ -50,7 +59,6 @@ export function TutorHomework({ qs, topics, students, config, onError, groups = 
   const [preset, setPreset] = useState<{ groupId: string; quiz: boolean; assessmentId?: string; noteIds?: string[]; title?: string; instructions?: string; childIds?: string[]; packNoteId?: string } | null>(null);
   const tookIntent = useRef(false);
   // Home's "Overdue" tile asks for the not-handed-in list (consumed once).
-  const requestedFilter = useRef<Filter | null>(takeHomeworkFilter());
   useEffect(() => {
     if (tookIntent.current) return;
     const i = takeHubIntent(["homework", "quiz"]);
@@ -120,13 +128,15 @@ export function TutorHomework({ qs, topics, students, config, onError, groups = 
 
       {viewGroup && <GroupViewChip group={viewGroup} what="homework" onClear={clearView} />}
 
-      {homework.length === 0 ? (
+      {homework.length === 0 && mq.count === 0 ? (
         <EmptyState icon={<Ico name="homework" size={26} />} title={viewGroup ? `No homework set for ${viewGroup.name} yet` : "Set your first homework"}
           body={students.length ? "Write the instructions, pick a due date, optionally attach a quiz and lessons, and choose who gets it. They hand it in here and you mark it." : "Enrol a student first, then set them homework."}
           action={students.length && !readOnly ? newBtn : undefined} />
       ) : (
         <>
-          <Segmented label="Homework views" value={view} onChange={setView} options={[{ v: "inbox", label: "Inbox", count: toMark }, { v: "assignments", label: "Set homework", count: homework.length }]} />
+          <Segmented label="Homework views" value={view} onChange={setView} options={[{ v: "mark", label: "To mark", count: mq.count }, { v: "inbox", label: "Inbox", count: toMark }, { v: "assignments", label: "Set homework", count: homework.length }]} />
+
+          {view === "mark" && <MarkQueue p={p} q={mq} />}
 
           {view === "inbox" && (
             <div className="grid gap-3">

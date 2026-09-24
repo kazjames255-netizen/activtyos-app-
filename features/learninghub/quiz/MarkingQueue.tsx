@@ -39,7 +39,7 @@ export function MarkingQueue({ p, rows, assessments, loading, reload }: { p: Pan
   );
 }
 
-function MarkForm({ p, attemptId, onBack, onSaved, hasNext }: { p: PanelProps; attemptId: string; onBack: () => void; onSaved: () => void; hasNext: boolean }) {
+export function MarkForm({ p, attemptId, onBack, onSaved, hasNext }: { p: PanelProps; attemptId: string; onBack: () => void; onSaved: () => void; hasNext: boolean }) {
   const { data, loading, error, reload } = useHubData<Result>(hubPath(p.qs, `/attempts/${attemptId}`));
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [fb, setFb] = useState<Record<string, string>>({});
