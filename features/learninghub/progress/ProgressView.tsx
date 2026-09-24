@@ -12,6 +12,8 @@ import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton, Stat } 
 import { Attainment } from "./Attainment";
 import { BandChip, GrowthChip, TrendChart } from "./charts";
 import { LevelLegend, LevelsModal } from "./levels";
+import { PARENT_COPY } from "../family/parentCopy";
+import { friendlyError } from "../kit";
 
 // One child's mastery dashboard. Everything shown (percentages, bands, growth,
 // coverage, trend) is computed by the API; this only lays it out. Used by the
@@ -39,7 +41,7 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
   useEffect(() => { if (data) onLoaded?.(data); }, [data, onLoaded]);
 
   if (loading && !data) return <ProgressSkeleton />;
-  if (!data) return error ? <Notice action={<button type="button" onClick={reload} className="min-h-[44px] rounded-lg px-2 text-[12px] font-extrabold underline">Retry</button>}>{error}</Notice> : null;
+  if (!data) return error ? <Notice action={<button type="button" onClick={reload} className="min-h-[44px] rounded-lg px-2 text-[12px] font-extrabold underline">{PARENT_COPY.tryAgain}</button>}>{tutor ? error : friendlyError(error, "My Classroom")}</Notice> : null;
 
   const subjects = data.subjects
     .filter((s) => !p.filter.subject || s.subject === p.filter.subject)
@@ -68,9 +70,9 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
 
   return (
     <div className="grid gap-4" data-testid="hub-progress">
-      {error && !dismissed && <Notice onDismiss={() => setDismissed(true)}>{error}</Notice>}
+      {error && !dismissed && <Notice onDismiss={() => setDismissed(true)}>{tutor ? error : friendlyError(error, "My Classroom")}</Notice>}
       {subjects.length === 0 && <EmptyState icon="search" title="Nothing in this topic yet" body="Pick another subject or topic on the left, or clear the filter." />}
-      <section aria-label="Attainment" data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5" style={{ background: "linear-gradient(120deg, var(--brand-soft), var(--surface) 55%)" }}>
+      <section aria-label={tutor ? "Attainment" : "Level"} data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5" style={{ background: "linear-gradient(120deg, var(--brand-soft), var(--surface) 55%)" }}>
         <Attainment bare overall={data.overall} bands={bands} subjects={data.subjects} onEmptyAction={p.canEdit ? undefined : () => p.goTo?.("quizzes")} />
         <div className="mt-3 border-t border-[var(--line)] pt-2"><LevelLegend bands={bands} onEdit={p.canEdit && !p.readOnly ? () => setEditing(true) : undefined} /></div>
       </section>
@@ -93,7 +95,7 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
       {data.trend.length > 0 && (
         <Card className="p-4 sm:p-5">
           <h3 className="m-0 text-[15px] font-extrabold text-[var(--ink)]" style={display}>Most recent progress</h3>
-          <p className="m-0 mb-1 mt-0.5 text-[12.5px] text-[var(--ink-3)]">{tutor ? `${first}'s` : "Your"} last {Math.min(20, data.trend.length)} quiz {data.trend.length === 1 ? "score" : "scores"}. Starting quizzes set {tutor ? "the" : "your"} starting point and don&apos;t appear here.</p>
+          <p className="m-0 mb-1 mt-0.5 text-[12.5px] text-[var(--ink-3)]">{tutor ? `${first}'s` : "Your"} last {Math.min(20, data.trend.length)} quiz {data.trend.length === 1 ? "score" : "scores"}. Starting quizzes show where to begin and don&apos;t appear here.</p>
           <TrendChart points={data.trend} bands={bands} passMark={p.config.passMarkPct} />
         </Card>
       )}
@@ -122,7 +124,7 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
             {started && <GrowthChip growth={s.growthPct} baseline={s.baselinePct} />}
           </div>
           <div className="mt-3">
-            <div className="mb-1 flex justify-between gap-2 text-[11px] font-semibold text-[var(--ink-3)]"><span>Coverage</span><span className="tabular-nums">{topics.length > 0 ? `${practised} of ${topics.length} ${topics.length === 1 ? "topic" : "topics"} practised` : `${cov}% of topics practised`}</span></div>
+            <div className="mb-1 flex justify-between gap-2 text-[11px] font-semibold text-[var(--ink-3)]"><span>{who === null && !p.canEdit ? PARENT_COPY.topicsTried : "Coverage"}</span><span className="tabular-nums">{topics.length > 0 ? `${practised} of ${topics.length} ${topics.length === 1 ? "topic" : "topics"} practised` : `${cov}% of topics practised`}</span></div>
             <Meter pct={cov} tone={cov >= 100 ? OK : BRAND} height={7} label={`Coverage ${cov}%`} />
           </div>
         </div>
@@ -141,7 +143,7 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
                   <BandChip bands={bands} band={tried ? t.band : null} pct={tried ? t.masteryPct : null} />
                 </div>
                 <div className="relative mt-2">
-                  <Meter pct={tried ? t.masteryPct : 0} tone={tt} height={8} delay={120 + i * 80} label={`${t.topic} mastery`} mark={t.baselinePct} />
+                  <Meter pct={tried ? t.masteryPct : 0} tone={tt} height={8} delay={120 + i * 80} label={`${t.topic} ${who === null && !p.canEdit ? "level" : "mastery"}`} mark={t.baselinePct} />
                 </div>
                 <div className="mt-1 flex justify-between text-[11px] font-semibold text-[var(--ink-3)]">
                   <span>{tried ? `${t.attempts} ${t.attempts === 1 ? "quiz" : "quizzes"}` : "Not practised yet"}{t.baselinePct != null ? ` · started at ${Math.round(t.baselinePct)}%` : ""}</span>
@@ -154,7 +156,7 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
       )}
       {topics.some((t) => t.baselinePct != null) && (
         <div className="flex items-center gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-5 py-2 text-[11px] font-semibold text-[var(--ink-3)]">
-          <span aria-hidden className="inline-block h-3 w-[3px] rounded bg-[var(--ink)]" /> marks {who ? `${who}'s` : "your"} placement-test starting point
+          <span aria-hidden className="inline-block h-3 w-[3px] rounded bg-[var(--ink)]" /> marks {who ? `${who}'s` : "the"} starting quiz result
         </div>
       )}
     </Card>

@@ -18,6 +18,7 @@ import { useStudentHome } from "./useHomeData";
 import { AskTutorLink, useFamily, useSupport } from "../family/FamilyContext";
 import { openLink } from "../family/link";
 import { kidBand } from "../family/KidMode";
+import { PARENT_COPY, overdueVerdict } from "../family/parentCopy";
 import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
 import { KidHome, type KidRow, type KidStep } from "./KidHome";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
@@ -83,7 +84,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
     const retry = [...av].filter((a) => a.type === "quiz" && a.lastAttempt?.status === "marked" && a.lastAttempt.pct < a.passMarkPct).sort((a, b) => (a.lastAttempt?.pct ?? 0) - (b.lastAttempt?.pct ?? 0))[0];
     const step: { a: AssessmentLite; kicker: string; go: "quizzes" | "diagnostic"; cta: string } | null =
       resume ? { a: resume, kicker: "Pick up where you left off", go: "quizzes", cta: "Continue quiz" }
-      : diag ? { a: diag, kicker: "Start here", go: "diagnostic", cta: kidMode ? "Do the starting quiz" : "Take the placement test" }
+      : diag ? { a: diag, kicker: "Start here", go: "diagnostic", cta: kidMode ? "Do the starting quiz" : PARENT_COPY.takeStartingQuiz }
       : fresh ? { a: fresh, kicker: "Up next", go: "quizzes", cta: "Start quiz" }
       : retry ? { a: retry, kicker: "Worth another go", go: "quizzes", cta: "Try again" }
       : null;
@@ -105,7 +106,15 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
   const newCards = d.due?.newCount ?? 0;
   const lead = [dueCards + newCards > 0 ? `${plural(dueCards + newCards, "flashcard")} to review` : "", !kind && d.overdueN ? `${d.overdueN} overdue` : "", !kind && d.soonN ? `${plural(d.soonN, "homework task")} due soon` : "", kind && d.urgent.length ? KID_COPY.homeworkWaiting(d.urgent.length) : ""].filter(Boolean);
   const partial = (Object.keys(failed) as (keyof typeof failed)[]);
-  const partLabel = { lessons: "lessons", homework: "homework", due: "flashcards", attempts: "quiz results", mastery: kidMode ? "your level" : "mastery", assessments: "quizzes" } as const;
+  const partLabel = { lessons: "lessons", homework: "homework", due: "flashcards", attempts: "quiz results", mastery: kidMode ? "your level" : PARENT_COPY.progressLoading, assessments: "quizzes" } as const;
+
+  // Parent verdict (one line, from data this screen already has): overdue homework first, otherwise "All done" once this week's work is in, else "On track".
+  const first = firstName(name);
+  const verdict: { text: string; hint: string; to: "homework" | "dashboard" | "quizzes"; tone: string; icon: "warning" | "check" } =
+    failed.homework ? { text: PARENT_COPY.verdict.couldntCheck, hint: "Try again", to: "homework", tone: "var(--ink-2)", icon: "warning" }
+    : d.overdueN ? { text: overdueVerdict(d.overdueN, first), hint: "See it", to: "homework", tone: "var(--red)", icon: "warning" }
+    : d.todo.length === 0 && d.weekHomework + d.weekQuizzes > 0 ? { text: `${first}: ${PARENT_COPY.verdict.allDone}`, hint: "See progress", to: "dashboard", tone: "var(--green)", icon: "check" }
+    : { text: `${first}: ${PARENT_COPY.verdict.onTrack}`, hint: d.todo.length ? "See homework" : "See progress", to: d.todo.length ? "homework" : "dashboard", tone: "var(--green)", icon: "check" };
 
   // Kid mode: ONE big next step, nothing else competing (P-03). Streak, level and stats stay out of a child's Home.
   if (kidMode) {
@@ -126,11 +135,15 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
          ...(next && next !== liveNow ? [{ key: "lesson", icon: "video", title: next.title, note: dayName(next.startsAt), to: "live" } as KidRow] : []),
          ...(d.results[0] ? [{ key: "result", icon: "quiz", title: d.results[0].assessmentTitle ?? "Quiz", note: d.results[0].status === "pending_marking" ? "Handed in" : d.results[0].passed === false && kind ? "Nearly there" : "Marked", to: "quizzes" } as KidRow] : [])]
       : band === "ks1" ? []
-      : todoThisWeek(d.todo, weekEnd).map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : `Due ${dayName(h.dueAt)}`, to: "homework" } as KidRow));
+      : [...todoThisWeek(d.todo, weekEnd).map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? `Was due ${dayName(h.dueAt)}` : `Due ${dayName(h.dueAt)}`, to: "homework" } as KidRow)),
+         ...(cardsReady ? [{ key: "cards", icon: "cards", title: "Flashcards", note: `${plural(dueCards + newCards, "card")} to review`, to: "flashcards" } as KidRow] : []),
+         ...(d.step && d.todo.length === 0 ? [{ key: "step", icon: "quiz", title: d.step.a.title, note: d.step.go === "diagnostic" ? "Starting quiz" : "Quiz", to: d.step.go } as KidRow] : [])];
+    // Weakest three topics, from this child's own mastery results only (hidden when there are none).
+    const weak = [...d.topics].sort((a, b) => (a.masteryPct ?? 0) - (b.masteryPct ?? 0)).slice(0, 3).map((t) => ({ topic: t.topic, subject: t.subject, pct: t.masteryPct ?? 0 }));
     return (
       <div className="space-y-4">
         <JoinRemoteSyncBanner qs={childQs ?? qs} childId={childId} config={config} />
-        <KidHome name={firstName(name)} band={band} step={step} rows={rows} failedHomework={!!failed.homework} onRetry={reload} go={(k) => go(k)} />
+        <KidHome name={firstName(name)} band={band} step={step} rows={rows} failedHomework={!!failed.homework} onRetry={reload} go={(k) => go(k)} weak={band === "ks3" || band === "teen" ? weak : []} />
       </div>
     );
   }
@@ -141,10 +154,12 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
       {!kidMode && (
         <section aria-label={`${firstName(name)} this week`} data-testid="hub-parent-summary" data-ui="card" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
           <div className="min-w-0 flex-1 basis-[240px]">
-            <div data-testid="hub-parent-verdict" role="status" className="mb-1.5 flex items-center gap-2 text-[15px] font-extrabold" style={{ color: failed.homework ? "var(--ink-2)" : d.overdueN ? "var(--red)" : "var(--green)" }}>
-              <Icon name={failed.homework || d.overdueN ? "warning" : "check"} size={17} strokeWidth={2.4} />
-              {failed.homework ? "We couldn't check homework just now" : d.overdueN ? `${plural(d.overdueN, "homework task")} overdue` : "On track. Nothing is overdue"}
-            </div>
+            <button type="button" data-testid="hub-parent-verdict" onClick={() => go(verdict.to)} aria-label={`${verdict.text}. ${verdict.hint}`}
+              className={`mb-1.5 flex min-h-[44px] w-full items-center gap-2 rounded-lg text-left text-[17px] font-extrabold ${FOCUS}`} style={{ color: verdict.tone }}>
+              <Icon name={verdict.icon} size={19} strokeWidth={2.4} />
+              <span className="min-w-0 flex-1">{verdict.text}</span>
+              <span className="inline-flex flex-none items-center gap-0.5 text-[12px] font-extrabold text-[var(--brand)]">{verdict.hint}<Icon name="chevronRight" size={14} /></span>
+            </button>
             <div className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">{firstName(name)} this week</div>
             <div className="mt-0.5 text-[13.5px] font-semibold leading-snug text-[var(--ink)]" data-testid="hub-parent-summary-text">
               {d.weekQuizzes + d.weekHomework + d.waitingMark === 0
@@ -223,7 +238,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           ) : d.todo.length === 0 ? (
             <div className="flex items-center gap-3 rounded-2xl bg-[var(--panel)] px-4 py-5">
               <IconTile icon="check" tone="green" size={44} />
-              <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Nothing to hand in</div><div className="text-[12.5px] text-[var(--ink-2)]">New homework from your tutor will show up here.</div></div>
+              <div><div className="text-[14px] font-extrabold text-[var(--ink)]">{PARENT_COPY.homeworkEmptyTitle}</div><div className="text-[12.5px] text-[var(--ink-2)]">{PARENT_COPY.homeworkEmptyBody}</div></div>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -259,9 +274,9 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           )}
         </Card>
 
-        <Card title={kidMode ? "How I'm doing" : "Mastery snapshot"} icon="chart" tone="green" style={rise(4)}>
+        <Card title={kidMode ? "How I'm doing" : PARENT_COPY.howTheyAreDoing} icon="chart" tone="green" style={rise(4)}>
           {d.subjects.length === 0 ? (
-            <EmptyState icon="chart" title={kidMode ? "Every quiz helps you grow" : "Mastery builds with every quiz"} body="After a few quizzes you'll see the strongest subject and where to focus next." action={<BigButton icon="chart" onClick={() => go("dashboard")}>See progress</BigButton>} />
+            <EmptyState icon="chart" title={kidMode ? "Every quiz helps you grow" : PARENT_COPY.buildsWithQuizzes} body={PARENT_COPY.buildsBody} action={<BigButton icon="chart" onClick={() => go("dashboard")}>See progress</BigButton>} />
           ) : (() => {
             const top = d.subjects[0];
             const tone = bandTone(top.masteryPct, config.masteryBands);
@@ -270,7 +285,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
             return (
               <>
                 <div className="flex items-center gap-4">
-                  <ScoreRing pct={top.masteryPct} size={92} color={tone?.fill ?? "var(--brand)"} sub={kidMode ? undefined : "mastery"} sr={`${top.subject} ${kidMode ? "level" : "mastery"} ${Math.round(top.masteryPct ?? 0)} percent, ${kidBand(top.band ?? tone?.label ?? "", kidMode)}`} />
+                  <ScoreRing pct={top.masteryPct} size={92} color={tone?.fill ?? "var(--brand)"} sub={kidMode ? undefined : PARENT_COPY.levelWord} sr={`${top.subject} level ${Math.round(top.masteryPct ?? 0)} percent, ${kidBand(top.band ?? tone?.label ?? "", kidMode)}`} />
                   <div className="min-w-0">
                     <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Strongest subject</div>
                     <div className="flex items-center gap-2"><SubjectTile subject={top.subject} size={26} /><span className="truncate text-[18px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{top.subject}</span></div>

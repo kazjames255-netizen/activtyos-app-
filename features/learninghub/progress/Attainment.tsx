@@ -34,7 +34,10 @@ const EXPLAIN = "This comes from your quiz results measured against the levels y
 const EXPLAIN_KID = "This shows how well you know things, from your quizzes. It goes up as you practise.";
 
 export function Attainment({ overall, bands, subjects = [], variant = "card", onEmptyAction, emptyActionLabel = "Browse quizzes", bare, maxSubjects = 6 }: Props) {
-  const kidMode = useFamily().kid; // kid mode: "My level", not "Attainment"
+  const fam = useFamily();
+  const kidMode = fam.kid; // kid mode: "My level", not "Attainment"
+  const parent = fam.active && !fam.kid; // a parent reads "level" (plain words), a tutor keeps "mastery"
+  const word = parent ? "level" : "mastery";
   const hero = variant === "hero";
   const [why, setWhy] = useState(false);
   const pct = overall?.masteryPct ?? null;
@@ -52,17 +55,17 @@ export function Attainment({ overall, bands, subjects = [], variant = "card", on
   const fillBg = (i: number) => (hero ? "white" : toneAt(i, n).fill);
   const named = subjects.filter((s) => s.band && s.masteryPct != null).slice(0, maxSubjects);
 
-  const valueText = has ? `${lab(overall!.band ?? ranges[cur]?.label)}, ${Math.round(pct!)} percent${kidMode ? "" : " mastery"}${overall!.next && overall!.toNext != null ? `. ${Math.round(overall!.toNext)} percent to reach ${lab(overall!.next.label)}` : ". Top level reached"}` : "No level yet";
+  const valueText = has ? `${lab(overall!.band ?? ranges[cur]?.label)}, ${Math.round(pct!)} percent${kidMode ? "" : " " + word}${overall!.next && overall!.toNext != null ? `. ${Math.round(overall!.toNext)} percent to reach ${lab(overall!.next.label)}` : ". Top level reached"}` : "No level yet";
 
   const body = (
     <div data-testid="hub-attainment" data-state={has ? "level" : "empty"}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${hero ? "text-white/70" : "text-[var(--ink-3)]"}`}>{kidMode ? "My level" : "Attainment"}</div>
+          <div className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${hero ? "text-white/70" : "text-[var(--ink-3)]"}`}>{kidMode ? "My level" : parent ? "Level" : "Attainment"}</div>
           {has ? (
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
               <span className={`text-[26px] font-extrabold leading-tight sm:text-[30px] ${ink}`} style={display} data-testid="hub-attainment-band">{lab(overall!.band ?? ranges[cur]?.label)}</span>
-              <span className={`text-[13px] font-bold tabular-nums ${soft}`}>{Math.round(pct!)}%{kidMode ? "" : " mastery"}</span>
+              <span className={`text-[13px] font-bold tabular-nums ${soft}`}>{Math.round(pct!)}%{kidMode ? "" : " " + word}</span>
             </div>
           ) : (
             <div className={`mt-0.5 text-[18px] font-extrabold leading-tight ${ink}`} style={display}>Take a quiz to see where you are</div>
