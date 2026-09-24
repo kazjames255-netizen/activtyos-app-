@@ -63,8 +63,9 @@ export function HubHero({ mode, providers, provider, onProvider, kids, childId, 
   const noLessons = !tutor && lessonCount === 0 && subjectCount === 0; // parent/child: show nothing rather than "0 lessons · 0 subjects"
   const val = (n: number) => (ready ? String(n) : "–");
 
-  const [open, setOpen] = useState(true);
-  useEffect(() => { try { if (localStorage.getItem(HERO_KEY) === "0") setOpen(false); } catch { /* private mode */ } }, []);
+  // Tutors: tiles collapsed by default (the summary line stays); a saved choice ("1" shown / "0" hidden) wins.
+  const [open, setOpen] = useState(!tutor);
+  useEffect(() => { try { const v = localStorage.getItem(HERO_KEY); if (v === "0") setOpen(false); else if (v === "1") setOpen(true); } catch { /* private mode */ } }, []);
   const toggle = () => setOpen((o) => { const n = !o; try { localStorage.setItem(HERO_KEY, n ? "1" : "0"); } catch { /* ignore */ } return n; });
 
   const lede = tutor
