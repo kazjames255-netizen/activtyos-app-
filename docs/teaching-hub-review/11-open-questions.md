@@ -26,3 +26,9 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - Tutor hero at 1440 is tighter but its card still stretches to the height of the Needs-your-attention card (grid row), so a smaller empty band remains; a full fix means top-aligning or moving the "later" list up. Not done.
 - Parent Home 390/1440 screenshots not re-inspected after the zero-tile change (fixture family has lessons, so the hidden-tile path was not exercised in browser).
 - Tab icons now only appear at 2xl (1536px+); tell tutors if the icon loss at 1024-1535 matters.
+
+## Builder G leftovers
+- KID_TAB_LABEL.dashboard kept (dashboard is a live kid tab).
+- End lesson: chose flush-on-unmount rather than a Re-open (no reopen API); no new spec for the tab-switch case.
+- kidTitle strips only overdue/late words; row notes from h.st.label not audited.
+- Ended-lesson Set homework button not covered by a spec; tsc shows unrelated server error (learningHub.ts EnrolledChild.support).
