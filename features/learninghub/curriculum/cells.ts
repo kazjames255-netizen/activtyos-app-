@@ -67,3 +67,43 @@ export const cellLabel = (a: MapArea, year: number, c: Cell, mode: "tutor" | "ch
   const state = c.kind === "gap" ? "a gap — no lessons" : c.kind === "thin" ? "thin — only a few lessons" : c.kind === "covered" ? "covered" : "extra, beyond the curriculum for this year";
   return `${head}: ${n}, ${state}`;
 };
+
+// ---- Year-first view (tutor): pick a year, see ONLY the areas the curriculum expects in it -------------------------------------------
+
+export interface YearItem { area: MapArea; cell: Cell; /** lessons in this exact year */ count: number }
+export const KEY_STAGES: { id: string; label: string; years: number[] }[] = [
+  { id: "ks1", label: "KS1", years: [1, 2] }, { id: "ks2", label: "KS2", years: [3, 4, 5, 6] }, { id: "ks3", label: "KS3", years: [7, 8, 9] }, { id: "ks4", label: "KS4", years: [10, 11] },
+];
+
+/** Years worth offering as pills: the curriculum expects something in them, or lessons sit there. */
+export const yearsWithContent = (areas: MapArea[], byArea: Map<string, MapRow[]>): number[] => visibleYears(areas, byArea);
+
+/** The areas the curriculum expects in `year` (a key-stage row covers each of its years), each with its verdict. Not-expected areas never appear. */
+export function expectedInYear(areas: MapArea[], year: number, byArea: Map<string, MapRow[]>): YearItem[] {
+  const out: YearItem[] = [];
+  for (const a of areas) { const c = cellKind("tutor", a, year, byArea); if (c.span) out.push({ area: a, cell: c, count: c.count }); }
+  return out;
+}
+/** Lessons sitting in `year` on areas the curriculum does NOT expect that year (shown as a quiet note, never as gaps). */
+export function extraInYear(areas: MapArea[], year: number, byArea: Map<string, MapRow[]>): number {
+  let n = 0;
+  for (const a of areas) { const c = cellKind("tutor", a, year, byArea); if (c.kind === "extra") n += c.count; }
+  return n;
+}
+export function yearSummary(items: YearItem[]) {
+  const covered = items.filter((i) => i.cell.kind === "covered").length, thin = items.filter((i) => i.cell.kind === "thin").length, gaps = items.filter((i) => i.cell.kind === "gap").length;
+  return { checked: items.length, covered, thin, gaps, pct: items.length ? Math.round((covered / items.length) * 100) : 0 };
+}
+/** "Year 5" / "Y5" / "5" → 5 (1–11), else null. */
+export const parseYear = (s: string | null | undefined): number | null => { const m = /(\d{1,2})/.exec(s ?? ""); const n = m ? Number(m[1]) : NaN; return n >= 1 && n <= 11 ? n : null; };
+/** Which year to open on: the most common among the tutor's active students (if the subject has it), else the year holding most lessons, else the first. */
+export function defaultYear(available: number[], studentYears: (number | null)[], areas: MapArea[]): number | null {
+  if (!available.length) return null;
+  const tally = new Map<number, number>();
+  for (const y of studentYears) if (y && available.includes(y)) tally.set(y, (tally.get(y) ?? 0) + 1);
+  const best = [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+  if (best) return best[0];
+  let top = available[0]!, topN = -1;
+  for (const y of available) { const n = areas.reduce((s, a) => s + (a.y[y - 1] ?? 0), 0); if (n > topN) { top = y; topN = n; } }
+  return top;
+}

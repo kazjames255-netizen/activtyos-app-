@@ -1,5 +1,5 @@
 // Run: server/node_modules/.bin/tsx features/learninghub/curriculum/cells.selftest.ts
-import { byStrand, cellKind, childSummary, rowsByArea, summarise, visibleYears, type MapArea, type MapRow } from "./cells";
+import { byStrand, defaultYear, expectedInYear, extraInYear, parseYear, yearSummary, cellKind, childSummary, rowsByArea, summarise, visibleYears, type MapArea, type MapRow } from "./cells";
 let n = 0, bad = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { bad++; console.error("FAIL:", m); } };
 const y = (o: Record<number, number>) => Array.from({ length: 11 }, (_, i) => o[i + 1] ?? 0);
@@ -29,5 +29,15 @@ ok(summarise(rows, new Set(["zzz"])).pct === 0, "empty subject → 0%, no divide
 const cs = childSummary([A, B, C], rows);
 ok(cs.total === 50 && cs.done === 10 && cs.expected === 5 && cs.touched === 3, `child summary ${JSON.stringify(cs)}`);
 ok(byStrand([A, B, C]).map(([s, l]) => `${s}:${l.length}`).join() === "Number:2,Algebra:1", "strand grouping keeps order");
+const e7 = expectedInYear([A, B, C], 7, by), e5 = expectedInYear([A, B, C], 5, by);
+ok(e7.map((i) => i.area.id).join() === "c", "Y7 lists only Equations (span Y7-9), never Algebra-less areas");
+ok(e5.map((i) => i.area.id).join() === "a" && e5[0]!.cell.kind === "gap", "Y5: only Fractions, as a gap");
+ok(expectedInYear([A, B, C], 1, by).length === 0, "a year nothing expects lists nothing");
+ok(extraInYear([A, B, C], 7, by) === 3, "Fractions Y7 lessons = extra note, not a gap");
+ok(yearSummary(expectedInYear([A, B, C], 3, by)).covered === 1 && yearSummary(e5).gaps === 1, "year summary");
+ok(parseYear("Year 5") === 5 && parseYear("Y11") === 11 && parseYear("Reception") === null && parseYear(null) === null && parseYear("Year 13") === null, "parseYear");
+ok(defaultYear([3, 4, 5], [4, 4, 5, null], [A]) === 4, "most common student year");
+ok(defaultYear([3, 4, 5], [9], [A]) === 3, "no student match: year with most lessons");
+ok(defaultYear([], [4], [A]) === null, "no years");
 console.log(`${n} checks, ${bad} failed`);
 process.exit(bad ? 1 : 0);

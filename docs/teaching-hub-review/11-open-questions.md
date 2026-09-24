@@ -70,3 +70,16 @@ Owner asleep, standing order: no questions. Each item below was decided by the l
 - Teen quiz/homework result screens still use kid tone in places outside Home; only Home and the P-13 string table were switched.
 
 - Fixture fix (M): the support-profile @api spec picked qs[0]'s topic, which was not in the review kids' enrolled subjects, so childSubjectOk 404'd the parent's attempt start. Spec now picks a question from an enrolled subject. Product R-5 code was correct; spec and mark-queue green.
+
+## N grouped tutor tabs (open)
+- Inbox has no live count on the sub-section card (the shell only holds the Mark queue count); a second count needs another request or lifting the Inbox rows.
+- Other panels' inner segments (Live Upcoming/Past, Quizzes Quizzes/Question bank/Marking/Results) still sit under the card; a further merge would remove one level.
+- Home's "Next lesson" schedule button lands on Live lessons, not the Schedule item (no dialog); confirm.
+- Emoji rendering varies by OS font; no image assets were added. If a branded icon set is wanted, swap the `emoji` strings in `tabGroups.ts`.
+- `?tab=<sub alias>` (e.g. `set-homework`) selects the sub-section but does not auto-open its dialog (deep links go to the view only).
+
+## O (year-first curriculum map) - not done
+- KS1/KS2/KS3/KS4 shortcut group on the year pills (optional in the brief; `KEY_STAGES` exists in cells.ts, no UI).
+- Multi-year key-stage rows (e.g. Years 3-6) are judged as a whole, so a Year 5 row shows its span total as a sub-line, not a per-year verdict.
+- Pre-existing lint errors (react-hooks set-state-in-effect) in AreaDrawer/CurriculumCard/CurriculumRings left as they were.
+- `--on-brand` token does not exist in the CSS; pills use it with a #fff fallback.

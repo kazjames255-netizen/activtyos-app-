@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { errMsg } from "../types";
+import { get } from "@/lib/api";
+import { errMsg, type Student } from "../types";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
 import { getMap, type CurriculumMap } from "./api";
 import { AreaDrawer } from "./AreaDrawer";
-import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, cellLabel, childSummary, rowsByArea, summarise, visibleYears, type CellKind, type MapArea } from "./cells";
+import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, cellLabel, childSummary, defaultYear, expectedInYear, extraInYear, parseYear, rowsByArea, summarise, visibleYears, yearSummary, yearsWithContent, type CellKind, type MapArea, type YearItem } from "./cells";
 
 // "Where do these lessons fit the curriculum?" — the first line on the Lessons tab (grid closed until opened).
 //  Tutor: a heat-map of every curriculum area × year, coloured by how many lessons cover it (gaps and thin spots stand out).
@@ -13,7 +14,7 @@ import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, cellLabel, childSummary, 
 // Tap a cell → the lessons behind it (open one; a tutor can also move a lesson that was auto-mapped wrongly).
 
 const LS = "hub.curriculum.v2"; // v2: the grid starts closed (P-09); the summary line is what shows first
-const readPref = (): { open?: boolean; fw?: string; group?: string; onlyGaps?: boolean } => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
+const readPref = (): { open?: boolean; fw?: string; group?: string; onlyGaps?: boolean; year?: number } => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
 const writePref = (p: object) => { try { localStorage.setItem(LS, JSON.stringify({ ...readPref(), ...p })); } catch { /* a nicety */ } };
 
 const TINT = (v: string, pct: number) => `color-mix(in srgb, var(${v}) ${pct}%, var(--surface))`;
@@ -62,6 +63,8 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const [fw, setFw] = useState(pref.fw ?? "nc2014");
   const [group, setGroup] = useState<string | null>(pref.group ?? null);
   const [onlyGaps, setOnlyGaps] = useState(!!pref.onlyGaps);
+  const [yearPick, setYearPick] = useState<number | null>(typeof pref.year === "number" ? pref.year : null);
+  const [studentYears, setStudentYears] = useState<(number | null)[] | null>(null);
   const [data, setData] = useState<CurriculumMap | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [cell, setCell] = useState<{ area: MapArea; year: number | null } | null>(null);
@@ -76,12 +79,32 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   }, [qs, fw]);
   useEffect(() => load(), [load]); // load while closed too: the summary line needs it
 
+  // The tutor's active students' school years pick the year the map opens on (one cheap existing call, only once the card is open).
+  useEffect(() => {
+    if (!open || mode !== "tutor" || studentYears) return;
+    let live = true;
+    get<Student[]>(`/api/learning-hub/students${qs}`).then((l) => { if (live) setStudentYears(l.filter((s) => s.active !== false).map((s) => parseYear(s.yearGroup))); }).catch(() => { if (live) setStudentYears([]); });
+    return () => { live = false; };
+  }, [open, mode, qs, studentYears]);
+
   const groups = useMemo(() => GROUP_ORDER.filter((g) => data?.areas.some((a) => a.group === g && (a.y.some((n) => n > 0) || data.rows.some((r) => r.areaId === a.id)))), [data]);
   const g = group && groups.includes(group as never) ? group : groups[0] ?? null;
   const byArea = useMemo(() => rowsByArea(data?.rows ?? []), [data]);
   const inGroup = useMemo(() => (data?.areas ?? []).filter((a) => a.group === g), [data, g]);
   const years = useMemo(() => visibleYears(inGroup, byArea), [inGroup, byArea]);
   const shown = useMemo(() => (onlyGaps && mode === "tutor" ? inGroup.filter((a) => years.some((y) => { const k = cellKind(mode, a, y, byArea).kind; return k === "gap" || k === "thin"; })) : inGroup), [inGroup, onlyGaps, mode, years, byArea]);
+  const yearList = useMemo(() => yearsWithContent(inGroup, byArea), [inGroup, byArea]);
+  const yr = yearPick && yearList.includes(yearPick) ? yearPick : defaultYear(yearList, studentYears ?? [], inGroup);
+  const yItems = useMemo<YearItem[]>(() => {
+    if (yr === null) return [];
+    const ex = expectedInYear(inGroup, yr, byArea);
+    // A subject with no checklist (languages): list the areas that hold lessons this year, neutrally.
+    return ex.length || inGroup.some((a) => (byArea.get(a.id) ?? []).length) ? ex : inGroup.filter((a) => (a.y[yr - 1] ?? 0) > 0).map((a) => ({ area: a, cell: cellKind("tutor", a, yr, byArea), count: a.y[yr - 1] ?? 0 }));
+  }, [inGroup, byArea, yr]);
+  const ySum = useMemo(() => yearSummary(yItems), [yItems]);
+  const yExtra = useMemo(() => (yr === null ? 0 : extraInYear(inGroup, yr, byArea)), [inGroup, byArea, yr]);
+  const yShown = useMemo(() => (onlyGaps ? yItems.filter((i) => i.cell.kind === "gap" || i.cell.kind === "thin") : yItems), [yItems, onlyGaps]);
+  const pickYear = (y: number) => { setYearPick(y); writePref({ year: y }); };
   const sum = useMemo(() => summarise(data?.rows ?? [], new Set(inGroup.map((a) => a.id))), [data, inGroup]);
   const placed = useMemo(() => inGroup.reduce((n, a) => n + a.y.reduce((x, y) => x + y, 0), 0), [inGroup]);
   /** The curriculum gives this subject no checklist of areas (e.g. languages), so there is no honest "% covered" — show the lessons placed instead. */
@@ -146,19 +169,22 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
               </div>
 
               <div role="tabpanel" id="hub-cur-panel" aria-labelledby={`hub-cur-tab-${g}`}>
+              {mode === "tutor" && yr !== null && (
+                <YearPills years={yearList} value={yr} onPick={pickYear} />
+              )}
               {/* headline */}
               <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl bg-[var(--panel)] p-3.5">
-                <Ring pct={mode === "tutor" ? sum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
+                <Ring pct={mode === "tutor" ? ySum.pct : kid.pct} count={noList ? placed : undefined} label={noList ? "lessons placed" : mode === "tutor" ? "of areas covered" : "of the curriculum touched"} />
                 <div className="grid gap-1.5">
                   {mode === "tutor" ? (
                     noList ? (
                       <>
-                        <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{placed} {GROUP_LABEL[g]} lessons placed on the curriculum</p>
-                        <p className="m-0 max-w-[46ch] text-[12.5px] font-semibold text-[var(--ink-2)]">The national curriculum doesn’t list checkable areas for {GROUP_LABEL[g].toLowerCase()}, so there’s no coverage score — the grid shows where each lesson sits.</p>
+                        <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{placed} {GROUP_LABEL[g]} lessons placed on the curriculum ({ySum.checked} topics in Year {yr})</p>
+                        <p className="m-0 max-w-[46ch] text-[12.5px] font-semibold text-[var(--ink-2)]">The national curriculum doesn’t list checkable areas for {GROUP_LABEL[g].toLowerCase()}, so there’s no coverage score — pick a year to see where each lesson sits.</p>
                       </>
                     ) : <>
-                      <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{sum.covered} of {sum.checked} areas covered in {GROUP_LABEL[g]}</p>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1"><Stat n={sum.covered} label="covered (5+ lessons)" dot="var(--sem-ok)" /><Stat n={sum.thin} label="thin (1–4)" dot="var(--sem-warn)" /><Stat n={sum.gaps} label="gaps" dot="var(--sem-crit)" /></div>
+                      <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{ySum.covered} of {ySum.checked} areas covered in {GROUP_LABEL[g]} · Year {yr}</p>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1"><Stat n={ySum.covered} label="covered (5+ lessons)" dot="var(--sem-ok)" /><Stat n={ySum.thin} label="thin (1–4)" dot="var(--sem-warn)" /><Stat n={ySum.gaps} label="gaps" dot="var(--sem-crit)" /></div>
                     </>
                   ) : (
                     <>
@@ -175,7 +201,9 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                 )}
               </div>
 
-              {/* grid */}
+              {mode === "tutor" ? (
+                <YearList items={yShown} year={yr} empty={onlyGaps && yItems.length > 0 ? `No gaps or thin spots in ${GROUP_LABEL[g]} · Year ${yr} 🎉` : `Nothing in ${GROUP_LABEL[g]} is expected in this year.`} neutral={noList} extra={yExtra} onPick={(a) => setCell({ area: a, year: yr })} />
+              ) : (
               <div className="-mx-1 overflow-x-auto px-1 pb-1">
                 <table className="w-full border-separate border-spacing-y-1 text-left" style={{ minWidth: 150 + years.length * 46 }}>
                   <thead>
@@ -192,15 +220,16 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                   </tbody>
                 </table>
               </div>
+              )}
 
               {/* legend + honesty */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-semibold text-[var(--ink-2)]">
-                {(mode === "tutor" ? [["covered", "5+ lessons"], ["thin", "1–4"], ["gap", "none"], ["extra", "beyond the curriculum"]] as const : [["done", "finished"], ["assigned", "given"], ["todo", "not started"]] as const).map(([k, t]) => (
+                {(mode === "tutor" ? [["covered", "5+ lessons"], ["thin", "1–4"], ["gap", "none"]] as const : [["done", "finished"], ["assigned", "given"], ["todo", "not started"]] as const).map(([k, t]) => (
                   <span key={k} className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3.5 w-3.5 rounded-[5px]" style={{ background: PATTERN[k] ? `${PATTERN[k]}, ${KIND_STYLE[k].bg}` : KIND_STYLE[k].bg, boxShadow: `inset 0 0 0 1.5px ${KIND_STYLE[k].ring}` }} />{t}</span>
                 ))}
               </div>
               <p className="m-0 mt-2 text-[11.5px] font-semibold leading-snug text-[var(--ink-3)]">
-                {data.framework.label} · {data.framework.version}. {mode === "tutor" && data.lessons > 0 ? `About ${autoPct}% of these placements are automatic best guesses — open a cell and use “Wrong place?” to correct any. ` : ""}
+                {data.framework.label} · {data.framework.version}. {mode === "tutor" && data.lessons > 0 ? `About ${autoPct}% of these placements are automatic best guesses — open an area and use “Wrong place?” to correct any. ` : ""}
                 {mode === "tutor" ? "“Covered” only means lessons exist, not how deep they go." : "A lesson counts as finished once its quiz is handed in."}{mode === "tutor" && data.unplaced > 0 ? ` ${data.unplaced} of your lessons aren’t on this map yet.` : ""}
               </p>
               </div>
@@ -243,5 +272,67 @@ function StrandBlock({ strand, list, years, mode, byArea, onPick }: { strand: st
         </tr>
       ))}
     </>
+  );
+}
+
+const STATUS: Record<string, { word: string; glyph: string; var: string }> = {
+  covered: { word: "Covered", glyph: "✓", var: "--sem-ok" }, thin: { word: "Thin", glyph: "!", var: "--sem-warn" }, gap: { word: "Gap", glyph: "✕", var: "--sem-crit" },
+};
+
+/** Y1…Y11 pills (a tablist): scroll sideways at phone width with an edge fade; each is a 44px target. */
+function YearPills({ years, value, onPick }: { years: number[]; value: number; onPick: (y: number) => void }) {
+  return (
+    <div className="relative mb-3">
+      <div role="tablist" aria-label="Year" data-testid="curriculum-years" className="flex gap-1.5 overflow-x-auto pb-1 pr-8 [scrollbar-width:none]"
+        onKeyDown={(e) => {
+          const i = years.indexOf(value);
+          const n = e.key === "ArrowRight" ? (i + 1) % years.length : e.key === "ArrowLeft" ? (i - 1 + years.length) % years.length : e.key === "Home" ? 0 : e.key === "End" ? years.length - 1 : -1;
+          if (n < 0) return;
+          e.preventDefault(); onPick(years[n]!);
+          requestAnimationFrame(() => document.getElementById(`hub-cur-year-${years[n]}`)?.focus());
+        }}>
+        {years.map((y) => (
+          <button key={y} type="button" role="tab" id={`hub-cur-year-${y}`} aria-selected={value === y} aria-label={`Year ${y}`} tabIndex={value === y ? 0 : -1} onClick={() => onPick(y)}
+            className={`min-h-[44px] min-w-[48px] flex-none rounded-full border px-3.5 text-[14px] font-extrabold ${FOCUS} ${value === y ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand,#fff)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`}>Y{y}</button>
+        ))}
+      </div>
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--surface)] to-transparent" />
+    </div>
+  );
+}
+
+/** Only what this year expects, grouped by strand. Bar = lessons (full at 5+); the word + glyph say the same thing without colour. */
+function YearList({ items, year, empty, neutral, extra, onPick }: { items: YearItem[]; year: number | null; empty: string; neutral: boolean; extra: number; onPick: (a: MapArea) => void }) {
+  return (
+    <div id="hub-cur-year-list" data-testid="curriculum-year-list">
+      {items.length === 0 && <p className="m-0 py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">{empty}</p>}
+      {byStrand(items.map((i) => i.area)).map(([strand, list]) => (
+        <section key={strand} aria-label={strand} className="mb-3">
+          <h4 className="m-0 mb-1 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-2)]">{strand}</h4>
+          <ul className="m-0 grid list-none gap-1.5 p-0">
+            {list.map((a) => {
+              const it = items.find((i) => i.area.id === a.id)!, k = it.cell.kind, st = STATUS[k], n = it.count;
+              const span = it.cell.span && it.cell.span.to > it.cell.span.from ? ` · Years ${it.cell.span.from}–${it.cell.span.to} together: ${it.cell.span.lessons}` : "";
+              const label = `${a.area}: ${n} ${n === 1 ? "lesson" : "lessons"}${neutral ? "" : `, ${st?.word.toLowerCase() ?? ""}`}`;
+              return (
+                <li key={a.id}>
+                  <button type="button" onClick={() => onPick(a)} aria-label={label} data-area={a.id} data-kind={k} data-count={n} className={`grid min-h-[52px] w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left hover:bg-[var(--panel)] ${FOCUS}`}>
+                    <span className="min-w-0 text-[13.5px] font-bold leading-tight text-[var(--ink)]">{shortArea(a.area)}{span && <span className="block text-[11.5px] font-semibold text-[var(--ink-3)]">{span.slice(3)}</span>}</span>
+                    <span className="inline-flex items-center gap-1.5 justify-self-end text-[12.5px] font-extrabold tabular-nums text-[var(--ink)]">
+                      {!neutral && st && <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full text-[11px] text-[var(--on-brand,#fff)]" style={{ background: `var(${st.var})` }}>{st.glyph}</span>}
+                      {n}<span className="sr-only"> lessons</span>{!neutral && st && <span className="font-bold text-[var(--ink-2)]">{st.word}</span>}
+                    </span>
+                    <span aria-hidden className="col-span-2 h-2.5 overflow-hidden rounded-full" style={{ background: k === "gap" ? "repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--sem-crit) 30%, transparent) 5px 7px), var(--panel)" : "var(--panel)", boxShadow: k === "gap" ? `inset 0 0 0 1.5px ${TINT("--sem-crit", 60)}` : "inset 0 0 0 1px var(--line)" }}>
+                      <span className="block h-full rounded-full" style={{ width: `${Math.min(1, n / 5) * 100}%`, background: neutral ? "var(--brand-2)" : st ? `var(${st.var})` : "var(--brand-2)", backgroundImage: k === "thin" ? "repeating-linear-gradient(90deg, transparent 0 4px, rgba(255,255,255,.45) 4px 6px)" : undefined }} />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+      {extra > 0 && year !== null && <p className="m-0 mt-1 text-[12px] font-semibold text-[var(--ink-3)]" data-testid="curriculum-extra">Also in this year: {extra} extra {extra === 1 ? "lesson" : "lessons"} on topics beyond the curriculum for Year {year}.</p>}
+    </div>
   );
 }
