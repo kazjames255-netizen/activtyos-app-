@@ -5,7 +5,8 @@ import type { PanelProps } from "../../panelTypes";
 import { DISPLAY, FOCUS, Avatar } from "../../teachKit";
 import { Ico } from "../../teachIcons";
 import { ProgressView } from "../../progress/ProgressView";
-import type { Lesson } from "../lessonTypes";
+import { lessonTiming, type Lesson } from "../lessonTypes";
+import { lessonHomeworkIntent } from "../../hubIntent";
 import { WS_TABS, type WsTabKey } from "./tabs";
 import { LessonBoard } from "../board/LessonBoard";
 import { busEmit, setBoardShown, useTutorPresenting, useUnseenBoardOps } from "../board/callObject";
@@ -112,6 +113,14 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
           {view.present && (
             <div className="flex flex-none items-center gap-2 border-b border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]" role="status">
               <Ico name="monitor" size={14} />Presenting — tutor-only controls are hidden{view.hideNames ? "; names are hidden" : ""}. Press P to stop.
+            </div>
+          )}
+
+          {isTutor && !view.present && (lesson.status === "ended" || lessonTiming(lesson, now).phase === "ended") && (
+            <div className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" data-testid="ws-ended-homework">
+              <span className="min-w-0 flex-1">This lesson has ended.</span>
+              <WsButton variant="solid" icon="plus" id="ws-ended-set-homework"
+                onClick={() => { const n = lesson.noteIds?.[0]; if (n) { lessonHomeworkIntent({ id: n, title: lesson.title }); p.goTo?.("homework"); } else onTab("homework"); }}>Set homework</WsButton>
             </div>
           )}
 
