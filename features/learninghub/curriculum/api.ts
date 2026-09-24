@@ -21,3 +21,8 @@ export const getCellLessons = (qs: string, framework: string, areaId: string, ye
   get<{ area: { id: string; area: string; strand: string }; total: number; lessons: CellLesson[] }>(`/api/learning-hub/curriculum/lessons${join(qs, `framework=${encodeURIComponent(framework)}&area=${encodeURIComponent(areaId)}&year=${year ?? "all"}`)}`);
 export const setTag = (qs: string, noteId: string, body: { framework: string; areaId: string; year?: number | null }) => put<{ ok: true }>(`/api/learning-hub/curriculum/tags/${noteId}${qs}`, body);
 export const clearTag = (qs: string, noteId: string, framework: string) => del<{ ok: true }>(`/api/learning-hub/curriculum/tags/${noteId}${join(qs, `framework=${encodeURIComponent(framework)}`)}`);
+
+/** Tutor only: one student's overlay for one year — per area, library / given / finished counts and a lesson to open, review or set next. */
+export interface StudentArea { areaId: string; library: number; assigned: number; done: number; open: { id: string; title: string } | null; review: { id: string; title: string } | null; next: { id: string; title: string } | null }
+export const getStudentYear = (qs: string, framework: string, childId: string, year: number) =>
+  get<{ childId: string; year: number; childName: string; areas: StudentArea[] }>(`/api/learning-hub/curriculum/student${join(qs, `framework=${encodeURIComponent(framework)}&childId=${encodeURIComponent(childId)}&year=${year}`)}`);

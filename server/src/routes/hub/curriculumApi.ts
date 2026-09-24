@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
-import { canSee, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
-import { childAssignedNoteIds, noteIndex, type NoteRow } from "../../lib/hubIndex";
+import { canSee, canSeeStudent, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
+import { childAssignedNoteIds, noteIndex, tenantRoster, type NoteRow } from "../../lib/hubIndex";
 import { frameworkIds, framework, tally, type CurFramework, type Placement } from "../../lib/curriculum";
 import { attemptsCol, nowIso } from "./teachingCommon";
 
@@ -132,6 +132,34 @@ hubCurriculumApi.get("/curriculum/lessons", async (req, res) => {
   }
   out.sort((a, b) => a.year - b.year || a.title.localeCompare(b.title));
   res.json({ area: fw.areas[areaIdx], total: out.length, lessons: out.slice(0, 400) });
+});
+
+// GET /curriculum/student?framework=&childId=&year=<1-11> — tutor only, read-only. For ONE of the tutor's own students: per curriculum area, how many library lessons
+// sit in that year, how many the student was given, how many finished (exit quiz handed in), and one lesson to open / to set next. Additive; writes nothing.
+hubCurriculumApi.get("/curriculum/student", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const fw = framework(fwParam(req.query.framework));
+  const childId = typeof req.query.childId === "string" ? req.query.childId : "", year = Number(req.query.year);
+  if (!fw || !okId(childId) || !Number.isInteger(year) || year < 1 || year > 11) { res.status(400).json({ error: "Pick a student and a year (1–11)" }); return; }
+  const enrol = (await tenantRoster(ctx.tenantId)).find((e) => e.childId === childId && e.active !== false && canSeeStudent(ctx, e.franchiseId));
+  if (!enrol) { res.status(404).json({ error: "Student not found" }); return; }
+  const [all, tags, assigned, finished] = await Promise.all([noteIndex(ctx.tenantId), tenantTags(ctx.tenantId, fw.id), childAssignedNoteIds(ctx.tenantId, childId), finishedQuizzes(ctx.tenantId, childId)]);
+  const by = new Map<string, { library: number; assigned: number; done: number; open: { id: string; title: string } | null; review: { id: string; title: string } | null; next: { id: string; title: string } | null }>();
+  for (const r of [...all.values()].sort((a, b) => a.title.localeCompare(b.title))) {
+    if (!(r.published && r.kind !== "board" && (r.isLesson || !!r.oakKey)) || !canSee(ctx, r.franchiseId)) continue;
+    const p = place(fw, r, tags);
+    if (!p || p.year !== year) continue;
+    const area = fw.areas[p.areaIdx]!.id;
+    const o = by.get(area) ?? { library: 0, assigned: 0, done: 0, open: null, review: null, next: null };
+    by.set(area, o);
+    const me = { id: r.id, title: r.title };
+    o.library++;
+    if (assigned.has(r.id)) {
+      if (r.lessonQuizId && finished.has(r.lessonQuizId)) { o.done++; o.review ??= me; } else { o.assigned++; o.open ??= me; }
+    } else o.next ??= me;
+  }
+  res.json({ childId, year, childName: enrol.childName, areas: [...by.entries()].map(([areaId, v]) => ({ areaId, ...v })) });
 });
 
 const tagBody = z.object({ framework: z.string().refine((f) => frameworkIds().includes(f)), areaId: z.string().min(1).max(200), year: z.number().int().min(1).max(11).nullable().optional() });

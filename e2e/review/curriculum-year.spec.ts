@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { ROOT } from "../helpers/env";
@@ -73,3 +72,39 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
     await ctx.close();
   });
 }
+
+test("student lens: one student's year as a checklist", async ({ browser }) => {
+  test.setTimeout(300_000);
+  for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"]]] as const) {
+    const ctx = await ctxFor(browser, "freelancer", vp);
+    const page = await ctx.newPage();
+    await page.route("**/api/learning-hub/curriculum/student**", (r) => r.fulfill({ json: { childId: "x", year: 5, childName: "Ava", areas: [
+      { areaId: "frac", library: 3, assigned: 1, done: 1, open: null, review: { id: "l1", title: "Adding fractions" }, next: null },
+      { areaId: "shape", library: 2, assigned: 0, done: 0, open: null, review: null, next: { id: "l2", title: "Shapes" } },
+    ] } }));
+    await page.route(/\/api\/learning-hub\/curriculum(\?|$)/, (r) => r.fulfill({ json: map }));
+    await gotoHubPage(page, "/freelancer/learninghub?tab=notes", fx);
+    await settle(page);
+    const card = page.getByTestId("curriculum-card");
+    await expect(card).toBeVisible({ timeout: 30_000 });
+    if ((await card.getByRole("button").first().getAttribute("aria-expanded")) !== "true") await card.getByRole("button").first().click();
+    const pills = card.getByTestId("curriculum-students");
+    await expect(pills.getByRole("button", { name: "Everyone" })).toBeVisible({ timeout: 20_000 });
+    await pills.getByRole("button", { name: new RegExp(fx.kids[0].name) }).click();
+    await card.getByRole("tab", { name: "Year 5" }).click();
+    const cards = card.getByTestId("curriculum-student-list");
+    await expect(cards.locator('[data-state="done"]')).toHaveCount(1);
+    await expect(cards.locator('[data-state="ready"]')).toHaveCount(1);
+    await expect(cards.locator('[data-state="none"]')).toHaveCount(1);
+    await expect(cards.getByRole("button", { name: /Review/ })).toBeVisible();
+    await expect(cards.getByRole("button", { name: /Set homework/ })).toBeVisible();
+    await expect(cards.getByRole("button", { name: /New lesson/ })).toBeVisible();
+    await expect(cards).not.toContainText("Equations");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+    await page.screenshot({ path: path.join(OUT, `student-${vpName}.png`), fullPage: true });
+    await pills.getByRole("button", { name: "Everyone" }).click();
+    await expect(card.getByTestId("curriculum-year-list")).toBeVisible();
+    await ctx.close();
+  }
+});
+

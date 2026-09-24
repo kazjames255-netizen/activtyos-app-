@@ -4,9 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { get } from "@/lib/api";
 import { errMsg, type Student } from "../types";
 import { FOCUS, Icon, SkeletonRows } from "../kit";
-import { getMap, type CurriculumMap } from "./api";
+import { bandOrDefault } from "../family/kidCopy";
+import { getMap, getStudentYear, type CurriculumMap, type StudentArea } from "./api";
+import { STICKER_COPY, emojiFor } from "./stickers";
 import { AreaDrawer } from "./AreaDrawer";
-import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, cellLabel, childSummary, defaultYear, expectedInYear, extraInYear, parseYear, rowsByArea, summarise, visibleYears, yearSummary, yearsWithContent, type CellKind, type MapArea, type YearItem } from "./cells";
+import { GROUP_LABEL, GROUP_ORDER, byStrand, cellKind, childSummary, defaultYear, expectedInYear, extraInYear, parseYear, rowsByArea, stickerDone, stickerStars, studentState, summarise, yearSummary, yearsWithContent, type CellKind, type MapArea, type YearItem } from "./cells";
 
 // "Where do these lessons fit the curriculum?" — the first line on the Lessons tab (grid closed until opened).
 //  Tutor: a heat-map of every curriculum area × year, coloured by how many lessons cover it (gaps and thin spots stand out).
@@ -54,9 +56,11 @@ const Stat = ({ n, label, dot }: { n: number; label: string; dot: string }) => (
   <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[var(--ink)]"><span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ background: dot }} /><b className="tabular-nums">{n}</b> <span className="font-semibold text-[var(--ink-2)]">{label}</span></span>
 );
 
-export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
+export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson, onSetHomework, onNewLesson }: {
   /** The hub query string for READS ("?tenantId=…", plus &childId=… for a parent). */
   qs: string; canEdit: boolean; mayAuthor: boolean; onOpenLesson: (id: string) => void;
+  /** Student lens: open the shared "set homework" flow with this student and lesson ticked. */
+  onSetHomework?: (childId: string, lessonId: string, title: string) => void; onNewLesson?: () => void;
 }) {
   const pref = useMemo(readPref, []);
   const [open, setOpen] = useState(pref.open === true);
@@ -64,7 +68,10 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const [group, setGroup] = useState<string | null>(pref.group ?? null);
   const [onlyGaps, setOnlyGaps] = useState(!!pref.onlyGaps);
   const [yearPick, setYearPick] = useState<number | null>(typeof pref.year === "number" ? pref.year : null);
-  const [studentYears, setStudentYears] = useState<(number | null)[] | null>(null);
+  const [students, setStudents] = useState<PickStudent[] | null>(null);
+  const [lens, setLens] = useState<string | null>(null);
+  const [ov, setOv] = useState<StudentArea[] | null>(null);
+  const [ovErr, setOvErr] = useState<string | null>(null);
   const [data, setData] = useState<CurriculumMap | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [cell, setCell] = useState<{ area: MapArea; year: number | null } | null>(null);
@@ -79,22 +86,23 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   }, [qs, fw]);
   useEffect(() => load(), [load]); // load while closed too: the summary line needs it
 
-  // The tutor's active students' school years pick the year the map opens on (one cheap existing call, only once the card is open).
+  // The students' school years pick the year the map opens on; a child's own year + calm setting come from the same call (a parent's list is just their own children).
   useEffect(() => {
-    if (!open || mode !== "tutor" || studentYears) return;
+    if (!open || students) return;
     let live = true;
-    get<Student[]>(`/api/learning-hub/students${qs}`).then((l) => { if (live) setStudentYears(l.filter((s) => s.active !== false).map((s) => parseYear(s.yearGroup))); }).catch(() => { if (live) setStudentYears([]); });
+    get<Student[]>(`/api/learning-hub/students${qs}`).then((l) => { if (live) setStudents(l.filter((s) => s.active !== false).map((s) => ({ id: s.childId, name: s.childName, yearText: s.yearGroup ?? null, year: parseYear(s.yearGroup), calm: !!s.support?.calm }))); }).catch(() => { if (live) setStudents([]); });
     return () => { live = false; };
-  }, [open, mode, qs, studentYears]);
+  }, [open, qs, students]);
+  useEffect(() => { setStudents(null); setLens(null); }, [qs]);
+  const wantChild = new URLSearchParams(qs.split("?")[1] ?? "").get("childId");
+  const me = mode === "child" ? students?.find((x) => x.id === wantChild) ?? students?.[0] ?? null : null;
 
   const groups = useMemo(() => GROUP_ORDER.filter((g) => data?.areas.some((a) => a.group === g && (a.y.some((n) => n > 0) || data.rows.some((r) => r.areaId === a.id)))), [data]);
   const g = group && groups.includes(group as never) ? group : groups[0] ?? null;
   const byArea = useMemo(() => rowsByArea(data?.rows ?? []), [data]);
   const inGroup = useMemo(() => (data?.areas ?? []).filter((a) => a.group === g), [data, g]);
-  const years = useMemo(() => visibleYears(inGroup, byArea), [inGroup, byArea]);
-  const shown = useMemo(() => (onlyGaps && mode === "tutor" ? inGroup.filter((a) => years.some((y) => { const k = cellKind(mode, a, y, byArea).kind; return k === "gap" || k === "thin"; })) : inGroup), [inGroup, onlyGaps, mode, years, byArea]);
   const yearList = useMemo(() => yearsWithContent(inGroup, byArea), [inGroup, byArea]);
-  const yr = yearPick && yearList.includes(yearPick) ? yearPick : defaultYear(yearList, studentYears ?? [], inGroup);
+  const yr = yearPick && yearList.includes(yearPick) ? yearPick : defaultYear(yearList, (students ?? []).map((x) => x.year), inGroup);
   const yItems = useMemo<YearItem[]>(() => {
     if (yr === null) return [];
     const ex = expectedInYear(inGroup, yr, byArea);
@@ -104,6 +112,20 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
   const ySum = useMemo(() => yearSummary(yItems), [yItems]);
   const yExtra = useMemo(() => (yr === null ? 0 : extraInYear(inGroup, yr, byArea)), [inGroup, byArea, yr]);
   const yShown = useMemo(() => (onlyGaps ? yItems.filter((i) => i.cell.kind === "gap" || i.cell.kind === "thin") : yItems), [yItems, onlyGaps]);
+  const kidYear = (() => { const y = me?.year ?? null; return y && yearList.includes(y) && expectedInYear(inGroup, y, byArea).length ? y : defaultYear(yearList, [], inGroup); })() ?? 0;
+  const kidBand = bandOrDefault(me?.yearText);
+  const kidItems = useMemo<YearItem[]>(() => (kidYear ? expectedInYear(inGroup, kidYear, byArea) : []), [inGroup, byArea, kidYear]);
+  const kidGot = kidItems.filter((i) => stickerDone(i.area, kidYear, byArea) > 0).length;
+  const kidStars = stickerStars(kidGot, kidItems.length);
+  // Student lens: that student's state for each area of the year on show.
+  useEffect(() => {
+    if (!lens || !open || yr === null || mode !== "tutor") return;
+    let live = true;
+    setOv(null); setOvErr(null);
+    getStudentYear(qs, fw, lens, yr).then((d) => { if (live) setOv(d.areas); }).catch((e) => { if (live) setOvErr(errMsg(e, "Couldn't load this student")); });
+    return () => { live = false; };
+  }, [lens, open, yr, qs, fw, mode, data]);
+  const pickLens = (id: string | null) => { setLens(id); const y = students?.find((x) => x.id === id)?.year; if (y && yearList.includes(y)) pickYear(y); };
   const pickYear = (y: number) => { setYearPick(y); writePref({ year: y }); };
   const sum = useMemo(() => summarise(data?.rows ?? [], new Set(inGroup.map((a) => a.id))), [data, inGroup]);
   const placed = useMemo(() => inGroup.reduce((n, a) => n + a.y.reduce((x, y) => x + y, 0), 0), [inGroup]);
@@ -169,7 +191,13 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
               </div>
 
               <div role="tabpanel" id="hub-cur-panel" aria-labelledby={`hub-cur-tab-${g}`}>
-              {mode === "tutor" && yr !== null && (
+              {mode === "child" ? (
+                <ChildBook items={kidItems} year={kidYear} name={me?.name ?? ""} band={kidBand} stars={kidStars} calm={!!me?.calm} onPick={(a) => setCell({ area: a, year: kidYear })} />
+              ) : (<>
+              {students && students.length > 0 && (
+                <StudentPills students={students} value={lens} onPick={pickLens} />
+              )}
+              {yr !== null && (
                 <YearPills years={yearList} value={yr} onPick={pickYear} />
               )}
               {/* headline */}
@@ -201,30 +229,16 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                 )}
               </div>
 
-              {mode === "tutor" ? (
-                <YearList items={yShown} year={yr} empty={onlyGaps && yItems.length > 0 ? `No gaps or thin spots in ${GROUP_LABEL[g]} · Year ${yr} 🎉` : `Nothing in ${GROUP_LABEL[g]} is expected in this year.`} neutral={noList} extra={yExtra} onPick={(a) => setCell({ area: a, year: yr })} />
+              {lens ? (
+                <StudentList items={yShown} ov={ov} name={students?.find((x) => x.id === lens)?.name ?? ""} year={yr} error={ovErr} onPick={(a) => setCell({ area: a, year: yr })} onOpen={onOpenLesson}
+                  onSet={(pick) => onSetHomework?.(lens, pick.id, pick.title)} onNew={onNewLesson} canNew={mayAuthor && !!onNewLesson} canSet={!!onSetHomework} />
               ) : (
-              <div className="-mx-1 overflow-x-auto px-1 pb-1">
-                <table className="w-full border-separate border-spacing-y-1 text-left" style={{ minWidth: 150 + years.length * 46 }}>
-                  <thead>
-                    <tr>
-                      <th scope="col" className="sticky left-0 z-10 bg-[var(--surface)] pr-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Topic</th>
-                      {years.map((y) => <th key={y} scope="col" className="w-[42px] min-w-[42px] text-center text-[11px] font-extrabold uppercase text-[var(--ink-2)]">Y{y}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {byStrand(shown).map(([strand, list]) => (
-                      <StrandBlock key={strand} strand={strand} list={list} years={years} mode={mode} byArea={byArea} onPick={(area, year) => setCell({ area, year })} />
-                    ))}
-                    {shown.length === 0 && <tr><td colSpan={years.length + 1} className="py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">No gaps or thin spots in {GROUP_LABEL[g]} 🎉</td></tr>}
-                  </tbody>
-                </table>
-              </div>
+                <YearList items={yShown} year={yr} empty={onlyGaps && yItems.length > 0 ? `No gaps or thin spots in ${GROUP_LABEL[g]} · Year ${yr} 🎉` : `Nothing in ${GROUP_LABEL[g]} is expected in this year.`} neutral={noList} extra={yExtra} onPick={(a) => setCell({ area: a, year: yr })} />
               )}
 
               {/* legend + honesty */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-semibold text-[var(--ink-2)]">
-                {(mode === "tutor" ? [["covered", "5+ lessons"], ["thin", "1–4"], ["gap", "none"]] as const : [["done", "finished"], ["assigned", "given"], ["todo", "not started"]] as const).map(([k, t]) => (
+                {([["covered", "5+ lessons"], ["thin", "1–4"], ["gap", "none"]] as const).map(([k, t]) => (
                   <span key={k} className="inline-flex items-center gap-1.5"><span aria-hidden className="h-3.5 w-3.5 rounded-[5px]" style={{ background: PATTERN[k] ? `${PATTERN[k]}, ${KIND_STYLE[k].bg}` : KIND_STYLE[k].bg, boxShadow: `inset 0 0 0 1.5px ${KIND_STYLE[k].ring}` }} />{t}</span>
                 ))}
               </div>
@@ -232,6 +246,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
                 {data.framework.label} · {data.framework.version}. {mode === "tutor" && data.lessons > 0 ? `About ${autoPct}% of these placements are automatic best guesses — open an area and use “Wrong place?” to correct any. ` : ""}
                 {mode === "tutor" ? "“Covered” only means lessons exist, not how deep they go." : "A lesson counts as finished once its quiz is handed in."}{mode === "tutor" && data.unplaced > 0 ? ` ${data.unplaced} of your lessons aren’t on this map yet.` : ""}
               </p>
+              </>)}
               </div>
             </>
           )}
@@ -248,32 +263,6 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, onOpenLesson }: {
 
 /** "Geometry – position and direction" reads as "Position and direction" under its strand header. */
 const shortArea = (area: string) => { const t = area.includes(" – ") ? area.split(" – ").slice(1).join(" – ") : area; return t.charAt(0).toUpperCase() + t.slice(1); };
-
-function StrandBlock({ strand, list, years, mode, byArea, onPick }: { strand: string; list: MapArea[]; years: number[]; mode: "tutor" | "child"; byArea: ReturnType<typeof rowsByArea>; onPick: (a: MapArea, y: number | null) => void }) {
-  return (
-    <>
-      <tr><th scope="colgroup" colSpan={years.length + 1} className="pt-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand-2)]">{strand}</th></tr>
-      {list.map((a) => (
-        <tr key={a.id}>
-          <th scope="row" className="sticky left-0 z-10 w-[124px] max-w-[124px] bg-[var(--surface)] py-0.5 pr-2 text-[12.5px] font-bold leading-tight text-[var(--ink)] sm:w-[220px] sm:max-w-[220px] sm:text-[13px]">
-            <button type="button" onClick={() => onPick(a, null)} className={`text-left hover:underline ${FOCUS}`}>{shortArea(a.area)}</button>
-          </th>
-          {years.map((y) => {
-            const c = cellKind(mode, a, y, byArea), st = KIND_STYLE[c.kind];
-            const shownN = mode === "child" ? (c.count ? `${c.done}/${c.count}` : "") : c.count || (c.kind === "gap" ? "0" : c.span && c.span.to > c.span.from ? "·" : "");
-            return (
-              <td key={y} className="p-0 text-center">
-                <button type="button" disabled={c.kind === "na"} onClick={() => onPick(a, y)} aria-label={cellLabel(a, y, c, mode)} title={cellLabel(a, y, c, mode)}
-                  className={`mx-auto grid h-[38px] w-[38px] place-items-center rounded-[10px] text-[12px] font-extrabold tabular-nums transition-transform hover:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100 disabled:cursor-default disabled:hover:scale-100 ${FOCUS}`}
-                  style={{ background: PATTERN[c.kind] ? `${PATTERN[c.kind]}, ${st.bg}` : st.bg, color: st.fg, boxShadow: `inset 0 0 0 1.5px ${st.ring}` }}>{c.kind === "na" ? "" : shownN}</button>
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </>
-  );
-}
 
 const STATUS: Record<string, { word: string; glyph: string; var: string }> = {
   covered: { word: "Covered", glyph: "✓", var: "--sem-ok" }, thin: { word: "Thin", glyph: "!", var: "--sem-warn" }, gap: { word: "Gap", glyph: "✕", var: "--sem-crit" },
@@ -333,6 +322,109 @@ function YearList({ items, year, empty, neutral, extra, onPick }: { items: YearI
         </section>
       ))}
       {extra > 0 && year !== null && <p className="m-0 mt-1 text-[12px] font-semibold text-[var(--ink-3)]" data-testid="curriculum-extra">Also in this year: {extra} extra {extra === 1 ? "lesson" : "lessons"} on topics beyond the curriculum for Year {year}.</p>}
+    </div>
+  );
+}
+
+interface PickStudent { id: string; name: string; yearText: string | null; year: number | null; calm: boolean }
+
+/** "Everyone" (the year-first view) or one of the tutor's own students: their year's areas become a checklist. */
+function StudentPills({ students, value, onPick }: { students: PickStudent[]; value: string | null; onPick: (id: string | null) => void }) {
+  const chip = (on: boolean) => `min-h-[44px] flex-none rounded-full border px-3.5 text-[13.5px] font-extrabold ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand,#fff)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`;
+  return (
+    <div className="relative mb-2">
+      <div role="group" aria-label="Whose curriculum" data-testid="curriculum-students" className="flex gap-1.5 overflow-x-auto pb-1 pr-8 [scrollbar-width:none]">
+        <button type="button" aria-pressed={value === null} onClick={() => onPick(null)} className={chip(value === null)}>Everyone</button>
+        {students.map((x) => <button key={x.id} type="button" aria-pressed={value === x.id} onClick={() => onPick(x.id)} className={chip(value === x.id)}>{x.name}{x.year ? ` · Y${x.year}` : ""}</button>)}
+      </div>
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[var(--surface)] to-transparent" />
+    </div>
+  );
+}
+
+const STATE: Record<string, { word: string; glyph: string; tint: string }> = {
+  done: { word: "Done", glyph: "✓", tint: "--sem-ok" }, assigned: { word: "Assigned", glyph: "•", tint: "--brand" }, ready: { word: "Ready to set", glyph: "+", tint: "--ink-3" }, none: { word: "No lesson yet", glyph: "∅", tint: "--sem-crit" },
+};
+
+/** One student, one year: a card per expected area with its state and ONE action. Tutor-private; only this student's data. */
+function StudentList({ items, ov, name, year, error, onPick, onOpen, onSet, onNew, canNew, canSet }: {
+  items: YearItem[]; ov: StudentArea[] | null; name: string; year: number | null; error: string | null; onPick: (a: MapArea) => void; onOpen: (id: string) => void;
+  onSet: (p: { id: string; title: string }) => void; onNew?: () => void; canNew: boolean; canSet: boolean;
+}) {
+  if (error) return <p role="alert" className="m-0 rounded-xl border border-[var(--sem-crit)] px-3 py-2 text-[13px] font-semibold text-[var(--ink)]">{error}</p>;
+  if (!ov) return <SkeletonRows rows={3} label={`Loading ${name}’s year`} variant="card" />;
+  const by = new Map(ov.map((o) => [o.areaId, o]));
+  const counts = { done: 0, assigned: 0, ready: 0, none: 0 };
+  for (const i of items) counts[studentState(by.get(i.area.id))]++;
+  return (
+    <div data-testid="curriculum-student-list">
+      <p className="m-0 mb-2 text-[13px] font-bold text-[var(--ink-2)]" aria-live="polite">{name}, Year {year}: {counts.done} done · {counts.assigned} assigned · {counts.ready} ready to set · {counts.none} with no lesson yet</p>
+      {items.length === 0 && <p className="m-0 py-6 text-center text-[14px] font-bold text-[var(--ink-2)]">Nothing to show for this year.</p>}
+      <ul className="m-0 grid list-none gap-2 p-0 sm:grid-cols-2">
+        {items.map((i) => {
+          const o = by.get(i.area.id), st = studentState(o), sd = STATE[st]!;
+          const act = st === "done" && o?.review ? { label: "Review", run: () => onOpen(o.review!.id) }
+            : st === "assigned" && o?.open ? { label: "View", run: () => onOpen(o.open!.id) }
+            : st === "ready" && o?.next && canSet ? { label: "Set homework", run: () => onSet(o.next!) }
+            : st === "none" && canNew ? { label: "＋ New lesson", run: () => onNew?.() } : null;
+          return (
+            <li key={i.area.id} data-area={i.area.id} data-state={st} className="flex min-h-[64px] flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border bg-[var(--surface)] px-3 py-2.5" style={{ borderColor: st === "none" ? TINT("--sem-crit", 55) : "var(--line)", borderStyle: st === "none" || st === "ready" ? "dashed" : "solid" }}>
+              <button type="button" onClick={() => onPick(i.area)} className={`min-h-[44px] min-w-0 flex-1 basis-[150px] text-left ${FOCUS}`}>
+                <span className="block text-[13.5px] font-bold leading-tight text-[var(--ink)]">{shortArea(i.area.area)}</span>
+                <span className="mt-0.5 inline-flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink-2)]"><span aria-hidden className="grid h-5 w-5 place-items-center rounded-full text-[11px] text-[var(--on-brand,#fff)]" style={{ background: `var(${sd.tint})` }}>{sd.glyph}</span>{sd.word}{st !== "none" && o ? <span className="font-semibold text-[var(--ink-3)]"> · {o.library} in library</span> : null}</span>
+              </button>
+              {act && <button type="button" onClick={act.run} className={`min-h-[44px] flex-none rounded-full border border-[var(--brand)] px-4 text-[13px] font-extrabold text-[var(--brand)] ${FOCUS}`}>{act.label}<span className="sr-only"> for {shortArea(i.area.area)}</span></button>}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** The child's view of the map: their own year only. KS1/KS2 = a sticker book (no scores, no "gaps"); Year 7+ = a plain checklist. */
+function ChildBook({ items, year, name, band, stars, calm, onPick }: { items: YearItem[]; year: number; name: string; band: string; stars: number; calm: boolean; onPick: (a: MapArea) => void }) {
+  const teen = band === "ks3" || band === "teen";
+  const got = (i: YearItem) => { const sp = i.cell.span; let n = 0; for (let y = sp?.from ?? year; y <= (sp?.to ?? year); y++) n += i.area.done?.[y - 1] ?? 0; return n > 0; };
+  if (!year || items.length === 0) return <p className="m-0 rounded-2xl border border-dashed border-[var(--line)] p-5 text-center text-[14px] font-semibold text-[var(--ink-2)]">{STICKER_COPY.empty}</p>;
+  if (teen) {
+    return (
+      <div data-testid="curriculum-progress-list" data-band={band}>
+        <h3 className="m-0 mb-2 text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{STICKER_COPY.teenTitle}</h3>
+        {byStrand(items.map((i) => i.area)).map(([strand, list]) => (
+          <section key={strand} aria-label={strand} className="mb-3">
+            <h4 className="m-0 mb-1 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{strand}</h4>
+            <ul className="m-0 grid list-none gap-1.5 p-0">
+              {list.map((a) => { const it = items.find((i) => i.area.id === a.id)!, d = got(it); return (
+                <li key={a.id}><button type="button" onClick={() => onPick(a)} data-done={d ? "1" : "0"} className={`flex min-h-[48px] w-full items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left ${FOCUS}`}>
+                  <span className="text-[14px] font-bold text-[var(--ink)]">{shortArea(a.area)}</span>
+                  <span className="text-[13px] font-bold text-[var(--ink-2)]">{d ? `✓ ${STICKER_COPY.teenDone}` : STICKER_COPY.teenNotYet}</span></button></li>
+              ); })}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div data-testid="curriculum-sticker-book" data-band={band} data-calm={calm ? "1" : undefined}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[var(--panel)] p-3.5">
+        <div><h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{name ? STICKER_COPY.title(name, year) : STICKER_COPY.titleNoName(year)}</h3><p className="m-0 text-[13px] font-semibold text-[var(--ink-2)]">{STICKER_COPY.intro}</p></div>
+        <span className="text-[24px] leading-none" role="img" aria-label={STICKER_COPY.stars(stars)} data-testid="curriculum-book-stars">{[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden style={{ color: i < stars ? "var(--sem-warn)" : "var(--ink-3)" }}>{i < stars ? "★" : "☆"}</span>)}</span>
+      </div>
+      <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((it) => { const d = got(it); return (
+          <li key={it.area.id}>
+            <button type="button" onClick={() => onPick(it.area)} data-sticker={d ? "got" : "next"} aria-label={`${shortArea(it.area.area)}: ${d ? STICKER_COPY.got : STICKER_COPY.next}`}
+              className={`grid min-h-[120px] w-full place-items-center gap-1 rounded-[22px] px-2 py-3 text-center ${FOCUS}`}
+              style={{ border: d ? "3px solid var(--sem-ok)" : "3px dashed var(--line)", background: d ? TINT("--sem-ok", 18) : "var(--panel)" }}>
+              <span aria-hidden className="text-[44px] leading-none" style={d ? undefined : { filter: "grayscale(1)", opacity: 0.35 }}>{emojiFor(it.area.area, it.area.strand)}</span>
+              <span className="text-[14px] font-extrabold leading-tight text-[var(--ink)]">{shortArea(it.area.area)}</span>
+              <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{d ? `✓ ${STICKER_COPY.got}` : STICKER_COPY.next}</span>
+            </button>
+          </li>
+        ); })}
+      </ul>
     </div>
   );
 }

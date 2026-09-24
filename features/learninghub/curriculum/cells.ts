@@ -107,3 +107,19 @@ export function defaultYear(available: number[], studentYears: (number | null)[]
   for (const y of available) { const n = areas.reduce((s, a) => s + (a.y[y - 1] ?? 0), 0); if (n > topN) { top = y; topN = n; } }
   return top;
 }
+
+// ---- Student lens (tutor) and sticker book (child) ------------------------------------------------------------------------------------
+export type StudentState = "done" | "assigned" | "ready" | "none";
+/** One student's state for one area this year: finished > given > lessons exist to set > nothing in the library. */
+export const studentState = (o: { library: number; assigned: number; done: number } | undefined): StudentState =>
+  !o ? "none" : o.done > 0 ? "done" : o.assigned > 0 ? "assigned" : o.library > 0 ? "ready" : "none";
+
+/** Child sticker: finished lessons in this area across the span the curriculum judges together (a Years 3-6 row is one sticker). */
+export function stickerDone(a: MapArea, year: number, byArea: Map<string, MapRow[]>): number {
+  const span = (byArea.get(a.id) ?? []).find((r) => year >= r.from && year <= r.to);
+  const from = span?.from ?? year, to = span?.to ?? year;
+  let n = 0; for (let y = from; y <= to; y++) n += a.done?.[y - 1] ?? 0;
+  return n;
+}
+/** Stars (0-5) for a child's year: share of the expected areas with a finished lesson. No percentage is ever shown. */
+export const stickerStars = (got: number, total: number) => (total > 0 ? Math.round((5 * got) / total) : 0);

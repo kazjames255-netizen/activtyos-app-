@@ -7,7 +7,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import type { HubSettings } from "@/lib/hubConfig";
 import { CreatorTabs, DiscardStrip, ExistingPicker, type ExistingQuery, type ExistingPage } from "./EditExisting";
 import { ConfirmButton, EmptyState, FOCUS, Icon, SkeletonRows, SubjectChip, Switch, subjectColor, subjectInk, tint } from "./kit";
-import { lessonHomeworkIntent, useOpenLessonRequest } from "./hubIntent";
+import { lessonHomeworkIntent, setHubIntent, useOpenLessonRequest } from "./hubIntent";
 import { NewTopicInline, useTopicsWithNew } from "./NewTopicInline";
 import { TopicPicker } from "./TopicPicker";
 import { YearGroupPicker } from "./YearGroupPicker";
@@ -637,7 +637,8 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
       {!canEdit && <JoinRemoteSyncBanner qs={listQs} childId={childId} config={config} />}
       {canEdit && <TutorLiveBanner qs={listQs} />}
       {/* The first thing on the Lessons tab: where the lessons fit the national curriculum / GCSE (tutor: coverage; child: what they've covered). */}
-      <CurriculumCard qs={listQs} canEdit={canEdit} mayAuthor={mayAuthor} onOpenLesson={openReading} />
+      <CurriculumCard qs={listQs} canEdit={canEdit} mayAuthor={mayAuthor} onOpenLesson={openReading} onNewLesson={mayAuthor ? startNew : undefined}
+        onSetHomework={goTo ? (childId, id, title) => { setHubIntent({ kind: "homework", groupId: "", childIds: [childId], noteIds: [id], title, packNoteId: id }); goTo("homework"); } : undefined} />
       <div ref={scrollTop} className="mb-4 flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[200px] flex-1 sm:max-w-[340px]">
           <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />

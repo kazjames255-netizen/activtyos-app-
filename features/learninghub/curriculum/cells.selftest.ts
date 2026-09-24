@@ -1,5 +1,6 @@
 // Run: server/node_modules/.bin/tsx features/learninghub/curriculum/cells.selftest.ts
-import { byStrand, defaultYear, expectedInYear, extraInYear, parseYear, yearSummary, cellKind, childSummary, rowsByArea, summarise, visibleYears, type MapArea, type MapRow } from "./cells";
+import { emojiFor } from "./stickers";
+import { stickerDone, stickerStars, studentState, byStrand, defaultYear, expectedInYear, extraInYear, parseYear, yearSummary, cellKind, childSummary, rowsByArea, summarise, visibleYears, type MapArea, type MapRow } from "./cells";
 let n = 0, bad = 0;
 const ok = (c: boolean, m: string) => { n++; if (!c) { bad++; console.error("FAIL:", m); } };
 const y = (o: Record<number, number>) => Array.from({ length: 11 }, (_, i) => o[i + 1] ?? 0);
@@ -39,5 +40,9 @@ ok(parseYear("Year 5") === 5 && parseYear("Y11") === 11 && parseYear("Reception"
 ok(defaultYear([3, 4, 5], [4, 4, 5, null], [A]) === 4, "most common student year");
 ok(defaultYear([3, 4, 5], [9], [A]) === 3, "no student match: year with most lessons");
 ok(defaultYear([], [4], [A]) === null, "no years");
+ok(studentState({ library: 3, assigned: 1, done: 1 }) === "done" && studentState({ library: 3, assigned: 1, done: 0 }) === "assigned" && studentState({ library: 3, assigned: 0, done: 0 }) === "ready" && studentState({ library: 0, assigned: 0, done: 0 }) === "none" && studentState(undefined) === "none", "student states");
+ok(stickerDone(A, 3, by) === 10 && stickerDone(C, 8, by) === 0, "sticker done counts finished lessons in the span");
+ok(stickerStars(1, 4) === 1 && stickerStars(0, 0) === 0 && stickerStars(4, 4) === 5, "stars");
+ok(emojiFor("Number – fractions") === "🍕" && emojiFor("Zzz") === "⭐" && emojiFor("Working scientifically", "Plants") === "🌱", "emoji map + fallback");
 console.log(`${n} checks, ${bad} failed`);
 process.exit(bad ? 1 : 0);
