@@ -9,6 +9,14 @@
 4. **Tools:** all 102 live tools open cleanly at 1440 and 390 (`e2e/review/tools-open-all.spec.ts`); 17 tool selftest suites pass; Tools tab shows only working tools.
 5. **Verified:** hub specs pass with a review-only Playwright config; after-screenshots at 390/768/1440 (`13-verification-report.md`); round-2 adversarial review (`14-round2-review.md`): 15% of friction fixed, 18% partly, rest = tutor marking/assign/quiz builder, parent comms, owner oversight (roadmap).
 
+## Wave 3 (also on the branch)
+- **R-6 age bands:** KS1 three big icon tabs (Today / Play & learn / Stars) over the same allow-listed kid tabs; teen (Y7+) grown-up Home with due-this-week list and 'Revise weakest'. One additive server line: a parent's `GET /students` now returns their own child's year group.
+- **R-12 parent:** verdict line per child, plain-language string table, printable child-only Progress report (no emails/notifications built).
+- **Tools assigned to questions:** every one of the 99 live tools is now suggested by at least one rule (was 64); maths lesson coverage 73% → 99.9% (specific 50 → 91%); tutor question form lists suggested tools with the reason; child quiz shows 'Open <tool>' buttons (`15-tools-assignment.md`). 24,492 selftest checks pass.
+
+## Final verification state
+Type-check clean (app + server). Integrated review-config run: 71 passed, 5 failed → 2 stale wording assertions updated (parent copy), 1 fixture bug fixed (support-profile), 2 passed on isolated re-run (mark-queue, home); 'Live lessons workspace wording' is a known timing-flaky test that passes alone. Not covered: the full `npm run e2e` (needs the HQ login, see blocker), real email, dark mode, keyboard/screen-reader passes.
+
 ## Needs the owner
 - **Blocker (11 #13):** the standard Playwright setup cannot sign in the platform account because HQ sign-in now emails a 2FA code to the admin inbox (two codes were sent during verification). A test-only pre-verify was refused as a security weakening and NOT done; decide how e2e should handle it.
 - Curriculum map on Lessons: summary line first, grid collapsed (conflicts with your earlier "first thing" ask; one-line revert).
