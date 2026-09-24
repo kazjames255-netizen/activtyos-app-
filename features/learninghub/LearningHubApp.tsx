@@ -24,7 +24,8 @@ import { useRealtime } from "@/lib/realtime";
 import { listDoubts } from "./lesson/doubts/api";
 import { useOnBrand } from "./onBrand";
 import { resolveTarget } from "./tabAlias";
-import { TUTOR_TOPS, rememberSub, rememberedSub, subById, subFor, topOfKey, type SubDef } from "./tabGroups";
+import { TUTOR_TOPS, recalledSub, rememberSub, subById, subFor, topOfKey, type SubDef } from "./tabGroups";
+import { SubMenuCard, type ItemInfo } from "./SubMenuCard";
 import { InPersonApp } from "./inperson/InPersonApp";
 import { setHubIntent } from "./hubIntent";
 import { useMarkItems } from "./mark/useMarkItems";
@@ -102,6 +103,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   // Tutor hub: which top tab / sub-tab the panel key sits under (a presentation grouping; `active` stays the panel key everywhere).
   const activeSub: SubDef | null = tutor ? subFor(active, sub) : null;
   const activeTop = tutor ? topOfKey(active) : null;
+
   const activeRef = useRef<TabKey>(active);
   useLayoutEffect(() => { activeRef.current = active; }, [active]);
   useEffect(() => { if (activeTop && activeSub) rememberSub(activeTop, activeSub); }, [activeTop, activeSub]);
@@ -154,13 +156,15 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     if (d.action === "intent" && d.intent) { setHubIntent(d.intent); setNonce((n) => n + 1); }
     setLinkParams({ tab: d.key, sub: d.id }, true);
   }, [setError]);
-  // A top tab opens the sub-tab last used under it (never an action one: that would pop a dialog on every visit).
   const selectTop = useCallback((id: string, how?: "arrow") => {
     const top = TUTOR_TOPS.find((t) => t.id === id);
     if (!top) return;
-    const d = rememberedSub(top);
-    selectSub(d, { focus: top.subs.length === 1 && how !== "arrow" });
-  }, [selectSub]);
+    // Opens the card AND a page at once: Homework goes straight to To mark while anything waits (else where you were, else Inbox);
+    // every other top reopens the sub-section last used (else its first).
+    const back = recalledSub(top);
+    const d = top.entry === "mark" ? (toMark.count > 0 ? subById("mark") : back && back.id !== "mark" ? back : subById("inbox")) : back ?? top.subs.find((x) => !x.action)!;
+    selectSub(d!, { focus: top.subs.length === 1 && how !== "arrow" });
+  }, [selectSub, toMark.count]);
   // The Homework panel reports the view it is on (its own default, a Home deep link, or a sub-tab click): keep sub-tab + URL in step.
   const onHwSubView = useCallback((v: string) => { const id = HW_SUB[v]; if (id) { setSub(id); setLinkParams({ sub: id }); } }, []);
   // Back / a link that names a tab (a notification, "Start the lesson" from a homework) moves the tab too.
@@ -237,13 +241,19 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
     onSubView: tutor ? onHwSubView : undefined,
   };
   const meta0 = (k: TabKey, label: string) => ({ ...(modules.find((m) => m.meta.key === k)?.meta ?? current.meta), label, status: "live" as const });
-  const subBadge = (id: string): Pick<HubTab, "badge" | "dot" | "sr"> => id === "lessons" && dirty ? { badge: "Unsaved" } : id === "live" ? { dot: liveNow } : id === "mark" && toMark.count > 0 ? { badge: String(toMark.count) } : {};
   const topTabs: HubTab[] = tutor ? TUTOR_TOPS.filter((t) => t.subs.some((x) => modules.some((m) => m.meta.key === x.key))).map((t) => ({
     id: t.id, emoji: t.emoji, meta: meta0(t.subs[0].key, t.label),
     badge: t.id === "lessons" && dirty ? "Unsaved" : t.id === "messages" && unreadQuestions > 0 ? String(unreadQuestions) : t.id === "homework" && toMark.count > 0 ? String(toMark.count) : undefined,
     dot: t.id === "lessons" ? liveNow : undefined, sr: t.id === "lessons" && liveNow ? "live now" : undefined,
   })) : [];
-  const subTabs: HubTab[] = activeTop ? activeTop.subs.filter((d) => !(d.action && readOnly)).map((d) => ({ id: d.id, emoji: d.emoji, meta: meta0(d.key, d.label), action: !!d.action, ...subBadge(d.id) })) : [];
+  const subList: SubDef[] = activeTop ? activeTop.subs.filter((d) => !(d.action && readOnly)) : [];
+  // Live numbers in the side card: only what the hub already holds (the Mark queue, the roster, a running lesson, an unsaved draft).
+  const itemInfo: Record<string, ItemInfo | undefined> = {
+    mark: toMark.count > 0 ? { count: `${toMark.count} to mark` } : undefined,
+    live: liveNow ? { count: "Live now", live: true } : undefined,
+    lessons: dirty ? { count: "Unsaved draft" } : undefined,
+    students: activeStudents > 0 ? { count: `${activeStudents} ${activeStudents === 1 ? "student" : "students"}` } : undefined,
+  };
   const tabs: HubTab[] = modules.filter((m) => !kid || ((KID_TABS as readonly string[]).includes(m.meta.key) && !KID_STRIP_HIDDEN.includes(m.meta.key))).map((m) => ({
     // One vocabulary: "Messages" and "Starting quizzes" for everyone; a child's own words (KID_TAB_LABEL) win on their screens.
     meta: kid && KID_TAB_LABEL[m.meta.key] ? { ...m.meta, label: KID_TAB_LABEL[m.meta.key] } : m.meta,
@@ -317,12 +327,11 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
         {!focus && kid && bandOrDefault(hub.child?.yearGroup) === "ks1" ? <KidIconTabs active={active} onSelect={(k) => go(k as TabKey)} /> : null}
         {!focus && tutor && activeTop && (
           <>
-            <HubTabs variant="top" tabs={topTabs} active={activeTop.id} onSelect={selectTop} label="Sections" className={subTabs.length > 1 ? "mb-1" : "mb-4"}
+            <HubTabs variant="top" tabs={topTabs} active={activeTop.id} onSelect={selectTop} label="Sections" className="mb-2"
               controls={(id) => (TUTOR_TOPS.find((t) => t.id === id)!.subs.length > 1 ? `hub-subtabs-${id}` : `hub-tabpanel-${active}`)} />
-            {subTabs.length > 1 && activeSub && (
-              <HubTabs key={activeTop.id} variant="sub" idPrefix="hub-subtab-" listId={`hub-subtabs-${activeTop.id}`} tabs={subTabs} active={activeSub.id} label={`${activeTop.label} sections`} className="mb-4"
-                controls={() => `hub-tabpanel-${active}`}
-                onSelect={(id, how) => { const d = subById(id); if (d) selectSub(d, { focus: how !== "arrow" }); }} />
+            {subList.length > 1 && activeSub && (
+              <SubMenuCard key={activeTop.id} top={activeTop} subs={subList} active={activeSub.id} info={itemInfo} listId={`hub-subtabs-${activeTop.id}`} controls={`hub-tabpanel-${active}`}
+                onSelect={(d, how) => selectSub(d, { focus: how !== "arrow" })} />
             )}
           </>
         )}

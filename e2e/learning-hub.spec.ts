@@ -134,14 +134,16 @@ test.describe("tutor builds topics and notes", () => {
     await expect(tops.nth(1)).toHaveAttribute("data-top", "lessons");
     await expect(tops.first()).toHaveAttribute("aria-selected", "true");
     // Every old panel is still one top tab (+ one sub-tab) away; nothing is hidden.
+    // (Each top tab opens with its sub-sections in view: the side card at desktop width, the pill row elsewhere.)
+    const reach = (sub: string) => page.locator(`[role="tab"][data-sub="${sub}"]`);
     await tops.nth(1).click();
-    for (const sub of ["lessons", "live", "schedule", "teach", "tools", "flashcards"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    for (const sub of ["lessons", "live", "schedule", "teach", "tools", "flashcards"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="students"]').click();
-    for (const sub of ["students", "enrol"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    for (const sub of ["students", "enrol"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="quizzes"]').click();
-    for (const sub of ["quizzes", "starting", "newquiz"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    for (const sub of ["quizzes", "starting", "newquiz"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="homework"]').click();
-    for (const sub of ["mark", "inbox", "set"]) await expect(page.locator(`[role="tab"][data-sub="${sub}"]`)).toBeVisible();
+    for (const sub of ["mark", "inbox", "set"]) await expect(reach(sub)).toBeVisible();
     // Roving tabindex + arrow keys.
     await tops.first().focus();
     await page.keyboard.press("End");

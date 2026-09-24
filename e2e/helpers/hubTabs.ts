@@ -3,7 +3,7 @@ import type { Locator, Page } from "@playwright/test";
 // The tutor / operator hub groups its tabs: seven top tabs (Home, Lessons, Students, Progress, Quizzes, Homework, Messages) with a
 // sub-tab row under most of them (features/learninghub/tabGroups.ts). Specs still think in the OLD tab names ("Live lessons",
 // "Starting quizzes", "Set homework"…), so `openTab` takes an old name (RegExp or string), clicks the right top tab and then the
-// right sub-tab. Parents and children keep the flat strip: with no `[data-top]` tab on the page it just clicks the tab by name.
+// right sub-tab (the side card at desktop width, the pill row under the top strip elsewhere; both are role=tab with data-sub). Parents and children keep the flat strip: with no `[data-top]` tab on the page it just clicks the tab by name.
 
 interface Entry { top: string; sub: string | null; labels: string[] }
 // First match wins; order matters where a looser regexp could hit two labels.
@@ -21,8 +21,7 @@ const MAP: Entry[] = [
   { top: "quizzes", sub: "quizzes", labels: ["Quizzes"] },
   { top: "quizzes", sub: "starting", labels: ["Starting quizzes", "Placement test"] },
   { top: "quizzes", sub: "newquiz", labels: ["New quiz"] },
-  { top: "homework", sub: null, labels: ["Homework"] },
-  { top: "homework", sub: "mark", labels: ["To mark"] },
+  { top: "homework", sub: "mark", labels: ["Homework", "To mark"] },
   { top: "homework", sub: "inbox", labels: ["Inbox"] },
   { top: "homework", sub: "set", labels: ["Set homework"] },
   { top: "messages", sub: null, labels: ["Messages", "Student message centre"] },

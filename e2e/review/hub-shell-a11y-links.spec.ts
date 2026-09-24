@@ -18,6 +18,7 @@ const selected = async (page: Page) => {
   if (top) return ({ progress: "dashboard", messages: "questions" } as Record<string, string>)[top] ?? top;
   return t.getAttribute("data-panel");
 };
+const pick = (page: Page, sub: string) => page.locator(`[role="tab"][data-sub="${sub}"]`).click();
 // Cheap navigation (the shared dev server is busy): no per-link feature toggle, just wait for the tab strip.
 async function open(page: Page, url: string) { await page.goto(url, { waitUntil: "domcontentloaded" }); await page.locator('[role="tab"][aria-selected="true"]').first().waitFor({ timeout: 120_000 }); }
 
@@ -37,7 +38,7 @@ for (const vpName of ["390", "1440"] as const) {
     // focus moves into the panel after a click, page does not jump, title follows
     await open(page, "/freelancer/learninghub?tab=home");
     await page.locator('[role="tab"][data-top="quizzes"]').click();
-    await page.locator('[role="tab"][data-sub="quizzes"]').click();
+    await pick(page, "quizzes");
     await page.waitForTimeout(1500);
     await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("#hub-tabpanel-quizzes"))).toBe(true);
     expect(await page.title()).toMatch(/^Quizzes - Teaching Hub/);
@@ -49,7 +50,7 @@ for (const vpName of ["390", "1440"] as const) {
     // Escape closes the dialog only
     await open(page, "/freelancer/learninghub?tab=home");
     await page.locator('[role="tab"][data-top="homework"]').click();
-    await page.locator('[role="tab"][data-sub="set"]').click();
+    await pick(page, "set");
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 20_000 });
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);

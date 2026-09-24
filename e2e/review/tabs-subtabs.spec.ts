@@ -14,6 +14,12 @@ const sub = (page: Page) => page.locator('[role="tab"][data-sub][aria-selected="
 async function open(page: Page, url: string) { await page.goto(url, { waitUntil: "domcontentloaded" }); await page.locator('[role="tab"][aria-selected="true"]').first().waitFor({ timeout: 120_000 }); }
 const clickTop = (page: Page, id: string) => page.locator(`[role="tab"][data-top="${id}"]`).click();
 const clickSub = (page: Page, id: string) => page.locator(`[role="tab"][data-sub="${id}"]`).click();
+/** Reach a sub-view: its sub-tab (side card or pill row), clicking the top tab first when that tab's sub-sections aren't showing. */
+async function goSub(page: Page, topId: string, subId: string) {
+  const s = page.locator(`[role="tab"][data-sub="${subId}"]`);
+  if (!(await s.isVisible().catch(() => false))) { await clickTop(page, topId); await s.waitFor({ timeout: 20_000 }); }
+  return s.click();
+}
 
 const LINKS: [string, string, string | null][] = [
   ["tab=home", "home", null],
@@ -65,10 +71,30 @@ for (const vpName of ["390", "1440"] as const) {
     await expect(tops).toHaveText([/🏠 ?Home/, /📚 ?Lessons/, /🧑‍🎓 ?Students/, /📈 ?Progress/, /📝 ?Quizzes/, /📓 ?Homework/, /💬 ?Messages/]);
     await expect(page.locator('[role="tab"][data-sub]')).toHaveCount(0); // Home has no sub-row
 
-    // Lessons: six sub-tabs; Schedule opens the existing dialog, Teach in person the existing overlay, each with a way back.
+    // Lessons: opening the top tab shows its sub-sections AND the default page at once (no extra tap, no separate landing page).
     await clickTop(page, "lessons");
     await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Lessons & curriculum/, /Live lessons/, /Schedule video lesson/, /Teach in person/, /Tools/, /Flashcards/]);
-    await clickSub(page, "schedule");
+    await expect(sub(page)).toHaveAttribute("data-sub", "lessons");
+    await expect(page.locator("#hub-tabpanel-notes")).toBeVisible({ timeout: 30_000 });
+    // Layout: ONE full-width gradient card at the top with the sub-sections across it in a row, the live page directly underneath (every width).
+    const panel = (await page.locator("#hub-tabpanel-notes").boundingBox())!;
+    const card = page.getByTestId("hub-submenu");
+    await expect(card).toBeVisible();
+    await expect(page.locator('[role="tablist"][aria-orientation="vertical"]')).toHaveCount(0);
+    const cb = (await card.boundingBox())!;
+    expect(panel.y, "page sits under the card").toBeGreaterThanOrEqual(cb.y + cb.height - 1);
+    const strip = (await page.locator('[role="tab"][data-top]').first().locator("xpath=ancestor::div[@role=\"tablist\"]/../..").boundingBox())!;
+    expect(cb.width, "card spans the page content width").toBeGreaterThan(strip.width * 0.9);
+    const items = page.locator('[data-testid="hub-submenu"] [role="tab"]');
+    for (const r of await items.all()) expect((await r.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    for (const t of await page.locator('[data-testid="hub-submenu"] [role="tab"] > span[aria-hidden]:first-child').all()) { const b = (await t.boundingBox())!; expect(b.width, "emoji tile size").toBeGreaterThanOrEqual(40); }
+    const boxes = await Promise.all((await items.all()).map((r) => r.boundingBox()));
+    if (vpName === "1440") expect(new Set(boxes.map((b) => Math.round(b!.y))).size, "all six items in one row").toBe(1);
+    else {
+      const sc = await page.locator('[data-testid="hub-submenu"] [role="tablist"]').evaluate((el) => ({ sw: (el.parentElement as HTMLElement).scrollWidth, cw: (el.parentElement as HTMLElement).clientWidth }));
+      expect(sc.sw, "the row scrolls sideways at phone width").toBeGreaterThan(sc.cw);
+    }
+    await clickSub(page, "schedule"); // an action item opens the existing dialog over the page
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -80,11 +106,12 @@ for (const vpName of ["390", "1440"] as const) {
 
     // Students -> Enrol a student opens the existing form
     await clickTop(page, "students");
+    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Students/, /Enrol a student/]);
     await clickSub(page, "enrol");
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
 
-    // Quizzes -> New quiz opens the builder; Homework -> Set homework opens the form
+    // Quizzes: three items; New quiz opens the builder. Homework: To mark straight away when anything waits, else Inbox; Set homework opens the form.
     await clickTop(page, "quizzes");
     await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Quizzes/, /Starting quizzes/, /New quiz/]);
     await clickSub(page, "newquiz");
@@ -92,6 +119,7 @@ for (const vpName of ["390", "1440"] as const) {
     await page.keyboard.press("Escape");
     await clickTop(page, "homework");
     await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/To mark/, /Inbox/, /Set homework/]);
+    await expect(sub(page)).toHaveAttribute("data-sub", /^(mark|inbox)$/);
     await clickSub(page, "set");
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
@@ -99,13 +127,17 @@ for (const vpName of ["390", "1440"] as const) {
     await clickSub(page, "inbox");
     await expect(sub(page)).toHaveAttribute("data-sub", "inbox");
 
-    // The last sub-tab per top tab is remembered (an action sub-tab never is); URL carries tab + sub.
+    // The last plain sub-section per top tab is reopened (an action item never is); the URL carries tab + sub.
     await clickTop(page, "lessons");
     await clickSub(page, "tools");
+    await expect(page).toHaveURL(/tab=tools&sub=tools|sub=tools&tab=tools/);
     await clickTop(page, "home");
     await clickTop(page, "lessons");
     await expect(sub(page)).toHaveAttribute("data-sub", "tools");
-    await expect(page).toHaveURL(/tab=tools&sub=tools|sub=tools&tab=tools/);
+    await clickSub(page, "schedule"); await page.keyboard.press("Escape");
+    await clickTop(page, "home");
+    await clickTop(page, "lessons");
+    await expect(sub(page)).toHaveAttribute("data-sub", "tools"); // not "schedule"
 
     // Arrow keys move along the sub-row and keep focus in it; the active sub-tab stays in view.
     await page.locator('[role="tab"][data-sub="tools"]').focus();
@@ -113,9 +145,8 @@ for (const vpName of ["390", "1440"] as const) {
     await expect(sub(page)).toHaveAttribute("data-sub", "flashcards");
     expect(await page.evaluate(() => document.activeElement?.getAttribute("data-sub"))).toBe("flashcards");
     const vp = page.viewportSize()!;
-    const box = await page.locator('[role="tab"][data-sub="flashcards"]').boundingBox();
-    expect(box && box.x >= 0 && box.x + box.width <= vp.width + 1, "active sub-tab in view").toBe(true);
-    if (vpName === "390") { expect(box!.height).toBeGreaterThanOrEqual(43); expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true); }
+    await expect.poll(async () => { const b = await page.locator('[role="tab"][data-sub="flashcards"]').boundingBox(); return !!b && b.x >= 0 && b.x + b.width <= vp.width + 1; }, { message: "active sub-tab scrolled into view" }).toBe(true);
+    if (vpName === "390") { expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true); }
     await ctx.close();
   });
 }

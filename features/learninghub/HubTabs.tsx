@@ -22,12 +22,13 @@ export interface HubTab {
 
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections", variant = "flat", idPrefix = "hub-tab-", controls, className = "mb-4", listId }: {
+export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sections", variant = "flat", idPrefix = "hub-tab-", controls, className = "mb-4", listId, bleed = true }: {
   tabs: HubTab[]; active: string; onSelect: (k: string, how?: "arrow") => void; liveNow?: boolean; label?: string;
   /** "flat": the parent / child strip (unchanged). "top" / "sub": the grouped tutor strip and the row of sub-tabs under it. */
   variant?: "flat" | "top" | "sub"; idPrefix?: string;
   /** id of the element the ACTIVE tab controls (defaults to its tabpanel). */ controls?: (id: string) => string | undefined;
   className?: string; listId?: string;
+  /** Pull the scroller out to the page edge (default). Off when the strip sits beside something else in a row. */ bleed?: boolean;
 }) {
   const idOf = (t: HubTab) => t.id ?? t.meta.key;
   const refs = useRef(new Map<string, HTMLButtonElement>());
@@ -98,7 +99,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
   return (
     <div className={`relative ${className}`}>
       <div ref={scroller} onScroll={readEdges} style={fade}
-        className="hub-fade-x -mx-3 snap-x snap-proximity overflow-x-auto scroll-px-10 px-3 [scrollbar-width:none] sm:-mx-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
+        className={`hub-fade-x snap-x snap-proximity overflow-x-auto scroll-px-10 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${bleed ? "-mx-3 px-3 sm:-mx-5 sm:px-5" : ""}`}>
         <div ref={list} role="tablist" id={listId} aria-label={label} onKeyDown={onKey} className="relative flex w-max min-w-full gap-1 pb-2 pt-1">
           <span aria-hidden="true" className={`pointer-events-none absolute left-0 top-1 rounded-full motion-reduce:transition-none ${animate ? "transition-[transform,width] duration-300 ease-[cubic-bezier(.3,.7,.2,1)]" : ""}`}
             style={{
@@ -128,7 +129,7 @@ export function HubTabs({ tabs, active, onSelect, liveNow = false, label = "Sect
                 onClick={() => onSelect(id)}
                 className={`relative z-10 motion-safe:active:scale-[.97] inline-flex min-h-[44px] ${variant === "sub" ? "lg:min-h-[38px] px-3 text-[12.5px]" : "px-2.5 text-[13px]"} flex-none snap-start items-center gap-1.5 whitespace-nowrap rounded-full border transition-[color,background-color,border-color,transform] duration-200 ${on ? "" : "hover:border-[var(--ink-3)] motion-safe:hover:-translate-y-px"} ${main || on ? "font-extrabold" : "font-bold"} ${FOCUS}`}
                 style={style}>
-                {emoji ? <span aria-hidden="true" className="text-[15px] leading-none">{emoji}</span>
+                {emoji ? <span aria-hidden="true" className="text-[18px] leading-none" style={{ fontFamily: '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif' }}>{emoji}</span>
                   : <span className="hidden 2xl:inline-flex"><Icon name={PANEL_ICON[meta.key] ?? "sparkle"} size={16} /></span>}
                 {meta.label}
                 {tab.sr && <span className="sr-only"> ({tab.sr})</span>}
