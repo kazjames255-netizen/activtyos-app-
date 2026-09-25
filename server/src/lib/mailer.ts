@@ -136,7 +136,17 @@ export interface MailOutcome {
   error?: string;
 }
 
+// Demo/seed rows carry things like "seed" or a person's NAME where an address
+// belongs, and task reminders happily addressed them. Every one is a hard
+// bounce, and bounce rate is what gets a sending domain suspended — so refuse
+// anything that isn't shaped like an address before it reaches the transport.
+const looksLikeAddress = (to: string) => /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(to.trim());
+
 export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<MailOutcome> {
+  if (!looksLikeAddress(to)) {
+    console.warn(`[mail] "${subject}" → ${JSON.stringify(to)} NOT AN ADDRESS — refused before sending`);
+    return { status: "failed", error: "not an email address" };
+  }
   if (!maySend(to)) {
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
     return { status: "suppressed" };
