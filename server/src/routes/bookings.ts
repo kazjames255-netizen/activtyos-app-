@@ -140,7 +140,11 @@ export const bookingDocId = (tenantId: string, ref: string) => `${tenantId}_${re
  *  landed — a rich branded email (dates, venue, who's on it, amount) AND the
  *  in-app bell. Called wherever a booking is settled: the reconcile action and
  *  the bookings-area "Mark received". Fire-and-forget. */
-async function notifyPaymentReceived(tenantId: string, b: Booking, label: string): Promise<void> {
+/** The family's "payment received" email + bell. Exported because a CARD
+ *  payment settles in lib/settlePayment.ts (shared with the Stripe webhook),
+ *  which sent nothing at all — a family paying by card heard from Stripe, if
+ *  anything, but never from ActivityOS. */
+export async function notifyPaymentReceived(tenantId: string, b: Booking, label: string): Promise<void> {
   if (!b.email?.includes("@")) return;
   const email = b.email;
   const tenantDoc = await db.collection("tenants").doc(tenantId).get();

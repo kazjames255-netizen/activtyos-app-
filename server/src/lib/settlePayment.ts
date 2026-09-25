@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { fromDoc, toDoc, type BookingDoc } from "./bookingDoc";
-import { bookingDocId } from "../routes/bookings";
+import { bookingDocId, notifyPaymentReceived } from "../routes/bookings";
 import { paidSoFar } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 
@@ -83,6 +83,7 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
   }
 
   const batch = db.batch();
+  const settled: Booking[] = [];
   for (const bookingRef of claimed.refs ?? []) {
     const bSnap = await db.collection("bookings").doc(bookingDocId(claimed.tenantId, bookingRef)).get();
     if (!bSnap.exists) continue;
@@ -96,8 +97,17 @@ export async function settlePaymentRecord(paymentId: string, by: SettleBy): Prom
     b.cardFailed = false;
     if (by.auto) b.reconciledBy = { at, by: by.by, auto: true };
     batch.set(bSnap.ref, toDoc(b));
+    settled.push(b);
   }
   await batch.commit();
+  // Tell the family their card payment landed — the same email + bell an
+  // operator's manual "record payment" sends. Runs after the commit and only on
+  // the claiming caller, so a webhook retry or a late browser confirm can't
+  // send it twice. Best-effort: a mail failure must never undo settled money.
+  for (const b of settled) {
+    await notifyPaymentReceived(claimed.tenantId, b, "card")
+      .catch((e) => console.error(`[settle] payment-received notice for ${b.ref}:`, (e as Error).message));
+  }
   return "settled";
 }
 

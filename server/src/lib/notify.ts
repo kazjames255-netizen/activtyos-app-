@@ -452,7 +452,12 @@ export async function notifyTenantMember(
   n: { category: NotifyCategory; title: string; body: string; href?: string; ref?: string; key?: string; sendEmail?: boolean },
 ): Promise<void> {
   try {
-    await col().add({
+    // Keep the ref: the email half's outcome is stamped on this row, so "the
+    // manager was emailed" is answerable from data. It used to swallow every
+    // mail error and record nothing — the parent path (above) got that honesty
+    // in backlog b33 and this one didn't, which is how a staff sweep could bell
+    // correctly and send nothing with no trace.
+    const bell = await col().add({
       tenantId,
       audience: "tenant",
       toEmail: email.trim().toLowerCase(),
@@ -466,13 +471,17 @@ export async function notifyTenantMember(
     } satisfies NotificationDoc);
     if (n.sendEmail) {
       const provider = await tenantContact(tenantId);
-      await sendMail(
+      const outcome = await sendMailDetailed(
         email.trim(),
         n.title,
         `<p>${escapeHtml(n.body)}</p>${n.href ? `<p><a href="${webUrl}${n.href}">Open it in ${escapeHtml(provider.name || "your portal")}</a></p>` : ""}`,
       );
+      await bell.set({ emailStatus: outcome.status }, { merge: true });
+      if (outcome.status === "failed") console.error(`[notify] team email to ${email} failed: ${outcome.error ?? "unknown"}`);
     }
-  } catch { /* best-effort */ }
+  } catch (e) {
+    console.error("[notify] team notification failed:", (e as Error).message);
+  }
 }
 
 /** Mark specific notifications read, or every one the caller can see. */
