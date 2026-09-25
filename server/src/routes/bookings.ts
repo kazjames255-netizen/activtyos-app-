@@ -680,7 +680,10 @@ bookings.post("/:ref/actions", async (req, res) => {
       }
       if (!moved.ok) {
         await ref.set({ cancel: { ...(updated.cancel ?? {}), refund: back?.refund ?? "pending", refundError: moved.error, refundAttempts: (back?.attempts ?? 0) + 1 }, pay: back?.pay ?? updated.pay }, { merge: true });
-        res.status(502).json({ error: `The refund didn't go through: ${moved.error}. Nothing was marked refunded — try again, or refund it in Stripe directly.` });
+        // Stripe's message usually ends in its own full stop ("Charge … has
+        // already been refunded.") — don't print a second one.
+        const why = String(moved.error ?? "").replace(/\s*\.\s*$/, "");
+        res.status(502).json({ error: `The refund didn't go through: ${why}. Nothing was marked refunded — try again, or refund it in Stripe directly.` });
         return;
       }
       // refundedAt: when the money actually moved (cancel.on is when it was

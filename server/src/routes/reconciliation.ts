@@ -249,7 +249,11 @@ function rollUp(rows: LedgerRow[]) {
     // The booker's side.
     confirmed: roll(paid, paid.reduce((s, i) => s + i.amountPaid, 0)),
     unconfirmed: roll(unpaid, unpaid.reduce((s, i) => s + i.outstanding, 0)),
-    // Our side.
+    // Our side. NOTE these two do NOT sum to `gross`, deliberately: reconciled
+    // counts money that ARRIVED on ticked-off rows, unreconciled counts what is
+    // still OWED on the rest. A row ticked off with nothing paid adds to
+    // reconciled.count and 0 to reconciled.amount. Don't render them as a split
+    // of gross — they answer two different questions.
     reconciled: roll(matched, matched.reduce((s, i) => s + i.amountPaid, 0)),
     unreconciled: roll(unmatched, unmatched.reduce((s, i) => s + (i.outstanding || i.amount), 0)),
     // Never a filter, only a flag: a parent who typed "Caelan" instead of a
@@ -275,8 +279,25 @@ reconciliation.get("/childcare", async (req, res) => {
   const scheme = str("scheme");
 
   const snap = await scopedBookings(req, scope).get();
-  const bookings = snap.docs
-    .map((d) => fromDoc(d.data() as BookingDoc) as ChildcareBooking)
+  const all = snap.docs.map((d) => fromDoc(d.data() as BookingDoc) as ChildcareBooking);
+  // Childcare money sitting on a CANCELLED booking is owed back to the family.
+  // It is excluded from the live population below (a cancelled booking promises
+  // nothing and owes nothing), which meant the childcare view alone never showed
+  // it — the provider had to notice it on the main ledger. Reported as its own
+  // figure rather than folded into gross, so the totals still agree with the
+  // ledger underneath.
+  const owedBackRows = all
+    .filter((b) => isChildcare(b) && cancelledish(b) && needsRefundOf(b) > 0)
+    .filter((b) => {
+      const d = dateOf(b);
+      if (from && (!d || d < from)) return false;
+      if (to && (!d || d > to)) return false;
+      if (route && childcareRoute(b) !== route) return false;
+      if (scheme && (childcareOf(b).scheme ?? "") !== scheme) return false;
+      return true;
+    })
+    .map((b) => ({ ref: b.ref, booker: b.booker, email: b.email, date: dateOf(b), scheme: childcareOf(b).scheme ?? null, amount: needsRefundOf(b) }));
+  const bookings = all
     // The same population the ledger counts: a waitlisted / offered /
     // approval-needed booking has no place yet, so nothing is promised and
     // nothing is owed. Counting them would make "gross childcare bookings"
@@ -365,6 +386,10 @@ reconciliation.get("/childcare", async (req, res) => {
     series,
     byScheme,
     summary: rollUp(rows),
+    // Childcare money on a CANCELLED booking — owed back to the family, not
+    // still to collect. Kept out of `summary`/`gross` on purpose so the totals
+    // agree with the ledger; surfaced here so the childcare view shows it at all.
+    owedBack: { count: owedBackRows.length, amount: round2(owedBackRows.reduce((t, r) => t + r.amount, 0)), rows: owedBackRows },
   });
 });
 
