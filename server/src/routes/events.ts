@@ -186,8 +186,32 @@ events.get("/", async (req, res) => {
     listen(db.collection("mealMenus").where("tenantId", "==", tenantId), "mealMenus");
   }
 
-  // Keep intermediaries from closing the idle connection.
-  const ping = setInterval(() => res.write(":ping\n\n"), 25_000);
+  const close = () => {
+    clearInterval(ping);
+    for (const u of unsubs) u();
+    unsubs.length = 0;
+    res.end();
+  };
+
+  // Keep intermediaries from closing the idle connection — and re-check, on the
+  // same beat, that the account is still allowed to listen. The check used to
+  // run ONLY at connect, so switching someone off left their open stream
+  // delivering updates indefinitely (every REST refetch 401s, but the stream
+  // itself never stopped). One read per account per 25s while connected.
+  const ping = setInterval(() => {
+    void (async () => {
+      try {
+        const snap = await db.collection("users").doc(decoded.uid).get();
+        const cur = snap.exists ? snap.data()! : {};
+        if (!snap.exists || cur.disabled === true || cur.deactivatedAt) {
+          console.log(`[events] closing stream for ${decoded.uid} — account switched off`);
+          close();
+          return;
+        }
+      } catch { /* a transient read failure must not drop a good stream */ }
+      res.write(":ping\n\n");
+    })();
+  }, 25_000);
 
   req.on("close", () => {
     clearInterval(ping);
