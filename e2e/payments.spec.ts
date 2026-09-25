@@ -61,9 +61,12 @@ test("customer pays an invoice by card through the public pay-link", async ({ pa
   await expect(page.getByText("Paid — thank you!")).toBeVisible({ timeout: 45_000 });
 
   // The paid state must be SERVER state, not client cheer — a reload re-reads
-  // the invoice and must still say paid.
+  // the invoice and must still say paid. "Paid — thank you!" is only the
+  // just-paid confirmation (PayPage keeps it in `justPaid`); a reload shows the
+  // settled invoice instead, and the pay button is gone.
   await page.reload();
-  await expect(page.getByText("Paid — thank you!")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("This invoice is paid")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: /Pay £/ })).toHaveCount(0);
 });
 
 test("a declined card leaves the invoice unpaid", async ({ page }) => {
