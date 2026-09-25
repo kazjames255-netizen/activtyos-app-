@@ -4,6 +4,10 @@ import type { Sender } from "./sender";
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
 //
+//  - RESEND_API_KEY configured → delivery over Resend's HTTPS API. Preferred
+//    on a PaaS: Railway blocks outbound SMTP, so port 587 just hangs — the
+//    first live send on the deployed API sat in "sending" forever with no
+//    error, because nodemailer had no timeout either (it does now).
 //  - SMTP_HOST configured → real delivery through any SMTP provider
 //    (Resend, Mailgun, SendGrid, Gmail app-password, …).
 //  - Not configured → a throwaway Ethereal test inbox: mails are NOT
@@ -24,6 +28,11 @@ function getTransport() {
           host: process.env.SMTP_HOST,
           port,
           secure: port === 465,
+          // A blocked SMTP port must surface as an error, not an open socket
+          // that never resolves (see the header note).
+          connectionTimeout: 15_000,
+          greetingTimeout: 10_000,
+          socketTimeout: 30_000,
           auth: process.env.SMTP_USER
             ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
             : undefined,
@@ -142,6 +151,44 @@ export interface MailOutcome {
 // anything that isn't shaped like an address before it reaches the transport.
 const looksLikeAddress = (to: string) => /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(to.trim());
 
+/** Resend's HTTPS API. Used in preference to SMTP whenever RESEND_API_KEY is
+ *  set, because hosts commonly block outbound SMTP. Inline `cid:` images map
+ *  to Resend's content_id so a provider's logo still renders. */
+async function sendViaResend(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<MailOutcome> {
+  const from = sender?.name || sender?.address
+    ? `${(sender.name ?? fromName).replace(/["\\]/g, "")} <${sender.address ?? fromAddress}>`
+    : MAIL_FROM;
+  const body: Record<string, unknown> = { from, to: [to], subject, html };
+  if (sender?.replyTo) body.reply_to = sender.replyTo;
+  if (opts?.attachments?.length) {
+    body.attachments = opts.attachments.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content.toString("base64") : Buffer.from(String(a.content), (a.encoding as BufferEncoding) ?? "utf8").toString("base64"),
+      ...(a.contentType ? { content_type: a.contentType } : {}),
+      ...(a.cid ? { content_id: a.cid } : {}),
+    }));
+  }
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) {
+      const detail = (await r.text()).slice(0, 300);
+      console.error(`[mail] failed to send "${subject}" to ${to}: ${r.status} ${detail}`);
+      return { status: "failed", error: `resend ${r.status}: ${detail}` };
+    }
+    const { id } = (await r.json()) as { id?: string };
+    console.log(`[mail] "${subject}" → ${to}` + (sender?.name ? ` as "${sender.name}"` : "") + (sender?.replyTo ? ` (reply-to: ${sender.replyTo})` : "") + (id ? ` [resend ${id}]` : ""));
+    return { status: "sent" };
+  } catch (e) {
+    console.error(`[mail] failed to send "${subject}" to ${to}:`, e);
+    return { status: "failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<MailOutcome> {
   if (!looksLikeAddress(to)) {
     console.warn(`[mail] "${subject}" → ${JSON.stringify(to)} NOT AN ADDRESS — refused before sending`);
@@ -151,6 +198,7 @@ export async function sendMailDetailed(to: string, subject: string, html: string
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
     return { status: "suppressed" };
   }
+  if (process.env.RESEND_API_KEY) return sendViaResend(to, subject, html, sender, opts);
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
