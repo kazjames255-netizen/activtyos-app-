@@ -268,7 +268,7 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "b32", who: "amir", severity: "critical",
     title: "Nothing is deployed — there is no staging environment",
-    detail: "28 days of localhost followed by a cold go-live tests nothing about hosting, HTTPS, env vars, cold starts or latency. DEPLOY.md documents 8 of the 43 environment variables.",
+    detail: "DEPLOYED 25 Sept (Amir). API on Railway (Docker, always-on so the sweeps run) at activtyos-app-production.up.railway.app — /health green, 20 env vars set incl. URL_SIGNING_SECRET and a real INBOUND_EMAIL_SECRET. Web on Vercel at activtyos-app-zayoxs-projects.vercel.app, public, CORS locked to that origin. Stripe webhook endpoint created and verified with a real test payment (platform + connected-account secrets both set). Firestore indexes deployed. Mail is LIVE over Resend's HTTPS API (Railway blocks outbound SMTP - SMTP hung silently, which is why the first send vanished) and a real send was confirmed delivered. Four deploy-blocking bugs fixed on the way: next build type-checked server/ (broke every build host), `sharp` was declared in nobody's dependencies, the Leads warm-up loaded all 71k leads at boot and OOM-killed the container in a loop (burning the 50k/day read cap), and task reminders were addressed to \"seed\". STILL OWED: custom domains (api./app.activityos.uk in Namecheap) + the Firebase authorised domain for them, the Blaze plan (still on free quotas), a real UK Stripe platform account (the keys in use are a French \"StrapSwatch sandbox\"), Vercel's production branch is still `main` (a push there would deploy 7 Aug), and no monitoring yet (b34). 28 days of localhost followed by a cold go-live tests nothing about hosting, HTTPS, env vars, cold starts or latency. DEPLOY.md documents 8 of the 43 environment variables.",
     step: "d1s1",
   },
   {
@@ -833,6 +833,36 @@ export const BACKLOG: BacklogItem[] = [
     title: "Two different \"invite a team member\" flows disagree on whether an email is required",
     detail: "NOT FIXED — needs a decision. HoTeamApp (head-office combined view, /company/staff with no scope) explicitly supports a blank-email, link-only invite — the copy literally says \"email (optional — or copy a link)\". TeamApp (the plain per-site Team & invites view, reached via ?hoScope=__ho__ or a non-franchised account) is a 5-step wizard where step 1's Next button is disabled until an email is filled — there is no way to create a link-only invite through it, and the join page enforces that the new person signs up with EXACTLY that email (\"This invite was sent to X — sign up with that address\"). So the same underlying feature (invite by shareable link, no email) works in one operator view and not the other. Decide whether TeamApp should also allow a blank email (matching HoTeamApp), or whether HoTeamApp's optional-email path should go away for consistency.",
     file: "features/team/TeamApp.tsx, features/team/HoTeamApp.tsx", step: "n/a — found via e2e/secondary.spec.ts",
+  },
+  {
+    id: "s25-leads-paging", who: "kaz", severity: "high",
+    title: "The HQ Leads board loads all 71k leads into the browser",
+    detail: "Server-side stop-gap in place 25 Sept (Amir), but the design still needs changing. GET /api/leads used to read the WHOLE collection into memory and warm it at boot — on the deployed container that was an out-of-memory crash-loop, and ~71k Firestore reads per attempt against a 50k/day cap. It now caps at the newest LEADS_CACHE_MAX (5000) and warms only on the first request, and the response carries {truncated, cap} so the board can say it is showing a slice. The board's filters, counts and CSV export all still assume they have every lead client-side, so they are now computed over that slice. Real fix: server-side search/filter/paging (query params + a count endpoint) so the page never needs the whole list.",
+    file: "features/platform/LeadsApp.tsx, server/src/routes/leads.ts", step: "n/a — found deploying",
+  },
+  {
+    id: "s25-platform-unscoped-reads", who: "amir", severity: "high",
+    title: "HQ reads every booking on the platform, unscoped, in three places",
+    detail: "server/src/routes/platform.ts does a bare db.collection(\"bookings\").get() three times — every booking of every tenant, on every HQ page load. growth.ts reads seven whole collections per load and hoOverview.ts four. On the free plan (50k reads/day) this is the biggest remaining drain now that the dashboard is narrowed (b36), and it is the same fix: aggregation queries, date windows and field masks.",
+    file: "server/src/routes/platform.ts, growth.ts, hoOverview.ts", step: "n/a",
+  },
+  {
+    id: "s25-tfc-ui", who: "kaz", severity: "high",
+    title: "TFC: the server side is ready, four UI pieces are owed",
+    detail: "Backend landed 21 Sept (see b8). Owed on the front end: (1) the \"Reconciled against bank statement\" tick column, bound to POST /api/reconciliation/:ref/bank-match — note it is a DIFFERENT action from the existing \"reconcile\" (which means the money is in, pays the booking off and emails the family); (2) the \"Unreconciled childcare\" bookings tab — every /api/reconciliation row now carries childcareRoute and bankMatched; (3) point the childcare figures at GET /api/reconciliation/childcare so the From/To filter actually applies (today they are a client-side useMemo over the whole ledger) and to get the gross series; (4) step 4 of the parent journey — pay from the TFC balance, then card/bank for the remainder; POST /api/my/tfc/pay and the client helper are ready and called by nothing. Also worth renaming the UI copy: \"reconciled\" now means two things on one screen (paid vs matched to bank).",
+    file: "features/reconciliation/ReconciliationApp.tsx, features/listings/checkout.tsx", step: "d8s11",
+  },
+  {
+    id: "s25-tfc-tokens", who: "amir", severity: "critical",
+    title: "Parents' HMRC tokens are stored unencrypted",
+    detail: "tfcLinks/{childId} holds refresh tokens — long-lived keys to a family's Tax-Free Childcare account — in plaintext Firestore, with no revocation on unlink or account closure and no audit line per use. Fine while the integration is unconfigured (it is: no HMRC credentials yet), MUST NOT go live with real families. Needs KMS envelope encryption, deletion + HMRC revocation on unlink, and a per-use audit entry.",
+    file: "server/src/routes/tfc.ts", step: "n/a",
+  },
+  {
+    id: "s25-tfc-decisions", who: "decision", severity: "high",
+    title: "TFC: two behaviour questions still unanswered",
+    detail: "Both change what operators and families experience, and both are blocking the last of the TFC work. (1) Does a \"promise to pay\" by Tax-Free Childcare CONFIRM the booking immediately, or hold the place until the money lands? Today the place is held (pay: \"Awaiting voucher payment\") and nothing ever auto-cancels; childcare.confirmedAt is deliberately left unwritten until someone decides who may stamp it — the parent's \"I've paid\" tap, or only HMRC's settlement. (2) Who chases an unreconciled childcare payment: an automatic parent reminder, or the provider's job? The data a sweep would need (summary.unreconciled + byScheme) now exists either way. These are questions 4 and 5 of docs/tfc-build-spec.md.",
+    file: "docs/tfc-build-spec.md", step: "d8s11",
   },
 ];
 
