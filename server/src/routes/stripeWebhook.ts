@@ -1,6 +1,7 @@
 import { Router, raw } from "express";
 import type Stripe from "stripe";
 import { stripe } from "../lib/stripe";
+import { db } from "../firebase";
 import { markPastDue, notifyBilling, syncFromStripe, tenantForCustomer } from "../lib/billing";
 import { markCardFailed, paymentForIntent, settleInvoicePayment, settlePaymentRecord } from "../lib/settlePayment";
 import { clearSubscriptionCache } from "../middleware/subscription";
@@ -50,6 +51,28 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
   if (!event) {
     res.status(400).json({ error: "Bad signature" });
     return;
+  }
+
+  // Stripe retries deliveries, and a retry used to re-run the whole handler:
+  // the money path is idempotent, but notifyBilling is not, so an operator was
+  // told twice that their payment failed. Claim event.id first — one row per
+  // delivered event, in a transaction, so only the first claim proceeds.
+  const seen = db.collection("stripeEvents").doc(event.id);
+  try {
+    const fresh = await db.runTransaction(async (tx) => {
+      if ((await tx.get(seen)).exists) return false;
+      tx.set(seen, { type: event!.type, at: new Date().toISOString(), account: event!.account ?? null });
+      return true;
+    });
+    if (!fresh) {
+      console.log(`[stripe-webhook] ${event.type} ${event.id} already handled — ignoring the retry`);
+      res.json({ received: true, duplicate: true });
+      return;
+    }
+  } catch (e) {
+    // Firestore unavailable: better to handle the event (money first) than to
+    // drop it, accepting that a retry may re-notify.
+    console.error(`[stripe-webhook] could not claim ${event.id}:`, (e as Error).message);
   }
 
   try {
@@ -147,6 +170,9 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
     res.json({ received: true });
   } catch (e) {
     console.error(`[stripe-webhook] ${event.type} failed:`, (e as Error).message);
+    // Release the claim, or the retry we just asked Stripe for would be
+    // discarded as a duplicate and the event would never be handled.
+    await seen.delete().catch(() => {});
     res.status(500).json({ error: "handler failed" }); // Stripe retries
   }
 });
