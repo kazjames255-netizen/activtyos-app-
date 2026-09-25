@@ -1,0 +1,32 @@
+{
+ "p2-m3": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 25 Sept after the fix. A card payment settled through lib/settlePayment.ts (the path BOTH the browser callback and the Stripe webhook use) now produces exactly one 'Payment received' notification addressed to the payer, plus the rich customer email (observed as SUPPRESSED in dev because MAIL_LIVE is off there — the same send is delivered in production, where mail is live). Replaying the settle returns \"already\" and sends NO second notice. 4/4 checks.",
+  "notes": "The gap this step found was real and is closed: emailPaymentReceived + the bell were only ever called from bookings.ts's manual 'record payment', so a family paying by card was told nothing at all. The notice is sent after the money commits and only by the claiming caller, so a webhook retry or a late browser confirm cannot double-send, and a mail failure cannot undo settled money.",
+  "evidence": "server/src/verifyPaidNotice.mts (throwaway, deleted); server/src/lib/settlePayment.ts settlePaymentRecord()",
+  "at": "2026-09-25",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 4
+ },
+ "p2-p9": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 25 Sept after the fix. Real staff account, real ticket, SSE stream open and delivering; the account was then switched off (users.disabled + deactivatedAt, refresh tokens revoked) and the server CLOSED the stream within one 25s heartbeat (~7 frames in), where before it kept delivering collection nudges at +23s and +83s. New connections were already refused correctly. 2/2 checks.",
+  "notes": "routes/events.ts checked disabled/deactivatedAt only at connect; the heartbeat now re-reads the user first and ends the response if the account is off or gone. One read per connected account per 25s; a transient read failure never drops a good stream.",
+  "evidence": "server/src/verifySse.mts (throwaway, deleted); server/src/routes/events.ts",
+  "at": "2026-09-25",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 3
+ },
+ "d27s4": {
+  "verdict": "fail",
+  "method": "live-read",
+  "actual": "Still a fail, but the reason has changed and the danger is mostly gone. When this was checked earlier today the database had point-in-time recovery DISABLED (recoverable window: 60 minutes), no backup schedule, no backups and no delete protection — restoring to yesterday was impossible by any route. Now, on activityos-bef89 (default): POINT_IN_TIME_RECOVERY_ENABLED with version retention 604800s (7 days), a DAILY backup schedule retaining 8467200s (98 days), and DELETE_PROTECTION_ENABLED.",
+  "notes": "Why it is not a pass: nobody has REHEARSED a restore, which is what the step asks — and a rehearsal needs somewhere to restore INTO (a second database or project), which doesn't exist. Owed: restore into a new database name, time it, and write the procedure into DEPLOY.md, which still has no backup/restore section.",
+  "evidence": "firebase firestore:databases:get \"(default)\" --project activityos-bef89; firebase firestore:backups:schedules:list",
+  "at": "2026-09-25",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 2
+ }
+}

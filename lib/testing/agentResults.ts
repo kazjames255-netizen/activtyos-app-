@@ -73,6 +73,9 @@ import Y from "./agent-results/plan2-agent-Y.json";
 import Z from "./agent-results/plan2-agent-Z.json";
 import ZA from "./agent-results/plan2-agent-ZA.json";
 import ZB from "./agent-results/plan2-agent-ZB.json";
+// Three entries whose verdict changed after the retest agents wrote them,
+// because the fix landed later the same day — re-verified, not assumed.
+import ZC from "./agent-results/plan2-agent-ZC.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -96,4 +99,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
   ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
   ...(Z as Record<string, AgentResult>), ...(ZA as Record<string, AgentResult>), ...(ZB as Record<string, AgentResult>),
+  ...(ZC as Record<string, AgentResult>),
 };
