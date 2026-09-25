@@ -279,35 +279,12 @@ export function TestingApp() {
           if (!ag.length) return null;
           const n = (v: string) => ag.filter((a) => a.verdict === v).length;
           const adoptable = Object.entries(AGENT_RESULTS).filter(([id]) => !run[id]);
-          // A row this page copied in earlier is tagged "[Claude · <method>]" in
-          // its notes. When Claude re-checks a step (a config change unblocked
-          // it, or a fix landed), the copy in your run goes stale and the button
-          // above can't help: it only offers steps you have NEVER logged, so the
-          // headline counters kept showing September's verdicts. These are the
-          // copies whose source result is newer — never your own verdicts, which
-          // carry no tag.
-          const refreshable = Object.entries(AGENT_RESULTS).filter(([id, a]) => {
-            const mine = run[id];
-            return mine && (mine.notes ?? "").startsWith("[Claude · ") && a.at > mine.at;
-          });
           return (
             <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-[14px] bg-white/10 px-3 py-2 text-[12.5px] font-bold ring-1 ring-white/20">
               <span>🤖 Claude has checked {ag.length}/{p.total}</span>
               <Chip bg="#e4f7ed" fg="#0b7a52">{n("pass")} pass</Chip>
               <Chip bg="#fdeaee" fg="#b3123c">{n("fail")} fail</Chip>
               <Chip bg="#fdf1dc" fg="#a5760a">{n("blocked")} blocked</Chip>
-              {refreshable.length > 0 && (
-                <button type="button" onClick={() => {
-                  if (!confirm(`Update ${refreshable.length} step(s) where Claude has re-checked since you copied the result in? Only rows copied from Claude are touched — anything you logged yourself is left alone.`)) return;
-                  let r = run;
-                  for (const [id, a] of refreshable) {
-                    const st = [...PLAN, ...PLAN2].flatMap((d) => d.steps).find((x) => x.id === id);
-                    r = saveResult({ stepId: id, verdict: a.verdict, owner: st?.needsBackend ? "amir" : "triage", actual: a.actual, notes: `[Claude · ${a.method}] ${a.notes ?? ""}`.trim(), at: a.at });
-                  }
-                  setRun(r);
-                }} className="rounded-full bg-[#e4f7ed] px-3 py-1 text-[12px] font-extrabold text-[#0b7a52]">Update {refreshable.length} re-checked
-                </button>
-              )}
               {adoptable.length > 0 && (
                 <button type="button" onClick={() => {
                   if (!confirm(`Copy Claude's result into your run for the ${adoptable.length} step(s) you haven't logged yourself? Your own results are never overwritten.`)) return;
