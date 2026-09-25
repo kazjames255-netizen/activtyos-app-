@@ -66,6 +66,13 @@ import X from "./agent-results/plan2-agent-X.json";
 // 62MB unpaged) — supersedes plan2-agent-O's blocked reading; plus e2e suite
 // fixes (smoke-test cold-compile warm-up, signup consent-checkbox) — 17 Sept 2026.
 import Y from "./agent-results/plan2-agent-Y.json";
+// 25 Sept 2026 — re-test of everything whose verdict was fail/blocked only
+// because mail was off (Z), Stripe wasn't configured or had no webhook (ZA), or
+// nothing was deployed (ZB). Imported last, so these supersede the earlier
+// readings for the same step ids.
+import Z from "./agent-results/plan2-agent-Z.json";
+import ZA from "./agent-results/plan2-agent-ZA.json";
+import ZB from "./agent-results/plan2-agent-ZB.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -88,4 +95,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(Q as Record<string, AgentResult>), ...(R as Record<string, AgentResult>), ...(S as Record<string, AgentResult>),
   ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
   ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
+  ...(Z as Record<string, AgentResult>), ...(ZA as Record<string, AgentResult>), ...(ZB as Record<string, AgentResult>),
 };
