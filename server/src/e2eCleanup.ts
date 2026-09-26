@@ -30,6 +30,11 @@ const TENANT_SCOPED = [
   "notifications", "schedulerFired",
   "calendarEvents", "inventory",
   "emailMessages", "scheduledEmails", "emailSuppressions",
+  // Milestones: the head-office template + one progress doc per franchise.
+  "milestones", "milestoneProgress",
+  // The append-only subscription lifecycle log — left behind, a throwaway
+  // account's cancellation would sit in HQ's churn history for ever.
+  "subscriptionEvents",
 ];
 
 // Collections owned by a USER (parents have no tenant): field → collection.

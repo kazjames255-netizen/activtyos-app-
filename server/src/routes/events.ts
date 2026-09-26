@@ -184,6 +184,12 @@ events.get("/", async (req, res) => {
     listen(db.collection("mealOptions").where("tenantId", "==", tenantId), "mealOptions");
     listen(db.collection("mealOrders").where("tenantId", "==", tenantId), "mealOrders");
     listen(db.collection("mealMenus").where("tenantId", "==", tenantId), "mealMenus");
+    // Milestones — the head-office template is one doc per tenant; progress is
+    // one doc per franchise (a franchise only ever watches its own).
+    listen(db.collection("milestones").where("tenantId", "==", tenantId), "milestones");
+    let progQ: FirebaseFirestore.Query = db.collection("milestoneProgress").where("tenantId", "==", tenantId);
+    if (role === "franchise" && franchiseId) progQ = progQ.where("franchiseId", "==", franchiseId);
+    listen(progQ, "milestoneProgress");
   }
 
   const close = () => {

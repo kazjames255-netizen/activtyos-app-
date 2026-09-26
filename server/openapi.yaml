@@ -1,10 +1,88 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.32.0
+  version: 0.34.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.34.0 — Subscription history (HQ churn stops rewriting itself)
+
+    A tenant's `subscription` record is CURRENT STATE — it is overwritten on
+    every transition, and reactivating clears `canceledAt`. HQ's churn numbers
+    were derived from it, so last quarter's chart changed whenever a provider
+    came back. Every lifecycle transition is now **appended** to a new
+    collection and never touched again:
+
+    - **`subscriptionEvents`** (append-only, no route writes to it):
+      `{tenantId, type: trial_started|started|canceling|canceled|reactivated,
+      state, at, month, seq, plan, band, cadence, mrr, subscriptionId,
+      source}`. Written by `lib/billing.ts syncFromStripe` — i.e. from the
+      Stripe webhook, the subscription routes and the sync sweep, whichever
+      notices first — plus the record-only (no Stripe keys) paths in
+      `/api/subscription`. A repeat is refused twice over: no row is appended
+      unless the tenant's newest event has a different `state`, and the doc id
+      is deterministic (`{tenantId}__{seq}__{type}`, `create`-only), so a
+      replayed webhook or a sweep can never add a second row for the same
+      transition.
+    - **`GET /api/platform/churn?months=6`** (platform role only) →
+      `{months: [{month, label, base, canceled, pct}]}`, oldest first,
+      computed from those events. A cancellation counts in the month **notice
+      was given** (`canceling`), not the month the term ran out, so a
+      `cancel_at_period_end` provider is visible immediately; `base` is who was
+      on the books when the month opened, replayed from the log.
+    - **`tenants/{id}.createdAt`** is guaranteed: set at creation (it always
+      was) and backfilled on the tenants that predate it; the churn aggregate
+      additionally falls back to the document's own create time, so a missing
+      value can never land in every month's denominator.
+
+    ## v0.33.0 — Milestones (head-office template + per-franchise progress)
+
+    Milestones — the phased operational roadmap head office writes and every
+    franchise works through — had **no server storage at all**. The template
+    lived in the head office's browser (`localStorage aos.milestones.template.v1`)
+    and a franchise's progress in the franchise's browser
+    (`aos.milestones.progress.v1`), so the two never met: a franchisor could not
+    see how any franchise was doing (the HO screen rendered invented sample
+    progress), a franchise lost everything on a new device, and because each
+    browser seeded its own random step ids the two halves could not have been
+    reconciled even by hand. (Acceptance p2-f13.)
+
+    Two collections, mirroring the `libraries` convention:
+    `milestones/{tenantId}` (the template) and `milestoneProgress/{tenantId}` /
+    `milestoneProgress/{tenantId}__fr__{franchiseId}` (one roadmap's progress).
+    Step/action **ids are stable slugs** seeded server-side (`lib/milestonePlan.ts`)
+    so head office's plan and every franchise's progress key off the same ids —
+    renaming or re-ordering a phase never wipes progress.
+    - **`GET /api/milestones`** → `{template: {phases, version, updatedAt,
+      updatedBy}, progress: {season, steps, extras, history, updatedAt},
+      canEditTemplate, canEditProgress, rollup}`. The template is seeded from
+      the default 5-phase plan on first read. `?franchiseId=<id>` lets head
+      office drill into one franchise (`__ho__`/absent = its own roadmap).
+    - **`PUT /api/milestones/template`** `{phases}` — **company / freelancer
+      only**; a franchise gets 403 (its template edits used to land in its own
+      localStorage and look published). Bumps `version`. Duplicate task ids are
+      rejected: progress is keyed by task id.
+    - **`PUT /api/milestones/progress`** `{season?, steps, extras?}` — saves the
+      CALLER's own progress. `extras` is a franchise's own extra checklist items
+      under a head-office task (`{[taskId]: [{id,title}]}`) — they belong here,
+      not in head office's template. Head office may **read** a franchise's
+      progress but never write it (403).
+    - **`POST /api/milestones/season`** `{season}` — "Start a new season". The
+      reset is a server-side rule: snapshot the finished season into `history`
+      (capped at 12), then clear the **recurring** phases only — a one-time
+      launch phase stays done, and the planned dates survive (p2-l11).
+    - **`GET /api/milestones/franchises`** — **company only**: one row per
+      franchise (plus head office's own) with `season`, `overall`,
+      `currentPhase`, `stepsDone/stepsTotal`, per-phase `pct` and `updatedAt`.
+      The network roll-up a franchisor never had.
+    - Scope: company = template RW + every franchise read + own progress RW;
+      freelancer = template + own progress (no network); franchise = template
+      read-only, its OWN progress RW, a foreign `?franchiseId=` **refused**, not
+      widened. **staff / parent / platform are refused outright** — Milestones is
+      an owner's screen in both portals.
+    - Realtime: collections `milestones` and `milestoneProgress` (a franchise's
+      stream is narrowed to its own progress doc).
 
     ## v0.32.0 — Per-provider sending identity (interim white-label)
 
@@ -248,6 +326,9 @@ info:
       - `POST /` — send, creating the thread if needed. Operator body
         `{parentEmail, parentName?, body}` (must be a customer → 400 if not);
         parent body `{tenantId, body}` (must have booked them → 403 if not).
+        Merge fields in an operator's text are resolved per family before the
+        message is stored/emailed (same seven tokens and neutral fallbacks as
+        bulk Email sends; `/broadcast` resolves them per RECIPIENT).
     - **`GET /api/my/providers`** — the distinct providers (tenantId + name) a
       parent has booked, powering the newsfeed labels and the "message a
       provider" picker.
@@ -773,6 +854,11 @@ tags:
     description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
   - name: splitfees
     description: Franchisor royalty report — franchise revenue × royalty (company accounts only)
+  - name: milestones
+    description: >
+      The operational roadmap — head office owns one template per tenant, each
+      franchise owns its own progress against it, and head office reads the
+      whole network's roll-up. Owners only (staff/parents refused).
   - name: emails
     description: Out-of-app email to families — send/dry-run + history (operators)
   - name: registers
@@ -2457,6 +2543,129 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/milestones:
+    get:
+      tags: [milestones]
+      summary: The tenant's milestones template + one roadmap's progress
+      description: >
+        The template is seeded from the default 5-phase plan on first read.
+        Head office may name a franchise with `?franchiseId=`; a franchise
+        always gets its own roadmap and a foreign id is refused (403).
+      parameters:
+        - { name: franchiseId, in: query, required: false, description: "Head office only — a franchiseId, or `__ho__`/absent for its own roadmap", schema: { type: string } }
+      responses:
+        "200":
+          description: "{template, progress, canEditTemplate, canEditProgress, rollup}"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  template:
+                    type: object
+                    properties:
+                      phases: { type: array, items: { $ref: "#/components/schemas/MilestonePhase" } }
+                      version: { type: integer, description: Bumped on every template save }
+                      updatedAt: { type: string, nullable: true }
+                      updatedBy: { type: string, nullable: true }
+                  progress: { $ref: "#/components/schemas/MilestoneProgress" }
+                  canEditTemplate: { type: boolean }
+                  canEditProgress: { type: boolean }
+                  rollup: { $ref: "#/components/schemas/MilestoneRollup" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: No such franchise in this network }
+
+  /api/milestones/template:
+    put:
+      tags: [milestones]
+      summary: Rewrite the plan every franchise follows (company / freelancer)
+      description: >
+        A franchise is refused — the template is head office's. Task ids must be
+        unique across the whole plan: progress is keyed by them, so KEEP the
+        existing ids when renaming or re-ordering (a new id loses that task's
+        progress for every franchise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phases]
+              properties:
+                phases: { type: array, maxItems: 40, items: { $ref: "#/components/schemas/MilestonePhase" } }
+      responses:
+        "200": { description: "The stored template {phases, version, updatedAt, updatedBy}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/progress:
+    put:
+      tags: [milestones]
+      summary: Save my own progress (head office, a solo operator, or a franchise)
+      description: >
+        Saves the CALLER's roadmap. Head office can read a franchise's progress
+        but never write it (403) — it is the franchise's own record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MilestoneProgressWrite" }
+      responses:
+        "200": { description: The stored progress doc }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/season:
+    post:
+      tags: [milestones]
+      summary: Start a new season — snapshot, then reset the recurring phases
+      description: >
+        Server-side rule (not the browser's): the finished season is pushed onto
+        `history` (season, overall %, date — 12 kept) and every task in a
+        `recurring` phase is cleared (pct 0, its actions back to To do, taskId
+        dropped). One-time phases (launch setup, starting clubs) stay done, and
+        the planned start/end dates survive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [season]
+              properties:
+                season: { type: string, maxLength: 120, example: Summer 2027 }
+      responses:
+        "200": { description: The reset progress doc (with the new `history` head) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/franchises:
+    get:
+      tags: [milestones]
+      summary: How the whole network is doing (company only)
+      responses:
+        "200":
+          description: "{version, franchises[]} — one row per franchise plus head office's own"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: integer }
+                  franchises:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/MilestoneRollup"
+                        - type: object
+                          properties:
+                            franchiseId: { type: string, nullable: true, description: null = head office's own roadmap }
+                            name: { type: string }
+                            season: { type: string }
+                            started: { type: boolean, description: false = this franchise has never saved any progress }
+                            updatedAt: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/discounts:
     get:
       tags: [discounts]
@@ -2908,6 +3117,16 @@ paths:
         Operator body `{parentEmail, parentName?, body}` (the family must be a
         customer, else 400). Parent body `{tenantId, body}` (must have booked
         that provider, else 403).
+
+
+        **Merge fields** — an operator's `body`/`subject` is resolved before it
+        is stored or emailed: all seven tokens
+        (`{ParentName} {ChildName} {ProviderName} {ListingName} {SessionDate}
+        {VenueName} {BookingRef}`) fill from that family's most relevant booking
+        (next upcoming, else latest past), exactly as bulk Email sends and
+        `POST /api/messages/broadcast` do. Anything with no data behind it
+        degrades to neutral prose (`{BookingRef}` to an empty string) — a family
+        never receives a literal `{Token}`. A parent's message is never merged.
       requestBody:
         required: true
         content:
@@ -4372,6 +4591,49 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/platform/churn:
+    get:
+      tags: [tenants]
+      summary: Churn per month from the append-only subscription history (platform role only)
+      description: |
+        Oldest month first. Computed from `subscriptionEvents` (append-only,
+        immutable), NOT from each tenant's current `subscription` doc — a
+        provider who cancels and later reactivates leaves both events behind,
+        so a month's number never changes once the month is over.
+
+        A cancellation is counted in the month **notice was given** (the
+        `canceling` event); the `canceled` event that follows it is the term
+        expiring and is not counted twice. A subscription that ends outright
+        with no notice counts at its `canceled`. `base` is the providers who
+        were on the books when the month opened, replayed from the log
+        (pre-billing tenants with no `subscription` field count from their
+        signup date; a signup that never chose a plan does not).
+      parameters:
+        - name: months
+          in: query
+          description: How many calendar months to return, ending with the current one (1–36, default 6).
+          schema: { type: integer, minimum: 1, maximum: 36, default: 6 }
+      responses:
+        "200":
+          description: One row per month, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  months:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: string, description: "`YYYY-MM` (UTC)" }
+                        label: { type: string, description: Short month name, e.g. `Sep` }
+                        base: { type: integer, description: Providers on the books when the month opened }
+                        canceled: { type: integer, description: Providers who gave notice (or ended outright) that month }
+                        pct: { type: number, description: canceled ÷ base as a percentage }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /api/tenants:
     get:
       tags: [tenants]
@@ -4435,6 +4697,121 @@ components:
     Role:
       type: string
       enum: [platform, company, franchise, freelancer, staff, parent]
+
+    MilestoneAction:
+      type: object
+      description: A checklist item inside a task. Head office defines these in the template; a franchise's own extras live in `progress.extras`.
+      properties:
+        id: { type: string, maxLength: 80 }
+        title: { type: string, maxLength: 240 }
+
+    MilestoneStep:
+      type: object
+      description: A task inside a milestone. Its `id` is the progress key — never re-generate it.
+      required: [id, title]
+      properties:
+        id: { type: string, maxLength: 80, example: before-kit }
+        title: { type: string, maxLength: 240 }
+        detail: { type: string, maxLength: 2000 }
+        links:
+          type: array
+          maxItems: 12
+          description: Deep links into the app (`/franchise/<view>`).
+          items:
+            type: object
+            properties:
+              label: { type: string, maxLength: 80 }
+              href: { type: string, maxLength: 400 }
+        actions: { type: array, maxItems: 60, items: { $ref: "#/components/schemas/MilestoneAction" } }
+
+    MilestonePhase:
+      type: object
+      description: A milestone. `recurring` phases are the ones a new season resets.
+      required: [id, title, when, recurring, steps]
+      properties:
+        id: { type: string, maxLength: 80, example: before }
+        title: { type: string, maxLength: 160 }
+        subtitle: { type: string, maxLength: 400 }
+        when: { type: string, enum: [setup, before, during, after, clubs] }
+        recurring: { type: boolean }
+        icon: { type: string, maxLength: 16 }
+        steps: { type: array, maxItems: 80, items: { $ref: "#/components/schemas/MilestoneStep" } }
+
+    MilestoneStepState:
+      type: object
+      description: One task's progress — planned dates plus completion. When the task has actions, its effective % is rolled up from them and `pct` is ignored.
+      required: [pct]
+      properties:
+        start: { type: string, description: "YYYY-MM-DD" }
+        end: { type: string, description: "YYYY-MM-DD" }
+        pct: { type: number, minimum: 0, maximum: 100 }
+        actions:
+          type: object
+          description: Per-action state, keyed by action id.
+          additionalProperties:
+            type: object
+            properties:
+              status: { type: string, enum: [todo, prog, done] }
+              done: { type: boolean, description: Legacy — treated as status done }
+              priority: { type: string, enum: [low, med, high, urgent] }
+              note: { type: string, maxLength: 2000 }
+              assignee: { type: string, maxLength: 160 }
+              due: { type: string, description: "YYYY-MM-DD" }
+              taskId: { type: string, description: The Task Manager task this action was pushed to }
+
+    MilestoneProgressWrite:
+      type: object
+      required: [steps]
+      properties:
+        season: { type: string, maxLength: 120 }
+        steps:
+          type: object
+          description: Progress keyed by TASK id (template step id).
+          additionalProperties: { $ref: "#/components/schemas/MilestoneStepState" }
+        extras:
+          type: object
+          description: A franchise's own extra actions under a head-office task, keyed by task id.
+          additionalProperties: { type: array, maxItems: 60, items: { $ref: "#/components/schemas/MilestoneAction" } }
+
+    MilestoneProgress:
+      allOf:
+        - $ref: "#/components/schemas/MilestoneProgressWrite"
+        - type: object
+          properties:
+            tenantId: { type: string }
+            franchiseId: { type: string, nullable: true, description: null = head office's / a solo operator's own roadmap }
+            history:
+              type: array
+              description: Past seasons, newest first (12 kept), pushed by POST /api/milestones/season.
+              items:
+                type: object
+                properties:
+                  season: { type: string }
+                  overall: { type: integer }
+                  at: { type: string, description: "YYYY-MM-DD" }
+            updatedAt: { type: string, nullable: true }
+            updatedBy: { type: string, nullable: true }
+
+    MilestoneRollup:
+      type: object
+      description: Where a roadmap has got to — computed server-side from the template + that roadmap's progress, so head office and the franchise always read the same numbers.
+      properties:
+        overall: { type: integer, description: "% across every task" }
+        stepsTotal: { type: integer }
+        stepsDone: { type: integer }
+        currentPhase: { type: string, nullable: true, description: The first milestone that isn't finished }
+        phases:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              when: { type: string, enum: [setup, before, during, after, clubs] }
+              recurring: { type: boolean }
+              pct: { type: integer }
+              steps: { type: integer }
+              done: { type: integer }
 
     TfcFailure:
       type: string
