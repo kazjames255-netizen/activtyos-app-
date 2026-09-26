@@ -8,6 +8,7 @@ import {
   staffCount, pendingStaffInvites, locationCount, updateMeteredQuantities, type SubRecord,
 } from "../lib/billing";
 import { accessFor, clearSubscriptionCache, subscriptionState } from "../middleware/subscription";
+import { recordSubscriptionEvent } from "../lib/subscriptionEvents";
 
 // Subscription (Money) — which plan the provider is on. There is no billing
 // integration yet (no Stripe Billing), so this records the chosen plan on the
@@ -476,6 +477,9 @@ subscription.put("/", async (req, res) => {
     perLocationPct: lim.perLocationPct,
   };
   await db.collection("tenants").doc(auth.tenantId).set({ subscription: sub }, { merge: true });
+  // The Stripe paths record their history from syncFromStripe; this one has no
+  // Stripe subscription to sync, so it appends its own (lib/subscriptionEvents.ts).
+  await recordSubscriptionEvent({ tenantId: auth.tenantId, status: sub.status, at: now, source: "route" });
   clearSubscriptionCache(auth.tenantId);
   res.json({ current: { ...sub, details: plans.find((p) => p.id === sub.plan) }, plans, billingConfigured: !!stripe });
 });
@@ -498,6 +502,9 @@ subscription.post("/cancel", async (req, res) => {
 
   const cancelAt = sub.currentPeriodEnd ?? sub.trialEndsAt ?? new Date().toISOString();
   await saveSub(auth.tenantId, { status: "canceling", cancelAt });
+  // Notice given NOW, even though the term runs to cancelAt — the month the
+  // provider decided is the month HQ's churn must count (backlog 46a).
+  await recordSubscriptionEvent({ tenantId: auth.tenantId, status: "canceling", source: "route" });
   clearSubscriptionCache(auth.tenantId);
   res.json({ ok: true, status: "canceling", cancelAt });
 });
@@ -586,6 +593,9 @@ subscription.post("/reactivate", async (req, res) => {
 
   const now = new Date().toISOString();
   await saveSub(auth.tenantId, { status: "active", cancelAt: null, currentPeriodEnd: addDays(now, 30), since: sub.since ?? now });
+  // The cancellation stays in the log — coming back is its own event, it never
+  // erases the leaving.
+  await recordSubscriptionEvent({ tenantId: auth.tenantId, status: "active", at: now, source: "route" });
   clearSubscriptionCache(auth.tenantId);
   res.json({ ok: true, status: "active" });
 });

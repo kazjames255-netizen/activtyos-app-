@@ -682,7 +682,7 @@ async function subscriptionSync(): Promise<void> {
     if (!sub?.stripeSubscriptionId || sub.status === "canceled") continue;
     try {
       const s = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
-      await syncFromStripe(t.id, s);
+      await syncFromStripe(t.id, s, "sweep");
       await updateMeteredQuantities(t.id);
       clearSubscriptionCache(t.id);
     } catch (e) {

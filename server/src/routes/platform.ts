@@ -4,6 +4,7 @@ import { db, auth } from "../firebase";
 import type { BookingDoc } from "../lib/bookingDoc";
 import { takesStaffSeat } from "../lib/billing";
 import { getPlans, limitsFor } from "./subscription";
+import { churnByMonth } from "../lib/subscriptionEvents";
 
 export const platform = Router();
 
@@ -329,6 +330,23 @@ platform.post("/at-risk/:id/contacted", async (req, res) => {
   const contacted = (req.body as { contacted?: boolean })?.contacted !== false;
   await db.collection("tenants").doc(req.params.id).set({ retentionContactedAt: contacted ? new Date().toISOString() : null }, { merge: true });
   res.json({ ok: true, contactedAt: contacted ? new Date().toISOString() : null });
+});
+
+// ── GET /churn?months=6 — the churn rate per month, from HISTORY ──────────
+// [{month, label, base, canceled, pct}], oldest first. Read from the
+// append-only subscriptionEvents log, NOT from the current subscription doc:
+// a provider who cancels and later returns leaves both events behind, so the
+// month they left keeps its number for ever. Computing this from current state
+// (which is what HQ's Fall-off card does today from /providers) meant
+// reactivation cleared `canceledAt` and last quarter's chart silently changed
+// — backlog 46a / acceptance p2-m35. A cancellation counts in the month NOTICE
+// was given, so `cancel_at_period_end` shows up when the provider decided
+// rather than when their term happened to run out.
+platform.get("/churn", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const asked = Number(req.query.months);
+  const months = Math.min(36, Math.max(1, Number.isFinite(asked) ? Math.round(asked) : 6));
+  res.json(await churnByMonth(months));
 });
 
 // GET /api/platform/analytics — the money/trends dashboard for HQ: MRR/ARR,

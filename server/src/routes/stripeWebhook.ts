@@ -11,7 +11,11 @@ import { clearSubscriptionCache } from "../middleware/subscription";
 //
 // 1. BILLING (platform account): keeps tenants' subscription records in
 //    lock-step with Stripe — trial → charged → active, payment failed →
-//    past_due, cancel at period end → canceled.
+//    past_due, cancel at period end → canceled. Each of those transitions is
+//    also APPENDED to the immutable lifecycle log (lib/subscriptionEvents.ts,
+//    via syncFromStripe) — that's what HQ's churn figures are computed from,
+//    so they stop moving once a month is over. The event.id claim below keeps
+//    a retried delivery from appending a second row.
 // 2. CONNECT (providers' connected accounts): settles parents' card payments
 //    server-side. Direct charges live on the provider's account, so these
 //    events arrive with `event.account` set — the endpoint must have "listen
@@ -83,7 +87,7 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
         const tenantId = tenantOf(s) ?? (await tenantForCustomer(String(s.customer)));
         if (tenantId) {
           const before = event.data.previous_attributes as { status?: string } | undefined;
-          const status = await syncFromStripe(tenantId, s);
+          const status = await syncFromStripe(tenantId, s, "webhook");
           clearSubscriptionCache(tenantId);
           // Every retry failed and Stripe is set to "mark unpaid": the tenant
           // is locked but RECOVERABLE — updating the card settles the open
@@ -121,7 +125,7 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
           ?? inv.parent?.subscription_details?.subscription;
         if (tenantId && subId) {
           const s = await stripe.subscriptions.retrieve(typeof subId === "string" ? subId : subId.id);
-          await syncFromStripe(tenantId, s);
+          await syncFromStripe(tenantId, s, "webhook");
           clearSubscriptionCache(tenantId);
         }
         break;

@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { db } from "../firebase";
 import { stripe, toPence } from "./stripe";
 import { notify } from "./notify";
+import { recordSubscriptionEvent, type SubEventSource } from "./subscriptionEvents";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Stripe Billing helpers — the platform's OWN revenue (the plan fee a
@@ -197,8 +198,19 @@ const OVERDUE = new Set(["past_due", "unpaid"]);
  *  invent locally is "canceling" (Stripe says active + cancel_at_period_end).
  *  "unpaid" is kept as itself, NOT folded into past_due: it's Stripe's
  *  end-of-dunning state (every retry spent), so the grace period is already
- *  over and accessFor() locks it — see middleware/subscription.ts. */
-export async function syncFromStripe(tenantId: string, s: Stripe.Subscription): Promise<string> {
+ *  over and accessFor() locks it — see middleware/subscription.ts.
+ *
+ *  This is also where the lifecycle gets WRITTEN DOWN. Every Stripe-driven
+ *  change funnels through here — the webhook, each subscription route, the
+ *  sync sweep — so appending the transition here records it once, at the
+ *  moment it happens, from whichever of those noticed first (`source` says
+ *  which). lib/subscriptionEvents.ts refuses a repeat, so the webhook's
+ *  retry and the sweep can't add a second row for the same transition. */
+export async function syncFromStripe(
+  tenantId: string,
+  s: Stripe.Subscription,
+  source: SubEventSource = "route",
+): Promise<string> {
   const status =
     s.status === "trialing" ? (s.cancel_at_period_end ? "canceling" : "trialing")
     : s.status === "active" ? (s.cancel_at_period_end ? "canceling" : "active")
@@ -220,6 +232,16 @@ export async function syncFromStripe(tenantId: string, s: Stripe.Subscription): 
     cancelAt: s.cancel_at_period_end ? (iso(s.cancel_at) ?? periodEnd(s)) : null,
     ...(status === "canceled" ? { canceledAt: iso(s.canceled_at) ?? new Date().toISOString() } : {}),
   });
+  // History (append-only, immutable) — the tenant record above is current
+  // state and gets overwritten; this doesn't. Stripe's own clock where it has
+  // one: a trial started when the subscription did, a trial converted when it
+  // ended, a subscription ended when Stripe says it was canceled.
+  const happenedAt =
+    status === "canceled" ? iso(s.canceled_at)
+    : status === "trialing" ? iso(s.start_date)
+    : status === "active" ? ((s.trial_end && s.trial_end * 1000 <= Date.now() ? iso(s.trial_end) : null) ?? iso(s.start_date))
+    : null; // "canceling" — Stripe records no "notice given at", so: now.
+  await recordSubscriptionEvent({ tenantId, status, at: happenedAt, subscriptionId: s.id, source });
   return status;
 }
 
