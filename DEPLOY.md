@@ -290,6 +290,64 @@ Not needed to run or deploy the app.
 
 ---
 
+## 7. Backups and restore
+
+Configured on `activityos-bef89` (default database) on 25 Sept 2026:
+
+| Setting | Value | Why |
+|---|---|---|
+| Point-in-time recovery | **ENABLED** | Version retention went from 1 hour to **7 days**. Before this, anything older than 60 minutes was unrecoverable. |
+| Backup schedule | **DAILY**, retained 98 days | Covers the case PITR can't: a fault discovered more than a week later. |
+| Delete protection | **ENABLED** | The database cannot be deleted by accident or by a stray script. |
+
+Check them any time:
+
+```bash
+firebase firestore:databases:get "(default)" --project activityos-bef89
+firebase firestore:backups:schedules:list --database "(default)" --project activityos-bef89
+```
+
+### Restoring — rehearsed 26 Sept 2026, end to end
+
+A restore does **not** overwrite the live database: it creates a NEW one from a
+snapshot, which you then read from or promote deliberately. That's the whole
+reason it is safe to practise.
+
+```bash
+# "As it was at 14:40 UTC" — any minute within the 7-day window.
+firebase firestore:databases:clone \
+  "projects/activityos-bef89/databases/(default)" \
+  "projects/activityos-bef89/databases/restore-drill2" \
+  --snapshot-time 2026-09-26T14:40:00Z \
+  --project activityos-bef89
+```
+
+Notes from actually doing it:
+
+- **The clone command creates the target itself.** Creating the database first
+  gets you `409 Database already exists`.
+- Both names must be **full paths** (`projects/<id>/databases/<name>`); a bare
+  name fails with "Error parsing database name".
+- **Timing: about 27 minutes** for this dataset (~120 tenants, ~350 bookings,
+  71k leads). While it runs, reads against the new database fail with
+  `FAILED_PRECONDITION: Cannot serve requests when the database is undergoing a
+  restore` — that is normal, not an error to chase.
+- Verified by counting: the restore held 119 tenants and 347 bookings, matching
+  the snapshot moment rather than the live figures at the time (122 / 310).
+- Read the restored data with the admin SDK by naming the database:
+  `getFirestore(app, "restore-drill2")`.
+- Delete a drill database when finished — it bills like any other. Delete
+  protection is ON by default on a clone, so turn it off first:
+
+```bash
+firebase firestore:databases:update restore-drill2 --delete-protection DISABLED --project activityos-bef89
+firebase firestore:databases:delete restore-drill2 --project activityos-bef89 --force
+```
+
+**To actually recover in anger:** clone to a new database, verify it holds what
+you expect, then repoint the API at it (the admin SDK takes a database id) or
+copy the affected collections back. Do not delete the live database.
+
 ## Handover notes (for Amir)
 
 The code side is done and committed — nothing more to change in the repo to go

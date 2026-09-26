@@ -20,13 +20,13 @@
   "retest": 3
  },
  "d27s4": {
-  "verdict": "fail",
+  "verdict": "pass",
   "method": "live-read",
-  "actual": "Still a fail, but the reason has changed and the danger is mostly gone. When this was checked earlier today the database had point-in-time recovery DISABLED (recoverable window: 60 minutes), no backup schedule, no backups and no delete protection — restoring to yesterday was impossible by any route. Now, on activityos-bef89 (default): POINT_IN_TIME_RECOVERY_ENABLED with version retention 604800s (7 days), a DAILY backup schedule retaining 8467200s (98 days), and DELETE_PROTECTION_ENABLED.",
-  "notes": "Why it is not a pass: nobody has REHEARSED a restore, which is what the step asks — and a rehearsal needs somewhere to restore INTO (a second database or project), which doesn't exist. Owed: restore into a new database name, time it, and write the procedure into DEPLOY.md, which still has no backup/restore section.",
-  "evidence": "firebase firestore:databases:get \"(default)\" --project activityos-bef89; firebase firestore:backups:schedules:list",
-  "at": "2026-09-25",
+  "actual": "Rehearsed end to end on 26 Sept 2026. Point-in-time recovery is ENABLED on activityos-bef89 (version retention 7 days, was 1 hour), a DAILY backup schedule retains 98 days, and delete protection is ON. A restore of the live database as it stood at 14:40 UTC was cloned into a separate database and READ BACK: 119 tenants and 347 bookings, matching the snapshot moment rather than the live figures at the time (122 / 310, which had moved as fixtures were created and cleaned up). Wall-clock: about 27 minutes, during which the new database correctly refuses reads with FAILED_PRECONDITION.",
+  "notes": "A restore creates a NEW database from a snapshot — it never overwrites the live one, which is what makes practising it safe. The exact commands, the two mistakes that cost time (the clone creates the target itself, and both names must be full resource paths), the timing and how to clean up a drill database are now written into DEPLOY.md section 7, which is what this step asked for. The drill database was deleted afterwards.",
+  "evidence": "firebase firestore:databases:clone …; admin SDK getFirestore(app, \"restore-drill2\") count comparison; DEPLOY.md §7",
+  "at": "2026-09-26",
   "agent": "ZC (post-fix re-verify)",
-  "retest": 2
+  "retest": 3
  }
 }
