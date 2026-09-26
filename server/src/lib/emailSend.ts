@@ -14,6 +14,7 @@ import { tenantSender } from "./sender";
  *  must resolve from the recipient's inbox, not from the web app). */
 import { sign, verify } from "./signing";
 import { ukToday } from "./ukDate";
+import { applyTokens, hasMergeTokens, mergeContexts } from "./mergeFields";
 
 export const apiUrl = process.env.API_URL || "http://localhost:4000";
 
@@ -61,87 +62,8 @@ const unsubFooter = (tenantId: string, to: string) => {
 // {VenueName}/{BookingRef} resolve per recipient from that family's most
 // relevant booking (next upcoming, else latest past). This is what lets
 // booking-scoped templates be used in bulk Email sends — nothing goes out
-// with a raw {Token} in it.
-
-const TOKEN_RE = /\{(ParentName|ChildName|ProviderName|ListingName|SessionDate|VenueName|BookingRef)\}/i;
-
-/** Neutral phrasing for a family we can't match to a booking — an email that
- *  reads a little generic beats one with {SessionDate} left in it. */
-const TOKEN_FALLBACK: Record<string, string> = {
-  parentname: "there",
-  childname: "your child",
-  listingname: "your booking",
-  sessiondate: "your booked dates",
-  venuename: "the venue",
-  bookingref: "",
-};
-
-// Merge values are PARENT-TYPED (their name, their child's name). Filled into
-// HTML they're escaped — a child named `<a href=…>` used to become a live link
-// in an email sent from the provider's own address. Subjects are plain text.
-const escMerge = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
-const applyTokens = (s: string, ctx: Record<string, string>, html = false): string =>
-  s.replace(/\{([A-Za-z]+)\}/g, (raw, t: string) => {
-    const key = t.toLowerCase();
-    const v = ctx[key] ?? TOKEN_FALLBACK[key];
-    return v === undefined ? raw : html ? escMerge(v) : v;
-  });
-
-/** email → merge context, from each family's most relevant booking. */
-async function mergeContexts(tenantId: string, recipients: string[]): Promise<Map<string, Record<string, string>>> {
-  // UK wall clock: in BST a UTC "today" is yesterday until 01:00, which put a
-  // session happening TODAY in the "upcoming" bucket for {SessionDate}.
-  const today = ukToday();
-  const wanted = new Set(recipients);
-  const [tenant, lib, bookings] = await Promise.all([
-    db.collection("tenants").doc(tenantId).get(),
-    db.collection("libraries").doc(tenantId).get(),
-    db.collection("bookings").where("tenantId", "==", tenantId).get(),
-  ]);
-  const settings = (lib.data()?.settings ?? {}) as { providerName?: string };
-  const providerName = settings.providerName?.trim() || (tenant.get("name") as string | undefined) || "Your activity provider";
-  const venues = ((lib.data()?.venues ?? []) as { id: string; name: string }[]);
-
-  type B = { email?: string; status?: string; booker?: string; child?: string; kids?: { name?: string }[]; days?: string[]; dates?: string; listing?: string; listingId?: string; ref?: string };
-  const best = new Map<string, { b: B; firstUpcoming: string | null; last: string }>();
-  for (const d of bookings.docs) {
-    const b = d.data() as B;
-    const e = (b.email ?? "").toLowerCase();
-    if (!wanted.has(e) || b.status === "Cancelled" || b.status === "Declined") continue;
-    const days = (b.days ?? []).slice().sort();
-    const firstUpcoming = days.find((x) => x >= today) ?? null;
-    const last = days[days.length - 1] ?? "";
-    const cur = best.get(e);
-    // Prefer a booking with an upcoming session (soonest first); otherwise
-    // the most recently finished one.
-    const wins = !cur
-      || (firstUpcoming && (!cur.firstUpcoming || firstUpcoming < cur.firstUpcoming))
-      || (!cur.firstUpcoming && !firstUpcoming && last > cur.last);
-    if (wins) best.set(e, { b, firstUpcoming, last });
-  }
-
-  const listingVenue = new Map<string, string>();
-  const ctxs = new Map<string, Record<string, string>>();
-  for (const [email, { b }] of best) {
-    if (b.listingId && !listingVenue.has(b.listingId)) {
-      const l = await db.collection("listings").doc(b.listingId).get();
-      const venueId = l.exists ? (l.get("venueId") as string | undefined) : undefined;
-      listingVenue.set(b.listingId, venues.find((v) => v.id === venueId)?.name ?? "");
-    }
-    ctxs.set(email, {
-      providername: providerName,
-      parentname: (b.booker ?? "").split(/\s+/)[0] || "there",
-      childname: b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean).join(", ") : (b.child ?? "your child"),
-      listingname: b.listing ?? "your booking",
-      sessiondate: b.dates ?? "your booked dates",
-      ...(b.listingId && listingVenue.get(b.listingId) ? { venuename: listingVenue.get(b.listingId)! } : {}),
-      ...(b.ref ? { bookingref: b.ref } : {}),
-    });
-  }
-  // Everyone still gets {ProviderName} even with no booking on file.
-  for (const r of recipients) if (!ctxs.has(r)) ctxs.set(r, { providername: providerName });
-  return ctxs;
-}
+// with a raw {Token} in it. The resolver itself is shared with the Messages
+// send paths (1:1, from-booking, broadcast) — see lib/mergeFields.ts.
 
 export interface EmailSendInput {
   tenantId: string;
@@ -210,7 +132,7 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
 
   void (async () => {
     // Merge fields only cost a booking scan when the content actually uses them.
-    const needsMerge = TOKEN_RE.test(`${input.subject} ${input.body} ${input.html ?? ""}`);
+    const needsMerge = hasMergeTokens(input.subject, input.body, input.html);
     const ctxs = needsMerge ? await mergeContexts(input.tenantId, input.recipients) : null;
     let delivered = 0;
     // Suppressed ≠ delivered: with MAIL_LIVE off the message never left the

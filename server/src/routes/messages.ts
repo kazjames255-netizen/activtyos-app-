@@ -9,6 +9,7 @@ import { emailNewMessage } from "../lib/emails";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { customerAreaOn } from "../lib/customerArea";
 import { webUrl } from "../lib/stripe";
+import { applyTokens, bookingCtx, hasMergeTokens, mergeContextForEmail, mergeContexts, pickBest, tenantMergeBase, venueResolver, type BookingLike, type MergeCtx } from "../lib/mergeFields";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Messages (Communication) — 1:1 threads between a provider (tenant) and a
@@ -84,25 +85,22 @@ async function threadExists(tenantId: string, email: string) {
 }
 // An operator may message anyone in their own customer list, booking or not —
 // the customer list is who they've chosen to work with. Case-insensitive so a
-// mixed-case stored email still matches the lowercased recipient.
-async function isMyCustomer(tenantId: string, email: string) {
+// mixed-case stored email still matches the lowercased recipient. Returns the
+// record (not just a yes/no) so the merge fields below can reuse this one scan
+// for {ParentName}/{ChildName} instead of reading customers a second time.
+interface CustomerRec { name?: string; email?: string; children?: { name?: string }[] }
+async function myCustomer(tenantId: string, email: string): Promise<CustomerRec | null> {
   const e = email.toLowerCase();
   const snap = await db.collection("customers").where("tenantId", "==", tenantId).get();
-  return snap.docs.some((d) => ((d.data().email as string | undefined) ?? "").toLowerCase() === e);
+  const hit = snap.docs.find((d) => ((d.data().email as string | undefined) ?? "").toLowerCase() === e);
+  return hit ? (hit.data() as CustomerRec) : null;
 }
-// Pro-composer merge fields we can resolve for any recipient. (Per-booking ones
-// like {ChildName}/{BookingRef} need booking context — see handoff §II.)
-interface MergeVars { parentName?: string; providerName?: string; childName?: string; listingName?: string; sessionDate?: string; venueName?: string; bookingRef?: string }
-function mergeText(text: string, v: MergeVars): string {
-  return text
-    .replace(/\{ParentName\}/gi, v.parentName ?? "")
-    .replace(/\{ProviderName\}/gi, v.providerName ?? "")
-    .replace(/\{ChildName\}/gi, v.childName ?? "")
-    .replace(/\{ListingName\}/gi, v.listingName ?? "")
-    .replace(/\{SessionDate\}/gi, v.sessionDate ?? "")
-    .replace(/\{VenueName\}/gi, v.venueName ?? "")
-    .replace(/\{BookingRef\}/gi, v.bookingRef ?? "");
-}
+// Merge fields are resolved by lib/mergeFields.ts — the SAME resolver the bulk
+// Email sends use — on every send path below (1:1, from-booking, broadcast), so
+// no family ever receives a literal "Hi {ParentName}". Values come from that
+// family's booking; anything we can't fill degrades to neutral prose (the
+// fallback rule is documented in lib/mergeFields.ts).
+const kidsOf = (c?: { children?: { name?: string }[] } | null) => (c?.children ?? []).map((k) => k.name).filter(Boolean).join(" & ");
 
 // GET /api/messages/threads — the caller's conversations (newest activity first).
 messages.get("/threads", async (req, res) => {
@@ -181,6 +179,7 @@ messages.post("/", async (req, res) => {
   const auth = req.auth!;
   let tenantId: string, parentEmail: string, parentName: string, from: "operator" | "parent";
   let subject: string | undefined;
+  let customer: CustomerRec | null = null;
 
   if (auth.role === "parent") {
     const parsed = startParentSchema.safeParse(req.body);
@@ -203,7 +202,8 @@ messages.post("/", async (req, res) => {
     if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
     tenantId = auth.tenantId;
     parentEmail = parsed.data.parentEmail.toLowerCase();
-    if (!(await isMyCustomer(tenantId, parentEmail)) && !(await hasBooking(tenantId, parentEmail))) {
+    customer = await myCustomer(tenantId, parentEmail);
+    if (!customer && !(await hasBooking(tenantId, parentEmail))) {
       res.status(400).json({ error: "You can only message your own customers or families who've booked" });
       return;
     }
@@ -212,7 +212,21 @@ messages.post("/", async (req, res) => {
     subject = parsed.data.subject;
   } else { res.status(403).json({ error: "Requires a parent or operator account" }); return; }
 
-  const body = (req.body as { body: string }).body.trim();
+  let body = (req.body as { body: string }).body.trim();
+  // Merge fields on the plain 1:1 path (acceptance p2-n2/p2-rt12, item 29): the
+  // body used to be stored and emailed VERBATIM, so a family literally received
+  // "Hi {ParentName}". Same resolver as the bulk Email sends, from this ONE
+  // family's bookings — an indexed (tenantId, email) query, never a collection
+  // scan. Only an operator's own message merges: a parent typing braces is
+  // typing text, not a field.
+  if (from === "operator" && hasMergeTokens(body, subject)) {
+    const ctx = await mergeContextForEmail(tenantId, parentEmail, {
+      parentName: customer?.name ?? (parentName.includes("@") ? undefined : parentName),
+      childName: kidsOf(customer) || undefined,
+    });
+    body = applyTokens(body, ctx);
+    if (subject) subject = applyTokens(subject, ctx);
+  }
   const id = threadId(tenantId, parentEmail);
   const now = new Date().toISOString();
   const tRef = threadsCol.doc(id);
@@ -281,36 +295,17 @@ messages.post("/from-booking", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", parsed.data.ref).limit(1).get();
   if (bkSnap.empty) { res.status(404).json({ error: "Booking not found" }); return; }
-  const b = bkSnap.docs[0].data() as { booker?: string; email?: string; child?: string; kids?: { name?: string }[]; listing?: string; dates?: string; ref?: string; listingId?: string };
+  const b = bkSnap.docs[0].data() as BookingLike;
   if (!b.email || !isEmail(b.email)) { res.status(400).json({ error: "That booking has no valid email to message." }); return; }
 
-  const pName = await tenantName(tenantId);
-  // Venue lives on the tenant's venues[], reached via the listing's venueId.
-  // Bookings don't always store listingId, so fall back to matching the listing
-  // by name within the tenant.
-  let venueName = "";
-  let venueId: string | undefined;
-  if (b.listingId) venueId = (await db.collection("listings").doc(b.listingId).get()).data()?.venueId as string | undefined;
-  if (!venueId && b.listing) {
-    const ls = await db.collection("listings").where("tenantId", "==", tenantId).get();
-    const match = ls.docs.find((d) => { const x = d.data() as { name?: string; title?: string }; return x.name === b.listing || x.title === b.listing; });
-    venueId = match?.data()?.venueId as string | undefined;
-  }
-  if (venueId) {
-    const venues = (await db.collection("tenants").doc(tenantId).get()).data()?.venues as { id: string; name: string }[] | undefined;
-    venueName = venues?.find((v) => v.id === venueId)?.name ?? "";
-  }
-  const vars: MergeVars = {
-    parentName: b.booker,
-    providerName: pName,
-    childName: b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean).join(" & ") : b.child,
-    listingName: b.listing,
-    sessionDate: b.dates,
-    venueName,
-    bookingRef: b.ref,
-  };
-  const body = mergeText(parsed.data.body, vars);
-  const mergedSubject = parsed.data.subject ? mergeText(parsed.data.subject, vars) : "";
+  // All seven tokens from THIS booking, via the shared resolver. (Venues live on
+  // the LIBRARY doc — this path used to look for them on the tenant doc, so
+  // {VenueName} always came out as the fallback.)
+  const base = await tenantMergeBase(tenantId);
+  const pName = base.tenantName; // thread/email header — unchanged by the merge work
+  const ctx = bookingCtx(base, b, await venueResolver(tenantId, base)(b));
+  const body = applyTokens(parsed.data.body, ctx);
+  const mergedSubject = parsed.data.subject ? applyTokens(parsed.data.subject, ctx) : "";
   // Preview: return the resolved text (exactly what would send) without sending.
   if (parsed.data.preview) { res.json({ subject: mergedSubject, body }); return; }
   const email = b.email.toLowerCase();
@@ -490,15 +485,22 @@ messages.post("/broadcast", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const recipients = new Map<string, string>(); // email → best-known name (deduped)
   const childByEmail = new Map<string, string>(); // email → child name(s), for {ChildName}
+  // The booking on the TARGETED listing, per family — the right source of truth
+  // for this broadcast's {SessionDate}/{VenueName}/{BookingRef}.
+  const onListing = new Map<string, BookingLike[]>();
   const wanted = new Set(parsed.data.listings);
+  // One read of the tenant's bookings serves recipient resolution AND the merge
+  // contexts below (mergeContexts() would otherwise scan the collection again).
+  let bkSnap: FirebaseFirestore.QuerySnapshot | null = null;
   if (wanted.size) {
-    const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
-    bk.docs.forEach((d) => {
-      const b = d.data() as { email?: string; booker?: string; listing?: string; child?: string };
+    bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+    bkSnap.docs.forEach((d) => {
+      const b = d.data() as BookingLike;
       if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) {
         const el = b.email.toLowerCase();
         recipients.set(el, b.booker ?? b.email);
         if (b.child) childByEmail.set(el, b.child);
+        (onListing.get(el) ?? onListing.set(el, []).get(el)!).push(b);
       }
     });
   }
@@ -536,8 +538,28 @@ messages.post("/broadcast", async (req, res) => {
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
   const tName = await tenantName(tenantId);
-  // {ListingName} is only unambiguous when exactly one listing was targeted.
-  const listingName = parsed.data.listings.length === 1 ? parsed.data.listings[0] : "";
+  // All SEVEN tokens, resolved PER RECIPIENT (this path used to fill 4 —
+  // {SessionDate}/{VenueName}/{BookingRef} were left to the fallback), from the
+  // same resolver the bulk Email sends use. A family targeted via a listing
+  // reads from their booking ON THAT LISTING; one targeted by email reads from
+  // their most relevant booking; with no booking at all the parent-level tokens
+  // come from the customer record and the rest degrade (lib/mergeFields.ts).
+  const merging = hasMergeTokens(parsed.data.body, parsed.data.subject);
+  const emails = [...recipients.keys()];
+  const base = merging ? await tenantMergeBase(tenantId) : null;
+  const venueFor = base ? venueResolver(tenantId, base) : null;
+  const ctxByEmail = new Map<string, MergeCtx>();
+  if (base && venueFor) {
+    const fromAll = await mergeContexts(tenantId, emails, { base, ...(bkSnap ? { bookings: bkSnap } : {}) });
+    for (const email of emails) {
+      const best = pickBest(onListing.get(email) ?? []);
+      const ctx = { ...fromAll.get(email), ...(best ? bookingCtx(base, best, await venueFor(best)) : {}) };
+      // Hints for a family with no booking to read a name from.
+      if (!ctx.parentname && !(recipients.get(email) ?? "").includes("@")) ctx.parentname = recipients.get(email)!.trim().split(/\s+/)[0];
+      if (!ctx.childname && childByEmail.get(email)) ctx.childname = childByEmail.get(email)!;
+      ctxByEmail.set(email, ctx);
+    }
+  }
   // Families whose provider (head office or their franchise) has messaging
   // switched off get this by email only — they can't open it in the app.
   const sentAs = senderFranchise(req);
@@ -553,7 +575,9 @@ messages.post("/broadcast", async (req, res) => {
     const id = threadId(tenantId, email);
     const tRef = threadsCol.doc(id);
     const existing = await tRef.get();
-    const rbody = mergeText(parsed.data.body, { parentName: name, providerName: tName, childName: childByEmail.get(email), listingName });
+    const ctx = ctxByEmail.get(email);
+    const rbody = ctx ? applyTokens(parsed.data.body, ctx) : parsed.data.body;
+    const rsubject = ctx && parsed.data.subject ? applyTokens(parsed.data.subject, ctx) : parsed.data.subject;
     await tRef.set({
       tenantId,
       tenantName: existing.exists ? (existing.data()!.tenantName as string) : tName,
@@ -565,7 +589,7 @@ messages.post("/broadcast", async (req, res) => {
       // New threads born from a broadcast stay hidden from the operator inbox
       // until the family replies (a reply flips operatorHidden=false via the main
       // send handler). Existing threads keep whatever visibility they had.
-      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, operatorHidden: true, ...(parsed.data.subject ? { subject: parsed.data.subject } : {}) }),
+      ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, operatorHidden: true, ...(rsubject ? { subject: rsubject } : {}) }),
       parentUnread: FieldValue.increment(1),
       ...joinStamp(req, existing, now),
     }, { merge: true });
