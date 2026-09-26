@@ -87,6 +87,7 @@ import { payments } from "./routes/payments";
 import { me, tenants } from "./routes/tenants";
 import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
+import { installProcessHandlers, record } from "./lib/monitor";
 import { enforceSubscription } from "./middleware/subscription";
 import { enforceAccess } from "./middleware/access";
 import { platformLeads } from "./routes/platformLeads";
@@ -325,6 +326,16 @@ app.use(
       res.status(400).json({ error: "That request wasn't valid — please try again." });
       return;
     }
+    // A 500 is a fault: record it and (first occurrence) raise the alarm, so
+    // "how would you know at 07:00 on a Monday?" has an answer (d27s3).
+    const fault = err as Error;
+    void record({
+      kind: "request",
+      signature: `500:${_req.method} ${(_req.route?.path as string) ?? _req.path}`,
+      message: fault?.message ?? String(err),
+      stack: fault?.stack,
+      context: { method: _req.method, path: _req.originalUrl, role: _req.auth?.role ?? "anon" },
+    });
     res.status(500).json({ error: "Internal server error" });
   },
 );
@@ -340,6 +351,28 @@ app.listen(port, () => {
 // scheduler — safe to start on every instance; exactly one runs each sweep.
 // See lib/scheduler.ts + lib/sweeps.ts.
 import("./lib/sweeps").then(({ startSweeps }) => startSweeps());
+
+// Crashes that would otherwise end the process without a trace.
+installProcessHandlers();
+
+// The watchdog. Runs on the same locked scheduler as everything else (so only
+// one instance checks), with a grace period so a fresh deploy isn't reported
+// as "never ran". Intervals mirror lib/sweeps.ts — the fast ones are enough to
+// prove the scheduler is alive.
+const STARTED = Date.now();
+import("./lib/scheduler").then(({ sweep }) => {
+  sweep("ops-watchdog", 15 * 60_000, async () => {
+    if (Date.now() - STARTED < 20 * 60_000) return; // let the sweeps run at least once
+    const { checkHeartbeats } = await import("./lib/monitor");
+    await checkHeartbeats({
+      "calendar-reminders": 60_000,
+      "medication-due": 60_000,
+      "scheduled-emails": 60_000,
+      "waitlist-expiry": 5 * 60_000,
+      "day-of-alerts": 10 * 60_000,
+    });
+  });
+});
 
 // Bootstrap the Platform (HQ) super-admin from env, if configured — so
 // setting ADMIN_EMAIL / ADMIN_PASSWORD in server/.env is all it takes.

@@ -67,6 +67,8 @@ async function claimSweep(name: string, everyMs: number): Promise<boolean> {
   }
 }
 
+import { beat, record } from "./monitor";
+
 const timers: NodeJS.Timeout[] = [];
 
 /** Run `fn` roughly every `everyMs`, on exactly one instance per interval.
@@ -77,8 +79,13 @@ export function sweep(name: string, everyMs: number, fn: () => Promise<void>): v
     if (!(await claimSweep(name, everyMs))) return;
     try {
       await fn();
+      // Proof of life: the watchdog compares this against the interval, so a
+      // scheduler that quietly stops is noticed instead of being silent.
+      void beat(name);
     } catch (e) {
-      console.error(`[scheduler] sweep "${name}" failed:`, (e as Error).message);
+      const err = e as Error;
+      console.error(`[scheduler] sweep "${name}" failed:`, err.message);
+      void record({ kind: "sweep", signature: `sweep:${name}`, message: err.message, stack: err.stack, context: { sweep: name } });
     }
   };
   void tick();
