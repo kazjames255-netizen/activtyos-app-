@@ -47,6 +47,7 @@ import {
   applyRowAction,
   buildBooking,
 } from "../../../features/bookings/mutations";
+import { attachChildcareRefs, childcareOf, isChildcare, paymentRecordsOf, type ChildcareBooking, type ChildcarePayment } from "../lib/childcare";
 
 // Operator bookings API. There is NO portal/tenant parameter — the scope is
 // derived from the authenticated account (multi-tenant isolation is enforced
@@ -217,8 +218,16 @@ bookings.get("/", async (req, res) => {
   // matters, because "what came in yesterday" is answered from this.
   const list = applyHoNetFilter(snap.docs.filter((d) => !site || bookingInSite(d.data(), site)).map((d) => withCreated(d)), scope.role, req.query.franchiseId);
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
-  res.json(scope.role === "staff" ? list.map((b) => staffView(b as unknown as Record<string, unknown>)) : list);
+  res.json(scope.role === "staff" ? list.map((b) => staffView(b as unknown as Record<string, unknown>)) : list.map((b) => withChildcare(b as ChildcareBooking)));
 });
+
+/**
+ * Additive childcare decoration: a childcare booking gets its `childcare` block
+ * DERIVED (ours + the booker's reference, per child, plus the promise/bank-match
+ * pair), so every screen reads one shape whether the booking was taken before
+ * minting existed or after it. Everything else is passed through untouched.
+ */
+const withChildcare = <T extends ChildcareBooking>(b: T): T => (isChildcare(b) ? { ...b, childcare: childcareOf(b) } : b);
 
 /** What a STAFF token gets: the booking minus its money. Staff screens use
  *  bookings for names, children, days and contacts (Families, trips,
@@ -230,6 +239,9 @@ const MONEY_KEYS = [
   "paymentIntentId", "stripeAccount", "mealItems", "reconciledBy", "payments", "refund",
   // Whether a family has paid, and how, is money too (acceptance d24s4).
   "pay", "method", "refundedApproved", "walletRefunded", "invoicePaymentIntentIds", "tfc",
+  // The childcare block is money too: it carries the references a family's
+  // payment arrives under, ours and theirs.
+  "childcare", "childcarePayments",
 ] as const;
 function staffView<T extends Record<string, unknown>>(b: T): T {
   const out: Record<string, unknown> = { ...b };
@@ -265,8 +277,11 @@ bookings.get("/:ref", async (req, res) => {
   }
   // Same fallback as the list, so opening a booking and seeing it in the list
   // never disagree about when it was made.
-  const one = withCreated(doc);
-  res.json(scope.role === "staff" ? staffView(one as unknown as Record<string, unknown>) : one);
+  // …plus, on a childcare booking, the derived block and the per-child payment
+  // records (OUR minted reference to quote, and the booker's own alongside it).
+  const one = withChildcare(withCreated(doc) as ChildcareBooking);
+  const full = isChildcare(one) ? { ...one, childcarePayments: paymentRecordsOf(one) } : one;
+  res.json(scope.role === "staff" ? staffView(full as unknown as Record<string, unknown>) : full);
 });
 
 // GET /api/bookings/:ref/children — the full child record(s) for this booking's
@@ -394,6 +409,10 @@ bookings.post("/", async (req, res) => {
         // the amount, never the method's name.
         ...(input.amount <= 0 ? { pay: "Funded" as const } : {}),
       };
+      // A childcare booking taken by the operator gets OUR minted payment
+      // reference too (d8s2) — the same helper the parent checkout uses, so no
+      // path creates a childcare booking with nothing to match its money by.
+      attachChildcareRefs(b as ChildcareBooking, tenantId);
       tx.update(tenantRef, { nextBid: nextBid + 1 });
       if (block && blockRef && hasSpace)
         tx.update(blockRef, { ...countsUpdate(block, seats, bookingDays(b, block)) });
@@ -451,7 +470,11 @@ bookings.post("/:ref/actions", async (req, res) => {
           const lib = (await db.collection("libraries").doc(b.tenantId!).get()).data() ?? {};
           const providers = ((lib.settings as Record<string, unknown> | undefined)?.voucherProviders ?? []) as { name: string; details?: { label: string; value: string }[] }[];
           const scheme = providers.find((v) => v.name === b.voucherScheme);
-          if (scheme) emailVoucherInstructions(b, await tenantName(), { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) });
+          if (scheme) emailVoucherInstructions(b, await tenantName(), { name: scheme.name, details: (scheme.details ?? []).filter((d) => d.value?.trim()) }, {
+            // Re-sends carry OUR minted reference(s) too — the family lost the
+            // first email, and the reference is the point of it.
+            payRefs: (childcareOf(b as ChildcareBooking).refs ?? []).map((r) => ({ child: r.child, reference: r.paymentReference })),
+          });
           else emailPaymentLink(b, await tenantName());
         } else {
           emailPaymentLink(b, await tenantName());
@@ -1123,6 +1146,12 @@ bookings.put("/:ref/voucher-scheme", async (req, res) => {
   }
 });
 
+// PUT /api/bookings/:ref/payment-ref — corrects the reference the BOOKER gave
+// us (their own voucher/HMRC account reference), e.g. when the bank shows it
+// differently. It is NOT our minted payment reference: that one we issued, the
+// family already has it, and it is never edited. So the family is only asked to
+// quote something here when we never minted one for them (a pre-minting
+// booking) — otherwise the email tells them ours, which is the one that matches.
 const paymentRefSchema = z.object({ paymentRef: z.string().trim().max(120) });
 bookings.put("/:ref/payment-ref", async (req, res) => {
   const scope = operatorScope(req, res);
@@ -1136,18 +1165,28 @@ bookings.put("/:ref/payment-ref", async (req, res) => {
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
-      const b = fromDoc(snap.data() as BookingDoc);
+      const b = fromDoc(snap.data() as BookingDoc) as ChildcareBooking;
       b.paymentRef = parsed.data.paymentRef;
+      // Mirror it into the childcare block under its honest name, so the two
+      // references stay distinguishable wherever the block is read.
+      if (isChildcare(b)) {
+        const prev = (b.childcare && typeof b.childcare === "object" ? b.childcare : {}) as ChildcarePayment;
+        b.childcare = { ...prev, bookerReference: parsed.data.paymentRef || null };
+      }
       tx.set(ref, toDoc(b));
       return b;
     });
     if (updated.email?.includes("@")) {
+      // Ours if we have one; theirs only for a booking taken before minting.
+      const ours = childcareOf(updated).paymentReference;
       void notify({
         tenantId,
         to: { kind: "parent", email: updated.email },
         category: "billing",
         title: `Payment reference updated · ${updated.ref}`,
-        body: `${updated.listing}: we've updated the payment reference for your ${updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method} payment to "${updated.paymentRef}". Please use this reference so we can match your payment.`,
+        body: ours
+          ? `${updated.listing}: we've noted your ${updated.voucherScheme ? `${updated.voucherScheme} account` : "scheme account"} reference as "${updated.paymentRef}". When you pay, please still quote our payment reference ${ours} — that's the one that matches the money to this booking.`
+          : `${updated.listing}: we've updated the payment reference for your ${updated.voucherScheme ? `${updated.voucherScheme} voucher` : updated.method} payment to "${updated.paymentRef}". Please use this reference so we can match your payment.`,
         subject: `Payment reference updated for ${updated.ref}`,
         href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
         ref: updated.ref,

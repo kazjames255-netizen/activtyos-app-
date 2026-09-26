@@ -58,6 +58,7 @@ import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutof
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { attachChildcareRefs, childcareOf, childcareRoute, type ChildcareBooking } from "../lib/childcare";
 import { sessionsClearGap } from "../lib/schedulingGap";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
@@ -279,7 +280,12 @@ my.get("/bookings", async (req, res) => {
   const snap = await bookingsCol.where("email", "==", email).get();
   const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
-  res.json(list);
+  // A childcare booking carries its derived childcare block, so the family can
+  // see the payment reference WE minted for each child (`childcare.refs[]`, or
+  // `childcare.paymentReference` for a single child) any time — not only on the
+  // done screen. A booking taken before minting existed has
+  // `paymentReference: null` and shows the reference they typed themselves.
+  res.json(list.map((b) => (childcareRoute(b) ? { ...b, childcare: childcareOf(b as ChildcareBooking) } : b)));
 });
 
 // GET /api/my/attendance — has my child actually been signed in today? (d10s10:
@@ -1619,6 +1625,16 @@ my.post("/bookings", async (req, res) => {
       for (const w of walletSpends) w.ref = refRemap.get(w.ref) ?? w.ref;
       created.length = 0; created.push(...merged);
 
+      // OUR payment reference, minted per booking-and-child (d8s2). The parent
+      // still types their own HMRC/scheme account reference above — it is kept
+      // as `childcare.bookerReference`, because it is genuinely theirs — but the
+      // string we ask them to quote when they pay is now one we issue: short,
+      // check-summed, and unique by construction per tenant. Minted here, AFTER
+      // the merge, so the slot in each reference is the child's real place on
+      // the booking that actually gets written. See lib/childcare.ts for the
+      // format and the uniqueness argument.
+      for (const b of created) attachChildcareRefs(b as ChildcareBooking, listing.tenantId);
+
       if (walletSpends.length) spendWalletInTx(tx, listing.tenantId, familyEmail, walletHeld, walletSpends);
       // The booking exists (in this same write), so the codes are genuinely spent.
       if (redemption?.ok) redemption.commit(created.map((b) => b.ref));
@@ -1827,6 +1843,18 @@ my.post("/bookings", async (req, res) => {
         emailVoucherInstructions(v, listing.tenantName ?? listing.name, voucher, {
           total: round2(awaiting.reduce((s, b) => s + (b.amount ?? 0), 0)),
           refs: awaiting.map((b) => b.ref),
+          // The references WE minted, one per booking-and-child — what the
+          // family must actually quote. Their own scheme account reference is
+          // captured on the booking and deliberately not asked for here.
+          // A basket spanning weeks makes several bookings, and the reference is
+          // per booking-and-child — so name the booking too when there's more
+          // than one, or two rows read as the same child twice.
+          payRefs: awaiting.flatMap((b) =>
+            (childcareOf(b as ChildcareBooking).refs ?? []).map((r) => ({
+              child: awaiting.length > 1 ? `${r.child} · ${b.ref}` : r.child,
+              reference: r.paymentReference,
+            })),
+          ),
         });
     }
     // "2nd in line for 12 Aug" — per-date queue positions for anything queued,

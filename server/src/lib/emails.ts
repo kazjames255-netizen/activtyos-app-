@@ -981,11 +981,20 @@ export function emailVoucherInstructions(
   scheme: { name: string; details: { label: string; value: string }[] },
   /** When a checkout made several voucher bookings (e.g. across weeks), pass the
    *  GRAND total + every ref so the family is asked for the full amount once,
-   *  not one booking's share. Defaults to this booking's own amount/ref. */
-  opts: { total?: number; refs?: string[] } = {},
+   *  not one booking's share. Defaults to this booking's own amount/ref.
+   *
+   *  `payRefs` are the references WE minted (one per booking-and-child, see
+   *  lib/childcare.ts). When there are any, they are what the family is asked to
+   *  quote — never the reference they typed themselves, which is their own
+   *  account's and matches nothing in our bank. */
+  opts: { total?: number; refs?: string[]; payRefs?: { child?: string | null; reference: string }[] } = {},
 ): void {
   const amount = opts.total ?? b.amount;
   const refsLabel = opts.refs?.length ? opts.refs.join(", ") : b.ref;
+  const payRefs = (opts.payRefs ?? []).filter((r) => (r.reference ?? "").trim());
+  const payRefRows = payRefs
+    .map((r) => `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Payment reference${payRefs.length > 1 && r.child ? ` · ${escapeHtml(r.child)}` : ""}</td><td><b style="font-size:15px;letter-spacing:.06em">${escapeHtml(r.reference)}</b></td></tr>`)
+    .join("");
   const isUrl = (d: { label: string; value: string }) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value);
   const refRows = scheme.details
     .map((d) => `<tr><td style="color:#8a86a3;padding:3px 14px 3px 0">${d.label}</td><td>${isUrl(d) ? `<a href="${/^https?:\/\//i.test(d.value) ? d.value : `https://${d.value}`}" style="color:#2f6bd8;font-weight:700">${d.value}</a>` : `<b>${d.value}</b>`}</td></tr>`)
@@ -1002,9 +1011,10 @@ export function emailVoucherInstructions(
     `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — your booking with ${escapeHtml(providerName)} is confirmed.
       It's held as <b>awaiting voucher payment</b> until the money lands. Pay <b>${gbp(amount)}</b> through
       <b>${scheme.name}</b> on their own website, quoting:</p>
-     <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
+     <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}${payRefRows}
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${opts.refs && opts.refs.length > 1 ? "s" : ""}</td><td><b>${refsLabel}</b></td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(amount)}</b></td></tr></table>
+     ${payRefs.length ? `<p style="font-size:13px;color:#8a86a3">Please put the payment reference${payRefs.length > 1 ? "s" : ""} above in the payment — it's how ${escapeHtml(providerName)} recognises your money when it arrives${payRefs.length > 1 ? ", one per child" : ""}. Your own ${escapeHtml(scheme.name)} account number isn't needed here.</p>` : ""}
      ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${escapeHtml(providerName)} in time to keep the place.</p>` : ""}
      <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
     { whatIncluded: true, map: true },

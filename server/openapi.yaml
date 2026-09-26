@@ -1,10 +1,62 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.34.0
+  version: 0.35.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.35.0 — Childcare payment references are MINTED, not typed
+
+    The parent used to type the reference they would pay under and we stored it
+    verbatim, so "Caelan" was accepted and the same string could be reused on
+    two bookings for two children (acceptance d8s2). The server now mints one
+    per **booking-and-child** at checkout, and that is the only string a family
+    is ever asked to quote.
+
+    - **Format** `CC-TTT-SSSS-KX` — `CC` literal, 3 symbols of
+      `sha256(tenantId)`, the booking's own number in base 32 (4 symbols,
+      widening beyond 1,048,575), the child's slot on the booking, and a Luhn
+      mod-32 **check symbol**. Alphabet is Crockford base 32 (0-9 A-Z without
+      I, L, O, U); reading one back in folds I/l/L → 1 and O/o → 0 and ignores
+      case and separators, and every other single-symbol slip is *detected* by
+      the check symbol. Validation is arithmetic — offline, no lookup.
+    - **Uniqueness** is structural: within a tenant the reference is an
+      injective function of (booking number, child slot), and the booking
+      number comes from `tenants/{id}.nextBid`, bumped inside the transaction
+      that writes the bookings. Two children on one booking differ in the slot
+      symbol; two bookings differ in the serial. Across tenants two providers
+      can share the 3-symbol tenant discriminator and so mint one string — as
+      booking numbers themselves already collide across tenants — and that is
+      harmless: a reference is only ever resolved against one tenant's own
+      bookings and one tenant's own bank account.
+    - **On the booking** `childcare.paymentReference` (single-child bookings),
+      `childcare.refs[] = {child, childId, slot, paymentReference,
+      bookerReference, scheme, amount}` (one row per child), `childcare.refScheme`
+      ("cc1"), and `childcare.reference` = ours. Written once, at creation
+      (`POST /api/my/bookings` and the operator's `POST /api/bookings`), and
+      never rewritten — the family has already been given it.
+    - **The parent's own reference is kept, separately.** What they type at
+      checkout (`items[].paymentRef` — their HMRC / voucher ACCOUNT reference)
+      lands on `childcare.bookerReference` (and per child in `refs[]`), and the
+      flat `paymentRef`/`payRefs` fields are unchanged. It is context for a
+      human, never the thing we ask them to quote:
+      `PUT /api/bookings/{ref}/payment-ref` now corrects *that* field, and the
+      email it sends quotes OUR reference when one exists.
+    - **Reconciliation** decorates rather than keys. Every projection carries
+      `paymentReference` (ours), `bookerReference` (theirs) and
+      `referenceStrength` ("minted" | "typed" | "none"); `referenceProblem` is
+      null for a minted booking (nothing to chase) and unchanged otherwise;
+      `summary.mintedReference` / `summary.typedReferenceOnly` say how much of
+      the ledger still leans on hand-typed strings. The bank-statement tick
+      still **keys on nothing** — an optional `statementRef` is scored
+      (strong = ours, hint = theirs, none) into the note and the response, and
+      never gates the tick.
+    - **Existing bookings are untouched** (no migration): no `childcare.refs`,
+      so `paymentReference` is null, `referenceStrength` is "typed" (or "none"),
+      the reference column keeps showing whatever the parent typed, and
+      `referenceProblem` keeps flagging it. Nothing is minted retroactively — a
+      reference the family was never told would be a lie on the screen.
 
     ## v0.34.0 — Subscription history (HQ churn stops rewriting itself)
 
@@ -1169,6 +1221,12 @@ paths:
     get:
       tags: [bookings]
       summary: Get one booking in the caller's scope
+      description: >
+        On a CHILDCARE booking (TFC / voucher) the response additionally carries
+        the derived `childcare` block — including the minted `paymentReference`
+        and `refs[]` (one per child: ours plus the reference the booker typed) —
+        and `childcarePayments[]`, the per-child/per-card payment records. Both
+        are money, so a staff token gets neither.
       parameters:
         - $ref: "#/components/parameters/refPath"
         - name: tenantId
@@ -1237,7 +1295,12 @@ paths:
     get:
       tags: [my]
       summary: The signed-in parent's bookings
-      description: All bookings (any provider) whose booker email matches the verified token.
+      description: >
+        All bookings (any provider) whose booker email matches the verified
+        token. A childcare booking also carries its derived `childcare` block,
+        so the family can re-read the payment reference we minted for each child
+        (`childcare.refs[].paymentReference`, or `childcare.paymentReference`
+        when one child is paying) at any time — not only on the done screen.
       responses:
         "200":
           description: The parent's bookings, newest ref first
@@ -1262,6 +1325,15 @@ paths:
         item's chosen days, then the listing's automatic discounts across
         the basket (multi-person → multi-session → early-bird; best rule of
         each kind wins). Clients send choices, never amounts.
+
+        **Childcare references.** `items[].paymentRef` is the BOOKER's own
+        account reference (their HMRC / voucher scheme reference) — captured,
+        stored on `childcare.bookerReference` (per child in `childcare.refs[]`)
+        and on the flat `paymentRef`/`payRefs` as before, and never quoted back
+        as ours. For a TFC/voucher booking the server MINTS the payment
+        reference the family must quote — one per booking-and-child — and the
+        created bookings in the 201 carry it on `childcare.paymentReference` /
+        `childcare.refs[].paymentReference`. See the v0.35.0 note above.
 
         Optional **`discountCode`** (Marketing): validated server-side and
         applied to the pass subtotal after automatic discounts; an
@@ -2055,7 +2127,7 @@ paths:
       summary: Outstanding money + a by-method summary
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
-        "200": { description: "{items[], summary}. Each item also carries the childcare fields: `childcareRoute` (\"Tax-Free Childcare\" | \"Childcare vouchers\" | null), `childcare` (the booking's childcare block), `bankMatched`, `referenceProblem`; `summary.childcare` is the unfiltered roll-up." }
+        "200": { description: "{items[], summary}. Each item also carries the childcare fields: `childcareRoute` (\"Tax-Free Childcare\" | \"Childcare vouchers\" | null), `childcare` (the booking's childcare block, incl. the minted `paymentReference`/`refs[]`), `bankMatched`, `referenceProblem`, plus `paymentReference` (OURS — minted, null on a pre-minting booking), `bookerReference` (THEIRS — hand-typed, a hint only) and `referenceStrength` (\"minted\"|\"typed\"|\"none\"); `summary.childcare` is the unfiltered roll-up." }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/reconciliation/childcare:
@@ -2072,6 +2144,15 @@ paths:
         BOOKER's promise, `reconciled`/`unreconciled` is OUR bank match.
         A junk or missing reference is flagged (`referenceProblem`) and never
         filters a row out.
+        Each row carries both references: `paymentReference` (OURS — minted per
+        booking-and-child, check-summed, the string to look for on the
+        statement; null on a booking taken before minting existed),
+        `bookerReference` (THEIRS — the account reference they typed, a hint
+        only), `references[]` (one `{child, childId, paymentReference,
+        bookerReference, amount}` per learner, because siblings pay from
+        separate accounts), `referenceStrength` and `referenceLooksValid`.
+        `summary.mintedReference` / `summary.typedReferenceOnly` count how much
+        of the table is ours versus still hand-typed.
       parameters:
         - { name: from, in: query, required: false, description: "Inclusive ISO day, on the booking's date", schema: { type: string } }
         - { name: to, in: query, required: false, schema: { type: string } }
@@ -2094,8 +2175,13 @@ paths:
         sends nothing to the family, and is reversible with `matched: false`.
         Matching keys on nothing: the parent's own reference may be junk, so
         an optional `statementRef` is stored as a note rather than used to
-        match. Writes `childcare.reconciledAt` + `childcare.reconciledBy` and
-        appends an attributed line to `reconNotes`.
+        match. That still holds now the server mints a reference — a
+        `statementRef` is SCORED ("strong" = the reference we minted for this
+        booking/child, "hint" = only what the booker typed, "none") into the
+        note and the `match` field of the response, and the tick happens either
+        way. Writes `childcare.reconciledAt` + `childcare.reconciledBy`,
+        preserves the minted `refs[]`, and appends an attributed line to
+        `reconNotes`.
       parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
       requestBody:
         required: false
@@ -2108,7 +2194,7 @@ paths:
                 statementRef: { type: string, description: The reference on YOUR bank line (optional, never used to match) }
                 note: { type: string }
       responses:
-        "200": { description: "{ref, childcare, bankMatched, reconNotes}" }
+        "200": { description: "{ref, childcare, bankMatched, reconNotes, match: {strength: strong|hint|none, on: minted|booker|null, child, reference}}" }
         "400": { description: Not a childcare booking }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }

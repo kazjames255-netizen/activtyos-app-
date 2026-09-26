@@ -8,7 +8,8 @@ import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 import { bookingDocId } from "./bookings";
 import {
   childcareOf, childcareRoute, isChildcare, isUnreconciled, loadChildcareSettings,
-  childcareSettingsComplete, paymentRecordsOf, referenceProblem, looksLikeTfcRef,
+  childcareSettingsComplete, paymentRecordsOf, referenceProblem, referenceLooksValid,
+  matchQuotedReference,
   type ChildcareBooking, type ChildcarePayment,
 } from "../lib/childcare";
 
@@ -147,6 +148,15 @@ reconciliation.get("/", async (req, res) => {
       voucherReceiveBy: b.voucherReceiveBy ?? null,
       paymentRef: b.paymentRef ?? null,
       payRefs: b.payRefs ?? null,
+      // ── The two references, kept apart (d8s2) ────────────────────────
+      // OURS: minted per booking-and-child, check-summed, unique. This is the
+      // string to look for on the bank statement, and the only one a family is
+      // ever asked to quote. `null` on a booking taken before minting existed.
+      paymentReference: cc?.paymentReference ?? null,
+      // THEIRS: the scheme/HMRC account reference the booker typed. Context for
+      // a human, never a match — it may read "Caelan".
+      bookerReference: cc?.bookerReference ?? null,
+      referenceStrength: cc?.referenceStrength ?? "none",
       cardPaid: b.cardPaid ?? 0,
       reconNotes: b.reconNotes ?? [],
       nudges: b.nudges ?? 0,
@@ -234,7 +244,7 @@ reconciliation.get("/", async (req, res) => {
 // client roll-up totals the whole ledger, whatever range is on screen) and so
 // the numbers can't drift between the ledger, Bookings and any future export.
 type Rolled = { amount: number; count: number; bookers: number };
-type LedgerRow = { email?: string; booker: string; ref: string; amount: number; amountPaid: number; outstanding: number; bankMatched: boolean; referenceProblem: string | null };
+type LedgerRow = { email?: string; booker: string; ref: string; amount: number; amountPaid: number; outstanding: number; bankMatched: boolean; referenceProblem: string | null; referenceStrength?: string };
 
 function rollUp(rows: LedgerRow[]) {
   const bookers = (l: LedgerRow[]) => new Set(l.map((i) => (i.email || i.booker || i.ref).trim().toLowerCase())).size;
@@ -260,6 +270,11 @@ function rollUp(rows: LedgerRow[]) {
     // reference still has a real booking and real money (§B3 note).
     missingReference: rows.filter((i) => i.referenceProblem === "missing").length,
     malformedReference: rows.filter((i) => i.referenceProblem === "malformed").length,
+    // How much of the ledger has a reference WE minted (a strong match) versus
+    // how much still leans on something a parent typed. The second number only
+    // ever falls: every new childcare booking is minted.
+    mintedReference: rows.filter((i) => i.referenceStrength === "minted").length,
+    typedReferenceOnly: rows.filter((i) => i.referenceStrength === "typed").length,
   };
 }
 
@@ -327,8 +342,21 @@ reconciliation.get("/childcare", async (req, res) => {
       listingId: b.listingId ?? null,
       route: cc.route,
       scheme: cc.scheme,                            // Childcare scheme
-      reference: cc.reference,                      // Childcare reference (may be junk — shown, never keyed on)
-      referenceLooksValid: cc.route === "Tax-Free Childcare" ? looksLikeTfcRef(cc.reference) : !!(cc.reference ?? "").trim(),
+      // Childcare reference — OURS when we minted one (new bookings), else the
+      // one the booker typed, which may still be junk ("Caelan"). Shown either
+      // way; the tick below keys on neither.
+      reference: cc.reference,
+      // OURS: minted per booking-and-child, arithmetic-checkable, unique per
+      // tenant. The string to look for on the statement. Null = a booking taken
+      // before minting existed, so the row degrades to the typed one.
+      paymentReference: cc.paymentReference,
+      // THEIRS: the booker's own scheme/HMRC account reference — a hint only.
+      bookerReference: cc.bookerReference,
+      referenceStrength: cc.referenceStrength,
+      // One row per child: siblings on one booking pay from separate accounts,
+      // so each has their own minted reference (and their own typed one).
+      references: (cc.refs ?? []).map((r) => ({ child: r.child, childId: r.childId ?? null, paymentReference: r.paymentReference, bookerReference: r.bookerReference ?? null, amount: r.amount ?? null })),
+      referenceLooksValid: referenceLooksValid(b),
       referenceProblem: referenceProblem(b),
       amount: b.amount ?? 0,                        // Childcare payment (booking total)
       childcareAmount: cc.amount ?? 0,              // …less anything taken by card at checkout
@@ -406,6 +434,11 @@ reconciliation.get("/childcare", async (req, res) => {
 // the parent's own reference may be junk ("Caelan" in the spec's own table), so
 // keying the tick on it would make exactly the rows that need a human
 // impossible to tick. A note is stored instead, for whoever asks later.
+//
+// That stays true now the server MINTS a reference per booking-and-child. A
+// minted reference is a strong match and the note says so when the statement
+// quotes it — but the money can still arrive quoting nothing, the wrong
+// reference, or a sibling's, so nothing here keys on it.
 reconciliation.post("/:ref/bank-match", async (req, res) => {
   const scope = managerScope(req, res);
   if (!scope) return;
@@ -427,6 +460,10 @@ reconciliation.post("/:ref/bank-match", async (req, res) => {
 
   // Same lookup as the bookings route: the tenant-prefixed doc id, falling back
   // to a query for bookings written before that id scheme.
+  // Set inside the transaction: what the operator's optional statement
+  // reference matched, so the response can say so without re-deriving it.
+  let matchedRefInfo: ReturnType<typeof matchQuotedReference> | null = null;
+
   const byId = db.collection("bookings").doc(bookingDocId(tenantId, req.params.ref));
   let ref = byId;
   if (!(await byId.get()).exists) {
@@ -445,10 +482,15 @@ reconciliation.post("/:ref/bank-match", async (req, res) => {
       const prev = (b.childcare && typeof b.childcare === "object" ? b.childcare : {}) as ChildcarePayment;
       const cc = childcareOf(b);
       const next: ChildcarePayment = {
+        // Everything already on the block survives — above all the MINTED
+        // references (paymentReference / refs / refScheme): the family has been
+        // given those strings, and a tick must never quietly drop them.
+        ...prev,
         // Persist what was only derived until now, so the block stops depending
         // on the flat fields once it has been touched.
         scheme: prev.scheme ?? cc.scheme ?? null,
         reference: prev.reference ?? cc.reference ?? null,
+        bookerReference: prev.bookerReference ?? cc.bookerReference ?? null,
         amount: prev.amount ?? cc.amount ?? null,
         promisedAt: prev.promisedAt ?? cc.promisedAt ?? null,
         confirmedAt: prev.confirmedAt ?? null,
@@ -456,16 +498,39 @@ reconciliation.post("/:ref/bank-match", async (req, res) => {
         reconciledBy: matched ? { at, by: who, auto: false } : null,
       };
       b.childcare = next;
+      // What the statement reference was WORTH, recorded for whoever asks later.
+      // It still decides nothing — the tick is the human's, and matching is
+      // deliberately keyed on nothing (see above) because the money may arrive
+      // quoting neither reference. But "that string is the one we minted for
+      // Amara on this booking" and "that string is what the parent typed, which
+      // could be anything" are different facts, and the trail should say which.
+      const hit = statementRef ? matchQuotedReference(b, statementRef) : null;
+      matchedRefInfo = hit;
+      const strength = hit?.strength === "strong"
+        ? ` — that is our payment reference for ${hit.child ? `${hit.child} on ` : ""}this booking`
+        : hit?.strength === "hint"
+          ? " — matches the reference the booker typed themselves, which is a hint, not proof"
+          : hit
+            ? " — not a reference we issued for this booking"
+            : "";
       // A running, attributed trail — the same provider-only notes the ledger
       // already shows, so an untick isn't a silent erasure.
       const line = matched
-        ? `Ticked off against the bank statement${statementRef ? ` (bank ref ${statementRef})` : ""}.${note ? ` ${note}` : ""}`
+        ? `Ticked off against the bank statement${statementRef ? ` (bank ref ${statementRef}${strength})` : ""}.${note ? ` ${note}` : ""}`
         : `Bank-statement tick removed.${note ? ` ${note}` : ""}`;
       b.reconNotes = [...(b.reconNotes ?? []), { at, by: who, text: line }];
       tx.set(ref, toDoc(b));
       return b;
     });
-    res.json({ ref: updated.ref, childcare: updated.childcare ?? null, bankMatched: matched, reconNotes: updated.reconNotes ?? [] });
+    res.json({
+      ref: updated.ref,
+      childcare: updated.childcare ?? null,
+      bankMatched: matched,
+      reconNotes: updated.reconNotes ?? [],
+      // What the optional statement reference was worth — for the screen to
+      // echo ("that's our reference for Amara"), never a gate on the tick.
+      match: matchedRefInfo,
+    });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
     else if (e instanceof NotChildcare) res.status(400).json({ error: "This booking isn't paid by a childcare scheme — reconcile it from the payment ledger instead." });
