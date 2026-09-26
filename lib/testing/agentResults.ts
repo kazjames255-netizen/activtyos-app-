@@ -76,6 +76,11 @@ import ZB from "./agent-results/plan2-agent-ZB.json";
 // Three entries whose verdict changed after the retest agents wrote them,
 // because the fix landed later the same day — re-verified, not assumed.
 import ZC from "./agent-results/plan2-agent-ZC.json";
+// 26 Sept — steps closed by the day's fixes, each re-verified against the real
+// routes. d8s2 stays a fail on purpose: the backend mints the reference, but
+// the step is about what the parent is GIVEN, and the checkout does not show
+// it yet.
+import ZD from "./agent-results/plan2-agent-ZD.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -99,5 +104,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
   ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
   ...(Z as Record<string, AgentResult>), ...(ZA as Record<string, AgentResult>), ...(ZB as Record<string, AgentResult>),
-  ...(ZC as Record<string, AgentResult>),
+  ...(ZC as Record<string, AgentResult>), ...(ZD as Record<string, AgentResult>),
 };
