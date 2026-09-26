@@ -34,7 +34,11 @@ export class ApiError extends Error {
 
 // Nothing here may hang forever: a stalled auth or token refresh used to leave
 // screens on "Loading…" with no way to tell why. Time every step out instead.
-const TIMEOUT_MS = 15_000;
+// 45s (not the original 15s): a cold shared-library cache rebuild (Learning Hub notes index, first
+// request after a server restart) has been measured taking 36-55s — comfortably longer than 15s — so
+// the old value was timing out a perfectly legitimate load, not just catching a genuine hang. This is
+// a safety-net widening, not a fix for the underlying cold-start slowness itself (see hubCache.ts).
+const TIMEOUT_MS = 45_000;
 
 function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
   // `label` names an internal step ("Getting your sign-in token"), so it stays

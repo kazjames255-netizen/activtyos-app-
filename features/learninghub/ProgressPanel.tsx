@@ -1,24 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { setHubIntent, takeOpenStudent } from "./hubIntent";
 import { Button } from "@/components/ui";
-import { Icon } from "./kit";
+import { Icon, SkeletonRows } from "./kit";
 import { post } from "@/lib/api";
 import type { PanelMeta, PanelProps } from "./panelTypes";
-import { CurriculumRings } from "./curriculum/CurriculumRings";
-import { Overview } from "./progress/Overview";
-import { ProgressView } from "./progress/ProgressView";
 import { hubPath } from "./shared-assess/api";
 import { EmptyState, FOCUS, TAP } from "./shared-assess/ui";
 import { errMsg } from "./types";
 import { useFamily } from "./family/FamilyContext";
-import { KidStars } from "./progress/KidStars";
-import { ProgressReport, ProgressReportButton } from "./progress/ProgressReport";
+import { PARENT_COPY } from "./family/parentCopy";
 
 // Progress — the mastery dashboard. A family sees their chosen child's mastery by
 // topic, growth from the placement-test baseline and the recent-quiz trend; a
-// tutor sees every student at a glance and opens any one of them.
+// tutor sees every student at a glance and opens any one of them. A tutor never
+// needs the family-only pieces (CurriculumRings, KidStars, ProgressReport) nor a
+// family the tutor-only roster (Overview) — load each when the branch that needs
+// it actually renders, same as Quizzes/Homework/Diagnostic/Flashcards do.
+const CurriculumRings = dynamic(() => import("./curriculum/CurriculumRings").then((m) => m.CurriculumRings), { loading: () => <SkeletonRows rows={1} label="Loading" /> });
+const Overview = dynamic(() => import("./progress/Overview").then((m) => m.Overview), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
+const ProgressView = dynamic(() => import("./progress/ProgressView").then((m) => m.ProgressView), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
+const KidStars = dynamic(() => import("./progress/KidStars").then((m) => m.KidStars), { loading: () => <SkeletonRows rows={2} label="Loading" /> });
+const ProgressReport = dynamic(() => import("./progress/ProgressReport").then((m) => m.ProgressReport));
+
 export const meta: PanelMeta = { key: "dashboard", label: "Progress", icon: "📈", status: "live", blurb: "Mastery by topic and how it's trending, built from your quiz and homework results." };
 
 export function Panel(p: PanelProps) {
@@ -33,7 +39,12 @@ export function Panel(p: PanelProps) {
     if (!p.childId) return <EmptyState icon="users" title="Choose a child" body="Pick which child's progress you'd like to see." />;
     return (
       <>
-        <div className="mb-3 flex justify-end"><ProgressReportButton onOpen={() => setReport(true)} /></div>
+        <div className="mb-3 flex justify-end">
+          <button type="button" onClick={() => setReport(true)} data-testid="hub-report-open"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] focus-visible:ring-2 focus-visible:ring-[var(--brand-2)]">
+            {PARENT_COPY.reportButton}
+          </button>
+        </div>
         <CurriculumRings qs={p.childQs ?? p.qs} canEdit={false} onOpenMap={() => p.goTo?.("notes")} /><ProgressView p={p} childId={p.childId} />
         {report && <ProgressReport p={p} childId={p.childId} onClose={() => setReport(false)} />}
       </>

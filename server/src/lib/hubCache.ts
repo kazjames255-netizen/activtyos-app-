@@ -21,7 +21,8 @@
 // real rebuild runs in the background exactly like an ordinary stale-while-revalidate refresh — so a restart is
 // never worse than "serves yesterday's counts for a few seconds," not "blocks the tab for a minute."
 
-import { readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, unlinkSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -35,12 +36,18 @@ const MAX_ENTRIES = 600;
 // The notes index gained `oakKey` (curriculum map): bump its snapshot version so an OLD snapshot (no oakKey) is never served as if current.
 const SNAPSHOT_VERSION: Partial<Record<HubKind, string>> = { notes: ".v2" };
 const diskPath = (kind: HubKind, tenantId: string) => join(tmpdir(), `aos-hub-cache.${kind}${SNAPSHOT_VERSION[kind] ?? ""}.${tenantId}.json`);
-function diskWrite(kind: HubKind, tenantId: string, v: unknown) {
+// Fire-and-forget from the caller (never awaited): a snapshot write is best-effort bookkeeping, not something a
+// request should wait on. The big kinds serialize to tens of MB (the shared-library questions snapshot alone is
+// ~47MB) — `writeFileSync` blocked the event loop for the actual disk syscalls on every background rebuild, on
+// top of the unavoidable synchronous `JSON.stringify`/`.entries()` cost. Using the async `fs/promises` write (still
+// write-then-rename for atomicity) removes that syscall-blocking portion so a rebuild's disk write no longer stalls
+// every other in-flight request on the process.
+async function diskWrite(kind: HubKind, tenantId: string, v: unknown): Promise<void> {
   try {
     const payload = JSON.stringify(v instanceof Map ? { __map: true, entries: [...v.entries()] } : { __map: false, v });
     const p = diskPath(kind, tenantId);
     const tmp = `${p}.${process.pid}.tmp`;
-    writeFileSync(tmp, payload);
+    await writeFile(tmp, payload);
     renameSync(tmp, p);
   } catch { /* best effort — a rebuild still happens on the next restart */ }
 }
@@ -74,6 +81,13 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
     // A write that lands while this load is in flight must not be papered over by the (older) result:
     // remember the generation and refuse to store if the kind was forgotten meanwhile.
     const gen = generation(kind, tenantId);
+    // In-place patches (patchHub) that land while this load runs are REPLAYED onto its result instead of discarding it:
+    // a 40-90s index rebuild used to be thrown away by any single note edit made meanwhile, so under steady write
+    // traffic the big indexes could never finish caching (and their disk snapshot was never written) — every request
+    // then paid a fresh full rebuild. Only an explicit forgetHub (a structural change) still invalidates a load.
+    const patches: ((v: unknown) => void)[] = [];
+    const fk = `${kind}|${tenantId}`;
+    (flightPatches.get(fk) ?? flightPatches.set(fk, []).get(fk)!).push(patches);
     let self: Promise<T> | null = null;
     const p: Promise<T> = (async () => {
       try {
@@ -86,12 +100,16 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
           console.log(`[hub-cache] ${kind}|${tenantId}${extra ? `|${extra}` : ""} loaded in ${(took / 1000).toFixed(1)}s${n === null ? "" : ` (${n} rows)`}`);
         }
         if (generation(kind, tenantId) === gen) {
+          for (const f of patches) f(v);
           if (store.size >= MAX_ENTRIES) { const oldest = [...store.entries()].sort((a, b) => a[1].at - b[1].at).slice(0, 100); for (const [k] of oldest) store.delete(k); }
           store.set(key, { at: Date.now(), v });
           if (opts.disk && !extra) diskWrite(kind, tenantId, v);
         }
         return v;
-      } finally { if (inflight.get(key) === self) inflight.delete(key); }
+      } finally {
+        if (inflight.get(key) === self) inflight.delete(key);
+        const l = flightPatches.get(fk); if (l) { const i = l.indexOf(patches); if (i >= 0) l.splice(i, 1); if (!l.length) flightPatches.delete(fk); }
+      }
     })();
     self = p;
     inflight.set(key, p);
@@ -105,6 +123,8 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
 }
 
 const gens = new Map<string, number>();
+/** `${kind}|${tenantId}` → the patch lists of the loads currently in flight for it (see start() in hubCached). */
+const flightPatches = new Map<string, ((v: unknown) => void)[][]>();
 const generation = (kind: HubKind, tenantId: string) => gens.get(`${kind}|${tenantId}`) ?? 0;
 
 /** Drop a tenant's cached data of the given kinds (all kinds when none named). Call it from every write route. */
@@ -129,8 +149,8 @@ export function forgetHub(tenantId: string, ...kinds: HubKind[]) {
 export function patchHub<T>(kind: HubKind, tenantId: string, fn: (value: T) => void) {
   const prefix = `${kind}|${tenantId}|`;
   for (const [k, e] of store) if (k.startsWith(prefix)) fn(e.v as T);
-  gens.set(`${kind}|${tenantId}`, generation(kind, tenantId) + 1);
-  for (const k of inflight.keys()) if (k.startsWith(prefix)) inflight.delete(k);
+  // A load in flight keeps running; this patch is replayed onto its result when it lands (its snapshot may predate the write).
+  for (const list of flightPatches.get(`${kind}|${tenantId}`) ?? []) list.push(fn as (v: unknown) => void);
 }
 
 /** Test/ops hook. */

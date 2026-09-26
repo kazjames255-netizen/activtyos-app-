@@ -64,6 +64,19 @@ export function bodyOf(i: Instrument): Pt[] {
 /** Compass pencil point. */
 export const compassPen = (i: Instrument): Pt => polar(org(i), i.r ?? 60, i.pen ?? 0);
 
+/** Turn an instrument over 180° in the paper's plane, so it can measure / draw the other way round (a protractor's body
+ *  goes from above the baseline to below it, a ruler's edge reverses, a set square points the opposite way). A protractor
+ *  turns about its centre cross — the corner the child has placed — everything else about the middle of its body, so it
+ *  stays where it was. Pure and exact for every instrument kind (positions/readings all derive from x, y and rot). The
+ *  compass has no "other way round", so it is returned unchanged. */
+export function flipInstrument(i: Instrument): Instrument {
+  if (i.kind === "compass") return i;
+  const o = org(i);
+  let p: Pt = o;
+  if (!isProtractor(i.kind)) { const b = bodyOf(i); p = [b.reduce((s, q) => s + q[0], 0) / b.length, b.reduce((s, q) => s + q[1], 0) / b.length]; }
+  return { ...i, x: 2 * p[0] - o[0], y: 2 * p[1] - o[1], rot: norm360(i.rot + 180) };
+}
+
 /** What a protractor reads for a ray from its centre towards `dir` (screen degrees). Both printed scales are returned.
  *  `null` = the ray is off a 180° protractor's half-disc. */
 export function protractorReading(i: Instrument, dir: number): { outer: number; inner: number } | null {

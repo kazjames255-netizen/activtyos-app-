@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
-import { canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, hubConfig, okId, requireEdit, resolveCtx, scopedChildren, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, hubConfig, okId, requireEdit, resolveCtx, scopedChildren, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { checkDataUrl } from "../../lib/hubUpload";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
@@ -67,18 +67,18 @@ async function checkRefs(ctx: HubCtx, b: { assessmentId?: string | null; noteIds
   if (b.assessmentId) {
     if (!okId(b.assessmentId)) return { status: 404, error: "Assessment not found" };
     const a = await assessmentsCol.doc(b.assessmentId).get();
-    if (!a.exists || a.get("tenantId") !== ctx.tenantId || !canSee(ctx, a.get("franchiseId"))) return { status: 404, error: "Assessment not found" };
+    if (!a.exists || !canReadContent(ctx, a.get("tenantId")) || !canSee(ctx, a.get("franchiseId"))) return { status: 404, error: "Assessment not found" };
     if (a.get("published") !== true) return { status: 400, error: "Publish that quiz before setting it as homework" };
   }
   if (b.noteIds?.length) {
     if (b.noteIds.some((id) => !okId(id))) return { status: 404, error: "Lesson not found" };
     const snaps = await db.getAll(...b.noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "franchiseId"] });
-    if (snaps.some((s) => !s.exists || s.get("tenantId") !== ctx.tenantId || !canSee(ctx, s.get("franchiseId")))) return { status: 404, error: "Lesson not found" };
+    if (snaps.some((s) => !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId")))) return { status: 404, error: "Lesson not found" };
   }
   if (b.flashcardTopicId) {
     if (!okId(b.flashcardTopicId)) return { status: 404, error: "Topic not found" };
     const t = await topicsCol.doc(b.flashcardTopicId).get();
-    if (!t.exists || t.get("tenantId") !== ctx.tenantId || !canSee(ctx, t.get("franchiseId"))) return { status: 404, error: "Topic not found" };
+    if (!t.exists || !canReadContent(ctx, t.get("tenantId")) || !canSee(ctx, t.get("franchiseId"))) return { status: 404, error: "Topic not found" };
   }
   return null;
 }
@@ -91,7 +91,7 @@ export interface Unreachable { childId: string; childName: string; reason: strin
 export async function unreachableFor(ctx: HubCtx, assessmentId: string, students: EnrolmentDoc[]): Promise<Unreachable[]> {
   if (!students.length || !okId(assessmentId)) return [];
   const a = await assessmentsCol.doc(assessmentId).get();
-  if (!a.exists || a.get("tenantId") !== ctx.tenantId) return [];
+  if (!a.exists || !canReadContent(ctx, a.get("tenantId"))) return [];
   const title = (a.get("title") as string | undefined) ?? "That quiz";
   const subject = (a.get("subject") as string | undefined) ?? "";
   const aud = normAudience(a.get("audience"));
@@ -194,7 +194,7 @@ hubHomeworkApi.get("/homework/reach", async (req, res) => {
   const id = typeof req.query.assessmentId === "string" ? req.query.assessmentId : "";
   if (!okId(id)) { res.status(400).json({ error: "Which quiz? Pass ?assessmentId=" }); return; }
   const a = await assessmentsCol.doc(id).get();
-  if (!a.exists || a.get("tenantId") !== ctx.tenantId || !canSee(ctx, a.get("franchiseId"))) { res.status(404).json({ error: "Assessment not found" }); return; }
+  if (!a.exists || !canReadContent(ctx, a.get("tenantId")) || !canSee(ctx, a.get("franchiseId"))) { res.status(404).json({ error: "Assessment not found" }); return; }
   const roster = [...(await tenantEnrolments(ctx)).values()].filter((e) => e.active !== false);
   res.json({ unreachable: await unreachableFor(ctx, id, roster) });
 });
@@ -235,7 +235,7 @@ hubHomeworkApi.get("/homework", async (req, res) => {
   // Which of those are interactive lessons (the pupil opens them in the lesson player, not as a static note).
   const lessonIds = new Set<string>();
   if (noteIds.length) { const idx = await noteIndex(ctx.tenantId); for (const id of noteIds) if (idx.get(id)?.isLesson) lessonIds.add(id); }
-  if (noteIds.length) for (const s of await db.getAll(...noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published"] })) if (s.exists && s.get("tenantId") === ctx.tenantId && s.get("published") !== false) notes.set(s.id, s.get("title") as string);
+  if (noteIds.length) for (const s of await db.getAll(...noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published"] })) if (s.exists && canReadContent(ctx, s.get("tenantId")) && s.get("published") !== false) notes.set(s.id, s.get("title") as string);
   const rows = mine.filter((s) => hws.has(s.homeworkId)).map((s) => {
     const h = hws.get(s.homeworkId)!;
     const kid = kids.find((k) => k.childId === s.childId)!;

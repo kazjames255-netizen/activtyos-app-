@@ -10,7 +10,18 @@ import { db } from "./firebase";
 // Usage: npm --prefix server run e2e-unwall -- <tenantId> [<tenantId>…]
 
 async function main() {
-  const ids = process.argv.slice(2).filter(Boolean);
+  const args = process.argv.slice(2).filter(Boolean);
+  // `--2fa=<uid>`: mark a throwaway platform (HQ) user as having passed the emailed-code step, so the UI login lands on /platform.
+  // Refuses anything that is not an @activityos-test.com account.
+  for (const a of args.filter((x) => x.startsWith("--2fa="))) {
+    const ref = db.collection("users").doc(a.slice(6));
+    const email = String((await ref.get()).data()?.email ?? "");
+    if (!/@activityos-test\.com$/.test(email)) { console.error(`[e2e-unwall] ${a.slice(6)}: not a test account — refused`); process.exit(1); }
+    await ref.set({ twoFaVerifiedAt: Date.now() }, { merge: true });
+    console.log(`[e2e-unwall] ${a.slice(6)}: 2FA marked verified`);
+  }
+  const ids = args.filter((x) => !x.startsWith("--2fa="));
+  if (!ids.length && args.some((x) => x.startsWith("--2fa="))) return;
   if (!ids.length) {
     console.error("Pass at least one tenantId");
     process.exit(1);

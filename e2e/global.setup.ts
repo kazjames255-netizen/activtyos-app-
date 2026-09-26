@@ -73,8 +73,10 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
       // Keep the standing operators clear of the plan gate (idempotent — see
       // the provisioning path below for why).
       const tids = [existing.accounts.freelancer.tenantId, existing.accounts.company.tenantId].filter(Boolean) as string[];
+      // The platform account's 12h emailed-code (2FA) session is refreshed too, or the HQ login stops at the code prompt.
+      const twoFa = existing.accounts.platform ? [`--2fa=${existing.accounts.platform.uid}`] : [];
       if (tids.length)
-        execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", ...tids], { stdio: "pipe" });
+        execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", ...tids, ...twoFa], { stdio: "pipe" });
       return;
     }
   }
@@ -136,6 +138,7 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
     const s = await fbTrySignIn(platformEmail);
     expect(s, "platform admin sign-in").toBeTruthy();
     accounts.platform = { role: "platform", email: platformEmail, uid: s!.uid, tenantId: null, tenantName: null };
+    execFileSync("npm", ["--prefix", path.join(ROOT, "server"), "run", "e2e-unwall", "--", `--2fa=${s!.uid}`], { stdio: "pipe" });
   }
 
   // One real UI login per role — saves the browser state every spec reuses,

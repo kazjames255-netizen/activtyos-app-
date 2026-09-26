@@ -47,6 +47,10 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
   const [search, setSearch] = useState("");
   const [dq, setDq] = useState("");
   const [preview, setPreview] = useState<Assessment | null>(null);
+  // A save that forked a head-office (shared-library) paper into the tutor's own copy — the builder
+  // (or togglePublish) closes/finishes right away, so the confirmation lives here, not in it.
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 5000); return () => clearTimeout(t); }, [flash]);
   // Home's "New quiz" quick action lands here with the builder already open.
   useEffect(() => { if (type === "quiz" && !p.readOnly && p.topics.length && takeHubIntent(["newQuiz"])) setEditing("new"); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -87,7 +91,8 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
     setBusy(row.id);
     try {
       const a = await full(row);
-      await put(hubPath(p.qs, `/assessments/${a.id}`), { type: a.type, title: a.title, subject: a.subject, topicIds: a.topicIds, questionIds: a.questionIds ?? [], timeLimitMins: a.timeLimitMins, passMarkPct: a.passMarkPct, published: !a.published, ...(a.audience ? { audience: a.audience } : {}), ...(a.retakePolicy ? { retakePolicy: a.retakePolicy } : {}), ...(a.retakeCooldownHours != null ? { retakeCooldownHours: a.retakeCooldownHours } : {}) });
+      const r = await put<{ forked?: boolean }>(hubPath(p.qs, `/assessments/${a.id}`), { type: a.type, title: a.title, subject: a.subject, topicIds: a.topicIds, questionIds: a.questionIds ?? [], timeLimitMins: a.timeLimitMins, passMarkPct: a.passMarkPct, published: !a.published, ...(a.audience ? { audience: a.audience } : {}), ...(a.retakePolicy ? { retakePolicy: a.retakePolicy } : {}), ...(a.retakeCooldownHours != null ? { retakeCooldownHours: a.retakeCooldownHours } : {}) });
+      if (r.forked) setFlash(`"${a.title}" belonged to head office, so publishing it saved your own copy.`);
       reload();
     } catch (e) { p.onError(errMsg(e, "Couldn't change publishing")); }
     finally { setBusy(null); }
@@ -120,6 +125,7 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
   return (
     <div className="grid gap-4" data-testid={`hub-${type}-admin`}>
       {diag && <PlacementGuide requireDiagnostic={p.config.requireDiagnostic} />}
+      {flash && <Notice tone="ok" onDismiss={() => setFlash(null)}>{flash}</Notice>}
 
       <div className="flex flex-wrap items-center gap-2">
         <p className="m-0 min-w-[200px] flex-1 text-[12.5px] text-[var(--ink-3)]">{diag ? "One placement test per subject sets each child's starting point." : "Quizzes are built from your question bank and marked instantly."}</p>
@@ -197,7 +203,8 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
 
       {diag && !p.readOnly && <WaiveCard p={p} diagSubjects={diagSubjects} />}
 
-      {editing && <AssessmentBuilder key={editing === "new" ? "new" : editing.id} p={p} type={type} assessment={editing === "new" ? null : editing} all={list} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }}
+      {editing && <AssessmentBuilder key={editing === "new" ? "new" : editing.id} p={p} type={type} assessment={editing === "new" ? null : editing} all={list} onClose={() => setEditing(null)}
+        onSaved={(forked) => { setEditing(null); reload(); if (forked) setFlash(`That ${noun} belonged to head office, so saving it made your own copy.`); }}
         onOpenOther={p.readOnly ? undefined : async (id) => { const a = await get<Assessment>(hubPath(p.qs, `/assessments/${id}`)); if (!canChangeRow(p.franchiseId, a.franchiseId)) throw new Error(`That ${noun} belongs to head office, so you can't edit it.`); setEditing(a); }}
         onStartNew={() => setEditing("new")} />}
       {preview && <PreviewModal p={p} a={preview} onClose={() => setPreview(null)} />}

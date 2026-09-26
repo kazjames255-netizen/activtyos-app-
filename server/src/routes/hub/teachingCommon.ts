@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { db } from "../../firebase";
-import { canSee, canSeeStudent, canWriteRow, hubEnrolments, okId, subjectAllowed, type EnrolledChild, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, canSeeStudent, canWriteRow, hubEnrolments, okId, subjectAllowed, type EnrolledChild, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
 import { signImageUrl } from "../../lib/signing";
 import { tenantRoster, tenantTopics } from "../../lib/hubIndex";
 
@@ -56,7 +56,10 @@ export async function eligibleStudents(ctx: HubCtx, childIds: string[]): Promise
 export async function visibleTopic(ctx: HubCtx, topicId: unknown) {
   if (!okId(topicId)) return null;
   const s = await topicsCol.doc(topicId).get();
-  if (!s.exists || s.get("tenantId") !== ctx.tenantId || !canSeeStudent(ctx, s.get("franchiseId"))) return null;
+  // A shared-library topic is fine to FILE content under (canReadContent) — every tenant reads the
+  // shared curriculum tree, so a tutor's own flashcard/lesson can sit under one of its topics, and a
+  // forked copy of shared content keeps referencing the shared topic it was filed under.
+  if (!s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSeeStudent(ctx, s.get("franchiseId"))) return null;
   if (ctx.role === "parent" && !subjectAllowed(ctx, s.get("subject") as string)) return null;
   return { id: s.id, subject: s.get("subject") as string, topic: s.get("topic") as string, subtopic: (s.get("subtopic") as string | null) ?? null, parentTopicId: (s.get("parentTopicId") as string | null) ?? null, franchiseId: (s.get("franchiseId") as string | null) ?? null };
 }

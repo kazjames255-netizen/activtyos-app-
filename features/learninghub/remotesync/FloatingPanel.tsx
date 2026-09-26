@@ -58,7 +58,9 @@ export function FloatingPanel({ title, icon, x, y, w, h, z, minW, minH, onMove, 
   };
 
   const onHeaderDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button")) return; // don't drag when pressing a header button
+    // Icon buttons (minimise / reset / close) click normally; the big title button IS the drag handle (it fills the header, so
+    // ignoring it left only a few pixels of the bar draggable).
+    if ((e.target as HTMLElement).closest("button:not([data-drag-ok])")) return;
     onFocus();
     drag.current = { id: e.pointerId, startX: e.clientX, startY: e.clientY, origX: x, origY: y };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -107,7 +109,7 @@ export function FloatingPanel({ title, icon, x, y, w, h, z, minW, minH, onMove, 
         className="flex flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_18px_44px_rgba(0,0,0,0.28)]">
         <div onPointerDown={onHeaderDown} onPointerMove={onHeaderMove} onPointerUp={endDrag} onPointerCancel={endDrag}
           className="flex flex-none cursor-grab touch-none select-none items-center gap-1.5 border-b border-[var(--line)] bg-[var(--panel)] pl-1" style={{ height: HEADER_H }}>
-          <button ref={titleRef} type="button" onKeyDown={onHeaderKey}
+          <button ref={titleRef} type="button" data-drag-ok="1" onKeyDown={onHeaderKey}
             aria-label={`Move ${title}. Use the arrow keys; hold Shift to move faster.`}
             className="flex h-11 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-extrabold text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)]">
             <span aria-hidden className="text-[14px]">{icon}</span><span className="truncate">{title}</span>

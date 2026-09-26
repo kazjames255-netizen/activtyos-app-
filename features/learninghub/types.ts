@@ -82,6 +82,8 @@ export interface Student {
   yearGroup?: string | null;
   /** True when the year was filled in from the child's date of birth (kept current each September). */
   yearGroupAuto?: boolean;
+  /** A date of birth is on file (tutor roster only) — so the year can be switched to automatic. */
+  hasDob?: boolean;
   /** R-5: the tutor-set support profile. Absent = defaults. Read-only for a family (only tutors can change it). */
   support?: SupportProfile;
 }

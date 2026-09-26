@@ -3,7 +3,7 @@ import { Router, type Response } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
 import { FieldValue } from "firebase-admin/firestore";
-import { canSee, canSeeStudent, canWriteRow, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, canSeeStudent, canWriteRow, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type HubCtx } from "../../lib/hubCore";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { pingHub } from "../../lib/hubPing";
@@ -232,7 +232,7 @@ async function loadPaper(ctx: HubCtx, assessmentId: string, res: Response): Prom
   const snap = await assessmentsCol.doc(assessmentId).get();
   if (!snap.exists) return nf();
   const asm = snap.data() as AssessmentDoc;
-  if (asm.tenantId !== ctx.tenantId || !canSee(ctx, asm.franchiseId)) return nf();
+  if (!canReadContent(ctx, asm.tenantId) || !canSee(ctx, asm.franchiseId)) return nf();
   if (asm.published === false) { res.status(409).json({ error: "Publish this before a student sits it", code: "not_published" }); return null; }
   const qDocs = asm.questionIds?.length ? await db.getAll(...asm.questionIds.filter(okId).map((id) => questionsCol.doc(id))) : [];
   return { asm: { ...asm, id: snap.id }, qDocs };

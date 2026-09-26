@@ -34,8 +34,7 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
       await pickChild(page, fx, idx).catch(() => undefined);
       await settle(page);
       const card = page.getByTestId("curriculum-card");
-      await expect(card).toBeVisible({ timeout: 30_000 });
-      if ((await card.getByRole("button").first().getAttribute("aria-expanded")) !== "true") await card.getByRole("button").first().click();
+      await expect(card).toBeVisible({ timeout: 30_000 }); // always open now — no accordion to expand first
       const body = card.locator("[role=tabpanel]");
       if (kind === "sticker") {
         const book = card.getByTestId("curriculum-sticker-book");

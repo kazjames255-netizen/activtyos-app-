@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
-import { canSee, canWriteRow, hubConfig, okId, registerTopicRef, requireEdit, resolveCtx, type EnrolledChild, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, canWriteRow, hubConfig, needsFork, okId, registerTopicRef, requireEdit, resolveCtx, type EnrolledChild, type HubCtx } from "../../lib/hubCore";
 import { buildQueue, isQuality, sm2, type SrsState } from "../../lib/hubSrs";
 import { chunk, eligibleStudents, flashcardsCol, isParent, nowIso, parentChild, reviewsCol, tenantEnrolments, topicFamily, visibleTopic } from "./teachingCommon";
 import { cardIndex, patchCard, tenantTopics as cachedTopics, topicRank, type CardRow } from "../../lib/hubIndex";
@@ -155,7 +155,7 @@ hubFlashcardsApi.post("/flashcards/:id/review", async (req, res) => {
   if (!isQuality(body.quality)) { res.status(400).json({ error: "quality must be 1 (Again), 3 (Hard), 4 (Good) or 5 (Easy)" }); return; }
   if (!okId(req.params.id)) { res.status(404).json({ error: "Card not found" }); return; }
   const cs = await flashcardsCol.doc(req.params.id).get();
-  if (!cs.exists || cs.get("tenantId") !== ctx.tenantId) { res.status(404).json({ error: "Card not found" }); return; }
+  if (!cs.exists || !canReadContent(ctx, cs.get("tenantId"))) { res.status(404).json({ error: "Card not found" }); return; }
   const card = { id: cs.id, ...(cs.data() as CardDoc) };
   const [topics, assignedScope] = await Promise.all([tenantTopics(ctx.tenantId), assignedScopeFor(ctx.tenantId, kid.childId)]);
   if (!cardForChild(card, topics, kid, assignedScope)) { res.status(404).json({ error: "Card not found" }); return; }
@@ -343,13 +343,35 @@ hubFlashcardsApi.post("/flashcards", async (req, res) => {
   res.status(201).json(cardOut({ id: ref.id, ...doc }));
 });
 
-/** A visible-and-writable card, or a refusal already sent. */
+/** A visible-and-writable card, or a refusal already sent. Strict same-tenant only — used by
+ *  DELETE, which never forks: deleting a shared card keeps failing exactly as before.
+ *
+ *  NOTE: this used to check `canReadContent` (own tenant OR shared library) and rely on
+ *  `canWriteRow` to keep shared cards safe from a write — but `canWriteRow` returns true for
+ *  ANY row whenever the caller is a tenant-level operator (`ctx.franchiseId === null`), shared
+ *  library rows included (their `franchiseId` is also always null). That let a tenant-level
+ *  operator `.update()`/delete a SHARED card in place, corrupting it for every other tenant.
+ *  Tightened to an exact tenantId match, matching `editableNote`/`editableAssessment`'s DELETE
+ *  path. See `writableCard` for the fork-aware version PUT uses. */
 async function editableCard(ctx: HubCtx, id: string, res: import("express").Response) {
   if (!okId(id)) { res.status(404).json({ error: "Card not found" }); return null; }
   const snap = await flashcardsCol.doc(id).get();
   if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canSee(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Card not found" }); return null; }
   if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That card belongs to head office" }); return null; }
   return snap;
+}
+
+/** A visible card the caller may PUT: the caller's own returns it for an in-place update; the
+ *  shared library returns it flagged to FORK (see `needsFork` in hubCore.ts) — PUT
+ *  /flashcards/:id then creates a new doc instead of updating this one. */
+async function writableCard(ctx: HubCtx, id: string, res: import("express").Response): Promise<{ snap: FirebaseFirestore.DocumentSnapshot; fork: boolean } | null> {
+  if (!okId(id)) { res.status(404).json({ error: "Card not found" }); return null; }
+  const snap = await flashcardsCol.doc(id).get();
+  const docTenantId = snap.get("tenantId") as string | undefined;
+  if (!snap.exists || !docTenantId || !canReadContent(ctx, docTenantId) || !canSee(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Card not found" }); return null; }
+  if (needsFork(ctx, docTenantId)) return { snap, fork: true }; // shared library: never edited in place
+  if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That card belongs to head office" }); return null; }
+  return { snap, fork: false };
 }
 
 // POST /flashcards/publish {ids, published} — publish (or un-publish) many cards in ONE request ("Publish 60 drafts" used to be 60
@@ -375,13 +397,26 @@ hubFlashcardsApi.put("/flashcards/:id", async (req, res) => {
   if (!ctx || !requireEdit(ctx, res)) return;
   const parsed = cardBody.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const snap = await editableCard(ctx, req.params.id, res);
-  if (!snap) return;
+  const result = await writableCard(ctx, req.params.id, res);
+  if (!result) return;
+  const { snap, fork } = result;
   if (parsed.data.topicId && !(await visibleTopic(ctx, parsed.data.topicId))) { res.status(404).json({ error: "Topic not found" }); return; }
-  const patch = { ...parsed.data, updatedAt: nowIso() };
-  await snap.ref.update(patch);
-  patchCard(ctx.tenantId, snap.id, patch); pingHub(ctx.tenantId, "hubFlashcards");
-  res.json(cardOut({ id: snap.id, ...(snap.data() as CardDoc), ...patch }));
+  const before = snap.data() as CardDoc;
+  if (!fork) {
+    const patch = { ...parsed.data, updatedAt: nowIso() };
+    await snap.ref.update(patch);
+    patchCard(ctx.tenantId, snap.id, patch); pingHub(ctx.tenantId, "hubFlashcards");
+    res.json(cardOut({ id: snap.id, ...before, ...patch }));
+    return;
+  }
+  // Shared-library card: fork into a brand-new one owned by this tenant. The shared original
+  // is never `.update()`d, so every other tenant's view of it is unaffected.
+  const now = nowIso();
+  const doc: CardDoc = { ...before, ...parsed.data, tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, createdBy: ctx.uid, createdByName: ctx.name, createdAt: now, updatedAt: now };
+  const ref = flashcardsCol.doc();
+  await ref.set(doc);
+  patchCard(ctx.tenantId, ref.id, doc); pingHub(ctx.tenantId, "hubFlashcards");
+  res.json({ ...cardOut({ id: ref.id, ...doc }), forked: true });
 });
 
 // DELETE /flashcards/:id — the card and every child's review state for it.

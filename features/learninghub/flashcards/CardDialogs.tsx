@@ -23,7 +23,9 @@ function TopicSelect({ id, topics, value, onChange }: { id: string; topics: Topi
 }
 
 export function CardDialog({ card, topics: topicsProp, defaultTopicId, qs, onClose, onSaved, onOpenOther, onStartNew, franchiseId = null }: {
-  card: Card | null; topics: Topic[]; defaultTopicId: string; qs: string; onClose: () => void; onSaved: (more: boolean) => void;
+  card: Card | null; topics: Topic[]; defaultTopicId: string; qs: string; onClose: () => void;
+  /** `forked`: editing a head-office (shared-library) card saved a NEW copy, not `card.id`. */
+  onSaved: (more: boolean, forked?: boolean) => void;
   /** "Edit existing" tab: swap this dialog over to another card. Without it the tab strip is not shown. */
   onOpenOther?: (c: Card) => void;
   /** "New" tab while editing a card: swap to a blank dialog. */
@@ -64,9 +66,13 @@ export function CardDialog({ card, topics: topicsProp, defaultTopicId, qs, onClo
     setBusy(more ? "more" : "one"); setErr(null);
     const body = { topicId, front: front.trim(), back: back.trim(), published };
     try {
-      if (card) await put(`/api/learning-hub/flashcards/${card.id}${qs}`, body);
-      else await post(`/api/learning-hub/flashcards${qs}`, body);
-      if (more) { setFront(""); setBack(""); setBusy(null); onSaved(true); } else onSaved(false);
+      if (card) {
+        const r = await put<{ forked?: boolean }>(`/api/learning-hub/flashcards/${card.id}${qs}`, body);
+        onSaved(false, r.forked === true);
+      } else {
+        await post(`/api/learning-hub/flashcards${qs}`, body);
+        if (more) { setFront(""); setBack(""); setBusy(null); onSaved(true); } else onSaved(false);
+      }
     } catch (e) { setErr(errMsg(e, "Couldn't save the card")); setBusy(null); }
   };
 

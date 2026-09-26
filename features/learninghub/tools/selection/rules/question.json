@@ -1,0 +1,879 @@
+{
+ "version": "question-2026-09-25",
+ "rules": [
+  {
+   "id": "q.M-01.y1-3",
+   "tool": "M-01",
+   "weight": 0.85,
+   "any": [
+    "\\bruler\\b|measur\\w* (the )?(length|lines?|distance|sides?)|^how (long|tall) is (the|this|a) [a-z ]{2,25}( in (centi|milli)metres)?\\s*\\??$|who has measured (it )?accurately|what number of mm"
+   ],
+   "none": [
+    "\\bunits?\\b|sensible|would you (use|measure)|when we measure length in|\\bmetres,? we use|\\bmeasure (the )?distance from one side",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head",
+    "\\bwho has measured\\b",
+    "\\bshould (always )?start\\b",
+    "missing from the ruler",
+    "\\bbroken\\b",
+    "compasses",
+    "\\bwhich image\\b",
+    "\\bwhat could\\b",
+    "\\bmeasured accurately\\b"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-01.y4-9",
+   "tool": "M-01",
+   "weight": 0.85,
+   "any": [
+    "\\bruler\\b.{0,60}\\b(measur|mark|cm|line|radius)|(measure|use)\\w* .{0,30}\\bruler\\b|centimetre ruler",
+    "\\bruler\\b",
+    "look at the (string|line|pencil|worm|stick)\\.? how long is it"
+   ],
+   "none": [
+    "cost|pounds|£|which of these is|which tool|unit",
+    "in metres|\\bm\\?|times the|one.tenth",
+    "which of these shows the correct way",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head",
+    "\\bwho has measured\\b",
+    "\\bshould (always )?start\\b",
+    "missing from the ruler",
+    "\\bbroken\\b",
+    "compasses",
+    "\\bwhich image\\b",
+    "\\bwhat could\\b",
+    "\\bmeasured accurately\\b"
+   ],
+   "years": [
+    4,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-02.measure",
+   "tool": "M-02",
+   "weight": 0.9,
+   "any": [
+    "protractor",
+    "(measure|draw|estimate|compare|name)\\w*,? (and |or )?(name |estimate |measure |draw )?(the )?(size of )?angles?",
+    "angles compare name estimate and measure",
+    "accurate\\w* draw",
+    "angle being measured"
+   ],
+   "none": [
+    "trigonom",
+    "match the letter",
+    "protractor placed correctly",
+    "pie chart",
+    "which image shows the protractor",
+    "geogebra",
+    "which (of these )?(tool|point|units?)\\b",
+    "true or false",
+    "correct position",
+    "known as",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head",
+    "(read|shows?|showing)\\b[^.?]{0,40}\\bprotractor",
+    "protractor (measuring|placed|is placed)",
+    "\\bfrequency\\b|\\bvoted\\b|\\bpeople\\b|\\bpie chart\\b"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-02.fillin",
+   "tool": "M-02",
+   "weight": 0.9,
+   "any": [
+    "\\b(measurement|size) of (the |this )?(acute |obtuse |reflex |right )?angle( [a-z])?( shown| here| in this image)?\\?? ?_+ ?°?",
+    "\\bthe (acute|obtuse|reflex)? ?angle (shown|in this image) (is|measures)\\b[^.?]*_+",
+    "^The size of the angle is _+",
+    "^What is the measurement of the angle shown"
+   ],
+   "none": [
+    "missing|not to scale|calculate|find|hexagon|triangle|polygon|which means",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head",
+    "(read|shows?|showing)\\b[^.?]{0,40}\\bprotractor",
+    "protractor (measuring|placed)"
+   ],
+   "years": [
+    4,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-02.bearings",
+   "tool": "M-02",
+   "weight": 0.9,
+   "any": [
+    "using the (image|diagram|map),? (what is|work out|find) the bearing",
+    "\\d+ ?km away from .{0,60}on a bearing of",
+    "on a bearing of \\d{2,3}.{0,120}which is the correct position"
+   ],
+   "none": [
+    "unscaled",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    9,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-21.y2-6",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "coordinates?",
+    "plotting",
+    "\\bquadrants?\\b",
+    "position and direction",
+    "midpoint of"
+   ],
+   "none": [
+    "scatter|time series",
+    "\\bthe origin has\\b|which coordinate do we|what does the (first|second) number|count along|write first|x-coordinate and|midpoint of \\d+ and \\d+|true or false",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    2,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-21.pairs",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "\\(\\s*[−-]?\\d+\\s*,\\s*[−-]?\\d+\\s*\\)",
+    "\\bplot(ted|ting|s)? (out )?(the |a )?(points?|vertices|vertex|triangle|final)|vertices of a (square|rectangle|shape|triangle) have been plotted"
+   ],
+   "none": [
+    "runs|better to draw",
+    "\\bDescribe the\\b",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    4,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-21.y7-9",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "\\bplot(s|ted|ting)?\\b.{0,50}(coordinates?|points|graph|line|\\(\\s*-?\\d)",
+    "\\b(draw|sketch)\\w* (the |a )?(graph|straight line)",
+    "\\bfourth (coordinate|point|vertex)|form (an? )?(rectangle|square|parallelogram|kite)",
+    "(lines?|graphs?) (of )?y ?=.{0,40}intersect|coordinates?.{0,30}lines? .{0,10}intersect",
+    "(make|form|lie on|be on) a straight line"
+   ],
+   "none": [
+    "_{3,}",
+    "^(which|what) (of )?(these |the following )?(statements?|words?|terms?)",
+    "minimum number|best (second )?points?|how many (points|coordinates)",
+    "desmos|spreadsheet|scatter|geometric sequence|arithmetic sequence|sequence|bivariate|table of values",
+    "^what (do|does|is)\\b.{0,30}(mean|called)",
+    "\\bmatch\\b",
+    "construction|pie chart|bar chart|dot plot|sector|plot of (land|grass)|plot of rect|plot of",
+    "\\bwhy\\b|explain|how do we know|what is wrong|line segment|angle|kite",
+    "\\bwhat is the (x|y)[- ]coordinate",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-21.y10-11.read",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "what are the coordinates of (the )?(point |vertex )?[A-Z]\\b",
+    "coordinates of (the|this) (point|vertex)s? (shown|marked)",
+    "what coordinates should be plotted",
+    "coordinate pairs? (we|you|would) .{0,20}plot",
+    "coordinates would you plot",
+    "graphical representation of this vector",
+    "this vector in column form"
+   ],
+   "none": [
+    "\\(\\s*-?\\d+\\s*,\\s*-?\\d+\\s*\\)",
+    "midpoint|translated|to the (right|left)",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-21.y10-11.transform",
+   "tool": "M-21",
+   "weight": 0.9,
+   "any": [
+    "\\btranslate shape [A-Z]+ by",
+    "select the points that should be joined",
+    "enlarged by scale factor .{0,30}centre",
+    "which point on the graph has the coordinates",
+    "what will the new position of the marked vertex"
+   ],
+   "none": [
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-40.literal",
+   "tool": "M-40",
+   "weight": 0.9,
+   "any": [
+    "number lines?"
+   ],
+   "none": [
+    "true or false|what does a number line|minuend|subtrahend",
+    "probab",
+    "double number line",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    1,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-40.y1-3",
+   "tool": "M-40",
+   "weight": 0.9,
+   "any": [
+    "\\bnumber (lines?|tracks?)\\b|\\bnegative numbers?\\b|positive and negative|\\bpositioning\\b|\\bwhat number is (the |this |that )?(\\w+ )?arrow|\\bthe arrow shows the position|which arrow (shows|represents) the position|estimate (which|what) number|(which|what) number (is|does) (the )?(\\w+ )?arrow|what number is (shown|represented) by the arrow"
+   ],
+   "none": [
+    "\\bwhich (equation|number line could)\\b|\\bequation (is|does|represented)|\\bwhat type of numbers",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-40.negatives",
+   "tool": "M-40",
+   "weight": 0.6,
+   "any": [
+    "(?<![\\w)./(,])[−-]\\d",
+    "\\bnegative numbers?\\b(?!.*(which of the following means))",
+    "\\bdistance from zero\\b"
+   ],
+   "none": [
+    "coordinate|quadrant|vertex|vertices|\\(\\s*[−-]?\\d",
+    "what does each of the numbers",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    4,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-40.temps",
+   "tool": "M-40",
+   "weight": 0.9,
+   "any": [
+    "temperatures?.{0,60}\\b(warmer|colder|coldest|warmest|in order)\\b",
+    "\\bwarmer|colder\\b.{0,30}°"
+   ],
+   "none": [
+    "double number line",
+    "^(select|which of)",
+    "(what|which)\\b.{0,20}\\b(is|are|does)\\b.{0,20}(called|used)",
+    "_{3,}",
+    "modal|mean|median|graph|scatter|forecast|map|bivariate|rounded",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-44.y1-3",
+   "tool": "M-44",
+   "weight": 0.9,
+   "any": [
+    "\\bequivalent fractions?\\b|\\bfractions?\\b[^.?]*\\bequivalent\\b|\\bhow many (halves|thirds|quarters|fifths|sixths|eighths|tenths|twelfths) (make|are (there )?in|does it take|in)\\b|\\bfraction (wall|strips?)\\b|\\bequal to (one|1) whole\\b"
+   ],
+   "none": [
+    "order|compare|larger|smaller|greater",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    1,
+    3
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-44.y4-6",
+   "tool": "M-44",
+   "weight": 0.9,
+   "any": [
+    "\\b(equivalent|related) fractions?\\b",
+    "\\bfractions?\\b[^.?]*\\b(equivalent|equal to|same value as|shaded)\\b|\\b(equivalent|shaded)\\b[^.?]*\\bfractions?\\b",
+    "\\bshaded\\b[^.?]*\\d+/\\d+|\\d+/\\d+[^.?]*\\bshaded\\b",
+    "\\bfractions?\\b[^.?]*\\b(order|largest|smallest|ascending|descending)\\b|\\border\\b[^.?]*\\bfractions\\b",
+    "missing (numerator|denominator)|scale factor used to create",
+    "fractions? wall|fraction of (the|a) (bar|shape|whole|circle|rectangle|square)|how much of the bar|equal to \\d+/\\d+",
+    "\\bimage\\b[^.?]*\\b(represent|show)\\w*\\b[^.?]*fraction|fractions?\\b[^.?]*\\b(represented|shown) (by|in) (the|this) image"
+   ],
+   "none": [
+    "decimal|percent|%",
+    "say (it|as)|we say|how do we say",
+    "\\bmixed number|improper|simplest|simplif|lowest terms",
+    "long division|remainder|shrimp|giraffe|litre|\\bkg\\b|\\bml\\b",
+    "is called|known as|\\bdefinition|complete (this|the) sentence|which of these describes",
+    "number line",
+    "\\bexpression|inches|\\brods?\\b|\\bmetres?\\b",
+    "\\bare fractions (where|in which)|can be called|statements describe|fractions if|fractions that are",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    4,
+    6
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-44.y7-9",
+   "tool": "M-44",
+   "weight": 0.9,
+   "any": [
+    "equivalent (fractions?|to \\d+/\\d+)|fractions? (that )?(are )?equivalent|simplify to",
+    "how many (halves|quarters|thirds|fifths|eighths|sixths|tenths) (are )?in"
+   ],
+   "none": [
+    "_{3,}",
+    "calculator|recurring|decimal|percent|%|mixed|improper|prime|true or false|which of these is a|match|\\d{3}|steps|expressions?|\\d[a-z]|simplify to \\d[a-z]|=|÷",
+    "(what|which)\\b.{0,20}(called|name)",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-46.tt",
+   "tool": "M-46",
+   "weight": 0.9,
+   "any": [
+    "\\btimes[- ]tables?\\b|\\bmultiplication facts?\\b|\\bdivision facts?\\b|\\bwhat is \\d+, \\d+ times\\b|\\bmultiplication (and|or) division facts",
+    "\\bchanting\\b",
+    "times tables?",
+    "(use|using|derive)[^.?]*multiplication facts",
+    "match[^.?]*(multiplication|times tables?) facts?",
+    "times tables?|multiplication (table|grid|square)",
+    "(first|next) (\\w+ )?(five|four|six|ten|three|\\d+) multiples",
+    "list (all )?(the )?(first )?\\w* ?multiples"
+   ],
+   "none": [
+    "digit sum|divisib|\\b\\d+ times (as|the|more|larger|smaller)|times the (size|value|height)|\\btimes as\\b|true or false|which of these times tables (has|have)",
+    "_{3,}",
+    "divisib|match (each )?set|100th|describe|factors",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    1,
+    7
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-60.build",
+   "tool": "M-60",
+   "weight": 0.9,
+   "any": [
+    "\\b(draw|drawing|construct\\w*|complete|build|create|make|plot\\w*)\\b.{0,25}\\b(bar (chart|graph)s?|pictograms?|pie charts?|line graphs?|histograms?|tally chart|frequency polygon)",
+    "how (would|could) (you|she|he|they) record\\b|would need to draw\\b|need(ed)? to be drawn|\\bnumerical axis\\b|\\baxis increase|\\bwhat scale\\b|\\bdraw (a|the|your) (bar (chart|graph)|pictogram|tally chart)"
+   ],
+   "none": [
+    "_{3,}",
+    "steps|essential|feature|true or false|which of|match|order|excel|spreadsheet|desmos|matches",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    1,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-64.y7-9",
+   "tool": "M-64",
+   "weight": 0.9,
+   "any": [
+    "\\b(roll|rolls|rolled|rolling|throw\\w*|toss\\w*|flip\\w*|spin\\w*|spun)\\b.{0,60}\\b(dice|die|coins?|spinners?)\\b",
+    "\\b(dice|die|coins?|spinners?)\\b.{0,40}\\b(rolled|thrown|tossed|flipped|spun)\\b"
+   ],
+   "none": [
+    "_{3,}",
+    "^(which|what) (of these )?(words?|terms?)",
+    "\\bsample space|\\bξ|probability tree|outcome tree|venn|mutually exclusive|exhaustive|the table|tables show|tally",
+    "\\bmatch\\b",
+    "\\b(this|these|the|each|both) (two )?(fair )?spinners?\\b|spinners? [A-Z]\\b|spinner with|\\btrial\\b",
+    "systematic|which (list|statement)",
+    "\\bimproved\\b|tree diagram|outcome table|which spinners",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    9
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-64.biased",
+   "tool": "M-64",
+   "weight": 0.85,
+   "any": [
+    "\\bbiased\\b.{0,80}\\b(dic?e|coin|spinner)\\b|\\b(dic?e|coin|spinner)\\b.{0,80}\\bbiased\\b",
+    "\\b(rolls?|rolled|tosse[sd]|tossed|flip(s|ped)?|spins?|spun)\\b.{0,60}\\b(\\d{1,2}|twice|three|four|five|ten) times\\b"
+   ],
+   "none": [
+    "venn|tree|frequency tree|probability (of|that)|P\\(|expect",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-80.explicit",
+   "tool": "M-80",
+   "weight": 0.9,
+   "any": [
+    "\\b(use|using|with|on) (a |your |the )?calculator|calculator (to|can|may)|you (may|can) use a calculator|calculator to help"
+   ],
+   "none": [
+    "without (using )?(a |the |your )?calculator|(do )?not (use|using)|no calculator|\\bkey\\b|button|display|casio|fx-|what does|inputting",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.M-80.numeric",
+   "tool": "M-80",
+   "weight": 0.85,
+   "any": [
+    "\\b(calculate|work out|find|evaluate)\\b.{0,100}\\d.{0,60}(d\\.?p\\.?|decimal place|s\\.?f\\.?|significant figure)",
+    "compound interest.{0,150}(how much|what is the|value|worth|total|end)",
+    "£\\s?[\\d,]+.{0,60}(invest|borrow).{0,120}(how much|worth|owe)",
+    "\\b(work out|calculate)\\b.{0,60}×\\s?10",
+    "to (\\d+|one|two|three) (d\\.?p\\.?|decimal places?|s\\.?f\\.?|significant figures?)\\W*$"
+   ],
+   "none": [
+    "\\bmatch\\b",
+    "true or false",
+    "which (of|statement|is|one)",
+    "_____ (is|are|called|known)",
+    "\\bwhy\\b",
+    "^\\s*(round|truncate)\\b",
+    "rounded to",
+    "\\btruncat",
+    "without a calculator|non-?calculator|no calculator",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    10,
+    11
+   ],
+   "subject": [
+    "maths"
+   ]
+  },
+  {
+   "id": "q.S-calc",
+   "tool": "M-80",
+   "weight": 0.85,
+   "any": [
+    "\\b(calculate|work out|determine)\\b"
+   ],
+   "none": [
+    "\\b(how would you|how do you|which (quantities|equation|formula|of the following)|explain|describe|why|order the|how will (this|it)|what is the (equation|formula)|would you (calculate|use)|most accurate)\\b",
+    "\\bgraph\\b",
+    "\\btrue or false\\b",
+    "\\bknown as\\b",
+    "\\b(is|are) called\\b",
+    "\\b(tool|instrument|equipment) (used|that|which|to)\\b",
+    "\\bused (to|for) (measur|draw|plot|read|find)",
+    "\\bwhat (does|do|is|are) (a|an|the) (protractor|ruler|number line|calculator|compass(es)?|fractions? wall|times tables?|dice|die|spinner)\\b",
+    "\\bwhich (of (these|the following)|one of these) (is|are) (a|an|the)? ?(tool|instrument|unit|type)",
+    "^\\s*match\\b",
+    "geogebra",
+    "without (using )?(a |the |your )?calculator",
+    "\\bno calculator\\b",
+    "non-?calculator",
+    "\\bmentally\\b|in your head"
+   ],
+   "years": [
+    7,
+    13
+   ],
+   "subject": [
+    "science"
+   ]
+  }
+ ],
+ "fallback": {}
+}

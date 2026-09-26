@@ -29,8 +29,6 @@ interface Props {
   /** Refetch after a change; the server also pushes hubTopics over realtime. */
   onChanged: () => void;
   onError: (msg: string) => void;
-  /** Bump to open the "add topic" form from elsewhere (empty states). */
-  addSignal?: number;
   /** "sidebar" (default): the sticky tree card / phone summary button.
    *  "chips": a horizontal snap-scrolling chip bar (quizzes, homework, placement),
    *  with the full tree one tap away in a sheet. */
@@ -75,7 +73,7 @@ function useEdgeFade() {
   return { ref, style, onScroll: read };
 }
 
-export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, franchiseId, qs, onChanged, onError, addSignal = 0, variant = "sidebar" }: Props) {
+export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, franchiseId, qs, onChanged, onError, variant = "sidebar" }: Props) {
   const isDesktop = useIsDesktop();
   const fullTree = useMemo(() => buildTree(topics), [topics]);
   const counts = useMemo(() => countsFromStats(topics, noteStats), [topics, noteStats]);
@@ -125,14 +123,6 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
     if (e.kind === "add-topic" && e.subject) expand(e.subject);
   };
   const cancelEdit = () => { setEditing(null); setSubject(""); setName(""); };
-
-  const lastSignal = useRef(addSignal);
-  useEffect(() => {
-    if (addSignal === lastSignal.current) return;
-    lastSignal.current = addSignal;
-    if (canEdit) { startEdit({ kind: "add-topic" }); if (!isDesktop) setSheet(true); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addSignal]);
 
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);

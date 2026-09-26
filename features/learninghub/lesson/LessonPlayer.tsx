@@ -14,7 +14,7 @@ import { QuizStep, type QuizOutcome } from "./QuizStep";
 import { normalizeLesson } from "./types";
 import { WarmupStep, type WarmupOutcome } from "./WarmupStep";
 import type { WarmupQuestion } from "./api";
-import { SlideDeck } from "./slides/SlideDeck";
+import { coverSlideSkipped, SlideDeck } from "./slides/SlideDeck";
 import { OakDeckStep } from "./OakDeckStep";
 import { WordsStep } from "./WordsStep";
 import { getWidget } from "./widgets";
@@ -92,21 +92,25 @@ export interface LessonPlayerProps {
    *  often, whenever the current warm-up/quiz answer changes (with the question's prompt, and, warm-up only, the
    *  Check verdict once known). Never affects marking. */
   onLiveAnswer?: (p: LiveAnswerPosition) => void;
+  /** The warm-up / quiz question on screen right now (null on slides and everywhere else) — fired as soon as it is shown, before any answer. Drives per-question help tools. */
+  onQuestion?: (q: { id: string; prompt: string; step: string } | null) => void;
   /** Tutor-led class mode — see InPersonSlots. */
   inPerson?: InPersonSlots;
   /** Remote-sync "I answer, they watch" mode — see DrivenSlots. */
   driven?: DrivenSlots;
   /** Opened from a homework: the exit quiz is recorded against it. */
   homeworkId?: string | null;
-  /** Hides the Start step's button entirely — NotesPanel's tutor preview shows the lesson info card as pure
-   *  information; the "One room" / "Share with children" choice cards below it are the only way to actually start. */
+  /** Hides the Start step's button entirely — NotesPanel's "Open" flow shows the lesson info card as pure
+   *  information; the "One room" / "Share with children" choice cards below it are the only way to actually start.
+   *  NOT used for a plain tutor preview (LessonTutorPanel's "Preview lesson"), which needs this button to step
+   *  through the deck on its own, with no roster or session. */
   hideStartButton?: boolean;
-  /** Extra classes on the Start step's card — NotesPanel uses this to flatten its bottom corners/shadow so the
-   *  choice cards below can sit flush underneath it, as one continuous card. */
+  /** Extra classes on the Start step's card — NotesPanel's "Open" flow uses this to flatten its bottom corners/shadow
+   *  so the choice cards below can sit flush underneath it, as one continuous card. */
   startCardClassName?: string;
   /** Hides the "Preview" banner, the progress header (close/streak/XP) and the step tracker — for NotesPanel's
-   *  tutor decision screen, where nothing has started yet so none of that means anything. Exiting is via the
-   *  page's own Back button instead. */
+   *  "Open" decision screen, where nothing has started yet so none of that means anything. Exiting is via the
+   *  page's own Back button instead. NOT used for a plain tutor preview, which shows this header normally. */
   hideHeader?: boolean;
   /** Remote-sync's student page has its own "Ask your teacher" sidebar card (same hubDoubts thread, context-tagged
    *  identically) — suppress this inline banner there so the pupil isn't offered two askers for the same thing. */
@@ -123,7 +127,7 @@ const loadProg = (k: string): { step?: string; xp?: number; streak?: number } | 
 const saveProg = (k: string, v: { step: string; xp: number; streak: number }) => { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 const dropProg = (k: string) => { try { sessionStorage.removeItem(k); } catch { /* ignore */ } };
 
-export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, pace, onLiveAnswer, inPerson, driven, homeworkId, hideStartButton, startCardClassName, hideHeader, flatShell, hideAskTeacher }: LessonPlayerProps) {
+export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = false, onExit, setFocus, goTo, onLessonSaved, onProgress, follow, pace, onLiveAnswer, onQuestion, inPerson, driven, homeworkId, hideStartButton, startCardClassName, hideHeader, flatShell, hideAskTeacher }: LessonPlayerProps) {
   const lesson = useMemo(() => normalizeLesson(note.lesson, note.title), [note.lesson, note.title]);
   const widget = useMemo(() => getWidget(lesson.widget), [lesson.widget]);
 
@@ -162,7 +166,7 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
   const hasSlides = lesson.slides.length > 0 || hasDeck || !!lesson.oakDeck;
   const [ownSlides, setOwnSlides] = useState(false); // a learner/tutor can swap Oak's real deck for our summary slides
   const summaryView = ownSlides && lesson.slides.length > 0;
-  const slideCount = hasDeck && !summaryView ? lesson.deckSlides.length : lesson.slides.length;
+  const slideCount = hasDeck && !summaryView ? lesson.deckSlides.length - (coverSlideSkipped(lesson.deckSlides) ? 1 : 0) : lesson.slides.length;
   // A slide-deck lesson runs like Oak's own: warm-up questions, then the slides (they carry the key words), then the exit quiz.
   const steps = useMemo<StepId[]>(() => (hasSlides
     ? ["start", ...(hasWarm ? ["warm" as const] : []), "slides", ...(hasQuiz ? ["quiz" as const] : []), "done"]
@@ -214,6 +218,9 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
   // "slides" — see `askContext` below), reported by WarmupStep/QuizStep's `onView` as soon as it's shown.
   const [qCtx, setQCtx] = useState<{ id: string; prompt: string } | null>(null);
   useEffect(() => { setQCtx(null); }, [step]);
+  const onQuestionRef = useRef(onQuestion);
+  onQuestionRef.current = onQuestion;
+  useEffect(() => { onQuestionRef.current?.(qCtx && (step === "warm" || step === "quiz") ? { ...qCtx, step } : null); }, [qCtx, step]);
 
   // Live lessons: report where we are, and follow the tutor (never out of the quiz / the result, never into them).
   const [slide, setSlide] = useState(0);
@@ -296,11 +303,11 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
       {readOnly && !inPerson && !driven && !hideHeader && (
         flatShell ? (
           <div role="note" className="flex items-center gap-2 px-[20px] py-[10px] text-[13px] font-semibold text-[var(--brand)]" style={{ background: "#EEF0FB" }}>
-            <Icon name="eye" size={16} className="flex-none" />Student preview — nothing here is saved or counted.
+            <Icon name="eye" size={16} className="flex-none" />Preview — this is what students see. Nothing you do here is saved or counted.
           </div>
         ) : (
           <div role="note" className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">
-            <Icon name="eye" size={16} className="flex-none text-[var(--brand-2)]" />Student preview — nothing here is saved or counted.
+            <Icon name="eye" size={16} className="flex-none text-[var(--brand-2)]" />Preview — this is what students see. Nothing you do here is saved or counted.
           </div>
         )
       )}
@@ -356,7 +363,9 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
 
         {step === "learn" && <LearnStep lesson={lesson} widget={widget} addXP={addXP} onDone={next} onBack={back} />}
         {step === "slides" && hasDeck && !summaryView && (
-          <SlideDeck slides={lesson.deckSlides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={slideFollowIndex}
+          <SlideDeck slides={lesson.deckSlides} addXP={addXP} onDone={next} onBack={back} onIndex={setSlide} followIndex={slideFollowIndex} subject={lesson.subject}
+            lessonTitle={lesson.title} lessonUnit={lesson.unit} lessonKeyConcepts={lesson.outline}
+            lessonAgeGroup={[lesson.keyStage, lesson.year && (/^\d+$/.test(lesson.year) ? `Year ${lesson.year}` : lesson.year)].filter(Boolean).join(" · ") || undefined}
             toolbar={lesson.slides.length > 0 ? <Btn tone="ghost" onClick={() => setOwnSlides(true)} data-testid="oak-deck-summary" className="!min-h-[36px] !px-3 !text-[12.5px]">Summary slides instead</Btn> : undefined}
             editor={readOnly && onLessonSaved ? { save: async (sl) => { onLessonSaved(await saveLessonSlides(note.id, qs, sl, "deckSlides")); } } : undefined} />
         )}

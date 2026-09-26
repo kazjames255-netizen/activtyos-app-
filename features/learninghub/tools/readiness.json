@@ -1,0 +1,94 @@
+{
+  "note": "What each help tool can ACTUALLY do today, in the canonical vocabulary of .unlazy/tools-per-question/checks/needs-canon.mjs. Kept honest: a capability is only listed once it is implemented and covered by a gate. The readiness gate compares this against what the agent judges said the child needs on the questions each tool was assigned.",
+  "tools": {
+    "calculator": {
+      "capabilities": [
+        "brackets",
+        "memory",
+        "keyboard",
+        "powers",
+        "trig",
+        "pi",
+        "roots",
+        "percent",
+        "standardform",
+        "fractions",
+        "decimals"
+      ],
+      "impl": "remotesync/ScientificCalculator.tsx + tools/calc/evaluate.ts (60 engine checks)"
+    },
+    "protractor": {
+      "capabilities": [
+        "rotate",
+        "flip",
+        "resize",
+        "overlay",
+        "move",
+        "zoom",
+        "keyboard"
+      ],
+      "impl": "remotesync/InstrumentOverlay.tsx",
+      "notes": {
+        "zoom": "Bigger/Smaller resizes the instrument so its scale can be read closely"
+      }
+    },
+    "ruler": {
+      "capabilities": [
+        "rotate",
+        "resize",
+        "overlay",
+        "move",
+        "zoom",
+        "keyboard"
+      ],
+      "impl": "remotesync/InstrumentOverlay.tsx"
+    },
+    "numberline": {
+      "capabilities": [
+        "range",
+        "undo",
+        "zoom",
+        "labels",
+        "axes",
+        "fractions",
+        "decimals"
+      ],
+      "impl": "remotesync/NumberLineTool.tsx + tools/numberline/range.ts (19 logic checks)"
+    },
+    "grid": {
+      "capabilities": [
+        "undo",
+        "draw",
+        "range",
+        "axes",
+        "zoom",
+        "labels"
+      ],
+      "impl": "tools/maths/CoordGrid.tsx + tools/maths/gridRange.ts (13 logic checks): settable axes fitted to the question, zoom, line tool, no auto-transform (would give the answer)"
+    },
+    "fractions": {
+      "capabilities": [
+        "resize",
+        "range",
+        "labels",
+        "shading",
+        "fractions"
+      ],
+      "impl": "remotesync/FractionBars.tsx + tools/fractions/bars.ts (12 logic checks): 1-4 wholes, up to 24 parts, tap to shade, whole + part labels, re-slice, second bar, Bigger/Smaller; no add/compare/common-denominator helpers"
+    },
+    "periodic": {
+      "capabilities": [
+        "fulltable",
+        "details",
+        "zoom"
+      ],
+      "impl": "tools/science/periodic/PeriodicTable.tsx + elements.ts (72 data checks): all 118 elements, layout, detail card, search, zoom"
+    },
+    "map": {
+      "capabilities": [
+        "rotate"
+      ],
+      "impl": "remotesync/CompassTool.tsx + tools/compass/turn.ts (turnable arrow on a fixed rose; never writes the direction's name)"
+    }
+  }
+}

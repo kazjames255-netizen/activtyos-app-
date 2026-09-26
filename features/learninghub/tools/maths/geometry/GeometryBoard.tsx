@@ -13,7 +13,7 @@ import { GENERATORS, markProblem, type Problem } from "./generators";
 import type { PublicProblem } from "../../problems";
 import { Paper, PaperDefs } from "./papers";
 import { CompassArt, InstrumentArt } from "./InstrumentArt";
-import { arcFromSweep, barLen, bodyOf, compassPen, drawAlongEdge, edgesOf, isProtractor, makeInstrument, nearestEdge, nearestPoint, protractorReading, snapCompass, snapEdgeToPoints, snapPoints, snapProtractor, snapSetSquare, SIZE, withRadius } from "./instruments";
+import { arcFromSweep, barLen, bodyOf, compassPen, drawAlongEdge, edgesOf, flipInstrument, isProtractor, makeInstrument, nearestEdge, nearestPoint, protractorReading, snapCompass, snapEdgeToPoints, snapPoints, snapProtractor, snapSetSquare, SIZE, withRadius } from "./instruments";
 import { DEFAULT_TOL, GEO_SCHEMA_VERSION, GEO_TOOL_ID, INSTR_LABEL, PAPERS, PAPER_H, PAPER_W, initialGeoState, uid, type GeoState, type InstrKind, type Instrument, type Mark, type PaperKind, type Tol } from "./model";
 
 // The geometry board: a real-millimetre sheet of paper with instruments that behave like the real thing (plan M-01…M-07, M-20).
@@ -52,6 +52,11 @@ export interface GeometryBoardProps {
   /** Instruments the pupil may add from the bar (default: all eight). */
   offer?: InstrKind[];
   paper?: PaperKind;
+  /** A picture (e.g. the lesson question's diagram) laid on the paper under the instruments, so they can be used ON it. */
+  backdropUrl?: string;
+  /** Focus mode (all buttons, tabs and hints hidden, just the paper + a tiny bar). Uncontrolled unless `focus` is given. */
+  focus?: boolean;
+  onFocusChange?: (on: boolean) => void;
   /** A question to work on (assess/practise). A `PublicProblem` (from the server, no answer key) can be worked on but not self-checked. */
   problem?: Problem | PublicProblem | null;
   /** Where the pupil left off (resuming a quiz): their marks and typed number. */
@@ -75,7 +80,7 @@ const newInstr = (k: InstrKind, at: Pt): Instrument => makeInstrument(k, uid("i"
 const inPoly = (poly: readonly Pt[], p: Pt) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i]!, b = poly[j]!; if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c; } return c; };
 const stateFrom = (paper: PaperKind, preset: InstrKind[], given: Mark[] = []): GeoState => ({ paper, instruments: preset.map((k, i) => newInstr(k, homeFor(k, i))), marks: given });
 
-export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit, initialAnswer, onAnswer }: GeometryBoardProps) {
+export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, backdropUrl, focus: focusProp, onFocusChange, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit, initialAnswer, onAnswer }: GeometryBoardProps) {
   const assess = mode === "assess";
   const [problem, setProblem] = useState<Problem | PublicProblem | null>(problemProp);
   const [hist, setHist] = useState<History<GeoState>>(() => newHistory(stateFrom(problemProp?.paper ?? paper, preset, [...(problemProp?.given ?? []), ...(initialAnswer?.marks ?? [])])));
@@ -248,6 +253,12 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
   };
 
   const say_ = (t: string) => setSay(t);
+  const [focusInt, setFocusInt] = useState(false);
+  const focusMode = focusProp ?? focusInt;
+  const setFocusMode = (b: boolean) => { setFocusInt(b); onFocusChange?.(b); };
+  const selIns = state.instruments.find((i) => i.id === sel) ?? null;
+  // Turn the selected instrument over 180° (protractor about its centre cross, others about their middle) — works for every instrument.
+  const flipSel = () => { if (!selIns || selIns.kind === "compass") return; const n2 = settle(flipInstrument(selIns), state); apply(patchInstr(selIns.id, () => n2)); say_(`${INSTR_LABEL[selIns.kind]} flipped, turned ${round(n2.rot, 1)} degrees`); };
   const label = (s: GeoState, id: string) => { const i = s.instruments.find((x) => x.id === id); return i ? INSTR_LABEL[i.kind] : "Instrument"; };
 
   // ── keyboard: works on the focused instrument ──
@@ -263,6 +274,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
     else if ((e.key === "-" || e.key === "_") && ins.kind === "compass") next = withRadius(ins, (ins.r ?? 60) - 1);
     else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); apply({ ...state, instruments: state.instruments.filter((i) => i.id !== ins.id) }); setSel(null); return; }
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(ins.id); return; }
+    else if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && ins.kind !== "compass") next = flipInstrument(ins);
     if (next) { e.preventDefault(); const n2 = settle(next, state); apply(patchInstr(ins.id, () => n2)); setSel(ins.id); say_(`${INSTR_LABEL[ins.kind]} at ${round(n2.x, 1)}, ${round(n2.y, 1)}, turned ${round(n2.rot, 1)} degrees`); }
   };
   const onKeyBoard = (e: React.KeyboardEvent) => {
@@ -330,7 +342,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
           {result && assess && <p role="status" className="m-0 mt-2 text-[13px] font-bold text-[var(--ink)]">Handed in.</p>}
         </div>
       )}
-      {!problem && !assess && generatorIds.length > 0 && (
+      {!focusMode && !problem && !assess && generatorIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-[12.5px] font-bold text-[var(--ink-2)]">Practise a question
             <select value={genId} onChange={(e) => setGenId(e.target.value)} className={`ml-2 min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`}>{generatorIds.map((g) => <option key={g} value={g}>{GEN_LABEL[g] ?? g}</option>)}</select>
@@ -339,7 +351,17 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         </div>
       )}
 
+      {focusMode && (
+        <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Focus mode">
+          <button type="button" onClick={() => setFocusMode(false)} data-testid="geo-focus-off" className={`${btn} ${on(false)}`}>⤡ Show tools</button>
+          <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Undo">↶</button>
+          <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Redo">↷</button>
+          {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} className={`${btn} ${on(false)}`}>⇅ Flip</button>}
+        </div>
+      )}
+      {!focusMode && (<>
       <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Drawing tools">
+        <button type="button" onClick={() => setFocusMode(true)} data-testid="geo-focus-on" title="Hide every button and tab so you can just work on the task" className={`${btn} ${on(false)}`}>⤢ Focus</button>
         {TOOLS.map(([id, t]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => setTool(id)} className={`${btn} ${on(tool === id)}`}>{t}</button>)}
         {compass && <button type="button" aria-pressed={penDown} onClick={() => setPenDown(!penDown)} className={`${btn} ${on(penDown)}`} title="When on, dragging the compass pencil draws an arc; when off, it changes the radius.">Draw arc {penDown ? "on" : "off"}</button>}
         <span className="mx-1 h-6 w-px bg-[var(--line)]" aria-hidden />
@@ -354,15 +376,18 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
       </div>
       <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Instruments">
         {(offer ?? ALL_INSTR).map((k) => <button key={k} type="button" onClick={() => addInstr(k)} className={`${btn} ${on(state.instruments.some((i) => i.kind === k) && sel === state.instruments.find((i) => i.kind === k)?.id)}`}>{INSTR_LABEL[k]}</button>)}
+        {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} data-testid="geo-flip" title="Turn the selected instrument over so it can measure the other way round (or press F)" className={`${btn} ${on(false)}`}>⇅ Flip {INSTR_LABEL[selIns.kind]}</button>}
         {!problem && <select value={state.paper} onChange={(e) => apply({ ...state, paper: e.target.value as PaperKind })} aria-label="Paper" className={`ml-auto min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[12.5px] font-semibold text-[var(--ink)] ${FOCUS}`}>{PAPERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>}
       </div>
 
+      </>)}
       <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
         <svg ref={svgRef} viewBox={`${view.x} ${view.y} ${view.w} ${viewH}`} role="application" aria-label="Geometry paper. Use the Tab key to reach an instrument, then arrow keys to move it and Shift with left or right to turn it."
           style={{ width: "100%", maxHeight: compact ? "52vh" : "68vh", touchAction: "none", cursor: tool === "move" ? "default" : "crosshair", display: "block" }}
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)}>
           <PaperDefs id={cid} />
           <Paper id={cid} kind={state.paper} />
+          {backdropUrl && <image href={backdropUrl} x={0} y={0} width={PAPER_W} height={PAPER_H} preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }} data-testid="geo-backdrop" />}
           {state.instruments.filter((i) => i.kind !== "compass").map((i) => (
             <g key={i.id} transform={`translate(${i.x} ${i.y}) rotate(${-i.rot})`} tabIndex={0} role="button" aria-label={`${INSTR_LABEL[i.kind]}. Arrow keys move, Shift and left or right arrow turns, Delete removes.`}
               aria-pressed={sel === i.id} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", cursor: tool === "move" ? "grab" : "crosshair" }}>
@@ -392,7 +417,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         </svg>
       </div>
 
-      {sELECTED && (
+      {sELECTED && !focusMode && (
         <details className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3" open={!compact}>
           <summary className={`cursor-pointer text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>Precise controls — {INSTR_LABEL[sELECTED.kind]}</summary>
           <Precise ins={sELECTED} assess={assess} onChange={(n2) => apply(patchInstr(sELECTED.id, () => settle(n2, state)))}
@@ -402,7 +427,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         </details>
       )}
       <p className="sr-only" role="status" aria-live="polite">{say}</p>
-      <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Drag an instrument to move it · drag the round handle to turn it · with two fingers you can move and turn together · Draw ▸ Line along a ruler edge for a straight line.</p>
+      {!focusMode && <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Drag an instrument to move it · drag the round handle to turn it · with two fingers you can move and turn together · Draw ▸ Line along a ruler edge for a straight line.</p>}
     </div>
   );
 }
@@ -460,6 +485,7 @@ function Precise({ ins, assess, onChange, onArc, onLine, onRemove }: { ins: Inst
         <Field label="Down (mm)" value={ins.y} on={(n) => onChange({ ...ins, y: n })} />
         {ins.kind !== "compass" && <Field label="Turn (°)" value={ins.rot} on={(n) => onChange({ ...ins, rot: norm360(n) })} />}
         {ins.kind === "compass" && <><Field label="Radius (mm)" value={ins.r ?? 60} on={(n) => onChange(withRadius(ins, n))} /><Field label="Pencil direction (°)" value={ins.pen ?? 0} on={(n) => onChange({ ...ins, pen: norm360(n) })} /></>}
+        {ins.kind !== "compass" && <Button onClick={() => onChange(flipInstrument(ins))}>⇅ Flip</Button>}
         <Button onClick={onRemove}>Remove</Button>
       </div>
       {ins.kind === "compass" && (
@@ -473,7 +499,7 @@ function Precise({ ins, assess, onChange, onArc, onLine, onRemove }: { ins: Inst
           <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">to (mm)<input value={t} onChange={(e) => setT(e.target.value)} className={fld} /></label>
           <Button variant="primary" onClick={() => onLine(num(f), num(t))}>Draw line</Button></div>)}
       {isProtractor(ins.kind) && !assess && <p className="m-0 text-[12px] font-semibold text-[var(--ink-2)]">Put the centre cross on the corner and the baseline along one line, then read the other line on the scale that starts at 0.</p>}
-      <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Keys: arrows move · Shift+←/→ turn · +/− radius (compass) · Delete removes.</p>
+      <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Keys: arrows move · Shift+←/→ turn · F flips · +/− radius (compass) · Delete removes.</p>
     </div>
   );
 }

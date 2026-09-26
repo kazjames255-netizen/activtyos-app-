@@ -4,7 +4,26 @@ import { db } from "../firebase";
 import { hubCached, patchHub } from "./hubCache";
 import { mdExcerpt, readMinutes } from "./hubText";
 import type { AssessmentDoc, QuestionDoc, TopicDoc } from "../routes/hub/shared";
-import type { EnrolmentDoc } from "./hubCore";
+import { OWNER_SOURCE_TENANT_IDS, SHARED_LIBRARY_TENANT_ID, type EnrolmentDoc } from "./hubCore";
+
+// SHARED LIBRARY: every content index below (topics/questions/notes/assessments/flashcards) is
+// the union of a tenant's OWN rows plus `SHARED_LIBRARY_TENANT_ID`'s (the platform curriculum,
+// seeded once — see seedCurriculum.ts). The shared slice is itself cached under its own tenantId
+// key, so it's read from Firestore once and reused across every tenant's merge, not re-read per
+// tenant. Read-only from a tenant's side: write routes still require an exact `tenantId` match
+// (see lib/hubCore.ts canReadContent), so a shared row can never be patched here either.
+//
+// EXCEPT the two owner tenants the library was itself promoted FROM (`OWNER_SOURCE_TENANT_IDS`):
+// they already own this exact content under their own tenantId, so merging the shared copy back in
+// for them doubled every count (own + an id-prefixed duplicate of the same rows) and roughly doubled
+// every cold-build time — see the constant's own comment for the confirmed numbers.
+async function withShared<T>(tenantId: string, ownFn: (tenantId: string) => Promise<T>, merge: (own: T, shared: T) => T): Promise<T> {
+  if (tenantId === SHARED_LIBRARY_TENANT_ID || OWNER_SOURCE_TENANT_IDS.has(tenantId)) return ownFn(tenantId);
+  const [own, shared] = await Promise.all([ownFn(tenantId), ownFn(SHARED_LIBRARY_TENANT_ID)]);
+  return merge(own, shared);
+}
+const listMerge = <T>(own: T[], shared: T[]): T[] => (shared.length ? [...shared, ...own] : own);
+const mapMerge = <K, V>(own: Map<K, V>, shared: Map<K, V>): Map<K, V> => (shared.size ? new Map([...shared, ...own]) : own);
 
 // Learning Hub — cached, tenant-wide READ MODELS (lists the hub re-reads on nearly every request): the topic
 // tree, a light question index, the note index, the assessment rows, the roster. Each is a raw, tenant-scoped copy;
@@ -19,7 +38,15 @@ const questionsCol = db.collection("hubQuestions");
 const assessmentsCol = db.collection("hubAssessments");
 const enrolCol = db.collection("hubEnrolments");
 
-const TTL_TOPICS = 60_000;
+// Topics are patched in place on every write (patchTopic), exactly like the notes/questions/assessments/cards
+// indexes below — the TTL is only a backstop for writes that bypass the API. It used to be 60s (vs. TTL_INDEX's
+// 20 min for those other kinds) with no functional reason for the difference; `tenantTopics`/`visibleTopics` is
+// the single most-called cached read in the whole hub (every learningHub.ts route, mastery, flashcards,
+// teachingCommon all go through it), so that short TTL meant a sharded, two-tenant (own + shared-library, ~3,000
+// rows total) rebuild was kicked off in the background on close to every minute of active use — real Firestore
+// read cost plus repeated JSON (de)serialization work on the event loop for no freshness benefit. Matching
+// TTL_INDEX cuts that background churn ~20x.
+const TTL_TOPICS = 20 * 60_000;
 // Questions / notes / assessments / cards: patched on every API write, so this only bounds seed-script staleness. It was 3 min,
 // which at scale (a tenant with ~89k questions + ~49k cards + 8.5k assessments) meant a background re-read of ~150k documents
 // every few minutes — parsing that blocked the event loop for seconds and made every "warm" request slow (see docs/hub-review/perf-round4.md).
@@ -75,8 +102,9 @@ export type TopicRow = TopicDoc & { id: string };
 // (2,400+ topics) under Firestore contention (a concurrent bulk import) that stream spiked past 30s. Sharded (like
 // the other big indexes) + `swr` so a request never blocks on a rebuild once the first one has landed, and `disk` so
 // a process restart doesn't either.
-export const tenantTopics = (tenantId: string): Promise<TopicRow[]> =>
+const tenantTopicsOwn = (tenantId: string): Promise<TopicRow[]> =>
   hubCached("topics", tenantId, "", TTL_TOPICS, async () => (await shardedTenantRead(topicsCol, tenantId, null)).map((d) => ({ id: d.id, ...(d.data() as TopicDoc) })), { swr: true, disk: true });
+export const tenantTopics = (tenantId: string): Promise<TopicRow[]> => withShared(tenantId, tenantTopicsOwn, listMerge);
 
 export const patchTopic = (tenantId: string, row: TopicRow | { id: string; deleted: true }) =>
   patchHub<TopicRow[]>("topics", tenantId, (list) => {
@@ -98,11 +126,12 @@ const qRow = (id: string, q: Partial<QuestionDoc>): QRow => ({
   image: q.image?.id ? { id: q.image.id, alt: q.image.alt ?? "" } : (q.image as { url?: string } | null | undefined)?.url ? { url: (q.image as { url: string }).url, alt: q.image?.alt ?? "" } : null,
   createdAt: q.createdAt ?? "", updatedAt: q.updatedAt ?? "",
 });
-export const questionIndex = (tenantId: string): Promise<Map<string, QRow>> =>
+const questionIndexOwn = (tenantId: string): Promise<Map<string, QRow>> =>
   hubCached("questions", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(questionsCol, tenantId, [...Q_FIELDS]);
     return new Map(docs.map((d) => [d.id, qRow(d.id, d.data() as Partial<QuestionDoc>)] as const));
   }, { swr: true, disk: true });
+export const questionIndex = (tenantId: string): Promise<Map<string, QRow>> => withShared(tenantId, questionIndexOwn, mapMerge);
 export const patchQuestion = (tenantId: string, id: string, doc: Partial<QuestionDoc> | null) =>
   patchHub<Map<string, QRow>>("questions", tenantId, (m) => { if (doc) m.set(id, qRow(id, doc)); else m.delete(id); });
 
@@ -144,35 +173,40 @@ export const noteRow = (id: string, n: NoteDocLike): NoteRow => {
     oakKey: oakKey(n.lesson?.source?.url),
   };
 };
-export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> =>
+const noteIndexOwn = (tenantId: string): Promise<Map<string, NoteRow>> =>
   hubCached("notes", tenantId, "", TTL_INDEX, async () => {
     // Only the fields a list row needs. An imported Oak lesson doc carries its whole slide deck + transcript + keywords inside `lesson`
     // (~40KB each): reading every note in full made this query time out (HTTP 500 after ~130 s) once a tenant held ~7,500 lessons.
     const docs = await shardedTenantRead(notesCol, tenantId,
       ["topicId", "franchiseId", "published", "title", "excerpt", "readMinutes", "hasBody", "attachments", "videos", "createdByName", "createdAt", "updatedAt", "lesson.widget", "lesson.quizId", "lesson.year", "lesson.outcome", "lesson.lessonSlug", "lesson.source.url"]);
-    // Notes written through the API have no stored excerpt: read just their body (a few docs, in chunks).
+    // Notes written through the API have no stored excerpt: read just their body, in chunks of 300 (Firestore's
+    // getAll/batchGet limit). A real tenant can have thousands of these (every API-authored note, not just the
+    // handful the old comment here assumed), so the chunks are fetched in parallel — sequential awaits meant this
+    // alone could add several seconds to a rebuild for tenants with a lot of hand-written (not imported) notes.
     const bodies = new Map<string, string>();
     const bare = docs.filter((d) => typeof d.get("excerpt") !== "string");
-    for (let i = 0; i < bare.length; i += 300) {
-      const got = await db.getAll(...bare.slice(i, i + 300).map((d) => d.ref), { fieldMask: ["body"] });
-      for (const g of got) bodies.set(g.id, (g.get("body") as string | undefined) ?? "");
-    }
+    const chunks: FirebaseFirestore.QueryDocumentSnapshot[][] = [];
+    for (let i = 0; i < bare.length; i += 300) chunks.push(bare.slice(i, i + 300));
+    const gotten = await Promise.all(chunks.map((c) => db.getAll(...c.map((d) => d.ref), { fieldMask: ["body"] })));
+    for (const got of gotten) for (const g of got) bodies.set(g.id, (g.get("body") as string | undefined) ?? "");
     return new Map(docs.map((d) => {
       const data = d.data() as NoteDocLike;
       if (bodies.has(d.id)) data.body = bodies.get(d.id);
       return [d.id, noteRow(d.id, data)] as const;
     }));
   }, { swr: true, disk: true });
+export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> => withShared(tenantId, noteIndexOwn, mapMerge);
 export const patchNote = (tenantId: string, id: string, doc: NoteDocLike | null) =>
   patchHub<Map<string, NoteRow>>("notes", tenantId, (m) => { if (doc) m.set(id, noteRow(id, doc)); else m.delete(id); });
 
 // ── assessments ──────────────────────────────────────────────────────────────
 export type AsmRow = AssessmentDoc & { id: string };
-export const assessmentRows = (tenantId: string): Promise<Map<string, AsmRow>> =>
+const assessmentRowsOwn = (tenantId: string): Promise<Map<string, AsmRow>> =>
   hubCached("assessments", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(assessmentsCol, tenantId, null);
     return new Map(docs.map((d) => [d.id, { id: d.id, ...(d.data() as AssessmentDoc) }] as const));
   }, { swr: true, disk: true });
+export const assessmentRows = (tenantId: string): Promise<Map<string, AsmRow>> => withShared(tenantId, assessmentRowsOwn, mapMerge);
 export const patchAssessment = (tenantId: string, id: string, doc: AssessmentDoc | null) =>
   patchHub<Map<string, AsmRow>>("assessments", tenantId, (m) => { if (doc) m.set(id, { id, ...doc }); else m.delete(id); });
 
@@ -193,11 +227,12 @@ export async function assessmentUseCached(tenantId: string) {
 // ── flashcards (light) ───────────────────────────────────────────────────────
 export interface CardRow { id: string; topicId: string; franchiseId: string | null; published: boolean; createdAt: string }
 const flashcardsCol = db.collection("hubFlashcards");
-export const cardIndex = (tenantId: string): Promise<Map<string, CardRow>> =>
+const cardIndexOwn = (tenantId: string): Promise<Map<string, CardRow>> =>
   hubCached("cards", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(flashcardsCol, tenantId, ["topicId", "franchiseId", "published", "createdAt"]);
     return new Map(docs.map((d) => [d.id, { id: d.id, topicId: d.get("topicId") as string, franchiseId: (d.get("franchiseId") as string | null) ?? null, published: d.get("published") !== false, createdAt: (d.get("createdAt") as string) ?? "" }] as const));
   }, { swr: true, disk: true });
+export const cardIndex = (tenantId: string): Promise<Map<string, CardRow>> => withShared(tenantId, cardIndexOwn, mapMerge);
 export const patchCard = (tenantId: string, id: string, doc: { topicId?: string; franchiseId?: string | null; published?: boolean; createdAt?: string } | null) =>
   patchHub<Map<string, CardRow>>("cards", tenantId, (m) => {
     if (!doc) { m.delete(id); return; }

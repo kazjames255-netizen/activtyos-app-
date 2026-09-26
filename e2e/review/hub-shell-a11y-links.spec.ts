@@ -43,7 +43,7 @@ for (const vpName of ["390", "1440"] as const) {
     await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("#hub-tabpanel-quizzes"))).toBe(true);
     expect(await page.title()).toMatch(/^Quizzes - Teaching Hub/);
     // arrow keys keep focus on the strip
-    await page.locator('[role="tab"][aria-selected="true"]').focus();
+    await page.locator('[role="tab"][data-top][aria-selected="true"]').focus();
     await page.keyboard.press("ArrowRight");
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => document.activeElement?.getAttribute("role"))).toBe("tab");

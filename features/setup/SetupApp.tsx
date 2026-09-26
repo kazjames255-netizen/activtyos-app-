@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
@@ -52,6 +52,8 @@ import { useTeam } from "@/features/team/useTeam";
 import { LevelsEditorDraft } from "@/features/learninghub/progress/levels";
 import { YearGroupsEditor } from "@/features/learninghub/quiz/YearGroupsEditor";
 import { SubjectColoursEditor } from "@/features/learninghub/SubjectColourPicker";
+import { YearReminder } from "@/features/learninghub/students/YearReminderCard";
+import type { Student } from "@/features/learninghub/types";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -1375,6 +1377,19 @@ export function SetupApp() {
       .catch(() => setListings([]));
   }, []);
 
+  // Teaching Hub tab: the year-group reminder needs the hub roster, which nothing
+  // else on this page otherwise fetches — load it lazily, only once that tab is
+  // actually opened (not on every Setup visit for every other tab).
+  const me = peekMe();
+  const hubTenantId = me?.tenantId ?? null;
+  const hubFranchiseId = me?.franchiseId ?? null;
+  const hubQs = hubTenantId ? `?tenantId=${encodeURIComponent(hubTenantId)}` : "";
+  const [hubStudents, setHubStudents] = useState<Student[] | null>(null);
+  const loadHubStudents = useCallback(() => {
+    apiGet<Student[]>(`/api/learning-hub/students${hubQs}`).then(setHubStudents).catch(() => setHubStudents([]));
+  }, [hubQs]);
+  useEffect(() => { if (tab === "hub" && hubStudents === null) loadHubStudents(); }, [tab, hubStudents, loadHubStudents]);
+
   const cred = useCredentials([]);
   const credTeam = useTeam();
   const toggleIn = (arr: string[] | undefined, v: string) => { const a = arr ?? []; return a.includes(v) ? a.filter((x) => x !== v) : [...a, v]; };
@@ -2575,6 +2590,14 @@ export function SetupApp() {
 
             <Section title="Subject colours" lede="Give each subject its own colour. Every card, chip and tile for that subject — in the Teaching Hub and in your families' My Classroom — uses it. You can also change one from a subject's ⋯ menu in the hub.">
               <SubjectColoursEditor colours={h.subjectColours ?? {}} onChange={(subjectColours) => setH({ subjectColours })} />
+            </Section>
+
+            <Section title="Year group reminder" lede="Students whose year group was typed in by hand don't move up on their own each September — review them here whenever suits you.">
+              {hubTenantId && hubStudents ? (
+                <YearReminder alwaysShow tenantId={hubTenantId} qs={hubQs} canEdit readOnly={false} franchiseId={hubFranchiseId} students={hubStudents} yearGroups={h.yearGroups} refreshStudents={loadHubStudents} />
+              ) : (
+                <p className="text-[13px] font-semibold text-[var(--ink-2)]">{t("setup.loading")}</p>
+              )}
             </Section>
 
             <Section title="Question types" lede="The kinds of question you can write. Rename or reorder them freely; the marking rule decides how answers are checked automatically.">

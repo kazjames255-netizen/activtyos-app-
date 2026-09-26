@@ -111,6 +111,50 @@ hubCurriculumApi.get("/curriculum", async (req, res) => {
   });
 });
 
+// GET /curriculum/search?framework=&q=<text> — which curriculum areas hold a lesson whose title/body matches
+// this text. Lets the map's area search find a lesson by its own name (e.g. "ionic and covalent bonding")
+// even when the area it's placed in is named differently (e.g. "Bonding, structure and the properties of
+// matter") — area names and lesson titles are independent, so a plain area-name filter can't find this.
+// Two ways a match can still be invisible on the CURRENT view, both reported so the UI can send the tutor
+// straight there instead of a dead-end "no match":
+//  · `unplaced` — the lesson isn't on the map at all yet (see `unplaced` on GET /curriculum): `place()`
+//    returns null for it, so it can never appear via `areaIds`.
+//  · a placed match whose YEAR differs from whatever year the tutor currently has selected — the area tile
+//    itself is filtered out of that year's grid client-side before the search-match ever gets a chance to
+//    highlight it (real bug hit in production: a lesson tagged Year 6 was invisible while Year 9 was picked,
+//    even though it genuinely was placed). `placed` carries the year of every match so the UI can offer
+//    "found in Year 6" and jump there, rather than requiring `areaIds` alone.
+hubCurriculumApi.get("/curriculum/search", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx) return;
+  const fw = framework(fwParam(req.query.framework));
+  if (!fw) { res.status(404).json({ error: "That curriculum isn't available yet" }); return; }
+  const q = typeof req.query.q === "string" ? req.query.q.trim().toLowerCase() : "";
+  if (!q) { res.json({ areaIds: [], placed: [], unplaced: [] }); return; }
+  const scope = await scopeFor(ctx);
+  if ("error" in scope) { res.status(scope.status).json({ error: scope.error }); return; }
+  const tags = await tenantTags(ctx.tenantId, fw.id);
+  const areaIds = new Set<string>();
+  const placed: { areaId: string; year: number; title: string }[] = [];
+  const unplaced: { id: string; title: string }[] = [];
+  for (const r of scope.rows) {
+    if (!r.search.includes(q)) continue;
+    const p = place(fw, r, tags);
+    if (p) { const areaId = fw.areas[p.areaIdx]!.id; areaIds.add(areaId); placed.push({ areaId, year: p.year, title: r.title }); }
+    else unplaced.push({ id: r.id, title: r.title });
+  }
+  // A tutor's own drafts and plain notes never sit on the map (it only draws published interactive lessons), but they must stay
+  // findable from the Lessons tab now that the flat list is gone — so they show up here as "not on the map yet".
+  if (scope.mode === "tutor") {
+    const seen = new Set(scope.rows.map((r) => r.id));
+    for (const r of (await noteIndex(ctx.tenantId)).values()) {
+      if (seen.has(r.id) || r.kind === "board" || !canSee(ctx, r.franchiseId) || !r.search.includes(q)) continue;
+      unplaced.push({ id: r.id, title: r.title });
+    }
+  }
+  res.json({ areaIds: [...areaIds], placed: placed.slice(0, 10), unplaced: unplaced.slice(0, 10) });
+});
+
 // GET /curriculum/lessons?framework=&area=<areaId>&year=<1-11 | all> — the lessons behind one cell.
 hubCurriculumApi.get("/curriculum/lessons", async (req, res) => {
   const ctx = await resolveCtx(req, res);
@@ -123,12 +167,15 @@ hubCurriculumApi.get("/curriculum/lessons", async (req, res) => {
   const scope = await scopeFor(ctx);
   if ("error" in scope) { res.status(scope.status).json({ error: scope.error }); return; }
   const tags = await tenantTags(ctx.tenantId, fw.id);
-  const out: { id: string; title: string; year: number; confidence: number; corrected: boolean; done: boolean; canCorrect: boolean }[] = [];
+  const out: { id: string; title: string; excerpt: string; isLesson: boolean; kind: "board" | null; createdByName: string; updatedAt: string; year: number; confidence: number; corrected: boolean; done: boolean; canCorrect: boolean }[] = [];
   for (const r of scope.rows) {
     const p = place(fw, r, tags);
     const hits = p && (p.areaIdx === areaIdx || (!p.corrected && r.oakKey && p.areaIdx !== areaIdx && fw.secondary?.[r.oakKey]?.includes(areaIdx)));
     if (!hits || (yearQ && p!.year !== yearQ)) continue;
-    out.push({ id: r.id, title: r.title, year: p!.year, confidence: p!.confidence, corrected: p!.corrected, done: scope.done.has(r.id), canCorrect: ctx.canEdit && canWriteRow(ctx, r.franchiseId) });
+    out.push({
+      id: r.id, title: r.title, excerpt: r.excerpt, isLesson: r.isLesson, kind: r.kind, createdByName: r.createdByName, updatedAt: r.updatedAt,
+      year: p!.year, confidence: p!.confidence, corrected: p!.corrected, done: scope.done.has(r.id), canCorrect: ctx.canEdit && canWriteRow(ctx, r.franchiseId),
+    });
   }
   out.sort((a, b) => a.year - b.year || a.title.localeCompare(b.title));
   res.json({ area: fw.areas[areaIdx], total: out.length, lessons: out.slice(0, 400) });

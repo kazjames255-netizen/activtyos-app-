@@ -1,10 +1,12 @@
 "use client";
 
+import { JoinRemoteSyncBanner } from "./remotesync/JoinRemoteSyncBanner";
 import { hubName } from "./names";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HubHero } from "./HubHero";
+import { HubWelcomeSplash } from "./HubWelcomeSplash";
 import { CallProvider } from "./live/CallProvider";
 import { HubTabs, type HubTab } from "./HubTabs";
 import { EmptyState, ErrorBanner, FOCUS, isOfflineError, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
@@ -58,7 +60,6 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   const [sub, setSub] = useState<string | null>(() => initial()?.sub ?? null);
   const [nonce, setNonce] = useState(0);
   const [dirty, setDirty] = useState(false);
-  const [addSignal, setAddSignal] = useState(0);
   // Focus mode is stored AS the tab that asked for it, so it can never outlive
   // that tab: switching tab (or the panel unmounting) ends it by construction.
   const [focusFor, setFocusFor] = useState<TabKey | null>(null);
@@ -263,7 +264,9 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   // homework and placement are card grids that want the width too: their
   // subject filter is a chip bar above the content, not a 280px column.
   const chips = active === "quizzes" || active === "homework" || active === "diagnostic";
-  const sidebar = active !== "students" && active !== "home" && active !== "tools" && !chips && !focus; // Tools has its own filters
+  // Notes (Lessons & curriculum) has its own primary browse now — the always-open curriculum card, whose tiles
+  // lead straight to a lesson list — so it no longer needs the subject/topic sidebar. Tools has its own filters.
+  const sidebar = active !== "students" && active !== "home" && active !== "tools" && active !== "notes" && !chips && !focus;
 
   const settled = ready && (!kid || hub.childId === kidChildId);
   const body = (() => {
@@ -273,7 +276,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   })();
 
   const topicFilter = (variant: "sidebar" | "chips") => (ready ? (
-    <TopicFilter topics={topics} noteStats={noteStats} filter={filter} onFilter={onFilter} canEdit={canEdit && !readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError} addSignal={addSignal} variant={variant} />
+    <TopicFilter topics={topics} noteStats={noteStats} filter={filter} onFilter={onFilter} canEdit={canEdit && !readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError} variant={variant} />
   ) : variant === "chips" ? (
     <div role="status" aria-busy="true" aria-label="Loading subjects" className="mb-4 flex gap-2">{[104, 92, 108, 96].map((w, i) => <Skeleton key={i} className="h-11 flex-none !rounded-full" style={{ width: w }} />)}</div>
   ) : (
@@ -297,6 +300,7 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
   return (
     <div className={kid ? "fixed inset-0 z-[320] overflow-y-auto overscroll-contain p-3 sm:p-5" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5"} style={{ background: "var(--bg)", color: "var(--ink)" }} id="learning-hub" data-kid={kid ? "1" : undefined} data-calm={!tutor && hub.child?.support?.calm ? "1" : undefined} data-text={!tutor && hub.child?.support?.textSize === "large" ? "large" : undefined}>
       <HubStyles />
+      <HubWelcomeSplash />
       <FamilyProvider value={family}>
       <CallProvider p={panelProps} key={tenantId}>
       <div className="mx-auto max-w-[1240px]">
@@ -339,6 +343,13 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
 
         {chips && !focus && topicFilter("chips")}
 
+        {/* A tutor sending this child a live lesson: the invite shows on EVERY tab, not just Lessons. */}
+        {/* Checks EVERY provider this child learns with, not only the one currently on screen: a tutor at a different
+            provider than the family's default pick (a fresh browser starts on the first) was invisible before. */}
+        {!tutor && !!tenantId && (providers ?? []).filter((p) => !!hub.childId && p.children.some((c) => c.childId === hub.childId)).map((p) => (
+          <JoinRemoteSyncBanner key={p.tenantId} qs={`?tenantId=${encodeURIComponent(p.tenantId)}&childId=${encodeURIComponent(hub.childId!)}`} childId={hub.childId} config={config} topics={p.tenantId === tenantId ? topics : undefined} />
+        ))}
+
         <div className={sidebar ? "grid items-start gap-4 lg:grid-cols-[280px_minmax(0,1fr)]" : ""}>
           {sidebar && <aside className="lg:sticky lg:top-3">{topicFilter("sidebar")}</aside>}
 
@@ -346,8 +357,8 @@ export function LearningHubApp({ mode }: { mode: "student" | "tutor" }) {
             {/* Notes stays mounted (hidden) on other tabs so an unsaved draft survives a tab switch. */}
             {settled && (
               <div role="tabpanel" id="hub-tabpanel-notes" data-hub-panel aria-labelledby={tutor ? "hub-subtab-lessons" : "hub-tab-notes"} hidden={active !== "notes"} tabIndex={-1} className="outline-none" key={tenantId}>
-                <NotesPanel topics={topics} version={notesVersion} listQs={childQs} covered={covered} filter={filter} canEdit={canEdit} readOnly={readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError}
-                  onAddTopic={() => setAddSignal((n) => n + 1)} onDirtyChange={setDirty} onClearFilter={() => onFilter(NONE)} active={active === "notes"}
+                <NotesPanel topics={topics} version={notesVersion} listQs={childQs} covered={covered} filter={filter} canEdit={canEdit} readOnly={readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} students={students} onChanged={refresh} onError={setError}
+                  onDirtyChange={setDirty} active={active === "notes"}
                   childId={hub.childId} config={config} setFocus={setFocus} goTo={go as (k: "flashcards" | "homework") => void} years={hub.years} onYearsChange={hub.setYears} />
               </div>
             )}

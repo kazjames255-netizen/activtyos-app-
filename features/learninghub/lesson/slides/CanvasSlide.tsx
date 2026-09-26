@@ -1,11 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { loadLib, type Lib } from "./SlideArt";
+import { TeachingHubGlyph } from "../../TeachingHubMark";
 import { useSlideBrand } from "./brand";
 import { applyDrag, nudge, reorderEl, type Guides, type Handle, type Order, type Rect } from "./canvasEdit";
-import { brandVars, fontStack, mapTextColor, themeBlock, type ElTheme, type TextTheme } from "./slideTheme";
-import type { CanvasBlock, CanvasEl, CanvasImg, CanvasPara, CanvasRun, CanvasShape, CanvasText } from "./types";
+import { LessonIntroCard, OBJECTIVE_CLASS } from "./LessonIntroCard";
+import { ITEM_TITLE_CLASS, LessonOutlineCard } from "./LessonOutlineCard";
+import { brandVars, fontStack, lessonOutlineSlide, mapTextColor, outcomeSlide, themeBlock, type ElTheme, type TextTheme } from "./slideTheme";
+import { isDecorativePic, type CanvasBlock, type CanvasEl, type CanvasImg, type CanvasPara, type CanvasRun, type CanvasShape, type CanvasText } from "./types";
 
 // A whole slide drawn on a canvas — real slide decks imported as our own editable slides (server/src/oak/deckConvert.ts).
 //
@@ -29,6 +32,15 @@ const LIGHT_VARS = {
 
 const ZWSP = /​/g;
 const sameStyle = (a: CanvasRun, b: CanvasRun) => a.size === b.size && !a.bold === !b.bold && !a.italic === !b.italic && !a.underline === !b.underline && a.color === b.color && a.f === b.f && a.link === b.link;
+
+// Some imported decks carry a third-party trademark/attribution disclaimer as a real text element, copied verbatim
+// from the source PowerPoint (e.g. "Google Sheets is a trademark of Google LLC and this content is not endorsed by
+// or affiliated with Google in any way."). It's never our own copy (mirrors isOakWordmarkText in deckConvert.ts,
+// which drops Oak's own wordmark at import time) — this is the render-time equivalent for plain text, matched by
+// disclaimer PHRASING (not just a brand name) so a slide that legitimately mentions a product in passing is never hidden.
+const TRADEMARK_RE = /\bis\s+an?\s+(?:registered\s+)?trademark\s+of\b|\bnot\s+endorsed\s+by\b|\bnot\s+affiliated\s+with\b|\bno\s+affiliation\s+with\b|\ball\s+trademarks?\s+(?:are\s+)?(?:the\s+)?property\s+of\b/i;
+const isTrademarkBoilerplate = (el: CanvasEl): boolean =>
+  el.k === "text" && TRADEMARK_RE.test(el.paras.map((p) => p.runs.map((r) => r.t).join("")).join(" "));
 
 /** The text of an edited element, read back from the DOM: paragraphs and runs keep the styling of the paragraph / run they came from. */
 export function readParas(root: HTMLElement, el: CanvasText): CanvasPara[] {
@@ -73,7 +85,7 @@ const HANDLES: { h: Handle; style: CSSProperties; cursor: string }[] = [
 
 interface Live { i: number; r: Rect; guides: Guides }
 
-export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick, label, onAdvance, cue, selectRequest }: {
+export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick, label, onAdvance, cue, selectRequest, subject, lessonTitle, lessonUnit, lessonAgeGroup, lessonTopic, lessonKeyConcepts, outlinePart }: {
   block: CanvasBlock;
   /** How many clicks have been made (elements with `step` ≤ reveal are shown). */
   reveal?: number;
@@ -90,6 +102,17 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
   cue?: ReactNode;
   /** Select this element (e.g. a picture that was just added); `n` makes a repeat request count. */
   selectRequest?: { index: number; n: number };
+  /** The lesson's own metadata — used only by the redesigned "Outcome" slide (LessonIntroCard.tsx), never by anything else here. */
+  subject?: string;
+  lessonTitle?: string;
+  lessonUnit?: string;
+  lessonAgeGroup?: string;
+  lessonTopic?: string;
+  lessonKeyConcepts?: string[];
+  /** Lesson-outline slide only: 0-based, which occurrence of this repeated slide is showing (SlideDeck.tsx counts
+   *  them across the whole deck — Oak's own decks legitimately repeat this slide once before each learning cycle,
+   *  see LessonOutlineCard.tsx). Undefined renders every item plain, with no done/here status. */
+  outlinePart?: number;
 }) {
   const [lib, setLib] = useState<Lib | null>(null);
   const wantsLib = useMemo(() => block.els.some((e) => e.k === "img" && e.picId), [block.els]);
@@ -106,6 +129,19 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
   const vars = useMemo(() => brandVars(brand.color), [brand.color]);
   const plan = useMemo(() => themeBlock(block), [block]);
   const themed = !!plan;
+  // The redesigned "Outcome" slide (LessonIntroCard.tsx: the lesson's own title/unit/objective on the left, a small
+  // "this continues digitally" dashboard mock on the right) fully replaces the generic per-element render below — a
+  // different LAYOUT, not a re-skin — in BOTH the student view and the tutor's own edit/preview, so a tutor always
+  // edits and checks their work against the exact thing students see. The only per-slide-editable field here is the
+  // objective statement itself (subject/title/unit are lesson-wide metadata, edited elsewhere); it's wired to the
+  // same contentEditable-in-place / onChange mechanism as every other canvas text box (see readParas/onCommit below).
+  const outcome = outcomeSlide(block);
+  const outcomeEl = outcome && block.els[outcome.idx]?.k === "text" ? (block.els[outcome.idx] as CanvasText) : undefined;
+  // The redesigned "Lesson outline" slide (LessonOutlineCard.tsx: a brand header + a rounded-white-card list, one per
+  // outline item) — same "different layout, not a reskin" treatment as the Outcome slide above, in both student view
+  // and tutor edit. Mutually exclusive with `outcome` (they're different Oak templates); only tried when this slide
+  // ISN'T an Outcome slide, so nothing here can shadow that detection.
+  const outline = !outcome ? lessonOutlineSlide(block) : null;
 
   // ── selection / drag (edit) ──
   const paper = useRef<HTMLDivElement>(null);
@@ -204,9 +240,61 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
 [data-canvas-edit] [data-grip]{opacity:.8}
 @media (hover:hover){[data-canvas-edit] [data-grip]{opacity:0}[data-canvas-edit] [data-el-wrap]:hover>[data-grip],[data-canvas-edit] [data-el-wrap]:focus-within>[data-grip],[data-canvas-edit] [data-grip]:focus-visible{opacity:1}}
 [data-hd]::before{content:"";position:absolute;inset:-9px}`}</style>
-        {block.els.map((el, i) => {
+        {outcome ? (
+          <div style={{ position: "absolute", inset: 0 }}>
+            <LessonIntroCard lesson={{
+              subject: subject ?? "", title: lessonTitle ?? label ?? "", unit: lessonUnit, ageGroup: lessonAgeGroup,
+              topic: lessonTopic, objective: outcome.statement, keyConcepts: lessonKeyConcepts,
+            }} objectiveEditable={edit && outcomeEl ? (
+              <div data-testid="lesson-intro-objective" data-canvas-text="" contentEditable suppressContentEditableWarning spellCheck
+                role="textbox" aria-multiline="true" aria-label="The objective — click to edit"
+                className={OBJECTIVE_CLASS} style={{ outline: "none", cursor: "text", whiteSpace: "pre-wrap" }}
+                onPaste={(e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); }}
+                onBlur={(e) => {
+                  const paras = readParas(e.currentTarget, outcomeEl);
+                  if (JSON.stringify(paras) !== JSON.stringify(outcomeEl.paras)) commit(block.els.map((o, k) => (k === outcome.idx && o.k === "text" ? { ...o, paras } : o)));
+                }}>
+                {outcomeEl.paras.map((p, pi) => (
+                  <p key={pi} data-p={pi} style={{ margin: 0 }}>
+                    {p.runs.map((r, ri) => (
+                      <span key={ri} data-r={ri} style={{ fontWeight: r.bold ? 700 : undefined, fontStyle: r.italic ? "italic" : undefined, textDecoration: r.underline ? "underline" : undefined }}>{r.t || "​"}</span>
+                    ))}
+                  </p>
+                ))}
+              </div>
+            ) : undefined} />
+          </div>
+        ) : outline ? (
+          <div style={{ position: "absolute", inset: 0 }}>
+            <LessonOutlineCard subject={subject ?? ""} heading={lessonTitle || label || ""} currentPart={outlinePart} items={outline.items.map(({ title, idx }) => {
+              const el = block.els[idx];
+              const textEl = el && el.k === "text" ? (el as CanvasText) : undefined;
+              return {
+                title,
+                editable: edit && textEl ? (
+                  <div data-testid="lesson-outline-item" data-canvas-text="" contentEditable suppressContentEditableWarning spellCheck
+                    role="textbox" aria-multiline="true" aria-label="This step's title — click to edit"
+                    className={ITEM_TITLE_CLASS} style={{ outline: "none", cursor: "text", whiteSpace: "pre-wrap", color: "var(--sb-ink, #171534)" }}
+                    onPaste={(e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); }}
+                    onBlur={(e) => {
+                      const paras = readParas(e.currentTarget, textEl);
+                      if (JSON.stringify(paras) !== JSON.stringify(textEl.paras)) commit(block.els.map((o, k) => (k === idx && o.k === "text" ? { ...o, paras } : o)));
+                    }}>
+                    {textEl.paras.map((p, pi) => (
+                      <p key={pi} data-p={pi} style={{ margin: 0 }}>
+                        {p.runs.map((r, ri) => (
+                          <span key={ri} data-r={ri} style={{ fontWeight: r.bold ? 700 : undefined, fontStyle: r.italic ? "italic" : undefined, textDecoration: r.underline ? "underline" : undefined }}>{r.t || "​"}</span>
+                        ))}
+                      </p>
+                    ))}
+                  </div>
+                ) : undefined,
+              };
+            })} />
+          </div>
+        ) : block.els.map((el, i) => {
           const th = plan?.els[i];
-          if (th?.hide) return null;
+          if (th?.hide || isTrademarkBoilerplate(el)) return null;
           const gi = g(i, el);
           const hidden = (!!el.step && el.step > r) || (!!el.until && r >= el.until);
           const auto = !el.step && !!el.delay && !edit;
@@ -242,12 +330,12 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
         )}
       </div>
       {cue && <div data-testid="canvas-cue" className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5" style={{ background: "var(--sb-paper)", borderTop: "1px solid var(--sb-a-line)" }}>{cue}</div>}
-      {edit && (
+      {edit && !outcome && !outline && (
         <div role="toolbar" aria-label="Placement" data-sel-toolbar="" data-testid="canvas-sel-toolbar" className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)]" style={{ borderRadius: 0 }}>
           {selEl && sel !== null ? (
             <>
               <strong className="mr-1 text-[var(--ink)]">{selEl.k === "img" ? "Picture" : selEl.k === "text" ? "Text box" : "Shape"}</strong>
-              {selEl.k === "img" && onPick && <TB onClick={() => onPick(sel)} testid="canvas-sel-change">Change…</TB>}
+              {selEl.k === "img" && onPick && !isDecorativePic(selEl, block) && !(plan?.els[sel] && (plan.els[sel]!.hide || !!plan.els[sel]!.outlineImg)) && <TB onClick={() => onPick(sel)} testid="canvas-sel-change">Change…</TB>}
               <TB onClick={() => setOrder("forward")} testid="canvas-sel-forward" title="Bring forward ( ] )">Forward</TB>
               <TB onClick={() => setOrder("back")} testid="canvas-sel-back" title="Send back ( [ )">Back</TB>
               <TB onClick={remove} testid="canvas-sel-delete" title="Delete ( Delete key )" danger>Delete</TB>
@@ -281,18 +369,38 @@ const rotOf = (el: { rot?: number; flipH?: true; flipV?: true }) => {
 
 const CARD: CSSProperties = { position: "absolute", inset: "-.6cqw -1.3cqw", zIndex: -1, pointerEvents: "none", background: "var(--sb-card)", borderRadius: "1.5cqw", boxShadow: "inset .5cqw 0 0 var(--sb-a-line), 0 .2cqw .9cqw var(--sb-glow)" };
 
+// Oak's own generic/stock decoration, identified by exact stored-file id — never lesson content, so a match is treated
+// exactly like "no picture stored" (draw our own mark instead). Each one was confirmed against real deck data before
+// being added here (a large full-bleed "hero" picture is decorative only when it's one of these, not by size/position
+// alone): a generic subject-cover illustration reused verbatim across many unrelated lessons (an abacus, on ~1 in 4 of
+// a 300-note sample spanning maths, science, French, Spanish and English decks alike), and Oak's own small platform
+// logo bug, which showed up on all but 2 of that same 300-note sample — i.e. effectively every deck's cover slide.
+const GENERIC_STOCK_SIDS = new Set([
+  "c49baf7e54e71d045c226cd3903feb3bc2f42ce95e85fe8d7171713fbcdf4b1a.webp", // generic "abacus" subject-cover illustration
+  "b86832f0daa938790e69ae939fb48a4518d87e7cfb0d13d9413d612ded2c430b.webp", // Oak's own small logo bug
+  "fa38355dede565428042f721d7c357b8ed3df0ce7a2316f4906e93c747de06e6.webp", // Oak's acorn mark, a bottom-right corner occurrence the
+  // import-time perceptual-hash check (deckConvert.ts isOakLogo/OAK_LOGO_DHASH) didn't catch: confirmed by eye against the real
+  // stored file (a Science "Increasing levels of CO2" chart slide) — its dhash is ~34/64 bits off the known acorn hash, most likely
+  // because this occurrence went through our own storage re-encode (resize/webp) before it could be hashed the same way.
+]);
+
 function ImgEl({ el, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; lib: Lib | null; edit: boolean; onDown: (e: RPointerEvent) => void }) {
   if (th?.panel) return <div aria-hidden="true" {...sr} style={{ ...pos, background: "var(--sb-card)", borderRadius: "2.4cqw", boxShadow: "0 .3cqw 1.6cqw var(--sb-glow), inset 0 0 0 .18cqw var(--sb-a-line)" }} />;
+  if (th?.outlineImg) return <div aria-hidden="true" {...sr} style={{ ...pos, background: th.fill, borderRadius: th.outlineImg === "dot" ? "50%" : "999px", boxShadow: "0 .25cqw 1cqw var(--sb-glow), inset 0 0 0 .1cqw var(--sb-a-line)" }} />;
   const pic = el.picId ? lib?.byId[el.picId] : undefined;
   const c = el.crop;
   const sx = c ? 1 / Math.max(0.05, 1 - c[0] - c[2]) : 1, sy = c ? 1 / Math.max(0.05, 1 - c[1] - c[3]) : 1;
+  const genericStock = !!el.sid && GENERIC_STOCK_SIDS.has(el.sid);
   const inner = pic
     ? <div role="img" aria-label={pic.alt} style={{ width: "100%", height: "100%", display: "flex", alignItems: "center" }} dangerouslySetInnerHTML={{ __html: pic.svg }} />
-    : el.url
+    : el.url && !genericStock
       // eslint-disable-next-line @next/next/no-img-element
       ? <img src={el.url} alt={el.alt} draggable={false} loading="lazy"
           style={c ? { position: "absolute", maxWidth: "none", width: `${sx * 100}%`, height: `${sy * 100}%`, left: `${-c[0] * sx * 100}%`, top: `${-c[1] * sy * 100}%` } : { width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-      : <div aria-hidden="true" style={{ width: "100%", height: "100%", background: "rgba(0,0,0,.06)", border: "1px dashed rgba(0,0,0,.25)" }} />;
+      // no real picture stored (or one Oak's own generic/stock art was dropped from): our own mark, never Oak's placeholder art
+      : <div aria-hidden="true" style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "var(--sb-card, rgba(0,0,0,.05))", borderRadius: "8%" }}>
+          <div style={{ width: "42%", height: "42%" }}><TeachingHubGlyph /></div>
+        </div>;
   const interactive = edit ? { onPointerDown: onDown } : {};
   return (
     <div data-testid="canvas-img" data-canvas-img="" data-src={el.sid ?? el.imageId ?? el.picId} {...sr} style={{ ...pos, overflow: c ? "hidden" : "visible", ...rotOf(el) }} {...interactive}>
@@ -326,11 +434,31 @@ function ShapeEl({ el, pos, sr, th, block, u, id }: { el: CanvasShape; pos: CSSP
     );
   }
   if (th?.band) {
-    return <div aria-hidden="true" {...sr} data-band="" style={{ ...pos, background: `radial-gradient(120% 260% at 100% 0%, rgba(255,255,255,.2), transparent 55%), linear-gradient(100deg, var(--sb-${th.band}-dk), var(--sb-${th.band}))`, borderRadius: "0 0 1.7cqw 1.7cqw", boxShadow: "0 .35cqw 1.3cqw var(--sb-glow2)", zIndex: 1 }} />;
+    // The slide's title band: always the app's own sidebar colour (its gradient + dot texture, components/shell/Sidebar.tsx),
+    // never the publisher's / a per-provider brand shade — every lesson's band reads as this app's chrome. `bandExtra` grows
+    // it a touch further down when a "slide type" label (e.g. "Explanation") dips slightly below Oak's own band box, so the
+    // label stays fully backed by the band instead of spilling, unstyled, onto the paper below.
+    const height = th.bandExtra ? `calc(${typeof pos.height === "number" ? `${pos.height}px` : pos.height} + ${u(th.bandExtra * block.h)})` : pos.height;
+    return <div aria-hidden="true" {...sr} data-band="" style={{ ...pos, height, backgroundImage: "radial-gradient(rgba(255,255,255,.16) 1px, transparent 1.6px), var(--side-bg)", backgroundSize: "1.6cqw 1.6cqw, cover", backgroundRepeat: "repeat, no-repeat", borderRadius: "0 0 1.7cqw 1.7cqw", boxShadow: "0 .35cqw 1.3cqw var(--sb-glow2)", zIndex: 1 }} />;
   }
   const radius = el.geom === "ellipse" ? "50%" : el.geom === "round" ? u((el.r ?? 0.16667) * Math.min(el.w * block.w, el.h * block.h)) : undefined;
-  return <div aria-hidden="true" {...sr} style={{ ...pos, boxSizing: "border-box", background: th?.fill ?? el.fill, border: el.line ? `${u(el.line.w)} solid ${lineC}` : undefined, borderRadius: radius, ...rotOf(el) }} />;
+  return (
+    <div aria-hidden="true" {...sr} style={{ ...pos, boxSizing: "border-box", background: th?.fill ?? el.fill, border: el.line ? `${u(el.line.w)} solid ${lineC}` : undefined, borderRadius: radius,
+      ...(th?.outlineCard ? { boxShadow: "0 .25cqw 1cqw var(--sb-glow), inset 0 0 0 .1cqw var(--sb-a-line)" } : {}), ...rotOf(el) }} />
+  );
 }
+
+// Shrink-to-fit for pupil-facing text (never while a tutor is editing, so typing/box outlines aren't disturbed): a stored
+// box's height came from the original PowerPoint, sized for its OWN fonts; our substituted fonts (Lexend/Abeezee/Kalam)
+// plus the fixed BASE_LH line-height can render the same words taller, which — unclipped — spills onto whatever sits
+// nearby (a speech bubble's border, a neighbouring sentence, a table caption). A binary search (capped at a few
+// iterations, only on mount / content change / a real container resize / once webfonts finish loading — never per
+// render, per reveal-click or per keystroke) finds the largest scale (down to MIN_FIT) whose rendered height fits the
+// box, applied via one CSS custom property so every run in the element shrinks together without per-run JS writes.
+// If even MIN_FIT still overflows by a lot, clipping is left OFF for that element: legitimate content that genuinely
+// doesn't fit is left to spill (today's behaviour), never silently cut away.
+const MIN_FIT = 0.55;
+const SPILL_TOLERANCE = 1.6;
 
 function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocusText }: {
   el: CanvasText; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; themed: boolean; u: (pt: number) => string; edit: boolean; r: number;
@@ -340,10 +468,48 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
   const j = el.anchor === "m" ? "center" : el.anchor === "b" ? "flex-end" : "flex-start";
   const tt: TextTheme | undefined = themed ? th?.text : undefined;
   const scale = (size: number, f?: string) => (themed && f === "kalam" ? size * HAND_SCALE : size);
+  const uf = (pt: number) => `calc(${u(pt)} * var(--fit, 1))`;
+
+  const textRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(1);
+  const [clip, setClip] = useState(false);
+  useLayoutEffect(() => {
+    if (edit) { setFit(1); setClip(false); return; }
+    const node = textRef.current;
+    if (!node) return;
+    let stopped = false;
+    let raf = 0;
+    const run = () => {
+      if (stopped || !node) return;
+      const box = node.clientHeight;
+      if (!box) return;
+      node.style.setProperty("--fit", "1");
+      const natural = node.scrollHeight;
+      if (natural <= box + 1) { setFit(1); setClip(false); return; }
+      let lo = MIN_FIT, hi = 1;
+      for (let i = 0; i < 6; i++) {
+        const mid = (lo + hi) / 2;
+        node.style.setProperty("--fit", String(mid));
+        if (node.scrollHeight <= box + 1) lo = mid; else hi = mid;
+      }
+      node.style.setProperty("--fit", String(lo));
+      const finalH = node.scrollHeight;
+      setFit(lo);
+      setClip(finalH <= box * SPILL_TOLERANCE);
+    };
+    run();
+    const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); });
+    ro.observe(node);
+    let fontsCancelled = false;
+    document.fonts?.ready?.then(() => { if (!fontsCancelled) run(); }).catch(() => { /* font-loading status unavailable: keep the initial-measure fit */ });
+    return () => { stopped = true; fontsCancelled = true; ro.disconnect(); cancelAnimationFrame(raf); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edit, el]);
+
   return (
     <div data-el-wrap="" {...sr} style={{ ...pos, ...rotOf(el), isolation: "isolate", ...(tt?.on === "band" ? { zIndex: 2 } : {}) }}>
       {tt?.card && <span aria-hidden="true" style={CARD} />}
-      <div data-testid="canvas-text" data-canvas-text="" contentEditable={edit || undefined} suppressContentEditableWarning spellCheck={edit}
+      <div ref={textRef} data-testid="canvas-text" data-canvas-text="" contentEditable={edit || undefined} suppressContentEditableWarning spellCheck={edit}
         role={edit ? "textbox" : undefined} aria-multiline={edit || undefined} aria-label={edit ? "Slide text — click to edit" : undefined}
         onFocus={edit ? () => { onFocusText(); try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* not supported: Enter makes a div, still read back */ } } : undefined}
         onBlur={edit ? (e) => {
@@ -352,7 +518,17 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
         } : undefined}
         onPaste={edit ? (e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); } : undefined}
         onKeyDown={edit ? (e) => { if ((e.metaKey || e.ctrlKey) && /^[biu]$/i.test(e.key)) e.preventDefault(); } : undefined}
-        style={{ display: "flex", flexDirection: "column", justifyContent: j, width: "100%", minHeight: "100%", boxSizing: "border-box", padding: `${u(pad[1])} ${u(pad[2])} ${u(pad[3])} ${u(pad[0])}`, overflowWrap: "break-word", whiteSpace: "pre-wrap", outline: "none" }}>
+        style={{ display: "flex", flexDirection: "column", justifyContent: j, width: "100%", height: "100%",
+          boxSizing: "border-box", padding: `${u(pad[1])} ${u(pad[2])} ${u(pad[3])} ${u(pad[0])}`, overflowWrap: "break-word", whiteSpace: "pre-wrap", outline: "none",
+          // Edit mode never shrinks text (a tutor needs true-size WYSIWYG feedback while typing — the earlier
+          // shrink-to-fit fix deliberately left this alone), but it must still stay CONTAINED to its own box:
+          // real imported decks routinely place two text boxes only a few points apart (confirmed on a real
+          // "Key words" canvas slide, term/definition columns ~1.8pt apart), and letting one box's overflow
+          // spill out with `overflow: visible` (the old behaviour) visually merges its text into the
+          // neighbouring box's — indistinguishable from a genuine layout bug. `overflow-y: auto` keeps a
+          // tutor able to scroll to and edit every word without any of it bleeding onto a sibling element.
+          overflowY: edit ? "auto" : undefined, overflow: edit ? undefined : clip ? "hidden" : "visible",
+          ...(edit ? {} : { "--fit": fit }) } as CSSProperties & Record<string, string | number | undefined>}>
         {el.paras.map((p, pi) => {
           const first = p.runs[0];
           const ml = p.ind?.[0] ?? 0, id = p.ind?.[1] ?? 0;
@@ -360,10 +536,10 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
           const psize = scale(first?.size ?? 18, first?.f);
           return (
             <p key={pi} data-p={pi} data-sr={p.step || p.until ? (off ? "off" : !edit && p.step === r && r > 0 ? "fresh" : "on") : undefined} style={{ margin: 0, marginTop: p.before ? u(p.before) : undefined, marginBottom: p.after ? u(p.after) : undefined, textAlign: p.algn === "c" ? "center" : p.algn === "r" ? "right" : p.algn === "j" ? "justify" : "left",
-              lineHeight: (p.lh ?? 1) * BASE_LH, fontSize: u(psize), paddingLeft: ml ? u(ml) : undefined, textIndent: id ? u(id) : undefined, letterSpacing: tt?.display ? "-0.012em" : undefined }}>
-              {p.bu && <span data-bu="" contentEditable={false} style={{ display: "inline-block", width: id < 0 ? u(-id) : undefined, textIndent: 0, fontSize: u(psize), fontFamily: fontStack(first?.f, false), color: tt?.on === "paper" && !tt.locked ? "var(--sb-a)" : undefined }}>{p.bu}</span>}
+              lineHeight: (p.lh ?? 1) * BASE_LH, fontSize: uf(psize), paddingLeft: ml ? u(ml) : undefined, textIndent: id ? u(id) : undefined, letterSpacing: tt?.display ? "-0.012em" : undefined }}>
+              {p.bu && <span data-bu="" contentEditable={false} style={{ display: "inline-block", width: id < 0 ? u(-id) : undefined, textIndent: 0, fontSize: uf(psize), fontFamily: fontStack(first?.f, false), color: tt?.on === "paper" && !tt.locked ? "var(--sb-a)" : undefined }}>{p.bu}</span>}
               {p.runs.map((ru, ri) => {
-                const style: CSSProperties = { fontSize: u(scale(ru.size, ru.f)), fontWeight: ru.bold || tt?.display ? 700 : 400, fontStyle: ru.italic ? "italic" : undefined, textDecoration: ru.underline || (ru.link && !edit) ? "underline" : undefined, color: themed ? mapTextColor(ru.color, ru.bold, tt) : ru.color, fontFamily: fontStack(ru.f, !!tt?.display) };
+                const style: CSSProperties = { fontSize: uf(scale(ru.size, ru.f)), fontWeight: ru.bold || tt?.display ? 700 : 400, fontStyle: ru.italic ? "italic" : undefined, textDecoration: ru.underline || (ru.link && !edit) ? "underline" : undefined, color: themed ? mapTextColor(ru.color, ru.bold, tt) : ru.color, fontFamily: fontStack(ru.f, !!tt?.display) };
                 const body = ru.t || "​";
                 return <span key={ri} data-r={ri} style={style}>{ru.link && !edit ? <a href={ru.link} target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>{body}</a> : body}</span>;
               })}

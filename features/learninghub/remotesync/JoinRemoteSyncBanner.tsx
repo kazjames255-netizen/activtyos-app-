@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { get } from "@/lib/api";
 import type { HubSettings } from "@/lib/hubConfig";
 import { useRealtime } from "@/lib/realtime";
@@ -8,10 +8,10 @@ import { FullscreenPortal, withQs } from "../teachKit";
 import { Icon } from "../kit";
 import { LessonCard } from "../lesson/LessonCard";
 import { LessonStyles } from "../lesson/lessonUi";
-import { errMsg, type Note } from "../types";
+import { errMsg, type Note, type Topic } from "../types";
 import { activeRemoteSync, heartbeat, patchLiveAnswer, type LiveAnswerReport, type RsActive } from "./api";
 import { HelpToolsPanel } from "./HelpTools";
-import { suggestDrawerTools } from "../tools/suggest";
+import { toolsForQuestion } from "../tools/suggest";
 import { listDoubts, type Doubt } from "../lesson/doubts/api";
 import { MessagesCard } from "../lesson/doubts/MessagesCard";
 import { MiniScreenCard } from "./MiniScreenCard";
@@ -48,7 +48,7 @@ function markJoined(id: string) {
   try { localStorage.setItem(joinedKey(id), "1"); } catch { /* ignore */ }
 }
 
-export function JoinRemoteSyncBanner({ qs, childId, config }: { qs: string; childId: string | null; config?: HubSettings }) {
+export function JoinRemoteSyncBanner({ qs, childId, config, topics }: { qs: string; childId: string | null; config?: HubSettings; /** The hub's topics: gives the lesson's subject and year, which the per-question tool rules need. */ topics?: Topic[] }) {
   const [active, setActive] = useState<RsActive | null>(null);
   const [joined, setJoined] = useState(false);
 
@@ -72,10 +72,10 @@ export function JoinRemoteSyncBanner({ qs, childId, config }: { qs: string; chil
       </div>
     );
   }
-  return <JoinedRemoteSync qs={qs} childId={childId} session={active} config={config} onLeft={() => setJoined(false)} />;
+  return <JoinedRemoteSync qs={qs} childId={childId} session={active} config={config} topics={topics} onLeft={() => setJoined(false)} />;
 }
 
-function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string; childId: string; session: RsActive; config?: HubSettings; onLeft: () => void }) {
+function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs: string; childId: string; session: RsActive; config?: HubSettings; topics?: Topic[]; onLeft: () => void }) {
   const [note, setNote] = useState<Note | null>(null);
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const [live, setLive] = useState<RsActive>(session);
@@ -128,6 +128,13 @@ function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string
   }, [qs, childId]);
 
   const [toolsOpen, setToolsOpen] = useState(true);
+  // What tools this exact question gets: decided per question (tools/suggest.ts) out of the tools the tutor allowed. A slide / no
+  // question in view = none. The panel opens instruments on its own and hides everything else on questions where nothing fits.
+  const [qNow, setQNow] = useState<{ id: string; prompt: string } | null>(null);
+  // The lesson's subject and year (from its topic) let the strict per-question rules apply; with no subject only a judged decision can show a tool.
+  const topic = topics?.find((t) => t.id === note?.topicId);
+  const topicYear = (() => { const m = /(\d{1,2})/.exec(topic?.subtopic ?? ""); return m ? Number(m[1]) : null; })();
+  const questionTools = useMemo(() => (live.tools.length && qNow ? toolsForQuestion({ id: qNow.id, prompt: qNow.prompt, subject: topic?.subject, year: topicYear }, live.tools) : []), [live.tools, qNow, topic?.subject, topicYear]);
   // Tool windows spawn from this card's top-right corner; the minimised tray docks at its bottom-left.
   const lessonCardRef = useRef<HTMLDivElement>(null);
 
@@ -175,7 +182,8 @@ function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string
                   follow={live.pace === "own_pace" ? null : { step: live.step, slide: live.slide }}
                   pace={live.pace}
                   onProgress={onProgress}
-                  onLiveAnswer={live.pace === "own_pace" ? onLiveAnswer : undefined}
+                  onLiveAnswer={onLiveAnswer}
+                  onQuestion={setQNow}
                   hideAskTeacher />
               )}
             </div>
@@ -208,7 +216,7 @@ function JoinedRemoteSync({ qs, childId, session, config, onLeft }: { qs: string
                     <h3 className="m-0 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Tools</h3>
                     <Icon name="chevronDown" size={14} className={`text-[var(--ink-3)] transition-transform ${toolsOpen ? "" : "-rotate-90"}`} />
                   </button>
-                  <HelpToolsPanel tools={live.tools} suggested={suggestDrawerTools({ subject: "", year: null, title: live.title, unit: "", objective: "" }, live.tools)} lessonCardRef={lessonCardRef} hideList={!toolsOpen} />
+                  <HelpToolsPanel tools={live.tools} questionTools={questionTools} questionKey={qNow ? qNow.id : null} questionPrompt={qNow?.prompt} lessonCardRef={lessonCardRef} hideList={!toolsOpen} />
                 </div>
               )}
             </div>

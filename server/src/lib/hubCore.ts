@@ -186,6 +186,49 @@ export function parentSubjects(ctx: HubCtx): Set<string> | null {
   return new Set(kids.flatMap((c) => c.subjects.map((s) => s.toLowerCase())));
 }
 
+/** The tenant id that holds the platform-wide shared curriculum library (topics/notes/questions/
+ *  assessments/flashcards seeded once via `server/src/seedCurriculum.ts shared-library`; see
+ *  lib/hubIndex.ts, which merges it into every tenant's content reads). It is never a real
+ *  tenant — no user, subscription or settings doc exists for it — and it is read-only: a real
+ *  tenant's own write routes still require an exact `tenantId` match, so a shared row can never
+ *  be edited or deleted through the API. */
+export const SHARED_LIBRARY_TENANT_ID = "shared-library";
+
+/** The two owner accounts whose own Oak imports were promoted INTO the shared library (see
+ *  `server/src/oak/import.ts`'s own `REAL_TENANTS`) — they already own this content directly under
+ *  their own `tenantId`, so `hubIndex.ts`'s `withShared` must skip merging the shared-library copy
+ *  back in for them specifically. Without this, each of these two tenants reads its own ~7,900
+ *  notes (and matching questions/assessments/flashcards) PLUS the shared library's promoted copy of
+ *  that exact same content under different (prefixed) ids — doubling every count the hub shows
+ *  (lessons, questions…) and roughly doubling the cold-build time of every index, since neither
+ *  copy dedupes against the other by id. Confirmed live: a cold `noteIndex()` build for one of
+ *  these tenants returned 15,788 rows (7,894 own + 7,894 shared, an exact duplicate) in ~65-90s. */
+export const OWNER_SOURCE_TENANT_IDS = new Set(["7jG2XO3cOD3VtoL8YfFY", "jYp5XNZGT7bgSUMuEgHN"]);
+
+/** May this caller read a CONTENT row (topic / note / question / assessment / flashcard) whose
+ *  own `tenantId` is `docTenantId`? True for the caller's own tenant, and for the shared
+ *  library (every tenant reads it). Only for CONTENT — never for people-data (enrolments,
+ *  attempts, invites, homework), which must stay a strict `=== ctx.tenantId`. */
+export function canReadContent(ctx: Pick<HubCtx, "tenantId">, docTenantId: string): boolean {
+  return docTenantId === ctx.tenantId || docTenantId === SHARED_LIBRARY_TENANT_ID;
+}
+
+/** For an EDIT endpoint on shared CONTENT (a note/lesson, an assessment, or a flashcard — never a
+ *  topic, which stays structural and out of scope) that has already passed `canReadContent`: does
+ *  writing this doc need to FORK rather than update in place? True exactly when the doc isn't the
+ *  caller's own tenant's — i.e. (given `canReadContent` already held) it's the shared library's.
+ *
+ *  On a fork, the route must NOT `.update()` the doc it read. Instead it creates a brand-new doc in
+ *  the same collection (`col.doc()` for a fresh id), seeds it from the shared doc's data with
+ *  `tenantId` set to `ctx.tenantId`, `franchiseId`/`createdBy`/`createdAt` set the way a fresh POST
+ *  to that collection would, applies the caller's edit on top, and `.set()`s the NEW ref — the
+ *  shared original (and every other tenant's view of it) is never touched. The route's response
+ *  must carry the new id and a `forked: true` flag so the caller (the web app) starts editing the
+ *  fork, not the shared original, from then on. */
+export function needsFork(ctx: Pick<HubCtx, "tenantId">, docTenantId: string): boolean {
+  return docTenantId !== ctx.tenantId;
+}
+
 /** May this caller read a row carrying this franchiseId? */
 export function canSee(ctx: HubCtx, franchiseId: string | null | undefined): boolean {
   const f = franchiseId ?? null;

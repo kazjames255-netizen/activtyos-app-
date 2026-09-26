@@ -21,10 +21,10 @@ export function ParentGate({ name, onUnlock, onClose }: { name: string; onUnlock
     setWrong(true); setVal(""); setSum(makeSum()); input.current?.focus();
   };
   return (
-    <Dialog title="Grown-ups only" subtitle={`Leave ${name}'s screen`} onClose={onClose} id="hub-parent-gate"
+    <Dialog title="Go back to parent portal" subtitle={`Leave ${name}'s screen`} onClose={onClose} id="hub-parent-gate"
       footer={<><Button variant="ghost" className={`min-h-[44px] ${FOCUS}`} onClick={onClose}>Stay here</Button><Button variant="solid" className={`min-h-[44px] ${FOCUS}`} onClick={check} data-testid="kid-gate-unlock">Unlock</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); check(); }}>
-        <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">To go back to the family menu, answer this:</p>
+        <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">Grown-ups only. To go back to the parent portal, answer this:</p>
         <label htmlFor="kid-gate-answer" className="mt-3 block text-[22px] font-extrabold text-[var(--ink)]" data-testid="kid-gate-sum">{label}</label>
         <input ref={input} id="kid-gate-answer" inputMode="numeric" pattern="[0-9]*" autoComplete="off" value={val} onChange={(e) => { setVal(e.target.value.replace(/[^0-9]/g, "")); setWrong(false); }} data-autofocus
           className="mt-2 min-h-[48px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[18px] font-bold text-[var(--ink)] outline-none focus:border-[var(--brand)]" />

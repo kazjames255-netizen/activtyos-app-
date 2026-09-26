@@ -35,8 +35,7 @@ for (const [vpName, vp] of [["390", VIEWPORTS["390"]], ["1440", VIEWPORTS["1440"
     await gotoHubPage(page, "/freelancer/learninghub?tab=notes", fx);
     await settle(page);
     const card = page.getByTestId("curriculum-card");
-    await expect(card).toBeVisible({ timeout: 30_000 });
-    if ((await card.getByRole("button").first().getAttribute("aria-expanded")) !== "true") await card.getByRole("button").first().click();
+    await expect(card).toBeVisible({ timeout: 30_000 }); // always open now — no accordion to expand first
     const list = page.getByTestId("curriculum-year-list");
 
     await card.getByRole("tab", { name: "Year 5" }).click();
@@ -100,11 +99,12 @@ test("student lens: one student's year as a checklist", async ({ browser }) => {
     await gotoHubPage(page, "/freelancer/learninghub?tab=notes", fx);
     await settle(page);
     const card = page.getByTestId("curriculum-card");
-    await expect(card).toBeVisible({ timeout: 30_000 });
-    if ((await card.getByRole("button").first().getAttribute("aria-expanded")) !== "true") await card.getByRole("button").first().click();
+    await expect(card).toBeVisible({ timeout: 30_000 }); // always open now — no accordion to expand first
     const pills = card.getByTestId("curriculum-students");
-    await expect(pills.getByRole("button", { name: "Everyone" })).toBeVisible({ timeout: 20_000 });
-    await pills.getByRole("button", { name: new RegExp(fx.kids[0].name) }).click();
+    const studentPick = pills.locator("select");
+    await expect(studentPick).toBeVisible({ timeout: 20_000 });
+    const kidOptionLabel = (await studentPick.locator("option", { hasText: fx.kids[0].name }).first().textContent())?.trim();
+    await studentPick.selectOption({ label: kidOptionLabel! });
     await card.getByRole("tab", { name: "Year 5" }).click();
     const cards = card.getByTestId("curriculum-student-list");
     await expect(cards.locator('[data-state="done"]')).toHaveCount(1);
@@ -116,7 +116,7 @@ test("student lens: one student's year as a checklist", async ({ browser }) => {
     await expect(cards).not.toContainText("Equations");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
     await page.screenshot({ path: path.join(OUT, `student-${vpName}.png`), fullPage: true });
-    await pills.getByRole("button", { name: "Everyone" }).click();
+    await studentPick.selectOption({ value: "" });
     await expect(card.getByTestId("curriculum-year-list")).toBeVisible();
     await ctx.close();
   }

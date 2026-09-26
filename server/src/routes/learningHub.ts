@@ -7,7 +7,7 @@ import { capLevel } from "../../../lib/accessMap";
 import { capsFor } from "../middleware/access";
 import { customerAreaOn } from "../lib/customerArea";
 import {
-  canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, enrolmentsForParent, forgetEnrolments, hubConfig, hubEnrolments, libraryDocId, norm, okId, registerTopicRef, requireEdit, resolveCtx, same, scopedChildren, subjectAllowed, topicReferences,
+  canReadContent, canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, enrolmentsForParent, forgetEnrolments, hubConfig, hubEnrolments, libraryDocId, needsFork, norm, okId, registerTopicRef, requireEdit, resolveCtx, same, scopedChildren, subjectAllowed, topicReferences,
   type EnrolmentDoc, type HubCtx,
 } from "../lib/hubCore";
 import { forgetHub } from "../lib/hubCache";
@@ -51,7 +51,7 @@ const commitChunked = async (ops: ((b: FirebaseFirestore.WriteBatch) => void)[])
 // A "student" is a parent's child ENROLLED by a tutor. The enrolment is what
 // lets that family into the hub (lib/hubCore.ts) — never the customer record.
 
-interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; audienceUnknown: boolean; support?: SupportProfile }
+interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; hasDob: boolean; audienceUnknown: boolean; support?: SupportProfile }
 /** `dob` = the child's date of birth (never returned): it lets the row say which year group they are in NOW
  *  and whether year/age are both unknown (`audienceUnknown` — year-group-targeted quizzes will show for them, flagged). */
 const enrolmentOut = (e: EnrolmentDoc, yearGroups: string[], dob: string | null): EnrolmentRow => {
@@ -59,7 +59,7 @@ const enrolmentOut = (e: EnrolmentDoc, yearGroups: string[], dob: string | null)
   return {
     childId: e.childId, childName: e.childName, parentEmail: e.parentEmail, franchiseId: e.franchiseId ?? null,
     subjects: e.subjects ?? [], tutorUid: e.tutorUid ?? null, tutorName: e.tutorName ?? "", active: e.active !== false, createdAt: e.createdAt,
-    yearGroup, yearGroupAuto: e.yearGroupAuto === true, audienceUnknown: !yearGroup && ageInYears(dob) === null,
+    yearGroup, yearGroupAuto: e.yearGroupAuto === true, hasDob: ageInYears(dob) !== null, audienceUnknown: !yearGroup && ageInYears(dob) === null,
     ...(e.support ? { support: cleanSupport(e.support) } : {}),
   };
 };
@@ -317,7 +317,11 @@ learningHub.post("/topics", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const b = parsed.data;
   const all = await visibleTopics(ctx);
-  if (all.length >= MAX_TOPICS) { res.status(409).json({ error: `A hub can hold up to ${MAX_TOPICS} topics — tidy some away first` }); return; }
+  // The cap is about what THIS tenant can "tidy away" — visibleTopics now also carries the shared
+  // library's read-only topics (post shared-curriculum-library), which this tenant can never delete,
+  // so counting them toward the cap would make it un-liftable by anything the tutor can actually do.
+  const ownCount = all.filter((t) => t.tenantId === ctx.tenantId).length;
+  if (ownCount >= MAX_TOPICS) { res.status(409).json({ error: `A hub can hold up to ${MAX_TOPICS} topics of your own — tidy some away first` }); return; }
   let doc: TopicDoc;
   const base = { tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, createdBy: ctx.uid, createdAt: new Date().toISOString() };
   if (b.parentTopicId) {
@@ -483,9 +487,49 @@ function slidesOut(base: string, slides: unknown): unknown {
   });
 }
 
+// Oak's own imported decks carry fixed platform-boilerplate slides (their own "Teacher Guidance" usage explainer,
+// a "how to use Oak lessons" page, a closing attribution/licence page) at a fixed point in EVERY deck, regardless of
+// the lesson's actual subject. It's boilerplate about the publisher's own tools, not this lesson's content, for tutor
+// or student — drop it before it's ever sent, the same way isOakLogo() (oak/deckConvert.ts) already drops their
+// literal logo images.
+//   CORRECTNESS NOTE: an earlier version of this filter matched a slide's `.title` field against /teacher guidance/i.
+// That never actually matched anything — real data shows this slide's title VARIES ("How our teaching resources are
+// designed for the classroom" / others) or is BLANK; "Teacher Guidance" is body copy, not the title. Verified against
+// real shared-library data (oak/fixOakGuidanceSlidesShared.ts's dry run): the title check matched 0 of 4,500 notes
+// scanned, while this body-text check matches on the large majority of notes checked. Detection now mirrors
+// oak/fixOakGuidanceSlides.ts's proven patterns exactly (that script performs the equivalent one-time fix directly
+// on already-stored Firestore data; this is the render-time belt-and-suspenders version, so any note it hasn't
+// reached yet — or ever reaches — still renders clean).
+const isOakTeacherGuidanceText = (t: string) => /oak.?s lessons? (?:are|is) structured around/i.test(t) || /oak.?s lesson structure/i.test(t);
+const isOakClipsGuidanceText = (t: string) => /teacher guidance/i.test(t) && /to help you teach this lesson, we/i.test(t);
+const isOakAttributionText = (t: string) => /oak national academy/i.test(t) && /©|open government licen[cs]e|licensed under/i.test(t);
+const isHowToUseOakText = (t: string) => /how to use oak lessons/i.test(t);
+function slideBoilerplateText(s: Record<string, unknown>): string {
+  const texts: string[] = [];
+  for (const b of Array.isArray(s.blocks) ? s.blocks : []) {
+    const block = b as { els?: unknown[] };
+    for (const e of Array.isArray(block.els) ? block.els : []) {
+      const el = e as { k?: unknown; paras?: unknown[] };
+      if (el.k !== "text") continue;
+      for (const p of Array.isArray(el.paras) ? el.paras : []) {
+        const para = p as { runs?: unknown[] };
+        for (const r of Array.isArray(para.runs) ? para.runs : []) { const run = r as { t?: unknown }; if (typeof run.t === "string") texts.push(run.t); }
+      }
+    }
+  }
+  return texts.join(" ").replace(/\s+/g, " ").trim();
+}
+const isBoilerplateSlide = (s: unknown): boolean => {
+  if (!s || typeof s !== "object") return false;
+  const t = slideBoilerplateText(s as Record<string, unknown>);
+  if (!t) return false;
+  return isHowToUseOakText(t) || isOakTeacherGuidanceText(t) || isOakClipsGuidanceText(t) || isOakAttributionText(t);
+};
+const stripBoilerplate = (slides: unknown): unknown => (Array.isArray(slides) ? slides.filter((s) => !isBoilerplateSlide(s)) : slides);
+
 /** The structured lesson a caller may see: tutors get it whole, a family loses the teacher-only parts. */
 function lessonOut(l: Record<string, unknown>, canEdit: boolean, base: string) {
-  const withArt = l.slides || l.deckSlides ? { ...l, ...(l.slides ? { slides: slidesOut(base, l.slides) } : {}), ...(l.deckSlides ? { deckSlides: slidesOut(base, l.deckSlides) } : {}) } : l;
+  const withArt = l.slides || l.deckSlides ? { ...l, ...(l.slides ? { slides: slidesOut(base, stripBoilerplate(l.slides)) } : {}), ...(l.deckSlides ? { deckSlides: slidesOut(base, stripBoilerplate(l.deckSlides)) } : {}) } : l;
   if (canEdit) return withArt;
   // (`tips` = what older imports called teacherTips; the plan's commonMistakes / watchOut are tutor-only too, its steps are the student recap)
   const { teacherTips: _t, misconceptions: _m, tips: _x, plan, ...rest } = withArt;
@@ -658,7 +702,7 @@ learningHub.get("/notes/:id", async (req, res) => {
   if (!okId(req.params.id)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const snap = await notesCol.doc(req.params.id).get();
   const n = snap.exists ? (snap.data() as NoteDoc) : null;
-  if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (!n || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const assigned = await familyAssignedNoteIds(ctx);
   if (assigned && !assigned.has(snap.id) && !(await liveRemoteSyncCoversNote(ctx, snap.id))) { res.status(404).json({ error: "Lesson not found" }); return; }
   const topic = (await visibleTopics(ctx)).find((t) => t.id === n.topicId);
@@ -675,12 +719,12 @@ learningHub.get("/notes/:id/homework-pack", async (req, res) => {
   if (!okId(req.params.id)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const snap = await notesCol.doc(req.params.id).get();
   const n = snap.exists ? (snap.data() as NoteDoc) : null;
-  if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || n.kind === "board") { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (!n || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || n.kind === "board") { res.status(404).json({ error: "Lesson not found" }); return; }
   if (!(await visibleTopics(ctx)).some((t) => t.id === n.topicId)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const lesson = n.lesson && typeof n.lesson === "object" ? n.lesson : null;
   const quizId = lesson && typeof lesson.quizId === "string" ? lesson.quizId : "";
   const a = quizId ? (await assessmentRows(ctx.tenantId)).get(quizId) : undefined;
-  const quiz = a && a.tenantId === ctx.tenantId && canSee(ctx, a.franchiseId) ? { id: a.id, title: a.title, questionCount: (a.questionIds ?? []).length, published: a.published === true } : null;
+  const quiz = a && canReadContent(ctx, a.tenantId) && canSee(ctx, a.franchiseId) ? { id: a.id, title: a.title, questionCount: (a.questionIds ?? []).length, published: a.published === true } : null;
   let flashcardCount = 0;
   if (lesson) {
     try { flashcardCount = (await db.collection("hubFlashcards").where("tenantId", "==", ctx.tenantId).where("lessonId", "==", snap.id).where("published", "==", true).count().get()).data().count; }
@@ -794,7 +838,10 @@ async function dropFiles(tenantId: string, ids: string[]) {
 async function noteTopic(ctx: HubCtx, topicId: string) {
   if (!okId(topicId)) return null;
   const snap = await topicsCol.doc(topicId).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canSee(ctx, snap.get("franchiseId"))) return null;
+  // A shared-library topic is fine to file a note under (canReadContent) — every tenant reads the
+  // shared curriculum tree, and a forked copy of a shared lesson keeps referencing the shared topic
+  // it was filed under.
+  if (!snap.exists || !canReadContent(ctx, snap.get("tenantId")) || !canSee(ctx, snap.get("franchiseId"))) return null;
   return snap;
 }
 
@@ -821,7 +868,10 @@ learningHub.post("/notes", async (req, res) => {
   res.status(201).json(await noteOutA(req, ref.id, doc));
 });
 
-/** A visible-and-writable note, or a refusal already sent. */
+/** A visible-and-writable note, or a refusal already sent. Strict same-tenant only — used by
+ *  PATCH (the interactive-widget patch) and DELETE, neither of which forks: editing a shared
+ *  lesson's widget or deleting it keeps failing exactly as before. See `writableNote` for the
+ *  fork-aware version PUT uses. */
 async function editableNote(ctx: HubCtx, id: string, res: import("express").Response) {
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return null; }
   const snap = await notesCol.doc(id).get();
@@ -830,13 +880,28 @@ async function editableNote(ctx: HubCtx, id: string, res: import("express").Resp
   return snap;
 }
 
+/** A visible note the caller may PUT: the caller's own returns it for an in-place update; the
+ *  shared library returns it flagged to FORK (see `needsFork` in hubCore.ts) — PUT /notes/:id
+ *  then creates a new doc instead of updating this one. Never returns a doc outside
+ *  `canReadContent` (some other tenant's, or invisible to this franchise). */
+async function writableNote(ctx: HubCtx, id: string, res: import("express").Response): Promise<{ snap: FirebaseFirestore.DocumentSnapshot; fork: boolean } | null> {
+  if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return null; }
+  const snap = await notesCol.doc(id).get();
+  const docTenantId = snap.get("tenantId") as string | undefined;
+  if (!snap.exists || !docTenantId || !canReadContent(ctx, docTenantId) || !canSee(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return null; }
+  if (needsFork(ctx, docTenantId)) return { snap, fork: true }; // shared library: never edited in place
+  if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That lesson belongs to head office" }); return null; }
+  return { snap, fork: false };
+}
+
 learningHub.put("/notes/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
   const parsed = noteBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const snap = await editableNote(ctx, req.params.id, res);
-  if (!snap) return;
+  const result = await writableNote(ctx, req.params.id, res);
+  if (!result) return;
+  const { snap, fork } = result;
   if (!(await noteTopic(ctx, parsed.data.topicId))) { res.status(404).json({ error: "Topic not found" }); return; }
   const atts = await checkAttachments(ctx.tenantId, parsed.data.attachments);
   if (typeof atts === "string") { res.status(400).json({ error: atts }); return; }
@@ -850,11 +915,23 @@ learningHub.put("/notes/:id", async (req, res) => {
   // The markdown editor never sends `lesson`, so editing the text of an interactive lesson keeps it intact.
   const lessonPatch = parsed.data.lesson === undefined ? {} : { lesson: parsed.data.lesson };
   const patch = { topicId: parsed.data.topicId, title: parsed.data.title, body: parsed.data.body, published: parsed.data.published, attachments: atts, videos: vids, ...lessonPatch, updatedAt: new Date().toISOString() };
-  await snap.ref.update(patch);
-  patchNote(ctx.tenantId, snap.id, { ...before, ...patch }); pingHub(ctx.tenantId, "hubNotes");
-  const kept = new Set(atts.map((a) => a.id));
-  void dropFiles(ctx.tenantId, (before.attachments ?? []).map((a) => a.id).filter((id) => !kept.has(id)));
-  res.json(await noteOutA(req, snap.id, { ...before, ...patch }));
+  if (!fork) {
+    await snap.ref.update(patch);
+    patchNote(ctx.tenantId, snap.id, { ...before, ...patch }); pingHub(ctx.tenantId, "hubNotes");
+    const kept = new Set(atts.map((a) => a.id));
+    void dropFiles(ctx.tenantId, (before.attachments ?? []).map((a) => a.id).filter((id) => !kept.has(id)));
+    res.json(await noteOutA(req, snap.id, { ...before, ...patch }));
+    return;
+  }
+  // Shared-library lesson: fork into a brand-new note owned by this tenant. The shared
+  // original is never `.update()`d or touched in any way, so every other tenant's view
+  // of it is unaffected — the tutor's edit, and every edit after it, lands on the fork.
+  const now = new Date().toISOString();
+  const forked: NoteDoc = { ...before, ...patch, tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, createdBy: ctx.uid, createdByName: ctx.name, createdAt: now };
+  const ref = notesCol.doc();
+  await ref.set(forked);
+  patchNote(ctx.tenantId, ref.id, forked); pingHub(ctx.tenantId, "hubNotes");
+  res.json({ ...(await noteOutA(req, ref.id, forked)), forked: true });
 });
 
 // PATCH /notes/:id {lesson:{widget}} — attach / detach the interactive "Explore" widget of an interactive lesson without

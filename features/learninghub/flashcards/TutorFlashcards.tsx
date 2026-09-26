@@ -6,7 +6,7 @@ import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../panelTypes";
 import { canChangeRow, errMsg, topicLabel } from "../types";
-import { DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Pill, ProgressBar, Skeleton, fmtDay, useCountUp, withQs } from "../teachKit";
+import { DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Notice, Pill, ProgressBar, Skeleton, fmtDay, useCountUp, withQs } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
 import { subjectColor } from "../kit";
 import { BulkDialog, CardDialog } from "./CardDialogs";
@@ -24,6 +24,10 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
   const [busy, setBusy] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
   const [allStudents, setAllStudents] = useState(false);
+  // A save that forked a head-office (shared-library) card into the tutor's own copy — the dialog
+  // closes right away, so the confirmation lives here.
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 5000); return () => clearTimeout(t); }, [flash]);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -77,7 +81,10 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
     setBusy(list.length === 1 ? list[0]!.id : "many");
     try {
       // One request however many cards ("Publish 60 drafts" used to be 60 parallel PUTs).
-      if (list.length === 1) await put(`/api/learning-hub/flashcards/${list[0]!.id}${withQs(qs, {})}`, { published });
+      if (list.length === 1) {
+        const r = await put<{ forked?: boolean }>(`/api/learning-hub/flashcards/${list[0]!.id}${withQs(qs, {})}`, { published });
+        if (r.forked) setFlash("That card belonged to head office, so publishing it saved your own copy.");
+      }
       else await post(`/api/learning-hub/flashcards/publish${withQs(qs, {})}`, { ids: list.map((c) => c.id), published });
       load();
     }
@@ -106,6 +113,7 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4" id="hub-flashcards">
+      {flash && <Notice tone="green" onClose={() => setFlash(null)}>{flash}</Notice>}
       <div className="flex flex-wrap items-center gap-3">
         <GradientTile icon="cards" size={44} />
         <div className="min-w-0 flex-1 basis-[200px]">
@@ -189,7 +197,7 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
       {dialog?.kind === "card" && (
         <CardDialog key={dialog.card?.id ?? "new"} card={dialog.card} topics={topics} defaultTopicId={dialog.topicId} qs={qs} franchiseId={franchiseId} onClose={() => setDialog(null)}
           onOpenOther={readOnly ? undefined : (c) => setDialog({ kind: "card", card: c, topicId: c.topicId })} onStartNew={() => setDialog({ kind: "card", card: null, topicId: defaultTopic })}
-          onSaved={(more) => { load(); if (!more) setDialog(null); }} />
+          onSaved={(more, forked) => { load(); if (!more) setDialog(null); if (forked) setFlash("That card belonged to head office, so saving it made your own copy."); }} />
       )}
       {dialog?.kind === "bulk" && <BulkDialog topics={topics} defaultTopicId={dialog.topicId} qs={qs} onClose={() => setDialog(null)} onSaved={() => { setDialog(null); load(); }} />}
     </div>

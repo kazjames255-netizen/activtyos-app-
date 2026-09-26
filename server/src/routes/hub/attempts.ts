@@ -4,7 +4,7 @@ import { cleanToolAnswer, isBlankToolAnswer, isGenerator, publicProblem, PROBLEM
 import { z } from "zod";
 import { db } from "../../firebase";
 import { FieldValue } from "firebase-admin/firestore";
-import { canSee, canSeeStudent, canWriteRow, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, canSeeStudent, canWriteRow, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type HubCtx } from "../../lib/hubCore";
 import { applyManualMark, autoSplit, inferRule, markResponse, revealAllowed, scoreAttempt, type ScoredAnswer } from "../../lib/hubScoring";
 import { audienceFit, effectiveRetake, failStreak, normAudience, retakeDecision } from "../../lib/hubRules";
 import { cleanKindResponse, presentMatch, presentOrder, type Pair } from "../../lib/hubKinds";
@@ -135,7 +135,7 @@ export function snapshotQuestions(tenantId: string, asm: AssessmentDoc, cfg: Hub
   for (const s of qSnaps) {
     if (!s.exists) continue;
     const q = s.data() as QuestionDoc;
-    if (q.tenantId !== tenantId || q.published === false || !fitsChild(q.franchiseId, child)) continue;
+    if (!canReadContent({ tenantId }, q.tenantId) || q.published === false || !fitsChild(q.franchiseId, child)) continue;
     const mark = cfg.questionKinds.find((k) => k.id === q.kind)?.mark ?? inferRule(q);
     questions.push({
       id: s.id, topicId: q.topicId, kind: q.kind, mark, prompt: q.prompt, options: q.options ?? [], marks: q.marks,
@@ -174,7 +174,7 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   const aSnap = await assessmentsCol.doc(req.params.id).get();
   if (!aSnap.exists) { notFound(); return; }
   const asm = aSnap.data() as AssessmentDoc;
-  if (asm.tenantId !== ctx.tenantId || !canSee(ctx, asm.franchiseId) || !fitsChild(asm.franchiseId, child) || !childSubjectOk(child, asm.subject)) { notFound(); return; }
+  if (!canReadContent(ctx, asm.tenantId) || !canSee(ctx, asm.franchiseId) || !fitsChild(asm.franchiseId, child) || !childSubjectOk(child, asm.subject)) { notFound(); return; }
   // Drafts are for tutors to build; nobody sits one, tutor or not.
   if (asm.published === false) {
     if (ctx.role === "parent") { notFound(); return; }

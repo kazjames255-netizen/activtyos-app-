@@ -96,7 +96,8 @@ test("lessons: New lesson has a New / Edit existing strip; Edit existing finds a
   await editor.getByRole("button", { name: "Save lesson" }).click();
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
   await page.getByLabel("Search lessons").fill(NOTE2);
-  await expect(cardWith(page, NOTE2)).toBeVisible({ timeout: 20_000 });
+  // A plain, unpublished note never sits on the curriculum map: the search lists it under "Found, but not yet placed on the map".
+  await expect(page.getByRole("button", { name: NOTE2, exact: true })).toBeVisible({ timeout: 20_000 });
 
   await ctx.close();
 });

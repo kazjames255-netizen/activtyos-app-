@@ -450,7 +450,7 @@ async function walk(nodes: N[], frames: Frame[], inheritStep: Anim | undefined, 
       out.push(shapeEl("line", pl, { line: ln, arrow, flipH: xf.flipH, flipV: xf.flipV }, st, sc));
       continue;
     }
-    if (n.tag === "p:graphicFrame") { await tableEls(n, frames, st, sc, out); continue; }
+    if (n.tag === "p:graphicFrame") { await tableEls(n, frames, st, anim, sc, out); continue; }
     if (n.tag !== "p:sp") continue;
 
     // ── an autoshape / text box / placeholder ──
@@ -467,6 +467,24 @@ async function walk(nodes: N[], frames: Frame[], inheritStep: Anim | undefined, 
     const line = lineOf(ch(spPr, "a:ln"), sc.cx) ?? (ph ? lineOf(ch(at(lph, "p:spPr"), "a:ln"), sc.cx) : undefined);
     const prst = at(spPr, "a:prstGeom")?.a.prst ?? "rect";
     if (ch(spPr, "a:custGeom")) sc.stats.warnings.push("custom geometry drawn as a rectangle");
+    // A PowerPoint "math" autoshape (a thin +/− glyph in a square-ish box, drawn skeletally — the shape is mostly
+    // empty space around a slim cross/bar) has no rect/round/ellipse/line equivalent in our schema; falling through
+    // to the generic "solid fill → rect" branch below turns a small charge-sign icon (e.g. the "+"/"−" on a plum
+    // pudding / nuclear model diagram) into a large, fully-opaque, wrongly-shaped solid block — confirmed against a
+    // real imported deck (Chemistry "Developing a model for atoms", the plum-pudding diagram's "+" is authored as
+    // `prstGeom prst="mathPlus"`, fill `schemeClr val="dk1"` (near-black), no text body of its own). Draw the glyph
+    // as a small centred TEXT character instead — a faithful, ungarbled render of what the shape actually is.
+    const MATH_GLYPH: Record<string, string> = { mathPlus: "+", mathMinus: "−", mathMultiply: "×", mathDivide: "÷", mathEqual: "=", mathNotEqual: "≠" };
+    const mathGlyph = MATH_GLYPH[prst];
+    if (mathGlyph) {
+      const glyphColor = fill ?? undefined;
+      // Font sizes are absolute points on the slide (not the x/y/w/h fraction-of-slide-width used for geometry), so
+      // the box's own EMU height is converted straight to points (1pt = 12700 EMU) rather than divided by sc.W.
+      const size = r1(Math.min(pl.w, pl.h) / 12700 * 0.72);
+      out.push(textEl([{ runs: [{ t: mathGlyph, size, bold: true, ...(glyphColor && glyphColor !== "#000000" ? { color: glyphColor } : {}) }], algn: "c" }],
+        pl, { anchor: "ctr", l: 0, t: 0, r: 0, b: 0, fontScale: 1 }, st, sc));
+      continue;
+    }
     const geom: CShape["geom"] = prst === "ellipse" ? "ellipse" : prst === "roundRect" ? "round" : "rect";
     if (prst === "line" || prst === "straightConnector1") { if (line) out.push(shapeEl("line", pl, { line, flipH: xf.flipH, flipV: xf.flipV }, st, sc)); continue; }
     if (fill || line) {
@@ -507,7 +525,7 @@ function contentHeight(paras: CPara[], availW: number): number {
   return h;
 }
 
-async function tableEls(frame: N, frames: Frame[], st: Anim, sc: SlideCtx, out: CEl[]): Promise<void> {
+async function tableEls(frame: N, frames: Frame[], st: Anim, anim: ShapeAnim | undefined, sc: SlideCtx, out: CEl[]): Promise<void> {
   const tbl = at(frame, "a:graphic", "a:graphicData", "a:tbl");
   const xf = readXfrm(ch(frame, "p:xfrm"));
   if (!tbl || !xf) return;
@@ -517,7 +535,8 @@ async function tableEls(frame: N, frames: Frame[], st: Anim, sc: SlideCtx, out: 
   // Pass 1: every cell's paragraphs, and how tall each row has to be.
   interface Cell { r: number; c: number; rs: number; cs: number; tc: N; tcPr: N | undefined; paras: CPara[]; pad: [number, number, number, number] }
   const cells: Cell[] = [];
-  const rowH = rows.map((tr) => num(tr.a.h));
+  const authoredH = rows.map((tr) => num(tr.a.h));
+  const rowH = authoredH.slice();
   rows.forEach((tr, ri) => chs(tr, "a:tc").forEach((tc, ci) => {
     if (tc.a.hMerge === "1" || tc.a.vMerge === "1") return;
     const tcPr = ch(tc, "a:tcPr");
@@ -531,6 +550,22 @@ async function tableEls(frame: N, frames: Frame[], st: Anim, sc: SlideCtx, out: 
       rowH[ri] = Math.max(rowH[ri]!, (contentHeight(paras, wPt) + pad[1] + pad[3]) * 12700);
     }
   }));
+  // Clamp the table's total height back to the frame's own declared height (xf.h): the content-width heuristic above can
+  // overestimate a row's height, and an unclamped table then renders taller than the deck laid out for it, overlapping
+  // whatever was positioned after it on the slide. Shrink back only the *heuristic growth* we added on top of each row's
+  // own PowerPoint-authored height (proportionally, so no one row eats the whole cut) — the authored heights are the
+  // deck's own numbers and are trusted first; only if even those alone overflow the frame (rare, a pre-existing
+  // inconsistency in the source deck) do we fall back to a uniform scale of everything.
+  const totalH = rowH.reduce((a, b) => a + b, 0);
+  if (xf.h > 0 && totalH > xf.h) {
+    const authoredTotal = authoredH.reduce((a, b) => a + b, 0);
+    const extraTotal = totalH - authoredTotal;
+    const budget = Math.max(0, xf.h - authoredTotal);
+    const scale = extraTotal > 0 ? Math.min(1, budget / extraTotal) : 0;
+    for (let i = 0; i < rowH.length; i++) rowH[i] = authoredH[i]! + (rowH[i]! - authoredH[i]!) * scale;
+    const newTotal = rowH.reduce((a, b) => a + b, 0);
+    if (newTotal > xf.h && newTotal > 0) { const f = xf.h / newTotal; for (let i = 0; i < rowH.length; i++) rowH[i] = rowH[i]! * f; }
+  }
   const ys = [xf.y]; for (const h of rowH) ys.push(ys[ys.length - 1]! + h);
   const fillEls: CEl[] = [], lineEls: CEl[] = [], textEls: CEl[] = [];
   for (const cell of cells) {
@@ -548,7 +583,13 @@ async function tableEls(frame: N, frames: Frame[], st: Anim, sc: SlideCtx, out: 
     }
     if (!cell.paras.length) continue;
     const bp: Props2 = { anchor: tcPr?.a.anchor ?? "t", l: cell.pad[0], t: cell.pad[1], r: cell.pad[2], b: cell.pad[3], fontScale: 1 };
-    textEls.push(textEl(cell.paras, pl, bp, st, sc));
+    // "By row" table builds: the same by-paragraph mechanism a regular text box uses (readSteps keys `paras` by paragraph
+    // index within the shape's txBody) — for a table's own spid, mirror that with the cell's row as the index, so a build
+    // that reveals the table one row at a time actually staggers instead of showing every cell from the first click.
+    const rowAnim = anim?.paras?.get(cell.r);
+    const cellSt: Anim = rowAnim ? { step: rowAnim.step ?? st.step, until: rowAnim.until ?? st.until, delay: rowAnim.delay ?? st.delay } : st;
+    if (rowAnim) cell.paras.forEach((p) => { if (cellSt.step !== undefined) p.step = cellSt.step; if (cellSt.until !== undefined) p.until = cellSt.until; });
+    textEls.push(textEl(cell.paras, pl, bp, rowAnim ? { ...cellSt, step: undefined } : cellSt, sc));
   }
   out.push(...fillEls, ...lineEls, ...textEls);
 }

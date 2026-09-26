@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { canSeeStudent, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSeeStudent, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { notify } from "../../lib/notify";
 import { doubtsCol, eligibleStudents, notesCol, nowIso } from "./teachingCommon";
@@ -75,7 +75,7 @@ hubDoubtsApi.post("/doubts", async (req, res) => {
     let lessonTitle = b.lessonTitle ?? null;
     if (b.noteId) {
       const note = await notesCol.doc(b.noteId).get();
-      if (!note.exists || note.get("tenantId") !== ctx.tenantId || !canSeeStudent(ctx, note.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return; }
+      if (!note.exists || !canReadContent(ctx, note.get("tenantId")) || !canSeeStudent(ctx, note.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return; }
       lessonTitle = (b.lessonTitle || (note.get("title") as string | undefined) || "Lesson").slice(0, 200);
     }
     const doc: DoubtDoc = {

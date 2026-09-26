@@ -62,9 +62,9 @@ export function KidBar({ name, onExit }: { name: string; onExit: () => void }) {
         <div className="min-w-0 flex-1">
           <div className="truncate text-[17px] font-extrabold text-[var(--brand-strong)]" style={{ fontFamily: "var(--ff-display)" }}>{first}&apos;s learning</div>
         </div>
-        <button type="button" onClick={() => setGate(true)} data-testid="kid-exit" aria-label="Grown-ups: leave kid mode"
+        <button type="button" onClick={() => setGate(true)} data-testid="kid-exit" aria-label="Go back to parent portal"
           className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}>
-          <Ico name="lock" size={15} />Grown-ups
+          <Ico name="lock" size={15} />Go back to parent portal
         </button>
       </div>
       {gate && <ParentGate name={first} onClose={() => setGate(false)} onUnlock={() => { setGate(false); onExit(); }} />}

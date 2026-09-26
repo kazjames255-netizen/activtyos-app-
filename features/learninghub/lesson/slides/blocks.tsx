@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FOCUS } from "../../kit";
 import { Btn } from "../lessonUi";
-import type { Block, Chip } from "./types";
+import { SlideArt, hasArt } from "./SlideArt";
+import type { Block, Chip, Slide } from "./types";
 
 // The interactive building blocks of a slide. Every block keeps its own small state; the deck remounts them per slide.
 // `xp(n)` awards experience points for a first-try success (the lesson player owns the total).
@@ -51,6 +52,97 @@ function ChipRow({ items }: { items: Chip[] }) {
         );
       })}
     </ul>
+  );
+}
+
+/** The server always generates the vocab-preview slide the same way (see server/src/oak/factory/generate.ts):
+ * `{ kind: "intro", title: "Key words" (or "Key words (2)" when split across slides), blocks: [{t:"text",...instruction}, {t:"define", items}] }`.
+ * Returns the terms/definitions for that slide, or null if this isn't one. */
+export function keyWordsItems(s: { title: string; blocks: Block[] }): { term: string; def: string }[] | null {
+  if (!/^key words\b/i.test(s.title.trim())) return null;
+  const b = s.blocks.find((x) => x.t === "define") as Extract<Block, { t: "define" }> | undefined;
+  return b ? b.items : null;
+}
+
+/** The vocab-preview ("Key words") slide, redesigned as a single dark card: an eyebrow label, a large display-font
+ * title and a plain divided list of terms — tap a term to reveal its meaning in place. Same tap-to-reveal behaviour
+ * as the ordinary `define` block, just restyled to read as one deliberate "front of the deck" vocabulary card.
+ * Some of these slides also carry a real picture (a library diagram, an uploaded image, or allow-listed emoji) —
+ * `art` renders it in its own light chip (`SlideArt`'s own art assumes a light surface behind it) so a Key words
+ * slide never loses its picture just to get the new styling. */
+export function KeyWordsCard({ title, intro, items, art, corner, editable, onItemsChange }: {
+  title: string; intro?: string; items: { term: string; def: string }[]; art?: Pick<Slide, "art" | "pics" | "image">; corner?: ReactNode;
+  /** Tutor edit only: lets a term/definition be tapped into an inline text field, edited in place, instead of the pupil's
+   *  tap-to-reveal chevron. Real editing on the SAME dark card the student sees — never a fallback layout. */
+  editable?: boolean;
+  onItemsChange?: (items: { term: string; def: string }[]) => void;
+}) {
+  const [open, setOpen] = useState<number | null>(null);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const showArt = !!art && hasArt(art);
+  const setField = (i: number, field: "term" | "def", value: string) => onItemsChange?.(items.map((it, k) => (k === i ? { ...it, [field]: value } : it)));
+  return (
+    <div className="relative overflow-hidden text-white" style={{ borderRadius: "16px 16px 28px 28px / 16px 16px 16px 16px",
+      // The app's own sidebar surface (components/shell/Sidebar.tsx) — its gradient plus dot texture — not a one-off navy,
+      // so this reads as this app's chrome rather than a per-lesson colour (same recipe the canvas title band reuses).
+      backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)", backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+      <div className={`grid gap-5 px-5 py-6 sm:px-8 sm:py-8 md:items-start md:gap-8 ${showArt ? "md:grid-cols-[minmax(0,0.85fr)_170px_minmax(0,1.05fr)]" : "md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]"}`}>
+        <div className="min-w-0">
+          {corner && <div className="mb-2 flex justify-end md:hidden">{corner}</div>}
+          <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--violet)" }}>Key words</span>
+          <h2 className="m-0 mt-2 text-[28px] font-extrabold leading-[1.15] sm:text-[34px]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h2>
+          {intro && <p className="m-0 mt-3 max-w-[38ch] text-[13.5px] font-semibold leading-snug text-white/65">{intro}</p>}
+        </div>
+        {showArt && (
+          <div className="aos-light mx-auto w-full max-w-[220px] rounded-2xl p-2 shadow-[0_10px_30px_rgba(0,0,0,.25)] md:mx-0 md:max-w-none" style={{ background: "var(--surface)" }}>
+            <SlideArt slide={art!} tint={["var(--brand-strong)", "var(--brand-2)"]} />
+          </div>
+        )}
+        <ul className="m-0 flex list-none flex-col p-0">
+          {items.map((it, i) => {
+            const on = open === i;
+            const editingThis = editable && editIdx === i;
+            return (
+              <li key={i} className="border-b border-white/12 last:border-0">
+                {editable ? (
+                  <div className="flex items-start justify-between gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      {editingThis ? (
+                        <input autoFocus value={it.term} onChange={(e) => setField(i, "term", e.target.value)}
+                          data-testid="kw-term-input" aria-label={`Term ${i + 1}`}
+                          className="w-full rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[16px] font-semibold text-white outline-none focus:border-white/70 sm:text-[17px]" />
+                      ) : (
+                        <button type="button" onClick={() => setEditIdx(i)} data-testid="kw-term-edit"
+                          className={`-mx-1 block w-full rounded px-1 text-left text-[16px] font-semibold hover:bg-white/10 sm:text-[17px] ${FOCUS}`}>{it.term}</button>
+                      )}
+                      {editingThis ? (
+                        <textarea value={it.def} onChange={(e) => setField(i, "def", e.target.value)} rows={2}
+                          data-testid="kw-def-input" aria-label={`Definition ${i + 1}`}
+                          className="mt-1 w-full rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[13px] leading-snug text-white outline-none focus:border-white/70" />
+                      ) : (
+                        <button type="button" onClick={() => setEditIdx(i)} data-testid="kw-def-edit"
+                          className={`-mx-1 mt-1 block w-full rounded px-1 text-left text-[13px] leading-snug text-white/70 hover:bg-white/10 ${FOCUS}`}>{it.def}</button>
+                      )}
+                    </div>
+                    {editingThis && <button type="button" onClick={() => setEditIdx(null)} className="mt-1 flex-none rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Done</button>}
+                  </div>
+                ) : (
+                  <button type="button" aria-expanded={on} onClick={() => setOpen(on ? null : i)}
+                    className={`flex w-full items-start justify-between gap-3 py-3 text-left transition ${FOCUS} hover:opacity-90`}>
+                    <span className="min-w-0">
+                      <span className="block text-[16px] font-semibold sm:text-[17px]">{it.term}</span>
+                      {on && <span className="mt-1 block text-[13px] leading-snug text-white/70">{it.def}</span>}
+                    </span>
+                    <span aria-hidden="true" className="mt-1.5 flex-none text-[11px] text-white/45 transition-transform" style={{ transform: on ? "rotate(90deg)" : "none" }}>▸</span>
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      {corner && <div className="absolute right-4 top-4 hidden md:block">{corner}</div>}
+    </div>
   );
 }
 

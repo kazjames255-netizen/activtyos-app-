@@ -1,8 +1,13 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { FOCUS, Icon } from "../kit";
 import { FloatingPanel } from "./FloatingPanel";
+import { InstrumentOverlay } from "./InstrumentOverlay";
+import CompassTool from "./CompassTool";
+import FractionBars from "./FractionBars";
+import PeriodicTable from "../tools/science/periodic/PeriodicTable";
+import { CALC_DEFAULT, ScientificCalculator, type CalcState } from "./ScientificCalculator";
 import NumberLineTool from "./NumberLineTool";
 
 // A student's "help board" for remote-sync — every generic tool widget the live lesson whiteboard offers
@@ -51,11 +56,34 @@ export const HELP_TOOLS: { id: HelpToolId; label: string; icon: string; subject:
 ];
 export const HELP_TOOL_SUBJECTS: HelpToolSubject[] = ["Maths", "Science", "Geography", "History", "General"];
 
+/** Every tool a live session can allow (a tutor says just Yes/No; WHICH tool shows is decided per question, see tools/suggest.ts toolsForQuestion). */
+export const ALL_HELP_TOOL_IDS: HelpToolId[] = HELP_TOOLS.filter((t) => t.ready !== false).map((t) => t.id);
+
+/** The tutor's single Yes / No for tools. Yes = every tool is allowed and each question shows only the ones that fit it (a protractor on a
+ *  measure-the-angle question, nothing on a definition question); No = no tools at all. */
+export function HelpToolsSwitch({ value, onChange }: { value: HelpToolId[]; onChange: (v: HelpToolId[]) => void }) {
+  const on = value.length > 0;
+  const opt = (yes: boolean) => (
+    <button type="button" role="radio" aria-checked={on === yes} onClick={() => onChange(yes ? ALL_HELP_TOOL_IDS : [])} data-testid={`remote-sync-tools-${yes ? "yes" : "no"}`}
+      className={`min-h-[44px] rounded-full border-2 px-5 text-[13.5px] font-extrabold ${FOCUS} ${on === yes ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--brand-2)]"}`}>{yes ? "Yes" : "No"}</button>);
+  return (
+    <div data-testid="remote-sync-tools-switch">
+      <h3 className="m-0 mb-1 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Let students use tools?</h3>
+      <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">A tool only appears on a question it is meant for (a protractor to measure an angle, a ruler to measure a line) and never on a question it would give the answer to.</p>
+      <div role="radiogroup" aria-label="Let students use tools" className="flex gap-2">{opt(true)}{opt(false)}</div>
+    </div>
+  );
+}
+
 /** The tutor's start/resume screen: which help tools this class gets, grouped the way the board's own subjects
  *  are — on by default (this call's caller seeds `value` with every id), with a per-subject toggle alongside
  *  each tool's own, so "everything except science" or "just calculator" are both one or two clicks. */
-export function HelpToolsPicker({ value, onChange }: { value: HelpToolId[]; onChange: (v: HelpToolId[]) => void }) {
+export function HelpToolsPicker({ value, onChange, suggested }: { value: HelpToolId[]; onChange: (v: HelpToolId[]) => void;
+  /** Tools that fit THIS lesson (from the lesson title via tools/suggest.ts). When given, only these show up front — every other subject's tools sit behind "More tools". */
+  suggested?: HelpToolId[] }) {
+  const [more, setMore] = useState(false);
   const set = new Set(value);
+  const focus = suggested && suggested.length > 0 ? HELP_TOOLS.filter((t) => suggested.includes(t.id)) : null;
   const toggle = (id: HelpToolId) => onChange(set.has(id) ? value.filter((x) => x !== id) : [...value, id]);
   const toggleSubject = (subject: HelpToolSubject) => {
     const ids = HELP_TOOLS.filter((t) => t.subject === subject).map((t) => t.id);
@@ -71,8 +99,25 @@ export function HelpToolsPicker({ value, onChange }: { value: HelpToolId[]; onCh
           {allOn ? "Clear all" : "Select all"}
         </button>
       </div>
-      <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">On by default — a side panel of the same tools the board offers, across every subject. Unselect a whole subject, or just one tool.</p>
-      <div className="space-y-2.5">
+      {focus ? (
+        <>
+          <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">Picked for this lesson. Tap to turn a tool off or on.</p>
+          <div className="flex flex-wrap gap-2" data-testid="remote-sync-tools-suggested">
+            {focus.map((t) => (
+              <button key={t.id} type="button" onClick={() => toggle(t.id)} aria-pressed={set.has(t.id)} data-testid={`remote-sync-tool-${t.id}`}
+                className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full border-2 px-3 text-[12.5px] font-extrabold transition ${FOCUS} ${set.has(t.id) ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}>
+                <span aria-hidden>{t.icon}</span>{t.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} data-testid="remote-sync-tools-more" className={`mt-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>
+            {more ? "Hide other tools" : `More tools (${HELP_TOOLS.length - focus.length} for other subjects)`}
+          </button>
+        </>
+      ) : (
+        <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">On by default — a side panel of the same tools the board offers, across every subject. Unselect a whole subject, or just one tool.</p>
+      )}
+      <div className={`space-y-2.5 ${focus && !more ? "hidden" : ""} ${focus ? "mt-2.5" : ""}`}>
         {HELP_TOOL_SUBJECTS.map((subject) => {
           const tools = HELP_TOOLS.filter((t) => t.subject === subject);
           const subjectOn = tools.every((t) => set.has(t.id));
@@ -119,26 +164,66 @@ const DEFAULT_SUGGESTED: HelpToolId[] = ["numberline", "timestable", "calculator
 const DEFAULT_OPEN_GROUP = "maths";
 
 const GeoBoard = lazy(() => import("../tools/maths/geometry/GeometryBoard").then((m) => ({ default: m.GeometryBoard })));
+/** The lesson card the tools sit beside (set by HelpToolsPanel) — lets a tool grab the picture on the question being worked on. */
+const LessonCardCtx = createContext<RefObject<HTMLDivElement | null> | null>(null);
+/** The question on screen (its wording), so a tool can frame itself to it — e.g. the number line opens fitted to the question's own numbers. */
+const QuestionPromptCtx = createContext<string | undefined>(undefined);
+function GridForQuestion() {
+  const prompt = useContext(QuestionPromptCtx);
+  return <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GridLazy key={prompt ?? "none"} compact help prompt={prompt} /></Suspense>;
+}
+function NumberLineForQuestion() {
+  const prompt = useContext(QuestionPromptCtx);
+  return <NumberLineTool key={prompt ?? "none"} prompt={prompt} />;
+}
+/** Ruler / protractor with a "put the question's picture on the paper" button: measure the ACTUAL diagram in the lesson,
+ *  not a blank sheet. Takes the largest real picture inside the lesson card as it is right now (so it follows the slide/question). */
+function GeoOnLesson({ preset, offer, generatorIds }: { preset: ("ruler15" | "protractor180")[]; offer: typeof GEO_OFFER; generatorIds: string[] }) {
+  const cardRef = useContext(LessonCardCtx);
+  const [pic, setPic] = useState<string | undefined>();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [focus, setFocus] = useState(false); // the board's focus mode also hides this row
+  const grab = () => {
+    // Judge by the size it is DRAWN at (an SVG file with no intrinsic size reports naturalWidth 0), and accept inline
+    // <svg> diagrams too (serialised to a data URL) — the largest visible one in the lesson card wins.
+    const root = cardRef?.current;
+    const cands: { area: number; src: string }[] = [];
+    root?.querySelectorAll("img").forEach((i) => { const r = i.getBoundingClientRect(); const src = i.currentSrc || i.src; if (src && r.width >= 100 && r.height >= 60) cands.push({ area: r.width * r.height, src }); });
+    root?.querySelectorAll("svg").forEach((v) => { const r = v.getBoundingClientRect(); if (r.width >= 100 && r.height >= 60 && !v.closest("button")) cands.push({ area: r.width * r.height, src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(v))}` }); });
+    const best = cands.sort((a, b) => b.area - a.area)[0];
+    if (best) { setPic(best.src); setMsg("Picture added — drag the protractor onto it."); } else setMsg(root ? "No picture found on this question." : "Couldn't find the lesson to take a picture from.");
+  };
+  return (
+    <div>
+      {!focus && <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={grab} data-testid="geo-use-question-picture" className={`min-h-[36px] rounded-full border-2 border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[12.5px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>🖼 Use this question's picture</button>
+        {pic && <button type="button" onClick={() => setPic(undefined)} className={`min-h-[36px] rounded-full border border-[var(--line)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>Remove picture</button>}
+        {msg && <span role="status" className="text-[12px] font-semibold text-[var(--ink-3)]">{msg}</span>}
+      </div>}
+      <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={preset} offer={offer} generatorIds={generatorIds} backdropUrl={pic} focus={focus} onFocusChange={setFocus} /></Suspense>
+    </div>
+  );
+}
 const GridLazy = lazy(() => import("../tools/maths/CoordGrid"));
 const GEO_OFFER: ("ruler15" | "straightedge" | "protractor180" | "protractor360" | "compass" | "setsquare45" | "setsquare3060")[] = ["ruler15", "straightedge", "protractor180", "protractor360", "compass", "setsquare45", "setsquare3060"];
 
 const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: ToolStateFor<HelpToolId>) => void) => ReactNode> = {
-  calculator: (v, set) => <Calculator value={v as CalcState} onChange={set} />,
+  calculator: (v, set) => <ScientificCalculator value={v as CalcState} onChange={set} />,
   // A finished, self-contained component supplied as-is (see NumberLineTool.tsx) — it manages its own state
   // internally rather than through this file's value/onChange contract, per the explicit "don't rewrite it" ask.
-  numberline: () => <NumberLineTool />,
+  numberline: () => <NumberLineForQuestion />,
   timestable: (v, set) => <TimesTable value={v as TimesTableState} onChange={set} />,
-  fractions: (v, set) => <Fractions value={v as FractionsState} onChange={set} />,
-  grid: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GridLazy compact /></Suspense>,
+  fractions: () => <FractionBars />,
+  grid: () => <GridForQuestion />,
   plot: (v, set) => <BarChart value={v as BarChartState} onChange={set} />,
   // The real instruments (tools/maths/geometry): movable, turnable, snapping, with a drawing compass and set square on the desk.
-  ruler: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={["ruler15"]} offer={GEO_OFFER} generatorIds={[]} /></Suspense>,
-  protractor: () => <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={["protractor180", "ruler15"]} offer={GEO_OFFER} generatorIds={["M-G01.measure", "M-G01.draw"]} /></Suspense>,
-  periodic: () => <Periodic />,
+  ruler: () => <GeoOnLesson preset={["ruler15"]} offer={["ruler15", "straightedge"]} generatorIds={[]} />,
+  protractor: () => <GeoOnLesson preset={["protractor180"]} offer={["protractor180", "protractor360"]} generatorIds={["M-G01.measure", "M-G01.draw"]} />,
+  periodic: () => <PeriodicTable />,
   bohr: (v, set) => <Bohr value={v as BohrState} onChange={set} />,
   apparatus: () => <Apparatus />,
   lens: () => <Lens />,
-  map: () => <Compass />,
+  map: () => <CompassTool />,
   timeline: (v, set) => <Timeline value={v as TimelineState} onChange={set} />,
   symbol: () => <Symbols />,
   clock: () => <Clock />,
@@ -150,15 +235,15 @@ const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: Too
 
 // Per-tool default size + minimum size. Content reflows inside; nothing is cut off at these defaults.
 const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: number }> = {
-  calculator: { w: 260, h: 360, minW: 220, minH: 300 },
-  numberline: { w: 620, h: 330, minW: 440, minH: 300 },
+  calculator: { w: 350, h: 540, minW: 310, minH: 500 },
+  numberline: { w: 640, h: 480, minW: 460, minH: 430 },
   timestable: { w: 300, h: 360, minW: 260, minH: 300 },
-  fractions: { w: 260, h: 220, minW: 220, minH: 200 },
+  fractions: { w: 560, h: 440, minW: 420, minH: 340 },
   grid: { w: 470, h: 720, minW: 340, minH: 520 },
   plot: { w: 360, h: 280, minW: 280, minH: 240 },
   ruler: { w: 600, h: 620, minW: 440, minH: 480 },
   protractor: { w: 600, h: 620, minW: 440, minH: 480 },
-  periodic: { w: 400, h: 300, minW: 320, minH: 260 },
+  periodic: { w: 740, h: 700, minW: 480, minH: 560 },
   bohr: { w: 280, h: 320, minW: 240, minH: 280 },
   apparatus: { w: 300, h: 220, minW: 260, minH: 200 },
   lens: { w: 320, h: 220, minW: 280, minH: 180 },
@@ -175,9 +260,7 @@ const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: 
 // ─── Per-tool remembered state (Part 2 "State") — lifted out of each widget so it survives close/reopen and
 // slide changes for as long as the student stays on this lesson page; "Reset" just deletes the entry, which
 // falls back to these defaults on the next render. Clock has no persisted state (it's just "now").
-interface CalcState { expr: string }
 interface TimesTableState { n: number }
-interface FractionsState { num: number; den: number }
 interface GridState { pts: { x: number; y: number }[] }
 interface BarChartState { text: string }
 interface BohrState { electrons: number }
@@ -187,14 +270,13 @@ interface SpinnerState { seg: number; angle: number }
 interface TallyState { n: number }
 interface TimelineState { events: { year: string; label: string }[]; year: string; label: string }
 type ToolStateFor<T extends HelpToolId> = T extends "calculator" ? CalcState
-  : T extends "timestable" ? TimesTableState : T extends "fractions" ? FractionsState : T extends "grid" ? GridState
+  : T extends "timestable" ? TimesTableState : T extends "grid" ? GridState
   : T extends "plot" ? BarChartState : T extends "bohr" ? BohrState : T extends "timer" ? TimerState
   : T extends "dice" ? DiceState : T extends "spinner" ? SpinnerState : T extends "tally" ? TallyState
   : T extends "timeline" ? TimelineState : undefined;
 const TOOL_DEFAULTS: Partial<Record<HelpToolId, unknown>> = {
-  calculator: { expr: "" } as CalcState,
+  calculator: CALC_DEFAULT,
   timestable: { n: 2 } as TimesTableState,
-  fractions: { num: 1, den: 4 } as FractionsState,
   grid: { pts: [] } as GridState,
   plot: { text: "3,7,4,9,5" } as BarChartState,
   bohr: { electrons: 11 } as BohrState,
@@ -214,8 +296,14 @@ const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
  *  open tool as its own floating window over the lesson card (never over the sidebar) — see FloatingPanel.tsx
  *  for the window mechanics and the comment at the top of this file for why that's a new component rather than
  *  a forced reuse of the board or the video tile. */
-export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
+export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, questionTools, questionKey, questionPrompt }: {
   tools: HelpToolId[];
+  /** The wording of the question on screen (tools frame themselves to it). */
+  questionPrompt?: string;
+  /** The tools that fit the question on screen RIGHT NOW (tools/suggest.ts toolsForQuestion). When given, ONLY these can show; an empty list = no tool on this question. */
+  questionTools?: HelpToolId[];
+  /** Changes when the question on screen changes: tools not allowed on the new one close, and instruments (protractor / ruler) open on their own. */
+  questionKey?: string | null;
   /** Tools to put under "Suggested for this lesson", best first (tools/suggest.ts works them out from the lesson). Absent/empty = the fixed default six. */
   suggested?: HelpToolId[];
   /** The left-column lesson card — new windows spawn from its top-right corner; the minimised tray docks at its
@@ -225,6 +313,8 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
   hideList?: boolean;
 }) {
   const [cards, setCards] = useState<OpenCard[]>([]);
+  // Ruler / protractor open as a single instrument laid directly over the lesson; this set = the ones switched to the full drawing board window.
+  const [boardMode, setBoardMode] = useState<Set<HelpToolId>>(new Set());
   const [toolState, setToolState] = useState<Partial<Record<HelpToolId, unknown>>>({});
   const [toast, setToast] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set([DEFAULT_OPEN_GROUP]));
@@ -269,19 +359,33 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
   };
   const update = (id: HelpToolId, patch: Partial<OpenCard>) => setCards((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   const bringFront = (id: HelpToolId) => update(id, { z: ++zRef.current });
-  const closeTool = (id: HelpToolId) => setCards((cs) => cs.filter((c) => c.id !== id));
+  const closeTool = (id: HelpToolId) => { setCards((cs) => cs.filter((c) => c.id !== id)); setBoardMode((m) => { if (!m.has(id)) return m; const n = new Set(m); n.delete(id); return n; }); };
   const minimizeTool = (id: HelpToolId) => update(id, { minimized: true });
   const resetTool = (id: HelpToolId) => setToolState((s) => { const n = { ...s }; delete n[id]; return n; });
   const setToolValue = (id: HelpToolId, v: unknown) => setToolState((s) => ({ ...s, [id]: v }));
 
   const isOpen = (id: HelpToolId) => cards.some((c) => c.id === id);
 
+  // Per-question tools: what shows is decided by the question in view, not by the lesson.
+  const perQuestion = questionTools !== undefined;
+  const allowed = new Set<HelpToolId>(questionTools ?? []);
+  const shownTools = perQuestion ? tools.filter((t) => allowed.has(t)) : tools;
+  const qk = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!perQuestion || qk.current === questionKey) return;
+    qk.current = questionKey;
+    setCards((cs) => cs.filter((c) => allowed.has(c.id)));
+    // A measuring instrument is the point of its question: put it straight over the question (windowed tools wait to be opened).
+    for (const id of ["protractor", "ruler"] as HelpToolId[]) if (allowed.has(id)) openTool(id, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questionKey, perQuestion]);
+
   // ── Mobile/tablet (<1100px): a single bottom sheet, never floating windows.
   if (mobile) {
     const activeId = cards[0]?.id ?? null;
     return (
-      <>
-        <ToolsListCard tools={tools} suggested={suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
+      <QuestionPromptCtx.Provider value={questionPrompt}><LessonCardCtx.Provider value={lessonCardRef}>
+        <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
           onPick={(id, el) => { if (isOpen(id)) closeTool(id); else { setCards([]); openTool(id, el); } }} />
         {activeId && (
           <MobileToolSheet id={activeId} label={HELP_TOOLS.find((t) => t.id === activeId)!.label} icon={HELP_TOOLS.find((t) => t.id === activeId)!.icon}
@@ -289,20 +393,24 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
             {TOOL_RENDER[activeId]((toolState[activeId] ?? TOOL_DEFAULTS[activeId]) as never, (v) => setToolValue(activeId, v))}
           </MobileToolSheet>
         )}
-      </>
+      </LessonCardCtx.Provider></QuestionPromptCtx.Provider>
     );
   }
 
-  const floating = cards.filter((c) => !c.minimized);
+  const floating = cards.filter((c) => !c.minimized && (!perQuestion || allowed.has(c.id)));
   const minimized = cards.filter((c) => c.minimized);
   const trayRect = lessonCardRef.current?.getBoundingClientRect();
 
   return (
-    <>
-      <ToolsListCard tools={tools} suggested={suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList}
+    <QuestionPromptCtx.Provider value={questionPrompt}><LessonCardCtx.Provider value={lessonCardRef}>
+      <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
         onPick={(id, el) => openTool(id, el)} />
       {floating.map((c) => {
         const t = HELP_TOOLS.find((x) => x.id === c.id)!;
+        if ((c.id === "protractor" || c.id === "ruler") && !boardMode.has(c.id)) {
+          return <InstrumentOverlay key={c.id} kind={c.id === "ruler" ? "ruler15" : "protractor180"} label={t.label} lessonCardRef={lessonCardRef}
+            onClose={() => closeTool(c.id)} onBoard={() => setBoardMode((m) => new Set(m).add(c.id))} />;
+        }
         const size = TOOL_SIZE[c.id];
         return (
           <FloatingPanel key={c.id} title={t.label} icon={t.icon} x={c.x} y={c.y} w={c.w} h={c.h} z={1000 + c.z}
@@ -337,7 +445,7 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested }: {
           {toast}
         </div>
       )}
-    </>
+    </LessonCardCtx.Provider></QuestionPromptCtx.Provider>
   );
 }
 
@@ -421,36 +529,6 @@ function MobileToolSheet({ id, label, icon, onClose, children }: { id: HelpToolI
   );
 }
 
-function Calculator({ value, onChange }: { value: CalcState; onChange: (v: CalcState) => void }) {
-  const expr = value.expr;
-  const press = (k: string) => onChange({ expr: (expr + k).slice(0, 24) });
-  const clear = () => onChange({ expr: "" });
-  const back = () => onChange({ expr: expr.slice(0, -1) });
-  const equals = () => {
-    if (!/^[0-9+\-*/.() ]+$/.test(expr)) return;
-    try { // eslint-disable-next-line no-new-func
-      const v = Function(`"use strict"; return (${expr || "0"})`)();
-      onChange({ expr: Number.isFinite(v) ? String(Math.round(v * 1e8) / 1e8) : "Error" });
-    } catch { onChange({ expr: "Error" }); }
-  };
-  const keys = ["7", "8", "9", "/", "4", "5", "6", "*", "1", "2", "3", "-", "0", ".", "=", "+"];
-  return (
-    <div>
-      <div className="mb-2 min-h-[36px] break-all rounded-lg bg-[var(--panel)] px-2.5 py-2 text-right text-[16px] font-bold text-[var(--ink)]" data-testid="calc-display">{expr || "0"}</div>
-      <div className="grid grid-cols-4 gap-1.5">
-        {keys.map((k) => (
-          <button key={k} type="button" onClick={() => (k === "=" ? equals() : press(k))}
-            className={`h-9 rounded-lg text-[14px] font-extrabold ${k === "=" ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink)]"} hover:brightness-95`}>{k}</button>
-        ))}
-      </div>
-      <div className="mt-1.5 flex gap-1.5">
-        <button type="button" onClick={back} className="h-8 flex-1 rounded-lg bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)] hover:brightness-95">⌫</button>
-        <button type="button" onClick={clear} className="h-8 flex-1 rounded-lg bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)] hover:brightness-95">Clear</button>
-      </div>
-    </div>
-  );
-}
-
 function TimesTable({ value, onChange }: { value: TimesTableState; onChange: (v: TimesTableState) => void }) {
   const n = value.n;
   return (
@@ -465,27 +543,6 @@ function TimesTable({ value, onChange }: { value: TimesTableState; onChange: (v:
       <div className="mt-2.5 grid grid-cols-3 gap-1.5">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((x) => (
           <div key={x} className="rounded-lg bg-[var(--panel)] px-2 py-1.5 text-center text-[13px] font-bold text-[var(--ink)]">{n} × {x} = {n * x}</div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Fractions({ value, onChange }: { value: FractionsState; onChange: (v: FractionsState) => void }) {
-  const { num, den } = value;
-  const clampedNum = Math.max(0, Math.min(den, num));
-  return (
-    <div>
-      <div className="flex items-center justify-center gap-2 text-[15px] font-extrabold text-[var(--ink)]">
-        <input type="number" min={0} max={20} value={num} onChange={(e) => onChange({ num: Math.max(0, Math.min(20, Number(e.target.value))), den })}
-          className="w-14 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-center" />
-        <span>/</span>
-        <input type="number" min={1} max={20} value={den} onChange={(e) => onChange({ num, den: Math.max(1, Math.min(20, Number(e.target.value))) })}
-          className="w-14 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-center" />
-      </div>
-      <div className="mt-3 flex h-10 w-full overflow-hidden rounded-lg border border-[var(--line)]">
-        {Array.from({ length: den }, (_, i) => (
-          <div key={i} className={`flex-1 border-r border-[var(--surface)] last:border-r-0 ${i < clampedNum ? "bg-[var(--brand)]" : "bg-[var(--panel)]"}`} />
         ))}
       </div>
     </div>
@@ -681,28 +738,6 @@ function BarChart({ value, onChange }: { value: BarChartState; onChange: (v: Bar
   );
 }
 
-const ELEMENTS = [
-  ["H", "Hydrogen", 1], ["He", "Helium", 2], ["Li", "Lithium", 3], ["Be", "Beryllium", 4], ["B", "Boron", 5],
-  ["C", "Carbon", 6], ["N", "Nitrogen", 7], ["O", "Oxygen", 8], ["F", "Fluorine", 9], ["Ne", "Neon", 10],
-  ["Na", "Sodium", 11], ["Mg", "Magnesium", 12], ["Al", "Aluminium", 13], ["Si", "Silicon", 14], ["P", "Phosphorus", 15],
-  ["S", "Sulfur", 16], ["Cl", "Chlorine", 17], ["Ar", "Argon", 18], ["K", "Potassium", 19], ["Ca", "Calcium", 20],
-] as const;
-function Periodic() {
-  return (
-    <div>
-      <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">The first 20 elements.</p>
-      <div className="grid grid-cols-5 gap-1.5">
-        {ELEMENTS.map(([sym, name, num]) => (
-          <div key={sym} title={name} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-1.5 text-center">
-            <div className="text-[9px] text-[var(--ink-3)]">{num}</div>
-            <div className="text-[15px] font-extrabold text-[var(--ink)]">{sym}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Bohr({ value, onChange }: { value: BohrState; onChange: (v: BohrState) => void }) {
   const electrons = value.electrons;
   const shells: number[] = [];
@@ -756,24 +791,6 @@ function Lens() {
         <line x1={130} y1={55} x2={220} y2={90} stroke="var(--brand)" />
       </svg>
       <p className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">A converging (convex) lens — parallel rays bend inward to a focus.</p>
-    </div>
-  );
-}
-
-function Compass() {
-  const dirs = [["N", 0], ["E", 90], ["S", 180], ["W", 270]] as const;
-  return (
-    <div className="flex flex-col items-center">
-      <svg width={140} height={140}>
-        <circle cx={70} cy={70} r={64} fill="var(--panel)" stroke="var(--ink-3)" strokeWidth={2} />
-        {dirs.map(([label, deg]) => {
-          const rad = ((deg - 90) * Math.PI) / 180;
-          return <text key={label} x={70 + 52 * Math.cos(rad)} y={70 + 52 * Math.sin(rad) + 4} textAnchor="middle" fontSize="13" fontWeight="bold" fill="var(--ink)">{label}</text>;
-        })}
-        <polygon points="70,18 78,70 70,60 62,70" fill="var(--red)" />
-        <polygon points="70,122 78,70 70,80 62,70" fill="var(--ink-3)" />
-      </svg>
-      <p className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">A compass rose — the red tip points north.</p>
     </div>
   );
 }

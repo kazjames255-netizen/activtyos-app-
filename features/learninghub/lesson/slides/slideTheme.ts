@@ -137,6 +137,15 @@ export interface ElTheme {
   line?: string;
   /** the full-width title band (`fam`), drawn as a brand gradient with a rounded lower edge */
   band?: Fam;
+  /** extra height (in the block's own x/y units) to draw the band down by, so a short "slide type" label whose own box
+   *  dips slightly below the band in Oak's raw geometry stays fully backed by it instead of spilling onto the paper */
+  bandExtra?: number;
+  /** a "lesson outline" pill (a step's plain rounded-rect, paired with a numbered circle): give it a soft shadow/line so it
+   *  reads as one of our own cards instead of Oak's flat template bar */
+  outlineCard?: boolean;
+  /** the same "lesson outline" pill/dot pairing, but baked as raster pictures rather than shapes: draw our own pill/dot
+   *  card in place of the raw picture (never a real photo — see the pairing detection in `themeBlock`) */
+  outlineImg?: "pill" | "dot";
   text?: TextTheme;
 }
 export interface ThemePlan { bg: string; hero: boolean; fam: Fam; els: (ElTheme | undefined)[] }
@@ -151,6 +160,38 @@ function overlapFrac(a: Box, b: Box): number {
 }
 const plain = (t: CanvasText) => t.paras.map((p) => p.runs.map((r) => r.t).join("")).join(" ").trim();
 const firstSize = (t: CanvasText) => t.paras.find((p) => p.runs.length)?.runs[0]?.size ?? 18;
+
+// A "lesson outline" / "learning cycle" pill+circle pair (see themeBlock's own 1.5 comment for how Oak draws this
+// template): shared by themeBlock's recolour treatment (below) and lessonOutlineSlide's card-list rebuild
+// (LessonOutlineCard.tsx) so both read the SAME shape, never two independently-drifting detectors.
+export interface OutlinePair { pill: number; dot: number; raster: boolean }
+function findOutlinePairs(b: CanvasBlock, skipPill?: (i: number) => boolean): OutlinePair[] {
+  const els = b.els;
+  const isSquareish = (e: CanvasEl) => Math.abs(e.w * b.w - e.h * b.h) < Math.max(4, 0.25 * Math.min(e.w * b.w, e.h * b.h));
+  const isWideBar = (e: CanvasEl) => e.w >= 0.35 && e.h <= 0.2 && e.w > e.h * 2;
+  const hasWhiteLabel = (sh: CanvasEl, si: number) => els.some((t, j) => j > si && t.k === "text" && inside(boxOf(sh), cx(boxOf(t)), cy(boxOf(t))) && t.paras.every((p) => p.runs.every((r) => !r.t.trim() || (r.color ?? "").toLowerCase().startsWith("#ffffff"))) && plain(t).length > 0);
+  const pairs: OutlinePair[] = [];
+  els.forEach((pill, pi) => {
+    if (skipPill?.(pi)) return;
+    const shapePill = pill.k === "shape" && pill.geom === "round";
+    const rasterPill = pill.k === "img" && !pill.alt && isWideBar(pill) && hasWhiteLabel(pill, pi);
+    if (!shapePill && !rasterPill) return;
+    const pillBox = boxOf(pill);
+    let best = -1, bestGap = Infinity;
+    els.forEach((dot, di) => {
+      const shapeDot = dot.k === "shape" && dot.geom === "ellipse" && isSquareish(dot);
+      const rasterDot = dot.k === "img" && !dot.alt && isSquareish(dot);
+      if (shapePill ? !shapeDot : !rasterDot) return;
+      const dotBox = boxOf(dot);
+      const gap = pillBox.x - (dotBox.x + dotBox.w);
+      if (gap < -0.01 || gap > 0.06) return;
+      if (Math.abs(cy(dotBox) - cy(pillBox)) > Math.max(dotBox.h, pillBox.h) * 0.6) return;
+      if (gap < bestGap) { bestGap = gap; best = di; }
+    });
+    if (best >= 0) pairs.push({ pill: pi, dot: best, raster: rasterPill });
+  });
+  return pairs;
+}
 
 /** The theme plan for one canvas block, or null when the slide is set to draw in its original colours. */
 export function themeBlock(b: CanvasBlock): ThemePlan | null {
@@ -173,17 +214,99 @@ export function themeBlock(b: CanvasBlock): ThemePlan | null {
     const c = clusterOf(e.fill);
     if (e.x <= 0.012 && e.w >= 0.97 && e.y <= 0.02 && e.h >= 0.05 && e.h <= 0.16 && (c.kind === "accent" || c.kind === "hero")) { bandIdx = i; plan[i] = c.kind === "accent" ? { band: c.fam } : { fill: "var(--sb-b-tint)", line: undefined }; }
   });
+  // an already-accent-coloured shape/picture is "theirs" (a pill / a slide-type tag) only when a white label sits on it —
+  // needed below for both the band's own corner tag and the outline pill/dot detection, so it's hoisted above both.
+  const hasWhiteLabel = (sh: CanvasEl, si: number) => els.some((t, j) => j > si && t.k === "text" && inside(boxOf(sh), cx(boxOf(t)), cy(boxOf(t))) && t.paras.every((p) => p.runs.every((r) => !r.t.trim() || (r.color ?? "").toLowerCase().startsWith("#ffffff"))) && plain(t).length > 0);
+
   if (bandIdx >= 0) {
     const band = els[bandIdx]!;
-    els.forEach((e, i) => { if (e.k === "img" && !e.alt && e.x <= 0.012 && e.w >= 0.97 && e.h <= 0.045 && e.y >= band.y + band.h - 0.035 && e.y <= band.y + band.h + 0.04) plan[i] = { hide: true }; });
+    const bandBox = boxOf(band);
+    els.forEach((e, i) => {
+      if (e.k !== "img" || e.alt || plan[i]) return;
+      // the full-width "torn edge" strip Oak draws right under the band
+      if (e.x <= 0.012 && e.w >= 0.97 && e.h <= 0.045 && e.y >= band.y + band.h - 0.035 && e.y <= band.y + band.h + 0.04) { plan[i] = { hide: true }; return; }
+      // a small raster "slide type" tag (e.g. "Explanation") baked in the publisher's OWN accent colour, sitting almost
+      // entirely inside the band's own box (its corner ribbon/icon): once the band is our own brand colour this raster
+      // asset no longer matches it and shows as a stray patch of the old accent — hide it, the text label beside it
+      // (handled below, `bandExtra`) already says what the slide type is.
+      if (overlapFrac(boxOf(e), bandBox) >= 0.9 && e.w * e.h < bandBox.w * bandBox.h * 0.5) plan[i] = { hide: true };
+    });
+    // a short "slide type" text label (e.g. "Explanation") that sits on the band but whose own box dips slightly below
+    // the band's bottom edge (Oak's raw geometry is only approximate) would otherwise show its lower half unstyled on
+    // the plain paper background: grow the band's own rendered box down far enough to fully back every such label.
+    let extra = 0;
+    els.forEach((e, i) => {
+      if (i === bandIdx || e.k !== "text" || i < bandIdx) return;
+      const tb = boxOf(e);
+      if (!(cx(tb) >= bandBox.x && cx(tb) <= bandBox.x + bandBox.w && cy(tb) >= bandBox.y && cy(tb) <= bandBox.y + bandBox.h)) return;
+      const overflow = tb.y + tb.h - (bandBox.y + bandBox.h);
+      if (overflow > extra) extra = overflow;
+    });
+    if (extra > 0 && plan[bandIdx]?.band) plan[bandIdx] = { ...plan[bandIdx], bandExtra: extra };
   }
 
-  // 2. panels: a big alt-less picture with paragraphs standing on it is the publisher's white blob → a branded card
+  // 1.5 "lesson outline" / "learning cycle" list: Oak's own template for this is a plain rounded-rect pill per step, each
+  // paired with a small numbered circle immediately to its left (often chained by a connecting line), sometimes as native
+  // shapes and sometimes (real decks vary) as a pair of raster pictures doing the same job — a wide bar picture with a
+  // white text label standing in for the pill, a small square picture standing in for the circle. The pill/bar is drawn in
+  // a pale/neutral fill (not the publisher's own accent, so nothing above recolours it) or baked into the picture itself,
+  // and the circle in an accent fill or baked accent pixels — left alone that reads as Oak's own flat bar-and-dot chrome.
+  // Re-skin BOTH as one of our own outline cards: the circle becomes a solid brand badge, the pill a soft brand-tinted card.
+  {
+    const pairs = findOutlinePairs(b, (i) => !!plan[i]);
+    if (pairs.length >= 2) {
+      for (const { pill, dot, raster } of pairs) {
+        if (raster) {
+          // a raster pill was only picked up because it already carries a white label (`hasWhiteLabel`, above) baked into
+          // the picture — like an accent shape-pill, it needs the dark gradient, not the pale tint, or that white text
+          // becomes near-illegible.
+          plan[pill] = { fill: GRADIENT(fam), outlineImg: "pill" };
+          plan[dot] = { fill: GRADIENT(fam), outlineImg: "dot" };
+          // Oak sometimes draws a step's "current/done" state as a SEPARATE small picture stacked exactly on the dot
+          // (revealed on click, hence its own `step`/`until` — not a themeable shape) rather than varying the dot's own
+          // fill: once every dot is our own solid badge that old filled/empty distinction is meaningless, and left alone
+          // it shows up as a stray unthemed black or white blob sitting on top of our badge.
+          const dotBox = boxOf(els[dot]!);
+          els.forEach((e, i) => {
+            if (i === dot || plan[i] || e.k !== "img" || e.alt) return;
+            if (overlapFrac(boxOf(e), dotBox) >= 0.7) plan[i] = { hide: true };
+          });
+        } else {
+          const pillC = clusterOf((els[pill] as { fill?: string }).fill);
+          // an already-accent pill with a white label is handled fine by the generic pass below (a branded gradient bar);
+          // this only rescues the flat/pale pills that nothing else would touch.
+          if (pillC.kind !== "accent") plan[pill] = { fill: `var(--sb-${fam}-tint)`, outlineCard: true };
+          plan[dot] = { fill: GRADIENT(fam), outlineCard: true };
+        }
+      }
+      // a stray decorative raster graphic caught inside the outline list's own footprint (e.g. a thin connector "rail"
+      // Oak draws behind the dots as a separate picture instead of using the plain connecting line): not real content
+      // (no alt, never reveal-gated), thin, and mostly inside the list's bounding box — hide it too.
+      const claimed = new Set(pairs.flatMap((p) => [p.pill, p.dot]));
+      const boxes = pairs.flatMap((p) => [boxOf(els[p.pill]!), boxOf(els[p.dot]!)]);
+      const union = boxes.reduce((u, bx) => ({
+        x: Math.min(u.x, bx.x), y: Math.min(u.y, bx.y),
+        w: Math.max(u.x + u.w, bx.x + bx.w) - Math.min(u.x, bx.x), h: Math.max(u.y + u.h, bx.y + bx.h) - Math.min(u.y, bx.y),
+      }), boxes[0]!);
+      els.forEach((e, i) => {
+        if (plan[i] || claimed.has(i) || e.k !== "img" || e.alt || e.step || e.until) return;
+        const aspect = e.h > 0 ? e.w / e.h : 1;
+        if (aspect > 0.3 && aspect < 3) return; // icon-shaped, not a thin rail: leave it alone
+        if (overlapFrac(boxOf(e), union) >= 0.5) plan[i] = { hide: true };
+      });
+    }
+  }
+
+  // 2. panels: a big alt-less picture with a PARAGRAPH standing on it is the publisher's white blob → a branded card.
+  // The signal is one substantial text box sitting on the picture (a real paragraph of body copy), not several short
+  // captions ADDED UP past the threshold — a real chart/diagram picture (e.g. a line graph exported as one raster image)
+  // routinely has its own short title + axis-label text elements positioned over it, and summing those together used to
+  // cross this same 50-char bar and get the whole chart replaced by a blank card.
   els.forEach((e, i) => {
     if (e.k !== "img" || plan[i] || e.alt || e.w * e.h < 0.2 || e.step || e.crop) return;
     const box = boxOf(e);
     let chars = 0;
-    for (const t of els) if (t.k === "text" && inside(box, cx(boxOf(t)), cy(boxOf(t)))) chars += plain(t).length;
+    for (const t of els) if (t.k === "text" && inside(box, cx(boxOf(t)), cy(boxOf(t)))) chars = Math.max(chars, plain(t).length);
     if (chars >= 50) plan[i] = { panel: true };
   });
 
@@ -201,7 +324,6 @@ export function themeBlock(b: CanvasBlock): ThemePlan | null {
     return hit;
   };
 
-  const hasWhiteLabel = (sh: CanvasEl, si: number) => els.some((t, j) => j > si && t.k === "text" && inside(boxOf(sh), cx(boxOf(t)), cy(boxOf(t))) && t.paras.every((p) => p.runs.every((r) => !r.t.trim() || (r.color ?? "").toLowerCase().startsWith("#ffffff"))) && plain(t).length > 0);
   els.forEach((e, i) => {
     if (e.k === "shape") {
       if (plan[i]) return;
@@ -263,6 +385,61 @@ export function themeBlock(b: CanvasBlock): ThemePlan | null {
     if (gap < 0.03 && Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x) > 0) plan[j]!.text!.card = false;
   }
   return { bg, hero, fam, els: plan };
+}
+
+// ── the "Outcome" slide ──────────────────────────────────────────────────
+// Oak's own template for the lesson's learning objective: a short bold "Outcome" label plus one "I can …" pupil statement,
+// alongside a picture (varies deck to deck — a topic illustration, a stock graphic, sometimes nothing). Confirmed against a
+// real imported deck (server/scratch/oak-decks/*.canvas.json, "Ordinal numbers" L1, slide 2): label text el "Outcome" (bold,
+// size 28) + a second text el "I can recognise, name and represent ordinal numbers …". Detected by CONTENT, not position/size
+// (those vary by deck) — the label's exact text is the one constant Oak never rephrases.
+export interface OutcomeSlide { statement: string; imgIdx?: number; /** the els[] index of the "I can…" text element itself — the only part of this slide that's really editable per-slide (slideTheme's own consumers use this to wire inline editing back to the right canvas text element) */ idx: number }
+export function outcomeSlide(b: CanvasBlock): OutcomeSlide | null {
+  const els = b.els;
+  const labelIdx = els.findIndex((e) => e.k === "text" && plain(e).trim().toLowerCase() === "outcome");
+  if (labelIdx < 0) return null;
+  let statement = "", idx = -1;
+  els.forEach((e, i) => {
+    if (i === labelIdx || e.k !== "text") return;
+    const t = plain(e).trim();
+    if (/^i\s+can\b/i.test(t) && t.length > statement.length) { statement = t; idx = i; }
+  });
+  if (!statement) return null;
+  const imgIdx = els.findIndex((e) => e.k === "img");
+  return { statement, imgIdx: imgIdx >= 0 ? imgIdx : undefined, idx };
+}
+
+// ── the "Lesson outline" card-list slide ────────────────────────────────
+// The genuinely-different (not just recoloured) layout for Oak's "lesson outline"/"learning cycle" template
+// (LessonOutlineCard.tsx): reuses findOutlinePairs (the exact pill/dot pairing themeBlock's own recolour treatment
+// above uses) so a slide either gets this new layout or, when it doesn't match, falls back untouched to the ordinary
+// per-element render (themeBlock's pill/dot recolour, or the slide's raw content). Never invents a title: an item's
+// wording is read straight from its own real text element (`idx`, wired back to CanvasSlide's inline-editing).
+export interface LessonOutlineItem { title: string; idx: number }
+export interface LessonOutlineSlide { items: LessonOutlineItem[] }
+export function lessonOutlineSlide(b: CanvasBlock): LessonOutlineSlide | null {
+  const els = b.els;
+  const pairs = findOutlinePairs(b);
+  if (pairs.length < 2) return null;
+  const items: LessonOutlineItem[] = [];
+  for (const { pill } of pairs) {
+    const pillBox = boxOf(els[pill]!);
+    // the pill's own text label — a shape-pill's centred caption, or (raster case) the separate white-text overlay
+    // findOutlinePairs already required to exist — whichever real text element sits centred on the pill; the longest
+    // match wins on the rare slide where more than one text box centres over the same pill.
+    let best = -1, bestLen = 0;
+    els.forEach((t, ti) => {
+      if (t.k !== "text" || !inside(pillBox, cx(boxOf(t)), cy(boxOf(t)))) return;
+      const len = plain(t).length;
+      if (len > bestLen) { bestLen = len; best = ti; }
+    });
+    if (best < 0) continue;
+    const title = plain(els[best] as CanvasText);
+    if (!title) continue;
+    items.push({ title, idx: best });
+  }
+  if (items.length < 2) return null;
+  return { items };
 }
 
 const COLOUR_WORDS = /\b(red|blue|green|yellow|orange|purple|pink|black|white|brown|grey|gray|teal|violet|colou?r)\b/i;

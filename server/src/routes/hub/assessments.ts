@@ -2,7 +2,7 @@ import { Router, type Response } from "express";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../firebase";
-import { ageInYears, canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, enrolmentsForParent, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, same, scopedChildren, subjectAllowed, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
+import { ageInYears, canReadContent, canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, enrolmentsForParent, hubConfig, hubEnrolments, needsFork, okId, requireEdit, resolveCtx, same, scopedChildren, subjectAllowed, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
 import { assessmentRows, collate, noteIndex, patchAssessment, questionIndex, tenantRoster, type AsmRow, type QRow } from "../../lib/hubIndex";
 import { pingHub } from "../../lib/hubPing";
 import { audienceFit, audienceKey, effectiveRetake, failStreak, isEveryone, normAudience, retakeDecision, type Audience, type Fit } from "../../lib/hubRules";
@@ -70,8 +70,11 @@ async function shape(ctx: HubCtx, franchiseId: string | null, b: z.infer<typeof 
   const qDocs: (FirebaseFirestore.DocumentSnapshot | null)[] = qIds.length ? (allOk ? await db.getAll(...qIds.map((id) => questionsCol.doc(id))) : qIds.map(() => null)) : [];
   const questions: { id: string; q: QuestionDoc }[] = [];
   for (const [i, s] of qDocs.entries()) {
-    // Foreign / missing / out-of-scope questions are all "not found".
-    if (!s || !s.exists || s.get("tenantId") !== ctx.tenantId || !canSee(ctx, s.get("franchiseId"))) { res.status(404).json({ error: "A question in this quiz wasn't found" }); return null; }
+    // Foreign / missing / out-of-scope questions are all "not found". A question from the shared
+    // library is fine here too (canReadContent) — a tenant composes quizzes from its own bank AND
+    // the shared one, and a forked copy of a shared assessment keeps referencing the shared
+    // questions it was built from.
+    if (!s || !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId"))) { res.status(404).json({ error: "A question in this quiz wasn't found" }); return null; }
     const q = s.data() as QuestionDoc;
     if ((q.franchiseId ?? null) !== null && q.franchiseId !== franchiseId) { res.status(404).json({ error: "A question in this quiz wasn't found" }); return null; }
     questions.push({ id: qIds[i], q });
@@ -388,7 +391,9 @@ hubAssessmentsCrud.post("/assessments", async (req, res) => {
   res.status(201).json({ id: ref.id, ...doc, questionCount: fields.questionIds.length, totalMarks: _totalMarks });
 });
 
-/** A visible-and-writable assessment, or a refusal already sent. */
+/** A visible-and-writable assessment, or a refusal already sent. Strict same-tenant only —
+ *  used by DELETE, which never forks: deleting a shared assessment keeps failing exactly as
+ *  before. See `writableAssessment` for the fork-aware version PUT uses. */
 async function editableAssessment(ctx: HubCtx, id: string, res: Response) {
   if (!okId(id)) { res.status(404).json({ error: "Assessment not found" }); return null; }
   const snap = await assessmentsCol.doc(id).get();
@@ -397,22 +402,51 @@ async function editableAssessment(ctx: HubCtx, id: string, res: Response) {
   return snap;
 }
 
+/** A visible assessment the caller may PUT: the caller's own returns it for an in-place update;
+ *  the shared library returns it flagged to FORK (see `needsFork` in hubCore.ts) — PUT
+ *  /assessments/:id then creates a new doc instead of updating this one. */
+async function writableAssessment(ctx: HubCtx, id: string, res: Response): Promise<{ snap: FirebaseFirestore.DocumentSnapshot; fork: boolean } | null> {
+  if (!okId(id)) { res.status(404).json({ error: "Assessment not found" }); return null; }
+  const snap = await assessmentsCol.doc(id).get();
+  const docTenantId = snap.get("tenantId") as string | undefined;
+  if (!snap.exists || !docTenantId || !canReadContent(ctx, docTenantId) || !canSee(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Assessment not found" }); return null; }
+  if (needsFork(ctx, docTenantId)) return { snap, fork: true }; // shared library: never edited in place
+  if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That assessment belongs to head office" }); return null; }
+  return { snap, fork: false };
+}
+
 hubAssessmentsCrud.put("/assessments/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
   const parsed = assessmentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const snap = await editableAssessment(ctx, req.params.id, res);
-  if (!snap) return;
+  const result = await writableAssessment(ctx, req.params.id, res);
+  if (!result) return;
+  const { snap, fork } = result;
   const before = snap.data() as AssessmentDoc;
   if (parsed.data.type !== before.type) { res.status(400).json({ error: "A quiz can't become a diagnostic (or back) — create a new one" }); return; }
-  const f = await shape(ctx, before.franchiseId ?? null, parsed.data, snap.id, res, before);
+  // On a fork the tenant/franchise/self-id context is the CALLER's, not the shared doc's — a
+  // shared assessment's franchiseId is always null (it belongs to no one's franchise), and the
+  // fresh id means there's no "self" to exclude from the other-published-diagnostic check.
+  const franchiseId = fork ? ctx.franchiseId : (before.franchiseId ?? null);
+  const f = await shape(ctx, franchiseId, parsed.data, fork ? null : snap.id, res, before);
   if (!f) return;
   const { _totalMarks, ...fields } = f;
-  const patch = { ...fields, updatedAt: nowIso() };
-  await snap.ref.update(patch);
-  patchAssessment(ctx.tenantId, snap.id, { ...before, ...patch }); pingHub(ctx.tenantId, "hubAssessments");
-  res.json({ id: snap.id, ...before, ...patch, questionCount: fields.questionIds.length, totalMarks: _totalMarks });
+  if (!fork) {
+    const patch = { ...fields, updatedAt: nowIso() };
+    await snap.ref.update(patch);
+    patchAssessment(ctx.tenantId, snap.id, { ...before, ...patch }); pingHub(ctx.tenantId, "hubAssessments");
+    res.json({ id: snap.id, ...before, ...patch, questionCount: fields.questionIds.length, totalMarks: _totalMarks });
+    return;
+  }
+  // Shared-library assessment: fork into a brand-new one owned by this tenant. The shared
+  // original is never `.update()`d, so every other tenant's view of it is unaffected.
+  const now = nowIso();
+  const doc: AssessmentDoc = { ...before, ...fields, tenantId: ctx.tenantId, franchiseId, createdBy: ctx.uid, createdAt: now, updatedAt: now };
+  const ref = assessmentsCol.doc();
+  await ref.set(doc);
+  patchAssessment(ctx.tenantId, ref.id, doc); pingHub(ctx.tenantId, "hubAssessments");
+  res.json({ id: ref.id, ...doc, questionCount: fields.questionIds.length, totalMarks: _totalMarks, forked: true });
 });
 
 hubAssessmentsCrud.delete("/assessments/:id", async (req, res) => {
@@ -443,7 +477,7 @@ hubAssessmentsCrud.post("/assessments/:id/allow-retake", async (req, res) => {
   const notFound = () => res.status(404).json({ error: "Assessment not found" });
   if (!okId(req.params.id)) { notFound(); return; }
   const snap = await assessmentsCol.doc(req.params.id).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canSee(ctx, snap.get("franchiseId"))) { notFound(); return; }
+  if (!snap.exists || !canReadContent(ctx, snap.get("tenantId")) || !canSee(ctx, snap.get("franchiseId"))) { notFound(); return; }
   const child = await childFor(ctx, parsed.data.childId, res);
   if (!child) return;
   if (!canWriteRow(ctx, child.franchiseId)) { res.status(403).json({ error: "That student belongs to head office" }); return; }

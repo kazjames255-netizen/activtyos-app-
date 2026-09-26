@@ -1,7 +1,7 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
-import { canSee, hubConfig, okId, resolveCtx, type HubCtx } from "../../lib/hubCore";
+import { canReadContent, canSee, hubConfig, okId, resolveCtx, type HubCtx } from "../../lib/hubCore";
 import { imageBase, pictureOf } from "../../lib/hubMedia";
 import { cleanKindResponse, presentMatch, presentOrder, type Pair } from "../../lib/hubKinds";
 import { inferRule, markResponse, revealAllowed } from "../../lib/hubScoring";
@@ -38,7 +38,7 @@ async function lessonFor(req: import("express").Request, res: Response): Promise
   if (!okId(id)) return nf();
   const snap = await notesCol.doc(id).get();
   const n = snap.exists ? (snap.data() as { tenantId: string; franchiseId: string | null; topicId: string; published?: boolean; lesson?: Ctxed["lesson"] | null }) : null;
-  if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) return nf();
+  if (!n || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) return nf();
   if (!(await loadTopics(ctx)).some((t) => t.id === n.topicId)) return nf();
   if (!n.lesson || typeof n.lesson !== "object") return nf();
   // A family acts for ONE child (an enrolled one); a tutor previews without a child.
@@ -56,7 +56,7 @@ async function warmupDocs(c: Ctxed, fromQuiz = false) {
   let ids = (c.lesson.warmupQuestionIds ?? []).filter(okId).slice(0, MAX_WARMUP);
   if (fromQuiz && c.ctx.canEdit && c.lesson.quizId) {
     const a = (await assessmentRows(c.ctx.tenantId)).get(c.lesson.quizId);
-    if (a && a.tenantId === c.ctx.tenantId) ids = (a.questionIds ?? []).filter(okId).slice(0, 40);
+    if (a && canReadContent(c.ctx, a.tenantId)) ids = (a.questionIds ?? []).filter(okId).slice(0, 40);
   }
   if (!ids.length) return [];
   const snaps = await db.getAll(...ids.map((id) => questionsCol.doc(id)));
@@ -65,7 +65,7 @@ async function warmupDocs(c: Ctxed, fromQuiz = false) {
   for (const s of snaps) {
     if (!s.exists) continue;
     const q = s.data() as QuestionDoc;
-    if (q.tenantId !== c.ctx.tenantId || q.published === false) continue;
+    if (!canReadContent(c.ctx, q.tenantId) || q.published === false) continue;
     if (c.child ? !fitsChild(q.franchiseId, c.child) : !canSee(c.ctx, q.franchiseId)) continue;
     const mark = cfg.questionKinds.find((k) => k.id === q.kind)?.mark ?? inferRule(q);
     if (mark === "tool") continue; // a warm-up is instant-feedback practice with no drawing surface — tool questions belong in a real quiz
@@ -97,7 +97,7 @@ hubLessonApi.get("/notes/:id/lesson-questions", async (req, res) => {
   let quiz: { id: string; title: string; questionCount: number } | null = null;
   if (c.lesson.quizId) {
     const a = (await assessmentRows(c.ctx.tenantId)).get(c.lesson.quizId);
-    const visible = a && a.tenantId === c.ctx.tenantId && canSee(c.ctx, a.franchiseId) && (c.ctx.canEdit || a.published !== false) && (!c.child || fitsChild(a.franchiseId, c.child));
+    const visible = a && canReadContent(c.ctx, a.tenantId) && canSee(c.ctx, a.franchiseId) && (c.ctx.canEdit || a.published !== false) && (!c.child || fitsChild(a.franchiseId, c.child));
     if (a && visible) quiz = { id: a.id, title: a.title, questionCount: a.questionIds?.length ?? 0 };
   }
   res.json({ warmup, quiz });
@@ -115,7 +115,7 @@ hubLessonApi.get("/notes/:id/slide-peek", async (req, res) => {
   if (!okId(req.params.id)) return nf();
   const snap = await notesCol.doc(req.params.id).get();
   const n = snap.exists ? (snap.data() as { tenantId: string; franchiseId: string | null; title: string; published?: boolean; lesson?: unknown }) : null;
-  if (!n || n.tenantId !== ctx.tenantId || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) return nf();
+  if (!n || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) return nf();
   if (!n.lesson || typeof n.lesson !== "object") return nf();
   const idx = Math.max(0, Math.trunc(Number(req.query.slide)) || 0);
   const lesson = normalizeLesson(n.lesson, n.title);

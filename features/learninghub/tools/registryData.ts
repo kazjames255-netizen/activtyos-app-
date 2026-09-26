@@ -8,8 +8,8 @@ import type { HelpToolId } from "../remotesync/HelpTools";
 
 const TABLE = `
 M-01|Ruler|m|P1|234|c|ruler,measure,length,cm,mm,perimeter,scale drawing|d:ruler
-M-02|Protractor 180°|m|P1|34|c|protractor,angle,measure angles,draw angles,degrees|d:protractor
-M-03|Protractor 360°|m|P1|34|c|protractor,reflex angle,angle
+M-02|Protractor 180°|m|P1|234|c|protractor,angle,measure angles,draw angles,degrees|d:protractor
+M-03|Protractor 360°|m|P1|234|c|protractor,reflex angle,angle
 M-04|Compasses|m|P1|34|c|compass,arc,construct,circle,loci
 M-05|Set squares|m|P1|34|c|set square,parallel,perpendicular
 M-06|Straight edge|m|P1|34|c|straight edge,construct,bisect

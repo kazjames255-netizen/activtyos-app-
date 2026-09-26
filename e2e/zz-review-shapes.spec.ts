@@ -160,7 +160,6 @@ async function pickShape(page: Page, s: string) { await tool(page, "shapes").cli
 const rel = async (page: Page, x: number, y: number) => { const b = (await surface(page).boundingBox())!; return { x: b.x + x, y: b.y + y }; };
 async function click(page: Page, x: number, y: number) { const p = await rel(page, x, y); await page.mouse.click(p.x, p.y); }
 
-test.describe.configure({ mode: "serial" });
 test.describe("shapes review", () => {
   let page: Page; let ctx: BrowserContext;
   test.beforeAll(async ({ browser }) => {

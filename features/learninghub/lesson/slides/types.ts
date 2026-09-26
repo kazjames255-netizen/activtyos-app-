@@ -119,6 +119,21 @@ export function normalizeCanvas(raw: unknown): CanvasBlock | null {
 /** The canvas of a slide that is one (a real-deck slide): `blocks` is exactly [canvas]. */
 export const canvasOf = (s: Pick<Slide, "blocks">): CanvasBlock | null => (s.blocks.length === 1 && s.blocks[0]!.t === "canvas" ? (s.blocks[0] as CanvasBlock) : null);
 
+/** Is this `img` element plain template decoration (a divider line, a bullet dot, a tiny swatch, an unlabelled colour
+ *  bar) rather than a genuine content picture a tutor might want to change? There is no pixel data on the client to
+ *  check "is this a flat colour fill" directly (only geometry + alt text), so this is a deliberately generous
+ *  geometry heuristic: a real photo is never a hairline, never postage-stamp tiny, and an unlabelled sliver is never
+ *  content either. Used to keep "Change picture" (and the picture count) to pictures worth changing. */
+export function isDecorativePic(el: Pick<CanvasImg, "w" | "h" | "alt">, block: Pick<CanvasBlock, "w" | "h">): boolean {
+  const wPt = el.w * block.w, hPt = el.h * block.h;
+  const minD = Math.min(wPt, hPt), maxD = Math.max(wPt, hPt);
+  if (minD <= 0) return true;
+  if (minD < 8) return true; // a hairline — a divider/connector drawn as a picture
+  if (maxD <= 44) return true; // a postage-stamp swatch — a bullet dot, a step marker, a tiny icon
+  if (!el.alt.trim() && maxD / minD >= 6) return true; // an unlabelled sliver/bar — a plain colour block used as decoration
+  return false;
+}
+
 /** A verified picture from the picture library (server/src/oak/factory/art/library.ts), referenced by id. Unknown ids are ignored by the player. */
 export interface SlidePic { id: string }
 /** A tutor's own picture: a private hub upload (POST /api/uploads {purpose:"private", kind:"hub"}) referenced by id, with REQUIRED alt text.

@@ -23,7 +23,7 @@ const BRANDT = { fill: "var(--brand)", soft: "var(--brand-soft)", ink: "var(--br
 // order questions (or write one on the spot), set timing and pass mark, publish.
 
 export function AssessmentBuilder({ p, type: initialType, assessment, all, onClose, onSaved, onOpenOther, onStartNew }: {
-  p: PanelProps; type: AssessType; assessment: Assessment | null; all: Assessment[]; onClose: () => void; onSaved: () => void;
+  p: PanelProps; type: AssessType; assessment: Assessment | null; all: Assessment[]; onClose: () => void; /** `forked`: the save landed on a NEW copy (the original was head office's / shared) rather than `assessment.id`. */ onSaved: (forked?: boolean) => void;
   /** "Edit existing" tab: open another paper (the list swaps the builder over to it). Without it the tab strip is not shown. */
   onOpenOther?: (id: string) => Promise<void>;
   /** "New" tab while editing an existing paper: swap over to a blank builder. */
@@ -127,9 +127,17 @@ export function AssessmentBuilder({ p, type: initialType, assessment, all, onClo
     setBusy(true);
     try {
       const body = { audience, retakePolicy: retake, ...(retake === "cooldown" ? { retakeCooldownHours: Math.round(Number(cool)) } : {}), type, title: title.trim(), subject, topicIds: topicIds.length ? topicIds : [...new Set(chosen.map((q) => q.topicId))], questionIds: qids, timeLimitMins: timed ? Math.round(Number(mins)) : null, ...(type === "quiz" ? { passMarkPct: Math.round(passN) } : {}), published };
-      if (assessment) await put(hubPath(p.qs, `/assessments/${assessment.id}`), body);
-      else await post(hubPath(p.qs, "/assessments"), body);
-      onSaved();
+      if (assessment) {
+        // A head-office (shared-library) quiz can't be edited in place — the server forks it into
+        // a new one owned by this tenant instead, and says so with `forked: true`. Nothing here
+        // keeps editing `assessment.id` afterwards (the builder closes on save), but the caller
+        // needs to know so it can tell the tutor what actually happened.
+        const r = await put<{ forked?: boolean }>(hubPath(p.qs, `/assessments/${assessment.id}`), body);
+        onSaved(r.forked === true);
+      } else {
+        await post(hubPath(p.qs, "/assessments"), body);
+        onSaved(false);
+      }
     } catch (e) { setErr(errMsg(e, "Couldn't save")); }
     finally { setBusy(false); }
   };

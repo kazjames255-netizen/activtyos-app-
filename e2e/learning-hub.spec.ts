@@ -48,12 +48,13 @@ async function expectLight(el: import("@playwright/test").Locator) {
   });
   expect(lum).toBeGreaterThan(200);
 }
-/** The hub's sidebar row for a subject / topic (its main button, not the chevron or ⋯). */
-const rowOf = (page: Page, label: string) => page.locator("#hub-topic-filter").getByRole("button", { name: new RegExp(`^${label}`) });
-/** The desktop sidebar caps the subject list at a handful ("Show all N") — open it before hunting for a row. */
-async function revealAll(page: Page) {
-  const more = page.locator("#hub-topic-filter").getByRole("button", { name: /^Show all \d+/ });
-  if (await more.isVisible().catch(() => false)) await more.click();
+/** The Lessons tab has no subject/topic sidebar any more: a lesson creates its subject/topic inline, in the
+ *  editor's Topic field ("+ New subject" / "+ New topic" — see NewTopicInline, testId="note-new-topic"). */
+async function newLessonSubject(page: Page, subject: string) {
+  await page.getByTestId("note-new-topic-subject-btn").click();
+  await page.getByTestId("note-new-topic-name").fill(subject);
+  await page.getByTestId("note-new-topic-save").click();
+  await expect(page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subject })).toBeVisible({ timeout: 20_000 });
 }
 async function openNotes(page: Page) {
   await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
@@ -152,38 +153,15 @@ test.describe("tutor builds topics and notes", () => {
     await expect(tops.first()).toHaveAttribute("aria-selected", "true");
   });
 
-  test("topic → subtopic → note with a PDF worksheet", async ({ page }) => {
+  test("a lesson creates its own subject/topic inline, with a PDF worksheet", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/freelancer/learninghub");
     await openNotes(page);
 
-    await page.locator("#hub-topic-filter").getByRole("button", { name: /Add topic/ }).click();
-    await page.getByLabel("Subject", { exact: true }).fill(subject);
-    await page.getByLabel("Topic name (e.g. Algebra)").fill("Algebra");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(rowOf(page, subject)).toBeVisible({ timeout: 20_000 });
-
-    await rowOf(page, subject).click();
-    await page.getByRole("button", { name: "Actions for Algebra" }).click();
-    await page.getByRole("menuitem", { name: "Add subtopic" }).click();
-    await page.getByLabel("Subtopic name").fill("Quadratics");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(rowOf(page, "Quadratics")).toBeVisible({ timeout: 20_000 });
-    await rowOf(page, "Quadratics").click();
-    await expect(rowOf(page, "Quadratics")).toHaveAttribute("aria-current", "true");
-
-    // A topic that has subtopics can't be deleted — the refusal shows as a dismissible banner.
-    await page.getByRole("button", { name: "Actions for Algebra" }).click();
-    await page.getByRole("menuitem", { name: "Delete" }).click();
-    await page.getByRole("menuitem", { name: /Tap again to delete/ }).click();
-    const banner = page.locator("#learning-hub").getByRole("alert");
-    await expect(banner).toBeVisible({ timeout: 15_000 });
-    await banner.getByRole("button", { name: "Dismiss error" }).click();
-    await expect(banner).toHaveCount(0);
-
-    // No notes yet → an empty state with a call to action, not a bare list.
-    await expect(page.getByText("No lessons here yet")).toBeVisible();
-    await page.getByRole("button", { name: /new lesson/i }).first().click();
+    // No sidebar and no topic management any more — the curriculum card is the primary way to browse, and a
+    // brand-new subject/topic is created inline, in the editor, the moment you write the first lesson for it.
+    await page.getByRole("button", { name: /start your first lesson|new lesson/i }).first().click();
+    await newLessonSubject(page, subject);
     await page.getByLabel("Title", { exact: true }).fill(noteTitle);
     await page.getByTestId("sb-title").fill("Factorising");
     await page.getByTestId("sb-add-block").click();
@@ -196,6 +174,8 @@ test.describe("tutor builds topics and notes", () => {
     await expect(page.getByText("worksheet.pdf")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: "Save lesson" }).click();
 
+    // The flat lesson list is secondary now — search reveals it (or "Browse all lessons").
+    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
     const card = cardWith(page, noteTitle);
     await expect(card).toBeVisible({ timeout: 20_000 });
     await expect(card.getByText("worksheet.pdf")).toBeVisible(); // attachment chip on the card
@@ -210,8 +190,6 @@ test.describe("tutor builds topics and notes", () => {
     test.setTimeout(120_000);
     await page.goto("/freelancer/learninghub");
     await openNotes(page);
-    await revealAll(page);
-    await rowOf(page, subject).click();
     await page.getByRole("button", { name: /new lesson/i }).first().click();
     await page.getByLabel("Title", { exact: true }).fill(`Unsaved ${stamp}`);
     await openTab(page, /Students/);
@@ -225,17 +203,14 @@ test.describe("tutor builds topics and notes", () => {
     await expect(page.getByText(`Unsaved ${stamp}`)).toHaveCount(0);
   });
 
-  test("on a phone the sidebar collapses into one button and a bottom sheet", async ({ page }) => {
+  test("on a phone, the Lessons tab has no sidebar — the curriculum card and search work the same as at desktop", async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/freelancer/learninghub");
     await openNotes(page);
-    await page.getByRole("button", { name: /Subjects and topics/ }).click();
-    const sheet = page.getByRole("dialog");
-    await expect(sheet).toBeVisible();
-    await sheet.getByRole("button", { name: new RegExp(`^${subject}`) }).first().click();
-    await expect(sheet).toHaveCount(0);
-    await expect(page.locator("#hub-topic-filter")).toContainText(subject);
+    await expect(page.getByRole("button", { name: /Subjects and topics/ })).toHaveCount(0);
+    await expect(page.getByTestId("curriculum-card")).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
     await expect(cardWith(page, noteTitle)).toBeVisible({ timeout: 20_000 });
   });
 
@@ -313,7 +288,7 @@ test.describe("a family reads it (the student side)", () => {
     const t = await token(accounts.freelancer);
     // A draft the family must never see.
     const topics = await apiFetch<{ id: string; subject: string; subtopic: string | null }[]>("/api/learning-hub/topics", t);
-    const topic = topics.find((x) => x.subject === subject && x.subtopic === "Quadratics")!;
+    const topic = topics.find((x) => x.subject === subject)!;
     await apiPost("/api/learning-hub/notes", t, { topicId: topic.id, title: `Draft ${stamp}`, body: "not yet", published: false, attachments: [] });
     const notes = await apiFetch<{ id: string; title: string }[]>("/api/learning-hub/notes", t);
     noteId = notes.find((n) => n.title === noteTitle)!.id;
@@ -333,8 +308,7 @@ test.describe("a family reads it (the student side)", () => {
     else if (await page.getByRole("radio", { name: childName }).isVisible().catch(() => false)) await page.getByRole("radio", { name: childName }).click();
 
     await openNotes(page);
-    await revealAll(page);
-    await rowOf(page, subject).click();
+    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
     await expect(cardWith(page, noteTitle)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByText(`Draft ${stamp}`)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /new lesson|add topic|enrol/i })).toHaveCount(0);
@@ -380,18 +354,14 @@ test.describe("a staff member authors too", () => {
     await page.getByRole("button", { name: /^Skip for now/ }).click({ timeout: 20_000 }).catch(() => {});
     await openNotes(page);
     await expect(tabOf(page, /Students/)).toBeVisible(); // tutors get the roster
-    await page.locator("#hub-topic-filter").getByRole("button", { name: /Add topic/ }).click();
-    await page.getByLabel("Subject", { exact: true }).fill(staffSubject);
-    await page.getByLabel("Topic name (e.g. Algebra)").fill("Forces");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(rowOf(page, staffSubject)).toBeVisible({ timeout: 20_000 });
-    await rowOf(page, staffSubject).click();
-    await page.getByRole("button", { name: /new lesson/i }).first().click();
+    await page.getByRole("button", { name: /start your first lesson|new lesson/i }).first().click();
+    await newLessonSubject(page, staffSubject);
     await page.getByLabel("Title", { exact: true }).fill(staffNote);
     await page.getByTestId("sb-add-block").click();
     await page.getByTestId("sb-add-text").click();
     await page.getByTestId("sb-block-0").locator("textarea").fill("Newton's laws in brief.");
     await page.getByRole("button", { name: "Save lesson" }).click();
+    await page.getByPlaceholder("Search lessons…").fill(staffNote);
     await expect(cardWith(page, staffNote)).toBeVisible({ timeout: 20_000 });
     await setHub(accounts.company, false);
   });

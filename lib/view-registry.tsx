@@ -96,7 +96,6 @@ const LeadsApp = dynamic(() => import("@/features/platform/LeadsApp").then((m) =
 const VentureLakesApp = dynamic(() => import("@/features/platform/VentureLakesApp").then((m) => m.VentureLakesApp));
 const InternationalExpansionApp = dynamic(() => import("@/features/platform/InternationalExpansionApp").then((m) => m.InternationalExpansionApp));
 const ActivlySiteApp = dynamic(() => import("@/features/platform/ActivlySiteApp").then((m) => m.ActivlySiteApp));
-const MyMoneyApp = dynamic(() => import("@/features/platform/MyMoneyApp").then((m) => m.MyMoneyApp));
 const SupportInboxApp = dynamic(() => import("@/features/platform/SupportInboxApp").then((m) => m.SupportInboxApp));
 const SupportReviewApp = dynamic(() => import("@/features/platform/SupportReviewApp").then((m) => m.SupportReviewApp));
 const TeamApp = dynamic(() => import("@/features/team/TeamApp").then((m) => m.TeamApp));
@@ -360,7 +359,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     "venture-lakes": VentureLakesApp,
     "international-expansion": InternationalExpansionApp,
     "activly-site": ActivlySiteApp,
-    "my-money": MyMoneyApp,
     // Platform tooling on the roadmap — these need PLATFORM-scoped
     // backends (a platform account has no tenant, so the operator
     // components can't run here).

@@ -1,6 +1,8 @@
 // Pure logic for the curriculum map: which colour a cell is, which year columns to show, the headline numbers.
 // No React, no fetch — selftest-covered (cells.selftest.ts).
 
+import { SUBJECT_PALETTE } from "../subjectColour";
+
 export type Status = "gap" | "thin" | "covered";
 export interface MapArea { id: string; subject: string; group: string; strand: string; area: string; code: string | null; /** lessons per year, index 0 = Year 1 … 10 = Year 11 */ y: number[]; /** child view: finished lessons per year */ done?: number[] }
 export interface MapRow { areaId: string; from: number; to: number; lessons: number; status: Status }
@@ -10,6 +12,23 @@ export interface Cell { kind: CellKind; count: number; done: number; /** the key
 export const GROUP_ORDER = ["maths", "english", "science", "languages"] as const;
 export const GROUP_LABEL: Record<string, string> = { maths: "Maths", english: "English", science: "Science", languages: "Languages" };
 export const yearLabel = (y: number) => `Year ${y}`;
+
+const strandHash = (s: string) => [...s].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) >>> 0, 11);
+/** A few NC strand labels are a generic bucket, not a real grouping (primary science files every topic under the
+ *  one strand "Statutory topic") — colouring by strand there would paint every card in a subject the same colour,
+ *  so those fall back to the area's own name instead. */
+const GENERIC_STRANDS = new Set(["Statutory topic"]);
+/** The colour a strand's tile shows on the map — shared by the coverage grid and the area's lesson-card
+ *  header (AreaDrawer) so the two never disagree. */
+export const strandColor = (a: { strand: string; area: string }) => {
+  // A real strand still picks from the curated 10-colour palette (matches the rest of the app's branding).
+  if (!GENERIC_STRANDS.has(a.strand)) return SUBJECT_PALETTE[strandHash(a.strand) % SUBJECT_PALETTE.length]!.base;
+  // The generic bucket can hold well over 10 areas (primary science: 16), so 10 curated hues WILL repeat —
+  // generate a hue instead, spread by the golden angle so neighbouring hashes still land far apart on the
+  // wheel (a plain `hash % 360` clusters; multiplying by the golden angle before wrapping doesn't).
+  const hue = (strandHash(a.area) * 137.508) % 360;
+  return `hsl(${hue.toFixed(1)} 60% 42%)`;
+};
 
 export const rowsByArea = (rows: MapRow[]): Map<string, MapRow[]> => {
   const m = new Map<string, MapRow[]>();

@@ -16,7 +16,7 @@ import { getRemoteSync, listLiveRemoteSync, patchProgress, startRemoteSync, upda
 import { listDoubts, type Doubt } from "../lesson/doubts/api";
 import { MessagesCard } from "../lesson/doubts/MessagesCard";
 import { FlashcardsForLesson } from "../lesson/FlashcardsForLesson";
-import { HelpToolsPicker, type HelpToolId } from "./HelpTools";
+import { ALL_HELP_TOOL_IDS, HelpToolsSwitch, type HelpToolId } from "./HelpTools";
 import { MiniScreenCard, MINI_STEPS } from "./MiniScreenCard";
 
 // "Start lesson now (remote)" — the full-screen tutor shell: pick who's joining remotely, and HOW the class moves
@@ -25,6 +25,8 @@ import { MiniScreenCard, MINI_STEPS } from "./MiniScreenCard";
 
 export interface RemoteSyncProps {
   qs: string; config: HubSettings; noteId: string; title: string;
+  /** The lesson's subject ("Maths") and school year, when the caller knows them — they sharpen which help tools are suggested. */
+  subject?: string; year?: number | null;
   onClose: () => void;
 }
 
@@ -36,7 +38,7 @@ const PACE_OPTIONS: { value: RsPace; label: string; hint: string }[] = [
   { value: "own_pace", label: "Their own pace", hint: "Each student moves freely. You'll see a live mini-screen of what each one is working on during the warm-up/quiz." },
 ];
 
-export function RemoteSyncApp({ qs, config, noteId, title, onClose }: RemoteSyncProps) {
+export function RemoteSyncApp({ qs, config, noteId, title, subject, year, onClose }: RemoteSyncProps) {
   const [students, setStudents] = useState<Student[] | null>(null);
   const [session, setSession] = useState<RsSession | null>(null);
   // A tutor who refreshed or closed the tab mid-broadcast: any session THIS lesson still has "live" (see
@@ -44,8 +46,9 @@ export function RemoteSyncApp({ qs, config, noteId, title, onClose }: RemoteSync
   const [live, setLive] = useState<RsSession[]>([]);
   const [childIds, setChildIds] = useState<string[]>([]);
   const [pace, setPace] = useState<RsPace>("own_pace");
-  const [tools, setTools] = useState<HelpToolId[]>([]);
-  // Same idea, but for a session already live — the start screen's picker above only ever sets tools at creation,
+  // Tools: the tutor just says Yes / No (Yes = every tool allowed; each question then shows only the ones that fit it).
+  const [tools, setTools] = useState<HelpToolId[]>(ALL_HELP_TOOL_IDS); // Yes by default; the tutor just ticks Yes / No
+  // Same idea, but for a session already live — the start screen's switch above only ever sets tools at creation,
   // so resuming needs its own copy, pre-filled from what this session already has (see the prefill effect below).
   const [resumeTools, setResumeTools] = useState<HelpToolId[]>([]);
   const [busy, setBusy] = useState(false);
@@ -128,7 +131,7 @@ export function RemoteSyncApp({ qs, config, noteId, title, onClose }: RemoteSync
                       <StudentPicker students={students.map((s) => ({ childId: s.childId, childName: s.childName, yearGroup: null }))} value={childIds} onChange={setChildIds} idPrefix="remote-sync" />
                     )}
                     <div className="mt-4">
-                      <HelpToolsPicker value={resumeTools} onChange={setResumeTools} />
+                      <HelpToolsSwitch value={resumeTools} onChange={setResumeTools} />
                     </div>
                     {live.length > 1 && (
                       <ul className="m-0 mt-3 grid list-none gap-2 border-t border-[var(--line)] p-0 pt-3">
@@ -166,7 +169,7 @@ export function RemoteSyncApp({ qs, config, noteId, title, onClose }: RemoteSync
                     </div>
                   </div>
                   <div className="mt-5">
-                    <HelpToolsPicker value={tools} onChange={setTools} />
+                    <HelpToolsSwitch value={tools} onChange={setTools} />
                   </div>
                   <button type="button" onClick={() => void start()} disabled={busy || !students || !childIds.length} data-testid="remote-sync-start"
                     className={`mt-4 inline-flex min-h-[48px] items-center gap-2 rounded-xl border border-[var(--brand)] bg-[var(--brand)] px-6 text-[15px] font-extrabold text-white transition hover:brightness-110 disabled:opacity-50 ${FOCUS}`}>
