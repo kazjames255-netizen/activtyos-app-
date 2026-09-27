@@ -28,6 +28,21 @@ import { db } from "../firebase";
 const locks = () => db.collection("schedulerLocks");
 const fired = () => db.collection("schedulerFired");
 
+// Which fleet these locks belong to. Dev machines share ONE Firestore with
+// production, so without this a laptop competes with the deployed API for the
+// same locks: whoever claims a sweep runs it and the other skips. Two things
+// went wrong because of that, both observed —
+//   • a laptop claimed sweeps and was then killed (out of memory) mid-run, so
+//     the work neither completed nor failed, and production's heartbeats went
+//     stale until the lock expired;
+//   • worse, a fireOnce marker written by a laptop (where mail is suppressed)
+//     tells PRODUCTION the delivery already happened, so a real parent's
+//     reminder is silently eaten.
+// Production keeps the bare ids it already has; anything else is prefixed, so
+// a dev box can never claim or satisfy a production sweep.
+const NS = (process.env.SCHEDULER_NAMESPACE ?? (process.env.NODE_ENV === "production" ? "prod" : "dev")).trim();
+const scoped = (id: string) => (NS === "prod" ? id : `${NS}__${id}`);
+
 /** How long a fireOnce claim survives a crashed process before another
  *  instance may retry the delivery. */
 const LEASE_MS = 5 * 60_000;
@@ -46,7 +61,7 @@ async function claimSweep(name: string, everyMs: number): Promise<boolean> {
   if (now < (nextDueHint.get(name) ?? 0)) return false;
   try {
     return await db.runTransaction(async (tx) => {
-      const ref = locks().doc(name);
+      const ref = locks().doc(scoped(name));
       const snap = await tx.get(ref);
       const nextAt = snap.exists ? Date.parse((snap.get("nextRunAt") as string) ?? "") || 0 : 0;
       if (now < nextAt) {
@@ -103,7 +118,7 @@ export async function fireOnce(
   meta: { tenantId?: string },
   fn: () => Promise<void>,
 ): Promise<boolean> {
-  const ref = fired().doc(key);
+  const ref = fired().doc(scoped(key));
   const now = Date.now();
   const claimed = await db
     .runTransaction(async (tx) => {
