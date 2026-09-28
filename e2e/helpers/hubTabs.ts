@@ -52,10 +52,10 @@ export async function openTab(page: Page, name: RegExp | string): Promise<void> 
   const family = grouped && (await page.locator('[role="tab"][data-top="today"]').count()) > 0;
   const e = grouped ? (family ? FAMILY_MAP : MAP).find((m) => m.labels.some((l) => matches(name, l))) : undefined;
   if (!e) { await tabOf(page, name).click(); return; }
-  if (!e.sub) { await page.locator(`[role="tab"][data-top="${e.top}"]`).click(); return; }
-  const sub = page.locator(`[role="tab"][data-sub="${e.sub}"]`);
+  if (!e.sub) { await page.locator(`[role="tab"][data-top="${e.top}"]:visible`).first().click(); return; }
+  const sub = page.locator(`[role="tab"][data-sub="${e.sub}"]:visible`).first();
   if (!(await sub.isVisible().catch(() => false))) {
-    await page.locator(`[role="tab"][data-top="${e.top}"]`).click();
+    await page.locator(`[role="tab"][data-top="${e.top}"]:visible`).first().click();
     await sub.waitFor({ state: "visible", timeout: 15_000 });
   }
   await sub.click();

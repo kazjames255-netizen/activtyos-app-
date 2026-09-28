@@ -29,13 +29,14 @@ function Card({ color, icon, label, value, sub, testId }: { color: string; icon:
 
 const tone = (pct: number) => (pct >= 80 ? "var(--green)" : pct >= 60 ? "var(--gold)" : "var(--red)");
 /** The quiz card: the last five marked quizzes, newest first, one tight line each (title and score). */
-function QuizzesCard({ label, empty, rows }: { label: string; empty: string; rows: { title: string; pct: number }[] }) {
+function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[] }) {
   const color = "var(--cat-4)";
   return (
     <div data-testid="pc-quiz" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>📝</span>
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
+        <div className="ms-auto flex items-baseline gap-1.5"><span className="text-[22px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{total}</span><span className="text-[11px] font-semibold text-[var(--ink-2)]">{sub}</span></div>
       </div>
       {rows.length === 0 ? <div className="mt-2 text-[13px] font-semibold text-[var(--ink)]">{empty}</div> : (
         <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-quiz-list">
@@ -134,9 +135,8 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   return (
     <div className="grid grid-cols-2 items-start gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
-      <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} rows={quiz.recent} />
+      <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} />
       <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} caption={T("pc_topics_from")} rows={quiz.topicsRecent} />
-      <Card testId="pc-taken" color="var(--cat-6)" icon="✅" label={quiz.labels.taken} value={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.recent} />
       </>}
       <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
       <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")} value={rows && rows.length ? `${handed}/${rows.length}` : "–"}
