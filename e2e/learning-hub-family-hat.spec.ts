@@ -76,7 +76,9 @@ async function familyCtx(browser: Browser, kids: string[] = [avaId, benId]) {
 }
 
 async function gotoHub(page: Page, url: string) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
+  // The hub is "up" when its heading, its tabs, or an opened lesson / quiz / homework (focus mode hides the heading) shows.
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })
+    .or(page.getByRole("tab")).or(page.getByTestId("lesson-player")).or(page.getByTestId("hub-start")).or(page.locator("#hub-homework-detail"));
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url);
@@ -135,16 +137,16 @@ test.describe("two children: who is learning?", () => {
     await openFamily(page, "?tab=quizzes");
     await dropRemembered(page);
     await page.reload();
-    await expect(tabOf(page, /^Quizzes/)).toBeVisible({ timeout: 30_000 });
-    const card = cardWith(page, QUIZ);
-    await expect(card).toBeVisible({ timeout: 30_000 });
-    await card.getByTestId("hub-open-assessment").click();
-
-    // The intro asks first; Start is off until the family says who.
-    await expect(page.getByTestId("hub-who-picker")).toBeVisible();
-    await expect(page.getByTestId("hub-start")).toBeDisabled();
-    await page.getByTestId("hub-who-kid").filter({ hasText: benName }).click();
-    await expect(page.getByTestId("hub-who-line").getByTestId("hub-child-chip")).toHaveAttribute("data-child-id", benId, { timeout: 20_000 });
+    // With two children and nobody picked, the family lands on "Everyone's progress" (no tabs) and MUST pick who is learning there: the child is
+    // chosen by opening their card, so a quiz can never be started for an unnamed child. (The old in-quiz "who is learning?" picker is unreachable now.)
+    await expect(page.getByRole("heading", { name: "Everyone's progress" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("tab")).toHaveCount(0);
+    await page.locator('button, a, [role="button"], [data-ui="card"]').filter({ hasText: benName }).filter({ hasText: /Tutor:/ }).last().click();
+    await expect(page.getByRole("tab", { name: /^Learn/ })).toBeVisible({ timeout: 30_000 });
+    await openTab(page, /^Quizzes/);
+    const qcard = cardWith(page, QUIZ);
+    await expect(qcard).toBeVisible({ timeout: 30_000 });
+    await qcard.getByTestId("hub-open-assessment").click();
     await expect(page.getByTestId("hub-start")).toBeEnabled({ timeout: 20_000 });
     await page.getByTestId("hub-start").click();
 
@@ -194,7 +196,9 @@ test.describe("two children: who is learning?", () => {
   });
 });
 
-test.describe("kid mode", () => {
+// SKIPPED (product decision): Kaz removed the "Hand over to…" function ("remove the handover function completely", see FamilyContext.tsx), so the
+// family bar, hand-over buttons and kid-mode gate this describe drove no longer exist.
+test.describe.skip("kid mode", () => {
   test("Hand over to Ava: full-screen, one child, adult tabs gone, Back stays, refresh stays, a sum lets a parent out", async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await familyCtx(browser);
@@ -270,8 +274,14 @@ test.describe("deep links", () => {
 
     // Opened from the list (a pushed entry), Back closes the lesson and stays in the hub.
     await gotoHub(page, `/custdash/learninghub?tab=notes&child=${avaId}`);
-    await page.getByLabel("Search lessons").fill(L.title);
-    await cardWith(page, L.title).getByRole("button", { name: L.title, exact: true }).click();
+    // (The child's Lessons tab is a curriculum map now, with no lesson list to click: push the entry exactly as an in-app open does — family/link.ts.)
+    await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 30_000 });
+    await page.evaluate((id) => {
+      const u = new URL(location.href);
+      u.searchParams.set("open", `lesson:${id}`);
+      history.pushState({ ...(history.state ?? {}), aosHubOpen: true }, "", u);
+      window.dispatchEvent(new Event("aos-hub-link"));
+    }, L.noteId);
     await expect(page.getByTestId("lesson-player")).toBeVisible({ timeout: 30_000 });
     expect(decodeURIComponent(page.url())).toContain(`open=lesson:${L.noteId}`);
     await page.goBack();
@@ -331,12 +341,10 @@ test.describe("parent extras + notifications", () => {
     const ctx = await familyCtx(browser);
     const page = await ctx.newPage();
     await openFamily(page, `?tab=home&child=${avaId}`);
-    const summary = page.getByTestId("hub-parent-summary");
-    await expect(summary).toContainText(avaName, { timeout: 30_000 });
-    await expect(summary).toContainText(/quiz/);
-    const ask = page.getByTestId("hub-ask-tutor").first();
-    await expect(ask).toBeVisible();
-    expect(await ask.getAttribute("href")).toContain(`/custdash/messages?compose=1&tenant=${tenantId}`);
+    // Today is the parent's summary now: "Everyone's progress" cards, one per child, listing their homework and quizzes.
+    await expect(page.getByText(avaName).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Quiz:/).first()).toBeVisible();
+    // (The "Ask your tutor" link is no longer on the multi-child Today page — it lives in the single-child summary — so it is not asserted here.)
     await ctx.close();
   });
 
@@ -363,7 +371,8 @@ test.describe("parent extras + notifications", () => {
   });
 });
 
-test.describe("phone (390px)", () => {
+// SKIPPED (product decision): drives the family bar, who's-learning picker and kid mode, all removed with the "Hand over to…" function.
+test.describe.skip("phone (390px)", () => {
   test("family bar, who's-learning picker, kid bar, gate and runner header fit with 44px targets and no sideways scroll", async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await browser.newContext({ storageState: statePath("parent"), viewport: { width: 390, height: 844 }, hasTouch: true });
