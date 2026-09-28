@@ -362,10 +362,8 @@ test.describe("1. tutor: find, preview, edit a slide, change its picture", () =>
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 test.describe("1b. tutor: set for children (homework) and add to a live lesson", () => {
-  // FIXME (product decision needed, reported to the lead): HomeworkForm.applyPack is "bare on creation" — "Set for children" on a lesson only fills the
-  // title, so the saved homework has noteIds [] and no assessmentId, and (families now only see ASSIGNED lessons) the child cannot open the lesson.
-  // This test asserted the old contract (noteIds [lesson], assessmentId = its exit quiz). Restore it if lessons should still be linked.
-  test.fixme("Set for children → homework for this child with the lesson + its exit quiz", async ({ browser }) => {
+  // "Set for children" on a lesson LINKS the lesson and its exit quiz (families only see lessons assigned to their child); the generic "Set homework" stays bare.
+  test("Set for children → homework for this child with the lesson + its exit quiz", async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
