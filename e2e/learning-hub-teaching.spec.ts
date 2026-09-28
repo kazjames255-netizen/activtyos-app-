@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { loadAccounts, API_URL, ROOT, type AccountManifest, type TestAccount } from "./helpers/env";
@@ -352,6 +353,38 @@ test.describe("live lessons", () => {
     const row = (Array.isArray(after) ? after : (after.lessons ?? [])).find((x) => x.id === l2)!;
     expect(row.status).toBe("scheduled");
     expect(row.startsAt).toBe(startsAt);
+  });
+
+  test("early join safeguards: presence must be recent, attendance can't be pre-marked, an early room isn't extended, in-person rows take no videos", async () => {
+    const patchDoc = (collection: string, id: string, patch: Record<string, unknown>) =>
+      execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/docPatch.ts"), collection, id, JSON.stringify(patch)], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
+    const rowOf = async (id: string) => {
+      const b = (await send("GET", `${HUB}/lessons`, tutor)).body as { lessons?: { id: string; status: string }[] } | { id: string; status: string }[];
+      return (Array.isArray(b) ? b : (b.lessons ?? [])).find((x) => x.id === id)!;
+    };
+    // (a) a parent cannot mark a child present on a lesson that is days away and not live
+    const pre = await send("POST", `${HUB}/lessons/${l2}/attended${qc(child1)}`, parent, {});
+    expect(pre.status, JSON.stringify(pre.body)).toBe(409);
+    // (b) the tutor starts it early → the family may follow…
+    expect((await send("POST", `${HUB}/lessons/${l2}/join`, tutor, {})).status).toBe(200);
+    expect((await send("POST", `${HUB}/lessons/${l2}/join${qc(child1)}`, parent, {})).status).toBe(200);
+    expect((await send("POST", `${HUB}/lessons/${l2}/attended${qc(child1)}`, parent, {})).status).toBe(200);
+    // (c) …"Stay on the call" on an early room has nothing to add and must not persist a roomUntil days ahead
+    const ext = await send("POST", `${HUB}/lessons/${l2}/extend`, tutor, {});
+    expect(ext.status, JSON.stringify(ext.body)).toBe(200);
+    expect(new Date(ext.body.roomExpiresAt as string).getTime()).toBeLessThanOrEqual(Date.now() + 4 * 3600_000 + 60_000);
+    // (d) the tutor leaves without pressing End and their presence goes stale (2h old) → a family can no longer walk in, and the lesson drops back to scheduled
+    patchDoc("hubLessons", l2, { tutorSeenAt: new Date(Date.now() - 2 * 3600_000).toISOString(), status: "live" });
+    const stale = await send("POST", `${HUB}/lessons/${l2}/join${qc(child1)}`, parent, {});
+    expect(stale.status, JSON.stringify(stale.body)).toBe(409);
+    expect(stale.body.code).toBe("waiting_for_tutor");
+    await expect.poll(async () => (await rowOf(l2)).status, { timeout: 15_000 }).toBe("scheduled");
+    // (e) an in-person lesson has no video call: PUT with videos is refused just like POST
+    const ip = await send("POST", `${HUB}/lessons`, tutor, { title: `In person ${stamp}`, topicId, durationMins: 30, childIds: [child1], startsAt: new Date(Date.now() + 2 * 86_400_000).toISOString(), mode: "in_person" });
+    expect(ip.status, JSON.stringify(ip.body)).toBe(201);
+    const put = await send("PUT", `${HUB}/lessons/${ip.body.id as string}`, tutor, { videos: [{ url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }] });
+    expect(put.status, JSON.stringify(put.body)).toBe(400);
+    expect((await send("PUT", `${HUB}/lessons/${ip.body.id as string}`, tutor, { notes: "still editable" })).status).toBe(200);
   });
 
   test("inside the window: tokens for the tutor (owner) and the enrolled family only", async () => {

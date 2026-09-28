@@ -43,6 +43,8 @@ interface LessonDoc {
   /** childId → ISO time that child's family first joined. */
   attendance: Record<string, string>;
   tutorJoinedAt: string | null; endedAt: string | null;
+  /** ISO: the last time the TUTOR (re)entered the room — an early family join needs this to be recent (see EARLY_TUTOR_PRESENCE_MS). */
+  tutorSeenAt?: string | null;
   /** ISO: how far "Stay on the call" has pushed the room's closing time (null = not extended). */
   roomUntil?: string | null;
   /** ISO: when a tutor last reopened a past/ended lesson for a fresh session. */
@@ -116,6 +118,10 @@ function addWeeksWall(iso: string, weeks: number, tz: string): string {
   return new Date(guess).toISOString();
 }
 const validZone = (tz: string) => { try { new Intl.DateTimeFormat("en-GB", { timeZone: tz }); return true; } catch { return false; } };
+
+/** How recently the tutor must have entered the room for a family to join it EARLY (before the normal 10-minutes-before window). A tutor who
+ *  left without pressing End is treated as gone after this, so a child is never left alone in a room days early. */
+const EARLY_TUTOR_PRESENCE_MS = 45 * 60_000;
 
 function windowOut(l: Lesson, now = new Date()) {
   const w = joinWindow(l.startsAt, l.durationMins, l.roomUntil);
@@ -288,6 +294,7 @@ hubLessonsApi.put("/lessons/:id", async (req, res) => {
   const patch: Partial<LessonDoc> = { updatedAt: nowIso() };
   if (b.title !== undefined) patch.title = b.title;
   if (b.notes !== undefined) patch.notes = b.notes;
+  if (b.videos !== undefined && cur.mode === "in_person" && b.videos.length) { res.status(400).json({ error: "An in-person lesson has no video call — add videos to the lesson notes instead" }); return; }
   if (b.videos !== undefined) {
     const vids = cleanVideos(b.videos);
     if (typeof vids === "string") { res.status(400).json({ error: vids }); return; }
@@ -488,7 +495,16 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
   // join (below) clears the flag and flips the lesson live again.
   // Early join: a tutor can start any scheduled lesson at any time. A family may go in earlier than 10 minutes before the start
   // only once their tutor is already in (status live) — a child is never left alone in a room that days-early nobody opened.
-  if (!isOwner && Date.now() < w.opensAt.getTime() && lesson.status !== "live") { res.status(409).json({ error: "Your tutor hasn't started this lesson yet — you can join once they do.", code: "waiting_for_tutor" }); return; }
+  // "Live" alone is not proof the tutor is still there (they may have left days early without pressing End), so an early family join also needs
+  // the tutor to have been in the room recently; a stale early-live lesson drops back to scheduled instead of leaving a family alone in it.
+  if (!isOwner && Date.now() < w.opensAt.getTime()) {
+    const seenMs = lesson.tutorSeenAt ? new Date(lesson.tutorSeenAt).getTime() : 0;
+    if (lesson.status !== "live" || !(Date.now() - seenMs < EARLY_TUTOR_PRESENCE_MS)) {
+      if (lesson.status === "live") void snap.ref.update({ status: "scheduled", updatedAt: nowIso() });
+      res.status(409).json({ error: "Your tutor hasn't started this lesson yet — you can join once they do.", code: "waiting_for_tutor" });
+      return;
+    }
+  }
   if (!isOwner && waitingForTutor(lesson)) { res.status(409).json({ error: "Your tutor ended the lesson — you can rejoin once they reopen it.", code: "waiting_for_tutor" }); return; }
 
   // ── video ──
@@ -513,7 +529,7 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
     const patch: Record<string, unknown> = {};
     if (lesson.roomUrl !== room.url || lesson.roomName !== room.name) { patch.roomUrl = room.url; patch.roomName = room.name; }
     if (roomUntil !== (lesson.roomUntil ?? null)) patch.roomUntil = roomUntil;
-    if (isOwner) { patch.tutorJoinedAt = lesson.tutorJoinedAt ?? nowIso(); if (lesson.needsTutor) patch.needsTutor = false; }
+    if (isOwner) { patch.tutorJoinedAt = lesson.tutorJoinedAt ?? nowIso(); patch.tutorSeenAt = nowIso(); if (lesson.needsTutor) patch.needsTutor = false; }
     // Anyone re-entering an ended lesson re-opens it; a tutor starting a scheduled one makes it live.
     if (lesson.status === "ended" || (isOwner && lesson.status === "scheduled")) { patch.status = "live"; if (lesson.status === "ended") patch.endedAt = null; }
     // (Attendance is NOT written here: a token is minted before anyone has connected. The family's client confirms it with POST /attended once Daily reports it joined.)
@@ -548,6 +564,8 @@ hubLessonsApi.post("/lessons/:id/attended", async (req, res) => {
   const kids = named.size ? inLesson.filter((c) => named.has(c.childId)) : inLesson.length === 1 ? inLesson : [];
   if (!kids.length) { res.status(404).json({ error: "Lesson not found" }); return; }
   if (lesson.status === "cancelled" || windowState(new Date(), joinWindow(lesson.startsAt, lesson.durationMins, lesson.roomUntil)) !== "open") { res.status(409).json({ error: "This lesson isn't open.", code: "outside_join_window" }); return; }
+  // Early join: attendance is only recorded once the room is genuinely open to families (normal window, or the tutor is in) — a parent cannot mark a child present days ahead.
+  if (Date.now() < joinWindow(lesson.startsAt, lesson.durationMins, lesson.roomUntil).opensAt.getTime() && lesson.status !== "live") { res.status(409).json({ error: "This lesson hasn't started yet.", code: "waiting_for_tutor" }); return; }
   const at = nowIso();
   const patch: Record<string, string> = {};
   for (const k of kids) if (!lesson.attendance?.[k.childId]) patch[`attendance.${k.childId}`] = at;
@@ -577,6 +595,13 @@ hubLessonsApi.post("/lessons/:id/extend", async (req, res) => {
   const w = joinWindow(lesson.startsAt, lesson.durationMins, lesson.roomUntil);
   if (windowState(new Date(), w) === "closed") { res.status(409).json({ error: "The joining window for this lesson has closed.", code: "outside_join_window" }); return; }
   const nowMs = Date.now();
+  // An EARLY room (lesson hours/days away) already lives at most MAX_OVERRUN_MS from the join and is re-extended by every join: "Stay" has nothing to
+  // add, and persisting roomUntil now would hold a paid video room open until days from now.
+  if (nowMs < w.opensAt.getTime()) {
+    const early = new Date(Math.min(roomExpiry(w.endsAt, lesson.roomUntil, lesson.reopenedAt).getTime(), nowMs + MAX_OVERRUN_MS));
+    res.json({ roomExpiresAt: early.toISOString(), closesAt: w.closesAt.toISOString(), promptSeconds: Math.round(STAY_PROMPT_MS / 1000) });
+    return;
+  }
   const cap = Math.max(w.endsAt.getTime(), lesson.reopenedAt ? new Date(lesson.reopenedAt).getTime() : 0) + MAX_OVERRUN_MS;
   const current = roomExpiry(w.endsAt, lesson.roomUntil, lesson.reopenedAt).getTime();
   const next = Math.min(Math.max(current, nowMs) + STAY_EXTENSION_MS, cap);
