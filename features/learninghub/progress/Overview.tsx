@@ -52,7 +52,7 @@ export function Overview({ p, onOpen }: { p: PanelProps; onOpen: (childId: strin
 
   // Columns. Overall view: every subject somebody has been scored in. With a subject
   // chosen: that subject (always, even if nobody has scored yet) plus its topics.
-  const cols = useMemo<Col[]>(() => {
+  const allCols = useMemo<Col[]>(() => {
     const out: Col[] = [];
     if (subjectFilter) {
       out.push({ key: `s:${subjectFilter}`, label: subjectFilter, sub: t("hubfam.pgOverall"), subject: subjectFilter });
@@ -83,7 +83,7 @@ export function Overview({ p, onOpen }: { p: PanelProps; onOpen: (childId: strin
 
   // Topic columns need each student's per-topic mastery (GET /mastery?childId=…), so
   // fetch it — only for students already scored in this subject, a few at a time.
-  const topicCols = cols.some((c) => c.topicId);
+  const topicCols = allCols.some((c) => c.topicId);
   const wanted = useMemo(() => (topicCols ? rows.filter((s) => s.subjects.some((x) => x.subject === subjectFilter)).map((s) => s.childId) : []), [topicCols, rows, subjectFilter]);
   const wantedKey = wanted.join(",");
   const [tick, setTick] = useState(0);
@@ -110,6 +110,16 @@ export function Overview({ p, onOpen }: { p: PanelProps; onOpen: (childId: strin
     })();
     return () => { alive.current++; };
   }, [wantedKey, p.qs, tick]);
+
+  // Only the topics somebody has actually scored on get a column. The subject lists EVERY topic in the library (thousands), so without this the grid
+  // was a wall of dashes; it stays as one "overall" column until the per-student scores have loaded.
+  const detailReady = !!wantedKey && !detailBusy && Object.keys(detail).length > 0;
+  const scoredTopics = useMemo(() => {
+    const seen = new Set<string>();
+    for (const m of Object.values(detail)) for (const sb of m.subjects) if (sb.subject === subjectFilter) for (const tp2 of sb.topics) if (tp2.masteryPct != null || tp2.attempts > 0) seen.add(tp2.topicId);
+    return seen;
+  }, [detail, subjectFilter]);
+  const cols = useMemo(() => allCols.filter((c) => !c.topicId || (detailReady && scoredTopics.has(c.topicId))), [allCols, detailReady, scoredTopics]);
 
   const recomputeAll = async () => {
     setBusy(true);
