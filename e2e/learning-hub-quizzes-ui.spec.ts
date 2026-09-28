@@ -173,6 +173,11 @@ test.describe("tutor authors in the UI", () => {
     await page.getByRole("group", { name: "Filter by subject" }).getByRole("button", { name: subject }).click();
     await expect(cardWith(page, quizTitle, "Published", "5 questions")).toBeVisible({ timeout: 30_000 });
     await expect(cardWith(page, quizTitle, "Year 4")).toBeVisible();
+    // The four headline tiles (Published / Attempts / Average / To mark) sit above the list, each named with its number and hint.
+    const tiles = page.getByTestId("hub-stat-tiles");
+    await expect(tiles).toBeVisible();
+    for (const k of ["published", "attempts", "avg", "tomark"]) await expect(tiles.getByTestId(`hub-stat-${k}`)).toBeVisible();
+    await expect(tiles.getByTestId("hub-stat-published")).toHaveAttribute("aria-label", /^Published: [1-9]\d*\./);
     await ctx.close();
   });
 });

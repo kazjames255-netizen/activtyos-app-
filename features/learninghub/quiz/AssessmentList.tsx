@@ -17,6 +17,7 @@ import { effectivePolicy, policyLabel } from "../shared-assess/retake";
 import { LIFT, useGrow } from "../shared-assess/motion";
 import { CardGridSkeleton, Chip, display, EmptyState, FOCUS, HourglassIcon, Modal, Notice, TAP } from "../shared-assess/ui";
 import { AssessmentBuilder } from "./AssessmentBuilder";
+import { StatTiles, quizStatTiles } from "./StatTiles";
 import { kindMix, statsFor, type AssessStats } from "./assessStats";
 import { PlacementGuide } from "./PlacementGuide";
 import { useAssessmentPage, useNearEnd } from "./useAssessmentPage";
@@ -36,8 +37,8 @@ const CHIP = (on: boolean, subject = false) => `min-h-[44px] lg:min-h-[40px] fle
  *  SCALE: the library is server-paged (40 at a time, more on scroll or "Show more") and server-filtered — subject /
  *  topic from the sidebar, year group, a title search and published state — with the chip counts coming back as facets
  *  on every page. Nothing here ever holds the whole library. */
-export function AssessmentList({ p, type, attempts, onGoMarking }: {
-  p: PanelProps; type: AssessType; attempts: AttemptRow[] | null; onGoMarking?: () => void;
+export function AssessmentList({ p, type, attempts, onGoMarking, onGoResults }: {
+  p: PanelProps; type: AssessType; attempts: AttemptRow[] | null; onGoMarking?: () => void; onGoResults?: () => void;
 }) {
   const { t, tp } = useHubI18n();
   const [editing, setEditing] = useState<Assessment | "new" | null>(null);
@@ -166,12 +167,12 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
       {!p.topics.length && <Notice tone="info">{t(`hubfam.qzAlNeedTopic${Q}`)}</Notice>}
 
       {total > 0 && (
-        <dl className="m-0 grid grid-cols-2 divide-x divide-y divide-[var(--line)] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)] sm:grid-cols-4 sm:divide-y-0">
-          <Summary label={t("hubfam.qzAlPublished")} value={`${totals.published}`} sub={totals.drafts ? t("hubfam.qzAlSubDrafts", { n: totals.drafts }) : t("hubfam.qzAlNoDrafts")} />
-          <Summary label={t("hubfam.qzRsAttempts")} value={attempts ? `${totals.attempts}` : "–"} sub={t("hubfam.qzAlHandedIn")} />
-          <Summary label={diag ? t("hubfam.qzAlAvgStart") : t("hubfam.qzAlAvgScore")} value={totals.avg != null ? `${Math.round(totals.avg)}%` : "–"} sub={totals.avg != null ? t("hubfam.qzAlAcross") : t("hubfam.qzAlNothingMarked")} />
-          <Summary label={t("hubfam.qzRsToMark")} value={`${totals.toMark}`} sub={totals.toMark ? t("hubfam.qzAlWaiting") : t("hubfam.qzAlCaughtUp")} warn={totals.toMark > 0} onClick={totals.toMark && onGoMarking ? onGoMarking : undefined} />
-        </dl>
+        <StatTiles label={t("hubfam.qzAlPublished")} tiles={quizStatTiles({
+          publishedLabel: t("hubfam.qzAlPublished"), published: totals.published, publishedHint: totals.drafts ? t("hubfam.qzAlSubDrafts", { n: totals.drafts }) : t("hubfam.qzAlNoDrafts"),
+          attemptsLabel: t("hubfam.qzRsAttempts"), attempts: attempts ? totals.attempts : null, attemptsHint: t("hubfam.qzAlHandedIn"), onAttempts: onGoResults,
+          avgLabel: diag ? t("hubfam.qzAlAvgStart") : t("hubfam.qzAlAvgScore"), avg: totals.avg, avgHint: totals.avg != null ? t("hubfam.qzAlAcross") : t("hubfam.qzAlNothingMarked"),
+          toMarkLabel: t("hubfam.qzRsToMark"), toMark: totals.toMark, toMarkHint: totals.toMark ? t("hubfam.qzAlWaiting") : t("hubfam.qzAlCaughtUp"), onToMark: onGoMarking,
+        })} />
       )}
 
       {page.loading && !loaded && <CardGridSkeleton count={3} label={t("hubfam.qzLoadingShort")} />}
@@ -220,19 +221,6 @@ export function AssessmentList({ p, type, attempts, onGoMarking }: {
       )}
     </div>
   );
-}
-
-function Summary({ label, value, sub, warn, onClick }: { label: string; value: string; sub: string; warn?: boolean; onClick?: () => void }) {
-  const body = (
-    <>
-      <dt className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{label}</dt>
-      <dd className="m-0 mt-1 text-[24px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ ...display, color: warn ? "color-mix(in srgb, var(--gold) 38%, var(--ink))" : undefined }}>{value}</dd>
-      <div className="mt-1 text-[11.5px] font-semibold text-[var(--ink-3)]">{sub}{onClick ? <> <DirArrow /></> : ""}</div>
-    </>
-  );
-  return onClick
-    ? <button type="button" onClick={onClick} className={`px-4 py-3 text-start transition-colors hover:bg-[var(--gold-soft)] ${FOCUS}`}>{body}</button>
-    : <div className="px-4 py-3">{body}</div>;
 }
 
 /** Five 20-point score bands as tiny columns; bars at/above the pass mark are green, the rest amber. */

@@ -74,7 +74,7 @@ export function TutorAssess({ p, type }: { p: PanelProps; type: AssessType }) {
       </div>
       {err && dismissed !== err && <Notice onDismiss={() => setDismissed(err)}>{err}</Notice>}
 
-      {tab === "list" && <AssessmentList p={p} type={type} attempts={att.data ? ofType : null} onGoMarking={() => setTab("marking")} />}
+      {tab === "list" && <AssessmentList p={p} type={type} attempts={att.data ? ofType : null} onGoMarking={() => setTab("marking")} onGoResults={() => setTab("results")} />}
       {tab === "bank" && <QuestionBank p={p} />}
       {tab === "marking" && <MarkingQueue p={p} rows={waiting.data ? pending : null} assessments={assessments} loading={waiting.loading} reload={waiting.reload} />}
       {tab === "results" && <Results p={p} type={type as AssessType} rows={att.data} assessments={assessments} loading={att.loading} error={att.error} scope={scope} />}
