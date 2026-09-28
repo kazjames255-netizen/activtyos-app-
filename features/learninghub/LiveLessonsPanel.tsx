@@ -24,6 +24,7 @@ import { InPersonApp } from "./inperson/InPersonApp";
 import { listSessions, startScheduledSession, type IpSession } from "./inperson/api";
 import { InPersonRow } from "./live/InPersonRow";
 import { ScheduledInPersonRow } from "./live/ScheduledInPersonRow";
+import { IpEditDialog } from "./live/IpEditDialog";
 import { NewSessionChooser, type SessionHow, type SessionWhen } from "./live/NewSessionChooser";
 import { wantBoardFirst } from "./live/board/callObject";
 import { GroupViewChip, useGroupView } from "./groupKit";
@@ -75,6 +76,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
   const [formInPerson, setFormInPerson] = useState(false);
   // "new" = the in-person setup screen (a fresh session); an IpSession = resuming one still left open.
   const [ipOverlay, setIpOverlay] = useState<"new" | IpSession | null>(null);
+  const [ipEdit, setIpEdit] = useState<IpSession | null>(null);
   // In-person sessions are ordinary hubLessons rows under the hood (mode: "in_person" — server/src/routes/hub/inPersonApi.ts)
   // but GET /lessons hides them (no room to join); fetched separately so Past/"still open" can show real in-person history
   // alongside video lessons in the one list, honestly (tutor-only: the endpoint refuses a view-only role).
@@ -234,6 +236,8 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
     />
   );
 
+  const ipEditDialog = ipEdit && <IpEditDialog qs={qs} session={ipEdit} onClose={() => setIpEdit(null)} onSaved={() => { setIpEdit(null); load(); }} />;
+
   if (lessons === null) return <div className="grid gap-3" aria-busy="true" aria-label={t("hublive.aPanel_loading")}><StageSkeleton /></div>;
 
   // The New session chooser's answer routes to whichever existing flow already does the real work: LessonForm
@@ -309,7 +313,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
           {ipLive.length > 0 && (
             <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-ip-still-open">
               <Overline>{t("hublive.aIp_stillOpenTitle")}</Overline>
-              {ipLive.map((s) => { const ed = (lessons ?? []).find((l) => l.id === s.id); return <InPersonRow key={s.id} session={s} now={now} onResume={() => setIpOverlay(s)} onEdit={ed && canEdit && !readOnly ? () => setEditor(ed) : undefined} />; })}
+              {ipLive.map((s) => { const ed = (lessons ?? []).find((l) => l.id === s.id); return <InPersonRow key={s.id} session={s} now={now} onResume={() => setIpOverlay(s)} onEdit={canEdit && !readOnly ? () => (ed ? setEditor(ed) : setIpEdit(s)) : undefined} />; })}
             </div>
           )}
 
@@ -349,7 +353,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
                   tutorLabel={tutorOf(item.lesson)} attendees={attendeesOf(item.lesson)} busy={busyId === item.lesson.id}
                   onJoin={() => undefined} onEdit={() => undefined} onCancel={() => undefined} onReopen={canEdit && !readOnly ? () => void reopenAndJoin(item.lesson) : undefined} onEditNotes={() => setNotesFor(item.lesson.id)} />
               ) : (
-                <InPersonRow key={item.session.id} session={item.session} now={now} />
+                <InPersonRow key={item.session.id} session={item.session} now={now} onEdit={canEdit && !readOnly && item.session.status === "ended" ? () => setIpEdit(item.session) : undefined} />
               ))}
               {pastItems.length > pastN && <button type="button" data-action="show-more-past" onClick={() => setPastN((n) => n + 40)} className={`min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--brand)] hover:border-[var(--brand)] ${FOCUS}`}>{t("hublive.aPanel_showMore", { n: Math.min(40, pastItems.length - pastN), m: pastItems.length - pastN })}</button>}
             </div>
@@ -365,7 +369,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
           initialSession={ipOverlay !== "new" ? ipOverlay : undefined}
           onClose={() => { setIpOverlay(null); setPresetGroup(null); load(); }} />
       )}
-      {form}
+      {form}{ipEditDialog}
       {notesFor && (() => { const nl = (allLessons ?? []).find((x) => x.id === notesFor); return nl ? <LessonNotesDialog p={props} lesson={nl} onClose={() => setNotesFor(null)} /> : null; })()}
       <span className="sr-only" aria-live="polite">{busyId ? t("hublive.aPanel_working") : ""}</span>
     </div>

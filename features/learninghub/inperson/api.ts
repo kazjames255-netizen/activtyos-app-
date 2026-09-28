@@ -10,7 +10,7 @@ export interface IpWarm { childId: string; correct: number; total: number }
 export interface IpSession {
   id: string; title: string; status: "live" | "ended" | "cancelled"; startsAt: string; endedAt: string | null; tutorName: string;
   noteId: string | null; assessmentId: string | null; groupIds: string[]; childIds: string[];
-  attendance: Record<string, string>; students: IpStudent[]; warmup: IpWarm[];
+  attendance: Record<string, string>; students: IpStudent[]; warmup: IpWarm[]; notes?: string;
 }
 
 export interface IpAnswerRow { questionId: string; correct: boolean | null; marksAwarded: number; marksMax: number; pending: boolean }
@@ -48,3 +48,6 @@ export const submitClass = (qs: string, id: string, body: { assessmentId: string
   post<{ sessionId: string; assessmentId: string; results: IpResult[] }>(hubPath(qs, `${base}/${id}/submit`), body);
 export const endSession = (qs: string, id: string, warmup: IpWarm[]) => post<IpSession & { results: IpStored[] }>(hubPath(qs, `${base}/${id}/end`), warmup.length ? { warmup } : {});
 
+
+/** Rename a session or fix its notes (the server refuses anything else, and anyone but the tutor). */
+export const editSession = (qs: string, id: string, body: { title?: string; notes?: string }) => put<IpSession>(hubPath(qs, `${base}/${id}`), body);

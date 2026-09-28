@@ -28,6 +28,7 @@ import { eligibleStudents, lessonsCol, notesCol, submissionsCol } from "./teachi
 //   POST /in-person/sessions {childIds|groupIds, noteId?, assessmentId?, title?, key?}     → the session (attendance starts as "everyone chosen")
 //   GET  /in-person/sessions[?status=live]                                                  → recent sessions (a tutor resumes one)
 //   GET  /in-person/sessions/:id                                                            → session + every result recorded so far
+//   PUT  /in-person/sessions/:id {title?, notes?}                                           → rename / fix the notes (nothing else)
 //   PUT  /in-person/sessions/:id/attendance {present:{childId:bool}, add?:[childId]}        → who is here (add = a late arrival)
 //   GET  /in-person/sessions/:id/questions[?assessmentId=]                                  → the paper as ONE class sees it (shared shuffle) + the tutor's key
 //   POST /in-person/sessions/:id/submit {assessmentId, children:[{childId, answers}], override?, linkHomework?}
@@ -82,7 +83,7 @@ const sessionOut = (s: Session, names: Map<string, string>) => ({
   tutorName: s.tutorName, noteId: s.noteId ?? null, assessmentId: s.assessmentId ?? null, groupIds: s.groupIds ?? [],
   childIds: s.childIds, attendance: s.attendance ?? {},
   students: s.childIds.map((id) => ({ childId: id, childName: names.get(id) ?? "Student", present: !!s.attendance?.[id] })),
-  warmup: s.warmup ?? [],
+  warmup: s.warmup ?? [], notes: s.notes ?? "",
 });
 
 /** Every attempt recorded for a session, as result rows (no key). */
@@ -228,6 +229,29 @@ const attendBody = z.object({
   present: z.record(z.string().min(1).max(100), z.boolean()).default({}),
   /** A child who turned up late and wasn't in the picked set: added to the session (and marked present). */
   add: z.array(z.string().min(1).max(100)).max(CLASS_MAX).optional(),
+});
+
+// PUT /in-person/sessions/:id {title?, notes?} — rename a session or fix its notes, whether it is scheduled, running or over.
+// Only those two fields: the students, the time and the status have their own routes (strict: anything else is a 400).
+const editBody = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  notes: z.string().max(4000).optional(),
+}).strict().refine((b) => b.title !== undefined || b.notes !== undefined, { message: "Nothing to change" });
+hubInPersonApi.put("/in-person/sessions/:id", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const parsed = editBody.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const s = await sessionFor(ctx, req.params.id, res, true, true);
+  if (!s) return;
+  if (s.status === "cancelled") { res.status(409).json({ error: "This session was cancelled", code: "lesson_closed" }); return; }
+  const patch: Record<string, unknown> = { updatedAt: nowIso() };
+  if (parsed.data.title !== undefined) patch.title = parsed.data.title;
+  if (parsed.data.notes !== undefined) patch.notes = parsed.data.notes;
+  await lessonsCol.doc(s.id).update(patch);
+  pingHub(ctx.tenantId, "hubLessons");
+  const fresh = { id: s.id, ...((await lessonsCol.doc(s.id).get()).data() as SessionDoc) };
+  res.json(sessionOut(fresh, await namesOf(ctx, fresh.childIds)));
 });
 
 hubInPersonApi.put("/in-person/sessions/:id/attendance", async (req, res) => {
