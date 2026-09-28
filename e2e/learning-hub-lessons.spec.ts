@@ -113,7 +113,7 @@ async function openTutorLessons(page: Page) {
 }
 /** Find THIS run's lesson in the list (search is server-side) and open it. */
 async function openLesson(page: Page, title: string) {
-  await page.getByLabel("Search lessons").fill(title);
+  await page.getByPlaceholder(/Search (areas or )?lessons/).fill(title);
   const card = cardWith(page, title);
   await expect(card).toBeVisible({ timeout: 20_000 });
   await card.getByRole("button", { name: title, exact: true }).click();
@@ -174,12 +174,12 @@ test.describe("tutor: lessons list, preview", () => {
     await gotoHub(page, "/freelancer/learninghub");
     await expect(tabOf(page, /^Lessons/)).toBeVisible({ timeout: 30_000 });
     await openTab(page, /^Lessons/);
-    await expect(tabOf(page, /Live lessons/)).toBeVisible(); // the video tab stays distinct (a sibling sub-tab under Lessons)
+    await expect(page.locator('[role="tab"][data-sub="live"]')).toBeVisible(); // the video tab ("Let\'s Teach") stays distinct (a sibling sub-tab under Lessons)
     await expect(tabOf(page, /Notes & resources/)).toHaveCount(0);
     await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: /new lesson/i }).first()).toBeVisible();
 
-    await page.getByLabel("Search lessons").fill(L.title);
+    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(L.title);
     const card = cardWith(page, L.title);
     await expect(card).toBeVisible({ timeout: 20_000 });
     await expect(card).toContainText("Interactive"); // this run's lesson carries the structured field
@@ -187,8 +187,8 @@ test.describe("tutor: lessons list, preview", () => {
 
     const panel = page.getByTestId("lesson-tutor-panel");
     await expect(panel).toBeVisible();
-    await expect(panel).toContainText(`${L.points.length} ideas`);
-    await expect(panel).toContainText(`${L.warmup.length} warm-up`);
+    await expect(panel).toContainText(`Ideas: ${L.points.length}`);
+    await expect(panel).toContainText(`Warm-up questions: ${L.warmup.length}`);
     // Owner decision 2026-09-20: tutors no longer pick an "Interactive activity" — the picker is gone (a lesson that already
     // carries a widget still plays it; see the pupil tests below).
     await expect(page.getByTestId("lesson-widget-select")).toHaveCount(0);
@@ -384,7 +384,7 @@ test.describe("parent plays the lesson end to end", () => {
     const ctx = await ctxFor(browser, "parent");
     const page = await ctx.newPage();
     await openParentLessons(page);
-    await page.getByLabel("Search lessons").fill(plainTitle);
+    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(plainTitle);
     const card = cardWith(page, plainTitle);
     await expect(card).toBeVisible({ timeout: 20_000 });
     await expect(card).not.toContainText("Interactive");

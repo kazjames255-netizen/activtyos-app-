@@ -12,6 +12,7 @@ import { EmptyState, FOCUS, TAP } from "./shared-assess/ui";
 import { errMsg } from "./types";
 import { useFamily } from "./family/FamilyContext";
 import { GamesSummaryCard } from "./games/GamesSummaryCard";
+import { GamesPlayedPanel } from "./games/GamesPlayedPanel";
 import { PARENT_COPY } from "./family/parentCopy";
 import { useT } from "@/lib/i18n/provider";
 import { hubT } from "./family/hubT";
@@ -79,7 +80,8 @@ export function Panel(p: PanelProps) {
       {/* Penguin Slide play is family-only, but its fact-strength evidence is a tutor's business: this is the one
           place it was ever wired to render (games/penguin/TutorPanel.tsx was built but never mounted before). */}
       <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-        <PenguinTutorPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")} />
+        <GamesPlayedPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")}
+          detail={<PenguinTutorPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")} />} />
       </div>
     </div>
   );
