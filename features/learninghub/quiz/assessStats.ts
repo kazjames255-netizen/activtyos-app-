@@ -34,6 +34,6 @@ export function statsFor(a: Assessment, rows: AttemptRow[]): AssessStats {
 }
 
 /** "3 Multiple choice · 1 Written" — how an assessment's questions break down by kind (from the list row's `kindCounts`). */
-export function kindMix(a: Assessment, kinds: HubSettings["questionKinds"]): { label: string; n: number }[] {
-  return Object.entries(a.kindCounts ?? {}).map(([k, n]) => ({ label: kinds.find((x) => x.id === k)?.label ?? k, n })).sort((x, y) => y.n - x.n);
+export function kindMix(a: Assessment, kinds: HubSettings["questionKinds"], labelOf?: (id: string) => string): { label: string; n: number }[] {
+  return Object.entries(a.kindCounts ?? {}).map(([k, n]) => ({ label: labelOf ? labelOf(k) : kinds.find((x) => x.id === k)?.label ?? k, n })).sort((x, y) => y.n - x.n);
 }

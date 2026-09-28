@@ -13,6 +13,7 @@ import {
 import { forgetHub } from "../lib/hubCache";
 import { pingHub } from "../lib/hubPing";
 import { gzipJson } from "../lib/gzipJson";
+import { familyNoteRule } from "../lib/hubAccess";
 import { assessmentRows, childAssignedNoteIds, collate, noteIndex, patchNote, questionIndex, patchTopic, tenantRoster, tenantTopics, topicRank, type NoteRow } from "../lib/hubIndex";
 import { ageInYears, cleanVideos, inList, videosOut, yearGroupFromDob, type StoredVideo } from "../lib/hubRules";
 import { removeFromGroups } from "../lib/hubGroups";
@@ -23,8 +24,14 @@ import { planForFamily } from "../../../features/learninghub/lesson/plan";
 import { PIC_BY_ID } from "../oak/factory/art/library";
 import { cleanCanvasBlock, signCanvasSlides } from "../oak/canvasSchema";
 import { withSlideUrls } from "../lib/slideStorage";
+import { copyWorksheetObject, hasWorksheetObject, signWorksheet, type WorksheetFile } from "../lib/worksheetStorage";
 import { hubAssessmentsApi } from "./hub/assessmentsApi";
 import { hubTeachingApi } from "./hub/teachingApi";
+import { hubDigestApi } from "./hub/digestApi";
+import { hubGamesApi } from "./hub/gamesApi";
+import { hubAppliedGamesApi } from "./hub/appliedGamesApi";
+import { hubQuizArcadeApi } from "./hub/quizArcadeApi";
+import { makeHubBootstrapApi } from "./hub/bootstrapApi";
 import { cleanSupport, isDefaultSupport, type SupportProfile } from "../../../features/learninghub/support";
 import { hubTutorsApi, resolveTutor } from "./hub/tutorsApi";
 
@@ -468,6 +475,10 @@ interface NoteDoc {
   kind?: "board";
   /** Structured interactive lesson (Oak import / lesson player) — see docs/learning-hub.md "Lessons". Absent = a plain markdown note. */
   lesson?: Record<string, unknown> | null;
+  /** Pointer to the lesson's Oak worksheet PDF in Firebase Storage (oak/worksheetBulk.ts; lib/worksheetStorage.ts). Distinct from `lesson.worksheet` (the interactive quiz). */
+  worksheetFile?: WorksheetFile | null;
+  /** The auto-marked quiz built from the worksheet (oak/worksheetQuiz.ts). */
+  worksheetQuizId?: string | null;
   createdBy: string;
   createdByName: string;
   createdAt: string;
@@ -546,6 +557,8 @@ function noteOut(req: Request, id: string, n: NoteDoc, canEdit = true) {
     attachments: (n.attachments ?? []).map((a) => ({ ...a, url: signImageUrl(`${base}/${a.id}`) as string })),
     videos: videosOut(n.videos),
     ...(n.lesson && typeof n.lesson === "object" ? { lesson: lessonOut(n.lesson, canEdit, base) } : {}),
+    ...(n.worksheetFile ? { worksheetFile: { name: n.worksheetFile.name, size: n.worksheetFile.size, ...(n.worksheetFile.pages ? { pages: n.worksheetFile.pages } : {}) } } : {}),
+    ...(n.worksheetQuizId ? { worksheetQuizId: n.worksheetQuizId } : {}),
     createdByName: n.createdByName || "Your tutor", createdAt: n.createdAt, updatedAt: n.updatedAt,
   };
 }
@@ -564,7 +577,7 @@ async function noteOutA(req: Request, id: string, n: NoteDoc, canEdit = true) {
 function noteListOut(req: Request, n: NoteRow) {
   const base = `${req.protocol}://${req.get("host")}/api/images`;
   return {
-    id: n.id, topicId: n.topicId, title: n.title, excerpt: n.excerpt, hasBody: n.hasBody, readMinutes: n.readMinutes, published: n.published, franchiseId: n.franchiseId, ...(n.kind === "board" ? { kind: "board" as const } : {}), ...(n.isLesson ? { isLesson: true, lessonWidget: n.lessonWidget, lessonYear: n.lessonYear } : {}),
+    id: n.id, topicId: n.topicId, title: n.title, excerpt: n.excerpt, hasBody: n.hasBody, readMinutes: n.readMinutes, published: n.published, franchiseId: n.franchiseId, ...(n.kind === "board" ? { kind: "board" as const } : {}), ...(n.isLesson ? { isLesson: true, lessonWidget: n.lessonWidget, lessonYear: n.lessonYear } : {}), ...(n.hasWorksheet ? { hasWorksheet: true, ...(n.worksheetQuizId ? { worksheetQuizId: n.worksheetQuizId } : {}) } : {}),
     attachments: n.attachments.map((a) => ({ ...a, url: signImageUrl(`${base}/${a.id}`) as string })),
     videos: videosOut(n.videos as StoredVideo[] | undefined),
     createdByName: n.createdByName, createdAt: n.createdAt, updatedAt: n.updatedAt,
@@ -586,13 +599,10 @@ const intParam = (v: unknown, dflt: number, max: number) => { const n = Number(v
 // `assignedChildIds`), never the tutor's whole library. Union across every child in scope (usually one; a
 // multi-child family with no `?childId=` sees the union, same as `scopedChildren` does everywhere else in the
 // hub). `null` (not a family caller — a tutor) means "no restriction", vs. an empty Set meaning "assigned nothing".
-async function familyAssignedNoteIds(ctx: HubCtx): Promise<Set<string> | null> {
-  if (ctx.canEdit) return null;
-  const kids = scopedChildren(ctx);
-  if (!kids.length) return new Set();
-  const sets = await Promise.all(kids.map((c) => childAssignedNoteIds(ctx.tenantId, c.childId)));
-  return sets.length === 1 ? sets[0]! : new Set(sets.flatMap((s) => [...s]));
-}
+// The provider's `lessonAccess` setting (Setup) widens this: "assigned" (the default — a tenant that never set it lands
+// here, lib/hubRules.ts's mergeHub) only what was set, "year" also their child's year group, "all" lets a family open
+// every published lesson — see lib/hubAccess.ts.
+const familyAssignedNoteIds = familyNoteRule;
 
 learningHub.get("/notes", async (req, res) => {
   const ctx = await resolveCtx(req, res);
@@ -615,12 +625,14 @@ learningHub.get("/notes", async (req, res) => {
   const yearTopics = yearSet ? new Set(topics.filter((t) => t.subtopic && yearNs.some((y) => new RegExp(`^year\\s*${y}$`, "i").test(t.subtopic!.trim()))).map((t) => t.id)) : null;
   // `?lessons=1`: interactive lessons only (so a page of 40 is 40 lessons, not whatever plain notes sort among them).
   const onlyLessons = req.query.lessons === "1";
+  const onlyWorksheets = req.query.worksheet === "1"; // additive: only lessons that carry an Oak worksheet PDF
   const index = await noteIndex(ctx.tenantId);
   const assigned = await familyAssignedNoteIds(ctx);
   const rows: NoteRow[] = [];
   for (const n of index.values()) {
-    if (!allowed.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned.has(n.id))) continue;
+    if (!allowed.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned(n))) continue;
     if (onlyLessons && !n.isLesson) continue;
+    if (onlyWorksheets && !n.hasWorksheet) continue;
     if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     if (pub !== null && ctx.canEdit && n.published !== pub) continue;
     if (ids && !ids.has(n.id)) continue;
@@ -650,6 +662,26 @@ learningHub.get("/notes", async (req, res) => {
   res.json({ items: out, total: rows.length, nextCursor: next < rows.length ? String(next) : null });
 });
 
+// POST /notes/index-refresh — tell THIS API process that notes were written behind its back (oak/worksheetBulk.ts, the worksheet-quiz
+// converter: they use the Admin SDK, so the cached notes index never sees `worksheetFile` / `worksheetQuizId`). Tutors of the tenant.
+// {ids:[…≤500]} → those notes are re-read and patched into the index in place (no rebuild). No ids → the tenant's notes index AND its
+// disk snapshot are dropped (one full rebuild on the next read). Body {} is safe to call any time.
+learningHub.post("/notes/index-refresh", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const ids: unknown = (req.body as { ids?: unknown } | undefined)?.ids;
+  if (Array.isArray(ids) && ids.length) {
+    const want = [...new Set(ids.filter((x): x is string => typeof x === "string" && okId(x)))].slice(0, 500);
+    const snaps = want.length ? await db.getAll(...want.map((id) => notesCol.doc(id))) : [];
+    let n = 0;
+    for (const sn of snaps) if (sn.exists && sn.get("tenantId") === ctx.tenantId) { patchNote(ctx.tenantId, sn.id, sn.data() as never); n++; }
+    res.json({ ok: true, patched: n });
+    return;
+  }
+  forgetHub(ctx.tenantId, "notes");
+  res.json({ ok: true, rebuilt: true });
+});
+
 // GET /notes/counts — per-topic and per-subject note counts (+ totals the hub header shows) without listing a
 // single note: the sidebar and hero stats need numbers, not 450 cards. Same visibility rules as GET /notes.
 learningHub.get("/notes/counts", async (req, res) => {
@@ -667,9 +699,21 @@ learningHub.get("/notes/counts", async (req, res) => {
   // P-02: real lessons only (interactive or Oak lessons, not whiteboard snapshots or bare notes), and the topics holding one,
   // so the hub header can say how many subjects actually have lessons. Additive: every existing field is unchanged.
   const lessonTopics = new Set<string>();
+  // Additive: notes that carry a worksheet, per school year and per subject (the worksheet picker's chip counts; ignores the year filter above).
+  const topicById = new Map(topics.map((t) => [t.id, t] as const));
+  const worksheetsByYear: Record<string, number> = {}, worksheetsBySubject: Record<string, number> = {};
+  let worksheets = 0;
   const assigned = await familyAssignedNoteIds(ctx);
   for (const n of (await noteIndex(ctx.tenantId)).values()) {
-    if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned.has(n.id))) continue;
+    if (!visible.has(n.topicId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && !n.published) || (assigned && !assigned(n))) continue;
+    if (n.hasWorksheet) {
+      const tp = topicById.get(n.topicId);
+      const ym = /^year\s*(\d{1,2})$/i.exec((tp?.subtopic ?? "").trim());
+      const yr = n.lessonYear ?? (ym ? Number(ym[1]) : null);
+      worksheets++;
+      if (yr != null) worksheetsByYear[String(yr)] = (worksheetsByYear[String(yr)] ?? 0) + 1;
+      if (tp?.subject) worksheetsBySubject[tp.subject] = (worksheetsBySubject[tp.subject] ?? 0) + 1;
+    }
     if (yearSet && !(n.lessonYear != null && yearSet.has(n.lessonYear)) && !yearTopics!.has(n.topicId)) continue;
     byTopic[n.topicId] = (byTopic[n.topicId] ?? 0) + 1;
     total++; files += n.attachments.length;
@@ -678,7 +722,7 @@ learningHub.get("/notes/counts", async (req, res) => {
     if ((n.isLesson || n.oakKey) && n.kind !== "board") { lessons++; lessonTopics.add(n.topicId); }
   }
   res.set("Cache-Control", "private, no-cache").vary("Authorization");
-  res.json({ total, drafts, files, fresh, byTopic, lessons, lessonTopicIds: [...lessonTopics] });
+  res.json({ total, drafts, files, fresh, byTopic, lessons, lessonTopicIds: [...lessonTopics], worksheets, worksheetsByYear, worksheetsBySubject });
 });
 
 /** A family may open a note their child never got as homework while a tutor is actively live-driving THAT note at
@@ -704,10 +748,39 @@ learningHub.get("/notes/:id", async (req, res) => {
   const n = snap.exists ? (snap.data() as NoteDoc) : null;
   if (!n || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Lesson not found" }); return; }
   const assigned = await familyAssignedNoteIds(ctx);
-  if (assigned && !assigned.has(snap.id) && !(await liveRemoteSyncCoversNote(ctx, snap.id))) { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (assigned && !assigned((await noteIndex(ctx.tenantId)).get(snap.id) ?? ({ id: snap.id, lessonYear: null } as NoteRow)) && !(await liveRemoteSyncCoversNote(ctx, snap.id))) { res.status(404).json({ error: "Lesson not found" }); return; }
   const topic = (await visibleTopics(ctx)).find((t) => t.id === n.topicId);
   if (!topic) { res.status(404).json({ error: "Lesson not found" }); return; }
   res.json(await noteOutA(req, snap.id, n, ctx.canEdit));
+});
+
+// GET /notes/:id/worksheet — the lesson's Oak worksheet PDF as a short-lived (15 min) signed URL: {url, name, size, pages?, quizId?}.
+// Tutors: any note they can read (canReadContent/canSee, drafts included). A family: ONLY when the note is named in a homework
+// assigned to THEIR child (`worksheetNoteIds` or `noteIds`) and published — the tutor's other worksheets stay 404. The storage
+// path comes from the note's own tenantId + id, never from the client.
+learningHub.get("/notes/:id/worksheet", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx) return;
+  const id = req.params.id;
+  if (!okId(id)) { res.status(404).json({ error: "Worksheet not found" }); return; }
+  const snap = await notesCol.doc(id).get();
+  const n = snap.exists ? (snap.data() as NoteDoc) : null;
+  const wf = n?.worksheetFile;
+  if (!n || !wf || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Worksheet not found" }); return; }
+  if (!ctx.canEdit) {
+    const kids = scopedChildren(ctx).map((c) => c.childId);
+    let ok = false;
+    if (kids.length) {
+      const hw = await Promise.all(kids.map((k) => db.collection("hubHomework").where("assignedChildIds", "array-contains", k).select("tenantId", "noteIds", "worksheetNoteIds").get()));
+      ok = hw.some((q) => q.docs.some((d) => d.get("tenantId") === ctx.tenantId && (((d.get("worksheetNoteIds") as string[] | undefined) ?? []).includes(id) || ((d.get("noteIds") as string[] | undefined) ?? []).includes(id))));
+    }
+    if (!ok) { res.status(404).json({ error: "Worksheet not found" }); return; }
+  }
+  if (!(await hasWorksheetObject(n.tenantId, id).catch(() => false))) { res.status(404).json({ error: "Worksheet not found" }); return; }
+  const url = await signWorksheet(n.tenantId, id, wf.name).catch(() => null);
+  if (!url) { res.status(404).json({ error: "Worksheet not found" }); return; }
+  res.set("Cache-Control", "private, no-store");
+  res.json({ url, name: wf.name, size: wf.size, ...(wf.pages ? { pages: wf.pages } : {}), ...(n.worksheetQuizId ? { quizId: n.worksheetQuizId } : {}) });
 });
 
 // GET /notes/:id/homework-pack — READY-MADE homework for a lesson (tutors). A pure function of the lesson's own data
@@ -929,6 +1002,12 @@ learningHub.put("/notes/:id", async (req, res) => {
   const now = new Date().toISOString();
   const forked: NoteDoc = { ...before, ...patch, tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, createdBy: ctx.uid, createdByName: ctx.name, createdAt: now };
   const ref = notesCol.doc();
+  // The worksheet PDF lives at a path derived from the note's OWN tenant + id, so the fork must bring its own copy —
+  // otherwise it would point at an object that doesn't exist (and quiz link to another tenant's assessment).
+  if (before.worksheetFile) {
+    if (await copyWorksheetObject(before.tenantId, snap.id, ctx.tenantId, ref.id)) { /* pointer stays valid */ }
+    else { delete forked.worksheetFile; delete forked.worksheetQuizId; }
+  }
   await ref.set(forked);
   patchNote(ctx.tenantId, ref.id, forked); pingHub(ctx.tenantId, "hubNotes");
   res.json({ ...(await noteOutA(req, ref.id, forked)), forked: true });
@@ -1069,3 +1148,8 @@ learningHub.use(hubGroupsApi);      // student groups (quick actions)
 learningHub.use(hubTutorsApi);      // who can teach (per-tutor scoping)
 learningHub.use(hubAssessmentsApi); // config, questions, assessments, attempts, mastery
 learningHub.use(hubTeachingApi);    // homework, flashcards, live lessons
+learningHub.use(hubDigestApi);      // parent digest / homework-nudge preview + dry run
+learningHub.use(hubGamesApi);       // games (Penguin Slide): sessions re-simulated from seed + input log
+learningHub.use(hubAppliedGamesApi); // games (Market Day / Bake Off Blitz / Rhythm Reef): typed-answer forms re-marked from a stored seed
+learningHub.use(hubQuizArcadeApi);  // games: Prime Reef / Data Carnival / Shape Workshop (server-marked plan-of-items)
+learningHub.use(makeHubBootstrapApi(learningHub)); // GET /bootstrap: many hub reads in one round trip (first paint)

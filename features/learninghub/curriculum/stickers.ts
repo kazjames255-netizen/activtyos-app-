@@ -1,17 +1,21 @@
 // Sticker-book wording and pictures for the CHILD view (KS1/KS2). Kind words only: no percentages, no "overdue", no "gap".
-export const STICKER_COPY = {
-  title: (name: string, year: number) => `${name}’s Year ${year} sticker book`,
-  titleNoName: (year: number) => `My Year ${year} sticker book`,
-  intro: "Finish a lesson to win a sticker.",
-  got: "Got it!",
-  next: "Next up",
-  stars: (n: number) => `${n} out of 5 stars`,
-  empty: "Your stickers will show up here soon.",
-  teenTitle: "My progress by topic",
-  teenDone: "Done",
-  teenNotYet: "Not started",
-  lessons: (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`,
-} as const;
+export type Tr = (key: string, vars?: Record<string, string | number>) => string;
+/** The sticker book's kind wording, in the active language (pass `t` from useT()). */
+export const stickerCopy = (t: Tr) => ({
+  // `allYears`: this family's lesson access isn't limited to the child's own year (Setup → Teaching Hub
+  // "Lessons students can open" = every lesson / by year), so naming ONE year in the title would be wrong —
+  // say "all year groups" instead of guessing which year is on show.
+  title: (name: string, year: number, allYears?: boolean) => allYears ? t("hublessons.scTitleAllYears", { name }) : t("hublessons.scTitle", { name, year }),
+  titleNoName: (year: number, allYears?: boolean) => allYears ? t("hublessons.scTitleAllYearsNoName") : t("hublessons.scTitleNoName", { year }),
+  intro: t("hublessons.scIntro"),
+  got: t("hublessons.scGot"),
+  next: t("hublessons.scNext"),
+  stars: (n: number) => t("hublessons.scStars", { n }),
+  empty: t("hublessons.scEmpty"),
+  teenTitle: t("hublessons.scTeenTitle"),
+  teenDone: t("hublessons.stepDone"),
+  teenNotYet: t("hublessons.scTeenNotYet"),
+});
 
 const EMOJI: [RegExp, string][] = [
   [/fraction|decimal|percent/i, "🍕"], [/place value|counting|number and/i, "🔢"], [/addition|subtraction|add\b/i, "➕"], [/multipl|division|times/i, "✖️"],

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { get } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import type { HubSettings } from "@/lib/hubConfig";
 import { Icon } from "../kit";
 import { LessonPlayer, type InPersonSlots } from "../lesson/LessonPlayer";
@@ -27,21 +28,24 @@ export interface InPersonProps {
   qs: string; config: HubSettings; preset?: InPersonPreset;
   /** Jump to another hub tab (the Homework form for a follow-up). */
   goTo?: (key: "homework") => void;
+  /** The merged Lessons area's "Resume" on a session still left open: skip Setup and go straight into it. */
+  initialSession?: IpSession;
   onClose: () => void;
 }
 
-export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPersonProps) {
+export function InPersonApp({ qs, config, preset = {}, goTo, initialSession, onClose }: InPersonProps) {
+  const t = useT();
   const [students, setStudents] = useState<Student[] | null>(null);
   const [groups, setGroups] = useState<HubGroup[]>([]);
   const [live, setLive] = useState<IpSession[]>([]);
-  const [session, setSession] = useState<IpSession | null>(null);
+  const [session, setSession] = useState<IpSession | null>(initialSession ?? null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const key = useRef(newKey());
 
   useEffect(() => {
     let alive = true;
-    get<Student[]>(`/api/learning-hub/students${qs}`).then((r) => { if (alive) setStudents(Array.isArray(r) ? r : []); }).catch((e) => { if (alive) { setStudents([]); setErr(errMsg(e, "Couldn't load your students")); } });
+    get<Student[]>(`/api/learning-hub/students${qs}`).then((r) => { if (alive) setStudents(Array.isArray(r) ? r : []); }).catch((e) => { if (alive) { setStudents([]); setErr(errMsg(e, t("hublive.cLoadStudentsFail"))); } });
     get<HubGroup[]>(`/api/learning-hub/groups${qs}`).then((r) => { if (alive) setGroups(Array.isArray(r) ? r : []); }).catch(() => undefined);
     listLiveSessions(qs).then((r) => { if (alive) setLive(Array.isArray(r) ? r : []); }).catch(() => undefined);
     return () => { alive = false; };
@@ -53,13 +57,13 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
       const s = await createSession(qs, { childIds: c.childIds, groupIds: c.groupIds.length ? c.groupIds : undefined, noteId: c.noteId, assessmentId: c.assessmentId, title: c.title, key: key.current });
       key.current = newKey();
       setSession(s);
-    } catch (e) { setErr(errMsg(e, "Couldn't start the session")); }
+    } catch (e) { setErr(errMsg(e, t("hublive.cStartFail"))); }
     finally { setBusy(false); }
   };
 
   return (
     <FullscreenPortal>
-      <div className="fixed inset-0 z-[300] overflow-y-auto overscroll-contain bg-[var(--bg)] text-[var(--ink)]" role="dialog" aria-modal="true" aria-label="Teach in person" data-testid="inperson-app">
+      <div className="fixed inset-0 z-[300] overflow-y-auto overscroll-contain bg-[var(--bg)] text-[var(--ink)]" role="dialog" aria-modal="true" aria-label={t("hublive.cTeachInPerson")} data-testid="inperson-app">
         <LessonStyles />
         {session ? (
           <SessionRunner key={session.id} qs={qs} config={config} initial={session} roster={students ?? []} goTo={goTo} onClose={onClose} />
@@ -70,10 +74,10 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
               <div role="status" aria-live="polite" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="m-0 text-[18px] font-extrabold text-[var(--ink)]">Teach in person</h2>
-                    <p className="m-0 mt-1 text-[13px] text-[var(--ink-2)]">Loading your students…</p>
+                    <h2 className="m-0 text-[18px] font-extrabold text-[var(--ink)]">{t("hublive.cTeachInPerson")}</h2>
+                    <p className="m-0 mt-1 text-[13px] text-[var(--ink-2)]">{t("hublive.cLoadingStudentsDots")}</p>
                   </div>
-                  <button type="button" onClick={onClose} className={`min-h-[44px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:border-[var(--ink-3)] ${FOCUS}`}>Cancel</button>
+                  <button type="button" onClick={onClose} className={`min-h-[44px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] hover:border-[var(--ink-3)] ${FOCUS}`}>{t("hublive.cCancel")}</button>
                 </div>
                 <div className="mt-4 h-28 animate-pulse rounded-xl bg-[var(--panel)]" />
               </div>
@@ -91,6 +95,7 @@ export function InPersonApp({ qs, config, preset = {}, goTo, onClose }: InPerson
  *  session) + results. Exported so a tutor's own lesson PREVIEW (NotesPanel.tsx) can swap into the SAME component
  *  inline once a session is created there via GoLivePicker, instead of mounting a separate full-screen app. */
 export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { qs: string; config: HubSettings; initial: IpSession; roster: Student[]; goTo?: (key: "homework") => void; onClose: () => void }) {
+  const t = useT();
   const store = useClassState(initial.id);
   const [sess, setSess] = useState<IpSession>(initial);
   const [note, setNote] = useState<Note | null>(null);
@@ -106,8 +111,8 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
   useEffect(() => {
     if (!initial.noteId) return;
     let alive = true;
-    get<Note>(`/api/learning-hub/notes/${initial.noteId}${qs}`).then((n) => { if (alive) { if (n.lesson) setNote(n); else setNoteErr("That lesson isn't interactive, so it can't be run in person. Pick a quiz instead."); } })
-      .catch((e) => { if (alive) setNoteErr(errMsg(e, "Couldn't open that lesson")); });
+    get<Note>(`/api/learning-hub/notes/${initial.noteId}${qs}`).then((n) => { if (alive) { if (n.lesson) setNote(n); else setNoteErr(t("hublive.cNotInteractive")); } })
+      .catch((e) => { if (alive) setNoteErr(errMsg(e, t("hublive.cOpenLessonFail"))); });
     return () => { alive = false; };
   }, [initial.noteId, qs]);
 
@@ -128,17 +133,17 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
       });
       store.setResults(r.results);
       return true;
-    } catch (e) { setErr(errMsg(e, "Couldn't record the results — nothing was lost, try again")); return false; }
-  }, [qs, initial.id, initial.noteId, initial.assessmentId, quiz?.id, store]);
+    } catch (e) { setErr(errMsg(e, t("hublive.cRecordFail"))); return false; }
+  }, [qs, initial.id, initial.noteId, initial.assessmentId, quiz?.id, store, t]);
 
   const toggleHere = async (childId: string, here: boolean) => {
     setErr(null);
-    try { setSess(await setAttendance(qs, initial.id, { [childId]: here })); } catch (e) { setErr(errMsg(e, "Couldn't update who is here")); }
+    try { setSess(await setAttendance(qs, initial.id, { [childId]: here })); } catch (e) { setErr(errMsg(e, t("hublive.cAttendFail"))); }
   };
   const addChildren = async (ids: string[]) => {
     if (!ids.length) return;
     setErr(null);
-    try { setSess(await setAttendance(qs, initial.id, {}, ids)); } catch (e) { setErr(errMsg(e, "Couldn't add them")); }
+    try { setSess(await setAttendance(qs, initial.id, {}, ids)); } catch (e) { setErr(errMsg(e, t("hublive.cAddFail"))); }
   };
 
   const finish = async (after?: () => void) => {
@@ -148,13 +153,13 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
       store.clear();
       after?.();
       onClose();
-    } catch (e) { setErr(errMsg(e, "Couldn't finish the session")); setFinishing(false); }
+    } catch (e) { setErr(errMsg(e, t("hublive.cFinishFail"))); setFinishing(false); }
   };
   const followUp = goTo ? (childIds: string[]) => {
     void finish(() => {
       setHubIntent({
         kind: "homework", groupId: "", assessmentId: assessmentId ?? undefined, noteIds: initial.noteId ? [initial.noteId] : undefined, childIds,
-        title: `Follow-up: ${initial.title}`, instructions: `A little more practice after our lesson together on “${initial.title}”.`,
+        title: t("hublive.cFollowUpTitle", { title: initial.title }), instructions: t("hublive.cFollowUpInstr", { title: initial.title }),
       });
       goTo("homework");
     });
@@ -167,8 +172,8 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
 
   const slots: InPersonSlots = {
     banner: (
-      <div role="note" data-testid="ip-banner" className="mb-3 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">
-        In-person lesson with {present.length} {present.length === 1 ? "child" : "children"}. Teach from here; you&apos;ll tap in each child&apos;s answers at the quiz and they&apos;re recorded for their parents.
+      <div role="note" data-testid="ip-banner" className="mb-3 rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--brand-2)] bg-[var(--panel)] px-3.5 py-2.5 text-[13px] font-semibold text-[var(--ink)]">
+        {t("hublive.cBanner", { n: present.length })}
       </div>
     ),
     quiz: ({ quiz: qz, onFinish, onBack }) => (
@@ -183,21 +188,21 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
   return (
     <div className="mx-auto w-full max-w-[900px] p-3 sm:p-6" data-testid="inperson-run" data-session={initial.id}>
       <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 shadow-[var(--shadow-sm)]">
-        <button type="button" onClick={() => setLeave(true)} aria-label="Leave the class session" data-testid="ip-leave" className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
+        <button type="button" onClick={() => setLeave(true)} aria-label={t("hublive.cLeaveAria")} data-testid="ip-leave" className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand)]">In-person</div>
+          <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--brand)]">{t("hublive.cInPerson")}</div>
           <div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{sess.title}</div>
         </div>
-        <Switch on={hideNames} onChange={setHideNames} label="Hide names" />
+        <Switch on={hideNames} onChange={setHideNames} label={t("hublive.cHideNames")} />
         <button type="button" onClick={() => setWho(true)} data-testid="ip-who-btn" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 text-[13px] font-extrabold text-[var(--ink)] hover:border-[var(--brand-2)] ${FOCUS}`}>
-          <Icon name="users" size={16} />{present.length} of {sess.students.length} here
+          <Icon name="users" size={16} />{t("hublive.cHereCount", { n: present.length, total: sess.students.length })}
         </button>
       </div>
       {err && <p role="alert" className="mb-3 rounded-xl bg-[var(--red-soft)] px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--red)]" data-testid="ip-error">{err}</p>}
 
       {initial.noteId ? (
         noteErr ? <p role="alert" className="rounded-xl bg-[var(--red-soft)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--red)]">{noteErr}</p>
-        : !note ? <div role="status" aria-label="Loading the lesson" className="h-40 animate-pulse rounded-2xl bg-[var(--panel)]" />
+        : !note ? <div role="status" aria-label={t("hublive.cLoadingLesson")} className="h-40 animate-pulse rounded-2xl bg-[var(--panel)]" />
         : <LessonPlayer note={{ id: note.id, title: note.title, lesson: note.lesson }} qs={qs} childQs={qs} childId={null} config={config} readOnly inPerson={slots} onExit={() => setLeave(true)} />
       ) : !initial.assessmentId ? (
         results
@@ -208,14 +213,14 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
       )}
 
       {leave && (
-        <Dialog title="Leave the class session?" onClose={() => setLeave(false)}
-          footer={<><Btn tone="ghost" onClick={() => setLeave(false)}>Stay</Btn><Btn onClick={onClose} data-testid="ip-leave-confirm">Leave for now</Btn></>}>
-          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">Your taps are saved on this device and the session stays open. Choose <b className="text-[var(--ink)]">Teach in person</b> again to resume it. Answers you haven&apos;t marked yet aren&apos;t recorded for the children.</p>
+        <Dialog title={t("hublive.cLeaveTitle")} onClose={() => setLeave(false)}
+          footer={<><Btn tone="ghost" onClick={() => setLeave(false)}>{t("hublive.cStay")}</Btn><Btn onClick={onClose} data-testid="ip-leave-confirm">{t("hublive.cLeaveNow")}</Btn></>}>
+          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{t("hublive.cLeaveBody")}</p>
         </Dialog>
       )}
       {who && (
-        <Dialog title="Who's here?" subtitle="Untick anyone who isn't. Only children marked here are in the quiz." onClose={() => setWho(false)} footer={<Btn onClick={() => setWho(false)}>Done</Btn>}>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Attendance">
+        <Dialog title={t("hublive.cWhoHere")} subtitle={t("hublive.cWhoSub")} onClose={() => setWho(false)} footer={<Btn onClick={() => setWho(false)}>{t("hublive.cDone")}</Btn>}>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("hublive.cAttendance")}>
             {sess.students.map((s) => (
               <button key={s.childId} type="button" aria-pressed={s.present} onClick={() => void toggleHere(s.childId, !s.present)}
                 className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-2 px-3.5 text-[13.5px] font-extrabold ${FOCUS} ${s.present ? "border-[var(--green)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] line-through"}`}>
@@ -225,7 +230,7 @@ export function SessionRunner({ qs, config, initial, roster, goTo, onClose }: { 
           </div>
           {roster.filter((r) => r.active !== false && !sess.childIds.includes(r.childId)).length > 0 && (
             <div className="mt-4">
-              <div className="mb-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Someone else turned up?</div>
+              <div className="mb-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("hublive.cSomeoneElse")}</div>
               <AddChildren roster={roster.filter((r) => r.active !== false && !sess.childIds.includes(r.childId))} onAdd={addChildren} />
             </div>
           )}
@@ -242,11 +247,12 @@ function QuizSlot({ quiz, onSeen, children }: { quiz: { id: string; title: strin
 }
 
 function AddChildren({ roster, onAdd }: { roster: Student[]; onAdd: (ids: string[]) => void }) {
+  const t = useT();
   const [ids, setIds] = useState<string[]>([]);
   return (
     <div>
       <StudentPicker students={roster} value={ids} onChange={setIds} idPrefix="ip-add" />
-      <div className="mt-2"><Btn tone="ghost" disabled={!ids.length} onClick={() => { onAdd(ids); setIds([]); }} data-testid="ip-add-btn">Add {ids.length || ""} to this session</Btn></div>
+      <div className="mt-2"><Btn tone="ghost" disabled={!ids.length} onClick={() => { onAdd(ids); setIds([]); }} data-testid="ip-add-btn">{ids.length ? t("hublive.cAddN", { n: ids.length }) : t("hublive.cAddNone")}</Btn></div>
     </div>
   );
 }

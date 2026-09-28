@@ -1,4 +1,5 @@
 // Equation balancer logic (plan S-05). Pure: no React, no DOM.
+import { say, type Tr } from "../tr";
 
 export type Counts = Record<string, number>;
 export interface Equation { left: string[]; right: string[] }
@@ -168,13 +169,13 @@ const ELEMENT_NAMES: Record<string, string> = { H: "Hydrogen", O: "Oxygen", C: "
 export const elementName = (el: string): string => ELEMENT_NAMES[el] ?? el;
 
 /** Pure checker (reusable for server marking). Never reveals numbers. */
-export function equationChecker(e: Equation | string, coeffs: number[]): EquationCheck {
+export function equationChecker(e: Equation | string, coeffs: number[], tr?: Tr): EquationCheck {
   const eq = eqOf(e);
   if (coeffs.length !== eq.left.length + eq.right.length || !coeffs.every((c) => Number.isInteger(c) && c >= 1))
-    return { ok: false, unbalanced: [], message: "Every substance needs a whole-number coefficient of 1 or more." };
+    return { ok: false, unbalanced: [], message: say(tr, "sc_eq_m_whole", "Every substance needs a whole-number coefficient of 1 or more.") };
   const bad = unbalancedElements(eq, coeffs);
-  if (bad.length) return { ok: false, unbalanced: bad, message: `${elementName(bad[0]!)} isn't balanced yet.` };
+  if (bad.length) return { ok: false, unbalanced: bad, message: say(tr, "sc_eq_m_unbal", "{el} isn't balanced yet.", { el: elementName(bad[0]!) }) };
   const sol = solveBalance(eq);
-  if (sol && sol.some((v, i) => v !== coeffs[i])) return { ok: false, unbalanced: [], message: "The atoms match, but can you use smaller whole numbers?" };
-  return { ok: true, unbalanced: [], message: "Balanced. Every atom is accounted for." };
+  if (sol && sol.some((v, i) => v !== coeffs[i])) return { ok: false, unbalanced: [], message: say(tr, "sc_eq_m_smaller", "The atoms match, but can you use smaller whole numbers?") };
+  return { ok: true, unbalanced: [], message: say(tr, "sc_eq_m_ok", "Balanced. Every atom is accounted for.") };
 }

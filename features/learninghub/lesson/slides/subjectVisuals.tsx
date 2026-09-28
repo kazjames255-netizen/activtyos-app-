@@ -58,16 +58,16 @@ export const SUBJECT_ICONS: Record<Glyph, ReactNode[]> = {
   ],
 };
 
-/** The 4-step "how this lesson goes" wording a dashboard checklist shows, phrased for that subject. */
+/** The 4-step "how this lesson goes" wording a dashboard checklist shows, phrased for that subject (i18n KEYS: resolve with t()). */
 export const SUBJECT_STEPS: Record<Glyph, [string, string, string, string]> = {
-  maths: ["Watch", "Practise", "Play", "Quiz"],
-  words: ["Listen", "Identify", "Practise", "Quiz"],
-  science: ["Observe", "Explore", "Record", "Quiz"],
-  world: ["Explore", "Compare", "Discuss", "Quiz"],
-  art: ["Look", "Create", "Reflect", "Share"],
-  music: ["Listen", "Copy", "Perform", "Review"],
-  code: ["Plan", "Build", "Test", "Debug"],
-  star: ["Learn", "Practise", "Apply", "Review"],
+  maths: ["hublessons.stWatch", "hublessons.stPractise", "hublessons.stPlay", "hublessons.quizTag"],
+  words: ["hublessons.stListen", "hublessons.stIdentify", "hublessons.stPractise", "hublessons.quizTag"],
+  science: ["hublessons.stObserve", "hublessons.explore", "hublessons.stRecord", "hublessons.quizTag"],
+  world: ["hublessons.explore", "hublessons.stCompare", "hublessons.stDiscuss", "hublessons.quizTag"],
+  art: ["hublessons.stLook", "hublessons.stCreate", "hublessons.stReflect", "hublessons.stShare"],
+  music: ["hublessons.stListen", "hublessons.stCopy", "hublessons.stPerform", "hublessons.stReview"],
+  code: ["hublessons.stPlan", "hublessons.stBuild", "hublessons.stTest", "hublessons.stDebug"],
+  star: ["hublessons.stepLearn", "hublessons.stPractise", "hublessons.stApply", "hublessons.stReview"],
 };
 
 /** A short, stable "pretend" percentage for the dashboard mock's progress row — decorative flavour only (never a

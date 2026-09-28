@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { Dialog, FOCUS, useNow } from "../../teachKit";
+import { useT } from "@/lib/i18n/provider";
 import { BIcon } from "./boardIcons";
 import { MiniCanvas } from "./MiniCanvas";
 import { newPadState, type PadHub, type PadInfo } from "./pads";
@@ -15,7 +16,6 @@ import type { Attendee } from "./StudentsPop";
 // takes it off again. "Set a question" writes the same question at the top of every
 // chosen pad; "Compare answers" lays the pads out side by side.
 
-const ago = (ms: number) => { const s = Math.round(ms / 1000); return s < 5 ? "just now" : s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`; };
 
 export function WorkView({ leading, hub, attendees, present, shown, paper, compare, onCompare, onOpen, onShow, onSendBack, onlyOnBoard, selected, onSelect, onQuestion, onSaveAll }: {
   leading?: React.ReactNode;
@@ -27,6 +27,7 @@ export function WorkView({ leading, hub, attendees, present, shown, paper, compa
   selected: Set<string>; onSelect: (s: Set<string>) => void;
   onQuestion: () => void; onSaveAll?: () => void;
 }) {
+  const t = useT();
   const ver = useSyncExternalStore(hub.subscribe, () => hub.version, () => 0);
   const now = useNow(1000);
   const [imgV, setImgV] = useState(0);
@@ -46,14 +47,14 @@ export function WorkView({ leading, hub, attendees, present, shown, paper, compa
       <div className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--hub-warm-line)] px-2 py-2">
         {leading}
         <div className="min-w-0 flex-1 basis-[160px]">
-          <div className="text-[14px] font-extrabold text-[var(--ink)]">Student work</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]" data-testid="work-summary">{rows.length ? `${done} of ${rows.length} done · updating live` : "Nobody's here yet"}</div>
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">{t("hublive.bStudentWork")}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]" data-testid="work-summary">{rows.length ? t("hublive.bWv_summary", { done, total: rows.length }) : t("hublive.bWv_nobody")}</div>
         </div>
-        <button type="button" data-action="set-question" onClick={onQuestion} disabled={!rows.length} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-transparent px-3.5 text-[13px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`} style={{ background: "linear-gradient(180deg, var(--brand-2), var(--brand))" }}><BIcon name="text" size={17} />Set a question</button>
-        <button type="button" data-action="compare" aria-pressed={compare} onClick={() => onCompare(!compare)} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 text-[13px] font-extrabold ${FOCUS} ${compare ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`}><BIcon name="pages" size={17} />Compare answers</button>
-        {onSaveAll && <button type="button" data-action="save-all-work" onClick={onSaveAll} disabled={!rows.length} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] disabled:opacity-50 ${FOCUS}`}><BIcon name="save" size={17} />Save all to lessons</button>}
+        <button type="button" data-action="set-question" onClick={onQuestion} disabled={!rows.length} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-transparent px-3.5 text-[13px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`} style={{ background: "linear-gradient(180deg, var(--brand-2), var(--brand))" }}><BIcon name="text" size={17} />{t("hublive.bQd_title")}</button>
+        <button type="button" data-action="compare" aria-pressed={compare} onClick={() => onCompare(!compare)} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border px-3 text-[13px] font-extrabold ${FOCUS} ${compare ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`}><BIcon name="pages" size={17} />{t("hublive.bWv_compare")}</button>
+        {onSaveAll && <button type="button" data-action="save-all-work" onClick={onSaveAll} disabled={!rows.length} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] disabled:opacity-50 ${FOCUS}`}><BIcon name="save" size={17} />{t("hublive.bWv_saveAll")}</button>}
         {rows.length > 1 && (
-          <button type="button" onClick={() => onSelect(selected.size === rows.length ? new Set() : new Set(rows.map((r) => r.a.childId)))} className={`inline-flex min-h-[44px] items-center rounded-xl px-3 text-[12.5px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>{selected.size === rows.length ? "Clear selection" : "Select all"}</button>
+          <button type="button" onClick={() => onSelect(selected.size === rows.length ? new Set() : new Set(rows.map((r) => r.a.childId)))} className={`inline-flex min-h-[44px] items-center rounded-xl px-3 text-[12.5px] font-bold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>{selected.size === rows.length ? t("hublive.bWv_clearSel") : t("hublive.bWv_selectAll")}</button>
         )}
       </div>
 
@@ -61,8 +62,8 @@ export function WorkView({ leading, hub, attendees, present, shown, paper, compa
         {!rows.length ? (
           <div className="mx-auto mt-10 max-w-[340px] rounded-2xl border border-dashed border-[var(--hub-warm-line)] px-4 py-8 text-center">
             <div className="mx-auto grid h-11 w-11 place-items-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]" aria-hidden><BIcon name="pages" size={22} /></div>
-            <div className="mt-2 text-[14px] font-extrabold text-[var(--ink)]">Waiting for students</div>
-            <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-3)]">When students join, each one gets a private page to write and show their working. You&apos;ll see it here as they go.</p>
+            <div className="mt-2 text-[14px] font-extrabold text-[var(--ink)]">{t("hublive.bWv_waiting")}</div>
+            <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-3)]">{t("hublive.bWv_waitingBody")}</p>
           </div>
         ) : (
           <ul className="m-0 grid list-none gap-3 p-0" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${tileW}px, 1fr))` }} data-imgv={imgV} data-ver={ver}>
@@ -82,33 +83,35 @@ function Tile({ a, name, pad, here, now, paper, images, version, w, h, selected,
   a: Attendee; name: string; pad: PadInfo | undefined; here: boolean; now: number; paper: Paper; images: ImageCache; version: number; w: number; h: number;
   selected: boolean; onSelect: (on: boolean) => void; onBoard: boolean; onOpen: () => void; onShow: () => void; onSendBack: () => void;
 }) {
+  const t = useT();
+  const ago = (ms: number) => { const s = Math.round(ms / 1000); return s < 5 ? t("hublive.bWv_justNow") : s < 60 ? t("hublive.bWv_secsAgo", { n: s }) : t("hublive.bWv_minsAgo", { n: Math.round(s / 60) }); };
   const writing = !!pad && pad.lastStrokeAt > 0 && now - pad.lastStrokeAt < 2500;
-  const idle = pad && pad.lastStrokeAt > 0 ? ago(now - pad.lastStrokeAt) : "no writing yet";
+  const idle = pad && pad.lastStrokeAt > 0 ? ago(now - pad.lastStrokeAt) : t("hublive.bWv_noWriting");
   const empty = !pad || pad.state.pages[0]!.els.size === 0;
   return (
     <li data-testid="pad-tile" data-student={a.childId} data-done={pad?.done ? "1" : "0"} data-writing={writing ? "1" : "0"} className={`flex flex-col rounded-2xl border bg-[var(--surface)] p-2.5 shadow-[var(--shadow-sm)] ${selected ? "border-[var(--brand)]" : "border-[var(--hub-warm-line)]"} ${here ? "" : "opacity-70"}`}>
       <div className="mb-2 flex items-center gap-2">
-        <label className="grid h-11 w-8 flex-none cursor-pointer place-items-center" title={`Include ${name} when setting a question`}>
-          <input type="checkbox" checked={selected} onChange={(e) => onSelect(e.target.checked)} aria-label={`Include ${name}`} className="h-4 w-4 accent-[var(--brand)]" />
+        <label className="grid h-11 w-8 flex-none cursor-pointer place-items-center" title={t("hublive.bWv_includeTitle", { name })}>
+          <input type="checkbox" checked={selected} onChange={(e) => onSelect(e.target.checked)} aria-label={t("hublive.bWv_include", { name })} className="h-4 w-4 accent-[var(--brand)]" />
         </label>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <span className="truncate text-[14px] font-extrabold text-[var(--ink)]" data-testid="pad-name">{name}</span>
-            {writing && <span className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft)] px-2 py-px text-[11px] font-extrabold text-[var(--hub-green-ink)]" data-testid="pad-writing"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />writing…</span>}
+            {writing && <span className="inline-flex items-center gap-1 rounded-full bg-[var(--green-soft)] px-2 py-px text-[11px] font-extrabold text-[var(--hub-green-ink)]" data-testid="pad-writing"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{t("hublive.bWv_writing")}</span>}
           </div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">{here ? idle : "not in the call"}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]">{here ? idle : t("hublive.bWv_notInCall")}</div>
         </div>
-        {pad?.done && <span className="inline-flex items-center gap-1 rounded-full bg-[var(--green)] px-2.5 py-1 text-[11.5px] font-extrabold text-white" data-testid="pad-done"><BIcon name="check" size={13} sw={2.6} />Done</span>}
+        {pad?.done && <span className="inline-flex items-center gap-1 rounded-full bg-[var(--green)] px-2.5 py-1 text-[11.5px] font-extrabold text-white" data-testid="pad-done"><BIcon name="check" size={13} sw={2.6} />{t("hublive.bDone")}</span>}
       </div>
-      <button type="button" onClick={onOpen} aria-label={`Open ${name}'s page`} data-action="open-pad" className={`relative block overflow-hidden rounded-xl border border-[var(--hub-warm-line)] ${FOCUS}`} style={{ width: "100%" }}>
-        <div className="flex justify-center bg-[var(--surface)]"><MiniCanvas state={pad?.state ?? EMPTY_STATE} version={version} paper={paper} images={images} w={w - 24} h={h - 12} label={`${name}'s working`} /></div>
-        {empty && <span className="absolute inset-0 grid place-items-center text-[12px] font-bold text-[var(--ink-3)]">Nothing written yet</span>}
+      <button type="button" onClick={onOpen} aria-label={t("hublive.bWv_openPage", { name })} data-action="open-pad" className={`relative block overflow-hidden rounded-xl border border-[var(--hub-warm-line)] ${FOCUS}`} style={{ width: "100%" }}>
+        <div className="flex justify-center bg-[var(--surface)]"><MiniCanvas state={pad?.state ?? EMPTY_STATE} version={version} paper={paper} images={images} w={w - 24} h={h - 12} label={t("hublive.bWv_working", { name })} /></div>
+        {empty && <span className="absolute inset-0 grid place-items-center text-[12px] font-bold text-[var(--ink-3)]">{t("hublive.bWv_nothingYet")}</span>}
       </button>
       <div className="mt-2 flex gap-1.5">
-        <button type="button" data-action="open-pad" onClick={onOpen} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] px-2 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] hover:text-[var(--brand)] ${FOCUS}`}><BIcon name="pen" size={16} />Open &amp; mark</button>
+        <button type="button" data-action="open-pad" onClick={onOpen} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] px-2 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] hover:text-[var(--brand)] ${FOCUS}`}><BIcon name="pen" size={16} />{t("hublive.bWv_openMark")}</button>
         {onBoard
-          ? <button type="button" data-action="send-back" onClick={onSendBack} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2 text-[12.5px] font-extrabold text-[var(--ink)] ${FOCUS}`}>Send back</button>
-          : <button type="button" data-action="show-to-class" onClick={onShow} disabled={empty} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2 text-[12.5px] font-extrabold text-[var(--brand-strong)] disabled:opacity-50 ${FOCUS}`}><BIcon name="present" size={16} />Show to class</button>}
+          ? <button type="button" data-action="send-back" onClick={onSendBack} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2 text-[12.5px] font-extrabold text-[var(--ink)] ${FOCUS}`}>{t("hublive.bSendBack")}</button>
+          : <button type="button" data-action="show-to-class" onClick={onShow} disabled={empty} className={`inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2 text-[12.5px] font-extrabold text-[var(--brand-strong)] disabled:opacity-50 ${FOCUS}`}><BIcon name="present" size={16} />{t("hublive.bShowToClass")}</button>}
       </div>
     </li>
   );

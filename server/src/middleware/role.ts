@@ -74,6 +74,18 @@ function normalizeRole(role: string | undefined): Role {
   return ALL_ROLES.includes(role as Role) ? (role as Role) : "parent";
 }
 
+// A page's first paint fires 20-30 API calls at once, and every one of them re-read this same users doc. Concurrent reads of ONE uid
+// now share a single Firestore round trip (single-flight — nothing is kept once it settles, so a role change is seen by the very next request).
+const userReads = new Map<string, Promise<FirebaseFirestore.DocumentSnapshot>>();
+function userDocOnce(uid: string): Promise<FirebaseFirestore.DocumentSnapshot> {
+  let p = userReads.get(uid);
+  if (!p) {
+    p = db.collection("users").doc(uid).get().finally(() => { if (userReads.get(uid) === p) userReads.delete(uid); });
+    userReads.set(uid, p);
+  }
+  return p;
+}
+
 export async function attachRole(req: Request, _res: Response, next: NextFunction) {
   const user = req.user;
   if (!user) {
@@ -81,7 +93,7 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     return;
   }
   const ref = db.collection("users").doc(user.uid);
-  const snap = await ref.get();
+  const snap = await userDocOnce(user.uid);
   if (snap.exists) {
     const d = snap.data()!;
     // A switched-off account (Team → Deactivate, or a closed parent account)

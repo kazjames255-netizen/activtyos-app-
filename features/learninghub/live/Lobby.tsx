@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { get } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { Avatar, DISPLAY, FOCUS, HERO_BG, fmtClock, humanSpan, relDay, useNow, withQs } from "../teachKit";
 import { useFamily } from "../family/FamilyContext";
 import { Ico, GradientTile } from "../teachIcons";
@@ -18,39 +19,42 @@ import { useMediaPreview, type DevStatus } from "./useMediaPreview";
 
 export interface JoinPrefs { camOn: boolean; micOn: boolean }
 
-const STATUS_TEXT: Record<DevStatus, { text: string; good: boolean }> = {
-  pending: { text: "Checking…", good: false },
-  ok: { text: "Working", good: true },
-  off: { text: "Switched off", good: false },
-  denied: { text: "Blocked by your browser", good: false },
-  missing: { text: "Not found", good: false },
-  busy: { text: "In use by another app", good: false },
-  unsupported: { text: "Not supported here", good: false },
+const STATUS_TEXT: Record<DevStatus, { key: string; good: boolean }> = {
+  pending: { key: "aLobby_stPending", good: false },
+  ok: { key: "aLobby_stOk", good: true },
+  off: { key: "aLobby_stOff", good: false },
+  denied: { key: "aLobby_stDenied", good: false },
+  missing: { key: "aLobby_stMissing", good: false },
+  busy: { key: "aLobby_stBusy", good: false },
+  unsupported: { key: "aLobby_stUnsupported", good: false },
 };
 
-function CheckRow({ icon, label, status, detail }: { icon: "video" | "mic" | "camOff" | "micOff"; label: string; status: DevStatus; detail?: string }) {
+function CheckRow({ icon, label, id, status, detail }: { icon: "video" | "mic" | "camOff" | "micOff"; label: string; id: string; status: DevStatus; detail?: string }) {
+  const t = useT();
   const s = STATUS_TEXT[status];
+  const sText = t("hublive." + s.key);
   const bad = status === "denied" || status === "missing" || status === "busy" || status === "unsupported";
   return (
-    <li className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/8 px-3.5 py-3" data-check={label.toLowerCase()} data-status={status}>
+    <li className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/8 px-3.5 py-3" data-check={id} data-status={status}>
       <span aria-hidden className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/12"><Ico name={icon} size={18} /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-[13px] font-extrabold">{label}</span>
-        <span className="block truncate text-[11.5px] text-white/70">{detail || s.text}</span>
+        <span className="block truncate text-[11.5px] text-white/70">{detail || sText}</span>
       </span>
       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${s.good ? "bg-[var(--green)]/25 text-white" : bad ? "bg-[var(--red)]/30 text-white" : "bg-white/15 text-white/85"}`}>
         <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${s.good ? "bg-[var(--green)]" : bad ? "bg-[var(--red)]" : "bg-white/60"}`} />
-        {s.text}
+        {sText}
       </span>
     </li>
   );
 }
 
 function LevelMeter({ level, on }: { level: number; on: boolean }) {
+  const t = useT();
   const bars = 12;
   const lit = Math.round(level * bars);
   return (
-    <div className="flex h-5 items-end gap-[3px]" role="meter" aria-label="Microphone level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)}>
+    <div className="flex h-5 items-end gap-[3px]" role="meter" aria-label={t("hublive.aLobby_micLevel")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)}>
       {Array.from({ length: bars }, (_, i) => (
         <span key={i} className="w-[4px] rounded-full transition-colors duration-75" style={{ height: 5 + i * 1.2, background: on && i < lit ? (i > 9 ? "var(--gold)" : "var(--green)") : "rgba(255,255,255,.25)" }} />
       ))}
@@ -86,6 +90,7 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
   /** The hub's `?tenantId=…` (a parent's lobby uses it to find which of their children are in this lesson). */
   qs?: string;
 }) {
+  const tx = useT();
   const family = useFamily();
   const kids = useKidsInLesson(lesson.id, qs, !isTutor && family.active && family.multi);
   const choose = !isTutor && kids && kids.length > 1 ? kids : null;
@@ -99,7 +104,7 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
   const media = useMediaPreview(true);
   const video = useRef<HTMLVideoElement>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const me = isTutor ? tutorLabel : "You";
+  const me = isTutor ? tutorLabel : tx("hublive.aPanel_you");
 
   useEffect(() => {
     const el = video.current;
@@ -124,13 +129,13 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
   const selectCls = `min-h-[44px] w-full rounded-xl border border-white/25 bg-white/10 px-3 text-[12.5px] font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-white [&>option]:text-[var(--ink)]`;
 
   return (
-    <section id="hub-lobby" role="dialog" aria-modal="true" aria-label={`Get ready for ${lesson.title}`} data-stage={info.stage}
+    <section id="hub-lobby" role="dialog" aria-modal="true" aria-label={tx("hublive.aLobby_getReady", { title: lesson.title })} data-stage={info.stage}
       className="fixed inset-0 z-[350] overflow-y-auto overscroll-contain p-3 text-white sm:p-6" style={HERO_BG}>
       <div className="mx-auto max-w-[1180px]">
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={onClose} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3.5 text-[12.5px] font-bold backdrop-blur-sm hover:bg-white/20 ${FOCUS}`}><Ico name="arrowLeft" size={15} /> Live lessons</button>
+          <button type="button" onClick={onClose} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-white/25 bg-white/10 px-3.5 text-[12.5px] font-bold backdrop-blur-sm hover:bg-white/20 ${FOCUS}`}><Ico name="arrowLeft" size={15} className="rtl:-scale-x-100" /> {tx("hublive.aLobby_liveLessons")}</button>
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70">Before you join</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70">{tx("hublive.aLobby_beforeJoin")}</div>
             <h2 className="m-0 truncate text-[20px] font-extrabold sm:text-[24px]" style={DISPLAY}>{lesson.title}</h2>
           </div>
         </div>
@@ -139,58 +144,58 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
           {/* ── self preview ── */}
           <div className="grid content-start gap-3">
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-white/20 bg-[var(--brand-ink)] shadow-[0_18px_50px_rgba(0,0,0,0.3)] sm:aspect-video" data-testid="hub-lobby-preview">
-              <video ref={video} autoPlay playsInline muted aria-label="Your camera preview" className={`absolute inset-0 h-full w-full object-cover ${showVideo && media.camOn ? "opacity-100" : "opacity-0"}`} style={{ transform: "scaleX(-1)" }} />
+              <video ref={video} autoPlay playsInline muted aria-label={tx("hublive.aLobby_camPreview")} className={`absolute inset-0 h-full w-full object-cover ${showVideo && media.camOn ? "opacity-100" : "opacity-0"}`} style={{ transform: "scaleX(-1)" }} />
               {!(showVideo && media.camOn) && (
                 <div className="absolute inset-0 grid place-content-center justify-items-center gap-3 px-6 text-center">
                   {media.cam === "pending" ? (
                     <>
                       <div className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/25 border-t-white motion-reduce:animate-none" />
-                      <div className="text-[13px] font-semibold text-white/85">Asking your browser for the camera…</div>
+                      <div className="text-[13px] font-semibold text-white/85">{tx("hublive.aLobby_askingCam")}</div>
                     </>
                   ) : (
                     <>
                       <Person name={me} size={84} />
                       <div className="max-w-[320px] text-[13px] font-semibold text-white/80">
-                        {media.cam === "off" ? "Your camera is off. Others will see your initials."
-                          : media.cam === "denied" ? "Camera access is blocked — allow it to see yourself here."
-                          : media.cam === "missing" ? "We couldn't find a camera. You can still join with audio."
-                          : media.cam === "busy" ? "Another app is using your camera. Close it, then try again."
-                          : "Camera preview isn't available in this browser."}
+                        {media.cam === "off" ? tx("hublive.aLobby_camOffMsg")
+                          : media.cam === "denied" ? tx("hublive.aLobby_camDeniedMsg")
+                          : media.cam === "missing" ? tx("hublive.aLobby_camMissingMsg")
+                          : media.cam === "busy" ? tx("hublive.aLobby_camBusyMsg")
+                          : tx("hublive.aLobby_camUnsupportedMsg")}
                       </div>
                     </>
                   )}
                 </div>
               )}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/45 to-transparent" aria-hidden />
-              <div className="absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-[12px] font-bold backdrop-blur-sm">
+              <div className="absolute bottom-3 start-3 inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 text-[12px] font-bold backdrop-blur-sm">
                 <Person name={me} size={20} />{me}
               </div>
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-3">
-                <button type="button" onClick={media.toggleMic} disabled={media.mic === "denied" || media.mic === "missing" || media.mic === "pending"} aria-pressed={media.micOn} aria-label={media.micOn ? "Mute microphone" : "Unmute microphone"}
+                <button type="button" onClick={media.toggleMic} disabled={media.mic === "denied" || media.mic === "missing" || media.mic === "pending"} aria-pressed={media.micOn} aria-label={media.micOn ? tx("hublive.aLobby_muteMic") : tx("hublive.aLobby_unmuteMic")}
                   className={`grid h-12 w-12 place-items-center rounded-full border backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-40 motion-reduce:transition-none ${FOCUS} ${media.micOn ? "border-white/30 bg-white/20 hover:bg-white/30" : "border-transparent bg-[var(--red)]"}`}>
                   <Ico name={media.micOn ? "mic" : "micOff"} size={20} />
                 </button>
-                <button type="button" onClick={media.toggleCam} disabled={media.cam === "denied" || media.cam === "missing" || media.cam === "pending"} aria-pressed={media.camOn} aria-label={media.camOn ? "Turn camera off" : "Turn camera on"}
+                <button type="button" onClick={media.toggleCam} disabled={media.cam === "denied" || media.cam === "missing" || media.cam === "pending"} aria-pressed={media.camOn} aria-label={media.camOn ? tx("hublive.aLobby_camOffBtn") : tx("hublive.aLobby_camOnBtn")}
                   className={`grid h-12 w-12 place-items-center rounded-full border backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-40 motion-reduce:transition-none ${FOCUS} ${media.camOn ? "border-white/30 bg-white/20 hover:bg-white/30" : "border-transparent bg-[var(--red)]"}`}>
                   <Ico name={media.camOn ? "video" : "camOff"} size={20} />
                 </button>
               </div>
-              <div className="absolute bottom-4 right-4 hidden sm:block"><LevelMeter level={media.level} on={media.mic === "ok"} /></div>
+              <div className="absolute bottom-4 end-4 hidden sm:block"><LevelMeter level={media.level} on={media.mic === "ok"} /></div>
             </div>
 
             {(camList || micList) && (
               <div className="grid gap-2.5 sm:grid-cols-2">
                 {camList && (
-                  <label className="grid gap-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/70">Camera
+                  <label className="grid gap-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/70">{tx("hublive.aLobby_camera")}
                     <select className={selectCls} value={media.camId || media.cams[0]?.deviceId} onChange={(e) => media.setCamId(e.target.value)}>
-                      {media.cams.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Camera ${i + 1}`}</option>)}
+                      {media.cams.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || tx("hublive.aLobby_cameraN", { n: i + 1 })}</option>)}
                     </select>
                   </label>
                 )}
                 {micList && (
-                  <label className="grid gap-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/70">Microphone
+                  <label className="grid gap-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/70">{tx("hublive.aLobby_microphone")}
                     <select className={selectCls} value={media.micId || media.mics[0]?.deviceId} onChange={(e) => media.setMicId(e.target.value)}>
-                      {media.mics.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</option>)}
+                      {media.mics.map((d, i) => <option key={d.deviceId || i} value={d.deviceId}>{d.label || tx("hublive.aLobby_microphoneN", { n: i + 1 })}</option>)}
                     </select>
                   </label>
                 )}
@@ -202,20 +207,17 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
                 <div className="flex items-start gap-3">
                   <span aria-hidden className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[var(--gold)] text-[var(--brand-ink)]"><Ico name="warning" size={18} /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-extrabold">{blocked ? "Your browser is blocking the camera or microphone" : media.cam === "busy" || media.mic === "busy" ? "Your camera or microphone is busy" : "We couldn't find everything"}</div>
-                    <p className="mt-1 text-[12.5px] leading-relaxed text-white/85">You can still join — but fix this first and the lesson goes much smoother.</p>
+                    <div className="text-[14px] font-extrabold">{blocked ? tx("hublive.aLobby_blockedTitle") : media.cam === "busy" || media.mic === "busy" ? tx("hublive.aLobby_busyTitle") : tx("hublive.aLobby_missingTitle")}</div>
+                    <p className="mt-1 text-[12.5px] leading-relaxed text-white/85">{tx("hublive.aLobby_fixFirst")}</p>
                     <button type="button" aria-expanded={helpOpen} onClick={() => setHelpOpen((v) => !v)} className={`mt-2 inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1.5 rounded-lg text-[12.5px] font-extrabold underline-offset-2 hover:underline ${FOCUS}`}>
-                      How to fix it <Ico name="chevronDown" size={14} className={helpOpen ? "rotate-180" : ""} />
+                      {tx("hublive.aLobby_howFix")} <Ico name="chevronDown" size={14} className={helpOpen ? "rotate-180" : ""} />
                     </button>
                     {helpOpen && (
-                      <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-[12.5px] leading-relaxed text-white/90">
-                        <li>Click the camera or padlock icon at the left of the address bar.</li>
-                        <li>Set <strong>Camera</strong> and <strong>Microphone</strong> to <strong>Allow</strong>.</li>
-                        <li>Close other apps that may hold the camera (Zoom, Teams, FaceTime).</li>
-                        <li>Press <strong>Check again</strong> below — no need to reload the page.</li>
+                      <ol className="mt-1 list-decimal space-y-1.5 ps-5 text-[12.5px] leading-relaxed text-white/90">
+                        {(["aLobby_fix1", "aLobby_fix2", "aLobby_fix3", "aLobby_fix4"] as const).map((k) => <li key={k} dangerouslySetInnerHTML={{ __html: tx("hublive." + k) }} />)}
                       </ol>
                     )}
-                    <button type="button" onClick={media.retry} className={`mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-4 text-[13px] font-extrabold hover:bg-white/25 ${FOCUS}`}><Ico name="refresh" size={16} /> Check again</button>
+                    <button type="button" onClick={media.retry} className={`mt-2 inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-white/30 bg-white/15 px-4 text-[13px] font-extrabold hover:bg-white/25 ${FOCUS}`}><Ico name="refresh" size={16} /> {tx("hublive.aLobby_checkAgain")}</button>
                   </div>
                 </div>
               </div>
@@ -234,39 +236,39 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
                     </span>
                     {topicLabel && <span className="max-w-full truncate text-[11.5px] font-bold text-white/80">{topicLabel}</span>}
                   </div>
-                  <div className="mt-1.5 text-[13px] text-white/85">{relDay(lesson.startsAt, now)} · {fmtClock(lesson.startsAt)}–{fmtClock(new Date(t.endMs).toISOString())} · {lesson.durationMins} min</div>
+                  <div className="mt-1.5 text-[13px] text-white/85">{relDay(lesson.startsAt, now)} · {fmtClock(lesson.startsAt)}–{fmtClock(new Date(t.endMs).toISOString())} · {tx("hublive.aLobby_min", { n: lesson.durationMins })}</div>
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-2.5 text-[12.5px] text-white/85">
                 <Stack names={isTutor ? attendees : [tutorLabel]} size={28} />
-                <span className="min-w-0 truncate">{isTutor ? (attendees.length ? attendees.join(", ") : "No students yet") : `with ${tutorLabel === "Your tutor" ? "your tutor" : tutorLabel}`}</span>
+                <span className="min-w-0 truncate">{isTutor ? (attendees.length ? attendees.join(", ") : tx("hublive.aLobby_noStudents")) : tutorLabel === tx("hublive.aPanel_yourTutor") ? tx("hublive.aLobby_withYourTutor") : tx("hublive.aLobby_withTutor", { name: tutorLabel })}</span>
               </div>
               <p className="mt-3 rounded-xl bg-black/15 px-3 py-2 text-[12.5px] leading-relaxed text-white/90">{info.sub}</p>
               <LessonNotes lesson={lesson} isTutor={isTutor} tone="dark" className="mt-3" />
             </div>
 
-            <ul className="grid gap-2" aria-label="Equipment check">
-              <CheckRow icon={media.cam === "off" ? "camOff" : "video"} label="Camera" status={media.cam} detail={media.cam === "ok" ? devLabel(media.cams, "Camera ready") : undefined} />
-              <CheckRow icon={media.mic === "off" ? "micOff" : "mic"} label="Microphone" status={media.mic} detail={media.mic === "ok" ? devLabel(media.mics, "Microphone ready") : undefined} />
+            <ul className="grid gap-2" aria-label={tx("hublive.aLobby_equipCheck")}>
+              <CheckRow icon={media.cam === "off" ? "camOff" : "video"} label={tx("hublive.aLobby_camera")} id="camera" status={media.cam} detail={media.cam === "ok" ? devLabel(media.cams, tx("hublive.aLobby_camReady")) : undefined} />
+              <CheckRow icon={media.mic === "off" ? "micOff" : "mic"} label={tx("hublive.aLobby_microphone")} id="microphone" status={media.mic} detail={media.mic === "ok" ? devLabel(media.mics, tx("hublive.aLobby_micReady")) : undefined} />
             </ul>
-            <div className="flex items-center gap-2 text-[11.5px] text-white/70 sm:hidden"><LevelMeter level={media.level} on={media.mic === "ok"} /><span>Say something to test your mic</span></div>
-            <p className="flex items-center gap-2 text-[12px] text-white/70"><Ico name="headphones" size={15} /> Headphones stop echo — especially with more than one student.</p>
+            <div className="flex items-center gap-2 text-[11.5px] text-white/70 sm:hidden"><LevelMeter level={media.level} on={media.mic === "ok"} /><span>{tx("hublive.aLobby_sayTest")}</span></div>
+            <p className="flex items-center gap-2 text-[12px] text-white/70"><Ico name="headphones" size={15} /> {tx("hublive.aLobby_headphones")}</p>
 
             {choose && (
-              <div role="radiogroup" aria-label="Which child is joining?" data-testid="hub-lobby-who" className="rounded-2xl border border-white/25 bg-white/10 p-3.5 backdrop-blur-sm">
-                <div className="mb-2 text-[13px] font-extrabold">Which child is joining?</div>
+              <div role="radiogroup" aria-label={tx("hublive.aLobby_whichChild")} data-testid="hub-lobby-who" className="rounded-2xl border border-white/25 bg-white/10 p-3.5 backdrop-blur-sm">
+                <div className="mb-2 text-[13px] font-extrabold">{tx("hublive.aLobby_whichChild")}</div>
                 <div className="flex flex-wrap gap-2">
                   {choose.map((k) => {
                     const on = asChild === k.childId;
                     return (
                       <button key={k.childId} type="button" role="radio" aria-checked={on} data-testid="hub-lobby-who-kid" data-child-id={k.childId} onClick={() => setPick(k.childId)}
-                        className={`inline-flex min-h-[52px] items-center gap-2 rounded-2xl border-2 pl-1.5 pr-4 text-[14px] font-extrabold ${FOCUS} ${on ? "border-white bg-white text-[var(--brand-strong)]" : "border-transparent bg-white/15 text-white hover:border-white/60"}`}>
+                        className={`inline-flex min-h-[52px] items-center gap-2 rounded-2xl border-2 ps-1.5 pe-4 text-[14px] font-extrabold ${FOCUS} ${on ? "border-white bg-white text-[var(--brand-strong)]" : "border-transparent bg-white/15 text-white hover:border-white/60"}`}>
                         <Avatar name={k.childName} size={38} />{k.childName}
                       </button>
                     );
                   })}
                 </div>
-                <p className="m-0 mt-2 text-[12px] text-white/80">{needPick ? "Attendance and the whiteboard are recorded for the child you choose — pick one to join." : "Attendance and the whiteboard are recorded for this child. Another child can join from a second device."}</p>
+                <p className="m-0 mt-2 text-[12px] text-white/80">{needPick ? tx("hublive.aLobby_pickChild") : tx("hublive.aLobby_childRecorded")}</p>
               </div>
             )}
 
@@ -274,11 +276,11 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
             <button type="button" id="hub-lobby-join" disabled={!info.canJoin || joining || needPick} onClick={start}
               className={`inline-flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-2xl px-6 text-[16px] font-extrabold shadow-[0_10px_28px_rgba(0,0,0,0.3)] transition hover:-translate-y-px disabled:cursor-not-allowed motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${info.canJoin ? "bg-white text-[var(--brand-strong)]" : "bg-white/20 text-white/80 shadow-none"}`}>
               <Ico name={info.canJoin ? "video" : "lock"} size={19} />
-              {joining ? "Connecting…" : info.canJoin ? (info.cta ?? "Join lesson") : info.waiting ? (info.cta ?? "Waiting for your tutor") : `Opens in ${humanSpan(t.opensMs - now)}`}
+              {joining ? tx("hublive.aLobby_connecting") : info.canJoin ? (info.cta ?? tx("hublive.aKit_joinLesson")) : info.waiting ? (info.cta ?? tx("hublive.aKit_waiting")) : tx("hublive.aKit_opensIn", { span: humanSpan(t.opensMs - now) })}
             </button>
             {info.waiting && <p className="text-center text-[12px] text-white/75">{info.sub}</p>}
-            {!info.canJoin && !info.waiting && <p className="text-center text-[12px] text-white/75">You can test your camera and microphone now — the room opens 10 minutes before the start.</p>}
-            {info.canJoin && problem && <p className="text-center text-[12px] text-white/75">Joining without a working camera or microphone? You&rsquo;ll still see and hear everyone.</p>}
+            {!info.canJoin && !info.waiting && <p className="text-center text-[12px] text-white/75">{tx("hublive.aLobby_testNow")}</p>}
+            {info.canJoin && problem && <p className="text-center text-[12px] text-white/75">{tx("hublive.aLobby_noDevices")}</p>}
             </div>
           </div>
         </div>

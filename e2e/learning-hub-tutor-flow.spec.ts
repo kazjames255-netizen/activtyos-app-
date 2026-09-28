@@ -182,17 +182,18 @@ test.describe("F19 — publishing many flashcards is one request", () => {
 });
 
 test.describe("the tutor's screens", () => {
-  test("F8/F3/F4: homework form — search the quiz, see who can't open it, publish a draft quiz", async ({ browser }) => {
+  test("F3: homework form — a quiz handed over from its card shows who can't open it (the form itself has no quiz picker any more)", async ({ browser }) => {
     test.setTimeout(240_000);
     const { ctx, page } = await tutorPage(browser);
-    await gotoHub(page, "homework");
-    await page.getByRole("button", { name: /Set homework|Set your first/ }).first().click();
+    await gotoHub(page, "quizzes");
+    await page.getByRole("button", { name: new RegExp(french) }).first().click().catch(() => undefined);
+    const qcard = page.locator(`#hub-assessment-${ids.quizB}`);
+    await expect(qcard).toBeVisible({ timeout: 40_000 });
+    await qcard.getByTestId("hub-assessment-assign").click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
-    // F8: the quiz picker searches on the server — typing this run's stamp finds exactly this run's quizzes, grouped by subject.
-    await dlg.locator("#hub-hw-quiz-search").fill(quizB);
-    await expect(dlg.locator("#hub-hw-quiz").locator(`option[value="${ids.quizB}"]`)).toHaveCount(1, { timeout: 20_000 });
-    await dlg.locator("#hub-hw-quiz").selectOption(ids.quizB);
+    await expect(dlg.locator("#hub-hw-quiz")).toHaveCount(0);
+    await expect(dlg.getByTestId("hub-hw-linked-rows")).toContainText(quizB, { timeout: 20_000 });
     // F3: tick this run's child → the form says French isn't in their subjects, and Assign is blocked.
     await dlg.locator(`#hub-hw-student-${childId}`).click();
     const warn = dlg.getByTestId("hub-hw-unreachable");
@@ -230,14 +231,12 @@ test.describe("the tutor's screens", () => {
   test("F4: attaching a draft lesson warns and can publish it", async ({ browser }) => {
     test.setTimeout(240_000);
     const { ctx, page } = await tutorPage(browser);
-    await gotoHub(page, "homework");
-    await page.getByRole("button", { name: /Set homework|Set your first/ }).first().click();
+    await gotoHub(page, "lessons");
+    await page.getByLabel("Search lessons").fill(draftLesson);
+    await page.getByRole("button", { name: draftLesson, exact: true }).first().click();
+    await page.getByTestId("lesson-set-for-children").click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
-    await dlg.locator("#hub-hw-note-search").fill(draftLesson);
-    const row = dlg.locator("label", { hasText: draftLesson });
-    await expect(row).toBeVisible({ timeout: 20_000 });
-    await row.locator("input[type=checkbox]").check();
     const warn = dlg.getByTestId("hub-hw-draft-lesson");
     await expect(warn).toContainText(draftLesson, { timeout: 20_000 });
     await warn.getByRole("button", { name: /Publish it/ }).click();

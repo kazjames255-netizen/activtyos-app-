@@ -6,7 +6,7 @@ import { get } from "@/lib/api";
 import { Icon } from "../kit";
 import type { PanelProps } from "../panelTypes";
 import { SubjectCover, SubjectGlyph } from "../subjectArt";
-import { errMsg } from "../types";
+import { errMsg, topicLabel } from "../types";
 import { BaselineCard } from "./Baseline";
 import { hubPath, type Assessment, type AssessType, type AttemptRow, type Result } from "./api";
 import { audienceChips } from "./audience";
@@ -20,6 +20,7 @@ import { closeLink, openLink, useLinkOpen } from "../family/link";
 import { sweepDrafts } from "./draft";
 import { useFamily, useSupport } from "../family/FamilyContext";
 import { effectiveLimitMins } from "../support";
+import { useHubI18n } from "../family/hubT";
 import { CardGridSkeleton, Chip, display, EmptyState, HourglassIcon, MedalIcon, Notice, ScoreRing, ScrollTop, TAP } from "./ui";
 
 // The family-facing list of assessments (quizzes or placement tests) for the
@@ -29,11 +30,11 @@ import { CardGridSkeleton, Chip, display, EmptyState, HourglassIcon, MedalIcon, 
 const GOLD: Tone = { fill: "var(--gold)", soft: "var(--gold-soft)", ink: "color-mix(in srgb, var(--gold) 30%, var(--ink))" };
 const BRAND: Tone = { fill: "var(--brand)", soft: "var(--brand-soft)", ink: "var(--brand-strong)" };
 
-const WELCOME = {
-  title: "Let's find your starting point",
-  body: "This quiz shows what you already know, so your tutor can plan the right next steps. It isn't a pass or fail test, so there's no pressure. Just do your best.",
-  bullets: ["You only do this one once. It shows where you start.", "Skip anything you're unsure about, or have a go.", "You'll see your starting point straight after."],
-};
+const welcomeFor = (t: (k: string) => string) => ({
+  title: t("hubfam.asWelcomeTitle"),
+  body: t("hubfam.asWelcomeBody"),
+  bullets: [t("hubfam.asWelcomeB1"), t("hubfam.asWelcomeB2"), t("hubfam.asWelcomeB3")],
+});
 
 const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,310px),1fr))]";
 
@@ -41,6 +42,7 @@ const GRID = "grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%
 interface Card_ { a: Assessment; marked: AttemptRow[]; count: number; best: number | null; running: AttemptRow | null; minsLeft: number | null; /** Newest handed-in paper (marked or with the tutor). */ latest: AttemptRow | null }
 
 export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) {
+  const { t, tp } = useHubI18n();
   const childId = p.childId;
   const diag = type === "diagnostic";
   const support = useSupport();
@@ -59,21 +61,25 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
   const now = useTick(30_000);
   useEffect(() => { sweepDrafts(); }, []); // drop answers-so-far of papers never handed in (older than a week)
   // A seeded provider publishes hundreds of papers (the server already narrows them to what suits this child): show the
-  // first page of each list and let the family filter by subject (with counts) or reveal more.
+  // first page of each list and reveal more on request. Subject/topic narrowing is the shared TopicFilter chip row +
+  // search above (p.filter) — this used to have its OWN separate subject-chip-with-counts row too, which just
+  // duplicated that control right next to it and read as a confused, half-merged strip (Kaz's report).
   const PAGE = 24;
-  const [subjectF, setSubjectF] = useState("");
   const [shownTodo, setShownTodo] = useState(PAGE);
   const [shownDone, setShownDone] = useState(PAGE);
 
   const topicById = useMemo(() => new Map(p.topics.map((t) => [t.id, t])), [p.topics]);
 
+  // The family's search bar (TopicFilter "chips" variant, above) — combines what used to be a separate
+  // "Browse topics" sheet with the chip row: typed text narrows these cards by title or by the topic(s) they cover.
+  const q = p.filter.q?.trim().toLowerCase() ?? "";
   const cards = useMemo<Card_[]>(() => {
     const narrowed = !!(p.filter.subject || p.filter.topicId);
     const rows = att.data ?? [];
     return (data ?? [])
       .filter((a) => a.type === type)
-      .filter((a) => !subjectF || a.subject === subjectF)
       .filter((a) => !narrowed || (p.filter.topicId ? a.topicIds.some((id) => p.covered.has(id)) : a.subject === p.filter.subject))
+      .filter((a) => !q || a.title.toLowerCase().includes(q) || a.subject.toLowerCase().includes(q) || a.topicIds.some((id) => topicById.get(id) && topicLabel(topicById.get(id)!).toLowerCase().includes(q)))
       .sort((a, b) => a.subject.localeCompare(b.subject) || a.title.localeCompare(b.title))
       .map((a) => {
         const mine = rows.filter((r) => r.assessmentId === a.id);
@@ -89,8 +95,7 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
         const latest = mine.filter((r) => r.status !== "in_progress").sort((x, y) => (y.submittedAt ?? "").localeCompare(x.submittedAt ?? ""))[0] ?? null;
         return { a, marked, count: Math.max(submitted, a.lastAttempt ? 1 : 0), best, running, minsLeft, latest };
       });
-  }, [data, att.data, type, p.filter, p.covered, subjectF]);
-  const subjectCounts = useMemo(() => { const m = new Map<string, number>(); for (const a of data ?? []) if (a.type === type) m.set(a.subject, (m.get(a.subject) ?? 0) + 1); return [...m].sort(([x], [y]) => x.localeCompare(y)); }, [data, type]);
+  }, [data, att.data, type, p.filter, p.covered, q, topicById]);
 
   const isDone = (c: Card_) => {
     const la = c.a.lastAttempt;
@@ -116,19 +121,19 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
   }, [linkId, linkHw, data, att.data, att.error, taking]);
   const begin = (a: Assessment, resume: boolean) => { setTaking({ a, resume, hw: null }); openLink({ kind: "quiz", id: a.id }, { tab: tabKey }); };
 
-  if (!childId) return <EmptyState icon="users" title="Choose a child" body="Pick which child is taking this from the header." />;
+  if (!childId) return <EmptyState icon="users" title={t("hubfam.asChooseChild")} body={t("hubfam.asChooseChildBody")} />;
 
   if (taking) {
     return <TakeAssessment key={taking.a.id} a={taking.a} p={p} childId={childId} resume={taking.resume} homeworkId={taking.hw}
       onExit={() => { setTaking(null); closeLink(); reload(); att.reload(); }} onSubmitted={() => { reload(); att.reload(); }}
-      welcome={diag ? WELCOME : undefined}
+      welcome={diag ? welcomeFor(t) : undefined}
       resultExtra={diag ? (r) => (r.status === "marked" ? <BaselineCard p={p} childId={childId} subject={taking.a.subject} /> : null) : undefined} />;
   }
 
   if (review) {
     return (
       <ScrollTop className="mx-auto w-full max-w-[860px]">
-        <button type="button" onClick={() => setReview(null)} className="mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pr-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)]"><Icon name="arrowLeft" size={16} />Back</button>
+        <button type="button" onClick={() => setReview(null)} className="mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pe-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)]"><Icon name="arrowLeft" size={16} className="rtl:rotate-180" />{t("hubfam.asBack")}</button>
         <ResultView kidYear={p.students.find((s) => s.childId === childId)?.yearGroup} onRefreshImages={async () => { const r = await get<Result>(hubPath(p.qs, `/attempts/${review.r.id}`, { childId })); setReview((cur) => cur && { ...cur, r }); }} result={review.r} questions={undefined} topics={p.topics} config={p.config} type={type} passMarkPct={review.a.passMarkPct} title={`${review.a.title} · ${fmtDate(review.r.submittedAt)}`}>
           {diag && review.r.status === "marked" ? <BaselineCard p={p} childId={childId} subject={review.a.subject} /> : null}
         </ResultView>
@@ -142,7 +147,7 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
     try {
       const r = await get<Result>(hubPath(p.qs, `/attempts/${a.lastAttempt.id}`, { childId }));
       setReview({ a, r });
-    } catch (e) { p.onError(errMsg(e, "Couldn't open that result")); }
+    } catch (e) { p.onError(errMsg(e, t("hubfam.asCouldntOpenResult"))); }
     finally { setOpening(null); }
   };
 
@@ -150,59 +155,52 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
     <AssessCard key={c.a.id} c={c} diag={diag} now={now} yearGroups={p.config.yearGroups} kid={kidMode} onGoDiag={p.goTo ? () => p.goTo!("diagnostic") : undefined} onStart={() => begin(c.a, false)} onView={() => openResult(c.a)} opening={opening === c.a.id}
       topicNames={c.a.topicIds.map((id) => topicById.get(id)).filter((t): t is NonNullable<typeof t> => !!t).map(topicShort)} />
   );
-  const noun = diag ? (kidMode ? "starting quizzes" : "placement tests") : "quizzes";
-  const narrowed = !!(p.filter.subject || p.filter.topicId);
+  const nk = diag ? (kidMode ? "Kid" : "Placement") : "Quizzes";
+  const narrowed = !!(p.filter.subject || p.filter.topicId || q);
 
   return (
     <div className="grid gap-5" data-testid={`hub-${type}-list`}>
       {diag && <DiagHero list={data ?? []} loading={loading} kid={kidMode} />}
-      {error && !dismissed && <Notice onDismiss={() => setDismissed(true)} action={<button type="button" onClick={reload} className="min-h-[44px] rounded-lg px-2 text-[12px] font-extrabold underline">Retry</button>}>{error}</Notice>}
-      {loading && !data && <CardGridSkeleton count={3} label={diag ? `Loading ${noun}` : "Loading quizzes"} />}
+      {error && !dismissed && <Notice onDismiss={() => setDismissed(true)} action={<button type="button" onClick={reload} className="min-h-[44px] rounded-lg px-2 text-[12px] font-extrabold underline">{t("hubfam.asRetry")}</button>}>{error}</Notice>}
+      {loading && !data && <CardGridSkeleton count={3} label={t(`hubfam.asLoading${nk}`)} />}
       {data && cards.length === 0 && (
-        <EmptyState icon={diag ? "compass" : "quiz"} title={narrowed ? `No ${noun} for this topic yet` : `No ${noun} yet`}
-          body={narrowed ? "Try another subject or topic, or clear the filter." : `Your tutor hasn't published any ${noun} for you yet. They'll appear here as soon as they do.`} />
+        <EmptyState icon={diag ? "compass" : "quiz"} title={narrowed ? t(`hubfam.asNoForTopic${nk}`) : t(`hubfam.asNoneYet${nk}`)}
+          body={narrowed ? t("hubfam.asNarrowBody") : t(`hubfam.asNoneBody${nk}`)} />
       )}
 
-      {(data?.length ?? 0) > PAGE && subjectCounts.length > 1 && (
-        <div role="group" aria-label="Filter by subject" data-testid="hub-subject-counts" className="flex max-w-full gap-1.5 overflow-x-auto pb-0.5">
-          {[["", data?.filter((a) => a.type === type).length ?? 0] as [string, number], ...subjectCounts].map(([sub, n]) => (
-            <button key={sub || "all"} type="button" aria-pressed={subjectF === sub} onClick={() => { setSubjectF(sub); setShownTodo(PAGE); setShownDone(PAGE); }}
-              className={`min-h-[44px] lg:min-h-[40px] flex-none rounded-full border px-3.5 text-[12.5px] font-bold transition-colors ${subjectF === sub ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`}>{sub || "All"}<span className="ml-1 tabular-nums opacity-70">{n}</span></button>
-          ))}
-        </div>
-      )}
 
       {running.map((c) => <ResumeCard key={c.a.id} c={c} kid={kidMode} onResume={() => begin(c.a, true)} />)}
 
       {lessonOnly.length > 0 && (
-        <section aria-label="Comes with a lesson" data-testid="hub-lesson-quizzes">
-          <GroupHead label="Finish a lesson to unlock" count={lessonOnly.length} />
+        <section aria-label={t("hubfam.asComesWithLesson")} data-testid="hub-lesson-quizzes">
+          <GroupHead label={t("hubfam.asFinishLesson")} count={lessonOnly.length} />
           <div className="grid gap-2">
-            {lessonOnly.map((c) => (
-              <div key={c.a.id} data-lesson-quiz={c.a.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+            {lessonOnly.slice(0, kidMode ? 3 : 12).map((c) => (
+              <div key={c.a.id} data-lesson-quiz={c.a.id} className="flex max-w-full flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
                 <div className="min-w-0 flex-1 basis-[200px]">
-                  <div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{c.a.title}</div>
-                  <div className="text-[12px] font-semibold text-[var(--ink-3)]">This quiz comes at the end of {c.a.lessonTitle ? `the lesson \u201c${c.a.lessonTitle}\u201d` : "a lesson"}. Do the lesson first.</div>
+                  <div className="text-[14px] font-extrabold text-[var(--ink)] [overflow-wrap:anywhere]">{c.a.title}</div>
+                  <div className="text-[12px] font-semibold text-[var(--ink-3)] [overflow-wrap:anywhere]">{c.a.lessonTitle ? t("hubfam.asLessonQuizNote", { title: c.a.lessonTitle }) : t("hubfam.asLessonQuizNoteAnon")}</div>
                 </div>
-                <Button variant="solid" className={`${TAP} w-full !px-5 sm:w-auto`} data-testid="hub-quiz-start-lesson" onClick={() => openLink({ kind: "lesson", id: c.a.lessonNoteId! }, { tab: "notes" })}>Start the lesson first</Button>
+                <Button variant="solid" className={`${TAP} w-full !px-5 sm:w-auto`} data-testid="hub-quiz-start-lesson" onClick={() => openLink({ kind: "lesson", id: c.a.lessonNoteId! }, { tab: "notes" })}>{t("hubfam.asStartLessonFirst")}</Button>
               </div>
             ))}
           </div>
+          {lessonOnly.length > (kidMode ? 3 : 12) && <p className="m-0 mt-2 text-[12px] font-semibold text-[var(--ink-3)]" data-testid="hub-lesson-quizzes-more">{t("hubfam.asShowMore", { n: lessonOnly.length - (kidMode ? 3 : 12) })}</p>}
         </section>
       )}
 
       {todo.length > 0 && (
-        <section aria-label="To do">
-          <GroupHead label="To do" count={todo.length} />
+        <section aria-label={t("hubfam.asToDo")}>
+          <GroupHead label={t("hubfam.asToDo")} count={todo.length} />
           <div className={GRID}>{todo.slice(0, shownTodo).map(cardFor)}</div>
-          {todo.length > shownTodo && <div className="mt-3 flex justify-center"><Button onClick={() => setShownTodo((n) => n + PAGE)} className={`${TAP} !px-6`}>Show more ({todo.length - shownTodo} left)</Button></div>}
+          {todo.length > shownTodo && <div className="mt-3 flex justify-center"><Button onClick={() => setShownTodo((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: todo.length - shownTodo })}</Button></div>}
         </section>
       )}
       {done.length > 0 && (
-        <section aria-label="Done">
-          <GroupHead label="Done" count={done.length} tone="done" />
+        <section aria-label={t("hubfam.asDone")}>
+          <GroupHead label={t("hubfam.asDone")} count={done.length} tone="done" />
           <div className={GRID}>{done.slice(0, shownDone).map(cardFor)}</div>
-          {done.length > shownDone && <div className="mt-3 flex justify-center"><Button onClick={() => setShownDone((n) => n + PAGE)} className={`${TAP} !px-6`}>Show more ({done.length - shownDone} left)</Button></div>}
+          {done.length > shownDone && <div className="mt-3 flex justify-center"><Button onClick={() => setShownDone((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: done.length - shownDone })}</Button></div>}
         </section>
       )}
     </div>
@@ -220,19 +218,20 @@ function GroupHead({ label, count, tone }: { label: string; count: number; tone?
 }
 
 function DiagHero({ list, loading, kid }: { list: Assessment[]; loading: boolean; kid: boolean }) {
+  const { t } = useHubI18n();
   const done = list.filter((a) => a.done).length;
   const all = list.length > 0 && done === list.length;
   return (
     <div className="relative overflow-hidden rounded-2xl p-5 text-white sm:p-6" style={{ background: "linear-gradient(120deg, var(--brand-strong), var(--brand-2))" }}>
-      <svg aria-hidden viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="pointer-events-none absolute -bottom-10 -right-6 h-[190px] w-[190px] opacity-[0.13]"><circle cx="32" cy="32" r="26" /><circle cx="32" cy="32" r="18" /><path d="m39 25-4.500 10L25 39l4.500-10z" /></svg>
+      <svg aria-hidden viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="pointer-events-none absolute -bottom-10 -end-6 h-[190px] w-[190px] opacity-[0.13]"><circle cx="32" cy="32" r="26" /><circle cx="32" cy="32" r="18" /><path d="m39 25-4.500 10L25 39l4.500-10z" /></svg>
       <div className="relative flex items-start gap-4">
         <div className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-white/15" aria-hidden><Icon name={all ? "check" : "compass"} size={26} strokeWidth={1.7} /></div>
         <div className="min-w-0">
-          <h3 className="m-0 text-[20px] font-extrabold leading-tight" style={display}>{all ? "Your starting points are set" : "Find your starting point"}</h3>
-          <p className="m-0 mt-1 max-w-[560px] text-[13.5px] leading-relaxed opacity-90">{kid ? (all ? "Every quiz you do now shows how far you've come." : "A short quiz for each subject shows where you're starting from. Then every quiz after it can show how far you've come.") : all ? "Every quiz you take from here shows how far you've come. Head to Progress to watch it grow." : "A short placement test for each subject sets your starting point. It shows what you already know, so every quiz after it can show how far you've come."}</p>
+          <h3 className="m-0 text-[20px] font-extrabold leading-tight" style={display}>{all ? t("hubfam.asDiagAll") : t("hubfam.asDiagFind")}</h3>
+          <p className="m-0 mt-1 max-w-[560px] text-[13.5px] leading-relaxed opacity-90">{kid ? (all ? t("hubfam.asDiagBodyKidAll") : t("hubfam.asDiagBodyKid")) : all ? t("hubfam.asDiagBodyAll") : t("hubfam.asDiagBody")}</p>
           {!loading && list.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-[12px] font-extrabold">{done} of {list.length} {list.length === 1 ? "subject" : "subjects"} done</span>
+              <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-[12px] font-extrabold">{t("hubfam.asSubjectsDone", { done, n: list.length })}</span>
               <span className="flex gap-1" aria-hidden>{list.slice(0, 12).map((a) => <span key={a.id} className="h-2 w-6 rounded-full" style={{ background: a.done ? "#fff" : "rgba(255,255,255,.28)" }} />)}</span>
             </div>
           )}
@@ -243,23 +242,25 @@ function DiagHero({ list, loading, kid }: { list: Assessment[]; loading: boolean
 }
 
 function ResumeCard({ c, kid, onResume }: { c: Card_; kid: boolean; onResume: () => void }) {
+  const { t } = useHubI18n();
   const { a, running } = c;
   return (
     <div data-testid="hub-resume" className="relative overflow-hidden rounded-2xl border p-4 sm:p-5" style={{ borderColor: "var(--gold-line)", background: "linear-gradient(120deg, var(--gold-soft), var(--surface) 70%)" }}>
       <div className="flex flex-wrap items-center gap-4">
         <SubjectCover subject={a.subject} height={52} width={52} rounded="rounded-xl"><span className="grid h-[52px] w-[52px] place-items-center"><SubjectGlyph subject={a.subject} size={26} /></span></SubjectCover>
         <div className="min-w-[180px] flex-1">
-          <div className="text-[11px] font-extrabold uppercase tracking-[0.1em]" style={{ color: GOLD.ink }}>Pick up where you left off</div>
+          <div className="text-[11px] font-extrabold uppercase tracking-[0.1em]" style={{ color: GOLD.ink }}>{t("hubfam.asPickUp")}</div>
           <div className="mt-0.5 text-[16px] font-extrabold leading-snug text-[var(--ink)] [overflow-wrap:anywhere]" style={display}>{a.title}</div>
-          <div className="mt-0.5 text-[12px] font-semibold text-[var(--ink-3)]">Started {timeAgo(running?.startedAt)}{c.minsLeft != null ? ` · about ${c.minsLeft} min left on the clock` : ""}</div>
+          <div className="mt-0.5 text-[12px] font-semibold text-[var(--ink-3)]">{c.minsLeft != null ? t("hubfam.asStartedMinsLeft", { when: timeAgo(running?.startedAt), mins: c.minsLeft }) : t("hubfam.asStartedAgo", { when: timeAgo(running?.startedAt) })}</div>
         </div>
-        <Button variant="solid" className={`${TAP} w-full !px-6 sm:w-auto`} onClick={onResume}>{a.type === "diagnostic" ? (kid ? "Carry on" : "Resume your test") : (kid ? "Carry on" : "Resume your quiz")}</Button>
+        <Button variant="solid" className={`${TAP} w-full !px-6 sm:w-auto`} onClick={onResume}>{a.type === "diagnostic" ? (kid ? t("hubfam.asCarryOn") : t("hubfam.asResumeTest")) : (kid ? t("hubfam.asCarryOn") : t("hubfam.asResumeQuiz"))}</Button>
       </div>
     </div>
   );
 }
 
 function AssessCard({ c, diag, kid, onGoDiag, topicNames, onStart, onView, opening, now, yearGroups }: { c: Card_; diag: boolean; kid: boolean; onGoDiag?: () => void; topicNames: string[]; onStart: () => void; onView: () => void; opening: boolean; now: number; yearGroups: string[] }) {
+  const { t, tp, locale } = useHubI18n();
   const { a, best, count, latest } = c;
   const la = a.lastAttempt ?? null;
   const pending = la?.status === "pending_marking";
@@ -282,23 +283,23 @@ function AssessCard({ c, diag, kid, onGoDiag, topicNames, onStart, onView, openi
   const rt = !diag && la && la.status !== "in_progress" ? retakeState(a, now) : ({ kind: "open" } as const);
   const chips = audienceChips(a.audience, yearGroups);
 
-  const status = locked ? <Chip tone={NEUTRAL} icon={<Icon name="close" size={11} />}>Locked</Chip>
+  const status = locked ? <Chip tone={NEUTRAL} icon={<Icon name="close" size={11} />}>{t("hubfam.asLocked")}</Chip>
     : diag
-      ? (pending ? <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kid ? "Your tutor is marking it" : "Awaiting marking"}</Chip> : doneDiag ? <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>Done</Chip> : reset ? <Chip tone={GOLD}>Ready to retake</Chip> : <Chip tone={GOLD}>Not done yet</Chip>)
-      : (pending ? (partial ? <Chip tone={BRAND} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>{kid ? "Scored" : "Auto-marked"} {latest!.autoMarks}/{autoMax}</Chip> : <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kid ? "Your tutor is marking it" : "Awaiting marking"}</Chip>) : marked ? (passed ? <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>Passed</Chip> : <Chip tone={GOLD}>{kid ? "Not yet" : "Not passed yet"}</Chip>) : <Chip tone={NEUTRAL}>New</Chip>);
+      ? (pending ? <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kid ? t("hubfam.asKidMarking") : t("hubfam.asAwaitingMarking")}</Chip> : doneDiag ? <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>{t("hubfam.asDone")}</Chip> : reset ? <Chip tone={GOLD}>{t("hubfam.asReadyRetake")}</Chip> : <Chip tone={GOLD}>{t("hubfam.asNotDoneYet")}</Chip>)
+      : (pending ? (partial ? <Chip tone={BRAND} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>{t(kid ? "hubfam.asScoredHead" : "hubfam.asAutoMarkedHead", { a: latest!.autoMarks!, b: autoMax })}</Chip> : <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kid ? t("hubfam.asKidMarking") : t("hubfam.asAwaitingMarking")}</Chip>) : marked ? (passed ? <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>{t("hubfam.asPassed")}</Chip> : <Chip tone={GOLD}>{kid ? t("hubfam.asNotYet") : t("hubfam.asNotPassedYet")}</Chip>) : <Chip tone={NEUTRAL}>{t("hubfam.asNew")}</Chip>);
 
   const ringTone = diag || pending ? BRAND : passed ? OK : GOLD;
   const showStart = !locked && (diag ? !doneDiag && !pending : true);
-  const meta = [a.questionCount != null ? `${a.questionCount} ${a.questionCount === 1 ? "question" : "questions"}` : null, a.totalMarks != null ? `${a.totalMarks} ${a.totalMarks === 1 ? "mark" : "marks"}` : null, a.timeLimitMins ? `${a.timeLimitMins} min` : "Untimed", diag ? null : `pass ${a.passMarkPct}%`].filter(Boolean).join(" · ");
+  const meta = [a.questionCount != null ? tp("hubfam.asQuestions", a.questionCount) : null, a.totalMarks != null ? tp("hubfam.asMarks", a.totalMarks) : null, a.timeLimitMins ? t("hubfam.asMin", { n: a.timeLimitMins }) : t("hubfam.asUntimed"), diag ? null : t("hubfam.asPassPct", { n: a.passMarkPct })].filter(Boolean).join(" · ");
 
   let blurb: string;
-  if (diag) blurb = pending ? "Your tutor is marking your written answers. Your starting point is set as soon as they finish."
-    : doneDiag ? "Your starting point is set. It only counts once, so there's no need to retake it."
-    : reset ? "Your tutor reset this test, so you can sit it again to set a fresh starting point."
-    : "One go, no pass mark. It shows your tutor where to begin.";
-  else blurb = pending ? (partial ? `Plus ${wp} written ${wp === 1 ? "answer" : "answers"} being reviewed by your tutor. This may change.` : "Every answer here is marked by your tutor. You'll see a score once they're done.")
-    : marked ? (passed ? (best != null && best >= 100 ? "Full marks. Brilliant work." : best != null && la && best > la.pct ? "Passed, and your best is even higher." : "Passed. Retake any time to beat your best.") : `You need ${a.passMarkPct}% to pass. Have another go when you're ready.`)
-    : `Get ${a.passMarkPct}% or more to pass.`;
+  if (diag) blurb = pending ? t("hubfam.asBlurbDiagPending")
+    : doneDiag ? t("hubfam.asBlurbDiagDone")
+    : reset ? t("hubfam.asBlurbDiagReset")
+    : t("hubfam.asBlurbDiag");
+  else blurb = pending ? (partial ? t("hubfam.asBlurbPartial", { wp }) : t("hubfam.asBlurbPending"))
+    : marked ? (passed ? (best != null && best >= 100 ? t("hubfam.asBlurbFull") : best != null && la && best > la.pct ? t("hubfam.asBlurbBestHigher") : t("hubfam.asBlurbPassed")) : t("hubfam.asBlurbNeed", { n: a.passMarkPct }))
+    : t("hubfam.asBlurbGet", { n: a.passMarkPct });
 
   return (
     <Card className={`flex flex-col overflow-hidden ${LIFT} ${locked ? "opacity-80" : ""}`} id={`hub-assess-${a.id}`}>
@@ -315,7 +316,7 @@ function AssessCard({ c, diag, kid, onGoDiag, topicNames, onStart, onView, openi
           {(chips.length > 0 || a.audienceUnknown) && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5" data-testid="hub-audience-chips">
               {chips.map((c2) => <span key={c2} className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}><Icon name="users" size={11} strokeWidth={2} />{c2}</span>)}
-              {a.audienceUnknown && chips.length > 0 && <span className="text-[11px] font-semibold text-[var(--ink-3)]">(check with your tutor)</span>}
+              {a.audienceUnknown && chips.length > 0 && <span className="text-[11px] font-semibold text-[var(--ink-3)]">{t("hubfam.asCheckTutor")}</span>}
             </div>
           )}
           {topicNames.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{topicNames.slice(0, 3).map((n) => <span key={n} className="rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{n}</span>)}{topicNames.length > 3 && <span className="px-1 text-[11px] font-bold text-[var(--ink-3)]">+{topicNames.length - 3}</span>}</div>}
@@ -324,42 +325,42 @@ function AssessCard({ c, diag, kid, onGoDiag, topicNames, onStart, onView, openi
         {!locked && (
           <div className="flex items-center gap-3.5 rounded-xl bg-[var(--panel)] p-3">
             {pending
-              ? (partial ? <ScoreRing pct={partialPct} size={64} stroke={7} tone={BRAND} maybe={share} ariaLabel={`Auto-marked ${latest!.autoMarks} out of ${autoMax}. ${wp} written ${wp === 1 ? "answer" : "answers"} still being marked, so this may change.`} /> : <ScoreRing pct={0} size={64} stroke={7} tone={BRAND} state="pending" />)
+              ? (partial ? <ScoreRing pct={partialPct} size={64} stroke={7} tone={BRAND} maybe={share} ariaLabel={t("hubfam.asPartialAriaCard", { a: latest!.autoMarks!, b: autoMax, wp })} /> : <ScoreRing pct={0} size={64} stroke={7} tone={BRAND} state="pending" />)
               : la && marked
                 ? <ScoreRing pct={la.pct} size={64} stroke={7} tone={ringTone} passMark={diag ? null : a.passMarkPct} />
-                : <ScoreRing pct={0} size={64} stroke={7} tone={BRAND} state="empty" label={diag ? "–" : `${a.passMarkPct}%`} sub={diag ? undefined : "to pass"} />}
+                : <ScoreRing pct={0} size={64} stroke={7} tone={BRAND} state="empty" label={diag ? "–" : `${a.passMarkPct}%`} sub={diag ? undefined : t("hubfam.asToPass")} />}
             <div className="min-w-0 flex-1">
               {marked && best != null && !diag ? (
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <span className="inline-flex items-center gap-1 text-[13px] font-extrabold tabular-nums text-[var(--ink)]"><MedalIcon size={17} gold={bestPassed} />Best {Math.round(best)}%</span>
-                  {la && Math.round(la.pct) !== Math.round(best) && <span className="text-[12px] font-semibold tabular-nums text-[var(--ink-3)]">Last {Math.round(la.pct)}%</span>}
+                  <span className="inline-flex items-center gap-1 text-[13px] font-extrabold tabular-nums text-[var(--ink)]"><MedalIcon size={17} gold={bestPassed} />{t("hubfam.asBest", { n: Math.round(best) })}</span>
+                  {la && Math.round(la.pct) !== Math.round(best) && <span className="text-[12px] font-semibold tabular-nums text-[var(--ink-3)]">{t("hubfam.asLast", { n: Math.round(la.pct) })}</span>}
                 </div>
               ) : marked && diag ? (
-                <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">Starting point {Math.round(la!.pct)}%</div>
+                <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{t("hubfam.asStartingPointPct", { n: Math.round(la!.pct) })}</div>
               ) : pending ? (
-                <div className="text-[13px] font-extrabold text-[var(--ink)]">{partial ? `${kid ? "Scored" : "Auto-marked"} ${latest!.autoMarks}/${autoMax}` : "Handed in"}</div>
+                <div className="text-[13px] font-extrabold text-[var(--ink)]">{partial ? t(kid ? "hubfam.asScoredHead" : "hubfam.asAutoMarkedHead", { a: latest!.autoMarks!, b: autoMax }) : t("hubfam.asHandedIn")}</div>
               ) : (
-                <div className="text-[13px] font-extrabold text-[var(--ink)]">{diag ? "Not done yet" : "Not tried yet"}</div>
+                <div className="text-[13px] font-extrabold text-[var(--ink)]">{diag ? t("hubfam.asNotDoneYet") : t("hubfam.asNotTriedYet")}</div>
               )}
               <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">{blurb}</div>
-              {count > 1 && <div className="mt-0.5 text-[11px] font-semibold text-[var(--ink-3)]">{count} attempts{la?.submittedAt ? ` · last ${fmtDate(la.submittedAt)}` : ""}</div>}
+              {count > 1 && <div className="mt-0.5 text-[11px] font-semibold text-[var(--ink-3)]">{la?.submittedAt ? t("hubfam.asAttemptsLast", { n: count, date: fmtDate(la.submittedAt) }) : t("hubfam.asAttempts", { n: count })}</div>}
               {count === 1 && la?.submittedAt && <div className="mt-0.5 text-[11px] font-semibold text-[var(--ink-3)]">{fmtDate(la.submittedAt)}</div>}
             </div>
           </div>
         )}
         {locked && (
           <div className="grid gap-2 rounded-xl bg-[var(--panel)] px-3 py-2.5 text-[12.5px] font-semibold leading-snug text-[var(--ink-2)]" data-testid="hub-locked">
-            <span>{kid ? `Do the starting quiz for ${a.subject} first. It unlocks this one.` : a.lockedReason || "Sit the placement test for this subject first."}</span>
-            {onGoDiag && <Button variant="solid" className={`${TAP} w-full !px-5 sm:w-auto`} onClick={onGoDiag} data-testid="hub-go-diag">{kid ? "Go to the starting quiz" : "Go to the placement test"}</Button>}
+            <span>{kid ? t("hubfam.asLockedKid", { subject: a.subject }) : a.lockedReason || t("hubfam.asLockedDefault")}</span>
+            {onGoDiag && <Button variant="solid" className={`${TAP} w-full !px-5 sm:w-auto`} onClick={onGoDiag} data-testid="hub-go-diag">{kid ? t("hubfam.asGoStartingKid") : t("hubfam.asGoPlacement")}</Button>}
           </div>
         )}
 
         {!locked && (
           <div className="mt-auto flex flex-wrap items-center gap-2">
-            {showStart && rt.kind === "open" && <Button variant={(marked && passed) || pending ? "ghost" : "solid"} className={`${TAP} flex-1 !px-5 sm:flex-none`} onClick={onStart} data-testid="hub-open-assessment">{diag ? (reset ? "Retake" : "Start") : la ? "Retake" : "Start"}</Button>}
+            {showStart && rt.kind === "open" && <Button variant={(marked && passed) || pending ? "ghost" : "solid"} className={`${TAP} flex-1 !px-5 sm:flex-none`} onClick={onStart} data-testid="hub-open-assessment">{diag ? (reset ? t("hubfam.asRetake") : t("hubfam.asStart")) : la ? t("hubfam.asRetake") : t("hubfam.asStart")}</Button>}
             {showStart && rt.kind === "wait" && <span data-testid="hub-retake-wait" className="inline-flex min-h-[44px] flex-1 items-center gap-1.5 rounded-full bg-[var(--panel)] px-3.5 text-[12px] font-extrabold text-[var(--ink-2)] sm:flex-none"><HourglassIcon size={14} />{rt.label}</span>}
             {showStart && rt.kind === "once" && <span data-testid="hub-retake-once" className="flex min-h-[44px] w-full items-center gap-1.5 rounded-2xl bg-[var(--panel)] px-3.5 py-2 text-[12px] font-bold leading-snug text-[var(--ink-2)]">{rt.label}</span>}
-            {la && <Button variant={showStart ? "ghost" : "solid"} className={`${TAP} flex-1 sm:flex-none`} onClick={onView} disabled={opening}>{opening ? "Opening…" : pending || (diag && doneDiag) ? "View result" : "Last result"}</Button>}
+            {la && <Button variant={showStart ? "ghost" : "solid"} className={`${TAP} flex-1 sm:flex-none`} onClick={onView} disabled={opening}>{opening ? t("hubfam.asOpening") : pending || (diag && doneDiag) ? t("hubfam.asViewResult") : t("hubfam.asLastResult")}</Button>}
           </div>
         )}
       </div>

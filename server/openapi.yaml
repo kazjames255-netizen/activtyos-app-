@@ -817,6 +817,8 @@ tags:
     description: AI assistant — plain-English Q&A over the caller's own live data (read-only)
   - name: learning-hub
     description: Learning Hub (tutoring) — topics, notes, questions, quizzes & diagnostics, attempts, mastery, homework, flashcards, live lessons
+  - name: hub-games
+    description: Learning Hub games (Penguin Slide, Turbo Slide) - server-issued seed + plan, results RE-SIMULATED from the input log, per-fact memory shared across both games. See docs/games-prototypes/BACKEND-PATTERN.md.
   - name: platform-hq
     description: Platform (HQ) tools — the sales pipeline and the support inbox (platform role only; bug reports come from any signed-in account)
 
@@ -4271,6 +4273,31 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /api/learning-hub/bootstrap:
+    get:
+      tags: [learning-hub]
+      summary: Many hub reads in ONE round trip (first paint)
+      description: >
+        Repeat `p=<hub path>` (e.g. `/topics?tenantId=T`, `/lessons?tenantId=T`). The server runs each read-only GET in parallel
+        through the hub router itself, so every answer is identical to the normal endpoint and every permission / scope rule applies
+        unchanged. Whitelisted paths only (providers, topics, students, config, notes/counts, groups, lessons, doubts, homework,
+        homework/inbox, attempts, curriculum, mastery, mastery/overview, assessments, flashcards/due, remote-sync/sessions), max 24.
+        Placeholders `{T}` (tenantId) and `{C}` (first child) are filled from the caller's own first provider, for a first visit that
+        remembers nothing. A path that fails is omitted from `responses` (the client then makes it the normal way and sees the real
+        error). The web client parks the answers for a few seconds (lib/api.ts `primeHubReads`).
+      parameters:
+        - { name: p, in: query, required: true, schema: { type: array, items: { type: string }, maxItems: 24 }, style: form, explode: true }
+      responses:
+        "200":
+          description: Answers keyed by the (placeholder-filled) path
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  responses: { type: object, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   # ── Learning Hub: questions, assessments, attempts, mastery (agent B1) ──────────
   /api/learning-hub/config:
     get:
@@ -4320,6 +4347,103 @@ paths:
               schema: { $ref: "#/components/schemas/HubConfig" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ── Learning Hub: parent digest & homework nudges ───────────────────────────
+  /api/learning-hub/digest/preview:
+    get:
+      tags: [learning-hub]
+      summary: Preview the exact parent email (tutors only)
+      description: >
+        Returns the rendered HTML a parent would receive for one student. Never sends anything. `kind` = `digest` (weekly summary),
+        `nudge_before` or `nudge_after` (homework reminders; `homeworkId` picks the homework, default the student's next open one).
+        Rendered in the parent's own language (`users.locale`, English if unset) unless `locale` is one of en pl ro ur pa bn ar pt es fr cy
+        (ar and ur render right-to-left). When the student has nothing of that kind yet a clearly-marked SAMPLE is rendered.
+        The opt-out link in a preview is inert. Response headers: `X-Preview-Subject` (URL-encoded), `X-Preview-Locale`, `X-Preview-Sample` (0/1).
+      parameters:
+        - { name: childId, in: query, required: true, schema: { type: string } }
+        - { name: kind, in: query, schema: { type: string, enum: [digest, nudge_before, nudge_after], default: digest } }
+        - { name: homeworkId, in: query, schema: { type: string } }
+        - { name: locale, in: query, schema: { type: string, enum: [en, pl, ro, ur, pa, bn, ar, pt, es, fr, cy] } }
+      responses:
+        "200": { description: The email HTML, content: { text/html: { schema: { type: string } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/learning-hub/digest/run:
+    post:
+      tags: [learning-hub]
+      summary: Dry run of the parent emails for my students (tutors only)
+      description: >
+        Reports what WOULD go out right now — ignoring the on/off switches so a tutor can see the effect before turning them on.
+        Body `{what: "digest"|"nudges"|"both"}` (default both). Never sends and never touches the sent-log; no addresses are returned.
+        Each item has `status` (`dry`, or `skipped` with a `reason` such as `parent_opted_out`, `nothing_to_report`, `already_sent_or_capped`).
+        Real sending is the scheduler only (server env `HUB_DIGEST_ENABLED=1`; `HUB_DIGEST_DRY=1` renders files instead).
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { what: { type: string, enum: [digest, nudges, both] } } }
+      responses:
+        "200":
+          description: The dry-run report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dry: { type: boolean }
+                  at: { type: string }
+                  week: { type: string, description: "UK date of the Sunday that keys this week's digest" }
+                  switches: { type: object, properties: { parentDigest: { type: boolean }, homeworkNudges: { type: boolean } } }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        childId: { type: string }
+                        childName: { type: string, description: first name only }
+                        kind: { type: string, enum: [digest, nudge_before, nudge_after] }
+                        homeworkId: { type: string }
+                        locale: { type: string }
+                        status: { type: string }
+                        reason: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/learning-hub/digest/opt-out/{childId}:
+    delete:
+      tags: [learning-hub]
+      summary: Put a parent's opt-out back (tutors only)
+      description: Clears the parent's `digest` or `nudge` opt-out for this student's parent (they asked to be switched on again).
+      parameters:
+        - { name: childId, in: path, required: true, schema: { type: string } }
+        - { name: scope, in: query, required: true, schema: { type: string, enum: [digest, nudge] } }
+      responses:
+        "200": { description: Done }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/hub-digest/unsubscribe:
+    get:
+      tags: [learning-hub]
+      summary: Parent opt-out page (public, signed link from the email)
+      description: >
+        Public — mounted before auth. `u` is an HMAC-signed token naming provider, address and scope (`digest` | `nudge`); `l` is the page language.
+        GET only shows a confirm button (so a link scanner opts nobody out); POST performs it. Rate-limited.
+      security: []
+      parameters:
+        - { name: u, in: query, required: true, schema: { type: string } }
+        - { name: l, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Confirm page (HTML) }
+        "400": { description: Link not valid (HTML) }
+    post:
+      tags: [learning-hub]
+      summary: Confirm the parent opt-out (public)
+      security: []
+      parameters:
+        - { name: u, in: query, required: true, schema: { type: string } }
+        - { name: l, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Done page (HTML) }
+        "400": { description: Link not valid (HTML) }
 
   /api/learning-hub/questions:
     get:
@@ -5141,7 +5265,7 @@ paths:
   /api/learning-hub/notes/counts:
     get:
       tags: [learning-hub]
-      summary: "Note counts without listing notes — `{ total, drafts, files, fresh (created in the last 7 days), byTopic: { topicId: n } }` (own rows per topic; same visibility as GET /notes, including the family assigned-only restriction)"
+      summary: "Note counts without listing notes — `{ total, drafts, files, fresh (created in the last 7 days), byTopic: { topicId: n }, worksheets, worksheetsByYear: { \"4\": n }, worksheetsBySubject: { subject: n } }` (own rows per topic; same visibility as GET /notes, including the family assigned-only restriction; the three `worksheets*` fields count notes carrying a worksheet, per school year and per subject, and ignore `year`)"
       parameters:
         - { $ref: "#/components/parameters/hubTenantId" }
       responses:
@@ -5174,6 +5298,22 @@ paths:
       responses:
         "200": { description: "{ok:true}" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /api/learning-hub/notes/{id}/worksheet:
+    get:
+      tags: [learning-hub]
+      summary: "A lesson's worksheet PDF as a short-lived signed URL (tutors; a family only for a worksheet listed on homework assigned to their child)"
+      description: |
+        Returns `{url, name, size, pages?, quizId?}`. `url` is a 15-minute V4 signed URL served inline (embeddable in an iframe/object); re-request when it expires.
+        The PDF lives in Firebase Storage (`tenants/<tid>/<worksheet store>/<noteId>.pdf`), the note carries only the pointer `worksheetFile {name,size,pages?}` (also shown on `GET /notes/{id}`).
+        `quizId` = the note's `worksheetQuizId` (the auto-marked interactive version), when one exists.
+        Tutors: any note they can read. A family: 404 unless the note is in `worksheetNoteIds` OR `noteIds` of a homework assigned to one of THEIR children (and published). Otherwise 404 (never 403).
+      parameters:
+        - { $ref: "#/components/parameters/hubTenantId" }
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Signed URL }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /api/learning-hub/notes/{id}/homework-pack:
     get:
       tags: [learning-hub]
@@ -5226,6 +5366,7 @@ paths:
                 instructions: { type: string }
                 assessmentId: { type: string, nullable: true, description: "A PUBLISHED quiz of this provider" }
                 noteIds: { type: array, items: { type: string } }
+                worksheetNoteIds: { type: array, maxItems: 10, items: { type: string }, description: "Lesson notes whose worksheet PDF to attach (each must be a readable note WITH a `worksheetFile`, else 404). Omitted on PUT = keep. Tutor rows return `worksheetNoteIds` + `worksheets[{noteId,title,size,quizId?}]`; student rows return `worksheets[]` (published notes only). A child may also start `worksheetQuizId`'s quiz with this homework's `homeworkId`." }
                 flashcardTopicId: { type: string, nullable: true }
                 dueAt: { type: string, description: "ISO date-time or YYYY-MM-DD (end of that day). Default = now + settings.hub.homeworkDueDays" }
                 assignedChildIds: { type: array, items: { type: string }, maxItems: 100 }
@@ -5922,7 +6063,7 @@ paths:
       description: |
         `{ lesson: { widget?: string|null, slides?: object[], deckSlides?: object[] } }` — at least one; `slides` (our summary slides) is capped at 120 slides / 400,000 chars of JSON, `deckSlides` at 120 slides / 500,000 chars. Both get the same picture checks.
 
-        `deckSlides` = the lesson's REAL slide deck (Oak's own slides imported as editable slides, `server/src/oak/deckConvert.ts`), kept beside `slides`. Each slide is `{kind:"explain", title, blocks:[{t:"canvas", w, h, bg?, els:[…]}]}`; `els` (max 300, in z-order) are `img` / `text` / `shape` elements with geometry as fractions of the slide, font sizes in points on a `w`-pt-wide slide, optional `step` / `until` (reveal / hide on that click). An `img` element has EXACTLY ONE source: `sid` (an imported picture in Firebase Storage, `<sha256>.webp` — the tenant folder `hubSlides/<tenantId>/` is added by the server, never sent), `imageId` (a private hub upload of this tenant, same rules as `image.id`) or `picId` (a verified library picture). Colours are hex only, unknown keys (incl. any client `url`) are dropped, text is capped at 30,000 chars per slide. On every read each `sid` / `imageId` element comes back with a short-lived signed `url` (Storage V4 URL, ~1 h; never stored). `deckSlides: []` removes the real deck (the player falls back to the embedded Oak deck).
+        `deckSlides` = the lesson's REAL slide deck (the imported slide deck as editable slides, `server/src/oak/deckConvert.ts`), kept beside `slides`. Each slide is `{kind:"explain", title, blocks:[{t:"canvas", w, h, bg?, els:[…]}]}`; `els` (max 300, in z-order) are `img` / `text` / `shape` elements with geometry as fractions of the slide, font sizes in points on a `w`-pt-wide slide, optional `step` / `until` (reveal / hide on that click). An `img` element has EXACTLY ONE source: `sid` (an imported picture in Firebase Storage, `<sha256>.webp` — the tenant folder `hubSlides/<tenantId>/` is added by the server, never sent), `imageId` (a private hub upload of this tenant, same rules as `image.id`) or `picId` (a verified library picture). Colours are hex only, unknown keys (incl. any client `url`) are dropped, text is capped at 30,000 chars per slide. On every read each `sid` / `imageId` element comes back with a short-lived signed `url` (Storage V4 URL, ~1 h; never stored). `deckSlides: []` removes the real deck (the player falls back to the embedded deck).
 
         Slide PICTURES are validated strictly (the rest of a slide is loose JSON the web app normalises). Per slide, all optional:
         `pics: [{id}]` (max 3) — ids from the verified picture library only, 400 otherwise; `image: {id, alt}` — a private hub upload of
@@ -6041,6 +6182,419 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: Cancelled }
 
+  # ── learning-hub: games (docs/games-research/03-concepts.md) ──
+  /api/learning-hub/games/sessions:
+    post:
+      tags: [hub-games]
+      summary: Start a Penguin Slide or Turbo Slide run (family). Returns seed, config, the plan (weakest facts first) and the personal best to race. Rate limited.
+      description: |
+        Family accounts only (`?tenantId=` as every family hub call). Config is chosen by the server - calm is forced when the child's support profile says calm/noTimer,
+        lanes/approach time follow the child's age, a tutor's pinned tables win. Nothing here is an answer key: the client simulates the run locally from
+        (seed, cfg, plan) with the shared deterministic core (features/learninghub/games/penguin/core.ts) and later sends only its input log.
+        Turbo Slide (features/learninghub/games/turbo/) is a highway-themed reskin of this exact same simulation and fact domain (docs/games-prototypes/BACKEND-PATTERN.md) -
+        it calls this same endpoint with `skin: "turbo"` and shares the resulting fact-mastery data with Penguin Slide; it does not use `stageId` / `loadout` (no journey map yet).
+      parameters:
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                mode: { type: string, enum: [solo, quick, calm, pit, daily, mtc], description: "pit = Practice Pit (weakest facts); daily = Challenge of the Day (a safe modifier); mtc = MTC practice (25 typed questions, no pass mark)" }
+                stageId: { type: string, description: "Journey stage, e.g. b1s2 (5 biomes x 4 stages). 403 while it is locked: the next stage opens at 2 stars on the one before. Penguin Slide only." }
+                loadout: { type: array, maxItems: 2, items: { type: string, enum: [hint, shield, freeze, magnet, radar] }, description: "Helpers taken along; only ones the child has EARNED are used. Penguin Slide only." }
+                tables: { type: array, items: { type: integer, minimum: 2, maximum: 12 } }
+                lanes: { type: integer, enum: [3, 4] }
+                forms: { type: array, items: { type: string, enum: [x, d, m] }, description: "x = 7 x 8, d = 56 / 7, m = ? x 8 = 56" }
+                timer: { type: string, enum: [none, soft], description: "Default none. soft (opt-in sprint) is refused for a child whose support profile says calm / noTimer." }
+                calm: { type: boolean }
+                skin: { type: string, enum: [penguin, turbo], description: "Which game asked for this run; stored on the session for reporting only - it never changes scoring or the shared fact data. Default penguin." }
+                gameId: { type: string, enum: [compass-quest, museum-vault, colour-lab, debate-keep, story-detective, word-vault, word-pop, bot-foundry, sort-yard, training-ground], description: "compass-quest/museum-vault/colour-lab/debate-keep/story-detective/word-vault: quiz-quest games (server/src/lib/hubQuizGames.ts) - a seeded-item-bank plan (8 questions, or the game's own count - Debate Keep 8, Story Detective 6, Word Vault 10), weakest/overdue first. word-pop: the SAME quiz-quest plumbing (plan shape, Leitner state, profile), but a timed arcade drill - see features/learninghub/games/wordpop/core.ts; the response includes `answerMs` (5000), and POST finish marks a slow answer as a miss regardless of what was picked. bot-foundry: a computing-logic plan of block-program puzzles (server/src/lib/games/botFoundry.ts). sort-yard: a statistics plan of sort/chart/order rounds (server/src/lib/games/sortYard.ts). training-ground: a generic typed-answer drill plan from `packId` (server/src/lib/games/trainingGround.ts). When set, every other field is ignored." }
+                packId: { type: string, description: "training-ground only: which drill pack to practise (see GET .../training-ground/facts is not exposed; packs are the fixed ids in features/learninghub/games/training/core.ts, e.g. spell-ks2-y34). Defaults to spell-ks2-y34." }
+      responses:
+        "201":
+          description: "{ sessionId, seed, cfg, plan, skin, best:{fish,correct,pace}|null, tickHz, softCap, todayCount, pinned, facts:[{key,thaw,attempts,correct,medianMs}], fluentFacts, weekDays, weekGoal, xpToday, xpCap, journey:{stars,unlockAll,totalStars,maxStars,bosses}, unlocks:{powers,cosmetics}, daily:{modifier} }. mode mtc returns { sessionId, seed, form:[{a,b}], limits }. A quiz-quest gameId returns { sessionId, gameId, plan:[{key,topics,difficulty,prompt,passage?,options:[{id,text}]}], itemsTotal, itemsSeen, secure, points, bestScore, weekDays, weekGoal, answerMs? (word-pop only) } - options carry no correctness hint, only ids; `passage` (Story Detective) is shared reading context above the prompt. bot-foundry returns { sessionId, seed, plan:[{id,title,concept,grid,parMoves,starterBug}], limits, points, streakDays } - never a solution. sort-yard returns { sessionId, seed, plan:[{kind,id,title,concept,...round data with no answer key}], limits, points, streakDays }. training-ground returns { sessionId, seed, packId, packTitle, plan:[{id,prompt}], limits, points, streakDays } - never the answer."
+        "429": { description: Too many runs in a short time }
+  /api/learning-hub/games/sessions/{id}/finish:
+    post:
+      tags: [hub-games]
+      summary: Finish a run - send the input log, the server re-simulates it from the stored seed and records score, accuracy, per-fact memory and the personal best. Idempotent.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                log: { type: array, description: "[tick, packed] pairs; packed = (steer+3) | (act<<3) | (power<<4). The server re-plays the run from the stored seed with the shared deterministic core.", items: { type: array, items: { type: integer } } }
+                endTick: { type: integer, description: "The tick the client stopped at (a finished run ends itself)" }
+                answers: { type: array, description: "MTC practice: 25 { v: number|null, ms } typed answers. Quiz-quest games: one { key, chosenId: string|null, ms } per plan item, IN PLAN ORDER - chosenId is the option id picked, never a score. Training Ground: one { v: string, ms } typed answer per plan item, IN PLAN ORDER.", items: { type: object } }
+                submissions: { type: array, description: "Bot Foundry: one { puzzleId, program } per puzzle attempted - program is the block/arrow list the child built (forward/left/right/repeat/if_wall), never a solved flag. Sort Yard: one { roundId, assignments|value|order } per round - assignments (sort rounds: item label -> category), value (chart rounds: the typed number), or order (order rounds: the values in the order submitted).", items: { type: object } }
+      responses:
+        "200":
+          description: "{ done, answered, correct, timeouts, fish, bestStreak, seconds, productiveSeconds, newBest, faster, fasterDetail, thawGained, wrong, lookAt, pace, facts, xp (first-attempt correct answers, capped per day), weekDays, stage:{id,stars,best,cleared,caught,opened,newPowers,newCosmetics}|null, mastery:{source:game,weight:0.15} }. Stars: 1 finish, 2 >=80% right first time, 3 >=92% with no helper - never speed. A repeat call returns the same body plus repeat:true. MTC: { kind, label:practice, score, total, byTable, missed:[{a,b,kind:wrong|timeout,entered}] } - no pass mark. Quiz-quest: { score, total, points, rows:[{key,correct,correctId,chosenId,explanation}], pointsTotal, bestScore, weekDays, weekGoal }. Bot Foundry: { done, solved, total, stars, maxStars, points, streakDays, rows:[{puzzleId,title,concept,reached,crashed,steps,parMoves,stars}] } - re-simulated per puzzle from the submitted program. Sort Yard: { done, correct, total, points, streakDays, rows:[{roundId,title,concept,correct,detail}] }. Training Ground: { done, score, total, streak, packId, points, streakDays, best, wrong:[{prompt,answer,entered}] }."
+        "400": { description: Bad input log }
+        "410": { description: Session expired (48 h) }
+  /api/learning-hub/games/sessions/{id}/checkpoint:
+    post:
+      tags: [hub-games]
+      summary: "Mid-run \"Back to Games\": save the input log + tick so far so the run can be resumed later. Penguin Slide / Turbo Slide only."
+      description: |
+        Never trusted blindly - the server re-verifies the log actually replays (the same `replay()` finish() uses) before storing it and marking the
+        session `paused`. Silently a no-op (`{ saved: false }`) if the session is already finished or expired - a stray double-exit, not an error.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                log: { type: array, items: { type: array, items: { type: integer } } }
+                endTick: { type: integer }
+      responses:
+        "200": { description: "{ sessionId, saved }" }
+        "400": { description: Bad input log }
+  /api/learning-hub/games/sessions/resumable:
+    get:
+      tags: [hub-games]
+      summary: Is there a run this child left mid-way, for one skin, not finished and not expired? Drives "Continue" vs "Play" on the Games tab honestly.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+        - { in: query, name: skin, schema: { type: string, enum: [penguin, turbo] }, description: Default penguin. }
+      responses:
+        "200": { description: "{ resumable: { sessionId, skin, savedAt } | null }" }
+  /api/learning-hub/games/sessions/{id}/resume:
+    get:
+      tags: [hub-games]
+      summary: Fetch one specific abandoned-but-resumable session - everything POST /games/sessions would return, plus the server-held checkpoint to continue from.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      responses:
+        "200": { description: "{ sessionId, seed, cfg, plan, skin, checkpoint:{log,endTick}, best, ...same fields as POST /games/sessions }" }
+        "404": { description: Not found, or nothing to resume }
+        "410": { description: Already finished, or expired - start a new one }
+  /api/learning-hub/games/penguin-slide/facts:
+    get:
+      tags: [hub-games]
+      summary: A child's fact strengths (the thaw map). Tutors also get slow-but-correct and wrong lists, pinned tables, personal bests and recent runs.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ facts:[{key,op,a,b,thaw,attempts,correct,medianMs,band,oftenAnswers}], slowButCorrect, wrong, pinned, bests, runs, totals }" }
+  /api/learning-hub/games/turbo-slide/facts:
+    get:
+      tags: [hub-games]
+      summary: Alias of GET /games/penguin-slide/facts - Turbo Slide reads and writes the SAME hubFactState/hubGameProfile data (one fact-mastery map per child, not one per game).
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/penguin-slide/facts." }
+  /api/learning-hub/games/compass-quest/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Compass Quest (geography) - the per-item Leitner box state, points, and recent runs.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ gameId, totals:{facts,fluent,itemsTotal}, points, bestScore, weekDays, weekGoal, runs:[{at,score,total}], weakTopics:[{topic,attempts,accuracy}], mastery }" }
+  /api/learning-hub/games/museum-vault/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Museum Vault (history) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/colour-lab/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Colour Lab (science) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/debate-keep/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Debate Keep (persuasive writing / argumentation) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/story-detective/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Story Detective (reading comprehension / inference) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/word-vault/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Word Vault (vocabulary) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/word-pop/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Word Pop (timed spelling drill) - same shape as compass-quest/progress, own item bank.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "Identical shape to /games/compass-quest/progress." }
+  /api/learning-hub/games/bot-foundry/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Bot Foundry (computing) - puzzles solved, points and recent runs.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ points, streakDays, puzzlesSolved, runs:[{at,solved,total,stars}], weekDays, weekGoal }" }
+  /api/learning-hub/games/sort-yard/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Sort Yard (statistics) - data rounds solved, points and recent runs.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ points, streakDays, roundsSolved, runs:[{at,correct,total}], weekDays, weekGoal }" }
+  /api/learning-hub/games/training-ground/progress:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in Training Ground (generic drill) - points, streak and recent runs by pack.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ points, streakDays, bests:{[packId]:{score,total,at}}, runs:[{at,packId,score,total}], weekDays, weekGoal }" }
+  /api/learning-hub/games/quiz/{gameId}/sessions:
+    post:
+      tags: [hub-games]
+      summary: Start a Prime Reef / Data Carnival / Shape Workshop run (family). Returns 8 freshly-generated multiple-choice items with their correct answers stripped out. Rate limited.
+      description: |
+        Family accounts only (`?tenantId=` as every family hub call). gameId is one of prime-reef (number theory: primes, factors, multiples, divisibility, prime
+        factorisation), data-carnival (statistics: bar/pie/line charts, mean/median/mode/range) or shape-workshop (geometry: 2D/3D shape properties, angles, symmetry,
+        area/perimeter) - see server/src/lib/games/*.ts for the curriculum content. Unlike the quiz-quest cluster (compass-quest etc., a FIXED item bank), every run's
+        8 items are freshly generated from a random seed by a pure per-game generator (server/src/lib/quizArcade.ts) so the arithmetic itself can't be memorised;
+        difficulty and which topics are weighted in are chosen server-side from the child's own per-topic accuracy so far (weakest topics first).
+      parameters:
+        - { in: path, name: gameId, required: true, schema: { type: string, enum: [prime-reef, data-carnival, shape-workshop] } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { childId: { type: string } } }
+      responses:
+        "201": { description: "{ sessionId, seed, items:[{id,topic,prompt,choices}], runLength (8), best:{score,streak}|null, coins, topics }. `choices` carry no correctness hint - only the server (which kept the full plan, including the correct index, to itself) can mark it." }
+        "429": { description: Too many runs in a short time }
+  /api/learning-hub/games/quiz/{gameId}/sessions/{id}/finish:
+    post:
+      tags: [hub-games]
+      summary: Finish a Prime Reef / Data Carnival / Shape Workshop run - send back which choice was picked per item, the server re-marks against the plan it kept and records per-topic mastery. Idempotent.
+      parameters:
+        - { in: path, name: gameId, required: true, schema: { type: string, enum: [prime-reef, data-carnival, shape-workshop] } }
+        - { in: path, name: id, required: true, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                answers: { type: array, description: "One { id, chosen: integer|null, ms } per item, IN PLAN ORDER - chosen is the choice INDEX picked (or null if never reached), never a score.", items: { type: object } }
+      responses:
+        "200": { description: "{ score, total, accuracy, streak, bestStreak, coins, newBest, rows:[{id,topic,prompt,ok,chosen,correct,explain}] }. A repeat call on the same session returns the same body plus repeat:true." }
+        "400": { description: Bad answers }
+        "410": { description: Session expired (48 h) }
+  /api/learning-hub/games/quiz/{gameId}/facts:
+    get:
+      tags: [hub-games]
+      summary: A child's progress in one of Prime Reef / Data Carnival / Shape Workshop - per-topic mastery level, best score/streak, coins and days practised.
+      parameters:
+        - { in: path, name: gameId, required: true, schema: { type: string, enum: [prime-reef, data-carnival, shape-workshop] } }
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family (their own child) or tutor }
+      responses:
+        "200": { description: "{ gameId, topics:[{topic,attempts,correct,streakBest,level (0-4),lastSeen,recentWrong:[{prompt,chosen,correct}]}], runs, bestScore, bestStreak, coins, days, totalCorrect, totalAnswered, lastPlayedAt, weekDays, weekGoal }" }
+  /api/learning-hub/games/quiz-arcade/summary:
+    get:
+      tags: [hub-games]
+      summary: Combined "has this child played any of Prime Reef / Data Carnival / Shape Workshop" line, for a Progress-panel summary that doesn't need one row per game.
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family (their own child) or tutor }
+      responses:
+        "200": { description: "{ played, runs, bestScore, gamesPlayed, weekDays }" }
+  /api/learning-hub/games/penguin-slide/journey:
+    get:
+      tags: [hub-games]
+      summary: The journey map data - stars per stage, unlocked helpers and wardrobe, today's Challenge of the Day (family for their own child; tutors for a student).
+      parameters:
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string }, description: Family accounts only }
+      responses:
+        "200": { description: "{ facts, fluentFacts, weekDays, weekGoal, xpToday, xpCap, journey:{stars,unlockAll,totalStars,maxStars,bosses}, unlocks:{powers,cosmetics}, daily:{modifier} }" }
+  /api/learning-hub/games/penguin-slide/unlock:
+    put:
+      tags: [hub-games]
+      summary: Tutor opens every journey stage for a child (stars are still earned honestly).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [childId, all], properties: { childId: { type: string }, all: { type: boolean } } }
+      responses:
+        "200": { description: "{ childId, unlockAll }" }
+  /api/learning-hub/games/penguin-slide/pin:
+    put:
+      tags: [hub-games]
+      summary: Tutor pins the times tables a child should practise (0-6 tables, 2-12). Pinned tables win over Pip's picks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId, tables]
+              properties:
+                childId: { type: string }
+                tables: { type: array, items: { type: integer, minimum: 2, maximum: 12 } }
+      responses:
+        "200": { description: "{ childId, pinned }" }
+  /api/learning-hub/games/turbo-slide/pin:
+    put:
+      tags: [hub-games]
+      summary: Alias of PUT /games/penguin-slide/pin - pinning tables is a property of the child's fact practice, so it applies to whichever game a tutor is looking at.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [childId, tables]
+              properties:
+                childId: { type: string }
+                tables: { type: array, items: { type: integer, minimum: 2, maximum: 12 } }
+      responses:
+        "200": { description: "{ childId, pinned }" }
+
+  # ── learning-hub: applied-maths games (Market Day, Bake Off Blitz, Rhythm Reef - docs/games-prototypes/) ──
+  /api/learning-hub/games/applied/{gameId}/sessions:
+    post:
+      tags: [hub-games]
+      summary: Start a Market Day / Bake Off Blitz / Rhythm Reef run (family). Returns a form of typed-answer items with the answer key stripped, at a level the server itself picked.
+      description: |
+        Same server-authoritative contract as /games/sessions, but each of these three is its own skill domain (money/economics, measurement/ratio/proportion, pattern/sequencing -
+        see features/learninghub/games/applied/core.ts) rather than a shared times-tables fact map, so each gets its own gameId-scoped session/state (server/src/lib/appliedGames.ts).
+        The item's `answer` is never sent to the client; finishing sends only the answers actually given and the server re-marks the exact items it issued.
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { childId: { type: string } } }
+      responses:
+        "201": { description: "{ sessionId, gameId, level, items:[{id,tag,kind,level,prompt,choices?,unit?}], itemsPerRun, best:{score,total,at}|null, softCap, todayCount, xpToday, daysPractised }" }
+        "429": { description: Too many runs in a short time }
+  /api/learning-hub/games/applied/{gameId}/sessions/{id}/finish:
+    post:
+      tags: [hub-games]
+      summary: Finish a run - send the answers, the server re-marks them against the items it issued and records the result. Idempotent.
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                answers: { type: array, items: { type: object, properties: { id: { type: string }, value: {}, ms: { type: integer } } } }
+      responses:
+        "200": { description: "{ gameId, score, total, level, nextLevel, newBest, best, xpGained, xpToday, rows:[{id,tag,correct,given,answer}] }. A repeat call returns the same body plus repeat:true." }
+        "400": { description: Missing/malformed answers }
+        "410": { description: Session expired (48 h) }
+  /api/learning-hub/games/applied/{gameId}/sessions/{id}/checkpoint:
+    post:
+      tags: [hub-games]
+      summary: "Back to Games\" mid-run: save the answers given so far so the run can be resumed (same pattern as /games/sessions/{id}/checkpoint)."
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { in: query, name: tenantId, required: true, schema: { type: string } }
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { childId: { type: string }, answers: { type: array, items: { type: object } } } }
+      responses:
+        "200": { description: "{ sessionId, saved }" }
+  /api/learning-hub/games/applied/{gameId}/sessions/resumable:
+    get:
+      tags: [hub-games]
+      summary: Is there a run this child left mid-way in THIS game, not finished and not expired? Drives a genuine "Continue" vs "Play".
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string } }
+      responses:
+        "200": { description: "{ resumable: { sessionId, gameId, savedAt } | null }" }
+  /api/learning-hub/games/applied/{gameId}/sessions/{id}/resume:
+    get:
+      tags: [hub-games]
+      summary: Fetch a specific abandoned-but-resumable session (items/level exactly as start would return) plus the server-held checkpoint.
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string } }
+      responses:
+        "200": { description: "Same shape as start, plus { checkpoint: { answers } }." }
+        "404": { description: Nothing to resume }
+        "410": { description: Already finished, or expired }
+  /api/learning-hub/games/applied/{gameId}/state:
+    get:
+      tags: [hub-games]
+      summary: A child's applied-maths progress for one game - level, per-tag accuracy, personal best (feeds the shared GamesSummaryCard pattern).
+      parameters:
+        - { name: gameId, in: path, required: true, schema: { type: string, enum: [market, bakeoff, reef] } }
+        - { in: query, name: childId, schema: { type: string } }
+        - { in: query, name: tenantId, schema: { type: string } }
+      responses:
+        "200": { description: "{ gameId, level, best, tags:[{tag,attempts,correct,rate}], weak, totals:{attempts,correct,accuracy,daysPractised}, xpToday }" }
+
 components:
   securitySchemes:
     firebaseIdToken:
@@ -6124,6 +6678,9 @@ components:
       type: object
       description: settings.hub merged over the defaults (lib/hubConfig.ts).
       properties:
+        parentDigest: { type: boolean, default: false, description: "Weekly 'This week in <child>'s learning' email to each enrolled child's parent (Sundays 17:00 UK). OFF by default. Sending also needs the server env HUB_DIGEST_ENABLED=1." }
+        homeworkNudges: { type: boolean, default: false, description: "Friendly homework reminders to the parent: one `nudgeLeadHours` before the due date and one gentle 'not handed in yet' a day after; max 2 per homework, only while not handed in. OFF by default." }
+        nudgeLeadHours: { type: integer, minimum: 1, maximum: 72, default: 24 }
         questionKinds:
           type: array
           items:

@@ -1,6 +1,7 @@
 import { compile, sample, type Fn } from "./toolkit/mathExpr";
 import { LINE_H, type El } from "./model";
 import { wrapLines, type Env } from "./render";
+import { bt, slug } from "./boardI18n";
 
 // The toolkit's data-driven stamps: periodic table, function plotter, Bohr atom,
 // circuit symbols, lab apparatus, lens ray diagrams, timelines, text-to-annotate,
@@ -79,7 +80,7 @@ function drawPeriodic(ctx: CanvasRenderingContext2D, e: El, env: Env) {
   // f-block markers + legend
   ctx.fillStyle = env.paper.label; ctx.font = `600 ${cw * 0.24}px ${env.paper.font}`; ctx.textAlign = "right";
   ctx.fillText("57–71", x + 2.9 * cw, y + 5.5 * ch); ctx.fillText("89–103", x + 2.9 * cw, y + 6.5 * ch);
-  if (colour) { ctx.textAlign = "left"; ctx.font = `600 ${cw * 0.2}px ${env.paper.font}`; CAT_NAMES.forEach((nm, i) => { const lx = x + (2.6 + (i % 4) * 2.25) * cw, ly = y + (0.3 + 0.55 * Math.floor(i / 4)) * ch; ctx.fillStyle = CAT_COL[i]!; ctx.fillRect(lx, ly - 6, 14, 14); ctx.strokeStyle = env.paper.gridStrong; ctx.strokeRect(lx, ly - 6, 14, 14); ctx.fillStyle = env.paper.label; ctx.fillText(nm, lx + 20, ly + 2); }); }
+  if (colour) { ctx.textAlign = "left"; ctx.font = `600 ${cw * 0.2}px ${env.paper.font}`; CAT_NAMES.forEach((nm, i) => { const lx = x + (2.6 + (i % 4) * 2.25) * cw, ly = y + (0.3 + 0.55 * Math.floor(i / 4)) * ch; ctx.fillStyle = CAT_COL[i]!; ctx.fillRect(lx, ly - 6, 14, 14); ctx.strokeStyle = env.paper.gridStrong; ctx.strokeRect(lx, ly - 6, 14, 14); ctx.fillStyle = env.paper.label; ctx.fillText(bt("bCat_" + slug(nm), nm), lx + 20, ly + 2); }); }
 }
 
 // ── function plotter ───────────────────────────────────────────────────────
@@ -192,8 +193,8 @@ function drawLens(ctx: CanvasRenderingContext2D, e: El, env: Env) {
   if (Number.isFinite(v) && v < 0 || !convex) { ctx.setLineDash([6, 5]); ctx.strokeStyle = P.axis; ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(cx, ty); ctx.lineTo(ix, iy); ctx.moveTo(cx, cy); ctx.lineTo(ix, iy); ctx.stroke(); ctx.setLineDash([]); }
   if (Number.isFinite(v) && ix > x && ix < x + w) { ctx.strokeStyle = P.brand; ctx.lineWidth = 4; if (v < 0 || !convex) ctx.setLineDash([7, 5]); ctx.beginPath(); ctx.moveTo(ix, cy); ctx.lineTo(ix, iy); ctx.stroke(); ctx.setLineDash([]); arrowHead(ctx, ix, iy, hi > 0 ? -Math.PI / 2 : Math.PI / 2); }
   ctx.fillStyle = P.label; ctx.font = `600 13px ${P.font}`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  const nature = !Number.isFinite(v) ? "image at infinity" : `${v > 0 ? "real" : "virtual"}, ${hi > 0 ? "upright" : "inverted"}, ${Math.abs(v / u) > 1 ? "magnified" : "diminished"}`;
-  ctx.fillText(`${convex ? "Convex" : "Concave"} lens · f = ${f0} · image: ${nature}`, x + 12, y + h - 10);
+  const nature = !Number.isFinite(v) ? bt("bImgInf", "image at infinity") : bt("bImgNature", "{a}, {b}, {c}", { a: v > 0 ? bt("bReal", "real") : bt("bVirtual", "virtual"), b: hi > 0 ? bt("bUpright", "upright") : bt("bInverted", "inverted"), c: Math.abs(v / u) > 1 ? bt("bMagnified", "magnified") : bt("bDiminished", "diminished") });
+  ctx.fillText(bt("bLensCap", "{type} · f = {f} · image: {nature}", { type: convex ? bt("bConvexLens", "Convex lens") : bt("bConcaveLens", "Concave lens"), f: f0, nature }), x + 12, y + h - 10);
 }
 function arrowHead(ctx: CanvasRenderingContext2D, x: number, y: number, a: number) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 11 * Math.cos(a - 0.5), y - 11 * Math.sin(a - 0.5)); ctx.moveTo(x, y); ctx.lineTo(x - 11 * Math.cos(a + 0.5), y - 11 * Math.sin(a + 0.5)); ctx.stroke(); }
 
@@ -239,7 +240,7 @@ function drawTimer(ctx: CanvasRenderingContext2D, e: El, env: Env) {
   ctx.fillStyle = left <= 10 && (run || left === 0) ? "#fdebec" : "#fff"; ctx.strokeStyle = left <= 10 && run ? P.danger : P.gridStrong; ctx.lineWidth = 3 / env.k; rr(ctx, x, y, w, h, 16); ctx.fill(); ctx.stroke();
   ctx.fillStyle = left <= 10 && run ? P.danger : P.ink; ctx.font = `800 ${h * 0.5}px ${P.font}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillText(`${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`, x + w / 2, y + h * 0.48);
-  ctx.fillStyle = P.label; ctx.font = `700 ${h * 0.11}px ${P.font}`; ctx.fillText(run ? "counting down" : left === 0 ? "time's up" : "ready", x + w / 2, y + h * 0.86);
+  ctx.fillStyle = P.label; ctx.font = `700 ${h * 0.11}px ${P.font}`; ctx.fillText(run ? bt("bTimerRun", "counting down") : left === 0 ? bt("bTimerUp", "time's up") : bt("bTimerReady", "ready"), x + w / 2, y + h * 0.86);
 }
 
 // ── outline maps ───────────────────────────────────────────────────────────
@@ -398,7 +399,7 @@ function drawTally(ctx: CanvasRenderingContext2D, e: El, env: Env) {
   ctx.fillStyle = P.brand; ctx.font = `800 ${h * 0.13}px ${P.font}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   const label = s(e, "label", "Score"); ctx.fillText(label.length > 18 ? label.slice(0, 17) + "…" : label, x + w / 2, y + h * 0.13);
   ctx.fillStyle = P.ink; ctx.font = `800 ${h * (String(v).length > 3 ? 0.36 : 0.5)}px ${P.font}`; ctx.fillText(String(v), x + w / 2, y + h * 0.6);
-  ctx.fillStyle = P.label; ctx.font = `700 ${h * 0.09}px ${P.font}`; ctx.fillText("click to add 1", x + w / 2, y + h * 0.9);
+  ctx.fillStyle = P.label; ctx.font = `700 ${h * 0.09}px ${P.font}`; ctx.fillText(bt("bClickAdd1", "click to add 1"), x + w / 2, y + h * 0.9);
 }
 
 const DRAW: Record<string, (ctx: CanvasRenderingContext2D, e: El, env: Env) => void> = {

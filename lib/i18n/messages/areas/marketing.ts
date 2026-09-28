@@ -13,7 +13,7 @@ const marketing: Record<string, Record<string, string>> = {
   ar: { inHouse: "داخلي", googleConnectUnavailable: "ربط Google غير متاح بعد." },
   pt: { inHouse: "Interno", googleConnectUnavailable: "A ligação ao Google ainda não está disponível." },
   es: { inHouse: "Internas", googleConnectUnavailable: "La conexión con Google aún no está disponible." },
-  fr: { inHouse: "Interne", googleConnectUnavailable: "La connexion Google n'est pas encore disponible." },
+  fr: { inHouse: "Interne", googleConnectUnavailable: "La connexion Google n’est pas encore disponible." },
   cy: { inHouse: "Mewnol", googleConnectUnavailable: "Nid yw cysylltu â Google ar gael eto." },
 };
 export default marketing;

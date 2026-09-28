@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { Ico } from "../teachIcons";
 import { useCallObject, type CallLike } from "./board/callObject";
 import { maskName } from "./workspace/wsKit";
@@ -39,6 +40,7 @@ export function useRoomPresence(): Presence[] | null {
 }
 
 export function RoomRoster({ students, hideNames }: { students: { childId: string; childName: string }[]; hideNames: boolean }) {
+  const t = useT();
   const here = useRoomPresence();
   if (!here) return null;
   const others = here.filter((p) => !p.local && !p.owner);
@@ -56,10 +58,10 @@ export function RoomRoster({ students, hideNames }: { students: { childId: strin
   const chip = "inline-flex min-h-[32px] flex-none items-center gap-1.5 rounded-full border px-2.5 text-[12px] font-bold";
 
   return (
-    <section aria-label="In the room" data-testid="hub-room-roster" data-here={connected.length} data-total={students.length}
+    <section aria-label={t("hublive.aRoster_inRoom")} data-testid="hub-room-roster" data-here={connected.length} data-total={students.length}
       className="flex flex-none items-center gap-2 overflow-x-auto border-b border-[var(--hub-warm-line)] px-3 py-1.5" style={{ background: "var(--hub-warm)" }}>
-      <span className="flex-none text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">In the room</span>
-      <span className="flex-none text-[12px] font-extrabold tabular-nums text-[var(--ink)]" aria-live="polite">{connected.length} of {students.length}</span>
+      <span className="flex-none text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("hublive.aRoster_inRoom")}</span>
+      <span className="flex-none text-[12px] font-extrabold tabular-nums text-[var(--ink)]" aria-live="polite">{t("hublive.aRoster_ofN", { a: connected.length, b: students.length })}</span>
       <ul className="m-0 flex list-none items-center gap-1.5 p-0">
         {connected.map(({ s, i, devices }) => {
           const muted = devices.every((d) => !d.audio);
@@ -68,20 +70,20 @@ export function RoomRoster({ students, hideNames }: { students: { childId: strin
               className={`${chip} border-[var(--green-line)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]`}>
               <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--green)]" />
               {label(s.childName, i)}
-              {devices.length > 1 && <span className="text-[11px] font-extrabold opacity-80" title="Connected from more than one device">×{devices.length}</span>}
-              {muted && <><Ico name="micOff" size={13} /><span className="sr-only">muted</span></>}
+              {devices.length > 1 && <span className="text-[11px] font-extrabold opacity-80" title={t("hublive.aRoster_multi")}>×{devices.length}</span>}
+              {muted && <><Ico name="micOff" size={13} /><span className="sr-only">{t("hublive.aRoster_muted")}</span></>}
             </li>
           );
         })}
         {guests.map((g) => (
-          <li key={g.sessionId} data-testid="hub-roster-guest" className={`${chip} border-[var(--gold-line)] bg-[var(--gold-soft)] text-[var(--brand-ink)]`} title="Someone joined who isn't matched to a student on this lesson">
-            <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--gold)]" />{hideNames ? "Guest" : g.name || "Guest"}
-            {!g.audio && <><Ico name="micOff" size={13} /><span className="sr-only">muted</span></>}
+          <li key={g.sessionId} data-testid="hub-roster-guest" className={`${chip} border-[var(--gold-line)] bg-[var(--gold-soft)] text-[var(--brand-ink)]`} title={t("hublive.aRoster_guestTitle")}>
+            <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--gold)]" />{hideNames ? t("hublive.aRoster_guest") : g.name || t("hublive.aRoster_guest")}
+            {!g.audio && <><Ico name="micOff" size={13} /><span className="sr-only">{t("hublive.aRoster_muted")}</span></>}
           </li>
         ))}
         {absent.map(({ s, i }) => (
           <li key={s.childId} data-testid="hub-roster-absent" data-child-id={s.childId} className={`${chip} border-[var(--line)] bg-transparent text-[var(--ink-3)]`}>
-            <span aria-hidden className="h-2 w-2 rounded-full border border-[var(--ink-3)]" />{label(s.childName, i)}<span className="sr-only"> not connected</span>
+            <span aria-hidden className="h-2 w-2 rounded-full border border-[var(--ink-3)]" />{label(s.childName, i)}<span className="sr-only">{t("hublive.aRoster_notConn")}</span>
           </li>
         ))}
       </ul>

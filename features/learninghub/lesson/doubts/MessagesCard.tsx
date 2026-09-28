@@ -3,20 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import { Avatar, Icon } from "../../kit";
 import { errMsg } from "../../types";
+import { useI18n } from "@/lib/i18n/provider";
 import { askDoubt, replyDoubt, seenDoubt, sendDoubtMessage, type Doubt } from "./api";
 
 // ONE component, two modes — the teacher's "Messages" and the student's "Ask your teacher" are the same threads
 // (hubDoubts), just read from opposite sides: this is the same data the old per-card "Asked a question" alert and
 // AskTeacher popup used, now surfaced as its own card instead of buried inside the lesson or a mini-screen card.
 
-const relTime = (iso: string) => {
+/** "5 minutes ago" in the active language (Intl, so plural forms / numerals are the locale's own). */
+const relTime = (iso: string, locale: string) => {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.round(ms / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  let rtf: Intl.RelativeTimeFormat;
+  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "narrow" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "narrow" }); }
+  if (m < 1) return rtf.format(0, "second");
+  if (m < 60) return rtf.format(-m, "minute");
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
+  if (h < 24) return rtf.format(-h, "hour");
+  return rtf.format(-Math.round(h / 24), "day");
 };
 
 export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible, context }: {
@@ -31,6 +35,7 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
    *  fully replace it rather than being a plainer, context-less copy. */
   context?: { noteId?: string; lessonTitle?: string; step?: string; slide?: number; questionId?: string | null; questionPrompt?: string | null };
 }) {
+  const { t, locale } = useI18n();
   const [expanded, setExpanded] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -58,7 +63,7 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
     try {
       const updated = mode === "teacher" ? await replyDoubt(qs, d.id, text.trim()) : await sendDoubtMessage(qs, d.id, text.trim());
       onUpdate(updated); setText(""); setOpenId(null);
-    } catch (e) { setErr(errMsg(e, "Couldn't send that — try again")); }
+    } catch (e) { setErr(errMsg(e, t("hublessons.atCouldntSend"))); }
     finally { setBusy(false); }
   };
 
@@ -71,7 +76,7 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
       // composer instead of a lesson popup or a trip to the Questions tab.
       const created = await askDoubt(qs, { text: composerText.trim(), ...(mode === "teacher" ? { childId: toChild } : {}), ...(mode === "student" ? context : {}) });
       onUpdate(created); setComposerText(""); setComposing(false); setToChild("");
-    } catch (e) { setComposerErr(errMsg(e, "Couldn't send that — try again")); }
+    } catch (e) { setComposerErr(errMsg(e, t("hublessons.atCouldntSend"))); }
     finally { setComposerBusy(false); }
   };
 
@@ -80,16 +85,16 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
       <div className={`flex items-center gap-2 px-4 py-3.5 ${collapsible ? "cursor-pointer" : ""}`} style={{ borderBottom: "1px solid #E4E4EE" }}
         onClick={collapsible ? () => setExpanded((e) => !e) : undefined}>
         <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-[var(--brand-soft)] text-[var(--brand)]"><Icon name="chat" size={16} /></span>
-        <div className="min-w-0 flex-1 text-[13.5px] font-extrabold text-[var(--ink)]">{mode === "teacher" ? "Messages" : "Ask your teacher"}</div>
+        <div className="min-w-0 flex-1 text-[13.5px] font-extrabold text-[var(--ink)]">{mode === "teacher" ? t("hublessons.mcMessages") : t("hublessons.mcAskTeacher")}</div>
         {unreadCount > 0 && (
           <span className="flex-none rounded-full px-2 py-0.5 text-[12px] font-extrabold" style={{ background: "#F59E0B", color: "#3A2400" }} data-testid="messages-unread-badge">{unreadCount}</span>
         )}
         {mode === "teacher" && !composing && expanded && (
           <button type="button" onClick={(e) => { e.stopPropagation(); setComposing(true); }} data-testid="messages-new-open"
-            className="flex-none min-h-[44px] rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)]">New message</button>
+            className="flex-none min-h-[44px] rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)]">{t("hublessons.mcNewMessage")}</button>
         )}
         {collapsible && (
-          <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }} aria-label={expanded ? "Collapse" : "Expand"} data-testid="messages-toggle"
+          <button type="button" onClick={(e) => { e.stopPropagation(); setExpanded((x) => !x); }} aria-label={expanded ? t("hublessons.mcCollapse") : t("hublessons.mcExpand")} data-testid="messages-toggle"
             className="flex-none grid h-7 w-7 place-items-center rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)]">
             <Icon name="chevronDown" size={16} className={`transition-transform ${expanded ? "" : "-rotate-90"}`} />
           </button>
@@ -98,34 +103,34 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
 
       {expanded && mode === "student" && (
         <div className="p-4" style={{ borderBottom: "1px solid #E4E4EE" }}>
-          <label htmlFor="messages-composer" className="sr-only">Ask a question</label>
+          <label htmlFor="messages-composer" className="sr-only">{t("hublessons.atAsk")}</label>
           <textarea id="messages-composer" value={composerText} onChange={(e) => setComposerText(e.target.value)} maxLength={2000}
-            placeholder="Stuck? Ask a question…" style={{ minHeight: 72 }}
+            placeholder={t("hublessons.mcPhStuck")} style={{ minHeight: 72 }}
             className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13.5px] text-[var(--ink)]" />
           {composerErr && <p role="alert" className="m-0 mt-1.5 text-[12px] font-semibold text-[var(--red)]">{composerErr}</p>}
           <button type="button" onClick={() => void sendNew()} disabled={composerBusy || !composerText.trim()} data-testid="messages-composer-send"
-            className="mt-2 min-h-[44px] w-full rounded-lg bg-[var(--brand)] text-[13px] font-extrabold text-white disabled:opacity-50">{composerBusy ? "Sending…" : "Send"}</button>
+            className="mt-2 min-h-[44px] w-full rounded-lg bg-[var(--brand)] text-[13px] font-extrabold text-white disabled:opacity-50">{composerBusy ? t("hublessons.atSending") : t("hublessons.atSend")}</button>
         </div>
       )}
 
       {expanded && mode === "teacher" && composing && (
         <div className="p-4" style={{ borderBottom: "1px solid #E4E4EE" }}>
-          <label htmlFor="messages-new-child" className="mb-1 block text-[12px] font-bold text-[var(--ink-2)]">To</label>
+          <label htmlFor="messages-new-child" className="mb-1 block text-[12px] font-bold text-[var(--ink-2)]">{t("hublessons.mcTo")}</label>
           <select id="messages-new-child" value={toChild} onChange={(e) => setToChild(e.target.value)} data-testid="messages-new-child"
             className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13.5px] text-[var(--ink)]">
-            <option value="">Choose a student…</option>
+            <option value="">{t("hublessons.mcChooseStudent")}</option>
             {(students ?? []).map((s) => <option key={s.childId} value={s.childId}>{s.childName}</option>)}
           </select>
-          <label htmlFor="messages-new-text" className="sr-only">Message</label>
+          <label htmlFor="messages-new-text" className="sr-only">{t("hublessons.mcMessage")}</label>
           <textarea id="messages-new-text" value={composerText} onChange={(e) => setComposerText(e.target.value)} maxLength={2000}
-            placeholder="Write a message…" style={{ minHeight: 72 }}
+            placeholder={t("hublessons.mcPhWrite")} style={{ minHeight: 72 }}
             className="mt-2 w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13.5px] text-[var(--ink)]" />
           {composerErr && <p role="alert" className="m-0 mt-1.5 text-[12px] font-semibold text-[var(--red)]">{composerErr}</p>}
           <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => void sendNew()} disabled={composerBusy || !composerText.trim() || !toChild} data-testid="messages-new-send"
-              className="min-h-[44px] flex-1 rounded-lg bg-[var(--brand)] text-[13px] font-extrabold text-white disabled:opacity-50">{composerBusy ? "Sending…" : "Send"}</button>
+              className="min-h-[44px] flex-1 rounded-lg bg-[var(--brand)] text-[13px] font-extrabold text-white disabled:opacity-50">{composerBusy ? t("hublessons.atSending") : t("hublessons.atSend")}</button>
             <button type="button" onClick={() => { setComposing(false); setComposerText(""); setToChild(""); setComposerErr(null); }}
-              className="min-h-[44px] rounded-lg border border-[var(--line)] px-3.5 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
+              className="min-h-[44px] rounded-lg border border-[var(--line)] px-3.5 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("hublessons.cancel")}</button>
           </div>
         </div>
       )}
@@ -133,7 +138,7 @@ export function MessagesCard({ mode, qs, doubts, onUpdate, students, collapsible
       <div style={{ maxHeight: expanded ? 360 : 0, overflowY: "auto" }}>
         {sorted.length === 0 ? (
           <p className="m-0 p-4 text-center text-[13px] text-[var(--ink-3)]">
-            {mode === "teacher" ? "No messages yet. Student questions will appear here." : "No questions yet. Ask your teacher anything about this lesson."}
+            {mode === "teacher" ? t("hublessons.mcNoMsgsTeacher") : t("hublessons.mcNoMsgsStudent")}
           </p>
         ) : sorted.map((d) => (
           <MessageRow key={d.id} mode={mode} doubt={d} open={openId === d.id} qs={qs}
@@ -149,6 +154,7 @@ function MessageRow({ mode, doubt, open, qs, text, onText, busy, err, onOpenRepl
   mode: "teacher" | "student"; doubt: Doubt; open: boolean; qs: string; text: string; onText: (t: string) => void;
   busy: boolean; err: string | null; onOpenReply: () => void; onSend: () => void; onUpdate: (d: Doubt) => void;
 }) {
+  const { t, locale } = useI18n();
   const unread = mode === "teacher" ? doubt.unreadByTutor : doubt.unreadByFamily;
   const last = doubt.messages[doubt.messages.length - 1];
   const teacherReplies = doubt.messages.filter((m) => m.from === "tutor");
@@ -171,31 +177,31 @@ function MessageRow({ mode, doubt, open, qs, text, onText, busy, err, onOpenRepl
       <div className="flex items-center gap-2">
         {unread && <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full" style={{ background: "#F59E0B" }} />}
         {mode === "teacher" && <Avatar name={doubt.childName} size={28} />}
-        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-[var(--ink)]">{mode === "teacher" ? doubt.childName : "You"}</span>
-        <span className="flex-none text-[11px] text-[var(--ink-3)]">{relTime(doubt.lastAt)}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-[var(--ink)]">{mode === "teacher" ? doubt.childName : t("hublessons.atYou")}</span>
+        <span className="flex-none text-[11px] text-[var(--ink-3)]">{relTime(doubt.lastAt, locale)}</span>
       </div>
       <p className="m-0 mt-1 line-clamp-3 text-[13px] leading-snug text-[var(--ink)]">{last?.text}</p>
 
       {mode === "teacher" ? (
         open ? (
           <div className="mt-2">
-            <textarea value={text} onChange={(e) => onText(e.target.value)} maxLength={4000} rows={2} autoFocus placeholder="Your reply…"
+            <textarea value={text} onChange={(e) => onText(e.target.value)} maxLength={4000} rows={2} autoFocus placeholder={t("hublessons.mcPhReply")}
               className="w-full resize-none rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)]" />
             {err && <p role="alert" className="m-0 mt-1 text-[12px] font-semibold text-[var(--red)]">{err}</p>}
             <button type="button" onClick={onSend} disabled={busy || !text.trim()} data-testid="messages-reply-send"
-              className="mt-1.5 min-h-[44px] rounded-full bg-[var(--brand)] px-3.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{busy ? "Sending…" : "Send"}</button>
+              className="mt-1.5 min-h-[44px] rounded-full bg-[var(--brand)] px-3.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{busy ? t("hublessons.atSending") : t("hublessons.atSend")}</button>
           </div>
         ) : (
           <button type="button" onClick={onOpenReply} data-testid="messages-reply-open"
-            className="mt-2 min-h-[44px] rounded-full border border-[var(--line)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Reply</button>
+            className="mt-2 min-h-[44px] rounded-full border border-[var(--line)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("hublessons.mcReply")}</button>
         )
       ) : teacherReplies.length > 0 ? (
-        <div className="ml-4 mt-2 rounded-lg p-2.5" style={{ background: "#E6F4EA" }}>
-          <div className="text-[11.5px] font-extrabold text-[var(--ink)]">{teacherReplies[teacherReplies.length - 1]!.byName} · {relTime(teacherReplies[teacherReplies.length - 1]!.at)}</div>
+        <div className="ms-4 mt-2 rounded-lg p-2.5" style={{ background: "#E6F4EA" }}>
+          <div className="text-[11.5px] font-extrabold text-[var(--ink)]">{teacherReplies[teacherReplies.length - 1]!.byName} · {relTime(teacherReplies[teacherReplies.length - 1]!.at, locale)}</div>
           <p className="m-0 mt-0.5 text-[13px] leading-snug text-[var(--ink)]">{teacherReplies[teacherReplies.length - 1]!.text}</p>
         </div>
       ) : (
-        <span className="mt-1.5 inline-block rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Waiting for reply</span>
+        <span className="mt-1.5 inline-block rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">{t("hublessons.mcWaiting")}</span>
       )}
     </div>
   );

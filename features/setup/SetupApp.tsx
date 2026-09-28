@@ -52,6 +52,7 @@ import { useTeam } from "@/features/team/useTeam";
 import { LevelsEditorDraft } from "@/features/learninghub/progress/levels";
 import { YearGroupsEditor } from "@/features/learninghub/quiz/YearGroupsEditor";
 import { SubjectColoursEditor } from "@/features/learninghub/SubjectColourPicker";
+import { ParentEmailSettings } from "@/features/learninghub/digest/ParentEmailSettings";
 import { YearReminder } from "@/features/learninghub/students/YearReminderCard";
 import type { Student } from "@/features/learninghub/types";
 
@@ -1431,7 +1432,7 @@ export function SetupApp() {
     ...(portal === "company" ? [["roles", t("setup.tabRolesPermissions")] as [Tab, string]] : []),
     ["learning", t("setup.tabLearning")],
     // The tutoring Learning Hub's own settings — only once the hub is switched on.
-    ...(!featureOff(settings.features, "learninghub") ? [["hub", "Teaching Hub"] as [Tab, string]] : []),
+    ...(!featureOff(settings.features, "learninghub") ? [["hub", t("hubshell.lbl_teaching_hub")] as [Tab, string]] : []),
     ["meals", t("setup.tabMeals")],
     ["medication", t("setup.tabMedication")],
     ["safeguarding", t("setup.tabSafeguarding")],
@@ -2534,65 +2535,72 @@ export function SetupApp() {
         const addKind = () => {
           const taken = new Set(h.questionKinds.map((k) => k.id));
           let id = `kind-${uid()}`; while (taken.has(id)) id = `kind-${uid()}`;
-          setH({ questionKinds: [...h.questionKinds, { id, label: "New question type", mark: "exact" }] });
+          setH({ questionKinds: [...h.questionKinds, { id, label: t("hubshell.su_newQuestionType"), mark: "exact" }] });
         };
         return (
           <>
-            <Section title="Marking & progress" lede="How quizzes are passed, when students see the answers, and what a placement test is for.">
-              <Row label="Pass mark" hint="The default pass mark (%) for a new quiz. You can still change it per quiz.">
-                <Input type="number" min={1} max={100} value={h.passMarkPct} onChange={(e) => setH({ passMarkPct: num(e.target.value, 1, 100) })} className="w-24" aria-label="Pass mark percent" />
+            <Section title={t("hubshell.su_markingTitle")} lede={t("hubshell.su_markingLede")}>
+              <Row label={t("hubshell.su_passMark")} hint={t("hubshell.su_passMarkHint")}>
+                <Input type="number" min={1} max={100} value={h.passMarkPct} onChange={(e) => setH({ passMarkPct: num(e.target.value, 1, 100) })} className="w-24" aria-label={t("hubshell.su_passMarkAria")} />
               </Row>
-              <Row label="Require a placement test" hint="On: a student must sit a placement test (or be waived by you) for a subject before its quizzes unlock.">
-                <Toggle on={h.requireDiagnostic} onChange={(v) => setH({ requireDiagnostic: v })} labels={["On", "Off"]} />
-              </Row>
-              <Row label="Show right answers" hint="When a student sees the correct answers and explanations after a quiz. The default keeps them back until the quiz is passed, so a child can't just re-sit it to read the answers off. You always see them.">
-                <Select value={h.revealAnswers} onChange={(e) => setH({ revealAnswers: e.target.value as HubSettings["revealAnswers"] })} className="w-full sm:w-56" aria-label="When answers are revealed">
-                  <option value="after_pass">Once they pass the quiz</option>
-                  <option value="after_submit">Straight after they submit</option>
-                  <option value="after_marked">Once you have marked it</option>
-                  <option value="never">Never</option>
+              <Row label={t("hubshell.su_lessonAccess")} hint={t("hubshell.su_lessonAccessHint")}>
+                <Select value={h.lessonAccess} onChange={(e) => setH({ lessonAccess: e.target.value as HubSettings["lessonAccess"] })} className="w-full sm:w-64" aria-label={t("hubshell.su_lessonAccessAria")}>
+                  <option value="assigned">{t("hubshell.su_lessonAccess_assigned")}</option>
+                  <option value="year">{t("hubshell.su_lessonAccess_year")}</option>
+                  <option value="all">{t("hubshell.su_lessonAccess_all")}</option>
                 </Select>
               </Row>
-              <Row label="Retakes" hint="Whether a student can sit a quiz or placement test again once they've handed it in. You can override this per quiz, and allow one more attempt for a single student from Results.">
+              <Row label={t("hubshell.su_requireDiag")} hint={t("hubshell.su_requireDiagHint")}>
+                <Toggle on={h.requireDiagnostic} onChange={(v) => setH({ requireDiagnostic: v })} labels={[t("hubshell.su_on"), t("hubshell.su_off")]} />
+              </Row>
+              <Row label={t("hubshell.su_reveal")} hint={t("hubshell.su_revealHint")}>
+                <Select value={h.revealAnswers} onChange={(e) => setH({ revealAnswers: e.target.value as HubSettings["revealAnswers"] })} className="w-full sm:w-56" aria-label={t("hubshell.su_revealAria")}>
+                  <option value="after_pass">{t("hubshell.su_reveal_after_pass")}</option>
+                  <option value="after_submit">{t("hubshell.su_reveal_after_submit")}</option>
+                  <option value="after_marked">{t("hubshell.su_reveal_after_marked")}</option>
+                  <option value="never">{t("hubshell.su_reveal_never")}</option>
+                </Select>
+              </Row>
+              <Row label={t("hubshell.su_retakes")} hint={t("hubshell.su_retakesHint")}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={h.retakePolicy} onChange={(e) => setH({ retakePolicy: e.target.value as HubSettings["retakePolicy"] })} className="w-full sm:w-56" aria-label="Retake policy">
-                    <option value="unlimited">Unlimited retakes</option>
-                    <option value="once">One attempt only</option>
-                    <option value="cooldown">Wait between attempts</option>
+                  <Select value={h.retakePolicy} onChange={(e) => setH({ retakePolicy: e.target.value as HubSettings["retakePolicy"] })} className="w-full sm:w-56" aria-label={t("hubshell.su_retakeAria")}>
+                    <option value="unlimited">{t("hubshell.su_retake_unlimited")}</option>
+                    <option value="once">{t("hubshell.su_retake_once")}</option>
+                    <option value="cooldown">{t("hubshell.su_retake_cooldown")}</option>
                   </Select>
                   {h.retakePolicy === "cooldown" && (
-                    <span className="inline-flex items-center gap-2"><Input type="number" min={1} max={720} value={h.retakeCooldownHours} onChange={(e) => setH({ retakeCooldownHours: num(e.target.value, 1, 720) })} className="w-24" aria-label="Hours to wait between attempts" /><span className="text-[12px] font-bold text-[var(--ink-2)]">hours</span></span>
+                    <span className="inline-flex items-center gap-2"><Input type="number" min={1} max={720} value={h.retakeCooldownHours} onChange={(e) => setH({ retakeCooldownHours: num(e.target.value, 1, 720) })} className="w-24" aria-label={t("hubshell.su_cooldownAria")} /><span className="text-[12px] font-bold text-[var(--ink-2)]">{t("hubshell.su_hours")}</span></span>
                   )}
                 </div>
               </Row>
               {h.retakePolicy === "unlimited" && (
-                <Row label="Short break after not passing" hint="With unlimited retakes: after this many tries in a row that don't reach the pass mark, each further go waits a few minutes (so they go back over the lesson first). 0 turns it off. You can let a student straight back in from Results.">
+                <Row label={t("hubshell.su_break")} hint={t("hubshell.su_breakHint")}>
                   <span className="inline-flex flex-wrap items-center gap-2">
-                    <Input type="number" min={0} max={10} value={h.retakeBreakAfter} onChange={(e) => setH({ retakeBreakAfter: num(e.target.value, 0, 10) })} className="w-20" aria-label="Tries in a row before a break (0 = off)" />
-                    <span className="text-[12px] font-bold text-[var(--ink-2)]">tries, then</span>
-                    <Input type="number" min={5} max={720} value={h.retakeBreakMinutes} onChange={(e) => setH({ retakeBreakMinutes: num(e.target.value, 5, 720) })} className="w-24" aria-label="Minutes to wait" disabled={h.retakeBreakAfter === 0} />
-                    <span className="text-[12px] font-bold text-[var(--ink-2)]">minutes</span>
+                    <Input type="number" min={0} max={10} value={h.retakeBreakAfter} onChange={(e) => setH({ retakeBreakAfter: num(e.target.value, 0, 10) })} className="w-20" aria-label={t("hubshell.su_breakAfterAria")} />
+                    <span className="text-[12px] font-bold text-[var(--ink-2)]">{t("hubshell.su_triesThen")}</span>
+                    <Input type="number" min={5} max={720} value={h.retakeBreakMinutes} onChange={(e) => setH({ retakeBreakMinutes: num(e.target.value, 5, 720) })} className="w-24" aria-label={t("hubshell.su_minutesAria")} disabled={h.retakeBreakAfter === 0} />
+                    <span className="text-[12px] font-bold text-[var(--ink-2)]">{t("hubshell.su_minutes")}</span>
                   </span>
                 </Row>
               )}
-              <Row label="Homework due date" hint="Days between setting homework and its default due date.">
-                <Input type="number" min={0} max={90} value={h.homeworkDueDays} onChange={(e) => setH({ homeworkDueDays: num(e.target.value, 0, 90) })} className="w-24" aria-label="Homework default due days" />
+              <Row label={t("hubshell.su_hwDue")} hint={t("hubshell.su_hwDueHint")}>
+                <Input type="number" min={0} max={90} value={h.homeworkDueDays} onChange={(e) => setH({ homeworkDueDays: num(e.target.value, 0, 90) })} className="w-24" aria-label={t("hubshell.su_hwDueAria")} />
               </Row>
             </Section>
 
-            <Section title="Attainment levels" lede="The levels students and parents see for how well they know a topic or subject, lowest first. A student reaches a level once their mastery is at or above its %. Two to eight levels; rename them or move the thresholds to suit how you teach.">
+            <Section title={t("hubshell.su_levelsTitle")} lede={t("hubshell.su_levelsLede")}>
               <LevelsEditorDraft bands={h.masteryBands} onCommit={(b) => setH({ masteryBands: b })} />
             </Section>
 
-            <Section title="Year groups" lede="The year groups (or grades, levels…) you can aim a quiz or placement test at, and tag each student with. Families only see the ones that suit their child.">
+            <Section title={t("hubshell.su_yearsTitle")} lede={t("hubshell.su_yearsLede")}>
               <YearGroupsEditor groups={h.yearGroups} onChange={(g) => setH({ yearGroups: g })} defaults={HUB_DEFAULTS.yearGroups} />
             </Section>
 
-            <Section title="Subject colours" lede="Give each subject its own colour. Every card, chip and tile for that subject — in the Teaching Hub and in your families' My Classroom — uses it. You can also change one from a subject's ⋯ menu in the hub.">
+            <Section title={t("hubshell.su_coloursTitle")} lede={t("hubshell.su_coloursLede")}>
               <SubjectColoursEditor colours={h.subjectColours ?? {}} onChange={(subjectColours) => setH({ subjectColours })} />
             </Section>
 
-            <Section title="Year group reminder" lede="Students whose year group was typed in by hand don't move up on their own each September — review them here whenever suits you.">
+            <Section title={t("hubshell.su_reminderTitle")} lede={t("hubshell.su_reminderLede")}>
               {hubTenantId && hubStudents ? (
                 <YearReminder alwaysShow tenantId={hubTenantId} qs={hubQs} canEdit readOnly={false} franchiseId={hubFranchiseId} students={hubStudents} yearGroups={h.yearGroups} refreshStudents={loadHubStudents} />
               ) : (
@@ -2600,23 +2608,27 @@ export function SetupApp() {
               )}
             </Section>
 
-            <Section title="Question types" lede="The kinds of question you can write. Rename or reorder them freely; the marking rule decides how answers are checked automatically.">
+            <Section title={t("hubplan.dg_title")}>
+              <ParentEmailSettings parentDigest={!!h.parentDigest} homeworkNudges={!!h.homeworkNudges} nudgeLeadHours={h.nudgeLeadHours ?? 24} onChange={setH} students={hubStudents ?? []} qs={hubQs} />
+            </Section>
+
+            <Section title={t("hubshell.su_kindsTitle")} lede={t("hubshell.su_kindsLede")}>
               {h.questionKinds.map((k, i) => (
                 <div key={k.id} className="flex flex-wrap items-center gap-2 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
-                  <Input value={k.label} maxLength={60} onChange={(e) => setKind(i, { label: e.target.value })} className="min-w-[160px] flex-1" aria-label={`Question type ${i + 1} name`} />
-                  <Select value={k.mark} onChange={(e) => setKind(i, { mark: e.target.value as HubSettings["questionKinds"][number]["mark"] })} className="w-full sm:w-56" aria-label={`Question type ${i + 1} marking rule`}>
-                    {MARK_RULES.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+                  <Input value={k.label} maxLength={60} onChange={(e) => setKind(i, { label: e.target.value })} className="min-w-[160px] flex-1" aria-label={t("hubshell.su_kindNameAria", { n: i + 1 })} />
+                  <Select value={k.mark} onChange={(e) => setKind(i, { mark: e.target.value as HubSettings["questionKinds"][number]["mark"] })} className="w-full sm:w-56" aria-label={t("hubshell.su_kindRuleAria", { n: i + 1 })}>
+                    {MARK_RULES.map((m) => <option key={m.id} value={m.id}>{t(`hubshell.su_mark_${m.id}`)}</option>)}
                   </Select>
                   <span className="flex items-center">
-                    <button type="button" disabled={i === 0} onClick={() => moveKind(i, -1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={`Move ${k.label} up`}>↑</button>
-                    <button type="button" disabled={i === h.questionKinds.length - 1} onClick={() => moveKind(i, 1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={`Move ${k.label} down`}>↓</button>
-                    <button type="button" disabled={h.questionKinds.length <= 1} onClick={() => setH({ questionKinds: h.questionKinds.filter((_, j) => j !== i) })} className="rounded-full px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--red-soft)] hover:text-[var(--red)] disabled:opacity-30" aria-label={`Remove ${k.label}`}>Remove</button>
+                    <button type="button" disabled={i === 0} onClick={() => moveKind(i, -1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={t("hubshell.su_moveUp", { name: k.label })}>↑</button>
+                    <button type="button" disabled={i === h.questionKinds.length - 1} onClick={() => moveKind(i, 1)} className="h-8 w-8 rounded-full text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30" aria-label={t("hubshell.su_moveDown", { name: k.label })}>↓</button>
+                    <button type="button" disabled={h.questionKinds.length <= 1} onClick={() => setH({ questionKinds: h.questionKinds.filter((_, j) => j !== i) })} className="rounded-full px-2.5 py-1 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--red-soft)] hover:text-[var(--red)] disabled:opacity-30" aria-label={t("hubshell.su_removeKind", { name: k.label })}>{t("hubshell.su_remove")}</button>
                   </span>
                 </div>
               ))}
               <div className="mt-2 flex flex-wrap gap-2">
-                {h.questionKinds.length < 12 && <Button sm onClick={addKind}>＋ Add a question type</Button>}
-                <Button sm onClick={() => setH({ questionKinds: HUB_DEFAULTS.questionKinds })}>Restore the defaults</Button>
+                {h.questionKinds.length < 12 && <Button sm onClick={addKind}>＋ {t("hubshell.su_addKind")}</Button>}
+                <Button sm onClick={() => setH({ questionKinds: HUB_DEFAULTS.questionKinds })}>{t("hubshell.su_restoreDefaults")}</Button>
               </div>
             </Section>
           </>
@@ -2679,7 +2691,7 @@ export function SetupApp() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-[200px] flex-1">
                         <div className="text-[13px] font-bold">{it.label ?? it.view}</div>
-                        {FEATURE_HINTS[it.view] && <div className="mt-0.5 text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{FEATURE_HINTS[it.view]}</div>}
+                        {FEATURE_HINTS[it.view] && <div className="mt-0.5 text-[11.5px] leading-[1.45] text-[var(--ink-2)]">{it.view === "learninghub" ? t("hubshell.su_learninghubHint") : FEATURE_HINTS[it.view]}</div>}
                         {keys && <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">👪 Families see this too</div>}
                       </div>
                       <Toggle on={on} onChange={(v) => setFe(it.view, v)} labels={["On", "Off"]} />

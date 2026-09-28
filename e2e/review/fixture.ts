@@ -29,7 +29,7 @@ const createParentChild: typeof _c = (...a) => R(() => _c(...a));
 const markParentWelcomed: typeof _m = (...a) => R(() => _m(...a));
 const provisionLiveListing: typeof _l = (...a) => R(() => _l(...a));
 const seedOakLesson: typeof _o = (...a) => R(() => _o(...a));
-const AUTH = path.join(ROOT, "e2e/review/.auth");
+const AUTH = process.env.REVIEW_AUTH_DIR ? path.resolve(process.env.REVIEW_AUTH_DIR) : path.join(ROOT, "e2e/review/.auth");
 const statePath = (r: "freelancer" | "parent") => path.join(AUTH, `${r}.json`);
 let own: Fx["accounts"] | null = null;
 
@@ -86,12 +86,12 @@ export async function setHub(op: TestAccount, on: boolean) {
 }
 
 // Other agents share the standing accounts and their setup wipes data mid-run: retry the whole build if a wipe hits.
-export async function buildFixture(n: number, full: boolean, browser?: Browser): Promise<Fx> {
+export async function buildFixture(n: number, full: boolean, browser?: Browser, startYear = 3): Promise<Fx> {
   for (let a = 0; ; a++) {
-    try { return await build(await provisionOwn(browser), n, full); } catch (e) { if (a >= 2 || !/not found|Unknown/i.test(String(e))) throw e; }
+    try { return await build(await provisionOwn(browser), n, full, startYear); } catch (e) { if (a >= 2 || !/not found|Unknown/i.test(String(e))) throw e; }
   }
 }
-async function build(accounts: Fx["accounts"], n: number, full: boolean): Promise<Fx> {
+async function build(accounts: Fx["accounts"], n: number, full: boolean, startYear = 3): Promise<Fx> {
   const tenantId = accounts.freelancer.tenantId!;
   const stamp = Date.now().toString(36);
   await setHub(accounts.freelancer, true);
@@ -102,7 +102,7 @@ async function build(accounts: Fx["accounts"], n: number, full: boolean): Promis
   const kids: Fx["kids"] = [];
   names.forEach(() => 0);
   for (let i = 0; i < names.length; i++) {
-    const year = 3 + Math.floor((i * 6) / names.length); // Years 3-8
+    const year = startYear + Math.floor((i * 6) / names.length); // Years 3-8 (startYear 1: a KS1 child first)
     const name = `${names[i]}${stamp}`;
     const id = await createParentChild(accounts.parent, { name, dob: `${2026 - (year + 5)}-03-01` });
     kids.push({ id, name });
@@ -213,7 +213,7 @@ export async function tabStrip(page: Page) {
 }
 
 export async function gotoHubPage(page: Page, url: string, fx: Fx) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let a = 0; a < 3; a++) {
     if (a > 0) await setHub(fx.accounts.freelancer, true);
     await page.goto(url);

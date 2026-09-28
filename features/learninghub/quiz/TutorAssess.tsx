@@ -12,6 +12,7 @@ import { MarkingQueue } from "./MarkingQueue";
 import { QuestionBank } from "./QuestionBank";
 import { Results, type GroupScope } from "./Results";
 import { useGroupView } from "../groupKit";
+import { useHubI18n } from "../family/hubT";
 import { isQuizHw, membersOf, relevantTo } from "../groupStatus";
 import type { HwLite } from "../useRosterInsights";
 
@@ -22,6 +23,7 @@ import type { HwLite } from "../useRosterInsights";
 type Tab = "list" | "bank" | "marking" | "results";
 
 export function TutorAssess({ p, type }: { p: PanelProps; type: AssessType }) {
+  const { t } = useHubI18n();
   // A group card's Quiz tile lands on Results filtered to that group: its members' attempts at the quizzes set for it.
   const { group: viewGroup, clear: clearView } = useGroupView("quiz", p.groups ?? []);
   const vg = type === "quiz" ? viewGroup : null;
@@ -63,11 +65,11 @@ export function TutorAssess({ p, type }: { p: PanelProps; type: AssessType }) {
   return (
     <div className="grid gap-4">
       <div className="overflow-x-auto pb-0.5">
-        <Segmented<Tab> label="Section" value={tab} onChange={setTab} options={[
-          { id: "list", label: diag ? "Starting quizzes" : "Quizzes" },
-          { id: "bank", label: "Question bank" },
-          { id: "marking", label: "Marking", count: pending.length },
-          { id: "results", label: "Results" },
+        <Segmented<Tab> label={t("hubfam.qzSection")} value={tab} onChange={setTab} options={[
+          { id: "list", label: diag ? t("hubfam.qzTabStarting") : t("hubfam.qzTabQuizzes") },
+          { id: "bank", label: t("hubfam.qzTabBank") },
+          { id: "marking", label: t("hubfam.qzTabMarking"), count: pending.length },
+          { id: "results", label: t("hubfam.qzTabResults") },
         ]} />
       </div>
       {err && dismissed !== err && <Notice onDismiss={() => setDismissed(err)}>{err}</Notice>}

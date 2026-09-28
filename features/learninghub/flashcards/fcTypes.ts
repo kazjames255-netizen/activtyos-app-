@@ -15,21 +15,23 @@ export interface FlashStats {
   students: { childId: string; childName: string; cardsAvailable: number; reviewed: number; due: number; new: number; mastered: number; lastReviewedAt: string | null }[];
 }
 
-/** The rating scale the server accepts: 1 Again · 3 Hard · 4 Good · 5 Easy. */
+/** The rating scale the server accepts: 1 Again · 3 Hard · 4 Good · 5 Easy. `labelKey` / `hintKey` are i18n keys (resolve with t()). */
 export const RATINGS = [
-  { key: "1", quality: 1, label: "Again", hint: "Didn't know it", tone: "red" },
-  { key: "2", quality: 3, label: "Hard", hint: "Got it, but struggled", tone: "gold" },
-  { key: "3", quality: 4, label: "Good", hint: "Knew it", tone: "brand" },
-  { key: "4", quality: 5, label: "Easy", hint: "Too easy", tone: "green" },
+  { key: "1", quality: 1, labelKey: "hublessons.fcRatAgain", hintKey: "hublessons.fcHintAgain", tone: "red" },
+  { key: "2", quality: 3, labelKey: "hublessons.fcRatHard", hintKey: "hublessons.fcHintHard", tone: "gold" },
+  { key: "3", quality: 4, labelKey: "hublessons.fcRatGood", hintKey: "hublessons.fcHintGood", tone: "brand" },
+  { key: "4", quality: 5, labelKey: "hublessons.fcRatEasy", hintKey: "hublessons.fcHintEasy", tone: "green" },
 ] as const;
 export type Rating = (typeof RATINGS)[number];
 
-/** "tomorrow", "in 6 days", "in 3 weeks" — display only. */
-export function intervalText(days: number): string {
-  if (days <= 1) return "tomorrow";
-  if (days < 14) return `in ${days} days`;
-  if (days < 60) return `in ${Math.round(days / 7)} weeks`;
-  return `in ${Math.round(days / 30)} months`;
+/** "tomorrow", "in 6 days", "in 3 weeks" — display only, in the active language (Intl handles plural forms). */
+export function intervalText(days: number, locale: string): string {
+  let rtf: Intl.RelativeTimeFormat;
+  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" }); }
+  if (days <= 1) return rtf.format(1, "day");
+  if (days < 14) return rtf.format(days, "day");
+  if (days < 60) return rtf.format(Math.round(days / 7), "week");
+  return rtf.format(Math.round(days / 30), "month");
 }
 
 /** Bulk-add: one card per line, "front | back" (a tab also works). */

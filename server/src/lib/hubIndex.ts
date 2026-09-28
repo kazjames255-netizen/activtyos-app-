@@ -150,6 +150,8 @@ export interface NoteRow {
   lessonYear: number | null;
   /** The lesson's Oak URL minus its host — the key into the curriculum maps (lib/curriculum.ts); null for a tutor's own lesson. */
   oakKey: string | null;
+  /** Has an Oak worksheet PDF (worksheetFile) and, when converted, its auto-marked quiz (worksheetQuizId). */
+  hasWorksheet: boolean; worksheetQuizId: string | null;
 }
 interface NoteDocLike { topicId?: string; franchiseId?: string | null; published?: boolean; title?: string; body?: string; attachments?: NoteRow["attachments"]; videos?: unknown[]; createdByName?: string; createdAt?: string; updatedAt?: string; kind?: string; lesson?: { widget?: string | null; quizId?: string | null; year?: unknown; source?: { url?: unknown } | null } | null; excerpt?: string; readMinutes?: number; hasBody?: boolean }
 const yearOf = (v: unknown): number | null => {
@@ -171,6 +173,12 @@ export const noteRow = (id: string, n: NoteDocLike): NoteRow => {
     lessonQuizId: typeof n.lesson?.quizId === "string" && n.lesson.quizId ? n.lesson.quizId : null,
     lessonYear: yearOf(n.lesson?.year),
     oakKey: oakKey(n.lesson?.source?.url),
+    // A worksheet counts whether it's a PDF (worksheetFile) OR an on-screen auto-marked quiz (worksheetQuizId) — most
+    // worksheets loaded this way carry ONLY worksheetQuizId (Kaz: "you don't need to add the PDFs just the function
+    // onscreen"), so checking worksheetFile alone silently hid 431 of 451 real worksheets from every count/picker
+    // (found 27 Sep 2026, live on the real tenants, via the "Set homework" worksheet picker showing 0 in every year).
+    hasWorksheet: !!((n as { worksheetFile?: unknown }).worksheetFile || (n as { worksheetQuizId?: unknown }).worksheetQuizId),
+    worksheetQuizId: typeof (n as { worksheetQuizId?: unknown }).worksheetQuizId === "string" ? (n as { worksheetQuizId: string }).worksheetQuizId || null : null,
   };
 };
 const noteIndexOwn = (tenantId: string): Promise<Map<string, NoteRow>> =>
@@ -178,7 +186,11 @@ const noteIndexOwn = (tenantId: string): Promise<Map<string, NoteRow>> =>
     // Only the fields a list row needs. An imported Oak lesson doc carries its whole slide deck + transcript + keywords inside `lesson`
     // (~40KB each): reading every note in full made this query time out (HTTP 500 after ~130 s) once a tenant held ~7,500 lessons.
     const docs = await shardedTenantRead(notesCol, tenantId,
-      ["topicId", "franchiseId", "published", "title", "excerpt", "readMinutes", "hasBody", "attachments", "videos", "createdByName", "createdAt", "updatedAt", "lesson.widget", "lesson.quizId", "lesson.year", "lesson.outcome", "lesson.lessonSlug", "lesson.source.url"]);
+      // worksheetFile / worksheetQuizId must stay in this list: noteRow()'s hasWorksheet/worksheetQuizId are derived
+      // straight off the projected doc, and a field-mask query returns them as undefined if they're left out here —
+      // every worksheet then silently reads as "no worksheet" the next time this cache rebuilds (found 27 Sep 2026:
+      // the fields were missing, so hasWorksheet was always false once the initial patchNote()-populated cache expired).
+      ["topicId", "franchiseId", "published", "title", "excerpt", "readMinutes", "hasBody", "attachments", "videos", "createdByName", "createdAt", "updatedAt", "lesson.widget", "lesson.quizId", "lesson.year", "lesson.outcome", "lesson.lessonSlug", "lesson.source.url", "worksheetFile", "worksheetQuizId"]);
     // Notes written through the API have no stored excerpt: read just their body, in chunks of 300 (Firestore's
     // getAll/batchGet limit). A real tenant can have thousands of these (every API-authored note, not just the
     // handful the old comment here assumed), so the chunks are fetched in parallel — sequential awaits meant this

@@ -4,6 +4,9 @@ import { RetryFace } from "../homework/RetryFace";
 import { kidTitle, type KidBand } from "../family/kidCopy";
 import { SpeakButton } from "../speak";
 import { DISPLAY, FOCUS, Icon, type IconName } from "./homeKit";
+import { useH } from "./homeI18n";
+import { Mascot, useMascotEnabled } from "../mascot";
+import HowItWorksButton from "../howitworks/HowItWorksButton";
 
 // A child's Home (P-03): ONE big next-step card, at most six words, one "Go" button. No streak, level, stats or
 // animation. KS1 (Reception to Year 2) sees nothing under the card; KS2 a few short rows; older children a plain
@@ -17,29 +20,35 @@ export interface WeakTopic { topic: string; subject: string; pct: number }
 export function KidHome({ name, band, step, rows, failedHomework, onRetry, go, weak = [] }: {
   name: string; band: KidBand; step: KidStep | null; rows: KidRow[]; failedHomework: boolean; onRetry: () => void; go: (k: KidStep["to"]) => void; weak?: WeakTopic[];
 }) {
+  const { t } = useH();
+  const mascotOn = useMascotEnabled();
   if (band === "ks3" || band === "teen") return <TeenHome name={name} band={band} rows={rows} failedHomework={failedHomework} onRetry={onRetry} go={go} weak={weak} />;
   const list = band === "ks1" ? [] : band === "ks2" ? rows.slice(0, 3) : rows.slice(0, 6);
   return (
     <div id="hub-home-kid" data-testid="hub-home-kid" data-band={band} className="mx-auto grid w-full max-w-[720px] gap-4">
-      <h2 className="m-0 text-[22px] font-extrabold text-[var(--ink)]" style={DISPLAY}>Hi {name}!</h2>
+      <div className="flex items-center gap-3">
+        {mascotOn && <Mascot pose="wave" size={72} />}
+        <h2 className="m-0 text-[22px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{t("hubshell.hm_hiName", { name })}</h2>
+      </div>
       {failedHomework ? (
-        <RetryFace what="your homework" kid onRetry={onRetry} />
+        <RetryFace what={t("hubshell.hm_yourHomework")} kid onRetry={onRetry} />
       ) : (
-        <section aria-label="What to do next" data-testid="hub-kid-next" data-ui="card" className="flex min-h-[96px] flex-wrap items-center gap-4 rounded-3xl border border-[var(--brand-line)] bg-[var(--brand-soft)] p-5 shadow-[var(--shadow-sm)]">
+        <section aria-label={t("hubshell.hm_whatNext")} data-testid="hub-kid-next" data-ui="card" className="flex min-h-[96px] flex-wrap items-center gap-4 rounded-3xl border border-[var(--brand-line)] bg-[var(--brand-soft)] p-5 shadow-[var(--shadow-sm)]">
           <span aria-hidden className="grid h-[72px] w-[72px] flex-none place-items-center rounded-3xl bg-[var(--surface)] text-[var(--brand)]"><Icon name={step?.icon ?? "check"} size={38} strokeWidth={2.2} /></span>
-          <p className="m-0 min-w-0 flex-1 basis-[180px] text-[26px] font-extrabold leading-tight text-[var(--ink)]" style={DISPLAY}>{step?.text ?? "All done. Well done!"}</p>
-          <SpeakButton text={step?.text ?? "All done. Well done!"} label="Read this aloud" size={56} testId="hub-read-next" />
+          <p className="m-0 min-w-0 flex-1 basis-[180px] text-[26px] font-extrabold leading-tight text-[var(--ink)]" style={DISPLAY}>{step?.text ?? t("hubshell.hm_allDoneKid")}</p>
+          <SpeakButton text={step?.text ?? t("hubshell.hm_allDoneKid")} label={t("hubshell.hm_readAloud")} size={56} testId="hub-read-next" />
           {step && (
-            <button type="button" onClick={() => go(step.to)} data-testid="hub-kid-go" aria-label={`Go: ${step.text}`}
-              className={`inline-flex min-h-[56px] min-w-[110px] items-center justify-center rounded-full bg-[var(--brand)] px-8 text-[20px] font-extrabold text-white ${FOCUS}`}>Go</button>
+            <button type="button" onClick={() => go(step.to)} data-testid="hub-kid-go" aria-label={t("hubshell.hm_goAria", { text: step.text })}
+              className={`inline-flex min-h-[56px] min-w-[110px] items-center justify-center rounded-full bg-[var(--brand)] px-8 text-[20px] font-extrabold text-white ${FOCUS}`}>{t("hubshell.hm_go")}</button>
           )}
         </section>
       )}
+      <HowItWorksButton role="kid" variant="kid" band={band === "ks1" ? "ks1" : "std"} />
       {list.length > 0 && !failedHomework && (
-        <section aria-label={band === "ks2" ? "More to do" : "Due this week"} className="grid gap-2">
-          {band !== "ks2" && <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Due this week</h3>}
+        <section aria-label={band === "ks2" ? t("hubshell.hm_moreToDoKid") : t("hubshell.hm_dueThisWeek")} className="grid gap-2">
+          {band !== "ks2" && <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.hm_dueThisWeek")}</h3>}
           {list.map((r) => (
-            <button key={r.key} type="button" onClick={() => go(r.to)} className={`flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-left ${FOCUS}`}>
+            <button key={r.key} type="button" onClick={() => go(r.to)} className={`flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-start ${FOCUS}`}>
               <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[var(--brand)]"><Icon name={r.icon} size={20} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-extrabold text-[var(--ink)]">{kidTitle(r.title, true)}</span>{r.note && <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{r.note}</span>}</span>
               <Icon name="chevronRight" size={16} className="flex-none text-[var(--ink-3)]" />
@@ -54,32 +63,34 @@ export function KidHome({ name, band, step, rows, failedHomework, onRetry, go, w
 /** Year 7+ (R-6): a plain grown-up list. No mascot, streak, confetti or big card; one "Start" per row; a "Revise weakest" strip only
  *  when this child's own results say something (weak topics come from the child-scoped mastery data, hidden when there is none). */
 function TeenHome({ name, band, rows, failedHomework, onRetry, go, weak }: { name: string; band: KidBand; rows: KidRow[]; failedHomework: boolean; onRetry: () => void; go: (k: KidStep["to"]) => void; weak: WeakTopic[] }) {
+  const { t } = useH();
   const list = rows.slice(0, 5);
   return (
     <div id="hub-home-kid" data-testid="hub-home-kid" data-band={band} data-teen="1" className="mx-auto grid w-full max-w-[860px] gap-4">
       <h2 className="m-0 text-[22px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{name}</h2>
+      <div><HowItWorksButton role="kid" variant="link" band="std" label={t("hubhow.btnThis")} /></div>
       {failedHomework ? (
-        <RetryFace what="your homework" kid={false} onRetry={onRetry} />
+        <RetryFace what={t("hubshell.hm_yourHomework")} kid={false} onRetry={onRetry} />
       ) : (
-        <section aria-label="Due this week" data-testid="hub-teen-due" className="grid gap-2">
-          <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Due this week</h3>
-          {list.length === 0 && <p data-testid="hub-teen-nothing" className="m-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[14.5px] font-semibold text-[var(--ink-2)]">Nothing due.{weak.length > 0 ? " Revise your weakest?" : ""}</p>}
+        <section aria-label={t("hubshell.hm_dueThisWeek")} data-testid="hub-teen-due" className="grid gap-2">
+          <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.hm_dueThisWeek")}</h3>
+          {list.length === 0 && <p data-testid="hub-teen-nothing" className="m-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[14.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.hm_nothingDue")}{weak.length > 0 ? ` ${t("hubshell.hm_reviseWeakestQ")}` : ""}</p>}
           {list.map((r) => (
             <div key={r.key} data-testid="hub-teen-row" className="flex min-h-[56px] items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2">
               <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[var(--brand)]"><Icon name={r.icon} size={20} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-extrabold text-[var(--ink)]">{r.title}</span>{r.note && <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{r.note}</span>}</span>
-              <button type="button" onClick={() => go(r.to)} aria-label={`Start: ${r.title}`} className={`inline-flex min-h-[44px] flex-none items-center rounded-full bg-[var(--brand)] px-5 text-[14px] font-extrabold text-white ${FOCUS}`}>Start</button>
+              <button type="button" onClick={() => go(r.to)} aria-label={t("hubshell.hm_startAria", { title: r.title })} className={`inline-flex min-h-[44px] flex-none items-center rounded-full bg-[var(--brand)] px-5 text-[14px] font-extrabold text-white ${FOCUS}`}>{t("hubshell.hm_start")}</button>
             </div>
           ))}
         </section>
       )}
       {weak.length > 0 && (
-        <section aria-label="Weakest topics" data-testid="hub-teen-weak" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+        <section aria-label={t("hubshell.hm_weakestTopics")} data-testid="hub-teen-weak" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
           <div className="min-w-0 flex-1 basis-[220px]">
-            <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Weakest topics</h3>
+            <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.hm_weakestTopics")}</h3>
             <p className="m-0 mt-1 text-[14px] font-semibold text-[var(--ink)]">{weak.map((w) => `${w.topic} ${Math.round(w.pct)}%`).join("  ·  ")}</p>
           </div>
-          <button type="button" onClick={() => go("quizzes")} className={`inline-flex min-h-[44px] items-center rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] px-5 text-[14px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>Revise weakest</button>
+          <button type="button" onClick={() => go("quizzes")} className={`inline-flex min-h-[44px] items-center rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] px-5 text-[14px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>{t("hubshell.hm_reviseWeakest")}</button>
         </section>
       )}
     </div>

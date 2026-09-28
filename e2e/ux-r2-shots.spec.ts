@@ -83,7 +83,7 @@ const tapAudit = async (page: Page, name: string) => {
 };
 
 async function gotoHub(page: Page, url: string) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ }).first();
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first();
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url, { waitUntil: "commit" }).catch(() => {});

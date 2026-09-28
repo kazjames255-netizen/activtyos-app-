@@ -1,0 +1,29 @@
+{
+ "balance": {
+  "samples": 88,
+  "svgRootHits": 0,
+  "fallThrough": 67,
+  "tokenStillHit": true,
+  "attr": "1"
+ },
+ "balanceDraggingGhostShown": 0,
+ "balanceDragChangedTokens": {
+  "before": "Balanced — whatever you do to one side, do to the other.",
+  "after": "Balanced — whatever you do to one side, do to the other."
+ },
+ "geoDrawToolButtons": [
+  "Line",
+  "Pencil"
+ ],
+ "geoWithDrawTool": {
+  "attr": "1",
+  "hitIsRect": true,
+  "hit": "geo-bare-hit",
+  "rectPresent": true
+ },
+ "geoMoveTool": {
+  "attr": "1",
+  "over": "page",
+  "rectPresent": false
+ }
+}

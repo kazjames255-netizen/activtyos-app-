@@ -1,0 +1,3489 @@
+{
+ "ui": {
+  "eyebrow": "{hub} · Jak to działa",
+  "hubTeaching": "Centrum nauczania",
+  "hubLearning": "Centrum nauki",
+  "pickShort": "Wybierz krótki film.",
+  "pickShortLong": "Wybierz krótki film. Każdy trwa kilka minut.",
+  "whoWatching": "Kto ogląda",
+  "allVideos": "Wszystkie filmy",
+  "allVideosPlay": "▶ Wszystkie filmy",
+  "fullTour": "▶ Pełny przewodnik",
+  "nextTopic": "▶ Dalej: {title}",
+  "chooseVideo": "Wybierz film",
+  "loading": "Wczytywanie…",
+  "sheetTitle": "Jak to działa",
+  "whichVideo": "Który film",
+  "close": "Zamknij",
+  "minScenes": "{m} min · sceny: {n}",
+  "watched": " · Obejrzane",
+  "stageAria": "{script} — scena {i} z {n}: {title}",
+  "sceneLive": "Scena {i} z {n}: {title}",
+  "playAria": "Odtwórz: {title}",
+  "soundOnCaps": "Dźwięk jest włączony. Napisy są zawsze widoczne poniżej.",
+  "capsBelow": "Napisy są widoczne poniżej.",
+  "startsAt": "Zaczyna się od „{title}”.",
+  "thatsTheLot": "To już wszystko",
+  "watchAgain": "↺ Obejrzyj jeszcze raz",
+  "captions": "Napisy",
+  "controls": "Sterowanie odtwarzaczem",
+  "scenesJump": "Sceny — przejdź do wybranej",
+  "sceneN": "Scena {k}: {title}",
+  "prev": "Poprzednia scena",
+  "prevT": "Poprzednia scena (←)",
+  "pause": "Pauza",
+  "play": "Odtwórz",
+  "replay": "Odtwórz ponownie",
+  "pauseT": "Pauza (spacja)",
+  "playT": "Odtwórz (spacja)",
+  "restart": "Zacznij od początku",
+  "restartT": "Od początku (R)",
+  "next": "Następna scena",
+  "nextT": "Następna scena (→)",
+  "captionsT": "Napisy (C)",
+  "captionsOn": "Napisy włączone",
+  "captionsOff": "Napisy wyłączone",
+  "soundT": "Dźwięk (M)",
+  "soundOn": "Dźwięk włączony",
+  "soundOff": "Dźwięk wyłączony",
+  "musicT": "Muzyka w tle",
+  "musicOn": "Muzyka włączona",
+  "musicOff": "Muzyka wyłączona",
+  "speed": "Prędkość",
+  "voice": "Głos",
+  "autoVoice": "Głos automatyczny",
+  "scenes": "Sceny",
+  "readScript": "Przeczytaj cały tekst",
+  "noVoice": "Brak głosu dla tego języka na tym urządzeniu: tylko napisy.",
+  "tryNow": "Wypróbuj teraz →",
+  "nextVideo": "Następny film: {title}"
+ },
+ "scripts": {
+  "tutor:std:main": {
+   "title": "Prowadź swoje Centrum nauczania",
+   "tagline": "Zapisz rodziny na swoją listę, ucz tak, jak Ci wygodnie, i sprawdzaj, jak radzi sobie każde dziecko.",
+   "audience": "Dla korepetytorów"
+  },
+  "parent:std:main": {
+   "title": "Centrum nauki Twojego dziecka",
+   "tagline": "Zobacz lekcje i prace domowe dziecka, jednym rzutem oka sprawdź, jak mu idzie, i wydrukuj raport z postępów.",
+   "audience": "Centrum nauki dla rodziców"
+  },
+  "kid:std:main": {
+   "title": "Jak to działa",
+   "tagline": "Twoje własne miejsce do nauki. Oglądaj, słuchaj i próbuj!",
+   "audience": "Dla dzieci",
+   "viewLabel": "Co widzi Twoje dziecko"
+  },
+  "tutor:std:roster": {
+   "title": "Zapisywanie rodzin na listę",
+   "tagline": "Dodaj rodziny do swojej listy i ustaw każde dziecko.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Ekran Start i trzy sposoby, w jakie rodzina może do Ciebie dołączyć: rezerwacja, link z zaproszeniem lub Twoja strona publiczna."
+  },
+  "tutor:std:students": {
+   "title": "Twoi uczniowie",
+   "tagline": "Zadbaj o swoją listę uczniów.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Karta każdego dziecka, grupy i ustawienia wsparcia, które możesz zmieniać tylko Ty."
+  },
+  "tutor:std:lessons": {
+   "title": "Lekcje i program nauczania",
+   "tagline": "Znajdź, otwórz i twórz lekcje.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Znajdź gotową lekcję, otwórz ją albo zbuduj własną w kreatorze slajdów."
+  },
+  "tutor:std:tools": {
+   "title": "Narzędzia",
+   "tagline": "Narzędzia dla Twoich dzieci.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Obszar Narzędzia i przekazywanie narzędzia dzieciom."
+  },
+  "tutor:std:live": {
+   "title": "Lekcje na żywo i stacjonarne",
+   "tagline": "Ucz na żywo, online lub na miejscu.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Trzy sposoby nauczania: lekcje wideo, co jest w rozmowie i nauczanie osobiste."
+  },
+  "tutor:std:homework": {
+   "title": "Praca domowa: zadaj, zbierz, sprawdź",
+   "tagline": "Zadawaj prace domowe i sprawdzaj to, co wraca.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Zadaj pracę, dołącz kartę pracy, zobacz oddane prace i je sprawdź."
+  },
+  "tutor:std:quizzes": {
+   "title": "Quizy i fiszki",
+   "tagline": "Sprawdź, co dzieci wiedzą.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Twórz quiz, sprawdzanie, quizy startowe i fiszki."
+  },
+  "tutor:std:progress": {
+   "title": "Postępy",
+   "tagline": "Zobacz, jak radzi sobie każde dziecko.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Cała klasa na jednym ekranie, jedno dziecko szczegółowo i Twoje własne poziomy."
+  },
+  "parent:std:start": {
+   "title": "Na start",
+   "tagline": "Skonfiguruj wszystko i dowiedz się, gdzie szukać.",
+   "audience": "Centrum nauki dla rodziców",
+   "blurb": "Jak dziecko trafia do Centrum, dołączanie z linku korepetytora i jednozdaniowy werdykt na ekranie Start."
+  },
+  "parent:std:homework": {
+   "title": "Prace domowe w Centrum nauki",
+   "tagline": "Zobacz, co zadano, kiedy termin i jak poszło.",
+   "audience": "Centrum nauki dla rodziców",
+   "blurb": "Co zadano, kiedy termin, jak dziecko oddaje pracę i gdzie pojawiają się oceny."
+  },
+  "parent:std:week": {
+   "title": "Tydzień Twojego dziecka",
+   "tagline": "Bądź na bieżąco i pytaj, kiedy potrzebujesz.",
+   "audience": "Centrum nauki dla rodziców",
+   "blurb": "Lekcje, lekcje na żywo, postępy, raport do wydruku i pytania do korepetytora."
+  },
+  "parent:std:handover": {
+   "title": "Przekaż ekran dziecku",
+   "tagline": "Pozwól dziecku uczyć się samodzielnie.",
+   "audience": "Centrum nauki dla rodziców",
+   "blurb": "Daj dziecku jego własną, prostą przestrzeń i dowiedz się, jak do niej wrócić."
+  },
+  "kid:std:homework": {
+   "title": "Moja praca domowa",
+   "tagline": "Znajdź ją, zrób ją, oddaj ją.",
+   "audience": "Dla dzieci",
+   "blurb": "Znajdź pracę domową, zrób ją i oddaj."
+  },
+  "kid:ks1:main": {
+   "title": "Jak to działa",
+   "tagline": "Oglądaj i słuchaj. To krótkie!",
+   "audience": "Dla dzieci",
+   "viewLabel": "Co widzi Twoje dziecko"
+  },
+  "tutor:std:home": {
+   "title": "Twój ekran Start",
+   "tagline": "Tu zaczynasz każdy dzień.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Twoje obszary, Wymaga Twojej uwagi i Jak to działa."
+  },
+  "tutor:std:families": {
+   "title": "Zapisywanie rodzin na listę",
+   "tagline": "Zapisz rodziny na swoją listę.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Trzy sposoby, w jakie rodzina do Ciebie dołączy: rezerwacja, link z zaproszeniem lub Twoja strona publiczna."
+  },
+  "tutor:std:messages": {
+   "title": "Wiadomości",
+   "tagline": "Rozmawiaj z rodzinami, jeden wątek na dziecko.",
+   "audience": "Dla korepetytorów",
+   "blurb": "Każda rozmowa z rodziną i to, jak dociera do niej odpowiedź."
+  }
+ },
+ "scenes": {
+  "tutor:std:tour": {
+   "chapter": "Twoje Centrum",
+   "title": "Twój ekran Start",
+   "say": "To jest Twój ekran Start. Na górze widzisz siedem obszarów: Start, Lekcje, Uczniowie, Postępy, Quizy, Praca domowa i Wiadomości. W Lekcjach są też Lekcje na żywo, Narzędzia i Fiszki. Na ekranie Start jest następna lekcja oraz lista Wymaga uwagi, więc zawsze wiesz, od czego zacząć. A przycisk Jak to działa jest tu zawsze.",
+   "keys": [
+    "Siedem obszarów",
+    "Następna lekcja",
+    "Wymaga uwagi",
+    "Jak to działa"
+   ],
+   "cam": [
+    {
+     "on": "Na górze"
+    },
+    {
+     "on": "Na ekranie Start"
+    },
+    {
+     "on": "lista Wymaga"
+    },
+    {
+     "on": "A przycisk Jak to działa"
+    }
+   ],
+   "rings": [
+    {
+     "on": "siedem obszarów",
+     "off": "W Lekcjach są"
+    },
+    {
+     "on": "Na ekranie Start",
+     "off": "oraz lista"
+    },
+    {
+     "on": "lista Wymaga",
+     "off": "A przycisk"
+    },
+    {
+     "on": "A przycisk Jak to działa"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Start, Lekcje"
+    },
+    {
+     "on": "lista Wymaga"
+    },
+    {
+     "on": "A przycisk Jak to działa"
+    }
+   ]
+  },
+  "tutor:std:ways-in": {
+   "chapter": "Zapisywanie rodzin",
+   "title": "Trzy sposoby, w jakie rodzina może do Ciebie dołączyć",
+   "say": "Rodzina może dołączyć do Twojej listy na trzy sposoby. Pierwszy: rezerwuje u Ciebie zajęcia. Drugi: wysyłasz jej prywatny link z zaproszeniem. Trzeci: znajduje Twoją stronę publiczną. Przyjrzyjmy się każdemu z nich.",
+   "keys": [
+    "Trzy sposoby dołączenia::trzy sposoby",
+    "Rezerwuje u Ciebie",
+    "Prywatny link z zaproszeniem",
+    "Twoją stronę publiczną"
+   ],
+   "nodes": [
+    {
+     "on": "Pierwszy:",
+     "title": "Rezerwują u Ciebie",
+     "sub": "Ich dziecko pojawia się w Zapisz ucznia"
+    },
+    {
+     "on": "Drugi:",
+     "title": "Prywatny link z zaproszeniem",
+     "sub": "Wysyłasz go Ty. Rodzice wybierają dzieci"
+    },
+    {
+     "on": "Trzeci:",
+     "title": "Twoja strona publiczna",
+     "sub": "Rodzice zakładają konto, a Ty zapisujesz dziecko"
+    }
+   ]
+  },
+  "tutor:std:enrol-book": {
+   "chapter": "Zapisywanie rodzin",
+   "title": "1. Rezerwują u Ciebie",
+   "say": "Pierwszy sposób. Rodzic zakłada konto i rezerwuje u Ciebie zajęcia. Jego dziecko pojawia się teraz w oknie Zapisz ucznia. Znajdź je i naciśnij Zapisz. Potem wybierz, jakie przedmioty dziecko widzi, oraz jego klasę. Naciśnij Zapisz ucznia, a od tej chwili rodzina widzi Centrum nauki.",
+   "keys": [
+    "Zapisz ucznia",
+    "Naciśnij Zapisz",
+    "Jakie przedmioty",
+    "Jego klasę",
+    "Centrum nauki"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Potem wybierz"
+    }
+   ],
+   "cam": [
+    {
+     "on": "pojawia się teraz"
+    },
+    {
+     "on": "Znajdź je"
+    },
+    {
+     "on": "Potem wybierz"
+    },
+    {
+     "on": "jakie przedmioty"
+    },
+    {
+     "on": "oraz jego klasę"
+    },
+    {
+     "on": "Naciśnij Zapisz ucznia"
+    },
+    {
+     "on": "a od tej chwili"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Znajdź je",
+     "off": "Potem wybierz"
+    },
+    {
+     "on": "jakie przedmioty",
+     "off": "oraz jego"
+    },
+    {
+     "on": "oraz jego klasę",
+     "off": "Naciśnij Zapisz ucznia"
+    },
+    {
+     "on": "Naciśnij Zapisz ucznia",
+     "off": "a od tej chwili"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "naciśnij Zapisz."
+    },
+    {
+     "on": "Naciśnij Zapisz ucznia"
+    }
+   ]
+  },
+  "tutor:std:enrol-invite": {
+   "chapter": "Zapisywanie rodzin",
+   "title": "2. Prywatny link z zaproszeniem",
+   "say": "Drugi sposób, dla rodziny, która nie rezerwowała zajęć. Wpisz, dla kogo jest zaproszenie, i naciśnij Utwórz link z zaproszeniem. Skopiuj go i wyślij rodzicowi samodzielnie. Link działa trzydzieści dni i tylko dla jednej rodziny. Rodzic go otwiera, wybiera, które dzieci dodać, a dzieci same pojawiają się na Twojej liście.",
+   "keys": [
+    "Dla kogo to?::Wpisz, dla kogo",
+    "Utwórz link z zaproszeniem",
+    "Wysyłasz go samodzielnie::wyślij rodzicowi samodzielnie",
+    "Trzydzieści dni, jedna rodzina::trzydzieści dni",
+    "Dzieci pojawiają się same::same pojawiają się"
+   ],
+   "cam": [
+    {
+     "on": "Drugi sposób"
+    },
+    {
+     "on": "Wpisz, dla kogo"
+    },
+    {
+     "on": "i naciśnij"
+    },
+    {
+     "on": "Skopiuj go"
+    },
+    {
+     "on": "Link działa"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wpisz, dla kogo",
+     "off": "i naciśnij"
+    },
+    {
+     "on": "i naciśnij",
+     "off": "Skopiuj go"
+    },
+    {
+     "on": "Skopiuj go",
+     "off": "Link działa"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "i naciśnij"
+    },
+    {
+     "on": "Skopiuj go"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "wyślij rodzicowi",
+     "text": "Nic nie jest wysyłane e-mailem: wysyłasz go Ty"
+    }
+   ]
+  },
+  "tutor:std:enrol-page": {
+   "chapter": "Zapisywanie rodzin",
+   "title": "3. Link do Twojej strony publicznej",
+   "say": "Trzeci sposób. Gdy nie ma jeszcze nikogo do zapisania, okno zapisu pokazuje link do Twojej strony, z przyciskiem Kopiuj. Wyślij go rodzicowi. Rodzic go otwiera, loguje się lub zakłada konto rodzica, a wtedy jego dzieci pojawiają się na liście, gotowe do zapisania. Rezerwacja nie jest potrzebna.",
+   "keys": [
+    "Link do Twojej strony",
+    "przyciskiem Kopiuj",
+    "Zakłada konto rodzica::zakłada konto rodzica",
+    "Gotowe do zapisania",
+    "Rezerwacja nie jest potrzebna"
+   ],
+   "cam": [
+    {
+     "on": "pokazuje link do Twojej strony"
+    },
+    {
+     "on": "gotowe do zapisania"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pokazuje link do Twojej strony",
+     "off": "gotowe do zapisania"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "z przyciskiem Kopiuj"
+    }
+   ]
+  },
+  "tutor:std:roster": {
+   "chapter": "Twoi uczniowie",
+   "title": "Twoja lista uczniów",
+   "say": "Po zapisaniu każde dziecko ma kartę na stronie Uczniowie, z klasą, przedmiotami i kółkiem postępu. Utwórz grupę, a jednym kliknięciem zadasz pracę domową, quiz lub lekcję całej grupie. Trzy kropki na karcie pozwalają w każdej chwili wstrzymać lub wypisać dziecko.",
+   "keys": [
+    "Karta dla każdego dziecka::każde dziecko ma kartę",
+    "Kółko postępu::kółkiem postępu",
+    "Grupy jednym kliknięciem::Utwórz grupę",
+    "Wstrzymać lub wypisać"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Utwórz grupę"
+    },
+    {
+     "on": "Trzy kropki"
+    }
+   ],
+   "cam": [
+    {
+     "on": "każde dziecko ma kartę"
+    },
+    {
+     "on": "Utwórz grupę"
+    },
+    {
+     "on": "Trzy kropki"
+    }
+   ],
+   "rings": [
+    {
+     "on": "każde dziecko ma kartę",
+     "off": "Utwórz grupę"
+    },
+    {
+     "on": "Utwórz grupę",
+     "off": "Trzy kropki"
+    },
+    {
+     "on": "Trzy kropki"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "jednym kliknięciem"
+    },
+    {
+     "on": "Trzy kropki"
+    }
+   ]
+  },
+  "tutor:std:support": {
+   "chapter": "Twoi uczniowie",
+   "title": "Wsparcie dla każdego dziecka",
+   "say": "Każde dziecko może mieć własne ustawienia wsparcia. Otwórz Edytuj dane dziecka. Wyłącz liczniki czasu w quizach, włącz tryb spokojny, dodaj dodatkowy czas, powiększ tekst albo włącz czytanie odpowiedzi na głos. Ustawiasz to tylko Ty. Dziecko i jego rodzina nie mogą tego zmienić.",
+   "keys": [
+    "Wsparcie dla każdego dziecka::ustawienia wsparcia",
+    "Bez liczników::Wyłącz liczniki",
+    "Tryb spokojny",
+    "Dodatkowy czas",
+    "czytanie odpowiedzi na głos",
+    "Ustawiasz to tylko Ty"
+   ],
+   "cam": [
+    {
+     "on": "Wyłącz"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wyłącz",
+     "off": "Ustawiasz to tylko"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wyłącz"
+    },
+    {
+     "on": "włącz tryb"
+    }
+   ]
+  },
+  "tutor:std:lessons": {
+   "chapter": "Lekcje",
+   "title": "Biblioteka gotowych lekcji",
+   "say": "Teraz Lekcje. Twoja biblioteka ma tysiące gotowych lekcji i kart pracy. To mapa programu nauczania. Wybierz przedmiot, wybierz klasę i zobacz, które tematy mają lekcje i ile ich jest. Wyszukiwarka znajdzie każdy dział lub lekcję po nazwie.",
+   "keys": [
+    "Tysiące gotowych lekcji",
+    "Mapa programu nauczania",
+    "Wybierz przedmiot",
+    "Wybierz klasę",
+    "Szukaj po nazwie::Wyszukiwarka znajdzie"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Wybierz przedmiot"
+    }
+   ],
+   "cam": [
+    {
+     "on": "To mapa"
+    },
+    {
+     "on": "Wybierz przedmiot"
+    },
+    {
+     "on": "wybierz klasę"
+    },
+    {
+     "on": "i zobacz"
+    },
+    {
+     "on": "Wyszukiwarka znajdzie"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wybierz przedmiot",
+     "off": "wybierz klasę"
+    },
+    {
+     "on": "wybierz klasę",
+     "off": "i zobacz"
+    },
+    {
+     "on": "Wyszukiwarka znajdzie"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wybierz przedmiot"
+    },
+    {
+     "on": "wybierz klasę"
+    },
+    {
+     "on": "Wyszukiwarka znajdzie"
+    }
+   ]
+  },
+  "tutor:std:lesson-view": {
+   "chapter": "Lekcje",
+   "title": "Otwórz lekcję",
+   "say": "Otwórz dowolną lekcję, żeby zobaczyć jej plan. To lekcja interaktywna: dzieci przechodzą przez nią po jednym pomyśle, ze slajdami, pytaniami na rozgrzewkę i quizem na końcu. Naciśnij Podgląd lekcji, aby przejrzeć dokładnie to, co zobaczy dziecko.",
+   "keys": [
+    "Otwórz dowolną lekcję",
+    "Lekcja interaktywna",
+    "Po jednym pomyśle",
+    "Podgląd lekcji"
+   ],
+   "cam": [
+    {
+     "on": "Otwórz dowolną lekcję"
+    },
+    {
+     "on": "To lekcja interaktywna"
+    },
+    {
+     "on": "Naciśnij Podgląd lekcji"
+    }
+   ],
+   "rings": [
+    {
+     "on": "To lekcja interaktywna",
+     "off": "Naciśnij Podgląd"
+    },
+    {
+     "on": "Naciśnij Podgląd lekcji"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Podgląd lekcji"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Otwórz dowolną lekcję",
+     "text": "Zadaj ją dzieciom"
+    }
+   ]
+  },
+  "tutor:std:builder": {
+   "chapter": "Lekcje",
+   "title": "Stwórz własną w kreatorze slajdów",
+   "say": "Chcesz własną lekcję? Naciśnij Utwórz nową lekcję i wybierz temat. Kreator slajdów pozwala pisać slajdy oraz dodawać tekst, słowa kluczowe, odkrywanie po dotknięciu, wybór wielokrotny, sortowanie i łączenie. Na bieżąco możesz oglądać podgląd slajdu, a potem zapisać. Lekcja trafia do Twojej biblioteki.",
+   "keys": [
+    "Utwórz nową lekcję",
+    "Kreator slajdów",
+    "Tekst, sortowanie, łączenie::sortowanie i łączenie",
+    "Podgląd na bieżąco::podgląd slajdu",
+    "Trafia do Twojej biblioteki"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Kreator slajdów"
+    },
+    {
+     "on": "wybór wielokrotny"
+    },
+    {
+     "on": "podgląd slajdu"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Kreator slajdów"
+    }
+   ]
+  },
+  "tutor:std:tools": {
+   "chapter": "Narzędzia",
+   "title": "Obszar Narzędzia",
+   "say": "Teraz Narzędzia, które znajdziesz w Lekcjach. Linijki, kątomierze, osie liczbowe, schematy przyrodnicze i wiele więcej. To miejsce do oglądania: otwórz dowolne narzędzie, żeby je wypróbować. Nic stąd jeszcze nie trafia do dzieci. Dzieje się to w lekcji lub w pytaniu.",
+   "keys": [
+    "Obszar Narzędzia::Teraz Narzędzia",
+    "Linijki, kątomierze, osie liczbowe",
+    "Miejsce do oglądania",
+    "Przekazane w lekcji::w lekcji"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "otwórz dowolne narzędzie"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Linijki, kątomierze"
+    },
+    {
+     "on": "To miejsce do oglądania"
+    },
+    {
+     "on": "otwórz dowolne narzędzie"
+    }
+   ],
+   "rings": [
+    {
+     "on": "To miejsce do oglądania",
+     "off": "otwórz dowolne narzędzie"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "otwórz dowolne narzędzie"
+    }
+   ]
+  },
+  "tutor:std:tool-assign": {
+   "chapter": "Narzędzia",
+   "title": "Daj narzędzie dzieciom",
+   "say": "Aby dać narzędzie dzieciom, otwórz lekcję i naciśnij Podgląd lekcji. Potem otwórz Narzędzia do tej lekcji, w prawym dolnym rogu. Pokazuje, jakie narzędzie dziecko dostanie przy każdym pytaniu. Naciśnij Dodaj narzędzie do tego pytania i wybierz jedno. Potem naciśnij Użyj we wszystkich pytaniach, a trafi do każdego pytania w lekcji.",
+   "keys": [
+    "Otwórz lekcję, Podgląd::naciśnij Podgląd lekcji",
+    "Narzędzia do tej lekcji",
+    "Dodaj narzędzie do tego pytania",
+    "Użyj we wszystkich pytaniach"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Pokazuje"
+    },
+    {
+     "on": "Naciśnij Dodaj"
+    },
+    {
+     "on": "i wybierz jedno"
+    },
+    {
+     "on": "Potem naciśnij Użyj"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Potem otwórz Narzędzia"
+    },
+    {
+     "on": "Pokazuje"
+    },
+    {
+     "on": "Naciśnij Dodaj"
+    },
+    {
+     "on": "i wybierz jedno"
+    },
+    {
+     "on": "Potem naciśnij Użyj"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Potem otwórz Narzędzia",
+     "off": "Pokazuje"
+    },
+    {
+     "on": "Pokazuje",
+     "off": "Naciśnij Dodaj"
+    },
+    {
+     "on": "Naciśnij Dodaj",
+     "off": "i wybierz jedno"
+    },
+    {
+     "on": "Potem naciśnij Użyj"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Potem otwórz Narzędzia"
+    },
+    {
+     "on": "Naciśnij Dodaj"
+    },
+    {
+     "on": "i wybierz jedno"
+    },
+    {
+     "on": "Potem naciśnij Użyj"
+    }
+   ]
+  },
+  "tutor:std:teach-modes": {
+   "chapter": "Nauczanie",
+   "title": "Trzy sposoby prowadzenia lekcji",
+   "say": "Lekcję można prowadzić na trzy sposoby. W rozmowie wideo, dla dzieci, które są gdzie indziej. Udostępnij dzieciom, gdzie każde dziecko podąża na swoim urządzeniu. Albo osobiście, z dziećmi obok siebie. Wybierasz za każdym razem.",
+   "keys": [
+    "Trzy sposoby",
+    "W rozmowie wideo",
+    "Udostępnij dzieciom",
+    "Osobiście"
+   ],
+   "nodes": [
+    {
+     "on": "W rozmowie wideo",
+     "title": "Lekcja wideo na żywo",
+     "sub": "Dołącz do rozmowy w Centrum"
+    },
+    {
+     "on": "Udostępnij dzieciom",
+     "title": "Udostępnij dzieciom",
+     "sub": "Każde dziecko podąża na swoim urządzeniu"
+    },
+    {
+     "on": "osobiście",
+     "title": "Nauczanie osobiste",
+     "sub": "Dzieci obok Ciebie, bez wideo"
+    }
+   ]
+  },
+  "tutor:std:live": {
+   "chapter": "Nauczanie",
+   "title": "Lekcje wideo na żywo",
+   "say": "Lekcję wideo na żywo zaplanuj dla wybranych dzieci. Gdy nadejdzie czas, w krótkiej poczekalni sprawdzasz kamerę i mikrofon i naciskasz Dołącz. Wszystko dzieje się tutaj, bez żadnej innej aplikacji. W rozmowie możesz prowadzić lekcję interaktywną, a ekran każdego dziecka podąża za Twoim.",
+   "keys": [
+    "Zaplanuj lekcję wideo::zaplanuj",
+    "Sprawdzenie kamery i mikrofonu::kamerę i mikrofon",
+    "Naciskasz Dołącz",
+    "Bez żadnej innej aplikacji"
+   ],
+   "cam": [
+    {
+     "on": "zaplanuj"
+    },
+    {
+     "on": "sprawdzasz kamerę"
+    },
+    {
+     "on": "naciskasz Dołącz"
+    },
+    {
+     "on": "Wszystko dzieje się"
+    }
+   ],
+   "rings": [
+    {
+     "on": "zaplanuj",
+     "off": "Gdy nadejdzie"
+    },
+    {
+     "on": "sprawdzasz kamerę",
+     "off": "naciskasz Dołącz"
+    },
+    {
+     "on": "naciskasz Dołącz",
+     "off": "Wszystko dzieje się"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "zaplanuj"
+    },
+    {
+     "on": "naciskasz Dołącz"
+    }
+   ]
+  },
+  "tutor:std:in-call": {
+   "chapter": "Nauczanie",
+   "title": "W środku rozmowy",
+   "say": "Obok wideo masz przestrzeń roboczą z siedmioma kartami. Uczniowie, Lekcje, gdzie naciskasz Prowadź, by uruchomić lekcję interaktywną, Postępy, Praca domowa, Quiz, fiszki i tablica na żywo. Dziecko może zejść z Twojego ekranu i pracować we własnym tempie, jeśli tego potrzebuje.",
+   "keys": [
+    "Siedem kart obok wideo::siedmioma kartami",
+    "Naciskasz Prowadź",
+    "Tablica na żywo",
+    "We własnym tempie"
+   ],
+   "nodes": [
+    {
+     "on": "Uczniowie",
+     "title": "Uczniowie"
+    },
+    {
+     "on": "Lekcje,",
+     "title": "Lekcje",
+     "sub": "Naciśnij Prowadź"
+    },
+    {
+     "on": "Postępy",
+     "title": "Postępy"
+    },
+    {
+     "on": "Praca domowa",
+     "title": "Praca domowa"
+    },
+    {
+     "on": "Quiz",
+     "title": "Quiz"
+    },
+    {
+     "on": "fiszki",
+     "title": "Fiszki"
+    },
+    {
+     "on": "tablica",
+     "title": "Tablica",
+     "sub": "Tablica na żywo"
+    }
+   ]
+  },
+  "tutor:std:share": {
+   "chapter": "Nauczanie",
+   "title": "Udostępnij dzieciom",
+   "say": "Otwórz lekcję, a dostaniesz dwie opcje. Udostępnij dzieciom jest najlepsze, gdy każde dziecko ma własne urządzenie. Dzieci podążają za lekcją i odpowiadają samodzielnie, gdziekolwiek są. Nie ma rozmowy wideo. Ich ekran podąża za Twoim.",
+   "keys": [
+    "Dwie opcje",
+    "Udostępnij dzieciom",
+    "Własne urządzenie",
+    "Nie ma rozmowy wideo"
+   ],
+   "cam": [
+    {
+     "on": "Otwórz lekcję"
+    },
+    {
+     "on": "Udostępnij dzieciom jest"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dostaniesz dwie opcje",
+     "off": "Udostępnij dzieciom jest"
+    },
+    {
+     "on": "Udostępnij dzieciom jest"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Udostępnij dzieciom jest"
+    }
+   ]
+  },
+  "tutor:std:in-person": {
+   "chapter": "Nauczanie",
+   "title": "Nauczanie osobiste",
+   "say": "Uczysz osobiście? Zaznacz, kto jest z Tobą. Potem prowadź lekcję wspólnie na jednym ekranie, wpisując odpowiedzi każdego dziecka. Każde dziecko dostaje prawdziwy wynik, który rodzic może potem zobaczyć.",
+   "keys": [
+    "Zaznacz, kto jest z Tobą",
+    "Jeden wspólny ekran::jednym ekranie",
+    "Prawdziwy wynik",
+    "Rodzic to zobaczy::rodzic może potem zobaczyć"
+   ],
+   "cam": [
+    {
+     "on": "Zaznacz, kto"
+    },
+    {
+     "on": "Potem prowadź"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Zaznacz, kto",
+     "off": "Potem prowadź"
+    },
+    {
+     "on": "Potem prowadź",
+     "off": "Każde dziecko"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Potem prowadź"
+    }
+   ]
+  },
+  "tutor:std:quizzes": {
+   "chapter": "Quizy",
+   "title": "Quizy i quizy startowe",
+   "say": "Quizy powstają z Twojego banku pytań i są sprawdzane od razu. Odpowiedzi pisemne czekają na Ciebie w kolejce. Quiz startowy nowi uczniowie rozwiązują raz, bez progu zaliczenia i bez presji, żebyś wiedział, od czego zaczyna każde dziecko.",
+   "keys": [
+    "Z Twojego banku pytań",
+    "Sprawdzane od razu",
+    "Quiz startowy",
+    "Od czego zaczyna każde dziecko"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Quiz startowy"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Quizy powstają"
+    },
+    {
+     "on": "sprawdzane od razu"
+    },
+    {
+     "on": "Quiz startowy"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Quizy powstają",
+     "off": "Quiz startowy"
+    },
+    {
+     "on": "Quiz startowy"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "sprawdzane od razu"
+    }
+   ]
+  },
+  "tutor:std:flashcards": {
+   "chapter": "Quizy",
+   "title": "Fiszki",
+   "say": "Fiszki to szybka praktyka przypominania. Dzieci najpierw powtarzają karty na dziś, a powtórki rozłożone w czasie przywracają te, które sprawiają im kłopot. A na lekcji na żywo możesz pokazać talię na ekranie.",
+   "keys": [
+    "Szybka praktyka przypominania",
+    "Karty na dziś najpierw::karty na dziś",
+    "Powtórki rozłożone w czasie",
+    "Pokazać talię"
+   ],
+   "cam": [
+    {
+     "on": "Fiszki to"
+    },
+    {
+     "on": "Dzieci najpierw"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dzieci najpierw"
+    }
+   ]
+  },
+  "tutor:std:progress": {
+   "chapter": "Postępy",
+   "title": "Cała klasa na jednym rzucie oka",
+   "say": "Postępy pokazują wszystkich uczniów na jednym ekranie. Każdy wiersz to dziecko, a każdy przedmiot ma kolorowy wynik, zabarwiony według Twoich własnych poziomów. Szukaj po imieniu albo filtruj według klasy lub grupy. Dziecko, które jeszcze nie zaczęło, jest oznaczone, więc widzisz, kto potrzebuje zachęty na start.",
+   "keys": [
+    "Wszystkich uczniów na jednym ekranie",
+    "Kolorowy wynik",
+    "Twoich własnych poziomów",
+    "Szukaj lub filtruj::Szukaj po imieniu",
+    "Kto potrzebuje zachęty"
+   ],
+   "cam": [
+    {
+     "on": "Każdy wiersz"
+    },
+    {
+     "on": "Szukaj po imieniu"
+    },
+    {
+     "on": "Dziecko, które"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Każdy wiersz",
+     "off": "Szukaj po imieniu"
+    },
+    {
+     "on": "Szukaj po imieniu",
+     "off": "Dziecko, które"
+    },
+    {
+     "on": "Dziecko, które"
+    }
+   ]
+  },
+  "tutor:std:progress-child": {
+   "chapter": "Postępy",
+   "title": "Otwórz jedno dziecko",
+   "say": "Kliknij dziecko, aby otworzyć jego postępy. Zobaczysz jego tematy jeden po drugim, jak każdy się rozwija, i jego najnowsze wyniki. Wszystko powstaje ze sprawdzonych quizów, więc jest zawsze aktualne.",
+   "keys": [
+    "Kliknij dziecko",
+    "Temat po temacie::tematy jeden po drugim",
+    "Jak każdy się rozwija",
+    "Najnowsze wyniki"
+   ],
+   "cam": [
+    {
+     "on": "Zobaczysz jego tematy"
+    }
+   ]
+  },
+  "tutor:std:progress-levels": {
+   "chapter": "Postępy",
+   "title": "Poziomy, które są Twoje",
+   "say": "Poziomy też są Twoje. Naciśnij Edytuj poziomy, aby zmienić ich nazwy albo przesunąć progi, tak by pasowały do Twojego sposobu nauczania. Dotychczasowe wyniki od razu trafiają do nowych przedziałów, a żadne oceny się nie zmieniają. A Przelicz od nowa odbudowuje postępy każdego dziecka na podstawie sprawdzonych prac.",
+   "keys": [
+    "Naciśnij Edytuj poziomy",
+    "Zmień nazwy, przesuń progi::zmienić ich nazwy",
+    "Żadne oceny się nie zmieniają",
+    "Przelicz od nowa"
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Edytuj poziomy"
+    }
+   ]
+  },
+  "parent:std:getting-in": {
+   "chapter": "Na start",
+   "title": "Jak dziecko trafia do Centrum",
+   "say": "Twoje dziecko pojawia się w Centrum nauki, gdy korepetytor je zapisze. Dzieje się to, gdy rezerwujesz zajęcia u korepetytora, a on dodaje Twoje dziecko. Albo korepetytor może przysłać Ci prywatny link, a Ty samodzielnie dodajesz dziecko. To korepetytor decyduje, jakie przedmioty dziecko widzi.",
+   "keys": [
+    "Zapisane przez korepetytora::zapisze",
+    "Rezerwacja u korepetytora::rezerwujesz zajęcia",
+    "Albo prywatny link::prywatny link",
+    "Przedmioty wybiera korepetytor::jakie przedmioty"
+   ],
+   "nodes": [
+    {
+     "on": "gdy rezerwujesz",
+     "title": "Rezerwacja u korepetytora",
+     "sub": "On dodaje Twoje dziecko"
+    },
+    {
+     "on": "Albo korepetytor",
+     "title": "Albo jego prywatny link",
+     "sub": "Dziecko dodajesz Ty"
+    },
+    {
+     "on": "To korepetytor decyduje",
+     "title": "Centrum nauki się otwiera",
+     "sub": "Z przedmiotami wybranymi przez korepetytora"
+    }
+   ]
+  },
+  "parent:std:invite": {
+   "chapter": "Na start",
+   "title": "Jeśli korepetytor przysłał Ci link",
+   "say": "Jeśli korepetytor przyśle Ci prywatny link, otwórz go, będąc zalogowanym na koncie rodzica. Albo najpierw załóż konto. Zobaczysz, który korepetytor Cię zaprosił. Wybierz, które dzieci zapisać, a dołączą od razu. Link działa dla jednej rodziny i przez trzydzieści dni.",
+   "keys": [
+    "Otwórz prywatny link::prywatny link",
+    "Zalogowany jako rodzic::zalogowanym",
+    "Wybierz dzieci::Wybierz, które dzieci",
+    "Trzydzieści dni, jedna rodzina::trzydzieści dni"
+   ],
+   "cam": [
+    {
+     "on": "Zobaczysz, który"
+    },
+    {
+     "on": "Wybierz, które"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Zobaczysz, który",
+     "off": "Wybierz, które"
+    },
+    {
+     "on": "Wybierz, które"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wybierz, które"
+    }
+   ]
+  },
+  "parent:std:home": {
+   "chapter": "Tydzień Twojego dziecka",
+   "title": "Start: werdykt w jednej linijce",
+   "say": "Start zaczyna się od jednej linijki, werdyktu. Mówi ona Zgodnie z planem, Wszystko zrobione w tym tygodniu albo ile prac domowych jest po terminie. Dotknij jej, aby przejść tam, gdzie możesz pomóc. Poniżej widzisz quizy zrobione w tym tygodniu, oddane prace domowe i to, co czeka na sprawdzenie. Więcej niż jedno dziecko? Przełączaj się między nimi u góry.",
+   "keys": [
+    "Jedna linijka, werdykt::jednej linijki",
+    "Zgodnie z planem, albo po terminie::Zgodnie z planem",
+    "Tydzień w skrócie::Poniżej",
+    "Przełączaj dzieci::Przełączaj się między nimi"
+   ],
+   "cam": [
+    {
+     "on": "Start zaczyna"
+    },
+    {
+     "on": "Mówi ona"
+    },
+    {
+     "on": "Poniżej"
+    },
+    {
+     "on": "Więcej niż jedno dziecko"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mówi ona",
+     "off": "Poniżej"
+    },
+    {
+     "on": "Poniżej",
+     "off": "Więcej niż jedno dziecko"
+    },
+    {
+     "on": "Więcej niż jedno dziecko"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij jej"
+    }
+   ]
+  },
+  "parent:std:lessons": {
+   "chapter": "Tydzień Twojego dziecka",
+   "title": "Lekcje",
+   "say": "Lekcje pokazują to, co udostępnił korepetytor. Otwórz jedną, a dziecko przejdzie ją po jednym pomyśle, z quizem na końcu.",
+   "keys": [
+    "Co udostępnił korepetytor::Lekcje pokazują",
+    "Po jednym pomyśle",
+    "Quiz na końcu::quizem na końcu"
+   ],
+   "cam": [
+    {
+     "on": "Lekcje pokazują"
+    },
+    {
+     "on": "Otwórz jedną"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Otwórz jedną"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Otwórz jedną"
+    }
+   ]
+  },
+  "parent:std:live": {
+   "chapter": "Tydzień Twojego dziecka",
+   "title": "Lekcje na żywo",
+   "say": "Gdy korepetytor ma zaplanowaną lekcję na żywo, widać ją w Lekcjach na żywo. Gdy się otworzy, najpierw sprawdzasz kamerę i mikrofon, potem naciskasz Dołącz. Jeśli korepetytor udostępni lekcję na urządzeniu dziecka, pojawi się baner, żeby mogło do niej dołączyć.",
+   "keys": [
+    "Lekcje na żywo, wkrótce::Lekcjach na żywo",
+    "Sprawdzenie kamery i mikrofonu::kamerę i mikrofon",
+    "Naciskasz Dołącz",
+    "Baner do dołączenia::baner"
+   ],
+   "cam": [
+    {
+     "on": "Gdy się otworzy"
+    }
+   ]
+  },
+  "parent:std:progress": {
+   "chapter": "Postępy",
+   "title": "Jak mu idzie",
+   "say": "Karta Postępy pokazuje, jak radzi sobie dziecko. Widzisz jego poziom, w skali korepetytora, i to, czego trzeba do następnego. Dotknij Skąd się bierze ten poziom, aby zobaczyć prosty opis. A Moja droga po programie pokazuje, jak daleko dziecko jest w każdym przedmiocie.",
+   "keys": [
+    "Jak radzi sobie dziecko::jak radzi sobie dziecko",
+    "Jego poziom, prostymi słowami::jego poziom",
+    "Skąd się bierze ten poziom",
+    "Moja droga po programie"
+   ],
+   "cam": [
+    {
+     "on": "Widzisz jego poziom"
+    },
+    {
+     "on": "Dotknij Skąd się bierze"
+    },
+    {
+     "on": "A Moja droga po programie"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Widzisz jego poziom",
+     "off": "Dotknij Skąd się bierze"
+    },
+    {
+     "on": "Dotknij Skąd się bierze",
+     "off": "A Moja droga"
+    },
+    {
+     "on": "A Moja droga po programie"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij Skąd się bierze"
+    }
+   ]
+  },
+  "parent:std:report": {
+   "chapter": "Postępy",
+   "title": "Raport z postępów do wydruku",
+   "say": "Potrzebujesz czegoś na spotkanie albo na lodówkę? Naciśnij Raport z postępów. Dostaniesz czyste jednostronicowe podsumowanie jednego dziecka, z przedmiotami i kolejnymi krokami. Wydrukuj je albo zapisz jako PDF w oknie drukowania przeglądarki.",
+   "keys": [
+    "Naciśnij Raport z postępów",
+    "Jednostronicowe podsumowanie::jednostronicowe podsumowanie",
+    "Przedmioty i kolejne kroki::kolejnymi krokami",
+    "Drukuj lub zapisz jako PDF::Wydrukuj je"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Dostaniesz czyste"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Raport z postępów"
+    },
+    {
+     "on": "Dostaniesz czyste"
+    },
+    {
+     "on": "z przedmiotami"
+    },
+    {
+     "on": "i kolejnymi krokami"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Naciśnij Raport z postępów",
+     "off": "Dostaniesz czyste"
+    },
+    {
+     "on": "z przedmiotami",
+     "off": "i kolejnymi krokami"
+    },
+    {
+     "on": "i kolejnymi krokami"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Raport z postępów"
+    }
+   ]
+  },
+  "parent:std:ask": {
+   "chapter": "Pomoc",
+   "title": "Zapytaj korepetytora",
+   "say": "Masz pytanie? Użyj Zapytaj korepetytora na ekranie Start albo karty Wiadomości. Odpowiedź korepetytora wróci tam do Ciebie. A możesz zawsze nacisnąć Jak to działa u góry, aby obejrzeć to jeszcze raz.",
+   "keys": [
+    "Zapytaj korepetytora",
+    "Albo karta Wiadomości::Wiadomości",
+    "Jak to działa, zawsze::Jak to działa"
+   ],
+   "cam": [
+    {
+     "on": "Użyj Zapytaj korepetytora"
+    },
+    {
+     "on": "Jak to działa u góry"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Użyj Zapytaj korepetytora",
+     "off": "Jak to działa u góry"
+    },
+    {
+     "on": "Jak to działa u góry"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Użyj Zapytaj korepetytora"
+    }
+   ]
+  },
+  "parent:std:hand-over": {
+   "chapter": "Własna przestrzeń dziecka",
+   "title": "Przekaż ekran dziecku",
+   "say": "Gdy dziecko jest gotowe do nauki, naciśnij Przekaż dziecku. Ekran zmienia się w jego własną, prostą przestrzeń, tylko z lekcjami, quizami i pracami domowymi. Aby wrócić do swojego portalu, dorosły rozwiązuje krótkie dodawanie. Aby zobaczyć dokładnie to, co widzi dziecko, wybierz Co widzi Twoje dziecko, na górze tego okna.",
+   "keys": [
+    "Naciśnij Przekaż dziecku",
+    "Własną, prostą przestrzeń",
+    "Krótkie działanie na powrót::krótkie dodawanie",
+    "Co widzi Twoje dziecko"
+   ],
+   "cam": [
+    {
+     "on": "naciśnij Przekaż"
+    }
+   ],
+   "rings": [
+    {
+     "on": "naciśnij Przekaż",
+     "off": "Ekran zmienia"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "naciśnij Przekaż"
+    }
+   ]
+  },
+  "kid:std:hello": {
+   "chapter": "Cześć",
+   "title": "Cześć!",
+   "say": "Cześć! To Twoje własne miejsce do nauki. Pokazuje Ci, co robić dalej, i pomaga Ci się uczyć. Rozejrzyjmy się szybko.",
+   "keys": [
+    "Cześć",
+    "miejsce do nauki",
+    "co robić dalej"
+   ],
+   "nodes": [
+    {
+     "on": "co robić dalej",
+     "title": "Co robić"
+    },
+    {
+     "on": "pomaga Ci się uczyć",
+     "title": "Nauka"
+    }
+   ]
+  },
+  "kid:std:home": {
+   "chapter": "Start",
+   "title": "Twój Start",
+   "say": "To jest Twój Start. Pokazuje jedną dużą rzecz do zrobienia. Dotknij Start, żeby ją zacząć. Dotknij małego głośnika, a przeczyta Ci ją na głos.",
+   "keys": [
+    "Twój Start",
+    "Jedną dużą rzecz",
+    "Dotknij Start::Dotknij Start, żeby",
+    "Usłysz to::małego głośnika"
+   ],
+   "cam": [
+    {
+     "on": "Pokazuje jedną dużą rzecz"
+    },
+    {
+     "on": "Dotknij Start"
+    },
+    {
+     "on": "małego głośnika"
+    }
+   ],
+   "rings": [
+    {
+     "on": "jedną dużą rzecz",
+     "off": "Dotknij Start"
+    },
+    {
+     "on": "Dotknij Start",
+     "off": "Dotknij małego"
+    },
+    {
+     "on": "małego głośnika"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij Start"
+    },
+    {
+     "on": "małego głośnika"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "jedną dużą rzecz",
+     "text": "Twoja następna rzecz do zrobienia"
+    },
+    {
+     "on": "Dotknij Start",
+     "text": "Dotknij Start, żeby zacząć"
+    },
+    {
+     "on": "małego głośnika",
+     "text": "Dotknij, aby usłyszeć"
+    }
+   ]
+  },
+  "kid:std:lessons": {
+   "chapter": "Nauka",
+   "title": "Lekcje",
+   "say": "Lekcje pomagają Ci nauczyć się czegoś nowego. Idziesz po jednym pomyśle. Są pytania do wypróbowania i quiz na końcu.",
+   "keys": [
+    "Nauczyć się czegoś nowego",
+    "Po jednym pomyśle",
+    "Pytania do wypróbowania",
+    "Quiz na końcu::quiz na końcu"
+   ],
+   "cam": [
+    {
+     "on": "nauczyć się czegoś nowego"
+    },
+    {
+     "on": "po jednym pomyśle"
+    }
+   ],
+   "rings": [
+    {
+     "on": "po jednym pomyśle"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "po jednym pomyśle"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "nauczyć się czegoś nowego",
+     "text": "Wybierz lekcję"
+    },
+    {
+     "on": "po jednym pomyśle",
+     "text": "Jeden pomysł naraz"
+    },
+    {
+     "on": "pytania do wypróbowania",
+     "text": "Pytania do wypróbowania"
+    }
+   ]
+  },
+  "kid:std:homework": {
+   "chapter": "Nauka",
+   "title": "Praca domowa",
+   "say": "Tu jest Twoja praca domowa. Otwórz ją, postaraj się i oddaj. Korepetytor ją obejrzy i powie Ci, jak Ci poszło.",
+   "keys": [
+    "Tu jest Twoja praca",
+    "Otwórz ją",
+    "Postaraj się",
+    "Oddaj"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Otwórz ją"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Twoja praca domowa"
+    },
+    {
+     "on": "postaraj się"
+    },
+    {
+     "on": "oddaj"
+    }
+   ],
+   "rings": [
+    {
+     "on": "postaraj się",
+     "off": "oddaj"
+    },
+    {
+     "on": "oddaj"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "postaraj się"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Otwórz ją",
+     "text": "Otwórz ją"
+    },
+    {
+     "on": "postaraj się",
+     "text": "Postaraj się"
+    },
+    {
+     "on": "oddaj",
+     "text": "Oddaj ją"
+    }
+   ]
+  },
+  "kid:std:quizzes": {
+   "chapter": "Zabawa",
+   "title": "Quizy",
+   "say": "Quizy to krótkie zestawy pytań. Przeczytaj każde i wybierz odpowiedź. Nie do końca dobrze? Nic nie szkodzi. Możesz spróbować jeszcze raz.",
+   "keys": [
+    "Krótkie zestawy pytań",
+    "Wybierz odpowiedź",
+    "Nic nie szkodzi::Nic nie szkodzi",
+    "Spróbuj jeszcze raz::jeszcze raz"
+   ],
+   "cam": [
+    {
+     "on": "Quizy to krótkie"
+    },
+    {
+     "on": "wybierz odpowiedź"
+    }
+   ],
+   "rings": [
+    {
+     "on": "wybierz odpowiedź"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "wybierz odpowiedź"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Przeczytaj każde",
+     "text": "Przeczytaj pytanie"
+    },
+    {
+     "on": "wybierz odpowiedź",
+     "text": "Wybierz odpowiedź"
+    },
+    {
+     "on": "jeszcze raz",
+     "text": "Spróbuj jeszcze raz!"
+    }
+   ]
+  },
+  "kid:std:tools": {
+   "chapter": "Zabawa",
+   "title": "Narzędzia pomocnicze",
+   "say": "Niektóre pytania mają narzędzie pomocnicze, na przykład linijkę albo kątomierz. Dotknij przycisku narzędzia, a otworzy się od razu, by pomóc Ci znaleźć odpowiedź. I dotknij głośnika, żeby usłyszeć pytanie na głos.",
+   "keys": [
+    "narzędzie pomocnicze",
+    "Dotknij przycisku narzędzia",
+    "głośnik"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "otworzy się od razu"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Niektóre pytania"
+    },
+    {
+     "on": "Dotknij przycisku narzędzia"
+    },
+    {
+     "on": "otworzy się od razu"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Niektóre pytania",
+     "off": "Dotknij przycisku"
+    },
+    {
+     "on": "Dotknij przycisku narzędzia",
+     "off": "otworzy się od razu"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij przycisku narzędzia"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Dotknij przycisku narzędzia",
+     "text": "Przycisk narzędzia"
+    }
+   ]
+  },
+  "kid:std:cards": {
+   "chapter": "Zabawa",
+   "title": "Fiszki",
+   "say": "Fiszki pomagają Ci zapamiętywać. Dotknij karty, żeby ją obrócić. Potem powiedz, jak dobrze ją znasz. Karty, które sprawiają Ci kłopot, wrócą wkrótce.",
+   "keys": [
+    "Zapamiętywać",
+    "Dotknij karty, by ją obrócić::Dotknij karty",
+    "Jak dobrze ją znasz",
+    "Trudne wracają::wrócą wkrótce"
+   ],
+   "cam": [
+    {
+     "on": "Fiszki pomagają"
+    },
+    {
+     "on": "Dotknij karty"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dotknij karty"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij karty"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Dotknij karty",
+     "text": "Dotknij karty, aby ją obrócić"
+    },
+    {
+     "on": "jak dobrze ją znasz",
+     "text": "Jak dobrze ją znasz?"
+    },
+    {
+     "on": "wrócą wkrótce",
+     "text": "Trudne wracają"
+    }
+   ]
+  },
+  "kid:std:grown-up": {
+   "chapter": "Koniec",
+   "title": "Gdy skończysz",
+   "say": "Gdy skończysz, poproś dorosłego, żeby pomógł Ci wyjść. Rozwiąże małe dodawanie i już koniec. Możesz w każdej chwili dotknąć Jak to działa, żeby obejrzeć to jeszcze raz.",
+   "keys": [
+    "poproś dorosłego",
+    "małe dodawanie",
+    "Jak to działa"
+   ],
+   "nodes": [
+    {
+     "on": "poproś dorosłego",
+     "title": "Poproś dorosłego"
+    },
+    {
+     "on": "małe dodawanie",
+     "title": "Małe dodawanie"
+    },
+    {
+     "on": "już koniec",
+     "title": "Koniec!"
+    }
+   ]
+  },
+  "tutor:std:hw-set": {
+   "chapter": "Zadaj",
+   "title": "Zadaj pracę domową",
+   "say": "W Pracach domowych naciśnij Zadaj pracę domową. Wybierz grupę albo zaznacz pojedyncze dzieci.",
+   "keys": [
+    "Naciśnij Zadaj pracę domową",
+    "Wybierz grupę",
+    "zaznacz pojedyncze dzieci"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Wybierz grupę"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Zadaj pracę domową"
+    },
+    {
+     "on": "Wybierz grupę"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Naciśnij Zadaj pracę domową",
+     "off": "Wybierz grupę"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Zadaj pracę domową"
+    }
+   ]
+  },
+  "tutor:std:hw-worksheet": {
+   "chapter": "Zadaj",
+   "title": "Dołącz kartę pracy",
+   "say": "Zaznacz karty pracy z Twojej biblioteki. Interaktywne oceniają się same. PDF-y są uzupełniane pisemnie albo zdjęciem.",
+   "keys": [
+    "Zaznacz karty pracy",
+    "z Twojej biblioteki",
+    "Interaktywne oceniają się same::oceniają się same",
+    "PDF-y są uzupełniane pisemnie albo zdjęciem::pisemnie albo zdjęciem"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "z Twojej biblioteki"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Zaznacz karty pracy"
+    },
+    {
+     "on": "z Twojej biblioteki"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Zaznacz karty pracy"
+    }
+   ]
+  },
+  "tutor:std:hw-assign": {
+   "chapter": "Zadaj",
+   "title": "Wyślij",
+   "say": "Naciśnij Przypisz pracę domową. Każde dziecko dostaje własną kopię, a rodziny są informowane od razu.",
+   "keys": [
+    "Naciśnij Przypisz pracę domową",
+    "Własną kopię",
+    "Rodziny informowane od razu::informowane od razu"
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Przypisz pracę domową"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Naciśnij Przypisz pracę domową"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Przypisz pracę domową"
+    }
+   ]
+  },
+  "tutor:std:hw-tasks": {
+   "chapter": "Zbierz",
+   "title": "Śledź to",
+   "say": "Każda karta pracy domowej pokazuje, kto wciąż pracuje, kto oddał i kto ma sprawdzone.",
+   "keys": [
+    "Każda karta pracy domowej",
+    "wciąż pracuje",
+    "oddał",
+    "ma sprawdzone"
+   ],
+   "cam": [
+    {
+     "on": "Każda karta pracy domowej"
+    }
+   ]
+  },
+  "tutor:std:hw-handin": {
+   "chapter": "Zbierz",
+   "title": "Jak dzieci oddają pracę",
+   "say": "Dzieci robią kartę pracy na ekranie, albo piszą, dodają zdjęcie lub PDF, potem naciskają Oddaj pracę domową.",
+   "keys": [
+    "robią kartę pracy na ekranie",
+    "piszą, dodają zdjęcie::piszą, dodają zdjęcie",
+    "lub PDF",
+    "Oddaj pracę domową"
+   ],
+   "cam": [
+    {
+     "on": "robią kartę pracy na ekranie"
+    },
+    {
+     "on": "piszą, dodają zdjęcie"
+    }
+   ],
+   "rings": [
+    {
+     "on": "robią kartę pracy na ekranie",
+     "off": "piszą, dodają zdjęcie"
+    },
+    {
+     "on": "piszą, dodają zdjęcie"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "robią kartę pracy na ekranie"
+    }
+   ]
+  },
+  "tutor:std:mark": {
+   "chapter": "Sprawdź",
+   "title": "Jedna kolejka do sprawdzenia",
+   "say": "Wszystko, co wymaga sprawdzenia, trafia do jednej kolejki, od najdłużej czekających. Prace domowe, pisemne odpowiedzi z quizów i odpowiedzi z quizów startowych, wszystko razem. Otwórz jedną, sprawdź ją i użyj przycisku dalej, by przejść od razu do następnej.",
+   "keys": [
+    "Jedna kolejka::jednej kolejki",
+    "Od najdłużej czekających",
+    "Otwórz jedną",
+    "Przycisku dalej"
+   ],
+   "cam": [
+    {
+     "on": "Wszystko, co wymaga"
+    },
+    {
+     "on": "Otwórz jedną"
+    },
+    {
+     "on": "przycisku dalej"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wszystko, co wymaga",
+     "off": "Otwórz jedną"
+    },
+    {
+     "on": "Otwórz jedną",
+     "off": "i użyj przycisku"
+    },
+    {
+     "on": "i użyj przycisku dalej"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Otwórz jedną"
+    }
+   ]
+  },
+  "tutor:std:hw-marking": {
+   "chapter": "Sprawdź",
+   "title": "Sprawdź i przejdź dalej",
+   "say": "Otwórz pracę, aby zobaczyć odpowiedź dziecka. Wpisz wynik i maksimum punktów oraz napisz uwagi. Naciśnij Sprawdź i dalej, a rodzina dostanie powiadomienie. Interaktywne karty pracy są już sprawdzone za Ciebie.",
+   "keys": [
+    "Odpowiedź dziecka",
+    "Wpisz wynik",
+    "Napisz uwagi::napisz uwagi",
+    "Sprawdź i dalej"
+   ],
+   "cam": [
+    {
+     "on": "zobaczyć odpowiedź"
+    },
+    {
+     "on": "Wpisz wynik"
+    },
+    {
+     "on": "napisz uwagi"
+    },
+    {
+     "on": "Naciśnij Sprawdź i dalej"
+    }
+   ],
+   "rings": [
+    {
+     "on": "zobaczyć odpowiedź",
+     "off": "Wpisz wynik"
+    },
+    {
+     "on": "Wpisz wynik",
+     "off": "napisz uwagi"
+    },
+    {
+     "on": "napisz uwagi",
+     "off": "Naciśnij Sprawdź"
+    },
+    {
+     "on": "Naciśnij Sprawdź i dalej"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wpisz wynik"
+    },
+    {
+     "on": "Naciśnij Sprawdź i dalej"
+    }
+   ]
+  },
+  "tutor:std:hw-results": {
+   "chapter": "Wyniki",
+   "title": "Wszyscy to widzą",
+   "say": "Dziecko widzi swój wynik i Twoje uwagi. Jego rodzina widzi to też w Centrum nauki.",
+   "keys": [
+    "Dziecko widzi",
+    "swój wynik i Twoje uwagi::swój wynik i Twoje uwagi",
+    "widzi to też",
+    "Centrum nauki"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "swój wynik i Twoje uwagi"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Dziecko widzi"
+    },
+    {
+     "on": "swój wynik i Twoje uwagi"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dziecko widzi",
+     "off": "swój wynik i Twoje uwagi"
+    },
+    {
+     "on": "swój wynik i Twoje uwagi"
+    }
+   ]
+  },
+  "parent:std:hw-list": {
+   "chapter": "Praca domowa",
+   "title": "Co zadano",
+   "say": "Karta Praca domowa pokazuje wszystko, co zadał korepetytor Twojego dziecka. Każda praca pokazuje termin oraz to, czy została oddana lub sprawdzona. Jeśli coś jest po terminie, zobaczysz to tutaj i w werdykcie na Starcie. Nowa praca domowa pojawia się tu od razu po zadaniu.",
+   "keys": [
+    "Wszystko, co zadano::zadał korepetytor",
+    "Pokazuje termin",
+    "Oddana lub sprawdzona::oddana",
+    "Zaległe widać tutaj::po terminie"
+   ],
+   "cam": [
+    {
+     "on": "Karta Praca domowa"
+    },
+    {
+     "on": "Każda praca"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Każda praca",
+     "off": "Nowa praca"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Każda praca"
+    }
+   ]
+  },
+  "parent:std:hw-open": {
+   "chapter": "Praca domowa",
+   "title": "Otwórz pracę domową",
+   "say": "Otwórz jedną, aby zobaczyć instrukcje oraz kartę pracy lub lekcję do zrobienia najpierw. Dziecko może wpisać odpowiedź albo dodać zdjęcie lub PDF, a potem nacisnąć Oddaj pracę domową. Może ją zmieniać, dopóki korepetytor jej nie sprawdzi.",
+   "keys": [
+    "Instrukcje i karta pracy::instrukcje",
+    "Wpisz lub dodaj zdjęcie::wpisać odpowiedź",
+    "Oddaj pracę domową",
+    "Zmiany do sprawdzenia::dopóki korepetytor jej nie sprawdzi"
+   ],
+   "cam": [
+    {
+     "on": "Otwórz jedną"
+    },
+    {
+     "on": "kartę pracy"
+    }
+   ],
+   "rings": [
+    {
+     "on": "kartę pracy",
+     "off": "Dziecko może"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Otwórz jedną",
+     "text": "Instrukcje"
+    },
+    {
+     "on": "kartę pracy",
+     "text": "Karta pracy do zrobienia"
+    },
+    {
+     "on": "Dziecko może wpisać",
+     "text": "Tekst, zdjęcie lub PDF"
+    }
+   ]
+  },
+  "parent:std:hw-marks": {
+   "chapter": "Praca domowa",
+   "title": "Oceny i uwagi",
+   "say": "Gdy korepetytor sprawdzi pracę, wynik i jego uwagi pojawiają się pod pracą domową, a Ty dostajesz powiadomienie. Postępy dziecka też to uwzględniają, więc widzisz, jak mu idzie.",
+   "keys": [
+    "Wynik i uwagi::wynik",
+    "Dostajesz powiadomienie",
+    "Postępy to uwzględniają::Postępy"
+   ],
+   "cam": [
+    {
+     "on": "wynik"
+    }
+   ],
+   "rings": [
+    {
+     "on": "wynik"
+    }
+   ]
+  },
+  "kid:std:hw-find": {
+   "chapter": "Praca domowa",
+   "title": "Znajdź swoją pracę domową",
+   "say": "Dotknij Praca domowa, żeby zobaczyć, co zadał korepetytor. Dotknij jednej, żeby ją otworzyć. Powie Ci, co masz zrobić i na kiedy.",
+   "keys": [
+    "Dotknij Praca domowa",
+    "Dotknij jednej",
+    "Co masz zrobić",
+    "Na kiedy::na kiedy"
+   ],
+   "cam": [
+    {
+     "on": "Dotknij Praca domowa"
+    },
+    {
+     "on": "Dotknij jednej"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dotknij jednej"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij jednej"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Dotknij Praca domowa",
+     "text": "Praca domowa"
+    },
+    {
+     "on": "Dotknij jednej",
+     "text": "Dotknij jednej, żeby otworzyć"
+    }
+   ]
+  },
+  "kid:std:hw-do": {
+   "chapter": "Praca domowa",
+   "title": "Zrób ją i oddaj",
+   "say": "Przeczytaj, co masz zrobić. Potem zrób kartę pracy, na ekranie lub na papierze, i napisz odpowiedź. Gdy skończysz, oddaj ją. Możesz ją zmieniać, dopóki korepetytor jej nie obejrzy.",
+   "keys": [
+    "Przeczytaj, co masz zrobić",
+    "Zrób kartę pracy",
+    "Oddaj ją",
+    "Zmień, zanim sprawdzą::zmieniać"
+   ],
+   "cam": [
+    {
+     "on": "Przeczytaj, co masz"
+    },
+    {
+     "on": "Potem zrób kartę pracy"
+    },
+    {
+     "on": "oddaj ją"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Potem zrób kartę pracy",
+     "off": "Gdy skończysz"
+    },
+    {
+     "on": "Gdy skończysz"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Potem zrób kartę pracy"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Potem zrób kartę pracy",
+     "text": "Zrób kartę pracy"
+    },
+    {
+     "on": "Gdy skończysz",
+     "text": "Oddaj ją"
+    }
+   ]
+  },
+  "kid:std:hw-back": {
+   "chapter": "Praca domowa",
+   "title": "Zobacz, jak Ci poszło",
+   "say": "Gdy korepetytor sprawdzi pracę, zobaczysz swój wynik i wiadomość od niego. Brawo za próbę!",
+   "keys": [
+    "Swój wynik",
+    "Wiadomość od korepetytora::wiadomość",
+    "Brawo!::Brawo"
+   ],
+   "cam": [
+    {
+     "on": "Gdy korepetytor"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Gdy korepetytor"
+    }
+   ]
+  },
+  "kid:ks1:hello": {
+   "chapter": "Cześć",
+   "title": "Cześć!",
+   "say": "Cześć! To jest Twoje miejsce. Zobaczmy, jak działa.",
+   "keys": [
+    "Cześć",
+    "Twoje miejsce"
+   ],
+   "nodes": [
+    {
+     "on": "Twoje miejsce",
+     "title": "Dziś"
+    },
+    {
+     "on": "Zobaczmy",
+     "title": "Zabawa i nauka"
+    },
+    {
+     "on": "jak działa",
+     "title": "Gwiazdki"
+    }
+   ]
+  },
+  "kid:ks1:today": {
+   "chapter": "Dziś",
+   "title": "Dziś",
+   "say": "To jest Dziś. Pokazuje jedną rzecz do zrobienia. Dotknij dużego przycisku Start. Dotknij głośnika, żeby to usłyszeć.",
+   "keys": [
+    "Dziś",
+    "Jedna rzecz::jedną rzecz",
+    "Dotknij dużego przycisku Start",
+    "Usłysz to::głośnika"
+   ],
+   "cam": [
+    {
+     "on": "Pokazuje jedną rzecz"
+    },
+    {
+     "on": "Dotknij dużego przycisku Start"
+    },
+    {
+     "on": "głośnika"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pokazuje jedną rzecz",
+     "off": "Dotknij dużego"
+    },
+    {
+     "on": "Dotknij dużego przycisku Start",
+     "off": "Dotknij głośnika"
+    },
+    {
+     "on": "Dotknij głośnika"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij dużego przycisku Start"
+    },
+    {
+     "on": "Dotknij głośnika"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "jedną rzecz",
+     "text": "Jedna rzecz do zrobienia"
+    },
+    {
+     "on": "dużego przycisku Start",
+     "text": "Dotknij Start"
+    },
+    {
+     "on": "głośnika",
+     "text": "Usłysz to"
+    }
+   ]
+  },
+  "kid:ks1:play": {
+   "chapter": "Zabawa",
+   "title": "Zabawa i nauka",
+   "say": "Dotknij Zabawa i nauka. Tu są Twoje quizy. Dotknij jednego. Spróbuj!",
+   "keys": [
+    "Zabawa i nauka",
+    "Twoje quizy::quizy",
+    "Spróbuj!"
+   ],
+   "cam": [
+    {
+     "on": "Dotknij Zabawa"
+    },
+    {
+     "on": "Tu są Twoje quizy"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dotknij Zabawa",
+     "off": "Tu są"
+    },
+    {
+     "on": "Dotknij jednego"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij Zabawa"
+    },
+    {
+     "on": "Dotknij jednego"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Dotknij Zabawa",
+     "text": "Zabawa i nauka"
+    },
+    {
+     "on": "quizy",
+     "text": "Quizy"
+    }
+   ]
+  },
+  "kid:ks1:stars": {
+   "chapter": "Gwiazdki",
+   "title": "Gwiazdki",
+   "say": "Dotknij Gwiazdki. Zrób quiz, a Twoje gwiazdki zaświecą tutaj. Brawo!",
+   "keys": [
+    "Gwiazdki",
+    "Twoje gwiazdki świecą tutaj::gwiazdki zaświecą tutaj",
+    "Brawo!::Brawo"
+   ],
+   "cam": [
+    {
+     "on": "Dotknij Gwiazdki"
+    },
+    {
+     "on": "Zrób quiz"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dotknij Gwiazdki",
+     "off": "Zrób quiz"
+    },
+    {
+     "on": "Zrób quiz"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dotknij Gwiazdki"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Dotknij Gwiazdki",
+     "text": "Gwiazdki"
+    },
+    {
+     "on": "gwiazdki zaświecą",
+     "text": "Twoje gwiazdki"
+    }
+   ]
+  },
+  "kid:ks1:grown-up": {
+   "chapter": "Koniec",
+   "title": "Koniec",
+   "say": "Koniec? Poproś dorosłego o pomoc. Do zobaczenia!",
+   "keys": [
+    "dorosłego",
+    "Do zobaczenia"
+   ],
+   "nodes": [
+    {
+     "on": "Poproś dorosłego",
+     "title": "Poproś dorosłego"
+    },
+    {
+     "on": "Do zobaczenia",
+     "title": "Pa!"
+    }
+   ]
+  },
+  "tutor:std:home-tour": {
+   "chapter": "Start",
+   "title": "Twoje obszary",
+   "say": "U góry są Twoje obszary: Lekcje, Uczniowie, Postępy, Quizy, Prace domowe i Wiadomości. Start to miejsce, od którego zaczynasz.",
+   "keys": [
+    "Twoje obszary",
+    "Lekcje, Uczniowie, Postępy",
+    "Quizy, Prace domowe",
+    "Start to miejsce"
+   ],
+   "cam": [
+    {
+     "on": "Twoje obszary"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Twoje obszary",
+     "off": "Lekcje, Uczniowie, Postępy"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Twoje obszary"
+    }
+   ]
+  },
+  "tutor:std:home-attention": {
+   "chapter": "Start",
+   "title": "Wymaga Twojej uwagi",
+   "say": "Wymaga Twojej uwagi pokazuje, co zrobić dalej: prace domowe do sprawdzenia, odpowiedzi pisemne i zaległe zadania. Zacznij od góry.",
+   "keys": [
+    "Wymaga Twojej uwagi",
+    "co zrobić dalej",
+    "Prace domowe do sprawdzenia",
+    "Zaległe zadania",
+    "Zacznij od góry"
+   ],
+   "cam": [
+    {
+     "on": "Wymaga Twojej uwagi"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wymaga Twojej uwagi"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wymaga Twojej uwagi"
+    }
+   ]
+  },
+  "tutor:std:home-help": {
+   "chapter": "Start",
+   "title": "Pomoc jest zawsze pod ręką",
+   "say": "Twoja następna lekcja jest tutaj. A Jak to działa jest na każdej stronie, gdy potrzebujesz przypomnienia.",
+   "keys": [
+    "Twoja następna lekcja",
+    "Jak to działa",
+    "na każdej stronie",
+    "przypomnienia"
+   ],
+   "cam": [
+    {
+     "on": "Twoja następna lekcja"
+    },
+    {
+     "on": "Jak to działa"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Twoja następna lekcja",
+     "off": "Jak to działa"
+    },
+    {
+     "on": "Jak to działa"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Twoja następna lekcja"
+    }
+   ]
+  },
+  "tutor:std:fam-ways": {
+   "chapter": "Rodziny",
+   "title": "Trzy sposoby dołączenia",
+   "say": "Rodzina może do Ciebie dołączyć na trzy sposoby: rezerwuje u Ciebie, wysyłasz link z zaproszeniem, albo znajduje Twoją stronę publiczną.",
+   "keys": [
+    "Rodzina może do Ciebie dołączyć",
+    "rezerwuje u Ciebie",
+    "link z zaproszeniem",
+    "stronę publiczną"
+   ],
+   "nodes": [
+    {
+     "on": "Rodzina może do Ciebie dołączyć",
+     "title": "Rezerwuje u Ciebie",
+     "sub": "Jej dziecko pojawia się w Zapisz ucznia"
+    },
+    {
+     "on": "rezerwuje u Ciebie",
+     "title": "Wyślij link z zaproszeniem",
+     "sub": "Działa raz, przez 30 dni"
+    },
+    {
+     "on": "link z zaproszeniem",
+     "title": "Twoja strona publiczna",
+     "sub": "Rejestrują się, a Ty ich zapisujesz"
+    }
+   ]
+  },
+  "tutor:std:fam-book": {
+   "chapter": "Rodziny",
+   "title": "Rezerwują u Ciebie",
+   "say": "Gdy rodzic rezerwuje, dziecko pojawia się w Zapisz ucznia. Naciśnij Zapisz, wybierz przedmioty i rok, potem Zapisz ucznia.",
+   "keys": [
+    "dziecko pojawia się w Zapisz ucznia",
+    "Naciśnij Zapisz",
+    "wybierz przedmioty i rok",
+    "Zapisz ucznia"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Naciśnij Zapisz"
+    }
+   ],
+   "cam": [
+    {
+     "on": "dziecko pojawia się w Zapisz ucznia"
+    },
+    {
+     "on": "Naciśnij Zapisz"
+    },
+    {
+     "on": "wybierz przedmioty i rok"
+    },
+    {
+     "on": "Zapisz ucznia"
+    },
+    {
+     "on": "dziecko pojawia się w Zapisz ucznia"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dziecko pojawia się w Zapisz ucznia",
+     "off": "Naciśnij Zapisz"
+    },
+    {
+     "on": "Naciśnij Zapisz",
+     "off": "wybierz przedmioty i rok"
+    },
+    {
+     "on": "wybierz przedmioty i rok",
+     "off": "Zapisz ucznia"
+    },
+    {
+     "on": "Zapisz ucznia"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "dziecko pojawia się w Zapisz ucznia"
+    },
+    {
+     "on": "Naciśnij Zapisz"
+    }
+   ]
+  },
+  "tutor:std:fam-invite": {
+   "chapter": "Rodziny",
+   "title": "Wyślij link z zaproszeniem",
+   "say": "Bez rezerwacji? Wpisz, dla kogo jest, i naciśnij Utwórz link z zaproszeniem. Wyślij go rodzicowi. Działa raz, przez 30 dni.",
+   "keys": [
+    "dla kogo jest",
+    "Utwórz link z zaproszeniem",
+    "Wyślij go rodzicowi",
+    "Działa raz, przez 30 dni"
+   ],
+   "cam": [
+    {
+     "on": "dla kogo jest"
+    },
+    {
+     "on": "Utwórz link z zaproszeniem"
+    },
+    {
+     "on": "Wyślij go rodzicowi"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dla kogo jest",
+     "off": "Utwórz link z zaproszeniem"
+    },
+    {
+     "on": "Utwórz link z zaproszeniem",
+     "off": "Wyślij go rodzicowi"
+    },
+    {
+     "on": "Wyślij go rodzicowi"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "dla kogo jest"
+    },
+    {
+     "on": "Utwórz link z zaproszeniem"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "dla kogo jest",
+     "text": "Nic nie jest wysyłane automatycznie: Ty wysyłasz link"
+    }
+   ]
+  },
+  "tutor:std:fam-page": {
+   "chapter": "Rodziny",
+   "title": "Udostępnij stronę publiczną",
+   "say": "Albo skopiuj link do swojej strony i wyślij go. Gdy rodzic się zarejestruje, jego dzieci pojawią się tutaj, gotowe do zapisania.",
+   "keys": [
+    "skopiuj link",
+    "wyślij go",
+    "rodzic się zarejestruje",
+    "gotowe do zapisania"
+   ],
+   "cam": [
+    {
+     "on": "skopiuj link"
+    },
+    {
+     "on": "wyślij go"
+    }
+   ],
+   "rings": [
+    {
+     "on": "skopiuj link",
+     "off": "wyślij go"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "skopiuj link"
+    }
+   ]
+  },
+  "tutor:std:std-cards": {
+   "chapter": "Uczniowie",
+   "title": "Każde dziecko ma kartę",
+   "say": "Każde zapisane dziecko ma kartę pokazującą jego rok, przedmioty i pierścień postępu.",
+   "keys": [
+    "Każde zapisane dziecko",
+    "kartę",
+    "rok, przedmioty",
+    "pierścień postępu"
+   ],
+   "cam": [
+    {
+     "on": "Każde zapisane dziecko"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Każde zapisane dziecko"
+    }
+   ]
+  },
+  "tutor:std:std-groups": {
+   "chapter": "Uczniowie",
+   "title": "Utwórz grupę",
+   "say": "Umieść dzieci w grupie. Wtedy jednym kliknięciem zadasz pracę domową, quiz albo lekcję całej grupie.",
+   "keys": [
+    "Umieść dzieci w grupie",
+    "jednym kliknięciem",
+    "pracę domową, quiz",
+    "całej grupie"
+   ],
+   "cam": [
+    {
+     "on": "Umieść dzieci w grupie"
+    },
+    {
+     "on": "jednym kliknięciem"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Umieść dzieci w grupie",
+     "off": "jednym kliknięciem"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Umieść dzieci w grupie"
+    }
+   ]
+  },
+  "tutor:std:std-support": {
+   "chapter": "Uczniowie",
+   "title": "Ustawienia wsparcia",
+   "say": "Otwórz Edytuj dane, aby wyłączyć czas quizu, włączyć tryb spokojny, dodać dodatkowy czas, powiększyć tekst albo czytać odpowiedzi na głos.",
+   "keys": [
+    "Otwórz Edytuj dane",
+    "wyłączyć czas quizu",
+    "tryb spokojny",
+    "dodać dodatkowy czas",
+    "powiększyć tekst",
+    "czytać odpowiedzi na głos"
+   ],
+   "cam": [
+    {
+     "on": "Otwórz Edytuj dane"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Otwórz Edytuj dane"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Otwórz Edytuj dane"
+    },
+    {
+     "on": "wyłączyć czas quizu"
+    }
+   ]
+  },
+  "tutor:std:std-owner": {
+   "chapter": "Uczniowie",
+   "title": "Tylko Ty możesz je zmieniać",
+   "say": "Rodziny nie mogą zmieniać tych ustawień. Użyj trzech kropek na karcie, aby zawiesić lub wypisać dziecko.",
+   "keys": [
+    "nie mogą zmieniać::nie mogą zmieniać",
+    "trzech kropek na karcie",
+    "zawiesić",
+    "wypisać dziecko"
+   ],
+   "cam": [
+    {
+     "on": "nie mogą zmieniać"
+    }
+   ],
+   "rings": [
+    {
+     "on": "nie mogą zmieniać"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "nie mogą zmieniać"
+    }
+   ]
+  },
+  "tutor:std:les-library": {
+   "chapter": "Lekcje",
+   "title": "Twoja biblioteka lekcji",
+   "say": "Lekcje zawiera tysiące gotowych lekcji, ułożonych na mapie programu nauczania. Wybierz przedmiot i rok.",
+   "keys": [
+    "tysiące gotowych lekcji::tysiące gotowych lekcji",
+    "mapie programu nauczania",
+    "Wybierz przedmiot",
+    "i rok"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "mapie programu nauczania"
+    }
+   ],
+   "cam": [
+    {
+     "on": "tysiące gotowych lekcji"
+    },
+    {
+     "on": "mapie programu nauczania"
+    },
+    {
+     "on": "Wybierz przedmiot"
+    }
+   ],
+   "rings": [
+    {
+     "on": "tysiące gotowych lekcji",
+     "off": "mapie programu nauczania"
+    },
+    {
+     "on": "mapie programu nauczania"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "tysiące gotowych lekcji"
+    },
+    {
+     "on": "mapie programu nauczania"
+    }
+   ]
+  },
+  "tutor:std:les-find": {
+   "chapter": "Lekcje",
+   "title": "Znajdź lekcję",
+   "say": "Każdy temat pokazuje, ile ma lekcji. Albo wpisz w Szukaj, aby przejść od razu do wybranej.",
+   "keys": [
+    "Każdy temat",
+    "ile ma lekcji",
+    "wpisz w Szukaj"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "ile ma lekcji"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Każdy temat"
+    },
+    {
+     "on": "ile ma lekcji"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Każdy temat"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Każdy temat"
+    }
+   ]
+  },
+  "tutor:std:les-preview": {
+   "chapter": "Lekcje",
+   "title": "Podgląd lekcji",
+   "say": "Otwórz lekcję, aby zobaczyć jej plan. Naciśnij Podgląd lekcji, aby przejść dokładnie przez to, co zobaczy dziecko.",
+   "keys": [
+    "Otwórz lekcję",
+    "zobaczyć jej plan",
+    "Podgląd lekcji",
+    "co zobaczy dziecko"
+   ],
+   "cam": [
+    {
+     "on": "Otwórz lekcję"
+    },
+    {
+     "on": "zobaczyć jej plan"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Otwórz lekcję"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Otwórz lekcję"
+    }
+   ]
+  },
+  "tutor:std:les-build": {
+   "chapter": "Lekcje",
+   "title": "Zbuduj własną",
+   "say": "Naciśnij Utwórz nową lekcję. Dodaj slajdy, słowa kluczowe, quiz wyboru, sortowanie lub dopasowanie, potem Zapisz. Dołączy do Twojej biblioteki.",
+   "keys": [
+    "Utwórz nową lekcję",
+    "Dodaj slajdy, słowa kluczowe::Dodaj slajdy, słowa kluczowe",
+    "sortowanie lub dopasowanie",
+    "Zapisz",
+    "Dołączy do Twojej biblioteki"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Dodaj slajdy, słowa kluczowe"
+    },
+    {
+     "on": "sortowanie lub dopasowanie"
+    },
+    {
+     "on": "Zapisz"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Utwórz nową lekcję"
+    }
+   ]
+  },
+  "tutor:std:live-modes": {
+   "chapter": "Lekcje na żywo",
+   "title": "Trzy sposoby nauczania",
+   "say": "Ucz na wideorozmowie, udostępniaj na urządzenie każdego dziecka, albo ucz osobiście. Wybierasz za każdym razem.",
+   "keys": [
+    "wideorozmowie",
+    "urządzenie każdego dziecka",
+    "osobiście",
+    "Wybierasz za każdym razem"
+   ],
+   "nodes": [
+    {
+     "on": "wideorozmowie",
+     "title": "Wideorozmowa",
+     "sub": "Dołącz do rozmowy w Centrum"
+    },
+    {
+     "on": "urządzenie każdego dziecka",
+     "title": "Udostępnij dzieciom",
+     "sub": "Każde dziecko na swoim urządzeniu"
+    },
+    {
+     "on": "osobiście",
+     "title": "Ucz osobiście",
+     "sub": "Dzieci obok Ciebie, bez wideo"
+    }
+   ]
+  },
+  "tutor:std:live-join": {
+   "chapter": "Lekcje na żywo",
+   "title": "Rozpocznij lekcję wideo",
+   "say": "Zaplanuj ją dla wybranych dzieci. O godzinie lekcji sprawdź kamerę i mikrofon, potem naciśnij Dołącz. Żadna inna aplikacja nie jest potrzebna.",
+   "keys": [
+    "Zaplanuj ją",
+    "wybranych dzieci",
+    "kamerę i mikrofon",
+    "naciśnij Dołącz",
+    "Żadna inna aplikacja"
+   ],
+   "cam": [
+    {
+     "on": "Zaplanuj ją"
+    },
+    {
+     "on": "wybranych dzieci"
+    },
+    {
+     "on": "kamerę i mikrofon"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Zaplanuj ją",
+     "off": "wybranych dzieci"
+    },
+    {
+     "on": "wybranych dzieci",
+     "off": "kamerę i mikrofon"
+    },
+    {
+     "on": "kamerę i mikrofon"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Zaplanuj ją"
+    },
+    {
+     "on": "wybranych dzieci"
+    }
+   ]
+  },
+  "tutor:std:live-incall": {
+   "chapter": "Lekcje na żywo",
+   "title": "Wewnątrz rozmowy",
+   "say": "Obok wideo są Twoje karty: Lekcje, Quiz, Praca domowa, Fiszki i tablica. Naciśnij Ucz, a każdy ekran podąża za Twoim.",
+   "keys": [
+    "Twoje karty",
+    "Fiszki i tablica",
+    "Naciśnij Ucz",
+    "podąża za Twoim"
+   ],
+   "nodes": [
+    {
+     "on": "Twoje karty",
+     "title": "Lekcje",
+     "sub": "Naciśnij Ucz"
+    },
+    {
+     "on": "Fiszki i tablica",
+     "title": "Quiz"
+    },
+    {
+     "on": "Naciśnij Ucz",
+     "title": "Praca domowa"
+    },
+    {
+     "on": "podąża za Twoim",
+     "title": "Fiszki"
+    },
+    {
+     "on": "Twoje karty",
+     "title": "Tablica"
+    }
+   ]
+  },
+  "tutor:std:live-share": {
+   "chapter": "Lekcje na żywo",
+   "title": "Udostępnij dzieciom",
+   "say": "Bez wideo? Naciśnij Udostępnij dzieciom. Każde dziecko podąża na własnym urządzeniu i samo odpowiada.",
+   "keys": [
+    "Naciśnij Udostępnij dzieciom",
+    "własnym urządzeniu",
+    "samo odpowiada"
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Udostępnij dzieciom"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Naciśnij Udostępnij dzieciom"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Udostępnij dzieciom"
+    }
+   ]
+  },
+  "tutor:std:live-person": {
+   "chapter": "Lekcje na żywo",
+   "title": "Ucz osobiście",
+   "say": "W pokoju? Zaznacz, kto jest obecny, i wpisz odpowiedzi każdego dziecka. Rodziny widzą wyniki później.",
+   "keys": [
+    "kto jest obecny",
+    "odpowiedzi każdego dziecka::odpowiedzi każdego dziecka",
+    "widzą wyniki później"
+   ],
+   "cam": [
+    {
+     "on": "kto jest obecny"
+    },
+    {
+     "on": "odpowiedzi każdego dziecka"
+    }
+   ],
+   "rings": [
+    {
+     "on": "kto jest obecny",
+     "off": "odpowiedzi każdego dziecka"
+    },
+    {
+     "on": "odpowiedzi każdego dziecka"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "kto jest obecny"
+    }
+   ]
+  },
+  "tutor:std:tools-try": {
+   "chapter": "Narzędzia",
+   "title": "Wypróbuj narzędzia",
+   "say": "Narzędzia, wewnątrz Lekcji, mają linijki, kątomierze, osie liczbowe i diagramy naukowe. Otwórz dowolne narzędzie, aby je wypróbować.",
+   "keys": [
+    "wewnątrz Lekcji",
+    "kątomierze, osie liczbowe",
+    "diagramy naukowe::diagramy naukowe",
+    "Otwórz dowolne narzędzie"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "kątomierze, osie liczbowe"
+    }
+   ],
+   "cam": [
+    {
+     "on": "wewnątrz Lekcji"
+    },
+    {
+     "on": "kątomierze, osie liczbowe"
+    }
+   ],
+   "rings": [
+    {
+     "on": "wewnątrz Lekcji",
+     "off": "kątomierze, osie liczbowe"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "wewnątrz Lekcji"
+    }
+   ]
+  },
+  "tutor:std:tools-give": {
+   "chapter": "Narzędzia",
+   "title": "Daj narzędzie dzieciom",
+   "say": "W Podglądzie lekcji otwórz Narzędzia dla tej lekcji. Naciśnij Dodaj narzędzie do tego pytania, albo Użyj we wszystkich pytaniach.",
+   "keys": [
+    "Podglądzie lekcji",
+    "Narzędzia dla tej lekcji",
+    "Dodaj narzędzie do tego pytania",
+    "we wszystkich pytaniach"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Narzędzia dla tej lekcji"
+    },
+    {
+     "on": "Dodaj narzędzie do tego pytania"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Podglądzie lekcji"
+    },
+    {
+     "on": "Narzędzia dla tej lekcji"
+    },
+    {
+     "on": "Dodaj narzędzie do tego pytania"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Podglądzie lekcji",
+     "off": "Narzędzia dla tej lekcji"
+    },
+    {
+     "on": "Narzędzia dla tej lekcji",
+     "off": "Dodaj narzędzie do tego pytania"
+    },
+    {
+     "on": "Dodaj narzędzie do tego pytania"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Podglądzie lekcji"
+    },
+    {
+     "on": "Narzędzia dla tej lekcji"
+    }
+   ]
+  },
+  "tutor:std:quiz-make": {
+   "chapter": "Quizy",
+   "title": "Utwórz quiz",
+   "say": "W Quizach naciśnij Nowy quiz, wybierz tematy z banku pytań i wybierz przedmiot oraz próg zaliczenia.",
+   "keys": [
+    "Naciśnij Nowy quiz",
+    "tematy z banku pytań::tematy z banku pytań",
+    "przedmiot oraz próg zaliczenia"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "tematy z banku pytań"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Nowy quiz"
+    },
+    {
+     "on": "tematy z banku pytań"
+    },
+    {
+     "on": "przedmiot oraz próg zaliczenia"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Nowy quiz"
+    }
+   ]
+  },
+  "tutor:std:quiz-marked": {
+   "chapter": "Quizy",
+   "title": "Sprawdzane za Ciebie",
+   "say": "Quizy są sprawdzane od razu. Odpowiedzi pisemne trafiają do Sprawdzania, do jednej kolejki.",
+   "keys": [
+    "sprawdzane od razu",
+    "Odpowiedzi pisemne",
+    "jednej kolejki::jednej kolejki"
+   ],
+   "cam": [
+    {
+     "on": "sprawdzane od razu"
+    }
+   ],
+   "rings": [
+    {
+     "on": "sprawdzane od razu"
+    }
+   ]
+  },
+  "tutor:std:quiz-starting": {
+   "chapter": "Quizy",
+   "title": "Quiz startowy",
+   "say": "Nowi uczniowie raz rozwiązują quiz startowy. Nie ma progu zaliczenia, więc widzisz, od czego zaczyna każde dziecko.",
+   "keys": [
+    "quiz startowy",
+    "Nie ma progu zaliczenia::Nie ma progu zaliczenia",
+    "od czego zaczyna każde dziecko"
+   ],
+   "cam": [
+    {
+     "on": "quiz startowy"
+    }
+   ],
+   "rings": [
+    {
+     "on": "quiz startowy"
+    }
+   ]
+  },
+  "tutor:std:quiz-flash": {
+   "chapter": "Quizy",
+   "title": "Fiszki",
+   "say": "Fiszki przywracają karty, które sprawiają dziecku trudność. Na lekcji na żywo możesz pokazać talię na ekranie.",
+   "keys": [
+    "Fiszki",
+    "karty, które sprawiają dziecku trudność",
+    "pokazać talię na ekranie"
+   ],
+   "cam": [
+    {
+     "on": "Fiszki"
+    },
+    {
+     "on": "karty, które sprawiają dziecku trudność"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiszki"
+    }
+   ]
+  },
+  "tutor:std:prog-class": {
+   "chapter": "Postępy",
+   "title": "Cała klasa",
+   "say": "Każdy wiersz to dziecko. Każdy przedmiot pokazuje kolorowy wynik. Filtruj wg roku lub grupy albo szukaj po imieniu.",
+   "keys": [
+    "Każdy wiersz to dziecko",
+    "kolorowy wynik",
+    "Filtruj wg roku lub grupy",
+    "szukaj po imieniu"
+   ],
+   "cam": [
+    {
+     "on": "Każdy wiersz to dziecko"
+    },
+    {
+     "on": "kolorowy wynik"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Każdy wiersz to dziecko",
+     "off": "kolorowy wynik"
+    },
+    {
+     "on": "kolorowy wynik"
+    }
+   ]
+  },
+  "tutor:std:prog-child": {
+   "chapter": "Postępy",
+   "title": "Jedno dziecko",
+   "say": "Kliknij dziecko, aby zobaczyć każdy temat, jego trend i najnowsze wyniki. Aktualizuje się wraz z ocenioną pracą.",
+   "keys": [
+    "Kliknij dziecko",
+    "każdy temat",
+    "najnowsze wyniki",
+    "ocenioną pracą"
+   ],
+   "cam": [
+    {
+     "on": "Kliknij dziecko"
+    }
+   ]
+  },
+  "tutor:std:prog-levels": {
+   "chapter": "Postępy",
+   "title": "Twoje poziomy",
+   "say": "Naciśnij Edytuj poziomy, aby zmienić ich nazwy lub próg startu. Wyniki od razu się przeliczają, a oceny się nie zmieniają.",
+   "keys": [
+    "Naciśnij Edytuj poziomy",
+    "zmienić ich nazwy",
+    "od razu się przeliczają",
+    "oceny się nie zmieniają"
+   ],
+   "cam": [
+    {
+     "on": "Naciśnij Edytuj poziomy"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Naciśnij Edytuj poziomy"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Naciśnij Edytuj poziomy"
+    }
+   ]
+  },
+  "tutor:std:hw-add-details": {
+   "chapter": "Zadaj",
+   "title": "Dodaj szczegóły",
+   "say": "Dodaj tytuł. Napisz instrukcje: co zrobić. Powiedz, co oddać. Potem wybierz termin.",
+   "keys": [
+    "Dodaj tytuł",
+    "Napisz instrukcje",
+    "co oddać",
+    "wybierz termin"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Napisz instrukcje"
+    },
+    {
+     "on": "co oddać"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Dodaj tytuł"
+    },
+    {
+     "on": "Napisz instrukcje"
+    },
+    {
+     "on": "co oddać"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dodaj tytuł",
+     "off": "Napisz instrukcje"
+    },
+    {
+     "on": "Napisz instrukcje",
+     "off": "co oddać"
+    },
+    {
+     "on": "co oddać"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dodaj tytuł"
+    },
+    {
+     "on": "Napisz instrukcje"
+    },
+    {
+     "on": "co oddać"
+    }
+   ]
+  },
+  "tutor:std:hw-mark": {
+   "chapter": "Sprawdź",
+   "title": "Sprawdź",
+   "say": "Wszystko do sprawdzenia jest w Do sprawdzenia, od najstarszych. Dodaj ocenę i uwagi, potem naciśnij Sprawdź i dalej.",
+   "keys": [
+    "Wszystko do sprawdzenia",
+    "od najstarszych",
+    "Dodaj ocenę i uwagi",
+    "Sprawdź i dalej"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "od najstarszych"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Wszystko do sprawdzenia"
+    },
+    {
+     "on": "od najstarszych"
+    },
+    {
+     "on": "Dodaj ocenę i uwagi"
+    },
+    {
+     "on": "Sprawdź i dalej"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Wszystko do sprawdzenia",
+     "off": "od najstarszych"
+    },
+    {
+     "on": "od najstarszych",
+     "off": "Dodaj ocenę i uwagi"
+    },
+    {
+     "on": "Dodaj ocenę i uwagi",
+     "off": "Sprawdź i dalej"
+    },
+    {
+     "on": "Sprawdź i dalej"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Wszystko do sprawdzenia"
+    },
+    {
+     "on": "od najstarszych"
+    }
+   ]
+  },
+  "tutor:std:msg-all": {
+   "chapter": "Wiadomości",
+   "title": "Wszystko w jednym miejscu",
+   "say": "Wiadomości gromadzą każdą rozmowę z rodzinami w jednym miejscu, pogrupowaną według dziecka.",
+   "keys": [
+    "każdą rozmowę z rodzinami",
+    "jednym miejscu",
+    "pogrupowaną według dziecka"
+   ],
+   "cam": [
+    {
+     "on": "każdą rozmowę z rodzinami"
+    }
+   ],
+   "rings": [
+    {
+     "on": "każdą rozmowę z rodzinami"
+    }
+   ]
+  },
+  "tutor:std:msg-reply": {
+   "chapter": "Wiadomości",
+   "title": "Odpowiedz",
+   "say": "Otwórz rozmowę, wpisz odpowiedź i naciśnij Wyślij. Rodzic dostaje powiadomienie.",
+   "keys": [
+    "Otwórz rozmowę",
+    "wpisz odpowiedź",
+    "naciśnij Wyślij",
+    "dostaje powiadomienie"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "wpisz odpowiedź"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Otwórz rozmowę"
+    },
+    {
+     "on": "wpisz odpowiedź"
+    },
+    {
+     "on": "naciśnij Wyślij"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Otwórz rozmowę",
+     "off": "wpisz odpowiedź"
+    },
+    {
+     "on": "wpisz odpowiedź"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Otwórz rozmowę"
+    },
+    {
+     "on": "wpisz odpowiedź"
+    }
+   ]
+  },
+  "tutor:std:msg-auto": {
+   "chapter": "Wiadomości",
+   "title": "Aktualizacje są automatyczne",
+   "say": "Nie musisz pisać o pracy domowej ani ocenach. Rodziny są informowane automatycznie.",
+   "keys": [
+    "Nie musisz pisać::Nie musisz pisać",
+    "pracy domowej ani ocenach",
+    "informowane automatycznie"
+   ],
+   "cam": [
+    {
+     "on": "Nie musisz pisać"
+    }
+   ]
+  }
+ }
+}

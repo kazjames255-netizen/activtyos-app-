@@ -34,7 +34,7 @@ import { tabOf, openTab } from "./helpers/hubTabs";
 async function tutorPage(browser: Browser) {
   const ctx = await browser.newContext({ storageState: statePath("freelancer") });
   const page = await ctx.newPage();
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto("/freelancer/learninghub");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { HUB_DEFAULTS, type HubSettings } from "@/lib/hubConfig";
 import { Icon } from "../kit";
 import { FOCUS } from "../teachKit";
@@ -15,13 +16,14 @@ export function StartRemoteSyncButton({ qs, config, noteId, title, readOnly, var
   qs: string; config?: HubSettings; noteId: string; title: string; readOnly?: boolean;
   variant?: "solid" | "outline"; className?: string; testId?: string;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   if (readOnly) return null;
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} data-testid={testId} title="Broadcast this lesson to students on their own devices — no video call, their screen follows yours"
+      <button type="button" onClick={() => setOpen(true)} data-testid={testId} title={t("hublive.dStartBtnTitle")}
         className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-4 text-[13px] font-extrabold transition ${FOCUS} ${variant === "solid" ? "border border-[var(--brand)] bg-[var(--brand)] text-white hover:brightness-110" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--brand)]"} ${className}`}>
-        <Icon name="play" size={16} />Share with children
+        <Icon name="play" size={16} />{t("hublive.dShareChildren")}
       </button>
       {open && <RemoteSyncApp qs={qs} config={config ?? HUB_DEFAULTS} noteId={noteId} title={title} onClose={() => setOpen(false)} />}
     </>

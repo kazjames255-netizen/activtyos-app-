@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { useT } from "@/lib/i18n/provider";
 import type { PanelProps } from "../../panelTypes";
 import { MiniRing } from "../../kit";
 import { Avatar, FOCUS, Pill, Skeleton, fmtClock } from "../../teachKit";
@@ -19,6 +20,7 @@ import { lessonSubject } from "./wsLib";
 export function StudentsTab({ p, lesson, attendees, data, groupNames, now, onOpen }: {
   p: PanelProps; lesson: Lesson; attendees: Attendee[]; data: WsData; groupNames: string[]; now: number; onOpen: (childId: string) => void;
 }) {
+  const tx = useT();
   const { hideNames, present, big } = useWsView();
   const { want } = data;
   useEffect(() => want(["overview", "inbox", "flash", "attempts"]), [want]);
@@ -47,22 +49,22 @@ export function StudentsTab({ p, lesson, attendees, data, groupNames, now, onOpe
 
   const ovLoading = data.overview === null && !data.failed.includes("overview");
   const loading = (data.overview === null || data.inbox === null) && data.failed.length === 0;
-  if (!attendees.length) return <WsEmpty icon="users" title="No students on this lesson" body="Edit the lesson to invite students." />;
+  if (!attendees.length) return <WsEmpty icon="users" title={tx("hublive.aSt_none")} body={tx("hublive.aSt_noneBody")} />;
 
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
-        <span className="font-bold">{attendees.length} {attendees.length === 1 ? "student" : "students"}</span>
+        <span className="font-bold">{tx("hublive.aSt_count", { n: attendees.length })}</span>
         {groupNames.map((g) => <Pill key={g} tone="violet" icon={<Ico name="users" size={12} />}>{g}</Pill>)}
         {subject && <Pill tone="brand">{subject}</Pill>}
       </div>
-      <ul className="grid list-none gap-2.5 p-0 [grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr))]" aria-label="Students in this lesson">
+      <ul className="grid list-none gap-2.5 p-0 [grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr))]" aria-label={tx("hublive.aSt_listAria")}>
         {rows.map(({ a, pct, tone, scope, hwOpen, overdue, tomark, fc, q }, i) => {
           const name = shown(a, i);
           return (
             <li key={a.childId} data-student={a.childId}>
-              <button type="button" onClick={() => onOpen(a.childId)} disabled={locked} aria-label={locked ? undefined : `${name}: open progress`}
-                className={`grid min-h-[44px] w-full gap-2.5 rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] p-3 text-left shadow-[var(--shadow-sm)] transition hover:-translate-y-px hover:border-[var(--brand)] hover:shadow-[var(--shadow)] disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:border-[var(--hub-warm-line)] motion-reduce:transition-none ${FOCUS}`}>
+              <button type="button" onClick={() => onOpen(a.childId)} disabled={locked} aria-label={locked ? undefined : tx("hublive.aSt_openProgress", { name })}
+                className={`grid min-h-[44px] w-full gap-2.5 rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] p-3 text-start shadow-[var(--shadow-sm)] transition hover:-translate-y-px hover:border-[var(--brand)] hover:shadow-[var(--shadow)] disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:border-[var(--hub-warm-line)] motion-reduce:transition-none ${FOCUS}`}>
                 <span className="flex items-center gap-2.5">
                   <Avatar name={name} size={big ? 40 : 34} />
                   <span className="min-w-0 flex-1">
@@ -70,8 +72,8 @@ export function StudentsTab({ p, lesson, attendees, data, groupNames, now, onOpe
                     <span className="block truncate text-[11.5px] text-[var(--ink-3)]">{hideNames ? " " : a.yearGroup ?? " "}</span>
                   </span>
                   {lesson.attendance !== undefined && (
-                    <span className={`inline-flex flex-none items-center gap-1 rounded-full border px-2 py-[3px] text-[11px] font-extrabold ${a.joinedAt ? "border-[var(--green-line)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-3)]"}`} title={a.joinedAt ? `Joined at ${fmtClock(a.joinedAt)}` : "Hasn't joined yet"}>
-                      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${a.joinedAt ? "bg-[var(--green)]" : "bg-[var(--ink-3)]"}`} />{a.joinedAt ? `Joined ${fmtClock(a.joinedAt)}` : "Not yet"}
+                    <span className={`inline-flex flex-none items-center gap-1 rounded-full border px-2 py-[3px] text-[11px] font-extrabold ${a.joinedAt ? "border-[var(--green-line)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-3)]"}`} title={a.joinedAt ? tx("hublive.aSt_joinedAt", { time: fmtClock(a.joinedAt) }) : tx("hublive.aSt_notJoined")}>
+                      <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${a.joinedAt ? "bg-[var(--green)]" : "bg-[var(--ink-3)]"}`} />{a.joinedAt ? tx("hublive.aSt_joined", { time: fmtClock(a.joinedAt) }) : tx("hublive.aSt_notYet")}
                     </span>
                   )}
                 </span>
@@ -82,17 +84,17 @@ export function StudentsTab({ p, lesson, attendees, data, groupNames, now, onOpe
                     ? <span aria-hidden className="grid flex-none place-items-center rounded-full bg-[var(--panel)] text-[var(--ink-3)]" style={{ width: big ? 62 : 54, height: big ? 62 : 54 }}><Ico name="eyeOff" size={big ? 24 : 20} /></span>
                     : <MiniRing pct={pct} size={big ? 62 : 54} stroke={6} color={tone?.fill ?? "var(--brand)"} />}
                   <span className="min-w-0 flex-1 text-[12px] leading-snug text-[var(--ink-2)]">
-                    <span className="block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{scope ? `${scope} level` : "Overall level"}</span>
-                    {ovLoading ? <Skeleton className="mt-1 h-4 w-24" /> : <span className={`block font-extrabold ${big ? "text-[15px]" : "text-[13px]"}`} style={{ color: tone ? `color-mix(in srgb, ${tone.fill} 55%, var(--ink))` : "var(--ink-3)" }}>{tone?.label ?? "Not started yet"}</span>}
+                    <span className="block text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{scope ? tx("hublive.aSt_levelSubj", { subject: scope }) : tx("hublive.aSt_overall")}</span>
+                    {ovLoading ? <Skeleton className="mt-1 h-4 w-24" /> : <span className={`block font-extrabold ${big ? "text-[15px]" : "text-[13px]"}`} style={{ color: tone ? `color-mix(in srgb, ${tone.fill} 55%, var(--ink))` : "var(--ink-3)" }}>{tone?.label ?? tx("hublive.aSt_notStarted")}</span>}
                   </span>
                 </span>
                 <span className="flex flex-wrap gap-1.5">
                   {loading ? <Skeleton className="h-6 w-full" /> : (
                     <>
-                      <Pill tone={overdue ? "red" : hwOpen ? "gold" : "green"} icon={<Ico name="homework" size={12} />}>{overdue ? `${overdue} overdue` : hwOpen ? `${hwOpen} due` : "Homework clear"}</Pill>
-                      {tomark > 0 && !present && <Pill tone="brand">{tomark} to mark</Pill>}
-                      {fc != null && <Pill tone={fc ? "violet" : "neutral"} icon={<Ico name="cards" size={12} />}>{fc} card{fc === 1 ? "" : "s"} due</Pill>}
-                      <Pill tone="neutral" icon={<Ico name="quiz" size={12} />}>{q && !hideNames ? `Quiz ${Math.round(q.pct ?? 0)}%` : q ? "Quiz taken" : "No quiz yet"}</Pill>
+                      <Pill tone={overdue ? "red" : hwOpen ? "gold" : "green"} icon={<Ico name="homework" size={12} />}>{overdue ? tx("hublive.aSt_overdue", { n: overdue }) : hwOpen ? tx("hublive.aSt_due", { n: hwOpen }) : tx("hublive.aSt_hwClear")}</Pill>
+                      {tomark > 0 && !present && <Pill tone="brand">{tx("hublive.aWs_toMark", { n: tomark })}</Pill>}
+                      {fc != null && <Pill tone={fc ? "violet" : "neutral"} icon={<Ico name="cards" size={12} />}>{tx("hublive.aSt_cardsDue", { n: fc })}</Pill>}
+                      <Pill tone="neutral" icon={<Ico name="quiz" size={12} />}>{q && !hideNames ? tx("hublive.aSt_quizPct", { pct: Math.round(q.pct ?? 0) }) : q ? tx("hublive.aSt_quizTaken") : tx("hublive.aSt_noQuiz")}</Pill>
                     </>
                   )}
                 </span>
@@ -101,7 +103,7 @@ export function StudentsTab({ p, lesson, attendees, data, groupNames, now, onOpe
           );
         })}
       </ul>
-      {!locked && <p className="m-0 text-[11.5px] text-[var(--ink-3)]">Tap a student to see their full progress.</p>}
+      {!locked && <p className="m-0 text-[11.5px] text-[var(--ink-3)]">{tx("hublive.aSt_tapHint")}</p>}
     </div>
   );
 }

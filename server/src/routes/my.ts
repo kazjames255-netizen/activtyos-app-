@@ -510,9 +510,10 @@ my.get("/providers", async (req, res) => {
   // brands their whole portal shell. Customers are stored lower-cased and
   // as-entered, so match both.
   const [bySnap, custSnap, custSnapLc] = await Promise.all([
-    bookingsCol.where("email", "==", email).get(),
-    db.collection("customers").where("email", "==", email).get(),
-    db.collection("customers").where("email", "==", email.toLowerCase()).get(),
+    // Only tenantId is used: don't ship every booking's full document (a busy family has hundreds) just to learn which providers they use.
+    bookingsCol.where("email", "==", email).select("tenantId").get(),
+    db.collection("customers").where("email", "==", email).select("tenantId").get(),
+    db.collection("customers").where("email", "==", email.toLowerCase()).select("tenantId").get(),
   ]);
   // A family who signs up through a provider's own link is written into that
   // provider's customers (see POST /providers/follow), so they resolve through

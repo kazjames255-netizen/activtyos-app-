@@ -485,10 +485,14 @@ export function DashboardApp() {
   const paidPct = payTotal ? Math.round((paidCount / payTotal) * 100) : 0;
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!d) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>;
+  if (!d) return <><EnableHubCard portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} /><div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div></>;
 
+  // First run: nothing booked and nothing listed yet. A tutor who never runs camps should not have to hunt for the Teaching Hub, so
+  // its card leads the page (enable, or open once on). Once there is any camp activity it drops back to the quieter card below.
+  const freshAccount = d.counts.listings === 0 && d.bookings.live === 0 && (bookings?.length ?? 0) === 0;
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+      {freshAccount && bookings && <EnableHubCard first portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />}
       {/* Hero */}
       <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
@@ -555,7 +559,7 @@ export function DashboardApp() {
       </div>
       </CollapsibleStats>
 
-      <EnableHubCard portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />
+      {!(freshAccount && bookings) && <EnableHubCard portal={portal} settings={settings} loading={settingsLoading} save={saveSettings} />}
 
       {/* Live clock-in board. Not for a freelancer: the card exists to answer
           "are the children covered, and by whom" across a team, and a solo

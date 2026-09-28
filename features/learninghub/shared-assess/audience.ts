@@ -1,4 +1,5 @@
 import type { Audience } from "./api";
+import { hubT } from "../family/hubT";
 
 // Who-is-this-for helpers. Labels come from the tenant's own year-group list
 // (config.yearGroups) — nothing about school stages is assumed here.
@@ -29,9 +30,9 @@ export function yearRanges(picked: string[], all: string[]): string[] {
 }
 
 export function ageLabel(min: number | null | undefined, max: number | null | undefined): string | null {
-  if (min != null && max != null) return min === max ? `Age ${min}` : `Ages ${min}–${max}`;
-  if (min != null) return `Ages ${min}+`;
-  if (max != null) return `Up to age ${max}`;
+  if (min != null && max != null) return min === max ? hubT("hubfam.asAge", { n: min }) : hubT("hubfam.asAges", { a: min, b: max });
+  if (min != null) return hubT("hubfam.asAgesPlus", { n: min });
+  if (max != null) return hubT("hubfam.asUpToAge", { n: max });
   return null;
 }
 

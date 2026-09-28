@@ -177,4 +177,5 @@ export function normalizeSlides(raw: unknown): Slide[] {
   return out;
 }
 
-export const KIND_LABEL: Record<SlideKind, string> = { intro: "Let’s begin", explain: "Explanation", practice: "Practice", check: "Check", summary: "Summary" };
+/** i18n KEYS (resolve with t()), one per slide kind. */
+export const KIND_LABEL: Record<SlideKind, string> = { intro: "hublessons.kindIntro", explain: "hublessons.kindExplain", practice: "hublessons.kindPractice", check: "hublessons.kindCheck", summary: "hublessons.kindSummary" };

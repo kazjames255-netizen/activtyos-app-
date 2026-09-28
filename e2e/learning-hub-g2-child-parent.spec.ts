@@ -202,7 +202,7 @@ test.describe("kid mode can take the placement test that unlocks a quiz", () => 
       await dismissParentWelcome(page);
       await setHub(accounts.freelancer, true);
       await page.goto(`/custdash/learninghub?tab=quizzes&child=${avaId}`);
-      await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ }).first()).toBeVisible({ timeout: 40_000 });
+      await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 40_000 });
       const toggle = page.getByTestId("hub-hand-over-toggle");
       if (await toggle.isVisible({ timeout: 5_000 }).catch(() => false)) await toggle.click();
       await page.locator(`[data-testid="hub-hand-over"][data-child-id="${avaId}"]`).click();

@@ -4,6 +4,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { FOCUS } from "../../teachKit";
 import { Ico, type IcoName } from "../../teachIcons";
+import { tr } from "../tr";
 
 // Shared bits for the in-call workspace: the "how is this being shown" context
 // (present mode / hide names / large type), the attendee model, and a few
@@ -31,7 +32,7 @@ export interface Attendee {
 }
 
 /** "Student A" … for a shared screen. */
-export const maskName = (i: number) => `Student ${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ""}`;
+export const maskName = (i: number) => tr("aWs_masked", { l: `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ""}` });
 export function useShownName(): (a: Attendee, i: number) => string {
   const { hideNames } = useWsView();
   return (a, i) => (hideNames ? maskName(i) : a.name);

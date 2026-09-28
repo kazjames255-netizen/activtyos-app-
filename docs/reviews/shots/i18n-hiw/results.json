@@ -1,0 +1,1410 @@
+{
+ "en|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "en|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "en|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "en|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "en|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "en|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "en"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pl|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pl|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pl|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pl|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pl|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pl"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ro|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ro|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ro|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ro|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ro|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "ro"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ur|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ur|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ur|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ur|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ur|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ur"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "bn|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "bn|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "bn|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "bn|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "bn|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "bn"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pt|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pt|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pt|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pt|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pt|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pt"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "es|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "es|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "es|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "es|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "es|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "es"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "fr|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "fr|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "",
+   null,
+   null
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "fr|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "fr|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "fr|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "fr|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "fr"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "cy|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "cy|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "cy|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "cy|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "cy"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pa|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pa|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 4,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pa|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "pa|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "pa|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "ltr",
+   "ltr",
+   "pa"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|tutors@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ar|tutors/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|parents@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ar|parents/start@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|children@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|children/homework@1440": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 5,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|tutors@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ar|tutors/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|parents@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 0,
+  "xo": false
+ },
+ "ar|parents/start@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|children@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ },
+ "ar|children/homework@390": {
+  "leaks": [],
+  "dirAttr": [
+   "rtl",
+   "rtl",
+   "ar"
+  ],
+  "clipped": 3,
+  "xo": false,
+  "playLeaks": []
+ }
+}

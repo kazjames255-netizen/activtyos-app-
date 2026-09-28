@@ -13,6 +13,10 @@ import { errMsg, fmtDate, groupMemberIds, subjectsOf, type HubGroup, type Studen
 import { ScopeToggle, useScope } from "./mineKit";
 import { SupportSection } from "./SupportSection";
 import { cleanSupport, isDefaultSupport, type SupportProfile } from "./support";
+import { PlanNextWeek } from "./plan/PlanNextWeek";
+import HowItWorksButton from "./howitworks/HowItWorksButton";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { YearReminder } from "./students/YearReminderCard";
 
 // Students — the tutor's roster. A family only ever sees the Learning Hub for a
 // child that has been enrolled here, so this is where access is granted, paused
@@ -21,19 +25,20 @@ import { cleanSupport, isDefaultSupport, type SupportProfile } from "./support";
 
 export const meta: PanelMeta = { key: "students", label: "Students", icon: "users", status: "live", blurb: "Enrol children, choose which subjects they can see, and pause or remove access." };
 
-interface Candidate { childId: string; name: string; parentName: string; parentEmail: string; postcode: string; town: string; ref: string; photo?: string; /** The server's dob-derived default school year, when it can work one out. */ yearGroup?: string | null; suggestedYearGroup?: string | null }
+interface Candidate { childId: string; name: string; parentName: string; parentEmail: string; postcode: string; town: string; ref: string; photo?: string; /** false = never booked with this provider (added by the family to their own account). */ booked?: boolean; /** The server's dob-derived default school year, when it can work one out. */ yearGroup?: string | null; suggestedYearGroup?: string | null }
 
 const norm = (s: string) => s.toLowerCase();
 
 /** Subject toggles — empty selection means "all subjects". */
 function SubjectPicker({ subjects, value, onChange }: { subjects: string[]; value: string[]; onChange: (v: string[]) => void }) {
+  const t = useT();
   const all = value.length === 0;
   return (
     <div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Subjects this student can see">
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t("hubshell.st_subjectsCanSee")}>
         <button type="button" aria-pressed={all} onClick={() => onChange([])}
           className={`min-h-[44px] lg:min-h-[40px] rounded-full border px-3.5 text-[12.5px] font-extrabold transition ${FOCUS} ${all ? "border-transparent text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}
-          style={all ? { background: "linear-gradient(180deg, var(--brand-2), var(--brand))" } : undefined}>All subjects</button>
+          style={all ? { background: "linear-gradient(180deg, var(--brand-2), var(--brand))" } : undefined}>{t("hubshell.st_allSubjects")}</button>
         {subjects.map((s) => {
           const on = value.includes(s);
           const c = subjectColor(s);
@@ -47,7 +52,7 @@ function SubjectPicker({ subjects, value, onChange }: { subjects: string[]; valu
         })}
       </div>
       <p className="mt-2 text-[12px] leading-snug text-[var(--ink-2)]">
-        {subjects.length === 0 ? "No subjects exist yet — the student will see everything you add." : all ? "They can see every subject, including ones you add later." : `They'll only see ${value.join(", ")}.`}
+        {subjects.length === 0 ? t("hubshell.st_noSubjectsYet") : all ? t("hubshell.st_seeEverySubject") : t("hubshell.st_onlySee", { list: value.join(", ") })}
       </p>
     </div>
   );
@@ -55,15 +60,16 @@ function SubjectPicker({ subjects, value, onChange }: { subjects: string[]; valu
 
 /** School year — optional; "Not set" clears it. Options come from the tenant's own list (Setup → Learning Hub). */
 function YearGroupSelect({ value, onChange, options, id, autoNote }: { value: string; onChange: (v: string) => void; options: string[]; id: string; autoNote?: string }) {
+  const t = useT();
   const list = value && !options.includes(value) ? [value, ...options] : options;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Year group</label>
+      <label htmlFor={id} className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_yearGroup")}</label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-[46px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13.5px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)]">
-        <option value="">Automatic — from their date of birth{autoNote ? ` (${autoNote})` : ""}</option>
+        <option value="">{autoNote ? t("hubshell.st_yearAutoNote", { note: autoNote }) : t("hubshell.st_yearAuto")}</option>
         {list.map((y) => <option key={y} value={y}>{y}</option>)}
       </select>
-      <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Used to show the right quizzes and placement tests. Leave on Automatic and we work it out from their date of birth; pick a year to set it yourself.</p>
+      <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("hubshell.st_yearHelp")}</p>
     </div>
   );
 }
@@ -83,16 +89,17 @@ function useTutors(enabled: boolean): Tutor[] {
 
 /** Who teaches this student. Shown only when the business has more than one tutor. "" = unassigned (every tutor sees them). */
 function TutorSelect({ tutors, value, onChange, id }: { tutors: Tutor[]; value: string; onChange: (v: string) => void; id: string }) {
+  const t = useT();
   if (tutors.length < 2) return null;
-  const list = value && !tutors.some((t) => t.uid === value) ? [{ uid: value, name: "Former tutor", role: "", me: false }, ...tutors] : tutors;
+  const list = value && !tutors.some((x) => x.uid === value) ? [{ uid: value, name: t("hubshell.st_formerTutor"), role: "", me: false }, ...tutors] : tutors;
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Tutor</label>
+      <label htmlFor={id} className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_tutor")}</label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className="min-h-[46px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13.5px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--brand)]">
-        <option value="">Unassigned — every tutor sees them</option>
-        {list.map((t) => <option key={t.uid} value={t.uid}>{t.name}{t.me ? " (you)" : ""}</option>)}
+        <option value="">{t("hubshell.st_unassigned")}</option>
+        {list.map((x) => <option key={x.uid} value={x.uid}>{x.me ? t("hubshell.st_nameYou", { name: x.name }) : x.name}</option>)}
       </select>
-      <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Tutors see their own students first (and can switch to Everyone). Owners and managers always see everyone.</p>
+      <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("hubshell.st_tutorHelp")}</p>
     </div>
   );
 }
@@ -102,6 +109,7 @@ interface InviteRow { id: string; token: string | null; status: "pending" | "cla
 /** F13 — a link for a family who has never booked: they open it signed in to their parent account, choose which of their own
  *  children to enrol, and the enrolment is created (POST /family-invites). Nothing is emailed from here: copy the link and send it. */
 function FamilyInvite({ qs, tutorUid }: { qs: string; tutorUid: string }) {
+  const t = useT();
   const [rows, setRows] = useState<InviteRow[] | null>(null);
   const [forName, setForName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -111,44 +119,48 @@ function FamilyInvite({ qs, tutorUid }: { qs: string; tutorUid: string }) {
   const load = () => get<InviteRow[]>(`/api/learning-hub/family-invites${qs}`).then((r) => setRows(Array.isArray(r) ? r : [])).catch(() => setRows([]));
   useEffect(() => { void load(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qs]);
-  const link = (t: string) => `${window.location.origin}/custdash/learninghub?invite=${t}`;
+  const link = (tok: string) => `${window.location.origin}/custdash/learninghub?invite=${tok}`;
   const create = async () => {
     setBusy(true); setErr(null);
     try {
       const r = await post<{ token: string }>(`/api/learning-hub/family-invites${qs}`, { forName: forName.trim(), ...(tutorUid ? { tutorUid } : {}) });
-      setMade(link(r.token)); setForName(""); void load();
-    } catch (e) { setErr(errMsg(e, "Couldn't create the invite")); }
+      const url = link(r.token);
+      setMade(url); setForName(""); void load();
+      // One click: the link is on the clipboard the moment it exists (falls back to the visible field + Copy button).
+      try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { /* the field below still has it */ }
+    } catch (e) { setErr(errMsg(e, t("hubshell.st_inviteCreateFail"))); }
     finally { setBusy(false); }
   };
   const copy = async (text: string) => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2500); }
-    catch { window.prompt("Copy this link", text); }
+    catch { window.prompt(t("hubshell.st_copyThisLink"), text); }
   };
-  const revoke = async (id: string) => { try { await del(`/api/learning-hub/family-invites/${id}${qs}`); void load(); } catch (e) { setErr(errMsg(e, "Couldn't withdraw that invite")); } };
+  const revoke = async (id: string) => { try { await del(`/api/learning-hub/family-invites/${id}${qs}`); void load(); } catch (e) { setErr(errMsg(e, t("hubshell.st_inviteWithdrawFail"))); } };
   const recent = (rows ?? []).slice(0, 4);
   return (
     <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3" data-testid="hub-family-invite">
-      <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Invite a family who hasn&apos;t booked</div>
-      <p className="mt-1 text-[12px] leading-snug text-[var(--ink-2)]">Make a private link and send it to the parent yourself. They open it while signed in to their ActivityOS parent account (or after signing up), choose which of their children to enrol, and they appear on your roster. Valid for 30 days, for one family.</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <Input aria-label="Who is it for (optional)" placeholder="Who is it for? (optional)" value={forName} onChange={(e) => setForName(e.target.value)} maxLength={120} className="!min-h-[44px] min-w-[180px] flex-1" />
-        <Button sm variant="primary" data-testid="hub-family-invite-create" disabled={busy} className="!h-[44px] !px-4" onClick={() => void create()}>{busy ? "Making…" : "Create invite link"}</Button>
-      </div>
+      <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_inviteTitle")}</div>
+      <p className="mt-1 text-[12px] leading-snug text-[var(--ink-2)]">{t("hubshell.st_inviteBody")}</p>
+      <form className="mt-2 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); if (!busy) void create(); }}>
+        <Input aria-label={t("hubshell.st_inviteForAria")} placeholder={t("hubshell.st_inviteForPh")} value={forName} onChange={(e) => setForName(e.target.value)} maxLength={120} className="!min-h-[44px] min-w-[180px] flex-1" />
+        <Button sm variant="primary" type="submit" data-testid="hub-family-invite-create" disabled={busy} className="!h-[44px] !px-4">{busy ? t("hubshell.st_making") : t("hubshell.st_createInviteLink")}</Button>
+      </form>
       {err && <p role="alert" className="mt-2 text-[12.5px] text-[var(--red)]">{err}</p>}
       {made && (
-        <div className="mt-2 flex items-center gap-2" data-testid="hub-family-invite-link">
-          <input readOnly value={made} aria-label="Invite link" onFocus={(e) => e.currentTarget.select()} className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[12.5px] text-[var(--ink)]" />
-          <Button sm className="!h-[44px] lg:!h-[40px] !px-4" onClick={() => void copy(made)}>{copied ? "Copied" : "Copy link"}</Button>
+        <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="hub-family-invite-link">
+          {copied && <p role="status" className="w-full text-[12.5px] font-bold text-[var(--green)]">{t("hubshell.st_linkReady")}</p>}
+          <input readOnly value={made} aria-label={t("hubshell.st_inviteLink")} onFocus={(e) => e.currentTarget.select()} className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[12.5px] text-[var(--ink)]" />
+          <Button sm className="!h-[44px] lg:!h-[40px] !px-4" onClick={() => void copy(made)}>{copied ? t("hubshell.st_copied") : t("hubshell.st_copyLink")}</Button>
         </div>
       )}
       {recent.length > 0 && (
-        <ul className="mt-3 grid gap-1.5 text-[12.5px]" aria-label="Recent invites">
+        <ul className="mt-3 grid gap-1.5 text-[12.5px]" aria-label={t("hubshell.st_recentInvites")}>
           {recent.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-2 text-[var(--ink-2)]">
-              <span className="font-bold text-[var(--ink)]">{r.forName || "Invite"}</span>
-              <span>{r.status === "claimed" ? `joined${r.childNames.length ? `: ${r.childNames.join(", ")}` : ""}` : r.status === "pending" ? "waiting for them to open it" : r.status}</span>
-              {r.status === "pending" && r.token && <button type="button" className={`ml-auto min-h-[44px] rounded-full px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} onClick={() => void copy(link(r.token!))}>Copy link</button>}
-              {r.status === "pending" && <button type="button" className={`min-h-[44px] rounded-full px-3 text-[12px] font-extrabold text-[var(--red)] hover:bg-[var(--red-soft)] ${FOCUS}`} onClick={() => void revoke(r.id)}>Withdraw</button>}
+              <span className="font-bold text-[var(--ink)]">{r.forName || t("hubshell.st_invite")}</span>
+              <span>{r.status === "claimed" ? (r.childNames.length ? t("hubshell.st_joinedNames", { names: r.childNames.join(", ") }) : t("hubshell.st_joined")) : r.status === "pending" ? t("hubshell.st_invWaiting") : r.status === "expired" ? t("hubshell.st_invExpired") : t("hubshell.st_invRevoked")}</span>
+              {r.status === "pending" && r.token && <button type="button" className={`ms-auto min-h-[44px] rounded-full px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} onClick={() => void copy(link(r.token!))}>{t("hubshell.st_copyLink")}</button>}
+              {r.status === "pending" && <button type="button" className={`min-h-[44px] rounded-full px-3 text-[12px] font-extrabold text-[var(--red)] hover:bg-[var(--red-soft)] ${FOCUS}`} onClick={() => void revoke(r.id)}>{t("hubshell.st_withdraw")}</button>}
             </li>
           ))}
         </ul>
@@ -158,6 +170,7 @@ function FamilyInvite({ qs, tutorUid }: { qs: string; tutorUid: string }) {
 }
 
 function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, qs, tutors, defaultTutor, onDone, onError }: { open: boolean; onClose: () => void; tenantId: string; students: Student[]; subjects: string[]; yearGroups: string[]; qs: string; tutors: Tutor[]; defaultTutor: string; onDone: (name: string) => void; onError: (m: string) => void }) {
+  const t = useT();
   const [list, setList] = useState<Candidate[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [q, setQ] = useState("");
@@ -187,16 +200,16 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
       await post(`/api/learning-hub/students${qs}`, { childId: pick.childId, subjects: chosen, ...(year ? { yearGroup: year } : {}), ...(tutors.length > 1 ? { tutorUid: tutor || null } : {}), ...(isDefaultSupport(support) ? {} : { support }) });
       onDone(pick.name);
       onClose();
-    } catch (e) { onError(errMsg(e, "Couldn't enrol that child")); }
+    } catch (e) { onError(errMsg(e, t("hubshell.st_enrolFail"))); }
     finally { setBusy(false); }
   };
 
   return (
-    <Modal open={open} onClose={onClose} wide id="hub-enrol-modal" title={pick ? `Enrol ${pick.name}` : "Enrol a student"}
+    <Modal open={open} onClose={onClose} wide id="hub-enrol-modal" title={pick ? t("hubshell.st_enrolName", { name: pick.name }) : t("hubshell.st_enrolAStudent")}
       footer={pick ? (
         <>
-          <Button onClick={() => setPick(null)} className="!h-[44px] lg:!h-[40px]"><Icon name="arrowLeft" size={14} /> Back</Button>
-          <Button variant="primary" disabled={busy} onClick={enrol} className="!h-[44px] lg:!h-[40px]">{busy ? "Enrolling…" : "Enrol student"}</Button>
+          <Button onClick={() => setPick(null)} className="!h-[44px] lg:!h-[40px]"><Icon name="arrowLeft" size={14} /> {t("hubshell.st_back")}</Button>
+          <Button variant="primary" disabled={busy} onClick={enrol} className="!h-[44px] lg:!h-[40px]">{busy ? t("hubshell.st_enrolling") : t("hubshell.st_enrolStudent")}</Button>
         </>
       ) : undefined}>
       {pick ? (
@@ -205,28 +218,28 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
             <Avatar name={pick.name} size={44} />
             <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{pick.name}</div><div className="truncate text-[12px] text-[var(--ink-2)]">{pick.parentName || pick.parentEmail}</div></div>
           </div>
-          <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Which subjects can they see?</h3>
+          <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_whichSubjects")}</h3>
           <SubjectPicker subjects={subjects} value={chosen} onChange={setChosen} />
           <div className="mt-4"><YearGroupSelect id="hub-enrol-year" value={year} onChange={setYear} options={yearGroups} /></div>
           {tutors.length > 1 && <div className="mt-4"><TutorSelect id="hub-enrol-tutor" tutors={tutors} value={tutor} onChange={setTutor} /></div>}
-          <div className="mt-4"><SupportSection id="hub-enrol-support" value={support} onChange={setSupport} /></div>
+          <details className="mt-4 rounded-xl border border-[var(--line)] px-3 py-2" data-testid="hub-enrol-support-more"><summary className="cursor-pointer text-[13px] font-extrabold text-[var(--ink-2)]">{t("hubshell.st_supportOptional")}</summary><div className="mt-3"><SupportSection id="hub-enrol-support" value={support} onChange={setSupport} /></div></details>
           <p className="mt-4 rounded-xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-3.5 py-2.5 text-[12.5px] leading-snug text-[var(--ink)]">
-            Their family will see My Classroom from now on, and get a notification when you publish new lessons.
+            {t("hubshell.st_familyWillSee")}
           </p>
         </div>
       ) : (
         <div>
           <div className="relative">
-            <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
-            <Input data-autofocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by child, parent, postcode…" aria-label="Search children" className="!min-h-[46px] w-full !rounded-full !pl-9" />
+            <Icon name="search" size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
+            <Input data-autofocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hubshell.st_searchChildPh")} aria-label={t("hubshell.st_searchChildren")} className="!min-h-[46px] w-full !rounded-full !pl-9" />
           </div>
           <div className="mt-3" aria-live="polite">
-            {list === null ? <SkeletonRows rows={3} label="Finding children" /> : failed ? (
-              <p role="alert" className="py-6 text-center text-[13px] text-[var(--red)]">Couldn&apos;t load your children. Close this and try again.</p>
+            {list === null ? <SkeletonRows rows={3} label={t("hubshell.st_findingChildren")} /> : failed ? (
+              <p role="alert" className="py-6 text-center text-[13px] text-[var(--red)]">{t("hubshell.st_loadChildrenFail")}</p>
             ) : shown.length === 0 ? (
               <div className="py-6 text-center">
-                <p className="text-[13.5px] font-extrabold text-[var(--ink)]">{list.length === 0 ? "No children to enrol yet" : "No one matches that search"}</p>
-                <p className="mx-auto mt-1 max-w-[380px] text-[12.5px] leading-snug text-[var(--ink-2)]">{list.length === 0 ? "A child shows up here once their family has booked with you or joined you. To bring in a family who hasn't booked, send them your page link below." : "Try part of the child's or parent's name, or a postcode — or send the family your page link below."}</p>
+                <p className="text-[13.5px] font-extrabold text-[var(--ink)]">{list.length === 0 ? t("hubshell.st_noChildren") : t("hubshell.st_noMatchSearch")}</p>
+                <p className="mx-auto mt-1 max-w-[380px] text-[12.5px] leading-snug text-[var(--ink-2)]">{list.length === 0 ? t("hubshell.st_noChildrenBody") : t("hubshell.st_noMatchBody")}</p>
                 <FamilyLink tenantId={tenantId} />
               </div>
             ) : (
@@ -239,12 +252,12 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
                       <Avatar name={c.name} size={40} />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{c.name}</div>
-                        <div className="truncate text-[12px] text-[var(--ink-2)]">{[c.parentName, c.postcode || c.town].filter(Boolean).join(" · ") || c.parentEmail}</div>
+                        <div className="truncate text-[12px] text-[var(--ink-2)]">{[c.parentName, c.postcode || c.town].filter(Boolean).join(" · ") || c.parentEmail}{c.booked === false ? ` · ${t("hubshell.st_addedByFamily")}` : ""}</div>
                       </div>
                       {enrolled ? (
-                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: "var(--green-soft)", color: "#0b6b3a" }}><Icon name="check" size={13} strokeWidth={2.6} /> Enrolled</span>
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-extrabold" style={{ background: "var(--green-soft)", color: "#0b6b3a" }}><Icon name="check" size={13} strokeWidth={2.6} /> {t("hubshell.st_enrolled")}</span>
                       ) : (
-                        <Button sm className="!h-[44px] lg:!h-[38px] !px-4" aria-label={`${cur ? "Resume" : "Enrol"} ${c.name}`} onClick={() => { setPick(c); setChosen(cur?.subjects ?? []); setYear(cur && !cur.yearGroupAuto ? cur.yearGroup ?? "" : ""); setSupport(cleanSupport(cur?.support)); if (cur) setTutor(cur.tutorUid ?? ""); }}>{cur ? "Resume" : "Enrol"}</Button>
+                        <Button sm className="!h-[44px] lg:!h-[38px] !px-4" aria-label={t(cur ? "hubshell.st_resumeName" : "hubshell.st_enrolName", { name: c.name })} onClick={() => { setPick(c); setChosen(cur?.subjects ?? []); setYear(cur && !cur.yearGroupAuto ? cur.yearGroup ?? "" : ""); setSupport(cleanSupport(cur?.support)); if (cur) setTutor(cur.tutorUid ?? ""); }}>{cur ? t("hubshell.st_resume") : t("hubshell.st_enrol")}</Button>
                       )}
                     </li>
                   );
@@ -252,6 +265,7 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
               </ul>
             )}
           </div>
+          <div className="mt-2 text-center"><HowItWorksButton variant="link" role="tutor" topic="families" scene="fam-ways" autoplay label={t("hubshell.st_howEnrolling")} /></div>
           <FamilyInvite qs={qs} tutorUid={defaultTutor} />
         </div>
       )}
@@ -262,41 +276,44 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
 /** A family who has never booked joins by opening the provider's public page while signed in to their parent account (or by
  *  signing up through it): that links them to the provider, and their children then appear in the enrol list above. */
 function FamilyLink({ tenantId }: { tenantId: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const url = typeof window === "undefined" ? "" : `${window.location.origin}/store/${tenantId}`;
   const copy = async () => {
     try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2500); }
-    catch { window.prompt("Copy this link", url); }
+    catch { window.prompt(t("hubshell.st_copyThisLink"), url); }
   };
   return (
-    <div className="mx-auto mt-4 max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 text-left" data-testid="hub-family-link">
-      <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Your page link for new families</div>
+    <div className="mx-auto mt-4 max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 text-start" data-testid="hub-family-link">
+      <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_pageLinkTitle")}</div>
       <div className="mt-1.5 flex items-center gap-2">
-        <input readOnly value={url} aria-label="Your page link" onFocus={(e) => e.currentTarget.select()} className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[12.5px] text-[var(--ink)]" />
-        <Button sm className="!h-[44px] lg:!h-[40px] !px-4" onClick={() => void copy()}>{copied ? "Copied" : "Copy link"}</Button>
+        <input readOnly value={url} aria-label={t("hubshell.st_pageLink")} onFocus={(e) => e.currentTarget.select()} className="min-h-[40px] min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[12.5px] text-[var(--ink)]" />
+        <Button sm className="!h-[44px] lg:!h-[40px] !px-4" onClick={() => void copy()}>{copied ? t("hubshell.st_copied") : t("hubshell.st_copyLink")}</Button>
       </div>
-      <p className="mt-2 text-[12px] leading-snug text-[var(--ink-2)]">Ask the parent to open it while signed in to their ActivityOS parent account (or to sign up through it). Once they have, their children show up in this list and you can enrol them. No booking needed.</p>
+      <p className="mt-2 text-[12px] leading-snug text-[var(--ink-2)]">{t("hubshell.st_pageLinkBody")}</p>
     </div>
   );
 }
 
-const clock = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+type Tr = (k: string, v?: Record<string, string | number>) => string;
 const DAY = 86_400_000;
-function nextWhen(t: number, now: number): string {
+function nextWhen(t: Tr, loc: string, at: number, now: number): string {
+  const clock = new Date(at).toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
   const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
-  const days = Math.floor((t - d0.getTime()) / DAY);
-  if (days <= 0) return `Today ${clock(t)}`;
-  if (days === 1) return `Tomorrow ${clock(t)}`;
-  if (days < 7) return `${new Date(t).toLocaleDateString("en-GB", { weekday: "short" })} ${clock(t)}`;
-  return `${new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}, ${clock(t)}`;
+  const days = Math.floor((at - d0.getTime()) / DAY);
+  if (days <= 0) return t("hubshell.st_todayAt", { time: clock });
+  if (days === 1) return t("hubshell.st_tomorrowAt", { time: clock });
+  if (days < 7) return `${new Date(at).toLocaleDateString(loc, { weekday: "short" })} ${clock}`;
+  return `${new Date(at).toLocaleDateString(loc, { day: "numeric", month: "short" })}, ${clock}`;
 }
-function seenAgo(t: number | null, now: number): string {
-  if (!t) return "No activity yet";
-  const d = now - t;
-  if (d < 3_600_000) return "Last seen just now";
-  if (d < DAY) return `Last seen ${Math.round(d / 3_600_000)} h ago`;
+function seenAgo(t: Tr, loc: string, at: number | null, now: number): string {
+  if (!at) return t("hubshell.st_noActivity");
+  const d = now - at;
+  const rtf = new Intl.RelativeTimeFormat(loc, { numeric: "auto" });
+  if (d < 3_600_000) return t("hubshell.st_lastSeen", { when: t("hubshell.st_justNow") });
+  if (d < DAY) return t("hubshell.st_lastSeen", { when: rtf.format(-Math.round(d / 3_600_000), "hour") });
   const days = Math.floor(d / DAY);
-  return days === 1 ? "Last seen yesterday" : days < 30 ? `Last seen ${days} days ago` : `Last seen ${new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+  return t("hubshell.st_lastSeen", { when: days < 30 ? rtf.format(-days, "day") : new Date(at).toLocaleDateString(loc, { day: "numeric", month: "short" }) });
 }
 
 /** Ring colour from the tenant's mastery ladder: lowest third gold, middle brand, top green (same rule as Progress). */
@@ -314,9 +331,11 @@ function Badge({ tone, icon, children }: { tone: "red" | "violet" | "brand" | "g
   return <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: bg, color: fg }}><Icon name={icon} size={12} strokeWidth={2.2} />{children}</span>;
 }
 
-export function Panel({ students, topics, qs, onError, refreshStudents, canEdit: tutorMode, readOnly, tenantId, config, groups = [], refreshGroups, goTo, me }: PanelProps) {
+export function Panel({ students, topics, qs, onError, refreshStudents, canEdit: tutorMode, readOnly, tenantId, franchiseId, config, groups = [], refreshGroups, goTo, me }: PanelProps) {
   const canEdit = tutorMode && !readOnly; // a view-only role sees the roster but none of the write controls
   const subjects = useMemo(() => subjectsOf(topics), [topics]);
+  const t = useT();
+  const { locale } = useI18n();
   const [enrolOpen, setEnrolOpen] = useState(false);
   const [editing, setEditing] = useState<Student | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
@@ -409,17 +428,22 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
       let restored = true;
       for (const u of undo.reverse()) { try { await u(); } catch { restored = false; } }
       refreshAll();
-      onError(`${errMsg(e, "Couldn't save the student")}${undo.length ? (restored ? " — nothing was changed." : " — some changes may have been saved; check the details and try again.") : ""}`);
+      onError(`${errMsg(e, t("hubshell.st_saveFail"))}${undo.length ? (restored ? t("hubshell.st_nothingChanged") : t("hubshell.st_partialSaved")) : ""}`);
     }
     finally { setBusy(null); }
   };
 
-  const tabs = [["all", `All ${students.length}`], ["active", `Active ${active.length}`], ["paused", `Paused ${students.length - active.length}`], ...(attention.length ? [["attention", `Needs attention ${attention.length}`]] : [])] as [typeof view, string][];
+  const tabs = [["all", t("hubshell.st_tabAll", { n: students.length })], ["active", t("hubshell.st_tabActive", { n: active.length })], ["paused", t("hubshell.st_tabPaused", { n: students.length - active.length })], ...(attention.length ? [["attention", t("hubshell.st_tabAttention", { n: attention.length })]] : [])] as [typeof view, string][];
 
   return (
     <div id="hub-students">
+      {tutorMode && (
+        <div className="mb-4">
+          <YearReminder tenantId={tenantId} qs={qs} canEdit={tutorMode} readOnly={readOnly} franchiseId={franchiseId ?? null} students={students} yearGroups={config.yearGroups} refreshStudents={refreshStudents} />
+        </div>
+      )}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
-        <div role="group" aria-label="Filter students" className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div role="group" aria-label={t("hubshell.st_filterStudents")} className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map(([k, label]) => (
             <button key={k} type="button" aria-pressed={view === k} onClick={() => setView(k)}
               className={`min-h-[44px] lg:min-h-[40px] flex-none whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-extrabold transition ${FOCUS} ${view === k ? "text-white" : "text-[var(--ink-2)] hover:text-[var(--ink)]"}`}
@@ -428,31 +452,31 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
         </div>
         {students.length > 5 && (
           <div className="relative min-w-[180px] flex-1 sm:max-w-[280px]">
-            <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search students…" aria-label="Search students" className="!min-h-[44px] w-full !rounded-full !pl-9" />
+            <Icon name="search" size={16} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--ink-2)]" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hubshell.st_searchStudentsPh")} aria-label={t("hubshell.st_searchStudents")} className="!min-h-[44px] w-full !rounded-full !pl-9" />
           </div>
         )}
         {multiTutor && <ScopeToggle scope={scope} onChange={setScope} mine={mineCount} all={students.length} what="students" />}
-        {canEdit && <Button variant="primary" className="ml-auto !h-[44px] !px-5" onClick={() => setEnrolOpen(true)}><Icon name="plus" size={16} /> Enrol a student</Button>}
+        {canEdit && <Button variant="primary" className="ms-auto !h-[44px] !px-5" onClick={() => setEnrolOpen(true)}><Icon name="plus" size={16} /> {t("hubshell.st_enrolAStudent")}</Button>}
       </div>
 
       {canEdit && <GroupsSection groups={groups} students={students} qs={qs} filterId={groupFilter} onFilter={setGroupFilter} onChanged={() => refreshGroups?.()} onError={onError} goTo={goTo} raw={insights.raw} loaded={insights.loaded} />}
 
       {activeGroup && (
         <div className="mb-3 flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]" role="status">
-          Showing <GroupChip group={activeGroup} /> · {shown.length} of {students.length} students
-          <button type="button" onClick={() => setGroupFilter(null)} className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><Icon name="close" size={13} /> Show everyone</button>
+          {t("hubshell.st_showing")} <GroupChip group={activeGroup} /> · {t("hubshell.st_showingCount", { n: shown.length, total: students.length })}
+          <button type="button" onClick={() => setGroupFilter(null)} className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><Icon name="close" size={13} /> {t("hubshell.st_showEveryone")}</button>
         </div>
       )}
 
       {flash && <div role="status" className="mb-3 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-bold" style={{ background: "var(--green-soft)", borderColor: "var(--green-line)", color: "#0b6b3a" }}><Icon name="check" size={16} strokeWidth={2.6} /> {flash}</div>}
 
       {students.length === 0 ? (
-        <EmptyState icon="users" title="No students enrolled yet" color="var(--violet)"
-          body="Families only see My Classroom once you've enrolled their child. Enrol a student to give them your lessons, quizzes and live lessons — and choose which subjects they can see."
-          action={canEdit ? <Button variant="primary" onClick={() => setEnrolOpen(true)}><Icon name="plus" size={15} /> Enrol your first student</Button> : undefined} />
+        <EmptyState icon="users" title={t("hubshell.st_emptyTitle")} color="var(--violet)"
+          body={t("hubshell.st_emptyBody")}
+          action={canEdit ? <Button variant="primary" onClick={() => setEnrolOpen(true)}><Icon name="plus" size={15} /> {t("hubshell.st_enrolFirst")}</Button> : undefined} />
       ) : shown.length === 0 ? (
-        <EmptyState icon="search" title="No students match" body="Try a different filter or search." color="var(--violet)" action={<Button onClick={() => { setQ(""); setView("all"); setGroupFilter(null); }}>Clear filters</Button>} />
+        <EmptyState icon="search" title={t("hubshell.st_noMatchTitle")} body={t("hubshell.st_noMatchFilter")} color="var(--violet)" action={<Button onClick={() => { setQ(""); setView("all"); setGroupFilter(null); }}>{t("hubshell.st_clearFilters")}</Button>} />
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
           {shown.map((s) => {
@@ -470,11 +494,11 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <h3 className="truncate text-[15.5px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{s.childName}</h3>
                       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide" style={on ? { background: "var(--green-soft)", color: "#0b6b3a" } : { background: "var(--gold-soft)", color: "#7a5300" }}>
-                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? "var(--green)" : "var(--gold)" }} />{on ? "Active" : "Paused"}
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ background: on ? "var(--green)" : "var(--gold)" }} />{on ? t("hubshell.st_active") : t("hubshell.st_paused")}
                       </span>
                     </div>
                     <div className="mt-1 text-[12.5px] font-semibold text-[var(--ink-2)]">
-                      {loading ? <Skeleton className="inline-block h-3 w-28 align-middle" /> : seenAgo(ins?.lastActive ?? null, now)}
+                      {loading ? <Skeleton className="inline-block h-3 w-28 align-middle" /> : seenAgo(t, locale, ins?.lastActive ?? null, now)}
                     </div>
                     {((groupsOf.get(s.childId)?.length ?? 0) > 0 || s.yearGroup) && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -482,14 +506,14 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
                         {(groupsOf.get(s.childId) ?? []).map((g) => <GroupChip key={g.id} group={g} />)}
                       </div>
                     )}
-                    {tutors.length > 1 && <div data-testid="hub-student-tutor" className="mt-1 text-[11.5px] font-semibold text-[var(--ink-3)]">{s.tutorName ? `Tutor: ${s.tutorName}` : "No tutor assigned"}</div>}
+                    {tutors.length > 1 && <div data-testid="hub-student-tutor" className="mt-1 text-[11.5px] font-semibold text-[var(--ink-3)]">{s.tutorName ? t("hubshell.st_tutorName", { name: s.tutorName }) : t("hubshell.st_noTutor")}</div>}
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {subs.length ? <>{subs.slice(0, 3).map((x) => <SubjectChip key={x} subject={x} />)}{subs.length > 3 && <span className="rounded-full bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)]" title={subs.slice(3).join(", ")}>+{subs.length - 3}</span>}</> : <span className="rounded-full bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)]">All subjects</span>}
+                      {subs.length ? <>{subs.slice(0, 3).map((x) => <SubjectChip key={x} subject={x} />)}{subs.length > 3 && <span className="rounded-full bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)]" title={subs.slice(3).join(", ")}>+{subs.length - 3}</span>}</> : <span className="rounded-full bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-bold text-[var(--ink-2)]">{t("hubshell.st_allSubjects")}</span>}
                     </div>
                   </div>
                   <div className="flex flex-none flex-col items-center gap-1">
                     {loading ? <Skeleton className="h-[56px] w-[56px] !rounded-full" /> : <MiniRing pct={ins?.mastery ?? null} size={56} stroke={6} color={ringColour(ins?.mastery ?? null, config.masteryBands)} />}
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Mastery</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.st_mastery")}</span>
                   </div>
                 </div>
 
@@ -497,28 +521,29 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
                   {loading ? <Skeleton className="h-6 w-40 !rounded-full" /> : (
                     <>
                       {ins?.nextLesson
-                        ? <Badge tone={ins.nextLesson.live ? "green" : "brand"} icon="video">{ins.nextLesson.live ? "Live now" : `Next: ${nextWhen(ins.nextLesson.at, now)}`}</Badge>
-                        : <span className="text-[12px] font-semibold text-[var(--ink-3)]">No lesson booked</span>}
-                      {(ins?.overdue ?? 0) > 0 && <Badge tone="red" icon="warning">{ins!.overdue} overdue</Badge>}
-                      {(ins?.toMark ?? 0) > 0 && <Badge tone="violet" icon="homework">{ins!.toMark} to mark</Badge>}
+                        ? <Badge tone={ins.nextLesson.live ? "green" : "brand"} icon="video">{ins.nextLesson.live ? t("hubshell.st_liveNow") : t("hubshell.st_next", { when: nextWhen(t, locale, ins.nextLesson.at, now) })}</Badge>
+                        : <span className="text-[12px] font-semibold text-[var(--ink-3)]">{t("hubshell.st_noLessonBooked")}</span>}
+                      {(ins?.overdue ?? 0) > 0 && <Badge tone="red" icon="warning">{t("hubshell.st_nOverdue", { n: ins!.overdue })}</Badge>}
+                      {(ins?.toMark ?? 0) > 0 && <Badge tone="violet" icon="homework">{t("hubshell.st_nToMark", { n: ins!.toMark })}</Badge>}
                     </>
                   )}
-                  <span className="ml-auto flex flex-wrap items-center gap-1">
-                    <button type="button" data-testid="hub-student-progress" onClick={() => openProgress(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Open ${s.childName}'s progress`}>Progress <Icon name="chevronRight" size={13} /></button>
-                    {canEdit && <button type="button" data-testid="hub-student-message" onClick={() => openMessage(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Message ${s.childName}`}><Icon name="help" size={13} />Message</button>}
-                    {canEdit && on && <button type="button" data-testid="hub-student-homework" onClick={() => setHomework(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={`Set homework for ${s.childName}`}>Set homework</button>}
+                  <span className="ms-auto flex flex-wrap items-center gap-1">
+                    <button type="button" data-testid="hub-student-progress" onClick={() => openProgress(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={t("hubshell.st_openProgress", { name: s.childName })}>{t("hubshell.st_progress")} <Icon name="chevronRight" size={13} /></button>
+                    {canEdit && <button type="button" data-testid="hub-student-message" onClick={() => openMessage(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={t("hubshell.st_messageName", { name: s.childName })}><Icon name="help" size={13} />{t("hubshell.st_message")}</button>}
+                    {canEdit && on && <button type="button" data-testid="hub-student-homework" onClick={() => setHomework(s)} className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1 rounded-full border border-[var(--line)] px-3 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`} aria-label={t("hubshell.st_setHwFor", { name: s.childName })}>{t("hubshell.st_setHomework")}</button>}
+                    {canEdit && on && <PlanNextWeek target={{ childId: s.childId }} targetName={s.childName} qs={qs} testId="hub-student-plan" onDone={() => refreshStudents?.()} />}
                   </span>
                   {canEdit && (
-                    <span className="-mr-1.5">
-                      <RowMenu label={`Actions for ${s.childName}`} roomy items={[
-                        { label: "Edit details", icon: "edit", disabled: pending, onSelect: () => beginEdit(s) },
-                        { label: on ? "Pause" : "Resume", icon: on ? "pause" : "play", disabled: pending, onSelect: () => act(s.childId, () => put(`/api/learning-hub/students/${s.childId}${qs}`, { active: !on }), "Couldn't update that student") },
-                        { label: "Un-enrol", icon: "close", danger: true, confirmText: "Tap again to un-enrol", disabled: pending, onSelect: () => act(s.childId, () => del(`/api/learning-hub/students/${s.childId}${qs}`), "Couldn't un-enrol that student") },
+                    <span className="-me-1.5">
+                      <RowMenu label={t("hubshell.st_actionsFor", { name: s.childName })} roomy items={[
+                        { label: t("hubshell.st_editDetails"), icon: "edit", disabled: pending, onSelect: () => beginEdit(s) },
+                        { label: on ? t("hubshell.st_pause") : t("hubshell.st_resume"), icon: on ? "pause" : "play", disabled: pending, onSelect: () => act(s.childId, () => put(`/api/learning-hub/students/${s.childId}${qs}`, { active: !on }), t("hubshell.st_updateFail")) },
+                        { label: t("hubshell.st_unenrol"), icon: "close", danger: true, confirmText: t("hubshell.st_unenrolConfirm"), disabled: pending, onSelect: () => act(s.childId, () => del(`/api/learning-hub/students/${s.childId}${qs}`), t("hubshell.st_unenrolFail")) },
                       ]} />
                     </span>
                   )}
                 </div>
-                {s.createdAt && <span className="sr-only">Enrolled {fmtDate(s.createdAt)}</span>}
+                {s.createdAt && <span className="sr-only">{t("hubshell.st_enrolledOn", { date: fmtDate(s.createdAt) })}</span>}
               </li>
             );
           })}
@@ -526,22 +551,22 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
       )}
 
       <EnrolModal open={enrolOpen} onClose={() => setEnrolOpen(false)} tenantId={tenantId} students={students} subjects={subjects} yearGroups={config.yearGroups} qs={qs} tutors={tutors} defaultTutor={defaultTutor} onError={onError}
-        onDone={(name) => { setFlash(`${name} is enrolled — their family can open My Classroom now.`); refresh(); }} />
+        onDone={(name) => { setFlash(t("hubshell.st_enrolledFlash", { name })); refresh(); }} />
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} id="hub-subjects-modal" title={editing ? `Details for ${editing.childName}` : ""}
-        footer={<><Button onClick={() => setEditing(null)} className="!h-[44px]">Cancel</Button><Button variant="primary" disabled={!!busy} onClick={saveDetails} className="!h-[44px]">Save</Button></>}>
+      <Modal open={!!editing} onClose={() => setEditing(null)} id="hub-subjects-modal" title={editing ? t("hubshell.st_detailsFor", { name: editing.childName }) : ""}
+        footer={<><Button onClick={() => setEditing(null)} className="!h-[44px]">{t("hubshell.st_cancel")}</Button><Button variant="primary" disabled={!!busy} onClick={saveDetails} className="!h-[44px]">{t("hubshell.st_save")}</Button></>}>
         <div className="grid gap-5">
           <div>
-            <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Subjects they can see</h3>
+            <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_subjectsTheyCanSee")}</h3>
             <SubjectPicker subjects={subjects} value={chosen} onChange={setChosen} />
           </div>
-          <YearGroupSelect id="hub-edit-year" value={editYear} onChange={setEditYear} options={config.yearGroups} autoNote={editing?.yearGroupAuto && editing.yearGroup ? `now ${editing.yearGroup}` : undefined} />
+          <YearGroupSelect id="hub-edit-year" value={editYear} onChange={setEditYear} options={config.yearGroups} autoNote={editing?.yearGroupAuto && editing.yearGroup ? t("hubshell.st_yearNow", { year: editing.yearGroup }) : undefined} />
           <TutorSelect id="hub-edit-tutor" tutors={tutors} value={editTutor} onChange={setEditTutor} />
           <SupportSection id="hub-edit-support" value={editSupport} onChange={setEditSupport} />
           {groups.length > 0 && (
             <div>
-              <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Groups</h3>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Groups this student is in">
+              <h3 className="mb-2 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hubshell.st_groups")}</h3>
+              <div className="flex flex-wrap gap-2" role="group" aria-label={t("hubshell.st_groupsIn")}>
                 {groups.map((g) => {
                   const on = editGroups.includes(g.id);
                   return (

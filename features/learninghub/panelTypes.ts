@@ -64,7 +64,7 @@ export interface PanelProps {
 }
 
 export interface PanelMeta {
-  key: "home" | "live" | "dashboard" | "diagnostic" | "quizzes" | "homework" | "notes" | "flashcards" | "students" | "questions" | "tools";
+  key: "home" | "live" | "dashboard" | "diagnostic" | "quizzes" | "homework" | "notes" | "flashcards" | "students" | "questions" | "tools" | "games";
   label: string;
   icon: string;
   /** "soon" renders greyed with the blurb (never hidden); flip to "live" when built. */

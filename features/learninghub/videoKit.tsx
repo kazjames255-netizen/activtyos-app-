@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Ico } from "./teachIcons";
 import { FOCUS, tint } from "./kit";
 import type { HubVideo, VideoInput } from "./types";
+import { useT } from "@/lib/i18n/provider";
 
 // YouTube videos on notes, homework and lesson notes (contract §8).
 //
@@ -77,6 +78,7 @@ function Thumb({ id, className = "" }: { id: string; className?: string }) {
 
 // ── tutor: editor ────────────────────────────────────────────────────────────
 export function VideoEditor({ value, onChange, idPrefix = "hub-video", hint }: { value: VideoInput[]; onChange: (v: VideoInput[]) => void; idPrefix?: string; hint?: string }) {
+  const t = useT();
   const [link, setLink] = useState("");
   const [title, setTitle] = useState("");
   const [startTxt, setStartTxt] = useState("");
@@ -97,21 +99,21 @@ export function VideoEditor({ value, onChange, idPrefix = "hub-video", hint }: {
   return (
     <div data-video-editor className="@container">
       {value.length > 0 && (
-        <ul className="mb-3 grid gap-2" aria-label="Videos on this item">
+        <ul className="mb-3 grid gap-2" aria-label={t("hubshell.k_videosOnItem")}>
           {value.map((v, i) => {
             const p = parseYouTube(v.url);
             return (
               <li key={`${v.url}-${i}`} data-video-row className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2">
                 {p ? <Thumb id={p.id} className="w-[72px] flex-none @[380px]:w-[104px] @[520px]:w-[128px]" /> : <span className="grid w-[104px] flex-none place-items-center rounded-xl bg-[var(--panel)] text-[var(--ink-3)]" style={{ aspectRatio: "16 / 9" }}><Ico name="video" size={18} /></span>}
                 <div className="min-w-0 flex-1">
-                  <input value={v.title ?? ""} onChange={(e) => patch(i, { title: e.target.value })} maxLength={120} placeholder="Add a title (optional)" aria-label={`Title for video ${i + 1}`}
+                  <input value={v.title ?? ""} onChange={(e) => patch(i, { title: e.target.value })} maxLength={120} placeholder={t("hubshell.k_addTitleOpt")} aria-label={t("hubshell.k_titleForVideo", { n: i + 1 })}
                     className="min-h-[40px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[13px] font-bold text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-                  <div className="mt-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-3)]"><Ico name="clock" size={12} />{v.start ? `Starts at ${fmtStart(v.start)}` : "Plays from the start"}</div>
+                  <div className="mt-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-3)]"><Ico name="clock" size={12} />{v.start ? t("hubshell.k_startsAt", { time: fmtStart(v.start) }) : t("hubshell.k_playsFromStart")}</div>
                 </div>
                 <div className="flex flex-none flex-col @[420px]:flex-row">
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move video ${i + 1} up`} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 sm:w-10 ${FOCUS}`}><Ico name="chevronDown" size={16} className="rotate-180" /></button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === value.length - 1} aria-label={`Move video ${i + 1} down`} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 sm:w-10 ${FOCUS}`}><Ico name="chevronDown" size={16} /></button>
-                  <button type="button" onClick={() => onChange(value.filter((_, k) => k !== i))} aria-label={`Remove video ${i + 1}`} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] sm:w-10 ${FOCUS}`}><Ico name="trash" size={16} /></button>
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={t("hubshell.k_moveUp", { n: i + 1 })} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 sm:w-10 ${FOCUS}`}><Ico name="chevronDown" size={16} className="rotate-180" /></button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === value.length - 1} aria-label={t("hubshell.k_moveDown", { n: i + 1 })} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 sm:w-10 ${FOCUS}`}><Ico name="chevronDown" size={16} /></button>
+                  <button type="button" onClick={() => onChange(value.filter((_, k) => k !== i))} aria-label={t("hubshell.k_removeVideo", { n: i + 1 })} className={`grid h-11 w-9 place-items-center rounded-lg text-[var(--red)] hover:bg-[var(--red-soft)] sm:w-10 ${FOCUS}`}><Ico name="trash" size={16} /></button>
                 </div>
               </li>
             );
@@ -120,32 +122,32 @@ export function VideoEditor({ value, onChange, idPrefix = "hub-video", hint }: {
       )}
 
       {full ? (
-        <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-[12.5px] font-semibold text-[var(--ink-2)]">That&rsquo;s the maximum of {MAX_VIDEOS} videos here. Remove one to add another.</p>
+        <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.k_maxVideos", { n: MAX_VIDEOS })}</p>
       ) : (
         <div className="rounded-2xl border border-dashed border-[var(--hub-warm-line)] p-3" style={{ background: "var(--hub-warm)" }}>
-          <label htmlFor={`${idPrefix}-link`} className="mb-1.5 flex items-center gap-1.5 text-[12px] font-extrabold text-[var(--ink)]"><Ico name="video" size={14} />Add a YouTube video</label>
+          <label htmlFor={`${idPrefix}-link`} className="mb-1.5 flex items-center gap-1.5 text-[12px] font-extrabold text-[var(--ink)]"><Ico name="video" size={14} />{t("hubshell.k_addYoutube")}</label>
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[200px] flex-1">
-              <Ico name="link" size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-3)]" />
+              <Ico name="link" size={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-[var(--ink-3)]" />
               <input id={`${idPrefix}-link`} value={link} onChange={(e) => setLink(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-                inputMode="url" autoComplete="off" spellCheck={false} placeholder="Paste a YouTube link…" aria-invalid={invalid} aria-describedby={`${idPrefix}-msg`}
-                className={`min-h-[44px] w-full rounded-full border pl-9 pr-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${invalid ? "border-[var(--red)]" : "border-[var(--line)]"}`} />
+                inputMode="url" autoComplete="off" spellCheck={false} placeholder={t("hubshell.k_pasteLink")} aria-invalid={invalid} aria-describedby={`${idPrefix}-msg`}
+                className={`min-h-[44px] w-full rounded-full border ps-9 pe-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${invalid ? "border-[var(--red)]" : "border-[var(--line)]"}`} />
             </div>
           </div>
           <p id={`${idPrefix}-msg`} role={invalid ? "alert" : undefined} className={`mt-1.5 text-[11.5px] font-semibold ${invalid ? "text-[var(--red)]" : "text-[var(--ink-3)]"}`}>
-            {invalid ? "That doesn't look like a YouTube link. Use a youtube.com/watch, youtu.be, /shorts or /embed link." : (hint ?? "Students watch it right here, on the privacy-friendly YouTube player.")}
+            {invalid ? t("hubshell.k_badLink") : (hint ?? t("hubshell.k_watchHint"))}
           </p>
           {parsed && (
             <div data-video-preview className="mt-3 grid gap-3 sm:grid-cols-[200px_minmax(0,1fr)]">
               <Thumb id={parsed.id} />
               <div className="grid content-start gap-2">
-                <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Title (optional)" aria-label="Video title"
+                <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder={t("hubshell.k_titleOpt")} aria-label={t("hubshell.k_videoTitle")}
                   className="min-h-[44px] w-full rounded-lg border border-[var(--line)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-                <input value={startTxt} onChange={(e) => setStartTxt(e.target.value)} placeholder={parsed.start ? `Start at ${fmtStart(parsed.start)}` : "Start at (optional) e.g. 1:30"} aria-label="Start time"
+                <input value={startTxt} onChange={(e) => setStartTxt(e.target.value)} placeholder={parsed.start ? t("hubshell.k_startAt", { time: fmtStart(parsed.start) }) : t("hubshell.k_startAtOpt")} aria-label={t("hubshell.k_startTime")}
                   className="min-h-[44px] w-full rounded-lg border border-[var(--line)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
                 <button type="button" onClick={add} disabled={dup} data-video-add
                   className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-5 text-[13px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`} style={{ background: "linear-gradient(180deg, var(--brand-2), var(--brand))" }}>
-                  <Ico name="plus" size={15} strokeWidth={2.4} />{dup ? "Already added" : "Add video"}
+                  <Ico name="plus" size={15} strokeWidth={2.4} />{dup ? t("hubshell.k_alreadyAdded") : t("hubshell.k_addVideo")}
                 </button>
               </div>
             </div>
@@ -163,10 +165,11 @@ function withAutoplay(embed: string): string {
 }
 
 function Embed({ v, index }: { v: HubVideo; index: number }) {
+  const t = useT();
   const [playing, setPlaying] = useState(false);
   // Trust nothing that isn't exactly the shape the server promises.
   if (!ID_RE.test(v.id) || !EMBED_RE.test(v.embedUrl)) return null;
-  const title = v.title?.trim() || `Video ${index + 1}`;
+  const title = v.title?.trim() || t("hubshell.k_videoN", { n: index + 1 });
   const watchOk = WATCH_RE.test(v.url);
   return (
     <figure data-video-embed className="m-0 min-w-0">
@@ -176,21 +179,21 @@ function Embed({ v, index }: { v: HubVideo; index: number }) {
             sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
             allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen />
         ) : (
-          <button type="button" onClick={() => setPlaying(true)} aria-label={`Play video: ${title}`} data-video-play
+          <button type="button" onClick={() => setPlaying(true)} aria-label={t("hubshell.k_playVideo", { title })} data-video-play
             className={`group absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center transition ${FOCUS}`}
             style={{ background: "radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--gold) 20%, var(--surface)), transparent 60%), linear-gradient(135deg, color-mix(in srgb, var(--brand) 12%, var(--surface)), color-mix(in srgb, var(--brand-2) 22%, var(--surface)))" }}>
             <span className="grid h-16 w-16 place-items-center rounded-full text-white shadow-[var(--shadow)] transition group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100" style={{ background: "linear-gradient(140deg, var(--brand-2), var(--brand))" }}>
               <Ico name="play" size={26} className="translate-x-0.5" />
             </span>
             <span className="max-w-full truncate text-[14px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</span>
-            <span className="text-[11.5px] font-bold text-[var(--ink-2)]">Press play{v.start ? ` · starts at ${fmtStart(v.start)}` : ""}</span>
+            <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubshell.k_pressPlay")}{v.start ? ` · ${t("hubshell.k_startsAtLower", { time: fmtStart(v.start) })}` : ""}</span>
           </button>
         )}
       </div>
       <figcaption className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-[12px]">
         {watchOk && (
           <a href={v.url} target="_blank" rel="noopener noreferrer" className={`inline-flex min-h-[44px] items-center gap-1 rounded-md font-bold text-[var(--brand)] hover:underline sm:min-h-[32px] ${FOCUS}`}>
-            Open on YouTube<Ico name="external" size={13} />
+            {t("hubshell.k_openYoutube")}<Ico name="external" size={13} />
           </a>
         )}
       </figcaption>
@@ -199,26 +202,29 @@ function Embed({ v, index }: { v: HubVideo; index: number }) {
 }
 
 /** The videos of a note / homework / lesson, as a responsive grid of click-to-load players. */
-export function VideoEmbeds({ videos, heading = "Videos", className = "" }: { videos?: HubVideo[] | null; heading?: string | null; className?: string }) {
+export function VideoEmbeds({ videos, heading: headingIn, className = "" }: { videos?: HubVideo[] | null; heading?: string | null; className?: string }) {
+  const t = useT();
+  const heading = headingIn === undefined ? t("hubshell.k_videos") : headingIn;
   const list = (videos ?? []).filter((v) => ID_RE.test(v.id) && EMBED_RE.test(v.embedUrl));
   if (!list.length) return null;
   return (
-    <section aria-label={heading ?? "Videos"} data-video-embeds className={className}>
+    <section aria-label={heading ?? t("hubshell.k_videos")} data-video-embeds className={className}>
       {heading && <div className="mb-2 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]"><Ico name="video" size={14} />{heading}<span className="rounded-full bg-[var(--panel)] px-1.5 py-px text-[11px] text-[var(--ink-2)]">{list.length}</span></div>}
       <div className={`grid gap-4 ${list.length > 1 ? "md:grid-cols-2" : "max-w-[760px]"}`}>
         {list.map((v, i) => <Embed key={`${v.id}-${v.start}-${i}`} v={v} index={i} />)}
       </div>
-      <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]"><Ico name="shield" size={13} className="mt-px" />Plays from YouTube&rsquo;s privacy-enhanced player. Nothing is loaded from YouTube until you press play.</p>
+      <p className="mt-2 flex items-start gap-1.5 text-[11.5px] leading-snug text-[var(--ink-3)]"><Ico name="shield" size={13} className="mt-px" />{t("hubshell.k_privacy")}</p>
     </section>
   );
 }
 
 /** A small "Video" / "2 videos" chip for cards. */
 export function VideoChip({ count, className = "" }: { count: number; className?: string }) {
+  const t = useT();
   if (!count) return null;
   return (
     <span data-video-chip className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-px text-[11px] font-extrabold ${className}`} style={{ background: "var(--violet-soft)", color: "var(--violet)", borderColor: "var(--brand-line)" }}>
-      <Ico name="video" size={11} strokeWidth={2.2} />{count > 1 ? `${count} videos` : "Video"}
+      <Ico name="video" size={11} strokeWidth={2.2} />{count > 1 ? t("hubshell.k_videosN", { n: count }) : t("hubshell.k_video")}
     </span>
   );
 }

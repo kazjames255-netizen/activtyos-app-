@@ -21,7 +21,7 @@ const V = (id: string, title: string, subject: ToolSubject, keyStages: KS, instr
 export const SORT_SETS: SortSet[] = [
   // ---- Science
   S("sci-living", "Living or non-living", "science", [1], "Sort each thing into living or non-living.", ["Living", "Non-living"],
-    [["Dog", 0], ["Oak tree", 0], ["Mushroom", 0], ["Bee", 0], ["Rock", 1], ["Chair", 1], ["Water", 1], ["Plastic bag", 1]], "Living things move, grow, feed, reproduce, sense and respire."),
+    [["Dog", 0], ["Pine tree", 0], ["Mushroom", 0], ["Bee", 0], ["Rock", 1], ["Chair", 1], ["Water", 1], ["Plastic bag", 1]], "Living things move, grow, feed, reproduce, sense and respire."),
   S("sci-vertebrates", "Vertebrate classes", "science", [1, 2], "Put each animal in its vertebrate class.", ["Mammal", "Bird", "Fish", "Reptile", "Amphibian"],
     [["Dolphin", 0], ["Bat", 0], ["Penguin", 1], ["Eagle", 1], ["Salmon", 2], ["Shark", 2], ["Snake", 3], ["Crocodile", 3], ["Frog", 4], ["Newt", 4]], "Bats and dolphins feed milk to their young; penguins are birds that cannot fly."),
   S("sci-plants", "Plant groups", "science", [1, 2], "Which plant group does each plant belong to?", ["Flowering plant", "Conifer", "Fern", "Moss"],

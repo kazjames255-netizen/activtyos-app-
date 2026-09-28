@@ -27,6 +27,13 @@ export const hubLessonApi = Router();
 const notesCol = db.collection("hubNotes");
 const MAX_WARMUP = 12;
 
+// A "studied" signal, independent of the exit quiz: one cheap, idempotent row per (tenant, child, lesson), written once
+// the child has actually gone through the lesson (LessonPlayer reaching its "done" step — see POST /notes/:id/viewed).
+// This is deliberately separate from mastery/attempts: a lesson can show "you've read this" even when it has no quiz,
+// or before/without the quiz being finished (see curriculumApi.ts's `viewedNoteIds`, which reads this collection).
+export const lessonViewsCol = db.collection("hubLessonViews");
+export const lessonViewId = (tenantId: string, childId: string, noteId: string) => `${tenantId}_${childId}_${noteId}`;
+
 interface Ctxed { ctx: HubCtx; child: ChildRef | null; lesson: { warmupQuestionIds?: string[]; quizId?: string | null }; noteId: string }
 
 /** The lesson behind a note id, if THIS caller may read the note (same rules as GET /notes/:id) — else a 404 has been sent. */
@@ -148,4 +155,21 @@ hubLessonApi.post("/notes/:id/warmup-check", async (req, res) => {
       ...(q.explanation ? { explanation: q.explanation } : {}),
     } : {}),
   });
+});
+
+// POST /notes/:id/viewed[?childId=] — "this child has actually gone through this lesson" (LessonPlayer fires it once,
+// on reaching the "done" step — see LessonPlayer.tsx's markViewed). Idempotent: a replay just refreshes `updatedAt`.
+// Family-only (a tutor previewing has no child and nothing to record); never blocks or errors the lesson for the
+// child if it fails — the caller fires-and-forgets this.
+hubLessonApi.post("/notes/:id/viewed", async (req, res) => {
+  const c = await lessonFor(req, res);
+  if (!c) return;
+  if (!c.child) { res.status(400).json({ error: "Which student? Pass ?childId=" }); return; }
+  const now = new Date().toISOString();
+  const id = lessonViewId(c.ctx.tenantId, c.child.childId, c.noteId);
+  await lessonViewsCol.doc(id).set({
+    tenantId: c.ctx.tenantId, franchiseId: c.child.franchiseId, childId: c.child.childId, noteId: c.noteId,
+    viewedAt: now, updatedAt: now,
+  }, { merge: true });
+  res.json({ ok: true });
 });

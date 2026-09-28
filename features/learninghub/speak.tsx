@@ -1,20 +1,28 @@
 "use client";
 
-// Read-aloud (R-2): the browser's own speechSynthesis, en-GB, never auto-plays, stops on unmount / navigation.
+// Read-aloud (R-2): the browser's own speechSynthesis, in the active UI language (en-GB for English), never auto-plays, stops on unmount / navigation.
 // One utterance at a time across the page: starting another (or unmounting) cancels the current one.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useT } from "@/lib/i18n/provider";
 
 const supported = () => typeof window !== "undefined" && "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
 
-/** Speak `text` (en-GB). Returns false when the browser can't. */
+const SPEECH_LANG: Record<string, string> = { en: "en-GB", pl: "pl-PL", ro: "ro-RO", ur: "ur-PK", pa: "pa-IN", bn: "bn-BD", ar: "ar-SA", pt: "pt-PT", es: "es-ES", fr: "fr-FR", cy: "cy-GB" };
+/** The speech language for the active locale (the provider mirrors it on <html lang>). */
+const speechLang = () => SPEECH_LANG[(typeof document !== "undefined" ? document.documentElement.lang : "").split("-")[0] || "en"] ?? "en-GB";
+
+/** Speak `text` in the active UI language. Returns false when the browser can't. */
 export function speakText(text: string, rate = 0.9, onEnd?: () => void): boolean {
   try {
     if (!supported()) return false;
     const synth = window.speechSynthesis;
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-GB"; u.rate = rate;
-    const voice = synth.getVoices().find((v) => v.lang === "en-GB" || v.lang === "en_GB");
+    const lang = speechLang();
+    u.lang = lang; u.rate = rate;
+    const norm = (l: string) => l.replace("_", "-").toLowerCase();
+    const voices = synth.getVoices();
+    const voice = voices.find((v) => norm(v.lang) === lang.toLowerCase()) ?? voices.find((v) => norm(v.lang).split("-")[0] === lang.split("-")[0].toLowerCase());
     if (voice) u.voice = voice;
     u.onend = () => onEnd?.(); u.onerror = () => onEnd?.();
     synth.speak(u);
@@ -39,11 +47,13 @@ export function useSpeak() {
 }
 
 /** A speaker button (44px+). Toggles: tap to hear `text`, tap again to stop. Renders nothing when speech is unavailable. */
-export function SpeakButton({ text, label = "Read aloud", size = 44, className = "", testId }: { text: string; label?: string; size?: number; className?: string; testId?: string }) {
+export function SpeakButton({ text, label: labelIn, size = 44, className = "", testId }: { text: string; label?: string; size?: number; className?: string; testId?: string }) {
+  const tr = useT();
+  const label = labelIn ?? tr("hubshell.k_readAloud");
   const { available, speaking, say, stop } = useSpeak();
   if (!available || !text.trim()) return null;
   return (
-    <button type="button" data-testid={testId ?? "hub-read-aloud"} aria-label={speaking ? `Stop reading: ${label}` : label} aria-pressed={speaking}
+    <button type="button" data-testid={testId ?? "hub-read-aloud"} aria-label={speaking ? tr("hubshell.k_stopReading", { label }) : label} aria-pressed={speaking}
       onClick={(e) => { e.stopPropagation(); if (speaking) stop(); else say(text); }}
       style={{ minWidth: Math.max(44, size), minHeight: Math.max(44, size) }}
       className={`inline-flex flex-none items-center justify-center rounded-full border-2 border-[var(--brand-line)] bg-[var(--surface)] text-[20px] text-[var(--brand)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand)] focus-visible:outline ${className}`}>

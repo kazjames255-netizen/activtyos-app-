@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { HelpToolId } from "../remotesync/HelpTools";
 
 export type ToolSubject = "maths" | "english" | "science" | "languages" | "humanities" | "cross";
+/** English fallback names. UI must show the translated name: subjectLabel(t, s) in ./toolTextB. */
 export const SUBJECT_LABEL: Record<ToolSubject, string> = { maths: "Maths", english: "English", science: "Science", languages: "Languages", humanities: "Humanities", cross: "Every subject" };
 export const SUBJECT_ORDER: ToolSubject[] = ["maths", "english", "science", "languages", "humanities", "cross"];
 export type KeyStage = 1 | 2 | 3 | 4 | 5;

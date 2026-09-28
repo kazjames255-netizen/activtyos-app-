@@ -3,6 +3,7 @@ import { withQs } from "../../teachKit";
 import { fmtKb, MAX_IMAGE_BYTES } from "../../shared-assess/imageUtil";
 import { drawPage, contentBounds, ImageCache, type Env, type Paper } from "./render";
 import type { Page } from "./model";
+import { bt } from "./boardI18n";
 
 // Export: render a page to a PNG (small enough for the hub's 750 KB upload limit),
 // download it, or save it into the lesson's notes so students can revisit the board.
@@ -53,7 +54,7 @@ export async function pageToBlob(src: ExportSource, page: Page, label?: string):
     }
     scale *= 0.78;
   }
-  throw new Error(`This page is too detailed to save as a picture (limit ${fmtKb(MAX_IMAGE_BYTES)}). Try zooming out or clearing some of it.`);
+  throw new Error(bt("bErrTooDetailed", "This page is too detailed to save as a picture (limit {size}). Try zooming out or clearing some of it.", { size: fmtKb(MAX_IMAGE_BYTES) }));
 }
 
 export function downloadBlob(blob: Blob, name: string) {
@@ -88,9 +89,9 @@ export interface SaveResult { noteId: string; title: string; pages: number }
 /** Board → private hub image(s) → a note titled "Board — <lesson> · <date>" → attached to the lesson. */
 export async function saveToLessonNotes(o: SaveOpts): Promise<SaveResult> {
   const topicId = o.topicId || o.fallbackTopicId;
-  if (!topicId) throw new Error("Add a topic in the Lessons tab first — every lesson is filed under one.");
-  if (!o.pages.length) throw new Error("There is nothing on the board to save yet.");
-  if (o.pages.length > 10) throw new Error("A lesson holds up to 10 pictures — save fewer pages at a time.");
+  if (!topicId) throw new Error(bt("bErrNoTopic", "Add a topic in the Lessons tab first — every lesson is filed under one."));
+  if (!o.pages.length) throw new Error(bt("bErrNothing", "There is nothing on the board to save yet."));
+  if (o.pages.length > 10) throw new Error(bt("bErrMax10", "A lesson holds up to 10 pictures — save fewer pages at a time."));
   const atts: { id: string; name: string }[] = [];
   for (let i = 0; i < o.pages.length; i++) {
     const { blob, ext } = await pageToBlob(o.src, o.pages[i]!.page, o.pages[i]!.label);

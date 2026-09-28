@@ -2,6 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import { FOCUS } from "./teachKit";
+import { useT } from "@/lib/i18n/provider";
 
 // "Mine / Everyone" — the per-tutor view for a business with more than one tutor (F11). A student carries the tutor
 // who teaches them and a lesson the tutor who scheduled it (`tutorUid`); a tutor sees just their own by default and can
@@ -27,6 +28,7 @@ export function useScope(fallback: Scope): [Scope, (s: Scope) => void] {
 }
 
 export function ScopeToggle({ scope, onChange, mine, all, what }: { scope: Scope; onChange: (s: Scope) => void; mine: number; all: number; what: string }) {
+  const tr = useT();
   const opt = (v: Scope, label: string, n: number) => (
     <button key={v} type="button" aria-pressed={scope === v} data-testid={`hub-scope-${v}`} onClick={() => onChange(v)}
       className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[12.5px] font-extrabold transition ${FOCUS} ${scope === v ? "text-white" : "text-[var(--ink-2)] hover:text-[var(--ink)]"}`}
@@ -35,8 +37,8 @@ export function ScopeToggle({ scope, onChange, mine, all, what }: { scope: Scope
     </button>
   );
   return (
-    <div role="group" aria-label={`Show ${what}`} className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      {opt("mine", `My ${what}`, mine)}{opt("all", "Everyone", all)}
+    <div role="group" aria-label={tr("hubshell.k_showWhat", { what })} className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {opt("mine", tr("hubshell.k_myWhat", { what }), mine)}{opt("all", tr("hubshell.k_everyone"), all)}
     </div>
   );
 }

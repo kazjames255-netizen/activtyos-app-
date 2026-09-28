@@ -27,17 +27,20 @@ me.get("/", async (req, res) => {
   const auth = req.auth!;
   // First load after a verified sign-in email change: move the records keyed
   // on the old address across (lib/emailSync; a no-op otherwise).
-  await syncAccountEmail(req).catch((e) => console.error("[me] email sync failed:", (e as Error).message));
+  // The email sync, the tenant + library reads and the users doc are independent: start them TOGETHER (they used to run one after another —
+  // three round trips to Firestore on every page load's very first request, which everything else waits behind).
+  const syncP = syncAccountEmail(req).catch((e) => console.error("[me] email sync failed:", (e as Error).message));
+  const tenantP = auth.tenantId ? Promise.all([db.collection("tenants").doc(auth.tenantId).get(), db.collection("libraries").doc(auth.tenantId).get()]) : null;
+  const userP = db.collection("users").doc(req.user!.uid).get();
+  tenantP?.catch(() => undefined); userP.catch(() => undefined); // awaited below; never an unhandled rejection while the sync is still running
+  await syncP;
   let tenantName: string | null = null;
   let displayName: string | null = null;
   let logoUrl: string | null = null;
   let brandColor: string | null = null;
   let tenantPlan: string | null = null;
-  if (auth.tenantId) {
-    const [t, lib] = await Promise.all([
-      db.collection("tenants").doc(auth.tenantId).get(),
-      db.collection("libraries").doc(auth.tenantId).get(),
-    ]);
+  if (tenantP) {
+    const [t, lib] = await tenantP;
     // Prefer the business name the operator set in Onboarding/Setup (settings.billing.businessName)
     // over the tenant doc's name, so editing it updates the portal brand immediately.
     const libSettings = (lib.data()?.settings as { billing?: { businessName?: string }; providerName?: string } | undefined);
@@ -54,7 +57,7 @@ me.get("/", async (req, res) => {
     brandColor = ((lib.data()?.settings as { brandColor?: string } | undefined)?.brandColor) || null;
   }
   // The parent's postcode, captured at signup, so the browse can locate them.
-  const userSnap = await db.collection("users").doc(req.user!.uid).get();
+  const userSnap = await userP;
   const postcode = (userSnap.data()?.postcode as string | undefined) ?? null;
   // The PERSON's name (not the business) — dashboards greet by first name.
   const name = ((userSnap.data()?.name as string | undefined) || req.user!.name || "").trim();

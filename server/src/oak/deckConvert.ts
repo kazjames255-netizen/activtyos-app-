@@ -645,8 +645,41 @@ function readSteps(slide: N): Map<string, ShapeAnim> {
   return m;
 }
 
+/** Converter clean-up for FUTURE imports (mirrors the render-time normaliser in features/learninghub/lesson/slides/normalize.ts, which handles decks already stored):
+ *  identical text re-emitted in the same spot is dropped, stacked frames (different text, same box, later clicks, no recorded exit) get an exit on the next
+ *  frame's click, and source fonts under 8pt are lifted to 8pt (the renderer floors at 9pt-equivalent anyway). */
+function tidyStacks(els: CEl[]): void {
+  const txt = (e: CEl) => (e.k === "text" ? e.paras.map((p) => p.runs.map((r) => r.t).join("")).join("\n").replace(/\s+/g, " ").trim().toLowerCase() : "");
+  const iou = (a: CEl, b: CEl) => {
+    const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    if (w <= 0 || h <= 0) return 0;
+    const i = w * h; return i / (a.w * a.h + b.w * b.h - i);
+  };
+  const pAnim = (e: CEl) => e.k === "text" && e.paras.some((p) => p.step || p.until);
+  const drop = new Set<CEl>();
+  const T = els.filter((e) => e.k === "text" && txt(e));
+  for (let a = 0; a < T.length; a++) for (let b = a + 1; b < T.length; b++) {
+    const A = T[a]!, B = T[b]!;
+    if (drop.has(A) || drop.has(B) || txt(A) !== txt(B) || (A.until ?? 0) !== (B.until ?? 0) || pAnim(A) || pAnim(B) || iou(A, B) < 0.8) continue;
+    drop.add((B.step ?? 0) < (A.step ?? 0) ? A : B);
+  }
+  const live = T.filter((e) => !drop.has(e) && !e.until && !pAnim(e));
+  const used = new Set<CEl>();
+  for (const seed of live) {
+    if (used.has(seed)) continue;
+    const grp = live.filter((t) => !used.has(t) && iou(seed, t) >= 0.6);
+    if (grp.length < 2 || new Set(grp.map((t) => t.step ?? 0)).size < 2 || !grp.some((t) => (t.step ?? 0) > 0)) continue;
+    grp.forEach((t) => used.add(t));
+    const order = [...grp].sort((p, q) => (p.step ?? 0) - (q.step ?? 0));
+    for (let k = 0; k < order.length - 1; k++) { const nx = order.slice(k + 1).find((t) => (t.step ?? 0) > (order[k]!.step ?? 0)); if (nx) order[k]!.until = nx.step; }
+  }
+  for (const e of els) if (e.k === "text") for (const p of e.paras) for (const r of p.runs) if (r.t.trim() && r.size < 8) r.size = 8;
+  if (drop.size) for (let i = els.length - 1; i >= 0; i--) if (drop.has(els[i]!)) els.splice(i, 1);
+}
+
 /** Keep every value inside what canvasSchema.ts accepts (Oak decks contain off-slide shapes, 60-click builds…): clamp, never drop. */
 function clampToSchema(els: CEl[]): void {
+  tidyStacks(els);
   const cl = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
   const st = (v: number | undefined) => (v === undefined ? undefined : cl(Math.round(v), 1, 40));
   for (const e of els) {

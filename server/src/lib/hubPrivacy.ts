@@ -33,7 +33,12 @@ export const HUB_COLLECTION_PRIVACY: Record<string, { how: "delete" | "scrub" | 
   hubFamilyInvites: { how: "scrub", note: "childIds + childNames" },
   hubBoards: { how: "scrub", note: "child's drawn elements (cid) and their image docs" },
   hubHomework: { how: "scrub", note: "assignedChildIds" },
+  hubDigestLog: { how: "delete", note: "childId; the sent-log of parent digest / nudge emails (no content, ids + times only)" },
+  hubDigestPrefs: { how: "scrub", note: "a parent's email opt-outs per provider (holds the parent's email): removed once the parent has no enrolment left with that provider" },
   hubToolStates: { how: "delete", note: "ownerKey == childId, ownerType child" },
+  hubGameSessions: { how: "delete", note: "childId; a run: seed + plan + the re-simulated result" },
+  hubFactState: { how: "delete", note: "childId; per-fact ease / interval / speed / wrong answers (times tables)" },
+  hubGameProfile: { how: "delete", note: "childId; pinned tables, personal bests, plays today" },
   hubAssessments: { how: "none", note: "tutor content" },
   hubBoardTemplates: { how: "none", note: "never carries a student's work" },
   hubFlashcards: { how: "none", note: "tutor content" },
@@ -58,7 +63,7 @@ const plain = (d: Doc) => ({ id: d.id, ...d.data() });
 export async function exportChildLearning(uid: string, childIds: string[]): Promise<Record<string, unknown[]>> {
   const kids = new Set(childIds);
   const arr = async (col: string, f: string, c: string[]) => (await db.collection(col).where(f, "array-contains-any", c).get()).docs;
-  const [enrol, submissions, reviews, attempts, mastery, lessons, doubts, assignments, groups, invites, boards, homework, toolStates] = await Promise.all([
+  const [enrol, submissions, reviews, attempts, mastery, lessons, doubts, assignments, digestLog, groups, invites, boards, homework, toolStates] = await Promise.all([
     db.collection("hubEnrolments").where("parentUid", "==", uid).get(),
     byChildren("hubSubmissions", childIds),
     byChildren("hubFlashcardReviews", childIds),
@@ -67,13 +72,16 @@ export async function exportChildLearning(uid: string, childIds: string[]): Prom
     Promise.all(chunks(childIds).map((c) => db.collection("hubLessons").where("childIds", "array-contains-any", c).get())).then((qs) => qs.flatMap((q) => q.docs)),
     byChildren("hubDoubts", childIds),
     byChildren("hubFlashcardAssignments", childIds),
+    byChildren("hubDigestLog", childIds),
     Promise.all(chunks(childIds).map((c) => arr("hubGroups", "childIds", c))).then((x) => x.flat()),
     Promise.all(chunks(childIds).map((c) => arr("hubFamilyInvites", "childIds", c))).then((x) => x.flat()),
     Promise.all(chunks(childIds).map((c) => arr("hubBoards", "childIds", c))).then((x) => x.flat()),
     Promise.all(chunks(childIds).map((c) => arr("hubHomework", "assignedChildIds", c))).then((x) => x.flat()),
     Promise.all(chunks(childIds).map((c) => db.collection("hubToolStates").where("ownerKey", "in", c).get())).then((qs) => qs.flatMap((q) => q.docs)),
   ]);
+  const [gameSessions, gameFacts, gameProfiles] = await Promise.all([byChildren("hubGameSessions", childIds), byChildren("hubFactState", childIds), byChildren("hubGameProfile", childIds)]);
   const emails = [...new Set(enrol.docs.map((d) => String(d.get("parentEmail") ?? "").trim().toLowerCase()).filter(Boolean))];
+  const prefDocs = (await Promise.all(emails.map((e) => db.collection("hubDigestPrefs").where("email", "==", e).get()))).flatMap((q) => q.docs); // "hubDigestPrefs"
   const bell = (await Promise.all(emails.map((e) => db.collection("notifications").where("email", "==", e).where("category", "==", "learning").get()))).flatMap((q) => q.docs);
   const uniq = <T extends { id: string }>(xs: T[]) => [...new Map(xs.map((x) => [x.id, x])).values()];
   return {
@@ -126,6 +134,7 @@ export async function exportChildLearning(uid: string, childIds: string[]): Prom
       };
     }),
     learningFlashcardAssignments: assignments.map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, childId: x.childId, topicId: x.topicId, assignedAt: x.assignedAt }; }),
+    learningEmailLog: digestLog.map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, childId: x.childId, kind: x.kind, at: x.at }; }),
     learningGroups: uniq(groups).map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, name: x.name, childIds: (x.childIds as string[]).filter((c) => kids.has(c)) }; }),
     learningInvites: uniq(invites).map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, forName: x.forName ?? null, claimedAt: x.claimedAt ?? null, childIds: ((x.childIds as string[]) ?? []).filter((c) => kids.has(c)) }; }),
     // Whiteboards: only what THEIR child drew (element type and time, not the tutor's or classmates' marks).
@@ -136,6 +145,8 @@ export async function exportChildLearning(uid: string, childIds: string[]): Prom
     }),
     learningHomeworkAssignments: uniq(homework).map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, title: x.title, instructions: x.instructions ?? "", dueAt: x.dueAt, setBy: x.createdByName ?? null, createdAt: x.createdAt }; }),
     learningToolStates: toolStates.filter((d) => d.get("ownerType") === "child").map((d) => ({ id: d.id, tenantId: d.get("tenantId"), toolId: d.get("toolId"), contextType: d.get("contextType"), contextId: d.get("contextId"), state: d.get("state") ?? null, updatedAt: d.get("updatedAt") ?? null })),
+    learningGames: [{ runs: gameSessions.map((d) => { const x = d.data(); return { id: d.id, tenantId: x.tenantId, childId: x.childId, gameId: x.gameId, startedAt: x.startedAt, finishedAt: x.finishedAt ?? null, mode: x.cfg?.mode, answered: x.summary?.answered ?? null, correct: x.summary?.correct ?? null, fish: x.summary?.fish ?? null }; }), facts: gameFacts.map(plain), profiles: gameProfiles.map(plain) }],
+    learningEmailPrefs: prefDocs.map((d) => ({ id: d.id, tenantId: d.get("tenantId"), digest: d.get("digest") ?? null, nudge: d.get("nudge") ?? null, updatedAt: d.get("updatedAt") ?? null })),
     learningNotifications: uniq(bell).map((d) => { const n = d.data(); return { id: d.id, tenantId: n.tenantId, title: n.title, body: n.body, at: n.at }; }),
   };
 }
@@ -160,7 +171,7 @@ export async function eraseChildLearning(childId: string): Promise<void> {
   // Learn who to look for in the bell BEFORE the enrolments (which carry the parent's email) and doubts go.
   const parentEmails = [...new Set((await db.collection("hubEnrolments").where("childId", "==", childId).get()).docs.map((d) => String(d.get("parentEmail") ?? "").trim().toLowerCase()).filter(Boolean))];
   const doubtIds = (await db.collection("hubDoubts").where("childId", "==", childId).get()).docs.map((d) => d.id);
-  for (const col of ["hubEnrolments", "hubSubmissions", "hubFlashcardReviews", "hubAttempts", "hubMastery", "hubDoubts", "hubFlashcardAssignments"]) await del(col);
+  for (const col of ["hubEnrolments", "hubSubmissions", "hubFlashcardReviews", "hubAttempts", "hubMastery", "hubDoubts", "hubFlashcardAssignments", "hubDigestLog", "hubGameSessions", "hubFactState", "hubGameProfile"]) await del(col);
   // Bell entries about this child: a tutor alert about one of their questions (ref = the doubt id), and the family's
   // own learning alerts whose deep link is for this child alone (`child=<id>`; multi-child alerts name several kids
   // and are left - see 11-open-questions.md).
@@ -171,6 +182,13 @@ export async function eraseChildLearning(childId: string): Promise<void> {
     bellDocs.push(...q.docs.filter((d) => String(d.get("href") ?? "").includes(`child=${childId}`)));
   }
   for (const part of chunks([...new Map(bellDocs.map((d) => [d.id, d])).values()], 400)) { const b = db.batch(); for (const d of part) b.delete(d.ref); await b.commit(); }
+  // The parent's email opt-out rows (they hold the address): drop each one once that parent has no enrolment left with the provider.
+  for (const e of parentEmails) {
+    for (const p of (await db.collection("hubDigestPrefs").where("email", "==", e).get()).docs) {
+      const left = await db.collection("hubEnrolments").where("tenantId", "==", p.get("tenantId")).where("parentEmail", "==", e).limit(1).get();
+      if (left.empty) await p.ref.delete();
+    }
+  }
   forgetEnrolments(); // the parent-enrolment cache must not keep granting hub access to an erased child
 
   // Shared docs: take the child out of them rather than deleting the tutor's lesson / homework.

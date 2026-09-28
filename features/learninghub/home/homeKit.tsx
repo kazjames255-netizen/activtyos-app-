@@ -6,6 +6,7 @@ import { FOCUS, Icon, Skeleton, type IconName } from "../kit";
 import { DISPLAY, TONES, type Tone } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { initialsOf } from "./homeLib";
+import { useH } from "./homeI18n";
 
 // Building blocks for the Home tab. Tokens only (var(--…)); motion is opt-out via
 // prefers-reduced-motion. Same primitives as the rest of the hub (kit.tsx).
@@ -81,8 +82,8 @@ export function Stack({ names, max = 4, size = 30 }: { names: string[]; max?: nu
   const more = names.length - shown.length;
   return (
     <span className="inline-flex items-center" aria-hidden>
-      {shown.map((n, i) => <span key={n + i} style={{ marginLeft: i ? -size * 0.28 : 0 }}><Person name={n} size={size} ring /></span>)}
-      {more > 0 && <span className="grid place-items-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-2)]" style={{ width: size, height: size, marginLeft: -size * 0.28, boxShadow: "0 0 0 2px var(--surface)" }}>+{more}</span>}
+      {shown.map((n, i) => <span key={n + i} style={{ marginInlineStart: i ? -size * 0.28 : 0 }}><Person name={n} size={size} ring /></span>)}
+      {more > 0 && <span className="grid place-items-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-2)]" style={{ width: size, height: size, marginInlineStart: -size * 0.28, boxShadow: "0 0 0 2px var(--surface)" }}>+{more}</span>}
     </span>
   );
 }
@@ -124,11 +125,12 @@ export function BigButton({ children, onClick, icon, variant = "brand", classNam
 
 /** A quiet inline note when one part of Home couldn't load (the rest still shows). */
 export function PartError({ what, message, onRetry }: { what: string; message?: string; onRetry?: () => void }) {
+  const { t } = useH();
   return (
     <div role="status" className="flex flex-wrap items-center gap-2 rounded-2xl border border-dashed px-3.5 py-3 text-[12.5px] font-semibold" style={{ borderColor: "var(--red-line)", background: "var(--red-soft)", color: "var(--ink)" }}>
       <Icon name="warning" size={15} className="text-[var(--red)]" />
-      <span className="min-w-0 flex-1">Couldn&apos;t load {what}{message ? ` — ${message}` : ""}.</span>
-      {onRetry && <button type="button" onClick={onRetry} className={`min-h-[44px] lg:min-h-[36px] rounded-full px-3 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>Try again</button>}
+      <span className="min-w-0 flex-1">{message ? t("hubshell.hm_couldntLoadMsg", { what, message }) : t("hubshell.hm_couldntLoad", { what })}</span>
+      {onRetry && <button type="button" onClick={onRetry} className={`min-h-[44px] lg:min-h-[36px] rounded-full px-3 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>{t("hubshell.hm_tryAgain")}</button>}
     </div>
   );
 }
@@ -178,9 +180,10 @@ export function Flame({ size = 56, lit = true, n }: { size?: number; lit?: boole
 
 /** Seven dots for the last seven days (oldest first); today is ringed. */
 export function WeekDots({ dots }: { dots: { day: number; letter: string; active: boolean; today: boolean }[] }) {
+  const { t } = useH();
   const on = dots.filter((d) => d.active).length;
   return (
-    <div role="img" aria-label={`Active on ${on} of the last 7 days`} className="flex items-end gap-1.5">
+    <div role="img" aria-label={t("hubshell.hm_activeOn7", { n: on })} className="flex items-end gap-1.5">
       {dots.map((d) => (
         <span key={d.day} className="flex flex-col items-center gap-1">
           <span className="grid h-[18px] w-[18px] place-items-center rounded-full transition-colors" style={{ background: d.active ? "#fff" : "rgba(255,255,255,.16)", boxShadow: d.today ? "0 0 0 2px rgba(255,255,255,.55)" : undefined, color: "var(--brand-strong)" }}>

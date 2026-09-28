@@ -1,6 +1,7 @@
 // Pure logic for the curriculum map: which colour a cell is, which year columns to show, the headline numbers.
 // No React, no fetch — selftest-covered (cells.selftest.ts).
 
+import { useT } from "@/lib/i18n/provider";
 import { SUBJECT_PALETTE } from "../subjectColour";
 
 export type Status = "gap" | "thin" | "covered";
@@ -10,8 +11,12 @@ export type CellKind = "covered" | "thin" | "gap" | "extra" | "na" | "done" | "a
 export interface Cell { kind: CellKind; count: number; done: number; /** the key-stage span this cell was judged as part of (tutor view) */ span: { from: number; to: number; lessons: number } | null }
 
 export const GROUP_ORDER = ["maths", "english", "science", "languages"] as const;
-export const GROUP_LABEL: Record<string, string> = { maths: "Maths", english: "English", science: "Science", languages: "Languages" };
-export const yearLabel = (y: number) => `Year ${y}`;
+/** Translator function shape (from useT()). */
+export type Tr = (key: string, vars?: Record<string, string | number>) => string;
+/** i18n KEYS of the four subject groups. */
+export const GROUP_KEY: Record<string, string> = { maths: "hublessons.grpMaths", english: "hublessons.grpEnglish", science: "hublessons.grpScience", languages: "hublessons.grpLanguages" };
+export const groupLabel = (g: string, t: Tr) => (GROUP_KEY[g] ? t(GROUP_KEY[g]!) : g);
+export const yearLabel = (y: number, t: Tr) => t("hublessons.yearN", { n: y });
 
 const strandHash = (s: string) => [...s].reduce((a, c) => (Math.imul(a, 31) + c.charCodeAt(0)) >>> 0, 11);
 /** A few NC strand labels are a generic bucket, not a real grouping (primary science files every topic under the
@@ -78,13 +83,12 @@ export function byStrand(areas: MapArea[]): [string, MapArea[]][] {
   return out;
 }
 
-export const cellLabel = (a: MapArea, year: number, c: Cell, mode: "tutor" | "child"): string => {
-  const head = `${a.area}, ${yearLabel(year)}`;
-  if (mode === "child") return c.kind === "na" ? `${head}: nothing yet` : c.kind === "todo" ? `${head}: not started yet` : `${head}: ${c.done} of ${c.count} finished`;
-  if (c.kind === "na") return `${head}: not part of the curriculum this year, no lessons`;
-  const n = `${c.count} ${c.count === 1 ? "lesson" : "lessons"}`;
-  const state = c.kind === "gap" ? "a gap — no lessons" : c.kind === "thin" ? "thin — only a few lessons" : c.kind === "covered" ? "covered" : "extra, beyond the curriculum for this year";
-  return `${head}: ${n}, ${state}`;
+export const cellLabel = (a: MapArea, year: number, c: Cell, mode: "tutor" | "child", t: Tr): string => {
+  const head = `${a.area}, ${yearLabel(year, t)}`;
+  if (mode === "child") return c.kind === "na" ? t("hublessons.clNothingYet", { head }) : c.kind === "todo" ? t("hublessons.clNotStarted", { head }) : t("hublessons.clFinished", { head, done: c.done, count: c.count });
+  if (c.kind === "na") return t("hublessons.clNa", { head });
+  const state = c.kind === "gap" ? t("hublessons.clGap") : c.kind === "thin" ? t("hublessons.clThin") : c.kind === "covered" ? t("hublessons.ccWordCovered") : t("hublessons.clExtra");
+  return t("hublessons.clTutor", { head, n: c.count, state });
 };
 
 // ---- Year-first view (tutor): pick a year, see ONLY the areas the curriculum expects in it -------------------------------------------

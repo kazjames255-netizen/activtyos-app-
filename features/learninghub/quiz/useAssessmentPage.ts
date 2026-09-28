@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { get } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { errMsg } from "../types";
+import { useHubI18n } from "../family/hubT";
 import { hubPath, type Assessment, type AssessType } from "../shared-assess/api";
 
 // SCALE: a provider's library can hold thousands of papers (the Oak import has 8.5k), so the tutor's list is never
@@ -38,6 +39,7 @@ export const PAGE = 40;
 const MAX_KEEP = 400;
 
 export function useAssessmentPage(qs: string, query: AssessmentQuery, onError?: (m: string) => void, enabled = true) {
+  const { t } = useHubI18n();
   const [items, setItems] = useState<Assessment[]>([]);
   const [total, setTotal] = useState(0);
   const [facets, setFacets] = useState<AssessmentFacets | null>(null);
@@ -66,7 +68,7 @@ export function useAssessmentPage(qs: string, query: AssessmentQuery, onError?: 
         count.current = more ? count.current + r.items.length : Math.max(PAGE, r.items.length);
         setTotal(r.total); setNext(r.nextCursor); setFacets(r.facets); setLoaded(true); setError(null);
       })
-      .catch((e) => { if (mine === seq.current) { const m = errMsg(e, "Couldn't load the quizzes"); setError(m); setLoaded(true); onError?.(m); } })
+      .catch((e) => { if (mine === seq.current) { const m = errMsg(e, t("hubfam.qzLoadQuizzesFail")); setError(m); setLoaded(true); onError?.(m); } })
       .finally(() => { if (mine === seq.current) setLoading(false); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, enabled]);

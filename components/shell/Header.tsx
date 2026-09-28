@@ -21,6 +21,7 @@ import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 import { LanguageSelector } from "@/components/i18n/LanguageSelector";
 import { useT } from "@/lib/i18n/provider";
+import { useLbl } from "@/features/learninghub/hubLabel";
 
 // Shared pill for the top-bar controls — the marketing site's ghost button:
 // transparent on the navy bar with a hairline outline, turning pink on hover.
@@ -106,6 +107,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   // anywhere, not just the Communication group in the sidebar.
   // The provider can switch Messaging / Browse off (Setup → Customer area /
   // Features). Operators lose the Messages tab when they turn Messages off.
+  const hubLbl = useLbl();
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
   const [commOpen, setCommOpen] = useState(false);
@@ -123,6 +125,9 @@ export function Header({ portal }: { portal: PortalKey }) {
           ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : messageLabel }] : []),
           ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: t("header.browse"), icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: "Find & book activities" }] : []),
           { view: "bookings", href: "/custdash/bookings", label: t("header.myBookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Your bookings" },
+          // M9 (product review): a family enrolled in the Learning Hub lands on Browse, so the hub is one tap away in the top bar too
+          // (it was sidebar-only, inside a collapsed group). Only when the family really has access (useCustomerArea).
+          ...(customerArea.learninghub ? [{ view: "learninghub", href: "/custdash/learninghub", label: hubLbl("Learning Hub"), icon: BOOK, wide: false, badge: 0, accent: "#2f6bd8", accentLight: "#5b9bff", tip: hubLbl("Learning Hub") }] : []),
           // Shown only when the provider runs a membership programme (gated in
           // useCustomerArea). Given a fancy gold treatment so it stands out.
           ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: t("header.memberships"), icon: STAR, wide: false, badge: 0, fancy: true }] : []),
@@ -246,12 +251,12 @@ export function Header({ portal }: { portal: PortalKey }) {
               <button
                 type="button"
                 onClick={() => setCommOpen((o) => !o)}
-                title="Contact — newsfeed, messages and email"
+                title={t("chrome.contactTip")}
                 className={`relative inline-flex items-center gap-1.5 text-[14.5px] transition-colors duration-150 hover:text-[var(--brand)] ${commActive || commOpen ? "font-extrabold" : "font-semibold"}`}
                 style={{ color: commActive || commOpen ? "var(--brand)" : "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
-                <span className="hidden truncate sm:inline">Contact</span>
+                <span className="hidden truncate sm:inline">{t("chrome.contact")}</span>
                 <span className="flex-none text-[9px] leading-none" aria-hidden>▼</span>
                 {unread > 0 && (
                   <span className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
@@ -259,7 +264,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               </button>
               {commOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
-                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Contact</div>
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("chrome.contact")}</div>
                   {commItems.map((it) => {
                     const on = it.view === view;
                     return (
@@ -466,6 +471,9 @@ const SEARCH = (
 );
 const CALENDAR = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="6" width="18" height="15" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+);
+const BOOK = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z" /><path d="M4 19V5.5M8 7h8" /></svg>
 );
 const STAR = (
   <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z" /></svg>

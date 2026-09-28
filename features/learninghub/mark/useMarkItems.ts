@@ -7,6 +7,7 @@ import { hubPath, type AttemptRow } from "../shared-assess/api";
 import { useAssessmentPage } from "../quiz/useAssessmentPage";
 import type { InboxRow } from "../homework/hwTypes";
 import { withQs } from "../teachKit";
+import { useH } from "../home/homeI18n";
 import type { Student } from "../types";
 
 // R-2 One Mark queue: the three existing queues (homework hand-ins, quiz written answers, starting-quiz written answers) read from
@@ -20,9 +21,11 @@ export interface MarkItem {
   late?: boolean; detail?: string;
   hw?: InboxRow; attempt?: AttemptRow;
 }
-export const KIND_LABEL: Record<MarkKind, string> = { homework: "Homework", quiz: "Quiz answers", starting: "Starting quiz" };
+/** Catalogue keys (hubshell.*) for each kind's label — resolve with t() at render. */
+export const KIND_LABEL: Record<MarkKind, string> = { homework: "hubshell.hm_kindHomework", quiz: "hubshell.hm_kindQuiz", starting: "hubshell.hm_kindStarting" };
 
 export function useMarkItems(qs: string, students: Student[], enabled = true) {
+  const { t, locale } = useH();
   const [inbox, setInbox] = useState<InboxRow[] | null>(null);
   const [waiting, setWaiting] = useState<AttemptRow[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -46,14 +49,14 @@ export function useMarkItems(qs: string, students: Student[], enabled = true) {
   const ready = inbox !== null && waiting !== null && (refIds.length === 0 || refs.loaded);
   const items = useMemo<MarkItem[]>(() => {
     const out: MarkItem[] = [];
-    for (const r of inbox ?? []) out.push({ key: `homework:${r.submissionId}`, kind: "homework", id: r.submissionId, childName: r.childName, what: r.title, at: r.submittedAt, late: r.late, hw: r, detail: r.attemptPending ? "Quiz part needs marking too" : undefined });
+    for (const r of inbox ?? []) out.push({ key: `homework:${r.submissionId}`, kind: "homework", id: r.submissionId, childName: r.childName, what: r.title, at: r.submittedAt, late: r.late, hw: r, detail: r.attemptPending ? t("hubshell.hm_quizPartToo") : undefined });
     for (const a of waiting ?? []) {
       const m = meta.get(a.assessmentId);
       const type = a.assessmentType ?? m?.type ?? "quiz";
-      out.push({ key: `attempt:${a.id}`, kind: type === "diagnostic" ? "starting" : "quiz", id: a.id, childName: a.childName ?? names.get(a.childId) ?? "Student", what: a.assessmentTitle ?? m?.title ?? "Assessment", at: a.submittedAt, attempt: a, detail: a.writtenPending ? `${a.writtenPending} written to mark` : undefined });
+      out.push({ key: `attempt:${a.id}`, kind: type === "diagnostic" ? "starting" : "quiz", id: a.id, childName: a.childName ?? names.get(a.childId) ?? t("hubshell.hm_student"), what: a.assessmentTitle ?? m?.title ?? t("hubshell.hm_assessment"), at: a.submittedAt, attempt: a, detail: a.writtenPending ? t("hubshell.hm_writtenToMarkN", { n: a.writtenPending }) : undefined });
     }
     return out.sort((x, y) => (x.at ? new Date(x.at).getTime() : Infinity) - (y.at ? new Date(y.at).getTime() : Infinity));
-  }, [inbox, waiting, meta, names]);
+  }, [inbox, waiting, meta, names, locale]); // eslint-disable-line react-hooks/exhaustive-deps -- t only changes with `locale`
 
   return { items, ready, failed, reload: load, count: items.length, byKind: { homework: items.filter((i) => i.kind === "homework").length, quiz: items.filter((i) => i.kind === "quiz").length, starting: items.filter((i) => i.kind === "starting").length } };
 }

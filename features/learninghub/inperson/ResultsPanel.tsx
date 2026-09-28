@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { Icon } from "../kit";
 import { Btn, StepCard, Tag, display } from "../lesson/lessonUi";
 import { FOCUS } from "../teachKit";
@@ -20,6 +21,7 @@ export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, 
   store: ClassStore; hideNames: boolean; retry: (childId: string) => Promise<void>; toggleHere: (childId: string, here: boolean) => void;
   followUp?: (childIds: string[]) => void; finish: () => void; finishing: boolean;
 }) {
+  const t = useT();
   const results = store.state.results;
   const rows = students.filter((s) => s.present || results[s.childId]);
   const recorded = rows.map((s) => results[s.childId]).filter((r): r is IpResult => !!r && r.status !== "skipped" && typeof r.pct === "number");
@@ -40,20 +42,20 @@ export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, 
 
   return (
     <StepCard>
-      <Tag tone="brand">In-person lesson</Tag>
-      <h2 className="m-0 mb-1 mt-2 text-[24px] font-extrabold text-[var(--ink)]" style={display} tabIndex={-1} data-autofocus>{hasQuiz ? "Results" : "Lesson complete"}</h2>
+      <Tag tone="brand">{t("hublive.cInPersonLesson")}</Tag>
+      <h2 className="m-0 mb-1 mt-2 text-[24px] font-extrabold text-[var(--ink)]" style={display} tabIndex={-1} data-autofocus>{hasQuiz ? t("hublive.cResults") : t("hublive.cLessonComplete")}</h2>
       <p className="m-0 text-[14px] text-[var(--ink-2)]" data-testid="ip-summary-title">
-        {session.title}{quizTitle ? ` · ${quizTitle}` : ""}{avg !== null ? <> · class average <b className="text-[var(--ink)]">{avg}%</b></> : null}{hardest ? <> · hardest: question {hardest.n} ({hardest.got} of {recorded.length} got it)</> : null}
+        {session.title}{quizTitle ? ` · ${quizTitle}` : ""}{avg !== null ? <> · {t("hublive.cClassAverage")} <b className="text-[var(--ink)]">{avg}%</b></> : null}{hardest ? <> · {t("hublive.cHardest", { n: hardest.n, got: hardest.got, total: recorded.length })}</> : null}
       </p>
 
       {hasQuiz && (
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[var(--line)]">
           <table className="w-full border-collapse text-[14px]" data-testid="ip-results">
             <thead>
-              <tr className="bg-[var(--panel)] text-left text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
-                <th className="px-2.5 py-2 sm:px-3">Child</th>
+              <tr className="bg-[var(--panel)] text-start text-[11.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
+                <th className="px-2.5 py-2 sm:px-3">{t("hublive.cChild")}</th>
                 {Array.from({ length: cols }, (_, i) => <th key={i} className="px-0.5 py-2 text-center sm:px-1.5">Q{i + 1}</th>)}
-                <th className="px-2.5 py-2 text-right sm:px-3">Score</th>
+                <th className="px-2.5 py-2 text-end sm:px-3">{t("hublive.cScore")}</th>
               </tr>
             </thead>
             <tbody>
@@ -69,30 +71,30 @@ export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, 
                           const a = r.answers?.[i];
                           return (
                             <td key={i} className="px-0.5 py-2.5 text-center sm:px-1.5" data-q={i + 1} data-correct={a ? String(a.correct) : "none"}>
-                              {!a ? "" : a.pending ? <span title="Waiting for marks" className="text-[var(--ink-3)]">…</span> : a.correct ? <span className="text-[var(--hub-green-ink)]" aria-label="Correct"><Icon name="check" size={16} strokeWidth={3} /></span> : <span className="text-[var(--red)]" aria-label="Not correct"><Icon name="close" size={16} strokeWidth={3} /></span>}
+                              {!a ? "" : a.pending ? <span title={t("hublive.cWaitingMarks")} className="text-[var(--ink-3)]">…</span> : a.correct ? <span className="text-[var(--hub-green-ink)]" aria-label={t("hublive.cCorrect")}><Icon name="check" size={16} strokeWidth={3} /></span> : <span className="text-[var(--red)]" aria-label={t("hublive.cNotCorrect")}><Icon name="close" size={16} strokeWidth={3} /></span>}
                             </td>
                           );
                         })}
-                        <td className="px-2.5 py-2.5 text-right font-extrabold tabular-nums text-[var(--ink)] sm:px-3" data-score>
+                        <td className="px-2.5 py-2.5 text-end font-extrabold tabular-nums text-[var(--ink)] sm:px-3" data-score>
                           <span className="whitespace-nowrap">{r.scoreMarks}/{r.maxMarks}{typeof r.pct === "number" ? ` · ${r.pct}%` : ""}</span>
                           <span className="mt-1 flex flex-wrap justify-end gap-1 text-[11px]">
-                            {r.attemptStatus === "pending_marking" && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[var(--ink-3)]">written to mark</span>}
-                            {r.passed === false && <span className="rounded-full bg-[var(--red-soft)] px-2 py-0.5 text-[var(--red)]">{passMark !== null ? `under ${passMark}%` : "under the pass mark"}</span>}
-                            {r.homeworkId && <span className="rounded-full bg-[var(--green-soft)] px-2 py-0.5 text-[var(--hub-green-ink)]">homework ticked off</span>}
+                            {r.attemptStatus === "pending_marking" && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[var(--ink-3)]">{t("hublive.cWrittenToMark")}</span>}
+                            {r.passed === false && <span className="rounded-full bg-[var(--red-soft)] px-2 py-0.5 text-[var(--red)]">{passMark !== null ? t("hublive.cUnderPct", { n: passMark }) : t("hublive.cUnderPass")}</span>}
+                            {r.homeworkId && <span className="rounded-full bg-[var(--green-soft)] px-2 py-0.5 text-[var(--hub-green-ink)]">{t("hublive.cHwTicked")}</span>}
                           </span>
                         </td>
                       </>
                     ) : (
-                      <td colSpan={cols + 1} className="px-3 py-2.5 text-right text-[13px] text-[var(--ink-2)]">
+                      <td colSpan={cols + 1} className="px-3 py-2.5 text-end text-[13px] text-[var(--ink-2)]">
                         {r ? (
                           <span className="inline-flex flex-wrap items-center justify-end gap-2">
-                            <span role="alert">{r.message ?? "Not recorded."}</span>
+                            <span role="alert">{r.message ?? t("hublive.cNotRecorded")}</span>
                             {r.code && ["retake_blocked", "diagnostic_required", "not_for_this_child"].includes(r.code) && (
                               <button type="button" disabled={busyRetry === s.childId} data-testid={`ip-allow-${s.childName}`} onClick={async () => { setBusyRetry(s.childId); await retry(s.childId); setBusyRetry(null); }}
-                                className={`min-h-[44px] lg:min-h-[40px] rounded-lg border-2 border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] disabled:opacity-50 ${FOCUS}`}>{busyRetry === s.childId ? "Recording…" : "Allow anyway"}</button>
+                                className={`min-h-[44px] lg:min-h-[40px] rounded-lg border-2 border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] disabled:opacity-50 ${FOCUS}`}>{busyRetry === s.childId ? t("hublive.cRecording") : t("hublive.cAllowAnyway")}</button>
                             )}
                           </span>
-                        ) : <span className="text-[var(--ink-3)]">No answers recorded</span>}
+                        ) : <span className="text-[var(--ink-3)]">{t("hublive.cNoAnswers")}</span>}
                       </td>
                     )}
                   </tr>
@@ -104,12 +106,12 @@ export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, 
       )}
 
       {warm.length > 0 && (
-        <p className="m-0 mt-3 text-[13.5px] text-[var(--ink-2)]" data-testid="ip-warm-summary"><b className="text-[var(--ink)]">Warm-up (out loud):</b> {warm.map((w) => `${nameFor(students.find((s) => s.childId === w.childId)?.childName ?? "", hideNames)} ${w.correct}/${w.total}`).join(" · ")}</p>
+        <p className="m-0 mt-3 text-[13.5px] text-[var(--ink-2)]" data-testid="ip-warm-summary"><b className="text-[var(--ink)]">{t("hublive.cWarmOut")}</b> {warm.map((w) => `${nameFor(students.find((s) => s.childId === w.childId)?.childName ?? "", hideNames)} ${w.correct}/${w.total}`).join(" · ")}</p>
       )}
 
       <div className="mt-5">
-        <div className="mb-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Here today</div>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Attendance">
+        <div className="mb-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{t("hublive.cHereToday")}</div>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("hublive.cAttendance")}>
           {students.map((s) => (
             <button key={s.childId} type="button" aria-pressed={s.present} onClick={() => toggleHere(s.childId, !s.present)} data-testid={`ip-here-${s.childName}`}
               className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border-2 px-3.5 text-[13.5px] font-extrabold ${FOCUS} ${s.present ? "border-[var(--green)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] line-through"}`}>
@@ -121,18 +123,18 @@ export function ResultsPanel({ session, students, quizTitle, hasQuiz, passMark, 
 
       {followUp && (
         <div className="mt-5 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
-          <div className="mb-2 text-[13.5px] font-extrabold text-[var(--ink)]">Follow-up homework</div>
+          <div className="mb-2 text-[13.5px] font-extrabold text-[var(--ink)]">{t("hublive.cFollowUp")}</div>
           <div className="flex flex-wrap gap-2">
-            {weak.length > 0 && <Btn tone="ghost" onClick={() => followUp(weak)} data-testid="ip-followup-weak">Set for the {weak.length} under the pass mark</Btn>}
-            <Btn tone="ghost" onClick={() => followUp(rows.filter((s) => s.present).map((s) => s.childId))} data-testid="ip-followup-all">Set for everyone here</Btn>
+            {weak.length > 0 && <Btn tone="ghost" onClick={() => followUp(weak)} data-testid="ip-followup-weak">{t("hublive.cSetWeak", { n: weak.length })}</Btn>}
+            <Btn tone="ghost" onClick={() => followUp(rows.filter((s) => s.present).map((s) => s.childId))} data-testid="ip-followup-all">{t("hublive.cSetAll")}</Btn>
           </div>
-          <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">Finishes this session and opens the Homework form with these children and this lesson filled in.</p>
+          <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">{t("hublive.cFollowNote")}</p>
         </div>
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[12.5px] text-[var(--ink-3)]">Finishing tells each family their child did this lesson with you.</span>
-        <Btn tone="good" onClick={finish} disabled={finishing} data-testid="ip-finish">{finishing ? "Finishing…" : "Finish session"}</Btn>
+        <span className="text-[12.5px] text-[var(--ink-3)]">{t("hublive.cFinishNote")}</span>
+        <Btn tone="good" onClick={finish} disabled={finishing} data-testid="ip-finish">{finishing ? t("hublive.cFinishing") : t("hublive.cFinish")}</Btn>
       </div>
     </StepCard>
   );

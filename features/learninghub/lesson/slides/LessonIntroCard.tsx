@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { glyphFor } from "../../subjectArt";
 import { subjectColor, tint } from "../../kit";
 import { SUBJECT_ICONS, SUBJECT_STEPS, mockProgress } from "./subjectVisuals";
@@ -54,7 +55,8 @@ function SubjectObjectIcon({ subject, index, size = 18, className = "" }: { subj
 
 /** A tiny browser-chrome frame with lesson-specific mini-content: this lesson "continuing digitally". */
 function DashboardMock({ lesson, accent }: { lesson: LessonIntroData; accent: string }) {
-  const steps = SUBJECT_STEPS[glyphOf(lesson.subject)];
+  const t = useT();
+  const steps = SUBJECT_STEPS[glyphOf(lesson.subject)].map((k) => t(k));
   const concepts = (lesson.keyConcepts ?? []).filter(Boolean).slice(0, 4);
   const rows = concepts.length ? concepts : steps;
   const pct = mockProgress(lesson.title || lesson.subject || "lesson");
@@ -64,7 +66,7 @@ function DashboardMock({ lesson, accent }: { lesson: LessonIntroData; accent: st
         <span className="h-2 w-2 rounded-full" style={{ background: "#F0554C" }} />
         <span className="h-2 w-2 rounded-full" style={{ background: "#F4B740" }} />
         <span className="h-2 w-2 rounded-full" style={{ background: "#38B26A" }} />
-        <span className="ml-2 truncate text-[9.5px] font-bold text-[#8890A6]">{lesson.topic || lesson.unit || lesson.subject}</span>
+        <span className="ms-2 truncate text-[9.5px] font-bold text-[#8890A6]">{lesson.topic || lesson.unit || lesson.subject}</span>
       </div>
       <div className="space-y-2.5 px-3.5 py-3">
         <p className="m-0 truncate text-[11.5px] font-extrabold leading-tight text-[#1B2140]">{lesson.title}</p>
@@ -127,20 +129,21 @@ export function LessonIntroCard({ lesson, objectiveEditable }: {
    *  in the real student view, which keeps rendering the plain, non-editable paragraph exactly as before. */
   objectiveEditable?: ReactNode;
 }) {
+  const t = useT();
   const accent = subjectColor(lesson.subject || "");
   const concepts = (lesson.keyConcepts ?? []).filter(Boolean);
-  const chipWords = concepts.length ? concepts.slice(0, 2) : SUBJECT_STEPS[glyphOf(lesson.subject)].slice(0, 2);
+  const chipWords = concepts.length ? concepts.slice(0, 2) : SUBJECT_STEPS[glyphOf(lesson.subject)].slice(0, 2).map((k) => t(k));
 
   return (
     <div data-testid="lesson-intro-card" className="flex h-full w-full flex-col overflow-hidden rounded-[1.6cqw] bg-white md:flex-row" style={{ fontFamily: "var(--ff-display), var(--ff), system-ui, sans-serif" }}>
       {/* LEFT — the lesson's own words, plainly. */}
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-[1.4cqw] px-[5cqw] py-[4cqw]">
         <div className="flex flex-wrap items-center gap-[1cqw]">
-          <span className="text-[2.4cqw] font-extrabold uppercase tracking-[0.08em]" style={{ color: accent }}>{lesson.subject || "Lesson"}</span>
+          <span className="text-[2.4cqw] font-extrabold uppercase tracking-[0.08em]" style={{ color: accent }}>{lesson.subject || t("hublessons.stepLesson")}</span>
           {lesson.ageGroup && <span className="rounded-full px-[1.4cqw] py-[.3cqw] text-[1.8cqw] font-bold" style={{ background: tint(accent, 14), color: accent }}>{lesson.ageGroup}</span>}
         </div>
         <h2 className="m-0 text-[4.4cqw] font-extrabold leading-[1.08]" style={{ color: "var(--sb-ink, #171534)" }}>{lesson.title}</h2>
-        {(lesson.unit || lesson.topic) && <p className="m-0 text-[2.2cqw] font-bold text-[color:var(--sb-ink2,#4a4763)]">Unit: {lesson.topic || lesson.unit}</p>}
+        {(lesson.unit || lesson.topic) && <p className="m-0 text-[2.2cqw] font-bold text-[color:var(--sb-ink2,#4a4763)]">{t("hublessons.liUnit", { unit: lesson.topic || lesson.unit || "" })}</p>}
         {objectiveEditable ?? <p className={OBJECTIVE_CLASS}>{lesson.objective}</p>}
       </div>
 

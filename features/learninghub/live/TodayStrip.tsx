@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { useT } from "@/lib/i18n/provider";
 import type { Topic } from "../types";
 import { subjectColor, tint } from "../kit";
-import { DISPLAY, FOCUS, fmtDay, humanSpan } from "../teachKit";
+import { DISPLAY, FOCUS, fmtDay, humanSpan, uiLocale } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { Stack } from "../home/homeKit";
 import { lessonStage, lessonTiming, type Lesson } from "./lessonTypes";
@@ -21,7 +22,7 @@ const RULER = 34;
 
 const dayStart = (ms: number) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
 const hh = (h: number) => `${String(h % 24).padStart(2, "0")}:00`;
-const clock = (ms: number) => new Date(ms).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+const clock = (ms: number) => new Date(ms).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" });
 
 function MiniRing({ progress, value }: { progress: number; value: string }) {
   const size = 40, sw = 4, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
@@ -45,6 +46,7 @@ export function TodayStrip({ lessons, now, isTutor, topicById, attendeesOf, tuto
   tutorOf: (l: Lesson) => string;
   onOpen: (l: Lesson) => void;
 }) {
+  const t = useT();
   const scroller = useRef<HTMLDivElement>(null);
   const centred = useRef(false);
 
@@ -89,27 +91,27 @@ export function TodayStrip({ lessons, now, isTutor, topicById, attendeesOf, tuto
   const live = day.placed.filter((p) => lessonStage(p.l, now) === "live");
 
   return (
-    <section aria-label="Today's lessons" id="hub-today-strip" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)] sm:p-4">
+    <section aria-label={t("hublive.aToday_aria")} id="hub-today-strip" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)] sm:p-4">
       <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="flex min-w-0 items-center gap-2.5">
           <span aria-hidden className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]"><Ico name="calendar" size={18} /></span>
           <div className="min-w-0">
-            <h3 className="m-0 text-[15px] font-extrabold text-[var(--ink)]" style={DISPLAY}>Today</h3>
-            <div className="text-[11.5px] font-semibold text-[var(--ink-3)]">{fmtDay(new Date(now).toISOString())} · {day.placed.length} lesson{day.placed.length === 1 ? "" : "s"}</div>
+            <h3 className="m-0 text-[15px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{t("hublive.aToday_today")}</h3>
+            <div className="text-[11.5px] font-semibold text-[var(--ink-3)]">{t("hublive.aToday_count", { day: fmtDay(new Date(now).toISOString()), n: day.placed.length })}</div>
           </div>
         </div>
-        <div className="ml-auto flex min-w-0 items-center gap-2.5">
-          {live.length > 0 && <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--green-line)] bg-[var(--green-soft)] px-2.5 py-1 text-[11.5px] font-extrabold text-[var(--hub-green-ink)]"><span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{live.length} live now</span>}
+        <div className="ms-auto flex min-w-0 items-center gap-2.5">
+          {live.length > 0 && <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--green-line)] bg-[var(--green-soft)] px-2.5 py-1 text-[11.5px] font-extrabold text-[var(--hub-green-ink)]"><span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{t("hublive.aToday_live", { n: live.length })}</span>}
           {next && untilNext !== null && untilNext < 6 * HOUR && (
-            <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[var(--panel)] py-1 pl-1 pr-3 text-[12px] font-bold text-[var(--ink-2)]" role="timer" aria-label={`${next.l.title} starts in ${humanSpan(untilNext)}`}>
+            <span className="inline-flex min-w-0 items-center gap-2 rounded-full bg-[var(--panel)] py-1 ps-1 pe-3 text-[12px] font-bold text-[var(--ink-2)]" role="timer" aria-label={t("hublive.aToday_timerAria", { title: next.l.title, span: humanSpan(untilNext) })}>
               <MiniRing progress={1 - untilNext / HOUR} value={untilNext < HOUR ? String(Math.max(1, Math.round(untilNext / 60_000))) : `${Math.round(untilNext / HOUR)}h`} />
-              <span className="min-w-0 truncate">{untilNext < HOUR ? "starts in" : "next in"} <b className="text-[var(--ink)]">{humanSpan(untilNext)}</b></span>
+              <span className="min-w-0 truncate" dangerouslySetInnerHTML={{ __html: t(untilNext < HOUR ? "hublive.aToday_startsInLine" : "hublive.aToday_nextInLine", { span: humanSpan(untilNext) }).replace("<b>", '<b class="text-[var(--ink)]">') }} />
             </span>
           )}
         </div>
       </div>
 
-      <div ref={scroller} className="-mx-1 overflow-x-auto px-1 pb-1" tabIndex={0} role="group" aria-label="Timeline of today's lessons, scrolls sideways">
+      <div ref={scroller} className="-mx-1 overflow-x-auto px-1 pb-1" tabIndex={0} role="group" aria-label={t("hublive.aToday_timeline")}>
         <div className="relative" style={{ width, height }}>
           {/* hour ruler + grid */}
           {Array.from({ length: day.to - day.from + 1 }, (_, i) => {
@@ -131,8 +133,8 @@ export function TodayStrip({ lessons, now, isTutor, topicById, attendeesOf, tuto
             const who = isTutor ? attendeesOf(p.l) : [tutorOf(p.l)];
             return (
               <button key={p.l.id} type="button" onClick={() => onOpen(p.l)} data-strip-lesson={p.l.id} data-stage={stage}
-                aria-label={`${p.l.title}, ${clock(p.start)} to ${clock(p.end)}${isLive ? ", live now" : ""}`}
-                className={`absolute flex flex-col justify-between overflow-hidden rounded-xl border px-2.5 py-1.5 text-left transition hover:-translate-y-0.5 hover:shadow-[var(--shadow)] motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${isLive ? "ring-2 ring-[var(--green)] ring-offset-1 ring-offset-[var(--surface)]" : ""} ${past ? "opacity-60" : ""}`}
+                aria-label={t(isLive ? "hublive.aToday_lessonAriaLive" : "hublive.aToday_lessonAria", { title: p.l.title, from: clock(p.start), to: clock(p.end) })}
+                className={`absolute flex flex-col justify-between overflow-hidden rounded-xl border px-2.5 py-1.5 text-start transition hover:-translate-y-0.5 hover:shadow-[var(--shadow)] motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${isLive ? "ring-2 ring-[var(--green)] ring-offset-1 ring-offset-[var(--surface)]" : ""} ${past ? "opacity-60" : ""}`}
                 style={{ left: p.left, width: p.width - 4, top: RULER + p.lane * LANE, height: LANE - 6, background: tint(c, 15), borderColor: tint(c, 38), borderLeft: `4px solid ${c}` }}>
                 <span className="flex items-center gap-1.5">
                   {isLive && <span aria-hidden className="h-1.5 w-1.5 flex-none animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />}
@@ -140,7 +142,7 @@ export function TodayStrip({ lessons, now, isTutor, topicById, attendeesOf, tuto
                 </span>
                 <span className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--ink-2)]">
                   <span className="tabular-nums">{clock(p.start)}–{clock(p.end)}</span>
-                  {who.length > 0 && <span className="ml-auto"><Stack names={who} max={3} size={18} /></span>}
+                  {who.length > 0 && <span className="ms-auto"><Stack names={who} max={3} size={18} /></span>}
                 </span>
               </button>
             );

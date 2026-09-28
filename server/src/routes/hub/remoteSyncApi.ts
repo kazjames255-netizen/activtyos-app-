@@ -199,7 +199,17 @@ hubRemoteSyncApi.post("/remote-sync/sessions", async (req, res) => {
     attendance: {}, tutorJoinedAt: now, endedAt: null, noteId: b.noteId, step: "start", slide: 0, pace: b.pace, liveAnswers: {},
     tools: b.tools, createdBy: ctx.uid, createdAt: now, updatedAt: now,
   };
-  await ref.set(doc);
+  try {
+    // create() is atomic: a parallel double tap with the same key can't overwrite a live session (attendance / step / answers).
+    if (b.key) await ref.create(doc); else await ref.set(doc);
+  } catch (e) {
+    if ((e as { code?: number }).code !== 6) throw e;
+    const again = await ref.get();
+    if (again.exists && again.get("tenantId") === ctx.tenantId && again.get("mode") === "remote_sync") {
+      res.json(tutorOut({ id: ref.id, ...(again.data() as SessionDoc) }, await namesOf(ctx, again.get("childIds") as string[]))); return;
+    }
+    throw e;
+  }
   pingHub(ctx.tenantId, "hubLessons");
   res.status(201).json(tutorOut({ id: ref.id, ...doc }, names));
 });

@@ -1,7 +1,9 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useMemo, useState } from "react";
 import type { LessonKeyword } from "./types";
+import { rich } from "./tRich";
 import { FOCUS } from "../kit";
 
 // A key learning point with its key words highlighted. Tap a highlighted word to see what it means — the definition opens
@@ -32,6 +34,7 @@ export function splitKeywords(text: string, keywords: LessonKeyword[]): { text: 
 
 export function KeywordText({ text, keywords, className = "" }: { text: string; keywords: LessonKeyword[]; className?: string }) {
   const parts = useMemo(() => splitKeywords(text, keywords), [text, keywords]);
+  const t = useT();
   const [open, setOpen] = useState<LessonKeyword | null>(null);
   const has = parts.some((p) => p.kw);
   return (
@@ -42,9 +45,9 @@ export function KeywordText({ text, keywords, className = "" }: { text: string; 
             className={`ls-kw cursor-help rounded-sm px-px font-extrabold text-[var(--ink)] ${FOCUS}`}>{p.text}</button>
         ) : <span key={i}>{p.text}</span>)}
       </p>
-      {has && !open && <p className="mt-3 text-[13px] text-[var(--ink-3)]">Tap a <span className="ls-kw font-extrabold text-[var(--ink)]">highlighted word</span> to see what it means.</p>}
+      {has && !open && <p className="mt-3 text-[13px] text-[var(--ink-3)]">{rich(t("hublessons.tapHighlighted"), { hl: <span className="ls-kw font-extrabold text-[var(--ink)]">{t("hublessons.highlightedWord")}</span> })}</p>}
       {open && (
-        <div role="status" className="mt-3 rounded-xl border border-l-4 border-[var(--line)] border-l-[var(--gold)] bg-[var(--panel)] px-4 py-3 text-[14px] leading-snug text-[var(--ink)]">
+        <div role="status" className="mt-3 rounded-xl border border-s-4 border-[var(--line)] border-s-[var(--gold)] bg-[var(--panel)] px-4 py-3 text-[14px] leading-snug text-[var(--ink)]">
           <b>{open.keyword}</b>{open.description ? <> — {open.description}</> : null}
         </div>
       )}

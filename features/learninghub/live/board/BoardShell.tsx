@@ -69,7 +69,7 @@ export function BoardShell({ ctrl, label, active, topLeft, topRight, renderPop, 
         <BoardCanvas ctrl={ctrl} label={label} active={active} />
 
         {/* top bar */}
-        <div className="pointer-events-none absolute left-2 right-2 top-2 z-10 flex flex-wrap items-start justify-between gap-1.5 @[620px]:left-[var(--rail-left)] [&>*]:pointer-events-auto">
+        <div className="pointer-events-none absolute start-2 end-2 top-2 z-10 flex flex-wrap items-start justify-between gap-1.5 @[620px]:left-[var(--rail-left)] [&>*]:pointer-events-auto">
           <div data-board-avoid className="flex min-w-0 flex-wrap items-start gap-1.5">{topLeft}</div>
           <div data-board-avoid className="flex flex-wrap items-start justify-end gap-1.5">
             <HistoryButtons ctrl={ctrl} />
@@ -79,13 +79,13 @@ export function BoardShell({ ctrl, label, active, topLeft, topRight, renderPop, 
         </div>
 
         {/* tool rail (wide): full height on the left; two columns when the pane is short */}
-        <div className="pointer-events-none absolute bottom-2 left-2 top-2 z-10 hidden @[620px]:flex [&>*]:pointer-events-auto">
+        <div className="pointer-events-none absolute bottom-2 start-2 top-2 z-10 hidden @[620px]:flex [&>*]:pointer-events-auto">
           <div className="flex max-h-full min-h-0 rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] shadow-[var(--shadow)]" data-pop-trigger data-board-avoid>
             <RailWithPop ctrl={ctrl} orient="col" cols={tall ? 1 : 2} onPop={(k, a) => openPop(k, a)} pop={pop?.kind ?? null} />
           </div>
         </div>
         {/* bottom row (wide): save/permission status, then the options for the current tool */}
-        <div className="pointer-events-none absolute bottom-3 right-2 z-10 hidden items-center gap-2 @[620px]:flex @[620px]:left-[var(--rail-left)] [&>*]:pointer-events-auto">
+        <div className="pointer-events-none absolute bottom-3 end-2 z-10 hidden items-center gap-2 @[620px]:flex @[620px]:left-[var(--rail-left)] [&>*]:pointer-events-auto">
           <div className="flex-none" aria-live="polite" data-board-avoid>{statusPill}</div>
           <div className="flex min-w-0 flex-1 justify-center"><div data-board-avoid className="min-w-0 max-w-full"><OptionsBar ctrl={ctrl} /></div></div>
           <div className="w-0 flex-none @[900px]:w-[88px]" aria-hidden />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FOCUS, Icon, tint } from "./kit";
 import { useEscapeLayer } from "./escapeLayer";
+import { useT } from "@/lib/i18n/provider";
 
 // A fun, big-circle multi-select for "which school years" — used to filter the lesson library.
 // Chosen years are sent to the server as `?year=3,4,5,6` (learningHub.ts's notes list already
@@ -20,19 +21,21 @@ const KEY_STAGES: { label: string; years: number[]; color: string }[] = [
 const colorFor = (y: number) => KEY_STAGES.find((k) => k.years.includes(y))?.color ?? "var(--brand)";
 
 const yearLabel = (y: number) => (y === 0 ? "R" : String(y));
-const fullLabel = (y: number) => (y === 0 ? "Reception" : `Year ${y}`);
+type Tr = (key: string, vars?: Record<string, string | number>) => string;
+const fullLabel = (y: number, tr?: Tr) => (y === 0 ? (tr ? tr("hubshell.k_reception") : "Reception") : tr ? tr("hubshell.k_yearN", { n: y }) : `Year ${y}`);
 
-export function summarizeYears(years: number[]): string {
-  if (!years.length) return "All years";
+export function summarizeYears(years: number[], tr?: Tr): string {
+  if (!years.length) return tr ? tr("hubshell.k_allYears") : "All years";
   const stage = KEY_STAGES.find((k) => k.years.length === years.length && k.years.every((y) => years.includes(y)));
   if (stage) return stage.label;
-  if (years.length === 1) return fullLabel(years[0]);
-  return `${years.length} years`;
+  if (years.length === 1) return fullLabel(years[0], tr);
+  return tr ? tr("hubshell.k_nYears", { n: years.length }) : `${years.length} years`;
 }
 
 // Reception has no numbered "year" a lesson can be tagged with server-side (yearOf() only accepts 1–13), so it's
 // left out here by default — pass hasReception only where Reception-tagged content genuinely exists and is filterable.
 export function YearGroupPicker({ years, onChange, hasReception = false }: { years: number[]; onChange: (y: number[]) => void; hasReception?: boolean }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -54,36 +57,36 @@ export function YearGroupPicker({ years, onChange, hasReception = false }: { yea
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-haspopup="true" data-testid="year-picker-trigger"
         className={`flex min-h-[44px] items-center gap-1.5 rounded-full border-2 border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--ink)] transition hover:border-[var(--brand-2)] ${FOCUS}`}>
-        {summarizeYears(years)}
+        {summarizeYears(years, tr)}
         <Icon name="chevronDown" size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div role="dialog" aria-label="Filter by school year" data-testid="year-picker-panel"
-          className="absolute left-0 top-[calc(100%+8px)] z-30 w-[min(92vw,380px)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-lg,0_12px_32px_rgba(0,0,0,0.18))]">
+        <div role="dialog" aria-label={tr("hubshell.k_filterYear")} data-testid="year-picker-panel"
+          className="absolute start-0 top-[calc(100%+8px)] z-30 w-[min(92vw,380px)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-lg,0_12px_32px_rgba(0,0,0,0.18))]">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Key stage</span>
-            {years.length > 0 && <button type="button" onClick={() => onChange([])} className={`text-[12.5px] font-extrabold text-[var(--brand)] ${FOCUS}`}>Clear</button>}
+            <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("hubshell.k_keyStage")}</span>
+            {years.length > 0 && <button type="button" onClick={() => onChange([])} className={`text-[12.5px] font-extrabold text-[var(--brand)] ${FOCUS}`}>{tr("hubshell.k_clear")}</button>}
           </div>
           <div className="mb-4 flex flex-wrap gap-1.5">
             {KEY_STAGES.filter((k) => hasReception || k.label !== "EYFS").map((k) => {
               const on = k.years.every((y) => years.includes(y));
               return (
                 <button key={k.label} type="button" onClick={() => toggleStage(k.years)} aria-pressed={on}
-                  className={`min-h-[36px] rounded-full border-2 px-3.5 text-[13px] font-extrabold transition ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}>
+                  className={`min-h-[44px] lg:min-h-[36px] rounded-full border-2 px-3.5 text-[13px] font-extrabold transition ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}>
                   {k.label}
                 </button>
               );
             })}
           </div>
 
-          <span className="mb-2 block text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Or pick years</span>
+          <span className="mb-2 block text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("hubshell.k_orPickYears")}</span>
           <div className="grid grid-cols-5 gap-2.5">
             {allYears.map((y) => {
               const on = years.includes(y);
               const c = colorFor(y);
               return (
-                <button key={y} type="button" onClick={() => toggleYear(y)} aria-pressed={on} aria-label={fullLabel(y)} title={fullLabel(y)}
+                <button key={y} type="button" onClick={() => toggleYear(y)} aria-pressed={on} aria-label={fullLabel(y, tr)} title={fullLabel(y, tr)}
                   data-testid={`year-circle-${y}`}
                   className={`grid aspect-square place-items-center rounded-full text-[15px] font-extrabold transition ${FOCUS} ${on ? "scale-105 text-white shadow-[var(--shadow-sm)]" : "text-[var(--ink)] hover:scale-105"}`}
                   style={on ? { background: c, boxShadow: `0 0 0 3px ${tint(c, 25)}` } : { background: tint(c, 16) }}>

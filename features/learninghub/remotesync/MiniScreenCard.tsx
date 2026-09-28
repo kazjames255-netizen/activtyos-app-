@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n/provider";
 import { Avatar, Icon } from "../kit";
 import type { RsSession } from "./api";
 
@@ -8,29 +9,30 @@ import type { RsSession } from "./api";
 /** own_pace's step order for the mini step-tracker on each card — mirrors LessonPlayer's own header tracker
  *  (Start → Learn/Lesson/Key words → Warm-up → Quiz → Done), just at a smaller scale and a fixed canonical order
  *  (a given lesson may skip some of these — that's fine, the dots just show how far through THIS shape a child is). */
-export const MINI_STEPS: { id: string; label: string }[] = [
-  { id: "start", label: "Start" }, { id: "learn", label: "Learn" }, { id: "slides", label: "Lesson" },
-  { id: "words", label: "Key words" }, { id: "warm", label: "Warm-up" }, { id: "quiz", label: "Quiz" }, { id: "done", label: "Done" },
+export const MINI_STEPS: { id: string; labelKey: string }[] = [
+  { id: "start", labelKey: "hublive.dStepstart" }, { id: "learn", labelKey: "hublive.dSteplearn" }, { id: "slides", labelKey: "hublive.dStepslides" },
+  { id: "words", labelKey: "hublive.dStepwords" }, { id: "warm", labelKey: "hublive.dStepwarm" }, { id: "quiz", labelKey: "hublive.dStepquiz" }, { id: "done", labelKey: "hublive.dStepdone" },
 ];
 /** Recent enough that this child is very likely still actively typing/selecting right now. */
 const TYPING_MS = 2000;
 
-export const previewOf = (r: unknown): string => {
-  if (r === undefined) return "Nothing yet…";
-  if (typeof r === "string") return r || "Nothing yet…";
+export const previewOf = (r: unknown, t: (key: string, vars?: Record<string, string | number>) => string): string => {
+  if (r === undefined) return t("hublive.dNothingYet");
+  if (typeof r === "string") return r || t("hublive.dNothingYet");
   if (typeof r === "number") return String(r);
-  if (Array.isArray(r)) return r.length ? `${r.length} selected` : "Nothing yet…";
-  return "Nothing yet…";
+  if (Array.isArray(r)) return r.length ? t("hublive.dNSelected", { n: r.length }) : t("hublive.dNothingYet");
+  return t("hublive.dNothingYet");
 };
 
 export function MiniScreenCard({ childName, connected, live, questionCount }: { childName: string; connected: boolean; live?: RsSession["liveAnswers"][number]; questionCount?: number }) {
+  const t = useT();
   if (!connected) {
     return (
       <div data-ui="card" className="grid min-h-[110px] place-items-center rounded-xl border border-dashed border-[var(--line)] bg-[var(--panel)] px-4 py-3.5 text-center opacity-70">
         <div>
           <Avatar name={childName} size={32} />
           <div className="mt-1.5 truncate text-[13.5px] font-extrabold text-[var(--ink)]">{childName}</div>
-          <div className="mt-1 text-[12px] text-[var(--ink-3)]">Waiting for {childName.split(" ")[0]} to join</div>
+          <div className="mt-1 text-[12px] text-[var(--ink-3)]">{t("hublive.dWaitingJoin", { name: childName.split(" ")[0] ?? childName })}</div>
         </div>
       </div>
     );
@@ -38,7 +40,8 @@ export function MiniScreenCard({ childName, connected, live, questionCount }: { 
 
   const step = live?.step ?? "start";
   const idx = Math.max(0, MINI_STEPS.findIndex((s) => s.id === step));
-  const label = MINI_STEPS.find((s) => s.id === step)?.label ?? step;
+  const stepKey = MINI_STEPS.find((s) => s.id === step)?.labelKey;
+  const label = stepKey ? t(stepKey) : step;
   const onWarm = step === "warm";
   const onQuiz = step === "quiz";
   const typing = !!live?.updatedAt && Date.now() - new Date(live.updatedAt).getTime() < TYPING_MS;
@@ -55,10 +58,10 @@ export function MiniScreenCard({ childName, connected, live, questionCount }: { 
         <Avatar name={childName} size={32} />
         <div className="min-w-0 flex-1 truncate text-[15px] font-extrabold text-white">{childName}</div>
         {!!questionCount && (
-          <span className="grid h-5 min-w-[20px] flex-none place-items-center rounded-full px-1 text-[10.5px] font-extrabold" style={{ background: "#F59E0B", color: "#3A2400" }} aria-label={`${questionCount} unread question${questionCount === 1 ? "" : "s"}`}>{questionCount}</span>
+          <span className="grid h-5 min-w-[20px] flex-none place-items-center rounded-full px-1 text-[10.5px] font-extrabold" style={{ background: "#F59E0B", color: "#3A2400" }} aria-label={t("hublive.dUnreadQ", { n: questionCount })}>{questionCount}</span>
         )}
         <div className="flex-none text-[12px] font-extrabold text-white/85">
-          {onWarm || onQuiz ? (correct === true ? "Correct!" : correct === false ? "Not quite" : label) : "In lesson"}
+          {onWarm || onQuiz ? (correct === true ? t("hublive.dCorrectEx") : correct === false ? t("hublive.dNotQuite") : label) : t("hublive.dInLesson")}
         </div>
       </div>
       <div className="px-4 py-3.5">
@@ -71,18 +74,18 @@ export function MiniScreenCard({ childName, connected, live, questionCount }: { 
         </div>
         {onWarm || onQuiz ? (
           <>
-            {live?.questionPrompt && <p className="m-0 mt-2.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--ink-2)]">Q: {live.questionPrompt}</p>}
+            {live?.questionPrompt && <p className="m-0 mt-2.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--ink-2)]">{t("hublive.dQPrefix", { q: live.questionPrompt })}</p>}
             <div className="mt-1.5 truncate text-[15px] font-extrabold text-[var(--ink)]">
-              {typing ? <span className="text-[var(--brand)]">Typing…</span> : previewOf(live?.response)}
+              {typing ? <span className="text-[var(--brand)]">{t("hublive.dTyping")}</span> : previewOf(live?.response, t)}
             </div>
             {correct !== null && (
               <div className={`mt-2.5 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-extrabold ${correct ? "bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "bg-[var(--red-soft)] text-[var(--red)]"}`}>
-                <Icon name={correct ? "check" : "close"} size={15} strokeWidth={3} />{correct ? "Correct!" : "Not quite"}
+                <Icon name={correct ? "check" : "close"} size={15} strokeWidth={3} />{correct ? t("hublive.dCorrectEx") : t("hublive.dNotQuite")}
               </div>
             )}
             {onQuiz && live?.questionId && (
               <div className="mt-2.5 flex items-center gap-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[13px] font-extrabold text-[var(--ink-2)]">
-                <Icon name="check" size={15} strokeWidth={3} />Answered — score known after they finish
+                <Icon name="check" size={15} strokeWidth={3} />{t("hublive.dAnsweredKnown")}
               </div>
             )}
           </>

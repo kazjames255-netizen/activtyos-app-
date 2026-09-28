@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, get } from "@/lib/api";
 import { withQs } from "../../teachKit";
 import type { BoardController } from "./controller";
+import { bt } from "./boardI18n";
 import { fitToLimit, type SavedPage } from "./model";
 
 // The board's saved copy on the server: loaded once on mount, and (tutor only)
@@ -45,7 +46,7 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
         if (!ctrl.loaded) ctrl.loadSaved(undefined);
         savedVer.current = ctrl.saveVersion;
         setState(o.isTutor ? "error" : "idle");
-        if (o.isTutor) setError(e instanceof Error ? e.message : "Couldn't load the saved board");
+        if (o.isTutor) setError(e instanceof Error ? e.message : bt("bErrLoad", "Couldn't load the saved board"));
       } finally { if (!dead) setLoaded(true); }
     })();
     return () => { dead = true; };
@@ -60,7 +61,7 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
     if (!force && ctrl.saveVersion === savedVer.current) return;
     const ver = ctrl.saveVersion;
     const pages = fitToLimit(ctrl.getSaved(), LIMIT);
-    if (!pages) { setState("toobig"); setError("This board is too big to save. Clear a page or delete some long drawings."); return; }
+    if (!pages) { setState("toobig"); setError(bt("bErrBig", "This board is too big to save. Clear a page or delete some long drawings.")); return; }
     inflight.current = true; setState("saving");
     try {
       const body = JSON.stringify({ pages });
@@ -70,7 +71,7 @@ export function useBoardPersistence(ctrl: BoardController | null, o: { lessonId:
     } catch (e) {
       const big = e instanceof ApiError && e.status === 413;
       setState(big ? "toobig" : "error");
-      setError(e instanceof Error ? e.message : "Couldn't save the board");
+      setError(e instanceof Error ? e.message : bt("bErrSave", "Couldn't save the board"));
     } finally { inflight.current = false; }
   }, [ctrl, o.isTutor, path]);
 

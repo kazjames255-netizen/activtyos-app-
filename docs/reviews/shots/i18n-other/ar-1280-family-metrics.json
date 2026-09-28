@@ -1,0 +1,442 @@
+{
+ "parent-home": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs",
+   "عرض ⁨Bravomuiupns7⁩",
+   "عرض: ⁨Bravomuiupns7⁩",
+   "جارٍ تحميل يوم ⁨Bravomuiupns7⁩…"
+  ],
+  "tabXs": [
+   [
+    "الرئيسية",
+    957
+   ],
+   [
+    "الدروس المباشر",
+    861
+   ],
+   [
+    "التقدّم",
+    814
+   ],
+   [
+    "اختبارات تحديد",
+    686
+   ],
+   [
+    "الاختبارات",
+    616
+   ],
+   [
+    "الواجبات المنز",
+    519
+   ],
+   [
+    "الدروس",
+    460
+   ],
+   [
+    "الأدوات",
+    402
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My children",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "101",
+    "157"
+   ]
+  }
+ },
+ "parent-quizzes": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs",
+   "عرض ⁨Bravomuiupns7⁩",
+   "عرض: ⁨Bravomuiupns7⁩"
+  ],
+  "tabXs": [
+   [
+    "الرئيسية",
+    957
+   ],
+   [
+    "الدروس المباشر",
+    861
+   ],
+   [
+    "التقدّم",
+    814
+   ],
+   [
+    "اختبارات تحديد",
+    686
+   ],
+   [
+    "الاختبارات",
+    616
+   ],
+   [
+    "الواجبات المنز",
+    519
+   ],
+   [
+    "الدروس",
+    460
+   ],
+   [
+    "الأدوات",
+    402
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My child",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "parent-dashboard": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My children",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "parent-flashcards": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs",
+   "عرض ⁨Bravomuiupns7⁩",
+   "عرض: ⁨Bravomuiupns7⁩"
+  ],
+  "tabXs": [
+   [
+    "الرئيسية",
+    957
+   ],
+   [
+    "الدروس المباشر",
+    861
+   ],
+   [
+    "التقدّم",
+    814
+   ],
+   [
+    "اختبارات تحديد",
+    686
+   ],
+   [
+    "الاختبارات",
+    616
+   ],
+   [
+    "الواجبات المنز",
+    519
+   ],
+   [
+    "الدروس",
+    460
+   ],
+   [
+    "الأدوات",
+    402
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My children",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "kid-home": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs",
+   "عرض ⁨Bravomuiupns7⁩",
+   "عرض: ⁨Bravomuiupns7⁩"
+  ],
+  "tabXs": [
+   [
+    "الرئيسية",
+    957
+   ],
+   [
+    "الدروس المباشر",
+    861
+   ],
+   [
+    "التقدّم",
+    814
+   ],
+   [
+    "اختبارات تحديد",
+    686
+   ],
+   [
+    "الاختبارات",
+    616
+   ],
+   [
+    "الواجبات المنز",
+    519
+   ],
+   [
+    "الدروس",
+    460
+   ],
+   [
+    "الأدوات",
+    402
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My children",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "kid-quizzes": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "مراسلة E2E Freelance muhzomxs",
+   "عرض ⁨Bravomuiupns7⁩",
+   "عرض: ⁨Bravomuiupns7⁩"
+  ],
+  "tabXs": [
+   [
+    "الرئيسية",
+    957
+   ],
+   [
+    "الدروس المباشر",
+    861
+   ],
+   [
+    "التقدّم",
+    814
+   ],
+   [
+    "اختبارات تحديد",
+    686
+   ],
+   [
+    "الاختبارات",
+    616
+   ],
+   [
+    "الواجبات المنز",
+    519
+   ],
+   [
+    "الدروس",
+    460
+   ],
+   [
+    "الأدوات",
+    402
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:My children",
+   "SPAN:First aid, medication & incide",
+   "SPAN:Savings & rewards",
+   "SPAN:Account",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ }
+}

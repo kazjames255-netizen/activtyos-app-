@@ -2,10 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { SkeletonRows } from "./kit";
+import { useT } from "@/lib/i18n/provider";
 import type { PanelMeta, PanelProps } from "./panelTypes";
 
-const StudentFlashcards = dynamic(() => import("./flashcards/StudentFlashcards").then((m) => m.StudentFlashcards), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
-const TutorFlashcards = dynamic(() => import("./flashcards/TutorFlashcards").then((m) => m.TutorFlashcards), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
+function FcLoading() { const t = useT(); return <SkeletonRows rows={3} label={t("hublessons.edLoading")} />; }
+const StudentFlashcards = dynamic(() => import("./flashcards/StudentFlashcards").then((m) => m.StudentFlashcards), { loading: () => <FcLoading /> });
+const TutorFlashcards = dynamic(() => import("./flashcards/TutorFlashcards").then((m) => m.TutorFlashcards), { loading: () => <FcLoading /> });
 
 // Flashcards — tutors keep a card bank per topic; students review what's due
 // (spaced repetition, scheduled by the server). Contract: docs/learning-hub.md.

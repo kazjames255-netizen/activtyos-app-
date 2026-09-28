@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { get } from "@/lib/api";
 import type { HubSettings } from "@/lib/hubConfig";
 import { useRealtime } from "@/lib/realtime";
@@ -10,8 +11,8 @@ import { LessonCard } from "../lesson/LessonCard";
 import { LessonStyles } from "../lesson/lessonUi";
 import { errMsg, type Note, type Topic } from "../types";
 import { activeRemoteSync, heartbeat, patchLiveAnswer, type LiveAnswerReport, type RsActive } from "./api";
-import { HelpToolsPanel } from "./HelpTools";
-import { toolsForQuestion } from "../tools/suggest";
+import { ALL_HELP_TOOL_IDS, HelpToolsPanel } from "./HelpTools";
+import { extraToolsForQuestion, toolsForQuestion } from "../tools/suggest";
 import { listDoubts, type Doubt } from "../lesson/doubts/api";
 import { MessagesCard } from "../lesson/doubts/MessagesCard";
 import { MiniScreenCard } from "./MiniScreenCard";
@@ -49,6 +50,7 @@ function markJoined(id: string) {
 }
 
 export function JoinRemoteSyncBanner({ qs, childId, config, topics }: { qs: string; childId: string | null; config?: HubSettings; /** The hub's topics: gives the lesson's subject and year, which the per-question tool rules need. */ topics?: Topic[] }) {
+  const t = useT();
   const [active, setActive] = useState<RsActive | null>(null);
   const [joined, setJoined] = useState(false);
 
@@ -66,9 +68,9 @@ export function JoinRemoteSyncBanner({ qs, childId, config, topics }: { qs: stri
     const rejoining = hasJoinedBefore(active.id);
     return (
       <div role="status" data-testid="remote-sync-offer" className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-4 py-3 text-[13.5px] font-bold text-[var(--brand-strong)]">
-        <span className="min-w-0 flex-1">{rejoining ? `Pick up “${active.title}” where you left off — ` : `Your tutor has started “${active.title}” — `}join now to follow along live.</span>
+        <span className="min-w-0 flex-1">{rejoining ? t("hublive.dPickUp", { title: active.title }) : t("hublive.dTutorStarted", { title: active.title })}</span>
         <button type="button" onClick={() => { markJoined(active.id); setJoined(true); }} data-testid="remote-sync-join"
-          className="min-h-[40px] rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-white hover:brightness-110">{rejoining ? "Resume" : "Start"}</button>
+          className="min-h-[40px] rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 text-[13px] font-extrabold text-white hover:brightness-110">{rejoining ? t("hublive.dResume") : t("hublive.dStart")}</button>
       </div>
     );
   }
@@ -76,6 +78,7 @@ export function JoinRemoteSyncBanner({ qs, childId, config, topics }: { qs: stri
 }
 
 function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs: string; childId: string; session: RsActive; config?: HubSettings; topics?: Topic[]; onLeft: () => void }) {
+  const t = useT();
   const [note, setNote] = useState<Note | null>(null);
   const [noteErr, setNoteErr] = useState<string | null>(null);
   const [live, setLive] = useState<RsActive>(session);
@@ -108,7 +111,7 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
   useEffect(() => {
     let alive = true;
     get<Note>(`/api/learning-hub/notes/${session.noteId}${qs}`).then((n) => { if (alive) setNote(n); })
-      .catch((e) => { if (alive) setNoteErr(errMsg(e, "Couldn't open this lesson")); });
+      .catch((e) => { if (alive) setNoteErr(errMsg(e, t("hublive.dErrOpenLesson"))); });
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.noteId, qs]);
@@ -132,9 +135,11 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
   // question in view = none. The panel opens instruments on its own and hides everything else on questions where nothing fits.
   const [qNow, setQNow] = useState<{ id: string; prompt: string } | null>(null);
   // The lesson's subject and year (from its topic) let the strict per-question rules apply; with no subject only a judged decision can show a tool.
-  const topic = topics?.find((t) => t.id === note?.topicId);
+  const topic = topics?.find((tp) => tp.id === note?.topicId);
   const topicYear = (() => { const m = /(\d{1,2})/.exec(topic?.subtopic ?? ""); return m ? Number(m[1]) : null; })();
-  const questionTools = useMemo(() => (live.tools.length && qNow ? toolsForQuestion({ id: qNow.id, prompt: qNow.prompt, subject: topic?.subject, year: topicYear }, live.tools) : []), [live.tools, qNow, topic?.subject, topicYear]);
+  const questionTools = useMemo(() => (live.tools.length && qNow ? toolsForQuestion({ id: qNow.id, prompt: qNow.prompt, subject: topic?.subject, year: topicYear }, live.tools, config?.questionToolsOff, config?.questionToolsAdd) : []), [live.tools, qNow, topic?.subject, topicYear, config?.questionToolsOff, config?.questionToolsAdd]);
+  // Tools-page tools the provider ADDED to this question (beyond the 20 help tools): shown as extra pills that open in their own window.
+  const extraIds = useMemo(() => (live.tools.length && qNow ? extraToolsForQuestion({ id: qNow.id }, config?.questionToolsAdd, ALL_HELP_TOOL_IDS) : []), [live.tools, qNow, config?.questionToolsAdd]);
   // Tool windows spawn from this card's top-right corner; the minimised tray docks at its bottom-left.
   const lessonCardRef = useRef<HTMLDivElement>(null);
 
@@ -158,14 +163,14 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
 
   return (
     <FullscreenPortal>
-      <div className="fixed inset-0 z-[300] overflow-y-auto overscroll-contain bg-[var(--bg)] text-[var(--ink)]" role="dialog" aria-modal="true" aria-label={`Live lesson: ${session.title}`} data-testid="remote-sync-student">
+      <div className="fixed inset-0 z-[300] overflow-y-auto overscroll-contain bg-[var(--bg)] text-[var(--ink)]" role="dialog" aria-modal="true" aria-label={t("hublive.dLiveLesson", { title: session.title })} data-testid="remote-sync-student">
         <LessonStyles />
         {tutorLeft && (
           <div className="fixed inset-0 z-[310] flex items-center justify-center bg-[color-mix(in_srgb,var(--ink)_45%,transparent)] p-6">
             <div role="alertdialog" aria-modal="true" data-testid="remote-sync-tutor-left" className="w-full max-w-[380px] rounded-2xl bg-[var(--surface)] p-5 text-center shadow-[var(--shadow-pop)]">
-              <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">Your tutor has finished the lesson.</p>
+              <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{t("hublive.dTutorFinished")}</p>
               <button type="button" onClick={onLeft} data-testid="remote-sync-tutor-left-ok"
-                className="mt-4 min-h-[44px] w-full rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 text-[13.5px] font-extrabold text-white hover:brightness-110">OK</button>
+                className="mt-4 min-h-[44px] w-full rounded-full border border-[var(--brand)] bg-[var(--brand)] px-4 text-[13.5px] font-extrabold text-white hover:brightness-110">{t("hublive.dOK")}</button>
             </div>
           </div>
         )}
@@ -189,20 +194,20 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
             </div>
 
             <div className="min-[1100px]:sticky min-[1100px]:top-6 min-[1100px]:self-start">
-              <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">My questions</h3>
+              <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hublive.dMyQuestions")}</h3>
               <div className="mb-6">
                 <MessagesCard mode="student" qs={qs} doubts={doubts} onUpdate={onDoubtUpdate} collapsible
                   context={{ noteId: session.noteId, lessonTitle: note?.title, step: myPos.step, slide: myPos.slide, questionId: myPos.questionId ?? null, questionPrompt: myPos.questionPrompt ?? null }} />
               </div>
 
-              <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">My progress</h3>
+              <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hublive.dMyProgress")}</h3>
               <div className="mb-6">
-                <MiniScreenCard childName="You" connected live={{ childId, childName: "You", ...myPos }} />
+                <MiniScreenCard childName={t("hublive.dYou")} connected live={{ childId, childName: t("hublive.dYou"), ...myPos }} />
               </div>
 
               {note && (
                 <>
-                  <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">My homework &amp; flashcards</h3>
+                  <h3 className="m-0 mb-2 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hublive.dMyHwFlash")}</h3>
                   <div className="mb-6 grid gap-3">
                     <MyHomeworkCard qs={qs} childId={childId} noteId={note.id} />
                     <MyFlashcardsCard qs={qs} childId={childId} topicId={note.topicId} />
@@ -212,11 +217,11 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
 
               {live.tools.length > 0 && inLesson && (
                 <div>
-                  <button type="button" onClick={() => setToolsOpen((o) => !o)} className="mb-2 flex w-full items-center gap-1.5 text-left" data-testid="remote-sync-tools-collapse">
-                    <h3 className="m-0 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Tools</h3>
+                  <button type="button" onClick={() => setToolsOpen((o) => !o)} className="mb-2 flex w-full items-center gap-1.5 text-start" data-testid="remote-sync-tools-collapse">
+                    <h3 className="m-0 text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{t("hublive.dTools")}</h3>
                     <Icon name="chevronDown" size={14} className={`text-[var(--ink-3)] transition-transform ${toolsOpen ? "" : "-rotate-90"}`} />
                   </button>
-                  <HelpToolsPanel tools={live.tools} questionTools={questionTools} questionKey={qNow ? qNow.id : null} questionPrompt={qNow?.prompt} lessonCardRef={lessonCardRef} hideList={!toolsOpen} />
+                  <HelpToolsPanel tools={live.tools} questionTools={questionTools} questionKey={qNow ? qNow.id : null} questionPrompt={qNow?.prompt} lessonCardRef={lessonCardRef} hideList={!toolsOpen} extraIds={extraIds} qs={qs} />
                 </div>
               )}
             </div>
@@ -231,13 +236,14 @@ function JoinedRemoteSync({ qs, childId, session, config, topics, onLeft }: { qs
  *  against THIS lesson's note. Submitting stays over on the Homework tab; this is just "is there something for
  *  this lesson" while it's on screen. */
 function MyHomeworkCard({ qs, childId, noteId }: { qs: string; childId: string; noteId: string }) {
+  const t = useT();
   const [rows, setRows] = useState<StudentHomework[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
     get<StudentHomework[]>(`/api/learning-hub/homework${withQs(qs, {})}`)
       .then((r) => { if (alive) setRows(Array.isArray(r) ? r.filter((h) => h.childId === childId && h.notes.some((n) => n.id === noteId)) : []); })
-      .catch((e) => { if (alive) setErr(errMsg(e, "Couldn't load homework")); });
+      .catch((e) => { if (alive) setErr(errMsg(e, t("hublive.dErrLoadHw"))); });
     return () => { alive = false; };
   }, [qs, childId, noteId]);
 
@@ -245,12 +251,12 @@ function MyHomeworkCard({ qs, childId, noteId }: { qs: string; childId: string; 
     <div className="overflow-hidden rounded-[14px] bg-white" style={{ border: "1px solid #E4E4EE" }} data-testid="my-homework-card">
       <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid #E4E4EE" }}>
         <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-[var(--gold-soft)] text-[color-mix(in_srgb,var(--gold)_55%,#000)]"><Icon name="homework" size={16} /></span>
-        <div className="text-[13.5px] font-extrabold text-[var(--ink)]">My homework</div>
+        <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t("hublive.dMyHomework")}</div>
       </div>
       <div className="p-4">
         {err ? <p role="alert" className="m-0 text-[12.5px] font-semibold text-[var(--red)]">{err}</p>
           : rows === null ? <div className="h-5 w-2/3 animate-pulse rounded bg-[var(--panel)]" />
-          : rows.length === 0 ? <p className="m-0 text-[13px] text-[var(--ink-3)]">Nothing set for this lesson yet.</p>
+          : rows.length === 0 ? <p className="m-0 text-[13px] text-[var(--ink-3)]">{t("hublive.dNothingSet")}</p>
           : (
             <ul className="m-0 grid list-none gap-2 p-0">
               {rows.map((h) => {
@@ -273,6 +279,7 @@ function MyHomeworkCard({ qs, childId, noteId }: { qs: string; childId: string; 
  *  same review session (ReviewSession), floating over the lesson like a tool card so nothing about the lesson
  *  itself is disturbed. */
 function MyFlashcardsCard({ qs, childId, topicId }: { qs: string; childId: string; topicId: string | null }) {
+  const t = useT();
   const [data, setData] = useState<DueResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<QueueCard[] | null>(null);
@@ -281,7 +288,8 @@ function MyFlashcardsCard({ qs, childId, topicId }: { qs: string; childId: strin
     if (!topicId) { setData({ due: [], dueCount: 0, newCount: 0, upcoming: 0 }); return; }
     get<DueResponse>(`/api/learning-hub/flashcards/due${withQs(qs, { childId, topicId })}`)
       .then(setData)
-      .catch((e) => setErr(errMsg(e, "Couldn't load flashcards")));
+      .catch((e) => setErr(errMsg(e, t("hublive.dErrLoadFc"))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qs, childId, topicId]);
   useEffect(() => { load(); }, [load]);
 
@@ -294,7 +302,7 @@ function MyFlashcardsCard({ qs, childId, topicId }: { qs: string; childId: strin
       <div className="overflow-hidden rounded-[14px] bg-white" style={{ border: "1px solid #E4E4EE" }} data-testid="my-flashcards-card">
         <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid #E4E4EE" }}>
           <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-[var(--violet-soft)] text-[var(--violet)]"><Icon name="cards" size={16} /></span>
-          <div className="text-[13.5px] font-extrabold text-[var(--ink)]">My flashcards</div>
+          <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t("hublive.dMyFlashcards")}</div>
         </div>
         <div className="p-4">
           {err ? <p role="alert" className="m-0 text-[12.5px] font-semibold text-[var(--red)]">{err}</p>
@@ -303,24 +311,24 @@ function MyFlashcardsCard({ qs, childId, topicId }: { qs: string; childId: strin
               <>
                 <div className="flex items-center justify-between gap-2">
                   <p className="m-0 text-[13px] text-[var(--ink-2)]">
-                    {count === 0 ? "No cards ready for this lesson yet." : `${count} card${count === 1 ? "" : "s"} ready for this lesson.`}
+                    {count === 0 ? t("hublive.dNoCardsReady") : t("hublive.dCardsReady", { n: count })}
                   </p>
                   {!!data.due.length && (
                     <button type="button" onClick={() => setReviewing(data.due)} data-testid="my-flashcards-review"
-                      className="flex-none min-h-[36px] rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)]">Review now</button>
+                      className="flex-none min-h-[36px] rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)]">{t("hublive.dReviewNow")}</button>
                   )}
                 </div>
                 {total > 0 && (
                   <>
                     <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-[var(--panel)]">
-                      <span style={{ width: `${pct(data.dueCount)}%`, background: "#F59E0B" }} title={`${data.dueCount} due`} />
-                      <span style={{ width: `${pct(data.newCount)}%`, background: "var(--violet)" }} title={`${data.newCount} new`} />
-                      <span style={{ width: `${pct(data.upcoming)}%`, background: "var(--hub-green-ink)" }} title={`${data.upcoming} mastered / scheduled later`} />
+                      <span style={{ width: `${pct(data.dueCount)}%`, background: "#F59E0B" }} title={t("hublive.dNDue", { n: data.dueCount })} />
+                      <span style={{ width: `${pct(data.newCount)}%`, background: "var(--violet)" }} title={t("hublive.dNNew", { n: data.newCount })} />
+                      <span style={{ width: `${pct(data.upcoming)}%`, background: "var(--hub-green-ink)" }} title={t("hublive.dMasteredLater", { n: data.upcoming })} />
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] font-bold text-[var(--ink-3)]">
-                      <span><span aria-hidden style={{ color: "#F59E0B" }}>●</span> {data.dueCount} due</span>
-                      <span><span aria-hidden className="text-[var(--violet)]">●</span> {data.newCount} new</span>
-                      <span><span aria-hidden className="text-[var(--hub-green-ink)]">●</span> {data.upcoming} learned</span>
+                      <span><span aria-hidden style={{ color: "#F59E0B" }}>●</span> {t("hublive.dNDue", { n: data.dueCount })}</span>
+                      <span><span aria-hidden className="text-[var(--violet)]">●</span> {t("hublive.dNNew", { n: data.newCount })}</span>
+                      <span><span aria-hidden className="text-[var(--hub-green-ink)]">●</span> {t("hublive.dNLearned", { n: data.upcoming })}</span>
                     </div>
                   </>
                 )}

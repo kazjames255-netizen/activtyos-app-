@@ -7,6 +7,7 @@
 // API's own validation (oak/canvasSchema.ts) is what accepts it. `lesson.slides` (our summary slides) and `lesson.oakDeck`
 // (the iframe fallback) are left exactly as they are. Password for --login: E2etest!123 (the oakstaging-* accounts).
 // SAFETY: refuses the two real tenants; only ever intended for the staging tenant.
+import { sanitiseForImport } from "./noOak";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,7 +52,7 @@ async function main() {
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${key}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: login, password: process.env.OAK_PW || "E2etest!123", returnSecureToken: true }) });
   const j = (await r.json()) as { idToken?: string };
   if (!j.idToken) throw new Error("login failed");
-  const res = await fetch(`${API}/api/learning-hub/notes/${note}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${j.idToken}` }, body: JSON.stringify({ lesson: { deckSlides: slides } }) });
+  const res = await fetch(`${API}/api/learning-hub/notes/${note}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${j.idToken}` }, body: JSON.stringify({ lesson: { deckSlides: sanitiseForImport(slides, `deck ${note}`) } }) });
   const text = await res.text();
   if (!res.ok) throw new Error(`PATCH ${res.status} ${text.slice(0, 400)}`);
   console.log("saved to note", note, "->", res.status);

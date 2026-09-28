@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { HubSettings } from "@/lib/hubConfig";
 import { ruleOf } from "../shared-assess/api";
@@ -14,7 +15,6 @@ import { errMsg } from "../types";
 // only if the tutor's reveal policy allows. Marking of every kind (incl. match / order) is the server's; practice only — nothing
 // here feeds mastery (the exit quiz does).
 
-const CHEERS = ["Yes!", "Spot on!", "Nice one!", "Correct!"];
 export interface WarmupOutcome { ok: boolean | null }
 
 export function WarmupStep({ questions, config, check, scored, onDone, onBack, skippable, extra, onLiveAnswer, onView }: {
@@ -52,6 +52,8 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
   onLiveAnswer?: (questionId: string, response: unknown, extra: { prompt: string; verdict?: boolean | null }) => void;
   onView?: (q: { id: string; prompt: string }) => void;
 }) {
+  const t = useT();
+  const CHEERS = [t("hublessons.cheer0"), t("hublessons.cheer1"), t("hublessons.cheer2"), t("hublessons.cheer3")];
   const rule = ruleOf(config.questionKinds, q.kind);
   const [value, setValue] = useState<Answer | undefined>(undefined);
   const [hint, setHint] = useState(false);
@@ -79,11 +81,11 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
       if (v.correct !== null) scored(v.correct, hint);
       if (v.correct === false) box.current?.closest("section")?.classList.add("ls-shake");
       else if (v.correct) box.current?.closest("section")?.classList.add("ls-pulse");
-    } catch (e) { setErr(errMsg(e, "Couldn't check that answer — try again")); }
+    } catch (e) { setErr(errMsg(e, t("hublessons.wuCouldntCheck"))); }
     finally { setBusy(false); }
   };
 
-  const shown = describeAnswer(verdict?.correctAnswer, q.options);
+  const shown = describeAnswer(verdict?.correctAnswer, q.options, (l) => t("hublessons.optionLetter", { l }));
   const ok = verdict?.correct;
 
   // In-person class mode: nobody answers as "the tutor" — the whole card (prompt, options, checking, reveal) is
@@ -91,11 +93,11 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
   if (extra) {
     return (
       <StepCard>
-        <div className="mb-3"><Tag>Warm-up · {n} of {of}</Tag></div>
+        <div className="mb-3"><Tag>{t("hublessons.wuXofY", { n, total: of })}</Tag></div>
         {extra(q)}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          {onBack ? <Btn tone="ghost" onClick={onBack}>Back</Btn> : <span />}
-          <Btn onClick={() => onNext({ ok: null })} data-testid="lesson-next">{n === of ? "Finish warm-up →" : "Next →"}</Btn>
+          {onBack ? <Btn tone="ghost" onClick={onBack}>{t("hublessons.back")}</Btn> : <span />}
+          <Btn onClick={() => onNext({ ok: null })} data-testid="lesson-next">{n === of ? t("hublessons.finishWarmupArrow") : t("hublessons.nextArrow")}</Btn>
         </div>
       </StepCard>
     );
@@ -104,29 +106,29 @@ function WarmupCard({ q, n, of, config, check, scored, onNext, onBack, skippable
   return (
     <StepCard>
       <div ref={box} tabIndex={-1} className="outline-none">
-        <div className="mb-3"><Tag>Warm-up · {n} of {of}</Tag></div>
+        <div className="mb-3"><Tag>{t("hublessons.wuXofY", { n, total: of })}</Tag></div>
         <QuestionView q={q} rule={rule} value={value} onChange={setValue} disabled={!!verdict} autoFocus />
       </div>
-      {hint && q.hint && <p role="note" className="mt-3 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--gold)] bg-[var(--panel)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--ink)]">💡 {q.hint}</p>}
+      {hint && q.hint && <p role="note" className="mt-3 rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3.5 py-2.5 text-[14px] font-semibold text-[var(--ink)]">💡 {q.hint}</p>}
       {err && <p role="alert" className="mt-3 rounded-xl bg-[var(--red-soft)] px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--red)]">{err}</p>}
       {verdict && (
         <div role="status" className="mt-4 rounded-xl px-4 py-3 text-[15px] ls-enter" style={ok === false ? { background: "var(--red-soft)", color: "color-mix(in srgb, var(--red) 60%, #000)" } : { background: "var(--green-soft)", color: "color-mix(in srgb, var(--green) 45%, #000)" }}>
-          <b className="mb-0.5 block">{ok === null ? "Noted" : ok ? CHEERS[(n - 1) % CHEERS.length] : "Not quite"}</b>
-          {ok === null && <>Your tutor reads written answers, so this one isn&apos;t marked here. </>}
-          {ok === false && shown && (Array.isArray(verdict?.correctAnswer) && q.options?.length ? <>The correct answers are: {shown}. </> : <>The answer is “{shown}”. </>)}
+          <b className="mb-0.5 block">{ok === null ? t("hublessons.wuNoted") : ok ? CHEERS[(n - 1) % CHEERS.length] : t("hublessons.wuNotQuite")}</b>
+          {ok === null && <>{t("hublessons.wuWrittenNotMarked")} </>}
+          {ok === false && shown && (Array.isArray(verdict?.correctAnswer) && q.options?.length ? <>{t("hublessons.wuCorrectAnswersAre", { a: shown })} </> : <>{t("hublessons.wuAnswerIs", { a: shown })} </>)}
           {verdict.explanation}
         </div>
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        {onBack ? <Btn tone="ghost" onClick={onBack}>Back</Btn> : <span />}
+        {onBack ? <Btn tone="ghost" onClick={onBack}>{t("hublessons.back")}</Btn> : <span />}
         <span className="flex flex-wrap gap-2">
           {/* Tutor preview only: skip past a question at any point, answered/checked or not — nothing here is
              saved or counted, so there's no reason to force them through it to move on. */}
-          {skippable && <Btn tone="ghost" onClick={() => onNext({ ok: null })} data-testid="lesson-skip">Skip →</Btn>}
-          {q.hint && !verdict && <Btn tone="ghost" disabled={hint} onClick={() => setHint(true)}>💡 Hint</Btn>}
+          {skippable && <Btn tone="ghost" onClick={() => onNext({ ok: null })} data-testid="lesson-skip">{t("hublessons.skipArrow")}</Btn>}
+          {q.hint && !verdict && <Btn tone="ghost" disabled={hint} onClick={() => setHint(true)}>{t("hublessons.hint")}</Btn>}
           {!verdict
-            ? <Btn onClick={doCheck} disabled={busy || !isAnswered(value)} data-testid="lesson-check">{busy ? "Checking…" : "Check"}</Btn>
-            : <Btn onClick={() => onNext({ ok: verdict.correct })} data-testid="lesson-next">{n === of ? "Finish warm-up →" : "Next →"}</Btn>}
+            ? <Btn onClick={doCheck} disabled={busy || !isAnswered(value)} data-testid="lesson-check">{busy ? t("hublessons.checking") : t("hublessons.check")}</Btn>
+            : <Btn onClick={() => onNext({ ok: verdict.correct })} data-testid="lesson-next">{n === of ? t("hublessons.finishWarmupArrow") : t("hublessons.nextArrow")}</Btn>}
         </span>
       </div>
     </StepCard>

@@ -1,4 +1,5 @@
 import { useFamily } from "./FamilyContext";
+import { hubT, hubLocale, tp } from "./hubT";
 
 // Kind child language (P-13) in ONE place. Only child screens (kid mode) use it, and only for children under Year 10:
 // a teenager gets the same plain factual words a grown-up does. Rules: never "Late" or "Overdue" in front of a
@@ -26,16 +27,18 @@ export function useKidCopy(yearGroup?: string | null): { kind: boolean; band: Ki
   return { kind: kid && (band === "ks1" || band === "ks2"), band };
 }
 
+// Module-level table used by files outside hubfam too, so it is a set of getters that read the active locale
+// (kept in step by FamilyProvider via hubT.ts) instead of fixed strings.
 export const KID_COPY = {
-  waiting: "Waiting for you",
-  waitingSince: (day: string) => `Waiting for you since ${day}`,
-  handedIn: "Handed in",
-  marked: "Marked",
-  nearlyThere: "Nearly there. Have another go.",
-  haveAnotherGo: "Have another go",
-  homeworkWaiting: (n: number) => `${n} homework waiting for you`,
-  loadFailed: "Oops! Let's try again.",
-} as const;
+  get waiting() { return hubT("hubfam.kWaiting"); },
+  waitingSince: (day: string) => hubT("hubfam.kWaitingSince", { day }),
+  get handedIn() { return hubT("hubfam.kHandedIn"); },
+  get marked() { return hubT("hubfam.kMarked"); },
+  get nearlyThere() { return hubT("hubfam.kNearlyThere"); },
+  get haveAnotherGo() { return hubT("hubfam.kHaveAnotherGo"); },
+  homeworkWaiting: (n: number) => tp(hubT, hubLocale(), "hubfam.kHwWaiting", n),
+  get loadFailed() { return hubT("hubfam.kLoadFailed"); },
+};
 
 /** Display only: a tutor's free-text title can carry shame words ("Overdue reading", "Late maths"); on a child's screen
  *  (below Year 10) drop them. Never used to change stored data. */

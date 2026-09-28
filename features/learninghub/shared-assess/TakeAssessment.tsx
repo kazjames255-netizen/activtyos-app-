@@ -16,6 +16,7 @@ import { Chip, display, FOCUS, Meter, Modal, Notice, TAP } from "./ui";
 import { AskTutorLink, ChildChip, useChildGate, useFamily, WhoIsLearning } from "../family/FamilyContext";
 import { clearDraft, loadDraft, pickDraft, saveDraft } from "./draft";
 import { useDraftSync } from "./useDraftSync";
+import { useT } from "@/lib/i18n/provider";
 
 // The student-side runner: intro → one question per screen (with a jump strip,
 // progress bar and optional countdown) → review + confirm → scored feedback.
@@ -44,6 +45,7 @@ interface Props {
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra, welcome, resume, homeworkId }: Props) {
+  const t = useT();
   // R-5: `a.timeLimitMins` is already what THIS child gets (StudentAssess applies their support profile; the server applies it again at start).
   const [phase, setPhase] = useState<Phase>("intro");
   const [run, setRun] = useState<StartedAttempt | null>(null);
@@ -59,18 +61,18 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
   const topRef = useRef<HTMLDivElement>(null);
   const diag = a.type === "diagnostic";
   const kidNoun = useFamily().kid;
-  const noun = diag ? "starting quiz" : "quiz";
+  const nk = diag ? "Start" : "Quiz"; // picks the whole-sentence variant (grammar differs per language)
   const again = effectivePolicy(a, p.config);
   // The child this paper is recorded for is exactly `childId` (the same id every request below sends and the chip shows).
   // A family with 2+ children must have said who is learning before anything starts.
   const gate = useChildGate(childId);
 
   const start = async () => {
-    if (!gate.ok) { setErr("Choose who's learning first, so the result is saved for the right child."); return; }
+    if (!gate.ok) { setErr(t("hubfam.asChooseWhoFirst")); return; }
     setPhase("starting"); setErr(null); setSoft(false);
     try {
       const r = await post<StartedAttempt>(hubPath(p.qs, `/assessments/${a.id}/attempts`, { childId }), { childId, ...(homeworkId ? { homeworkId } : {}) });
-      if (!r.questions?.length) throw new Error(`This ${noun} has no questions yet.`);
+      if (!r.questions?.length) throw new Error(t(`hubfam.asNoQuestions${nk}`));
       // A resumed paper: the newer of what the server kept (works on any device) and what this device kept.
       const draft = r.resumed ? pickDraft(r.draft, loadDraft(r.attemptId)) : null;
       setRun(r); setAnswers(draft?.a ?? {}); setIdx(Math.min(draft?.idx ?? 0, r.questions.length - 1)); submitted.current = false;
@@ -86,9 +88,9 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
       const blocked = e instanceof ApiError && e.status === 409 && (body?.code === "retake_blocked" || body?.code === "not_for_this_child" || needsDiag);
       setSoft(blocked);
       if (e instanceof ApiError && e.status === 409 && body?.code === "retake_blocked") setErr(retakeBlockedFor(body.reason, body.nextAvailableAt));
-      else if (needsDiag) setErr(kidNoun ? "Do the starting quiz for this subject first. It unlocks the rest." : "Take the starting quiz for this subject first. It unlocks the quizzes.");
-      else if (blocked) setErr("This one isn't set up for your year group. Ask your tutor if you think that's a mistake.");
-      else setErr(errMsg(e, "Couldn't start"));
+      else if (needsDiag) setErr(kidNoun ? t("hubfam.asNeedsDiagKid") : t("hubfam.asNeedsDiagParent"));
+      else if (blocked) setErr(t("hubfam.asNotForYear"));
+      else setErr(errMsg(e, t("hubfam.asCouldntStart")));
       setPhase("intro");
     }
   };
@@ -131,10 +133,10 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
       setResult(r); setPhase("result"); onSubmitted();
     } catch (e) {
       submitted.current = false;
-      setErr(errMsg(e, auto ? `Time ran out and we couldn't hand your ${noun} in` : "Couldn't hand in"));
+      setErr(errMsg(e, auto ? t(`hubfam.asTimeRanOut${nk}`) : t("hubfam.asCouldntHandIn")));
       setPhase("review");
     }
-  }, [run, answers, p.qs, p.config.questionKinds, childId, onSubmitted]);
+  }, [run, answers, p.qs, p.config.questionKinds, childId, onSubmitted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Countdown. Auto-hands-in at zero.
   useEffect(() => {
@@ -182,10 +184,10 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
   const unanswered = qs.length - answered;
   const set = (id: string, v: Answer) => setAnswers((m) => ({ ...m, [id]: v }));
   const meta = [
-    { k: "Questions", v: String(a.questionCount ?? "—") },
-    { k: "Marks", v: String(a.totalMarks ?? "—") },
-    { k: "Time", v: a.timeLimitMins ? `${a.timeLimitMins} min` : "No limit" },
-    ...(diag ? [] : [{ k: "Pass mark", v: `${a.passMarkPct}%` }]),
+    { k: t("hubfam.asMetaQuestions"), v: String(a.questionCount ?? "—") },
+    { k: t("hubfam.asMetaMarks"), v: String(a.totalMarks ?? "—") },
+    { k: t("hubfam.asMetaTime"), v: a.timeLimitMins ? t("hubfam.asMin", { n: a.timeLimitMins }) : t("hubfam.asNoLimit") },
+    ...(diag ? [] : [{ k: t("hubfam.asMetaPass"), v: `${a.passMarkPct}%` }]),
   ];
 
   // ── intro ──
@@ -193,13 +195,13 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
     const resuming = !!resume && phase === "starting";
     return (
       <div ref={topRef} className="mx-auto w-full max-w-[680px]">
-        <button type="button" onClick={onExit} className={`mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pr-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)] ${FOCUS}`}><Icon name="arrowLeft" size={16} />Back</button>
+        <button type="button" onClick={onExit} className={`mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pe-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)] ${FOCUS}`}><Icon name="arrowLeft" size={16} className="rtl:rotate-180" />{t("hubfam.asBack")}</button>
         <Card className="overflow-hidden">
           <SubjectCover subject={a.subject} height={132} rounded="rounded-none" className="!h-auto min-h-[132px]">
             <div className="px-5 pb-4 pt-5 sm:px-8">
               <div className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-2)]">
                 <span className="grid h-7 w-7 place-items-center rounded-lg bg-[var(--surface)]/80 text-[var(--ink)]"><SubjectGlyph subject={a.subject} size={16} /></span>
-                {a.subject}{diag ? " · Starting quiz" : ""}
+                {a.subject}{diag ? ` · ${t("hubfam.asStartingQuizTag")}` : ""}
               </div>
               <h3 className="m-0 mt-2.5 text-[24px] font-extrabold leading-tight text-[var(--ink)] sm:text-[26px]" style={display}>{welcome?.title ?? a.title}</h3>
               {welcome && <div className="mt-1 text-[13px] font-semibold text-[var(--ink-2)]">{a.title}</div>}
@@ -224,12 +226,12 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
                 </div>
               ))}
             </dl>
-            {a.timeLimitMins ? <p className="m-0 mt-3 text-[12.5px] text-[var(--ink-3)]">The clock starts when you press Start and your answers are handed in automatically when time is up.</p> : null}
+            {a.timeLimitMins ? <p className="m-0 mt-3 text-[12.5px] text-[var(--ink-3)]">{t("hubfam.asClockNote")}</p> : null}
             {err && <div className="mt-4"><Notice tone={soft ? "warn" : "error"} onDismiss={() => setErr(null)}>{err}</Notice>{soft && <AskTutorLink subject={a.title} />}</div>}
             <div className="mt-5"><WhoIsLearning childId={childId} /></div>
             <div className="flex justify-center">
               <Button variant="solid" className={`${TAP} w-full !px-8 text-[14px] sm:w-auto`} disabled={phase === "starting" || !gate.ok} onClick={start} data-testid="hub-start">
-                {phase === "starting" ? (resuming ? "Finding your answers…" : "Getting your questions…") : a.lastAttempt && !diag ? "Retake" : "Start"}
+                {phase === "starting" ? (resuming ? t("hubfam.asFindingAnswers") : t("hubfam.asGettingQuestions")) : a.lastAttempt && !diag ? t("hubfam.asRetake") : t("hubfam.asStart")}
               </Button>
             </div>
           </div>
@@ -242,15 +244,15 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
   if (phase === "result" && result) {
     return (
       <div ref={topRef} className="mx-auto w-full max-w-[860px]">
-        <div className="mb-2 flex items-center gap-2" data-testid="hub-result-for"><ChildChip childId={childId} /><span className="text-[12.5px] font-semibold text-[var(--ink-3)]">result saved</span></div>
+        <div className="mb-2 flex items-center gap-2" data-testid="hub-result-for"><ChildChip childId={childId} /><span className="text-[12.5px] font-semibold text-[var(--ink-3)]">{t("hubfam.asResultSaved")}</span></div>
         <ResultView kidYear={p.students.find((s) => s.childId === childId)?.yearGroup} result={result} questions={qs} topics={p.topics} config={p.config} type={a.type} passMarkPct={a.passMarkPct} title={a.title}
           actions={<>
-            <Button variant="solid" className={TAP} onClick={onExit}>Back to {diag ? "starting quizzes" : "quizzes"}</Button>
+            <Button variant="solid" className={TAP} onClick={onExit}>{diag ? t("hubfam.asBackToStarting") : t("hubfam.asBackToQuizzes")}</Button>
             {!diag && (again.policy === "once"
-              ? <span className="inline-flex min-h-[44px] flex-wrap items-center gap-x-1.5 rounded-full bg-[var(--panel)] px-4 text-[12.5px] font-bold text-[var(--ink-2)]">One attempt only. Ask your tutor if you need another go.<AskTutorLink subject={a.title} /></span>
+              ? <span className="inline-flex min-h-[44px] flex-wrap items-center gap-x-1.5 rounded-full bg-[var(--panel)] px-4 text-[12.5px] font-bold text-[var(--ink-2)]">{t("hubfam.asOnceOnly")}<AskTutorLink subject={a.title} /></span>
               : again.policy === "cooldown"
-                ? <span className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--panel)] px-4 text-[12.5px] font-bold text-[var(--ink-2)]">You can retake this in {fmtWait(again.hours * 3_600_000)}</span>
-                : <Button variant="ghost" className={TAP} onClick={() => { setResult(null); setRun(null); setAnswers({}); setPhase("intro"); }}>Retake</Button>)}
+                ? <span className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--panel)] px-4 text-[12.5px] font-bold text-[var(--ink-2)]">{t("hubfam.asRetakeInDur", { wait: fmtWait(again.hours * 3_600_000) })}</span>
+                : <Button variant="ghost" className={TAP} onClick={() => { setResult(null); setRun(null); setAnswers({}); setPhase("intro"); }}>{t("hubfam.asRetake")}</Button>)}
           </>}>
           {resultExtra?.(result)}
         </ResultView>
@@ -258,8 +260,11 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
     );
   }
 
-  if (!run) return <div ref={topRef} className="mx-auto w-full max-w-[680px]"><div role="status" aria-label={`Opening your ${noun}`} className="grid gap-3"><div aria-hidden className="h-[72px] animate-pulse rounded-2xl bg-[var(--panel)]" /><div aria-hidden className="h-[280px] animate-pulse rounded-2xl bg-[var(--panel)]" /></div></div>;
+  if (!run) return <div ref={topRef} className="mx-auto w-full max-w-[680px]"><div role="status" aria-label={t(`hubfam.asOpening${nk}`)} className="grid gap-3"><div aria-hidden className="h-[72px] animate-pulse rounded-2xl bg-[var(--panel)]" /><div aria-hidden className="h-[280px] animate-pulse rounded-2xl bg-[var(--panel)]" /></div></div>;
   const urgent = left != null && left <= 60;
+  // MyMaths-style doing screen for homework/worksheet papers: marks [n] on every question in the rail, a running total, and a "Mark it" button.
+  const hw = !!homeworkId;
+  const totalMarks = qs.reduce((n, x) => n + (x.marks || 0), 0);
 
   // ── taking / review ──
   return (
@@ -267,26 +272,26 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
       <style>{`@keyframes hub-q-in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}.hub-q-in{animation:hub-q-in .28s cubic-bezier(.2,.7,.2,1) both}@media (prefers-reduced-motion:reduce){.hub-q-in{animation:none}}`}</style>
       <div className="sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-4 py-3 shadow-[var(--shadow-sm)] backdrop-blur">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={() => setConfirm("leave")} aria-label={`Leave this ${noun}`} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
+          <button type="button" onClick={() => setConfirm("leave")} aria-label={t(`hubfam.asLeaveAria${nk}`)} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}><Icon name="close" size={20} /></button>
           <SubjectCover subject={a.subject} height={40} width={40} rounded="rounded-xl" className="hidden sm:block"><span className="grid h-10 w-10 place-items-center"><SubjectGlyph subject={a.subject} size={20} /></span></SubjectCover>
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13px] font-extrabold text-[var(--ink)]" style={display}>{a.title}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
               <ChildChip childId={childId} />
-              <span className="text-[11.5px] font-semibold text-[var(--ink-3)]" aria-live="polite">{phase === "review" ? "Check your answers" : `Question ${idx + 1} of ${qs.length}`} · {answered} answered</span>
+              <span className="text-[11.5px] font-semibold text-[var(--ink-3)]" aria-live="polite">{phase === "review" ? t("hubfam.asCheckAnswers") : t("hubfam.asQofN", { i: idx + 1, n: qs.length })} · {t("hubfam.asNAnswered", { n: answered })}</span>
             </div>
           </div>
           {left != null && (
-            <div role="timer" aria-label={`Time left ${mmss(left)}`} className="flex flex-none items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-extrabold tabular-nums" style={urgent ? { background: "var(--red-soft)", color: "var(--red)" } : { background: "var(--panel)", color: "var(--ink)" }}>
+            <div role="timer" aria-label={t("hubfam.asTimeLeft", { time: mmss(left) })} className="flex flex-none items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-extrabold tabular-nums" style={urgent ? { background: "var(--red-soft)", color: "var(--red)" } : { background: "var(--panel)", color: "var(--ink)" }}>
               <span aria-hidden>⏱</span>{mmss(left)}
             </div>
           )}
         </div>
-        <div className="mt-2.5"><Meter pct={phase === "review" ? 100 : ((idx + 1) / qs.length) * 100} tone={{ fill: "var(--brand)", soft: "var(--brand-soft)", ink: "var(--brand-strong)" }} height={6} label="Progress" /></div>
+        <div className="mt-2.5"><Meter pct={phase === "review" ? 100 : ((idx + 1) / qs.length) * 100} tone={{ fill: "var(--brand)", soft: "var(--brand-soft)", ink: "var(--brand-strong)" }} height={6} label={t("hubfam.asProgress")} /></div>
       </div>
 
       {err && <div className="mb-3"><Notice onDismiss={() => setErr(null)}>{err}</Notice></div>}
-      {left != null && left <= 0 && <div className="mb-3"><Notice tone="warn">Time&apos;s up. Handing in your answers…</Notice></div>}
+      {left != null && left <= 0 && <div className="mb-3"><Notice tone="warn">{t("hubfam.asTimesUp")}</Notice></div>}
 
       {phase === "taking" && q && (
         <Card className="p-4 sm:p-6">
@@ -295,66 +300,66 @@ export function TakeAssessment({ a, p, childId, onExit, onSubmitted, resultExtra
               toolCtx={diag ? undefined : { subject: a.subject, year: yearFromLabel(p.students.find((s) => s.childId === childId)?.yearGroup), unit: a.title, qs: p.qs }} />
           </div>
           <div className="mt-6 flex items-center justify-between gap-2">
-            <Button variant="ghost" className={`${TAP} !px-5`} disabled={idx === 0} onClick={() => setIdx(idx - 1)}>← Back</Button>
+            <Button variant="ghost" className={`${TAP} !px-5`} disabled={idx === 0} onClick={() => setIdx(idx - 1)}><span aria-hidden className="inline-block rtl:rotate-180">←</span> {t("hubfam.asBack")}</Button>
             {idx < qs.length - 1
-              ? <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setIdx(idx + 1)} data-testid="hub-next">{isAnswered(answers[q.id]) ? "Next →" : "Skip →"}</Button>
-              : <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setPhase("review")} data-testid="hub-review">Review answers</Button>}
+              ? <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setIdx(idx + 1)} data-testid="hub-next">{isAnswered(answers[q.id]) ? t("hubfam.asNext") : t("hubfam.asSkip")} <span aria-hidden className="inline-block rtl:rotate-180">→</span></Button>
+              : <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setPhase("review")} data-testid="hub-review">{t("hubfam.asReviewAnswers")}</Button>}
           </div>
         </Card>
       )}
 
       {phase === "taking" && qs.length > 1 && (
-        <nav aria-label="Jump to a question" className="mt-3 flex gap-1.5 overflow-x-auto pb-1">
+        <nav aria-label={t("hubfam.asJumpTo")} className="mt-3 flex items-stretch gap-1.5 overflow-x-auto pb-1" data-testid={hw ? "hub-doing-rail" : undefined}>
           {qs.map((x, i) => {
             const done = isAnswered(answers[x.id]);
             const cur = i === idx;
             return (
-              <button key={x.id} type="button" onClick={() => setIdx(i)} aria-label={`Question ${i + 1}${done ? ", answered" : ""}`} aria-current={cur ? "step" : undefined}
-                className={`grid h-11 min-w-[44px] flex-none place-items-center rounded-xl border-2 text-[12.5px] font-extrabold tabular-nums transition-colors ${FOCUS} ${cur ? "border-[var(--brand)] bg-[var(--brand)] text-white" : done ? "border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)]"}`}>{i + 1}</button>
+              <button key={x.id} type="button" onClick={() => setIdx(i)} aria-label={(done ? t("hubfam.asQuestionNAnswered", { n: i + 1 }) : t("hubfam.asQuestionN", { n: i + 1 })) + (hw ? `, ${t("hubfam.asQMarks", { m: x.marks })}` : "")} aria-current={cur ? "step" : undefined}
+                className={`grid h-11 min-w-[44px] flex-none ${hw ? "px-2.5" : ""} place-items-center rounded-xl border-2 text-[12.5px] font-extrabold tabular-nums transition-colors ${FOCUS} ${cur ? "border-[var(--brand)] bg-[var(--brand)] text-white" : done ? "border-[var(--brand-line)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)]"}`}>{i + 1}{hw && <span className="ms-1 text-[10.5px] font-bold opacity-80" aria-hidden>[{x.marks}]</span>}</button>
             );
           })}
+          {hw && <span className="grid h-11 flex-none place-items-center rounded-xl bg-[var(--panel)] px-3 text-[12.5px] font-extrabold tabular-nums text-[var(--ink)]" data-testid="hub-doing-total">{t("hubfam.asMarkTotal", { n: totalMarks })}</span>}
         </nav>
       )}
 
       {(phase === "review" || phase === "submitting") && (
         <Card className="p-4 sm:p-6">
-          <h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={display}>Ready to hand in?</h3>
-          <p className="mt-1 text-[13px] text-[var(--ink-2)]">Tap a question to go back to it.</p>
-          {unanswered > 0 && <div className="mt-3"><Notice tone="warn">You haven&apos;t answered {unanswered} {unanswered === 1 ? "question" : "questions"} yet. Unanswered questions score no marks.</Notice></div>}
+          <h3 className="m-0 text-[18px] font-extrabold text-[var(--ink)]" style={display}>{t("hubfam.asReadyHandIn")}</h3>
+          <p className="mt-1 text-[13px] text-[var(--ink-2)]">{t("hubfam.asTapToGoBack")}</p>
+          {unanswered > 0 && <div className="mt-3"><Notice tone="warn">{t("hubfam.asUnansweredNotice", { n: unanswered })}</Notice></div>}
           <ol className="m-0 mt-4 grid list-none gap-2 p-0">
             {qs.map((x, i) => {
               const done = isAnswered(answers[x.id]);
               return (
                 <li key={x.id}>
-                  <button type="button" onClick={() => { setIdx(i); setPhase("taking"); }} className={`flex min-h-[48px] w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left hover:border-[var(--brand)] ${FOCUS}`}>
+                  <button type="button" onClick={() => { setIdx(i); setPhase("taking"); }} className={`flex min-h-[48px] w-full items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-start hover:border-[var(--brand)] ${FOCUS}`}>
                     <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{i + 1}</span>
                     <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--ink)]">{x.prompt}</span>
-                    {done ? <Chip tone={{ fill: "", soft: "var(--green-soft)", ink: "color-mix(in srgb, var(--green) 50%, var(--ink))" }} icon="✓">Answered</Chip> : <Chip tone={{ fill: "", soft: "var(--gold-soft)", ink: "color-mix(in srgb, var(--gold) 30%, var(--ink))" }}>Blank</Chip>}
+                    {done ? <Chip tone={{ fill: "", soft: "var(--green-soft)", ink: "color-mix(in srgb, var(--green) 50%, var(--ink))" }} icon="✓">{t("hubfam.asAnsweredChip")}</Chip> : <Chip tone={{ fill: "", soft: "var(--gold-soft)", ink: "color-mix(in srgb, var(--gold) 30%, var(--ink))" }}>{t("hubfam.asBlank")}</Chip>}
                   </button>
                 </li>
               );
             })}
           </ol>
           <div className="mt-5 flex items-center justify-between gap-2">
-            <Button variant="ghost" className={`${TAP} !px-5`} onClick={() => { setIdx(qs.length - 1); setPhase("taking"); }} disabled={phase === "submitting"}>← Back</Button>
-            <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setConfirm("submit")} disabled={phase === "submitting"} data-testid="hub-handin">{phase === "submitting" ? "Marking…" : "Hand in"}</Button>
+            <Button variant="ghost" className={`${TAP} !px-5`} onClick={() => { setIdx(qs.length - 1); setPhase("taking"); }} disabled={phase === "submitting"}><span aria-hidden className="inline-block rtl:rotate-180">←</span> {t("hubfam.asBack")}</Button>
+            <Button variant="solid" className={`${TAP} !px-6`} onClick={() => setConfirm("submit")} disabled={phase === "submitting"} data-testid="hub-handin">{phase === "submitting" ? t("hubfam.asMarking") : hw ? t("hubfam.asMarkIt") : t("hubfam.asHandIn")}</Button>
           </div>
         </Card>
       )}
 
       {confirm === "submit" && (
-        <Modal title="Hand in your answers?" onClose={() => setConfirm(null)}
-          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirm(null)}>Keep going</Button><Button variant="solid" className={TAP} onClick={() => submit()} data-testid="hub-confirm-submit" data-autofocus>Yes, hand in</Button></>}>
+        <Modal title={hw ? t("hubfam.asMarkItTitle") : t("hubfam.asHandInTitle")} onClose={() => setConfirm(null)}
+          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirm(null)}>{t("hubfam.asKeepGoing")}</Button><Button variant="solid" className={TAP} onClick={() => submit()} data-testid="hub-confirm-submit" data-autofocus>{hw ? t("hubfam.asYesMarkIt") : t("hubfam.asYesHandIn")}</Button></>}>
           <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">
-            {unanswered > 0 ? <>You still have <b className="text-[var(--ink)]">{unanswered} unanswered</b>. </> : "You've answered every question. "}
-            Once you hand in you can&apos;t change your answers.
+            {unanswered > 0 ? t("hubfam.asConfirmUnanswered", { n: unanswered }) : t("hubfam.asConfirmAll")}
           </p>
         </Modal>
       )}
       {confirm === "leave" && (
-        <Modal title={`Leave this ${noun} for now?`} onClose={() => setConfirm(null)}
-          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirm(null)}>Stay</Button><Button variant="solid" className={TAP} onClick={onExit}>Leave for now</Button></>}>
-          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">Your answers are saved, so you can pick this up again from the list (on this device or another){a.timeLimitMins ? ", but the clock keeps running" : ""}.</p>
+        <Modal title={t(`hubfam.asLeaveTitle${nk}`)} onClose={() => setConfirm(null)}
+          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirm(null)}>{t("hubfam.asStay")}</Button><Button variant="solid" className={TAP} onClick={onExit}>{t("hubfam.asLeaveForNow")}</Button></>}>
+          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{a.timeLimitMins ? t("hubfam.asLeaveBodyClock") : t("hubfam.asLeaveBody")}</p>
         </Modal>
       )}
     </div>

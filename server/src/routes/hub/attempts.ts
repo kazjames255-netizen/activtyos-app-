@@ -10,13 +10,14 @@ import { audienceFit, effectiveRetake, failStreak, normAudience, retakeDecision 
 import { cleanKindResponse, presentMatch, presentOrder, type Pair } from "../../lib/hubKinds";
 import { imageBase, pictureOf, pinAttemptImages, questionImageIds } from "../../lib/hubMedia";
 import type { HubSettings } from "../../../../lib/hubConfig";
+import { syncHomeworkMark } from "../../lib/hubHwSync";
 import { diagnosticState } from "./assessments";
 import { assessmentRows } from "../../lib/hubIndex";
 import { pingHub } from "../../lib/hubPing";
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { recomputeChildMastery } from "./mastery";
 import {
-  ATTEMPT_LITE_FIELDS, assessmentsCol, asStr, attemptsCol, childFacts, childFor, childSubjectOk, enrolmentId, fitsChild, homeworkCol, nowIso, questionsCol,
+  ATTEMPT_LITE_FIELDS, assessmentsCol, asStr, attemptsCol, childFacts, childFor, childSubjectOk, diagnosticAssignedTo, enrolmentId, fitsChild, homeworkCol, nowIso, questionsCol,
   requestedChild, type AnswerDoc, type AssessmentDoc, type AttemptDoc, type ChildRef, type QuestionDoc, type QuestionSnap,
 } from "./shared";
 
@@ -193,10 +194,19 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   const cfg = await hubConfig(ctx.tenantId, child.franchiseId);
   // Who is this for? A year group / age the child doesn't fit is a refusal; a child whose year or age is
   // simply unknown is let in (the tutor said "unknown", we never silently lock anyone out).
-  if (audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") {
+  // EXCEPT a lesson's own exit quiz (`asm.lessonId` set): whatever already let this child open THAT lesson
+  // (franchise scope, the tutor's `lessonAccess` setting…) is the real access decision — its `audience` is
+  // just the year the source content was written for, not a second, independent gate on top. Re-applying it
+  // here used to dead-end a child who was properly shown an off-year-group lesson (e.g. `lessonAccess: "all"`,
+  // or general browsing): they'd play the whole thing and then hit "this quiz isn't set up for your year
+  // group" with no way forward, even though nothing about seeing the LESSON was ever wrong.
+  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") {
     res.status(409).json({ error: `${asm.title} isn't set for ${child.childName || "this student"}'s year group or age.`, code: "not_for_this_child" });
     return;
   }
+  // A diagnostic fitting the audience isn't enough — it must actually have been assigned to THIS child
+  // (legacy diagnostics with no assignedChildIds field are exempt: everyone audience-fitting still counts).
+  if (asm.type === "diagnostic" && !diagnosticAssignedTo(asm, child.childId)) { notFound(); return; }
   const subjectKey = asm.subject.toLowerCase();
   const diag = await pre.diag;
   if (asm.type === "diagnostic" && diag.active.has(subjectKey)) {
@@ -205,11 +215,12 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   }
   if (asm.type === "quiz" && cfg.requireDiagnostic && !diag.taken.has(subjectKey) && !child.waived.includes(subjectKey)) {
     // Only bites when a diagnostic actually exists for the subject — otherwise nobody could ever unlock the quizzes.
-    // (and only a placement test that is FOR this child counts — several may exist per subject, one per audience).
+    // (and only a placement test that is FOR this child, both audience AND assignment, counts — several may
+    // exist per subject, one per audience, and not every audience-fitting one was assigned to this child).
     const all = [...(await assessmentRows(ctx.tenantId)).values()]; // cached rows — was a read of every assessment per quiz start
     const facts = await childFacts(child, cfg.yearGroups);
     const hasDiag = all.some((x) => {
-      return x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no";
+      return x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no" && diagnosticAssignedTo(x, child.childId);
     });
     if (hasDiag) { res.status(409).json({ error: `Take the ${asm.subject} diagnostic first`, code: "diagnostic_required", subject: asm.subject }); return; }
   }
@@ -219,7 +230,13 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   if (parsed.data.homeworkId) {
     const h = await homeworkCol.doc(parsed.data.homeworkId).get();
     const assigned = h.get("assignedChildIds") as string[] | undefined;
-    if (!h.exists || h.get("tenantId") !== ctx.tenantId || (Array.isArray(assigned) && !assigned.includes(child.childId)) || (h.get("assessmentId") && h.get("assessmentId") !== aSnap.id)) {
+    // …or the auto-marked quiz built from one of the worksheets the homework lists (`worksheetNoteIds` → note.worksheetQuizId).
+    let viaWorksheet = false;
+    const wsIds = ((h.get("worksheetNoteIds") as string[] | undefined) ?? []).filter(okId);
+    if (h.exists && wsIds.length && h.get("assessmentId") !== aSnap.id) {
+      viaWorksheet = (await db.getAll(...wsIds.map((id) => db.collection("hubNotes").doc(id)), { fieldMask: ["tenantId", "worksheetQuizId"] })).some((n) => n.exists && canReadContent(ctx, n.get("tenantId")) && n.get("worksheetQuizId") === aSnap.id);
+    }
+    if (!h.exists || h.get("tenantId") !== ctx.tenantId || (Array.isArray(assigned) && !assigned.includes(child.childId)) || ((h.get("assessmentId") || wsIds.length) && h.get("assessmentId") !== aSnap.id && !viaWorksheet)) {
       res.status(404).json({ error: "Homework not found" });
       return;
     }
@@ -337,6 +354,7 @@ hubAttemptsApi.post("/attempts/:id/submit", async (req, res) => {
   }
   await refreshMastery(saved);
   pingHub(saved.tenantId, "hubAttempts");
+  await syncHomeworkMark(saved.tenantId, saved.homeworkId, saved.childId);
   const cfg = await hubConfig(saved.tenantId, saved.franchiseId);
   res.json(resultOut(found.id, saved, cfg, ctx.canEdit, false, imageBase(req), needsPastPass(cfg, saved, ctx.canEdit) && await passedBefore(saved)));
 });
@@ -466,6 +484,7 @@ hubAttemptsApi.put("/attempts/:id/mark", async (req, res) => {
   }
   await refreshMastery(saved);
   pingHub(saved.tenantId, "hubAttempts");
+  await syncHomeworkMark(saved.tenantId, saved.homeworkId, saved.childId);
   // The tutor just finished marking a paper that was waiting: tell the family (a parent-muted "learning" category still gets the bell).
   if (saved.status === "marked" && found.a.status !== "marked" && saved.childId) {
     void notifyFamilies({

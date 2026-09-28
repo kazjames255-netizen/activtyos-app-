@@ -1,5 +1,7 @@
 "use client";
 
+import { useLbl } from "@/features/learninghub/hubLabel";
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -73,7 +75,14 @@ function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolea
   return label;
 }
 
+// English group label -> chrome.g_<key> (lib/i18n/messages/areas/chrome.ts). Unknown labels render as authored.
+const GROUP_KEY: Record<string, string> = { "Account": "account", "Activities": "activities", "AI": "ai", "Blocks and listings": "blocks", "Communication": "communication", "First aid, medication & incidents": "firstaid", "Franchises": "franchises", "Learning & documents": "learndocs", "Marketing": "marketing", "Money & growth": "moneygrowth", "Money": "money", "My child": "mychild", "My children": "mychild", "My schedule": "myschedule", "On session": "onsession", "Oversight": "oversight", "Pay & personal": "paypersonal", "Pupils": "pupils", "Run the day": "runday", "Safeguarding & health": "safeguard", "Savings & rewards": "savings", "Sell & take bookings": "sell", "Settings": "settings", "Team": "team", "Tenants": "tenants", "Your team": "yourteam", "Overview": "overview", "People & reviews": "peoplerev", "Safeguarding oversight": "safeoversight" };
+
 function NavLink({ item, portal, active, multiChild, unread, coupons, faded, collapsed }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number; faded?: boolean; collapsed?: boolean }) {
+  const lbl = useLbl();
+  const tt = useT();
+  // Hub items carry a fixed English name; every other label is still passed through as authored.
+  const navText = (it: NavItem, text: string) => (it.view === "learninghub" ? lbl(text) : text);
   // The Messages badge is live: unread message count, not the config placeholder.
   // It grows as replies arrive and clears to nothing once the thread is opened
   // (the open marks messages read → realtime → this refetches). The Coupons badge
@@ -88,7 +97,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
     return (
       <Link
         href={`/${portal}/${item.view}`}
-        title={pluralLabel(item.label, portal, multiChild)}
+        title={navText(item, pluralLabel(item.label, portal, multiChild))}
         className={`relative mx-2 flex items-center justify-center rounded-lg py-2 no-underline hover:bg-[var(--side-hover)]${active ? " side-active" : ""}`}
         style={
           active
@@ -113,10 +122,10 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
         href={`/${portal}/${item.view}`}
         className={`${itemCls} opacity-60 transition-opacity hover:opacity-90`}
         style={{ color: "var(--side-nav)" }}
-        title={`${item.label} — nothing here yet`}
+        title={tt("chrome.nothingYet", { name: navText(item, item.label ?? "") })}
       >
         <Icon icon={item.icon} />
-        <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
+        <span className="min-w-0 flex-1 truncate">{navText(item, pluralLabel(item.label, portal, multiChild))}</span>
         <span className="ml-auto flex-none rounded-full border border-white/15 bg-white/[0.06] px-2 py-[1px] text-[8.5px] font-bold uppercase tracking-[0.06em] text-[var(--side-muted)]">{tag}</span>
       </Link>
     );
@@ -139,7 +148,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
       }
     >
       <Icon icon={item.icon} />
-      <span className="min-w-0 flex-1 truncate">{pluralLabel(item.label, portal, multiChild)}</span>
+      <span className="min-w-0 flex-1 truncate">{navText(item, pluralLabel(item.label, portal, multiChild))}</span>
       <Badge value={badge} />
     </Link>
   );
@@ -201,7 +210,7 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
             key={item.view}
             item={item}
             portal={portal}
-            active={pathname === `/${portal}/${item.view}`}
+            active={pathname === `/${portal}/${item.view}` || pathname.startsWith(`/${portal}/${item.view}/`)}
             multiChild={multiChild}
             unread={unread}
             coupons={coupons}
@@ -216,7 +225,10 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
 
 export function Sidebar({ portal }: { portal: PortalKey }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const groups = NAV_GROUPS[portal];
+  const t = useT();
+  const groupText = (label: string | null) => { const k = label ? GROUP_KEY[label] : undefined; return k ? t(`chrome.g_${k}`) : pluralLabel(label, portal, multiChild); };
   const activeView = pathname.split("/")[2];
   const activeGroupLabel = groups.find((g) => g.items.some((i) => i.view === activeView))?.label;
 
@@ -231,9 +243,6 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
-  // The provider's uploaded logo (Setup → Money, billing.logoUrl), shown in
-  // place of the initial when there is one.
-  const [logo, setLogo] = useState<string | null>(null);
   // Franchise identity — head-office-granted business name + territory, badged under the brand.
   const [fr, setFr] = useState<{ name: string | null; area: string | null } | null>(null);
   // Head office only sees franchisor tools once it has ≥1 franchise. Start hidden to avoid a flash.
@@ -249,7 +258,6 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         if (m.role === "staff") setCaps(m.caps ?? null);
         if (m.role === "franchise") setFr({ name: m.franchiseName ?? null, area: m.franchiseArea ?? null });
         if (m.tenantName) {
-          setLogo(m.logoUrl || null);
           // A named franchise brands with its own business name; else the tenant (head office) name.
           setBrand((m.role === "franchise" && m.franchiseName) || m.displayName || m.tenantName);
           return;
@@ -264,17 +272,25 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
         // their customer-facing display name.
-        apiGet<{ name: string; logoUrl?: string | null }[]>("/api/my/providers")
+        apiGet<{ name: string }[]>("/api/my/providers")
           .then((ps) => {
             const p = ps?.[0];
             if (p?.name) setBrand(p.name);
-            if (p?.logoUrl) setLogo(p.logoUrl);
           })
           .catch(() => {});
       })
       .catch(() => {});
   }, []);
-  const brandName = brand || "Activly";
+  // Never flash "Activly" while the name loads: show the last known provider name (remembered per portal, PER SIGNED-IN ACCOUNT, on this
+  // browser) and, until there is one, a blank line — the real name replaces it a moment later. Keyed by uid too: without that, switching
+  // accounts on the same browser (a tutor testing as themselves, then as a parent, then as another test account) briefly — or, if the
+  // fresh /api/my/providers call ever fails silently, permanently — shows the PREVIOUS account's provider name instead of this one's.
+  const BRAND_KEY = `aos.brand.${portal}.${user?.uid ?? "anon"}`;
+  useEffect(() => {
+    try { const c = JSON.parse(localStorage.getItem(BRAND_KEY) ?? "null") as { n?: string } | null; if (c?.n) setBrand((b) => b ?? c.n!); } catch { /* storage blocked */ }
+  }, [BRAND_KEY]);
+  useEffect(() => { if (brand) { try { localStorage.setItem(BRAND_KEY, JSON.stringify({ n: brand })); } catch { /* ignore */ } } }, [brand, BRAND_KEY]);
+  const brandName = brand || "";
 
   // Live unread-message total for the Messages nav badge (see useUnreadMessages).
   const unread = useUnreadMessages(portal);
@@ -290,6 +306,11 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const [emptySections, setEmptySections] = useState<Set<string>>(new Set());
   useEffect(() => {
     if (portal !== "custdash") return;
+    // These 7 reads only decide which nav links fade ("no info") — cosmetic. They used to fire on the very first paint, queueing behind
+    // (and competing for the browser's 6 sockets per origin with) the page's own data. Let the page go first.
+    let cancelled = false;
+    const timer = setTimeout(() => { if (!cancelled) run(); }, 2500);
+    const run = () => {
     apiGet<unknown[]>("/api/timetables/published")
       .then((w) => setHasTimetable((w?.length ?? 0) > 0))
       .catch(() => {});
@@ -302,7 +323,9 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       check("/api/my/trips", "trips"),
       check("/api/incidents", "accidents"),
       check("/api/medications", "medication"),
-    ]).then((res) => setEmptySections(new Set(res.filter(Boolean) as string[])));
+    ]).then((res) => { if (!cancelled) setEmptySections(new Set(res.filter(Boolean) as string[])); });
+    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [portal]);
   // What to hide from this nav:
   //  • custdash — sections the provider switched off (Customer area) + Simple mode.
@@ -408,12 +431,11 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
-        {/* The provider's logo when uploaded (else their initial, collapsed only). */}
-        {logo && (
-          <img src={logo} alt={`${brandName} logo`} className="h-8 w-8 flex-none rounded-md bg-white object-contain p-0.5" />
-        )}
+        {/* Kaz: "remove logo function where it sits here on portals i dont like it" \u2014 the uploaded provider
+            logo image is deliberately not rendered here any more; the initial-letter badge always stands in
+            for it (collapsed and expanded), rather than leaving empty space next to the business name. */}
         {collapsed ? (
-          !logo && <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
+          <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1) || "\u00A0"}</span>
         ) : (
           <span className="block min-w-0 flex-1">
             <span
@@ -423,7 +445,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               title={brandName}
               style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
             >
-              {brandName}
+              {brandName || "\u00A0"}
             </span>
             {fr && (fr.area || fr.name) && (
               <span
@@ -523,7 +545,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               className="flex w-full items-center justify-between px-4 py-2 text-left text-[11px] font-bold uppercase tracking-[0.08em]"
               style={{ color: "var(--side-muted)" }}
             >
-              <span>{pluralLabel(group.label, portal, multiChild)}</span>
+              <span>{groupText(group.label)}</span>
               <span className={`transition-transform ${open ? "rotate-180" : ""}`}>▾</span>
             </button>
             {open && (
@@ -541,7 +563,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       <div className="mt-auto px-4 pb-2 pt-3">
         <div className="border-t border-white/10 pt-3">
           <div className="text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: "var(--side-muted)" }}>
-            Powered by
+            {t("chrome.poweredBy")}
           </div>
           <div className="mt-1.5 flex items-center gap-2">
             <svg viewBox="0 0 32 32" width="22" height="22" fill="none" aria-hidden="true">
@@ -561,7 +583,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
             </span>
           </div>
           <div className="mt-1.5 text-[10px] font-semibold leading-snug" style={{ color: "var(--side-muted)" }}>
-            The unfair advantage for camps, clubs &amp; coaches
+            {t("chrome.tagline")}
           </div>
         </div>
       </div>

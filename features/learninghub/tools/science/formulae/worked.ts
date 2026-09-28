@@ -4,8 +4,10 @@ import { makeRng } from "../../engine/rng";
 import { formulaById, varOf, type Formula, type Values } from "./formulae";
 import { formatNum, formatSF, sensibleValue } from "./units";
 
-export interface WorkedStep { n: number; label: string; /** what a pupil should ask themselves (used at "prompts only" scaffold) */ prompt: string; text: string }
-export interface Worked { steps: WorkedStep[]; raw: number; answer: { value: number; unit: string; text: string }; sigFigs: number }
+/** `k` identifies the step kind so the UI can translate `label`/`prompt`; `body` is `text` without its trailing note; `extra` describes that note so the UI can translate it. */
+export type StepKind = "write" | "rearrange" | "substitute" | "calculate" | "round" | "unit";
+export interface WorkedStep { n: number; k: StepKind; body: string; extra?: { k: "cover" | "sf"; v: string | number }; label: string; /** what a pupil should ask themselves (used at "prompts only" scaffold) */ prompt: string; text: string }
+export interface Worked { steps: WorkedStep[]; /** symbol of the quantity being found */ sym: string; raw: number; answer: { value: number; unit: string; text: string }; sigFigs: number }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Replace variable symbols in a rearranged expression with their numbers. */
@@ -23,16 +25,16 @@ export function workedSolution(f: Formula, unknown: string, givens: Values, sigF
   const rhs = eq.slice(eq.indexOf("=") + 1).trim();
   const rounded = toSF(raw, sigFigs), shown = formatSF(raw, sigFigs);
   const steps: Omit<WorkedStep, "n">[] = [
-    { label: "Write the formula", prompt: "Which equation links the quantities in the question?", text: `${f.words}\n${f.symbol}` },
+    { k: "write", label: "Write the formula", prompt: "Which equation links the quantities in the question?", text: `${f.words}\n${f.symbol}`, body: `${f.words}\n${f.symbol}` },
   ];
-  if (rearrange) steps.push({ label: "Rearrange", prompt: `Make ${uv.sym} the subject (undo what is done to it).`, text: `${f.symbol}  →  ${eq}${f.triangle ? `\n(formula triangle: cover ${uv.sym})` : ""}` });
+  if (rearrange) steps.push({ k: "rearrange", label: "Rearrange", prompt: `Make ${uv.sym} the subject (undo what is done to it).`, text: `${f.symbol}  →  ${eq}${f.triangle ? `\n(formula triangle: cover ${uv.sym})` : ""}`, body: `${f.symbol}  →  ${eq}`, ...(f.triangle ? { extra: { k: "cover" as const, v: uv.sym } } : {}) });
   steps.push(
-    { label: "Substitute", prompt: "Put each known value in place of its symbol.", text: `${uv.sym} = ${substitute(f, rhs, givens)}` },
-    { label: "Calculate", prompt: "Work it out on your calculator (keep the full display).", text: `${uv.sym} = ${formatNum(toSF(raw, 8))}` },
-    { label: "Round", prompt: `Round to ${sigFigs} significant figures.`, text: `${uv.sym} = ${shown}  (${sigFigs} s.f.)` },
-    { label: "Unit", prompt: "Add the correct unit.", text: `${uv.sym} = ${shown}${uv.unit ? " " + uv.unit : ""}` },
+    { k: "substitute", label: "Substitute", prompt: "Put each known value in place of its symbol.", text: `${uv.sym} = ${substitute(f, rhs, givens)}`, body: `${uv.sym} = ${substitute(f, rhs, givens)}` },
+    { k: "calculate", label: "Calculate", prompt: "Work it out on your calculator (keep the full display).", text: `${uv.sym} = ${formatNum(toSF(raw, 8))}`, body: `${uv.sym} = ${formatNum(toSF(raw, 8))}` },
+    { k: "round", label: "Round", prompt: `Round to ${sigFigs} significant figures.`, text: `${uv.sym} = ${shown}  (${sigFigs} s.f.)`, body: `${uv.sym} = ${shown}`, extra: { k: "sf", v: sigFigs } },
+    { k: "unit", label: "Unit", prompt: "Add the correct unit.", text: `${uv.sym} = ${shown}${uv.unit ? " " + uv.unit : ""}`, body: `${uv.sym} = ${shown}${uv.unit ? " " + uv.unit : ""}` },
   );
-  return { steps: steps.map((s, i) => ({ ...s, n: i + 1 })), raw, answer: { value: rounded, unit: uv.unit, text: `${shown}${uv.unit ? " " + uv.unit : ""}` }, sigFigs };
+  return { steps: steps.map((s, i) => ({ ...s, n: i + 1 })), sym: uv.sym, raw, answer: { value: rounded, unit: uv.unit, text: `${shown}${uv.unit ? " " + uv.unit : ""}` }, sigFigs };
 }
 
 export interface QuestionOpts { unknown?: string; sigFigs?: number }

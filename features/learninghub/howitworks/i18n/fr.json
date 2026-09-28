@@ -1,0 +1,3489 @@
+{
+ "ui": {
+  "eyebrow": "{hub} · Comment ça marche",
+  "hubTeaching": "Espace enseignant",
+  "hubLearning": "Espace d’apprentissage",
+  "pickShort": "Choisissez une courte vidéo.",
+  "pickShortLong": "Choisissez une courte vidéo. Chacune dure quelques minutes.",
+  "whoWatching": "Qui regarde",
+  "allVideos": "Toutes les vidéos",
+  "allVideosPlay": "▶ Toutes les vidéos",
+  "fullTour": "▶ La visite complète",
+  "nextTopic": "▶ Suivante : {title}",
+  "chooseVideo": "Choisir une vidéo",
+  "loading": "Chargement…",
+  "sheetTitle": "Comment ça marche",
+  "whichVideo": "Quelle vidéo",
+  "close": "Fermer",
+  "minScenes": "{m} min · {n} scènes",
+  "watched": " · Vue",
+  "stageAria": "{script} — scène {i} sur {n} : {title}",
+  "sceneLive": "Scène {i} sur {n} : {title}",
+  "playAria": "Lire : {title}",
+  "soundOnCaps": "Le son est activé. Les sous-titres s’affichent toujours en bas.",
+  "capsBelow": "Les sous-titres s’affichent en bas.",
+  "startsAt": "Commence à « {title} ».",
+  "thatsTheLot": "C’est tout !",
+  "watchAgain": "↺ Revoir",
+  "captions": "Sous-titres",
+  "controls": "Commandes du lecteur",
+  "scenesJump": "Scènes — aller directement à l’une d’elles",
+  "sceneN": "Scène {k} : {title}",
+  "prev": "Scène précédente",
+  "prevT": "Scène précédente (←)",
+  "pause": "Pause",
+  "play": "Lire",
+  "replay": "Revoir",
+  "pauseT": "Pause (espace)",
+  "playT": "Lire (espace)",
+  "restart": "Recommencer depuis le début",
+  "restartT": "Recommencer (R)",
+  "next": "Scène suivante",
+  "nextT": "Scène suivante (→)",
+  "captionsT": "Sous-titres (C)",
+  "captionsOn": "Sous-titres activés",
+  "captionsOff": "Sous-titres désactivés",
+  "soundT": "Son (M)",
+  "soundOn": "Son activé",
+  "soundOff": "Son désactivé",
+  "musicT": "Musique de fond",
+  "musicOn": "Musique activée",
+  "musicOff": "Musique désactivée",
+  "speed": "Vitesse",
+  "voice": "Voix",
+  "autoVoice": "Voix automatique",
+  "scenes": "Scènes",
+  "readScript": "Lire tout le texte",
+  "noVoice": "Aucune voix pour cette langue sur cet appareil : sous-titres uniquement.",
+  "tryNow": "Essaie maintenant →",
+  "nextVideo": "Vidéo suivante : {title}"
+ },
+ "scripts": {
+  "tutor:std:main": {
+   "title": "Gérez votre Espace enseignant",
+   "tagline": "Ajoutez des familles à votre liste, enseignez à votre façon, et voyez comment chaque enfant progresse.",
+   "audience": "Pour les tuteurs"
+  },
+  "parent:std:main": {
+   "title": "L’Espace d’apprentissage de votre enfant",
+   "tagline": "Consultez les leçons et les devoirs de votre enfant, voyez en un coup d’œil où il en est et imprimez un bilan de progression.",
+   "audience": "Espace d’apprentissage pour les parents"
+  },
+  "kid:std:main": {
+   "title": "Comment ça marche",
+   "tagline": "Ton espace à toi pour apprendre. Regarde, écoute et essaie !",
+   "audience": "Pour les enfants",
+   "viewLabel": "Ce que voit votre enfant"
+  },
+  "tutor:std:roster": {
+   "title": "Ajouter des familles à votre liste",
+   "tagline": "Accueillez des familles dans votre liste et configurez chaque enfant.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Votre écran d’accueil et les trois façons dont une famille vous rejoint : une réservation, un lien d’invitation ou votre page publique."
+  },
+  "tutor:std:students": {
+   "title": "Vos élèves",
+   "tagline": "Prenez soin de votre liste.",
+   "audience": "Pour les tuteurs",
+   "blurb": "La fiche de chaque enfant, les groupes, et les réglages de soutien que vous seul pouvez changer."
+  },
+  "tutor:std:lessons": {
+   "title": "Les leçons et le programme",
+   "tagline": "Trouvez, ouvrez et créez des leçons.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Trouvez une leçon toute prête, ouvrez-la, ou créez la vôtre avec l’éditeur de diapositives."
+  },
+  "tutor:std:tools": {
+   "title": "Les outils",
+   "tagline": "Des outils que vos enfants peuvent utiliser.",
+   "audience": "Pour les tuteurs",
+   "blurb": "L’espace Outils, et donner un outil à vos enfants."
+  },
+  "tutor:std:live": {
+   "title": "Cours en direct et en présentiel",
+   "tagline": "Enseignez en direct, en ligne ou dans la salle.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Trois façons d’enseigner, les cours en visio, ce que contient l’appel, et l’enseignement en présentiel."
+  },
+  "tutor:std:homework": {
+   "title": "Devoirs : les donner, les collecter, les corriger",
+   "tagline": "Donnez des devoirs, et corrigez ce qui revient.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Donner un devoir, joindre une fiche d’exercices, voir les rendus, et les corriger."
+  },
+  "tutor:std:quizzes": {
+   "title": "Quiz et cartes mémoire",
+   "tagline": "Vérifiez ce que savent les enfants.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Créer un quiz, la correction, les quiz de départ et les cartes mémoire."
+  },
+  "tutor:std:progress": {
+   "title": "Progression",
+   "tagline": "Voyez comment chaque enfant progresse.",
+   "audience": "Pour les tuteurs",
+   "blurb": "Toute votre classe en un coup d’œil, un enfant en détail, et vos propres niveaux."
+  },
+  "parent:std:start": {
+   "title": "Pour bien démarrer",
+   "tagline": "Installez-vous et sachez où regarder.",
+   "audience": "Espace d’apprentissage pour les parents",
+   "blurb": "Comment votre enfant arrive dans l’espace, comment rejoindre avec le lien de votre tuteur, et le verdict en une ligne sur l’accueil."
+  },
+  "parent:std:homework": {
+   "title": "Les devoirs dans l’Espace d’apprentissage",
+   "tagline": "Voyez ce qui est donné, ce qui est à rendre et comment cela s’est passé.",
+   "audience": "Espace d’apprentissage pour les parents",
+   "blurb": "Ce qui a été donné, la date de rendu, comment votre enfant rend son travail et où apparaissent les notes."
+  },
+  "parent:std:week": {
+   "title": "La semaine de votre enfant",
+   "tagline": "Suivez le travail et posez vos questions quand vous en avez besoin.",
+   "audience": "Espace d’apprentissage pour les parents",
+   "blurb": "Les leçons, les cours en direct, la progression, le bilan imprimable et comment écrire à votre tuteur."
+  },
+  "parent:std:handover": {
+   "title": "Passer la main à votre enfant",
+   "tagline": "Laissez votre enfant apprendre seul.",
+   "audience": "Espace d’apprentissage pour les parents",
+   "blurb": "Donnez à votre enfant son propre espace simple, et voyez comment revenir."
+  },
+  "kid:std:homework": {
+   "title": "Mes devoirs",
+   "tagline": "Trouve-les, fais-les, rends-les.",
+   "audience": "Pour les enfants",
+   "blurb": "Trouve tes devoirs, fais-les et rends-les."
+  },
+  "kid:ks1:main": {
+   "title": "Comment ça marche",
+   "tagline": "Regarde et écoute. C’est court !",
+   "audience": "Pour les enfants",
+   "viewLabel": "Ce que voit votre enfant"
+  },
+  "tutor:std:home": {
+   "title": "Ton écran d'accueil",
+   "tagline": "Là où tu commences chaque jour.",
+   "audience": "Pour les enseignants",
+   "blurb": "Tes espaces, Nécessite ton attention, et Comment ça marche."
+  },
+  "tutor:std:families": {
+   "title": "Ajouter des familles à ta liste",
+   "tagline": "Fais venir des familles sur ta liste.",
+   "audience": "Pour les enseignants",
+   "blurb": "Les trois façons de rejoindre : une réservation, un lien d'invitation, ou ta page publique."
+  },
+  "tutor:std:messages": {
+   "title": "Messages",
+   "tagline": "Parle avec les familles, un fil par enfant.",
+   "audience": "Pour les enseignants",
+   "blurb": "Chaque conversation avec une famille, et comment une réponse leur parvient."
+  }
+ },
+ "scenes": {
+  "tutor:std:tour": {
+   "chapter": "Votre espace",
+   "title": "Votre écran d’accueil",
+   "say": "Voici votre Accueil. En haut, vous avez vos sept espaces : Accueil, Leçons, Élèves, Progression, Quiz, Devoirs et Messages. Leçons contient aussi les Cours en direct, les Outils et les Cartes mémoire. L’Accueil affiche votre prochain cours et une liste « À traiter », pour toujours savoir quoi faire en premier. Et ce bouton Comment ça marche est toujours là.",
+   "keys": [
+    "Vos sept espaces",
+    "Votre prochain cours",
+    "À traiter",
+    "Comment ça marche"
+   ],
+   "cam": [
+    {
+     "on": "En haut"
+    },
+    {
+     "on": "L’Accueil affiche"
+    },
+    {
+     "on": "une liste « À traiter »"
+    },
+    {
+     "on": "Et ce bouton Comment ça marche"
+    }
+   ],
+   "rings": [
+    {
+     "on": "sept espaces",
+     "off": "Leçons contient"
+    },
+    {
+     "on": "L’Accueil affiche",
+     "off": "et une liste"
+    },
+    {
+     "on": "une liste « À traiter »",
+     "off": "Et ce bouton"
+    },
+    {
+     "on": "Et ce bouton Comment ça marche"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Accueil, Leçons"
+    },
+    {
+     "on": "une liste « À traiter »"
+    },
+    {
+     "on": "Et ce bouton Comment ça marche"
+    }
+   ]
+  },
+  "tutor:std:ways-in": {
+   "chapter": "Ajouter des familles",
+   "title": "Trois façons de vous rejoindre",
+   "say": "Une famille peut rejoindre votre liste de trois façons. Un : elle réserve chez vous. Deux : vous lui envoyez un lien d’invitation privé. Trois : elle trouve votre page publique. Voyons chacune d’elles.",
+   "keys": [
+    "Trois façons de rejoindre::trois façons",
+    "Elle réserve chez vous",
+    "Un lien d’invitation privé",
+    "Votre page publique"
+   ],
+   "nodes": [
+    {
+     "on": "Un :",
+     "title": "Elle réserve chez vous",
+     "sub": "Son enfant apparaît dans Inscrire un élève"
+    },
+    {
+     "on": "Deux :",
+     "title": "Un lien d’invitation privé",
+     "sub": "Vous l’envoyez. Elle choisit ses enfants"
+    },
+    {
+     "on": "Trois :",
+     "title": "Votre page publique",
+     "sub": "Elle s’inscrit, puis vous l’inscrivez"
+    }
+   ]
+  },
+  "tutor:std:enrol-book": {
+   "chapter": "Ajouter des familles",
+   "title": "1. Elle réserve chez vous",
+   "say": "Première voie. Un parent crée un compte et réserve une séance chez vous. Son enfant apparaît alors dans Inscrire un élève. Trouvez-le, et appuyez sur Inscrire. Choisissez ensuite les matières visibles et son niveau scolaire. Appuyez sur Inscrire l’élève, et sa famille accède dès lors à l’Espace d’apprentissage.",
+   "keys": [
+    "Inscrire un élève",
+    "Appuyez sur Inscrire",
+    "Les matières",
+    "Son niveau scolaire",
+    "L’Espace d’apprentissage"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Choisissez ensuite"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Son enfant apparaît"
+    },
+    {
+     "on": "Trouvez-le"
+    },
+    {
+     "on": "Choisissez ensuite"
+    },
+    {
+     "on": "les matières"
+    },
+    {
+     "on": "son niveau scolaire"
+    },
+    {
+     "on": "Appuyez sur Inscrire l’élève"
+    },
+    {
+     "on": "et sa famille"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Trouvez-le",
+     "off": "Choisissez ensuite"
+    },
+    {
+     "on": "les matières",
+     "off": "son niveau"
+    },
+    {
+     "on": "son niveau scolaire",
+     "off": "Appuyez sur Inscrire l’élève"
+    },
+    {
+     "on": "Appuyez sur Inscrire l’élève",
+     "off": "et sa famille"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "appuyez sur Inscrire."
+    },
+    {
+     "on": "Appuyez sur Inscrire l’élève"
+    }
+   ]
+  },
+  "tutor:std:enrol-invite": {
+   "chapter": "Ajouter des familles",
+   "title": "2. Un lien d’invitation privé",
+   "say": "Deuxième voie, pour une famille qui n’a pas réservé. Indiquez pour qui c’est, puis appuyez sur Créer un lien d’invitation. Copiez-le et envoyez-le vous-même au parent. Le lien dure trente jours et ne sert qu’à une famille. Elle l’ouvre, choisit les enfants à ajouter, et ils apparaissent automatiquement dans votre liste.",
+   "keys": [
+    "Pour qui ?::Indiquez pour qui",
+    "Créer un lien d’invitation",
+    "Vous l’envoyez vous-même::envoyez-le vous-même au parent",
+    "Trente jours, une famille::trente jours",
+    "Les enfants apparaissent seuls::automatiquement"
+   ],
+   "cam": [
+    {
+     "on": "Deuxième voie"
+    },
+    {
+     "on": "Indiquez pour qui"
+    },
+    {
+     "on": "puis appuyez"
+    },
+    {
+     "on": "Copiez-le"
+    },
+    {
+     "on": "Le lien dure"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Indiquez pour qui",
+     "off": "puis appuyez"
+    },
+    {
+     "on": "puis appuyez",
+     "off": "Copiez-le"
+    },
+    {
+     "on": "Copiez-le",
+     "off": "Le lien dure"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "puis appuyez"
+    },
+    {
+     "on": "Copiez-le"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "envoyez-le vous-même",
+     "text": "Aucun e-mail n’est envoyé pour vous : c’est vous qui l’envoyez"
+    }
+   ]
+  },
+  "tutor:std:enrol-page": {
+   "chapter": "Ajouter des familles",
+   "title": "3. Le lien de votre page publique",
+   "say": "Troisième voie. Quand il n’y a encore personne à inscrire, la fenêtre d’inscription affiche le lien de votre page, avec un bouton Copier. Envoyez-le au parent. Il l’ouvre, se connecte ou crée un compte parent, et ses enfants apparaissent dans la liste, prêts à être inscrits par vous. Aucune réservation n’est nécessaire.",
+   "keys": [
+    "Le lien de votre page",
+    "Un bouton Copier",
+    "Il crée un compte parent::crée un compte parent",
+    "Prêts à être inscrits",
+    "Aucune réservation"
+   ],
+   "cam": [
+    {
+     "on": "affiche le lien de votre page"
+    },
+    {
+     "on": "prêts à être inscrits"
+    }
+   ],
+   "rings": [
+    {
+     "on": "affiche le lien de votre page",
+     "off": "prêts à être inscrits"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "avec un bouton Copier"
+    }
+   ]
+  },
+  "tutor:std:roster": {
+   "chapter": "Vos élèves",
+   "title": "Votre liste d’élèves",
+   "say": "Une fois inscrit, chaque enfant a sa fiche dans votre page Élèves, avec son niveau scolaire, ses matières et son anneau de progression. Créez un groupe, et vous pouvez donner un devoir, un quiz ou une leçon à tout le groupe en un clic. Les trois points d’une fiche permettent de mettre en pause ou de désinscrire un enfant à tout moment.",
+   "keys": [
+    "Une fiche par enfant::chaque enfant a sa fiche",
+    "Son anneau de progression::anneau de progression",
+    "Groupes en un clic::Créez un groupe",
+    "Mettre en pause"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Créez un groupe"
+    },
+    {
+     "on": "Les trois points"
+    }
+   ],
+   "cam": [
+    {
+     "on": "chaque enfant a sa fiche"
+    },
+    {
+     "on": "Créez un groupe"
+    },
+    {
+     "on": "Les trois points"
+    }
+   ],
+   "rings": [
+    {
+     "on": "chaque enfant a sa fiche",
+     "off": "Créez un groupe"
+    },
+    {
+     "on": "Créez un groupe",
+     "off": "Les trois points"
+    },
+    {
+     "on": "Les trois points"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "en un clic"
+    },
+    {
+     "on": "Les trois points"
+    }
+   ]
+  },
+  "tutor:std:support": {
+   "chapter": "Vos élèves",
+   "title": "Un soutien pour chaque enfant",
+   "say": "Chaque enfant peut avoir ses propres réglages de soutien. Ouvrez Modifier les détails d’un enfant. Désactivez les minuteurs des quiz, activez le mode calme, ajoutez du temps, agrandissez le texte ou faites lire les réponses à voix haute. Vous seul décidez. L’enfant et sa famille ne peuvent pas les changer.",
+   "keys": [
+    "Soutien pour chaque enfant::réglages de soutien",
+    "Sans minuteur::Désactivez les minuteurs",
+    "Mode calme",
+    "Ajoutez du temps",
+    "À voix haute",
+    "Vous seul décidez"
+   ],
+   "cam": [
+    {
+     "on": "Désactivez"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Désactivez",
+     "off": "Vous seul décidez"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Désactivez"
+    },
+    {
+     "on": "activez le mode calme"
+    }
+   ]
+  },
+  "tutor:std:lessons": {
+   "chapter": "Leçons",
+   "title": "Une bibliothèque de leçons toutes prêtes",
+   "say": "Passons aux Leçons. Votre bibliothèque contient des milliers de leçons et de fiches d’exercices prêtes à l’emploi. Elles sont présentées sur une carte du programme. Choisissez une matière, puis une année, et voyez quels sujets ont des leçons, et combien. La recherche trouve n’importe quel domaine ou leçon par son nom.",
+   "keys": [
+    "Prêtes à l’emploi",
+    "Une carte du programme",
+    "Choisissez une matière",
+    "Puis une année",
+    "Recherche par nom::La recherche trouve"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Choisissez une matière"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Elles sont présentées"
+    },
+    {
+     "on": "Choisissez une matière"
+    },
+    {
+     "on": "puis une année"
+    },
+    {
+     "on": "et voyez quels"
+    },
+    {
+     "on": "La recherche trouve"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Choisissez une matière",
+     "off": "puis une année"
+    },
+    {
+     "on": "puis une année",
+     "off": "et voyez quels"
+    },
+    {
+     "on": "La recherche trouve"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Choisissez une matière"
+    },
+    {
+     "on": "puis une année"
+    },
+    {
+     "on": "La recherche trouve"
+    }
+   ]
+  },
+  "tutor:std:lesson-view": {
+   "chapter": "Leçons",
+   "title": "Ouvrir une leçon",
+   "say": "Ouvrez une leçon pour voir son plan. C’est une leçon interactive : les enfants avancent une idée à la fois, avec des diapositives, des questions d’échauffement et un quiz à la fin. Appuyez sur Aperçu de la leçon pour voir exactement ce que verra un enfant.",
+   "keys": [
+    "Ouvrez une leçon",
+    "Une leçon interactive",
+    "Une idée à la fois",
+    "Aperçu de la leçon"
+   ],
+   "cam": [
+    {
+     "on": "Ouvrez une leçon"
+    },
+    {
+     "on": "C’est une leçon interactive"
+    },
+    {
+     "on": "Appuyez sur Aperçu de la leçon"
+    }
+   ],
+   "rings": [
+    {
+     "on": "C’est une leçon interactive",
+     "off": "Appuyez sur Aperçu"
+    },
+    {
+     "on": "Appuyez sur Aperçu de la leçon"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Appuyez sur Aperçu de la leçon"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Ouvrez une leçon",
+     "text": "À donner aux enfants"
+    }
+   ]
+  },
+  "tutor:std:builder": {
+   "chapter": "Leçons",
+   "title": "Créez la vôtre avec l’éditeur de diapositives",
+   "say": "Envie de votre propre leçon ? Appuyez sur Créer une leçon et choisissez un sujet. L’éditeur de diapositives vous permet d’écrire des diapositives et d’ajouter du texte, des mots clés, du toucher pour révéler, des QCM, du tri et des associations. Voyez chaque diapositive au fur et à mesure, puis enregistrez. Elle rejoint votre bibliothèque.",
+   "keys": [
+    "Créer une leçon",
+    "L’éditeur de diapositives",
+    "Texte, tri, associations::du tri et des associations",
+    "Aperçu au fur et à mesure::Voyez chaque diapositive",
+    "Elle rejoint votre bibliothèque"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "L’éditeur de diapositives"
+    },
+    {
+     "on": "des QCM"
+    },
+    {
+     "on": "Voyez chaque"
+    }
+   ],
+   "cam": [
+    {
+     "on": "L’éditeur de diapositives"
+    }
+   ]
+  },
+  "tutor:std:tools": {
+   "chapter": "Outils",
+   "title": "L’espace Outils",
+   "say": "Ensuite, les Outils, que vous trouverez dans Leçons. Règles, rapporteurs, droites graduées, schémas de sciences et bien plus. C’est un espace de démonstration : ouvrez un outil pour l’essayer. Rien n’est encore donné aux enfants. Cela se fait dans une leçon ou une question.",
+   "keys": [
+    "L’espace Outils::Ensuite, les Outils",
+    "Règles, rapporteurs, droites graduées",
+    "Un espace de démonstration",
+    "Donné dans une leçon::dans une leçon"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "ouvrez un outil"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Règles, rapporteurs"
+    },
+    {
+     "on": "C’est un espace"
+    },
+    {
+     "on": "ouvrez un outil"
+    }
+   ],
+   "rings": [
+    {
+     "on": "C’est un espace",
+     "off": "ouvrez un outil"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "ouvrez un outil"
+    }
+   ]
+  },
+  "tutor:std:tool-assign": {
+   "chapter": "Outils",
+   "title": "Donner un outil à vos enfants",
+   "say": "Pour donner un outil à vos enfants, ouvrez une leçon et appuyez sur Aperçu de la leçon. Ouvrez ensuite Outils pour cette leçon, en bas à droite. Il indique l’outil que recevrait un enfant à chaque question. Appuyez sur Ajouter un outil à cette question, et choisissez-en un. Appuyez alors sur L’utiliser pour toutes les questions, et il sera donné à chaque question de la leçon.",
+   "keys": [
+    "Ouvrir une leçon, Aperçu::Aperçu de la leçon",
+    "Outils pour cette leçon",
+    "Ajouter un outil à cette question",
+    "L’utiliser pour toutes les questions"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Il indique"
+    },
+    {
+     "on": "Appuyez sur Ajouter"
+    },
+    {
+     "on": "et choisissez-en un"
+    },
+    {
+     "on": "Appuyez alors"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Ouvrez ensuite Outils"
+    },
+    {
+     "on": "Il indique"
+    },
+    {
+     "on": "Appuyez sur Ajouter"
+    },
+    {
+     "on": "et choisissez-en un"
+    },
+    {
+     "on": "Appuyez alors"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ouvrez ensuite Outils",
+     "off": "Il indique"
+    },
+    {
+     "on": "Il indique",
+     "off": "Appuyez sur Ajouter"
+    },
+    {
+     "on": "Appuyez sur Ajouter",
+     "off": "et choisissez-en un"
+    },
+    {
+     "on": "Appuyez alors"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvrez ensuite Outils"
+    },
+    {
+     "on": "Appuyez sur Ajouter"
+    },
+    {
+     "on": "et choisissez-en un"
+    },
+    {
+     "on": "Appuyez alors"
+    }
+   ]
+  },
+  "tutor:std:teach-modes": {
+   "chapter": "Enseigner",
+   "title": "Trois façons de donner une leçon",
+   "say": "Il y a trois façons d’enseigner. En appel vidéo, pour les enfants qui sont ailleurs. En Partager avec les enfants, où chacun suit sur son propre appareil. Ou en présentiel, avec les enfants à côté de vous. Vous choisissez à chaque fois.",
+   "keys": [
+    "Trois façons d’enseigner",
+    "En appel vidéo",
+    "Partager avec les enfants",
+    "En présentiel"
+   ],
+   "nodes": [
+    {
+     "on": "En appel vidéo",
+     "title": "Cours en visio",
+     "sub": "Rejoignez l’appel dans l’Espace"
+    },
+    {
+     "on": "Partager avec les enfants",
+     "title": "Partager avec les enfants",
+     "sub": "Chaque enfant suit sur son appareil"
+    },
+    {
+     "on": "en présentiel",
+     "title": "Enseigner en présentiel",
+     "sub": "Les enfants à côté de vous, sans vidéo"
+    }
+   ]
+  },
+  "tutor:std:live": {
+   "chapter": "Enseigner",
+   "title": "Cours en visio",
+   "say": "Pour un cours en visio, planifiez-le pour les enfants de votre choix. Le moment venu, vous vérifiez votre caméra et votre micro dans un petit salon d’attente, puis appuyez sur Rejoindre. Tout se passe ici, sans autre application. Vous pouvez donner une leçon interactive pendant l’appel, et l’écran de chaque enfant suit le vôtre.",
+   "keys": [
+    "Planifier un cours en visio::planifiez-le",
+    "Vérification caméra et micro::caméra et votre micro",
+    "Appuyez sur Rejoindre",
+    "Sans autre application"
+   ],
+   "cam": [
+    {
+     "on": "planifiez-le"
+    },
+    {
+     "on": "vous vérifiez votre caméra"
+    },
+    {
+     "on": "appuyez sur Rejoindre"
+    },
+    {
+     "on": "Tout se passe"
+    }
+   ],
+   "rings": [
+    {
+     "on": "planifiez-le",
+     "off": "Le moment venu"
+    },
+    {
+     "on": "vous vérifiez votre caméra",
+     "off": "appuyez sur Rejoindre"
+    },
+    {
+     "on": "appuyez sur Rejoindre",
+     "off": "Tout se passe"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "planifiez-le"
+    },
+    {
+     "on": "appuyez sur Rejoindre"
+    }
+   ]
+  },
+  "tutor:std:in-call": {
+   "chapter": "Enseigner",
+   "title": "Pendant l’appel",
+   "say": "À côté de la vidéo, vous avez un espace de travail à sept onglets. Élèves, Leçons, où vous appuyez sur Enseigner pour lancer une leçon interactive, Progression, Devoirs, Quiz, cartes mémoire et un tableau blanc en direct. Un enfant peut quitter votre écran et avancer à son rythme, s’il en a besoin.",
+   "keys": [
+    "Sept onglets près de la vidéo::sept onglets",
+    "Appuyez sur Enseigner",
+    "Un tableau blanc en direct",
+    "À son rythme"
+   ],
+   "nodes": [
+    {
+     "on": "Élèves",
+     "title": "Élèves"
+    },
+    {
+     "on": "Leçons,",
+     "title": "Leçons",
+     "sub": "Appuyez sur Enseigner"
+    },
+    {
+     "on": "Progression",
+     "title": "Progression"
+    },
+    {
+     "on": "Devoirs",
+     "title": "Devoirs"
+    },
+    {
+     "on": "Quiz",
+     "title": "Quiz"
+    },
+    {
+     "on": "cartes mémoire",
+     "title": "Cartes"
+    },
+    {
+     "on": "tableau blanc",
+     "title": "Tableau",
+     "sub": "Un tableau blanc en direct"
+    }
+   ]
+  },
+  "tutor:std:share": {
+   "chapter": "Enseigner",
+   "title": "Partager avec les enfants",
+   "say": "Ouvrez une leçon et vous avez deux choix. Partager avec les enfants convient quand chaque enfant a son propre appareil. Ils suivent et répondent chacun de leur côté, où qu’ils soient. Il n’y a pas d’appel vidéo. Leur écran suit le vôtre.",
+   "keys": [
+    "Deux choix",
+    "Partager avec les enfants",
+    "Son propre appareil",
+    "Pas d’appel vidéo"
+   ],
+   "cam": [
+    {
+     "on": "Ouvrez une leçon"
+    },
+    {
+     "on": "Partager avec les enfants convient"
+    }
+   ],
+   "rings": [
+    {
+     "on": "vous avez deux choix",
+     "off": "Partager avec les enfants convient"
+    },
+    {
+     "on": "Partager avec les enfants convient"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Partager avec les enfants convient"
+    }
+   ]
+  },
+  "tutor:std:in-person": {
+   "chapter": "Enseigner",
+   "title": "Enseigner en présentiel",
+   "say": "Vous enseignez en présentiel ? Cochez ceux qui sont avec vous. Puis faites la leçon ensemble sur un seul écran, en saisissant la réponse de chaque enfant. Chaque enfant obtient un vrai résultat que son parent pourra voir ensuite.",
+   "keys": [
+    "Cochez ceux qui sont avec vous",
+    "Un seul écran ensemble::un seul écran",
+    "Un vrai résultat",
+    "Visible par les parents::son parent pourra voir"
+   ],
+   "cam": [
+    {
+     "on": "Cochez ceux"
+    },
+    {
+     "on": "Puis faites"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Cochez ceux",
+     "off": "Puis faites"
+    },
+    {
+     "on": "Puis faites",
+     "off": "Chaque enfant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Puis faites"
+    }
+   ]
+  },
+  "tutor:std:quizzes": {
+   "chapter": "Quiz",
+   "title": "Quiz et quiz de départ",
+   "say": "Les quiz sont construits à partir de votre banque de questions et corrigés instantanément. Les réponses écrites vous attendent dans la file. Un quiz de départ est passé une seule fois par les nouveaux élèves, sans note minimale ni pression, pour que vous sachiez d’où part chaque enfant.",
+   "keys": [
+    "Votre banque de questions",
+    "Corrigés instantanément",
+    "Un quiz de départ",
+    "D’où part chaque enfant"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Un quiz de départ"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Les quiz sont construits"
+    },
+    {
+     "on": "corrigés instantanément"
+    },
+    {
+     "on": "Un quiz de départ"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Les quiz sont construits",
+     "off": "Un quiz de départ"
+    },
+    {
+     "on": "Un quiz de départ"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "corrigés instantanément"
+    }
+   ]
+  },
+  "tutor:std:flashcards": {
+   "chapter": "Quiz",
+   "title": "Cartes mémoire",
+   "say": "Les cartes mémoire offrent un entraînement rapide à la mémorisation. Les enfants révisent d’abord les cartes prévues aujourd’hui, et la répétition espacée fait revenir celles qu’ils trouvent difficiles. Et pendant un cours en direct, vous pouvez présenter un jeu de cartes à l’écran.",
+   "keys": [
+    "Entraînement rapide",
+    "Cartes du jour d’abord::prévues aujourd’hui",
+    "Répétition espacée",
+    "Présenter un jeu"
+   ],
+   "cam": [
+    {
+     "on": "Les cartes mémoire offrent"
+    },
+    {
+     "on": "Les enfants révisent"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Les enfants révisent"
+    }
+   ]
+  },
+  "tutor:std:progress": {
+   "chapter": "Progression",
+   "title": "Toute votre classe en un coup d’œil",
+   "say": "Progression réunit tous les élèves sur un seul écran. Chaque ligne est un enfant, et chaque matière reçoit un score en couleur, nuancé selon vos propres niveaux. Cherchez un nom, ou filtrez par niveau scolaire ou par groupe. Un enfant qui n’a pas encore commencé est signalé, pour voir qui a besoin d’un coup de pouce.",
+   "keys": [
+    "Sur un seul écran",
+    "Un score en couleur",
+    "Vos propres niveaux",
+    "Recherche ou filtre::Cherchez un nom",
+    "Pas encore commencé"
+   ],
+   "cam": [
+    {
+     "on": "Chaque ligne"
+    },
+    {
+     "on": "Cherchez un nom"
+    },
+    {
+     "on": "Un enfant qui"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Chaque ligne",
+     "off": "Cherchez un nom"
+    },
+    {
+     "on": "Cherchez un nom",
+     "off": "Un enfant qui"
+    },
+    {
+     "on": "Un enfant qui"
+    }
+   ]
+  },
+  "tutor:std:progress-child": {
+   "chapter": "Progression",
+   "title": "Ouvrir un enfant",
+   "say": "Cliquez sur un enfant pour ouvrir sa progression. Vous voyez ses sujets un par un, l’évolution de chacun et ses résultats les plus récents. Elle se construit à partir de ses quiz corrigés, donc elle est toujours à jour.",
+   "keys": [
+    "Cliquez sur un enfant",
+    "Sujet par sujet::sujets un par un",
+    "L’évolution de chacun",
+    "Résultats les plus récents"
+   ],
+   "cam": [
+    {
+     "on": "Vous voyez ses sujets"
+    }
+   ]
+  },
+  "tutor:std:progress-levels": {
+   "chapter": "Progression",
+   "title": "Des niveaux qui sont les vôtres",
+   "say": "Les niveaux aussi sont à vous. Appuyez sur Modifier les niveaux pour les renommer ou déplacer le point de départ de chacun, selon votre façon d’enseigner. Les scores existants sont reclassés aussitôt, sans changer aucune note. Et Recalculer reconstruit la progression de chaque enfant à partir de son travail corrigé.",
+   "keys": [
+    "Modifier les niveaux",
+    "Les renommer, les déplacer::les renommer",
+    "Sans changer aucune note",
+    "Recalculer"
+   ],
+   "cam": [
+    {
+     "on": "Appuyez sur Modifier les niveaux"
+    }
+   ]
+  },
+  "parent:std:getting-in": {
+   "chapter": "Pour bien démarrer",
+   "title": "Comment votre enfant arrive",
+   "say": "Votre enfant apparaît dans l’Espace d’apprentissage dès que votre tuteur l’a inscrit. Cela se fait quand vous réservez chez votre tuteur, et qu’il ajoute votre enfant. Ou bien votre tuteur peut vous envoyer un lien privé, et vous ajoutez votre enfant vous-même. Votre tuteur décide des matières que votre enfant peut voir.",
+   "keys": [
+    "Inscrit par votre tuteur::l’a inscrit",
+    "Réserver chez votre tuteur::réservez chez votre tuteur",
+    "Ou un lien privé::lien privé",
+    "Le tuteur choisit les matières::des matières"
+   ],
+   "nodes": [
+    {
+     "on": "quand vous réservez",
+     "title": "Réservez chez votre tuteur",
+     "sub": "Il ajoute votre enfant"
+    },
+    {
+     "on": "Ou bien votre tuteur",
+     "title": "Ou utilisez son lien privé",
+     "sub": "Vous ajoutez votre enfant vous-même"
+    },
+    {
+     "on": "Votre tuteur décide",
+     "title": "L’Espace d’apprentissage s’ouvre",
+     "sub": "Avec les matières choisies par votre tuteur"
+    }
+   ]
+  },
+  "parent:std:invite": {
+   "chapter": "Pour bien démarrer",
+   "title": "Si votre tuteur vous a envoyé un lien",
+   "say": "Si votre tuteur vous envoie un lien privé, ouvrez-le en étant connecté à votre compte parent. Ou créez d’abord un compte. Vous verrez quel tuteur vous a invité. Choisissez lesquels de vos enfants inscrire, et ils rejoignent aussitôt. Le lien ne sert qu’à une famille et dure trente jours.",
+   "keys": [
+    "Ouvrez le lien privé::lien privé",
+    "Connecté en tant que parent::connecté",
+    "Choisissez les enfants::Choisissez lesquels",
+    "Trente jours, une famille::trente jours"
+   ],
+   "cam": [
+    {
+     "on": "Vous verrez quel tuteur"
+    },
+    {
+     "on": "Choisissez lesquels"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Vous verrez quel tuteur",
+     "off": "Choisissez lesquels"
+    },
+    {
+     "on": "Choisissez lesquels"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Choisissez lesquels"
+    }
+   ]
+  },
+  "parent:std:home": {
+   "chapter": "La semaine de votre enfant",
+   "title": "Accueil : le verdict en une ligne",
+   "say": "L’Accueil commence par une ligne, le verdict. Elle indique Sur la bonne voie, Tout est fait cette semaine, ou le nombre de devoirs en retard. Touchez-la pour aller là où vous pouvez aider. En dessous, vous voyez les quiz faits cette semaine, les devoirs rendus et ce qui attend d’être corrigé. Plusieurs enfants ? Passez de l’un à l’autre en haut.",
+   "keys": [
+    "Une ligne, le verdict::une ligne",
+    "Bonne voie, ou en retard::Sur la bonne voie",
+    "La semaine en un coup d’œil::En dessous",
+    "Passer d’un enfant à l’autre::Passez de l’un à l’autre"
+   ],
+   "cam": [
+    {
+     "on": "L’Accueil commence"
+    },
+    {
+     "on": "Elle indique"
+    },
+    {
+     "on": "En dessous"
+    },
+    {
+     "on": "Plusieurs enfants"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Elle indique",
+     "off": "En dessous"
+    },
+    {
+     "on": "En dessous",
+     "off": "Plusieurs enfants"
+    },
+    {
+     "on": "Plusieurs enfants"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touchez-la"
+    }
+   ]
+  },
+  "parent:std:lessons": {
+   "chapter": "La semaine de votre enfant",
+   "title": "Leçons",
+   "say": "Leçons montre ce que votre tuteur a partagé. Ouvrez-en une et votre enfant la parcourt une idée à la fois, avec un quiz à la fin.",
+   "keys": [
+    "Ce que votre tuteur a partagé::Leçons montre",
+    "Une idée à la fois",
+    "Un quiz à la fin::quiz à la fin"
+   ],
+   "cam": [
+    {
+     "on": "Leçons montre"
+    },
+    {
+     "on": "Ouvrez-en une"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ouvrez-en une"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvrez-en une"
+    }
+   ]
+  },
+  "parent:std:live": {
+   "chapter": "La semaine de votre enfant",
+   "title": "Cours en direct",
+   "say": "Quand votre tuteur prévoit un cours en direct, il apparaît dans Cours en direct. À l’ouverture, vous vérifiez d’abord la caméra et le micro, puis vous appuyez sur Rejoindre. Si votre tuteur partage une leçon sur l’appareil de votre enfant, une bannière apparaît pour qu’il la rejoigne.",
+   "keys": [
+    "Cours en direct à venir::Cours en direct",
+    "Vérification caméra et micro::la caméra et le micro",
+    "Appuyez sur Rejoindre",
+    "Une bannière pour rejoindre::bannière"
+   ],
+   "cam": [
+    {
+     "on": "À l’ouverture"
+    }
+   ]
+  },
+  "parent:std:progress": {
+   "chapter": "Progression",
+   "title": "Où il en est",
+   "say": "L’onglet Progression montre où en est votre enfant. Vous voyez son niveau, sur l’échelle de votre tuteur, et ce qu’il faut pour atteindre le suivant. Touchez D’où vient ce niveau ? pour une explication simple. Et Mon parcours dans le programme montre où il en est dans chaque matière.",
+   "keys": [
+    "Où en est votre enfant::où en est votre enfant",
+    "Son niveau, en clair::son niveau",
+    "D’où vient ce niveau",
+    "Mon parcours dans le programme"
+   ],
+   "cam": [
+    {
+     "on": "Vous voyez son niveau"
+    },
+    {
+     "on": "Touchez D’où vient"
+    },
+    {
+     "on": "Et Mon parcours"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Vous voyez son niveau",
+     "off": "Touchez D’où vient"
+    },
+    {
+     "on": "Touchez D’où vient",
+     "off": "Et Mon parcours"
+    },
+    {
+     "on": "Et Mon parcours dans le programme"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touchez D’où vient"
+    }
+   ]
+  },
+  "parent:std:report": {
+   "chapter": "Progression",
+   "title": "Un bilan de progression imprimable",
+   "say": "Besoin d’un document pour un rendez-vous, ou pour le frigo ? Appuyez sur Bilan de progression. Vous obtenez un résumé propre d’une page pour un enfant, avec ses matières et les prochaines étapes. Imprimez-le, ou enregistrez-le en PDF depuis la fenêtre d’impression de votre navigateur.",
+   "keys": [
+    "Appuyez sur Bilan de progression",
+    "Un résumé d’une page::résumé propre d’une page",
+    "Matières et prochaines étapes::prochaines étapes",
+    "Imprimer ou enregistrer en PDF::Imprimez-le"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Vous obtenez un résumé"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Appuyez sur Bilan de progression"
+    },
+    {
+     "on": "Vous obtenez un résumé"
+    },
+    {
+     "on": "avec ses matières"
+    },
+    {
+     "on": "et les prochaines étapes"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Appuyez sur Bilan de progression",
+     "off": "Vous obtenez un résumé"
+    },
+    {
+     "on": "avec ses matières",
+     "off": "et les prochaines étapes"
+    },
+    {
+     "on": "et les prochaines étapes"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Appuyez sur Bilan de progression"
+    }
+   ]
+  },
+  "parent:std:ask": {
+   "chapter": "Aide",
+   "title": "Écrire à votre tuteur",
+   "say": "Une question ? Utilisez Écrire à votre tuteur sur l’Accueil, ou l’onglet Messages. La réponse de votre tuteur vous y parvient. Et vous pouvez toujours appuyer sur Comment ça marche, en haut, pour revoir cette vidéo.",
+   "keys": [
+    "Écrire à votre tuteur",
+    "Ou l’onglet Messages::Messages",
+    "Comment ça marche, à tout moment::Comment ça marche"
+   ],
+   "cam": [
+    {
+     "on": "Utilisez Écrire à votre tuteur"
+    },
+    {
+     "on": "Comment ça marche, en haut"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Utilisez Écrire à votre tuteur",
+     "off": "Comment ça marche, en haut"
+    },
+    {
+     "on": "Comment ça marche, en haut"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Utilisez Écrire à votre tuteur"
+    }
+   ]
+  },
+  "parent:std:hand-over": {
+   "chapter": "L’espace de votre enfant",
+   "title": "Passer la main à votre enfant",
+   "say": "Quand votre enfant est prêt à apprendre, appuyez sur Passer la main. L’écran devient son propre espace simple, avec seulement ses leçons, quiz et devoirs. Pour revenir à votre portail, un adulte répond à un petit calcul. Pour voir exactement ce que voit votre enfant, choisissez Ce que voit votre enfant, en haut de cette fenêtre.",
+   "keys": [
+    "Appuyez sur Passer la main",
+    "Son propre espace simple",
+    "Un petit calcul pour revenir::petit calcul",
+    "Ce que voit votre enfant"
+   ],
+   "cam": [
+    {
+     "on": "appuyez sur Passer la main"
+    }
+   ],
+   "rings": [
+    {
+     "on": "appuyez sur Passer la main",
+     "off": "L’écran devient"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "appuyez sur Passer la main"
+    }
+   ]
+  },
+  "kid:std:hello": {
+   "chapter": "Bonjour",
+   "title": "Bonjour !",
+   "say": "Bonjour ! Voici ton espace à toi pour apprendre. Il te montre quoi faire ensuite, et il t’aide à apprendre. Jetons un petit coup d’œil.",
+   "keys": [
+    "Bonjour",
+    "espace à toi pour apprendre",
+    "quoi faire ensuite"
+   ],
+   "nodes": [
+    {
+     "on": "quoi faire ensuite",
+     "title": "Quoi faire"
+    },
+    {
+     "on": "t’aide à apprendre",
+     "title": "Apprendre"
+    }
+   ]
+  },
+  "kid:std:home": {
+   "chapter": "Accueil",
+   "title": "Ton accueil",
+   "say": "Voici ton Accueil. Il te montre une grande chose à faire ensuite. Touche Go pour commencer. Touche le petit haut-parleur, et il te la lit à voix haute.",
+   "keys": [
+    "Ton accueil",
+    "Une grande chose à faire",
+    "Touche Go::Touche Go pour",
+    "Écoute-la::petit haut-parleur"
+   ],
+   "cam": [
+    {
+     "on": "une grande chose"
+    },
+    {
+     "on": "Touche Go"
+    },
+    {
+     "on": "petit haut-parleur"
+    }
+   ],
+   "rings": [
+    {
+     "on": "une grande chose",
+     "off": "Touche Go"
+    },
+    {
+     "on": "Touche Go",
+     "off": "Touche le petit"
+    },
+    {
+     "on": "petit haut-parleur"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche Go"
+    },
+    {
+     "on": "petit haut-parleur"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "une grande chose",
+     "text": "Ta prochaine chose à faire"
+    },
+    {
+     "on": "Touche Go",
+     "text": "Touche Go pour commencer"
+    },
+    {
+     "on": "petit haut-parleur",
+     "text": "Touche pour l’écouter"
+    }
+   ]
+  },
+  "kid:std:lessons": {
+   "chapter": "Apprendre",
+   "title": "Leçons",
+   "say": "Les leçons t’aident à apprendre quelque chose de nouveau. Tu avances une idée à la fois. Il y a des questions à essayer, et un quiz à la fin.",
+   "keys": [
+    "Quelque chose de nouveau",
+    "Une idée à la fois",
+    "Des questions à essayer",
+    "Un quiz à la fin::quiz à la fin"
+   ],
+   "cam": [
+    {
+     "on": "apprendre quelque chose"
+    },
+    {
+     "on": "une idée à la fois"
+    }
+   ],
+   "rings": [
+    {
+     "on": "une idée à la fois"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "une idée à la fois"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "apprendre quelque chose",
+     "text": "Choisis une leçon"
+    },
+    {
+     "on": "une idée à la fois",
+     "text": "Une idée à la fois"
+    },
+    {
+     "on": "questions à essayer",
+     "text": "Des questions à essayer"
+    }
+   ]
+  },
+  "kid:std:homework": {
+   "chapter": "Apprendre",
+   "title": "Devoirs",
+   "say": "Tes devoirs sont ici. Ouvre-les, fais de ton mieux, et rends-les. Ton tuteur les regardera et te dira comment tu as fait.",
+   "keys": [
+    "Tes devoirs sont ici",
+    "Ouvre-les",
+    "Fais de ton mieux",
+    "Rends-les"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Ouvre-les"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Tes devoirs"
+    },
+    {
+     "on": "fais de ton mieux"
+    },
+    {
+     "on": "rends-les"
+    }
+   ],
+   "rings": [
+    {
+     "on": "fais de ton mieux",
+     "off": "rends-les"
+    },
+    {
+     "on": "rends-les"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "fais de ton mieux"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Ouvre-les",
+     "text": "Ouvre-les"
+    },
+    {
+     "on": "fais de ton mieux",
+     "text": "Fais de ton mieux"
+    },
+    {
+     "on": "rends-les",
+     "text": "Rends-les"
+    }
+   ]
+  },
+  "kid:std:quizzes": {
+   "chapter": "Jouer",
+   "title": "Quiz",
+   "say": "Les quiz sont de courtes séries de questions. Lis chaque question, et choisis ta réponse. Pas tout à fait juste ? Ce n’est pas grave. Tu peux réessayer.",
+   "keys": [
+    "De courtes séries de questions",
+    "Choisis ta réponse",
+    "Pas juste ? Pas grave::Ce n’est pas grave",
+    "Réessaie::réessayer"
+   ],
+   "cam": [
+    {
+     "on": "Les quiz sont"
+    },
+    {
+     "on": "choisis ta réponse"
+    }
+   ],
+   "rings": [
+    {
+     "on": "choisis ta réponse"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "choisis ta réponse"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Lis chaque question",
+     "text": "Lis la question"
+    },
+    {
+     "on": "choisis ta réponse",
+     "text": "Choisis ta réponse"
+    },
+    {
+     "on": "réessayer",
+     "text": "Réessaie !"
+    }
+   ]
+  },
+  "kid:std:tools": {
+   "chapter": "Jouer",
+   "title": "Outils pour t’aider",
+   "say": "Certaines questions ont un outil pour t’aider, comme une règle ou un rapporteur. Touche le bouton de l’outil, et il s’ouvre juste là pour t’aider à trouver la réponse. Et touche le haut-parleur pour écouter la question.",
+   "keys": [
+    "Un outil pour t’aider",
+    "Touche le bouton de l’outil",
+    "haut-parleur"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "s’ouvre juste là"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Certaines questions"
+    },
+    {
+     "on": "Touche le bouton"
+    },
+    {
+     "on": "s’ouvre juste là"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Certaines questions",
+     "off": "Touche le bouton"
+    },
+    {
+     "on": "Touche le bouton",
+     "off": "s’ouvre juste là"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche le bouton"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Touche le bouton",
+     "text": "Le bouton de l’outil"
+    }
+   ]
+  },
+  "kid:std:cards": {
+   "chapter": "Jouer",
+   "title": "Cartes mémoire",
+   "say": "Les cartes mémoire t’aident à retenir des choses. Touche une carte pour la retourner. Puis dis à quel point tu la connaissais. Les cartes que tu trouves difficiles reviennent bientôt.",
+   "keys": [
+    "Retenir des choses",
+    "Touche une carte pour la retourner::Touche une carte",
+    "à quel point tu la connaissais",
+    "Les difficiles reviennent::reviennent bientôt"
+   ],
+   "cam": [
+    {
+     "on": "Les cartes mémoire"
+    },
+    {
+     "on": "Touche une carte"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Touche une carte"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche une carte"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Touche une carte",
+     "text": "Touche la carte pour la retourner"
+    },
+    {
+     "on": "à quel point tu la connaissais",
+     "text": "La connaissais-tu bien ?"
+    },
+    {
+     "on": "reviennent bientôt",
+     "text": "Les difficiles reviennent"
+    }
+   ]
+  },
+  "kid:std:grown-up": {
+   "chapter": "Terminé",
+   "title": "Quand tu as fini",
+   "say": "Quand tu as fini, demande à un adulte de t’aider à sortir. Il répond à un petit calcul, et c’est terminé. Tu peux toucher Comment ça marche quand tu veux pour revoir cette vidéo.",
+   "keys": [
+    "demande à un adulte",
+    "petit calcul",
+    "Comment ça marche"
+   ],
+   "nodes": [
+    {
+     "on": "demande à un adulte",
+     "title": "Demande à un adulte"
+    },
+    {
+     "on": "petit calcul",
+     "title": "Un petit calcul"
+    },
+    {
+     "on": "c’est terminé",
+     "title": "Terminé !"
+    }
+   ]
+  },
+  "tutor:std:hw-set": {
+   "chapter": "Donner",
+   "title": "Donne un devoir",
+   "say": "Dans Devoirs, appuie sur Donner un devoir. Choisis un groupe, ou coche des élèves un par un.",
+   "keys": [
+    "appuie sur Donner un devoir",
+    "Choisis un groupe",
+    "coche des élèves"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Choisis un groupe"
+    }
+   ],
+   "cam": [
+    {
+     "on": "appuie sur Donner un devoir"
+    },
+    {
+     "on": "Choisis un groupe"
+    }
+   ],
+   "rings": [
+    {
+     "on": "appuie sur Donner un devoir",
+     "off": "Choisis un groupe"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "appuie sur Donner un devoir"
+    }
+   ]
+  },
+  "tutor:std:hw-worksheet": {
+   "chapter": "Donner",
+   "title": "Joins une fiche",
+   "say": "Coche des fiches de ta bibliothèque. Les interactives se corrigent seules. Les PDF sont complétés par écrit ou avec une photo.",
+   "keys": [
+    "Coche des fiches",
+    "de ta bibliothèque",
+    "se corrigent seules::se corrigent seules",
+    "par écrit ou avec une photo::par écrit ou avec une photo"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "de ta bibliothèque"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Coche des fiches"
+    },
+    {
+     "on": "de ta bibliothèque"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Coche des fiches"
+    }
+   ]
+  },
+  "tutor:std:hw-assign": {
+   "chapter": "Le donner",
+   "title": "Envoyez-le",
+   "say": "Appuyez sur Attribuer le devoir. Chaque enfant reçoit sa propre copie, et les familles en sont informées immédiatement.",
+   "keys": [
+    "Appuyez sur Attribuer le devoir",
+    "Sa propre copie",
+    "Les familles informées::en sont informées immédiatement"
+   ],
+   "cam": [
+    {
+     "on": "appuyez sur Attribuer le devoir"
+    }
+   ],
+   "rings": [
+    {
+     "on": "appuyez sur Attribuer le devoir"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "appuyez sur Attribuer le devoir"
+    }
+   ]
+  },
+  "tutor:std:hw-tasks": {
+   "chapter": "Récupérer",
+   "title": "Suis-le",
+   "say": "Chaque fiche de devoir montre qui travaille encore, qui a rendu et qui a été corrigé.",
+   "keys": [
+    "Chaque fiche de devoir",
+    "travaille encore",
+    "a rendu",
+    "a été corrigé"
+   ],
+   "cam": [
+    {
+     "on": "Chaque fiche de devoir"
+    }
+   ]
+  },
+  "tutor:std:hw-handin": {
+   "chapter": "Récupérer",
+   "title": "Comment les élèves rendent",
+   "say": "Les élèves font la fiche à l'écran, ou écrivent, ajoutent une photo ou un PDF, puis appuient sur Rendre le devoir.",
+   "keys": [
+    "font la fiche à l'écran",
+    "écrivent, ajoutent une photo::écrivent, ajoutent une photo",
+    "ou un PDF",
+    "Rendre le devoir"
+   ],
+   "cam": [
+    {
+     "on": "font la fiche à l'écran"
+    },
+    {
+     "on": "écrivent, ajoutent une photo"
+    }
+   ],
+   "rings": [
+    {
+     "on": "font la fiche à l'écran",
+     "off": "écrivent, ajoutent une photo"
+    },
+    {
+     "on": "écrivent, ajoutent une photo"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "font la fiche à l'écran"
+    }
+   ]
+  },
+  "tutor:std:mark": {
+   "chapter": "Corriger",
+   "title": "Une seule file à corriger",
+   "say": "Tout ce qui attend une correction arrive dans une seule file, la plus ancienne attente en premier. Devoirs rendus, réponses écrites de quiz et réponses des quiz de départ, tous ensemble. Ouvrez-en un, corrigez-le, et utilisez le bouton suivant pour passer directement au suivant.",
+   "keys": [
+    "Une seule file à corriger::une seule file",
+    "La plus ancienne attente en premier",
+    "Ouvrez-en un",
+    "Le bouton suivant"
+   ],
+   "cam": [
+    {
+     "on": "Tout ce qui attend"
+    },
+    {
+     "on": "Ouvrez-en un"
+    },
+    {
+     "on": "le bouton suivant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tout ce qui attend",
+     "off": "Ouvrez-en un"
+    },
+    {
+     "on": "Ouvrez-en un",
+     "off": "et utilisez le bouton"
+    },
+    {
+     "on": "et utilisez le bouton suivant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvrez-en un"
+    }
+   ]
+  },
+  "tutor:std:hw-marking": {
+   "chapter": "Corriger",
+   "title": "Corriger et passer au suivant",
+   "say": "Ouvrez un rendu pour voir sa réponse. Donnez une note, avec le total, et rédigez un commentaire. Appuyez sur Corriger et suivant, et la famille est prévenue. Les fiches interactives sont déjà corrigées pour vous.",
+   "keys": [
+    "Sa réponse",
+    "Donnez une note",
+    "Un commentaire::rédigez un commentaire",
+    "Corriger et suivant"
+   ],
+   "cam": [
+    {
+     "on": "pour voir sa réponse"
+    },
+    {
+     "on": "Donnez une note"
+    },
+    {
+     "on": "rédigez un commentaire"
+    },
+    {
+     "on": "Appuyez sur Corriger et suivant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pour voir sa réponse",
+     "off": "Donnez une note"
+    },
+    {
+     "on": "Donnez une note",
+     "off": "rédigez un commentaire"
+    },
+    {
+     "on": "rédigez un commentaire",
+     "off": "Appuyez sur Corriger"
+    },
+    {
+     "on": "Appuyez sur Corriger et suivant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Donnez une note"
+    },
+    {
+     "on": "Appuyez sur Corriger et suivant"
+    }
+   ]
+  },
+  "tutor:std:hw-results": {
+   "chapter": "Résultats",
+   "title": "Tout le monde le voit",
+   "say": "L'enfant voit sa note et ton retour. Sa famille le voit aussi dans l'Espace d'apprentissage.",
+   "keys": [
+    "L'enfant voit",
+    "sa note et ton retour::sa note et ton retour",
+    "le voit aussi",
+    "Espace d'apprentissage"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "sa note et ton retour"
+    }
+   ],
+   "cam": [
+    {
+     "on": "L'enfant voit"
+    },
+    {
+     "on": "sa note et ton retour"
+    }
+   ],
+   "rings": [
+    {
+     "on": "L'enfant voit",
+     "off": "sa note et ton retour"
+    },
+    {
+     "on": "sa note et ton retour"
+    }
+   ]
+  },
+  "parent:std:hw-list": {
+   "chapter": "Devoirs",
+   "title": "Ce qui a été donné",
+   "say": "L’onglet Devoirs liste tout ce que le tuteur de votre enfant a donné. Chaque devoir indique sa date de rendu, et s’il a été rendu ou corrigé. En cas de retard, vous le verrez ici, et dans le verdict de l’Accueil. Les nouveaux devoirs apparaissent ici dès qu’ils sont donnés.",
+   "keys": [
+    "Tout ce qui a été donné::a donné",
+    "Sa date de rendu",
+    "Rendu, ou corrigé::rendu",
+    "Le retard s’affiche ici::retard"
+   ],
+   "cam": [
+    {
+     "on": "L’onglet Devoirs"
+    },
+    {
+     "on": "Chaque devoir indique"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Chaque devoir indique",
+     "off": "Les nouveaux devoirs"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Chaque devoir indique"
+    }
+   ]
+  },
+  "parent:std:hw-open": {
+   "chapter": "Devoirs",
+   "title": "Ouvrir un devoir",
+   "say": "Ouvrez-en un pour voir les consignes, et toute fiche ou leçon à faire d’abord. Votre enfant peut taper une réponse, ou ajouter une photo ou un PDF, puis appuyer sur Rendre le devoir. Il peut la modifier jusqu’à ce que le tuteur la corrige.",
+   "keys": [
+    "Consignes et fiche::les consignes",
+    "Taper, ou ajouter une photo::taper une réponse",
+    "Rendre le devoir",
+    "Modifiable jusqu’à correction::jusqu’à ce que le tuteur la corrige"
+   ],
+   "cam": [
+    {
+     "on": "Ouvrez-en un"
+    },
+    {
+     "on": "toute fiche"
+    }
+   ],
+   "rings": [
+    {
+     "on": "toute fiche",
+     "off": "Votre enfant peut"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Ouvrez-en un",
+     "text": "Consignes"
+    },
+    {
+     "on": "toute fiche",
+     "text": "Fiche à faire"
+    },
+    {
+     "on": "Votre enfant peut taper",
+     "text": "Texte, photo ou PDF"
+    }
+   ]
+  },
+  "parent:std:hw-marks": {
+   "chapter": "Devoirs",
+   "title": "Notes et commentaires",
+   "say": "Quand le tuteur a corrigé, la note et son commentaire apparaissent sous le devoir, et vous êtes prévenu. La progression de votre enfant en tient compte aussi, pour que vous voyiez où il en est.",
+   "keys": [
+    "La note et le commentaire::la note",
+    "Vous êtes prévenu",
+    "La progression le prend en compte::progression"
+   ],
+   "cam": [
+    {
+     "on": "la note"
+    }
+   ],
+   "rings": [
+    {
+     "on": "la note"
+    }
+   ]
+  },
+  "kid:std:hw-find": {
+   "chapter": "Devoirs",
+   "title": "Trouve tes devoirs",
+   "say": "Touche Devoirs pour voir ce que ton tuteur t’a donné. Touches-en un pour l’ouvrir. Il te dit quoi faire, et pour quand c’est à rendre.",
+   "keys": [
+    "Touche Devoirs",
+    "Touches-en un pour l’ouvrir",
+    "Quoi faire",
+    "Pour quand::pour quand"
+   ],
+   "cam": [
+    {
+     "on": "Touche Devoirs"
+    },
+    {
+     "on": "Touches-en un"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Touches-en un"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touches-en un"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Touche Devoirs",
+     "text": "Devoirs"
+    },
+    {
+     "on": "Touches-en un",
+     "text": "Touche pour l’ouvrir"
+    }
+   ]
+  },
+  "kid:std:hw-do": {
+   "chapter": "Devoirs",
+   "title": "Fais-le et rends-le",
+   "say": "Lis ce qu’il faut faire. Puis fais la fiche, à l’écran ou sur papier, et écris ta réponse. Quand tu as fini, rends-la. Tu peux la changer jusqu’à ce que ton tuteur l’ait regardée.",
+   "keys": [
+    "Lis ce qu’il faut faire",
+    "Fais la fiche",
+    "Rends-la",
+    "Change-la jusqu’à la correction::la changer"
+   ],
+   "cam": [
+    {
+     "on": "Lis ce qu’il faut faire"
+    },
+    {
+     "on": "Puis fais la fiche"
+    },
+    {
+     "on": "rends-la"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Puis fais la fiche",
+     "off": "Quand tu as fini"
+    },
+    {
+     "on": "Quand tu as fini"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Puis fais la fiche"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Puis fais la fiche",
+     "text": "Fais la fiche"
+    },
+    {
+     "on": "Quand tu as fini",
+     "text": "Rends-la"
+    }
+   ]
+  },
+  "kid:std:hw-back": {
+   "chapter": "Devoirs",
+   "title": "Vois comment tu as fait",
+   "say": "Quand ton tuteur l’a corrigé, tu verras ta note et un message de sa part. Bravo d’avoir essayé !",
+   "keys": [
+    "Ta note",
+    "Un message de ton tuteur::message",
+    "Bravo !::Bravo"
+   ],
+   "cam": [
+    {
+     "on": "Quand ton tuteur"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Quand ton tuteur"
+    }
+   ]
+  },
+  "kid:ks1:hello": {
+   "chapter": "Bonjour",
+   "title": "Bonjour !",
+   "say": "Bonjour ! Voici ton espace. Voyons comment ça marche.",
+   "keys": [
+    "Bonjour",
+    "ton espace"
+   ],
+   "nodes": [
+    {
+     "on": "ton espace",
+     "title": "Aujourd’hui"
+    },
+    {
+     "on": "Voyons",
+     "title": "Jouer et apprendre"
+    },
+    {
+     "on": "comment ça marche",
+     "title": "Étoiles"
+    }
+   ]
+  },
+  "kid:ks1:today": {
+   "chapter": "Aujourd’hui",
+   "title": "Aujourd’hui",
+   "say": "Voici Aujourd’hui. Il te montre une chose à faire. Touche le grand bouton Go. Touche le haut-parleur pour l’écouter.",
+   "keys": [
+    "Aujourd’hui",
+    "Une chose à faire::une chose",
+    "Touche le grand bouton Go",
+    "Écoute::haut-parleur"
+   ],
+   "cam": [
+    {
+     "on": "Il te montre une chose"
+    },
+    {
+     "on": "Touche le grand bouton"
+    },
+    {
+     "on": "le haut-parleur"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Il te montre une chose",
+     "off": "Touche le grand bouton"
+    },
+    {
+     "on": "Touche le grand bouton",
+     "off": "Touche le haut-parleur"
+    },
+    {
+     "on": "Touche le haut-parleur"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche le grand bouton"
+    },
+    {
+     "on": "Touche le haut-parleur"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "une chose",
+     "text": "Une chose à faire"
+    },
+    {
+     "on": "grand bouton Go",
+     "text": "Touche Go"
+    },
+    {
+     "on": "le haut-parleur",
+     "text": "Écoute"
+    }
+   ]
+  },
+  "kid:ks1:play": {
+   "chapter": "Jouer",
+   "title": "Jouer et apprendre",
+   "say": "Touche Jouer et apprendre. Voici tes quiz. Touches-en un. Essaie !",
+   "keys": [
+    "Jouer et apprendre",
+    "Tes quiz::quiz",
+    "Essaie !"
+   ],
+   "cam": [
+    {
+     "on": "Touche Jouer"
+    },
+    {
+     "on": "Voici tes quiz"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Touche Jouer",
+     "off": "Voici"
+    },
+    {
+     "on": "Touches-en un"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche Jouer"
+    },
+    {
+     "on": "Touches-en un"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Touche Jouer",
+     "text": "Jouer et apprendre"
+    },
+    {
+     "on": "quiz",
+     "text": "Quiz"
+    }
+   ]
+  },
+  "kid:ks1:stars": {
+   "chapter": "Étoiles",
+   "title": "Étoiles",
+   "say": "Touche Étoiles. Fais un quiz, et tes étoiles brillent ici. Bravo !",
+   "keys": [
+    "Étoiles",
+    "Tes étoiles brillent ici::étoiles brillent ici",
+    "Bravo !::Bravo"
+   ],
+   "cam": [
+    {
+     "on": "Touche Étoiles"
+    },
+    {
+     "on": "Fais un quiz"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Touche Étoiles",
+     "off": "Fais un quiz"
+    },
+    {
+     "on": "Fais un quiz"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Touche Étoiles"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Touche Étoiles",
+     "text": "Étoiles"
+    },
+    {
+     "on": "tes étoiles brillent",
+     "text": "Tes étoiles"
+    }
+   ]
+  },
+  "kid:ks1:grown-up": {
+   "chapter": "Terminé",
+   "title": "Terminé",
+   "say": "Fini ? Demande à un adulte de t’aider. À bientôt !",
+   "keys": [
+    "adulte",
+    "À bientôt"
+   ],
+   "nodes": [
+    {
+     "on": "Demande à un adulte",
+     "title": "Demande à un adulte"
+    },
+    {
+     "on": "À bientôt",
+     "title": "À bientôt !"
+    }
+   ]
+  },
+  "tutor:std:home-tour": {
+   "chapter": "Accueil",
+   "title": "Tes espaces",
+   "say": "En haut se trouvent tes espaces : Leçons, Élèves, Progrès, Quiz, Devoirs et Messages. Accueil est là où tu commences.",
+   "keys": [
+    "tes espaces",
+    "Leçons, Élèves, Progrès",
+    "Quiz, Devoirs",
+    "Accueil est là"
+   ],
+   "cam": [
+    {
+     "on": "tes espaces"
+    }
+   ],
+   "rings": [
+    {
+     "on": "tes espaces",
+     "off": "Leçons, Élèves, Progrès"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "tes espaces"
+    }
+   ]
+  },
+  "tutor:std:home-attention": {
+   "chapter": "Accueil",
+   "title": "Nécessite ton attention",
+   "say": "Nécessite ton attention indique quoi faire ensuite : devoirs à corriger, réponses écrites et travail en retard. Commence par le haut.",
+   "keys": [
+    "Nécessite ton attention",
+    "quoi faire ensuite",
+    "devoirs à corriger",
+    "travail en retard",
+    "Commence par le haut"
+   ],
+   "cam": [
+    {
+     "on": "Nécessite ton attention"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Nécessite ton attention"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Nécessite ton attention"
+    }
+   ]
+  },
+  "tutor:std:home-help": {
+   "chapter": "Accueil",
+   "title": "L'aide est toujours là",
+   "say": "Ton prochain cours est ici. Et Comment ça marche est sur chaque page, dès que tu as besoin d'un rappel.",
+   "keys": [
+    "prochain cours",
+    "Comment ça marche",
+    "sur chaque page",
+    "un rappel"
+   ],
+   "cam": [
+    {
+     "on": "prochain cours"
+    },
+    {
+     "on": "Comment ça marche"
+    }
+   ],
+   "rings": [
+    {
+     "on": "prochain cours",
+     "off": "Comment ça marche"
+    },
+    {
+     "on": "Comment ça marche"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "prochain cours"
+    }
+   ]
+  },
+  "tutor:std:fam-ways": {
+   "chapter": "Familles",
+   "title": "Trois façons de rejoindre",
+   "say": "Une famille peut te rejoindre de trois façons : elle réserve avec toi, tu envoies un lien d'invitation, ou elle trouve ta page publique.",
+   "keys": [
+    "de trois façons",
+    "elle réserve avec toi",
+    "lien d'invitation",
+    "page publique"
+   ],
+   "nodes": [
+    {
+     "on": "de trois façons",
+     "title": "Elle réserve avec toi",
+     "sub": "Son enfant apparaît dans Inscrire un élève"
+    },
+    {
+     "on": "elle réserve avec toi",
+     "title": "Envoie un lien d'invitation",
+     "sub": "Fonctionne une fois, pendant 30 jours"
+    },
+    {
+     "on": "lien d'invitation",
+     "title": "Ta page publique",
+     "sub": "Ils s'inscrivent, puis tu les inscris"
+    }
+   ]
+  },
+  "tutor:std:fam-book": {
+   "chapter": "Familles",
+   "title": "Ils réservent avec toi",
+   "say": "Quand un parent réserve, son enfant apparaît dans Inscrire un élève. Appuie sur Inscrire, choisis les matières et l'année, puis Inscrire l'élève.",
+   "keys": [
+    "apparaît dans Inscrire un élève",
+    "Appuie sur Inscrire",
+    "matières et l'année",
+    "Inscrire l'élève"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Appuie sur Inscrire"
+    }
+   ],
+   "cam": [
+    {
+     "on": "apparaît dans Inscrire un élève"
+    },
+    {
+     "on": "Appuie sur Inscrire"
+    },
+    {
+     "on": "matières et l'année"
+    },
+    {
+     "on": "Inscrire l'élève"
+    },
+    {
+     "on": "apparaît dans Inscrire un élève"
+    }
+   ],
+   "rings": [
+    {
+     "on": "apparaît dans Inscrire un élève",
+     "off": "Appuie sur Inscrire"
+    },
+    {
+     "on": "Appuie sur Inscrire",
+     "off": "matières et l'année"
+    },
+    {
+     "on": "matières et l'année",
+     "off": "Inscrire l'élève"
+    },
+    {
+     "on": "Inscrire l'élève"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apparaît dans Inscrire un élève"
+    },
+    {
+     "on": "Appuie sur Inscrire"
+    }
+   ]
+  },
+  "tutor:std:fam-invite": {
+   "chapter": "Familles",
+   "title": "Envoie un lien d'invitation",
+   "say": "Pas de réservation ? Indique pour qui c'est et appuie sur Créer un lien d'invitation. Envoie-le au parent. Il fonctionne une fois, pendant 30 jours.",
+   "keys": [
+    "pour qui c'est",
+    "Créer un lien d'invitation",
+    "Envoie-le au parent",
+    "une fois, pendant 30 jours"
+   ],
+   "cam": [
+    {
+     "on": "pour qui c'est"
+    },
+    {
+     "on": "Créer un lien d'invitation"
+    },
+    {
+     "on": "Envoie-le au parent"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pour qui c'est",
+     "off": "Créer un lien d'invitation"
+    },
+    {
+     "on": "Créer un lien d'invitation",
+     "off": "Envoie-le au parent"
+    },
+    {
+     "on": "Envoie-le au parent"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pour qui c'est"
+    },
+    {
+     "on": "Créer un lien d'invitation"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "pour qui c'est",
+     "text": "Rien n'est envoyé automatiquement pour toi : c'est toi qui l'envoies"
+    }
+   ]
+  },
+  "tutor:std:fam-page": {
+   "chapter": "Familles",
+   "title": "Partage ta page publique",
+   "say": "Ou copie le lien de ta page et envoie-le. Dès que le parent s'inscrit, ses enfants apparaissent ici, prêts à être inscrits.",
+   "keys": [
+    "copie le lien",
+    "envoie-le",
+    "s'inscrit",
+    "prêts à être inscrits"
+   ],
+   "cam": [
+    {
+     "on": "copie le lien"
+    },
+    {
+     "on": "envoie-le"
+    }
+   ],
+   "rings": [
+    {
+     "on": "copie le lien",
+     "off": "envoie-le"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "copie le lien"
+    }
+   ]
+  },
+  "tutor:std:std-cards": {
+   "chapter": "Élèves",
+   "title": "Chaque enfant a une fiche",
+   "say": "Chaque élève inscrit a une fiche qui montre son année, ses matières et un anneau de progrès.",
+   "keys": [
+    "Chaque élève inscrit",
+    "une fiche",
+    "son année, ses matières",
+    "anneau de progrès"
+   ],
+   "cam": [
+    {
+     "on": "Chaque élève inscrit"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Chaque élève inscrit"
+    }
+   ]
+  },
+  "tutor:std:std-groups": {
+   "chapter": "Élèves",
+   "title": "Crée un groupe",
+   "say": "Regroupe des élèves. Tu peux ensuite donner des devoirs, un quiz ou un cours à tout le groupe en un clic.",
+   "keys": [
+    "Regroupe des élèves",
+    "en un clic",
+    "devoirs, un quiz",
+    "tout le groupe"
+   ],
+   "cam": [
+    {
+     "on": "Regroupe des élèves"
+    },
+    {
+     "on": "en un clic"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Regroupe des élèves",
+     "off": "en un clic"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Regroupe des élèves"
+    }
+   ]
+  },
+  "tutor:std:std-support": {
+   "chapter": "Élèves",
+   "title": "Réglages d'accompagnement",
+   "say": "Ouvre Modifier les détails pour désactiver le chrono des quiz, activer le mode calme, ajouter du temps, agrandir le texte ou lire les réponses à voix haute.",
+   "keys": [
+    "Ouvre Modifier les détails",
+    "chrono des quiz",
+    "mode calme",
+    "ajouter du temps",
+    "agrandir le texte",
+    "lire les réponses à voix haute"
+   ],
+   "cam": [
+    {
+     "on": "Ouvre Modifier les détails"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ouvre Modifier les détails"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvre Modifier les détails"
+    },
+    {
+     "on": "chrono des quiz"
+    }
+   ]
+  },
+  "tutor:std:std-owner": {
+   "chapter": "Élèves",
+   "title": "Toi seul peux les modifier",
+   "say": "Les familles ne peuvent pas modifier ces réglages. Utilise les trois points sur la fiche pour suspendre ou désinscrire un élève.",
+   "keys": [
+    "ne peuvent pas modifier::ne peuvent pas modifier",
+    "trois points",
+    "suspendre",
+    "désinscrire"
+   ],
+   "cam": [
+    {
+     "on": "ne peuvent pas modifier"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ne peuvent pas modifier"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "ne peuvent pas modifier"
+    }
+   ]
+  },
+  "tutor:std:les-library": {
+   "chapter": "Leçons",
+   "title": "Ta bibliothèque de leçons",
+   "say": "Leçons contient des milliers de leçons prêtes à l'emploi, organisées sur une carte du programme. Choisis une matière et une année.",
+   "keys": [
+    "milliers de leçons prêtes::milliers de leçons prêtes",
+    "carte du programme",
+    "Choisis une matière",
+    "et une année"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "carte du programme"
+    }
+   ],
+   "cam": [
+    {
+     "on": "milliers de leçons prêtes"
+    },
+    {
+     "on": "carte du programme"
+    },
+    {
+     "on": "Choisis une matière"
+    }
+   ],
+   "rings": [
+    {
+     "on": "milliers de leçons prêtes",
+     "off": "carte du programme"
+    },
+    {
+     "on": "carte du programme"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "milliers de leçons prêtes"
+    },
+    {
+     "on": "carte du programme"
+    }
+   ]
+  },
+  "tutor:std:les-find": {
+   "chapter": "Leçons",
+   "title": "Trouve une leçon",
+   "say": "Chaque thème indique combien de leçons il contient. Ou tape dans Rechercher pour aller directement à une leçon.",
+   "keys": [
+    "Chaque thème",
+    "combien de leçons",
+    "tape dans Rechercher"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "combien de leçons"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Chaque thème"
+    },
+    {
+     "on": "combien de leçons"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Chaque thème"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Chaque thème"
+    }
+   ]
+  },
+  "tutor:std:les-preview": {
+   "chapter": "Leçons",
+   "title": "Prévisualise-la",
+   "say": "Ouvre une leçon pour voir son plan. Appuie sur Prévisualiser la leçon pour voir exactement ce qu'un enfant verra.",
+   "keys": [
+    "Ouvre une leçon",
+    "son plan",
+    "Prévisualiser la leçon",
+    "un enfant verra"
+   ],
+   "cam": [
+    {
+     "on": "Ouvre une leçon"
+    },
+    {
+     "on": "son plan"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ouvre une leçon"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvre une leçon"
+    }
+   ]
+  },
+  "tutor:std:les-build": {
+   "chapter": "Leçons",
+   "title": "Crée la tienne",
+   "say": "Appuie sur Créer une nouvelle leçon. Ajoute des diapositives, des mots-clés, un QCM, un tri ou une association, puis Enregistrer. Elle rejoint ta bibliothèque.",
+   "keys": [
+    "Créer une nouvelle leçon",
+    "diapositives, des mots-clés::diapositives, des mots-clés",
+    "un tri ou une association",
+    "Enregistrer",
+    "ta bibliothèque"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "diapositives, des mots-clés"
+    },
+    {
+     "on": "un tri ou une association"
+    },
+    {
+     "on": "Enregistrer"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Créer une nouvelle leçon"
+    }
+   ]
+  },
+  "tutor:std:live-modes": {
+   "chapter": "Cours en direct",
+   "title": "Trois façons d'enseigner",
+   "say": "Enseigne en visioconférence, partage sur l'appareil de chaque enfant, ou enseigne en personne. Tu choisis à chaque fois.",
+   "keys": [
+    "visioconférence",
+    "appareil de chaque enfant",
+    "en personne",
+    "choisis à chaque fois"
+   ],
+   "nodes": [
+    {
+     "on": "visioconférence",
+     "title": "Appel vidéo",
+     "sub": "Rejoins l'appel dans le Centre"
+    },
+    {
+     "on": "appareil de chaque enfant",
+     "title": "Partage avec les élèves",
+     "sub": "Chaque élève sur son appareil"
+    },
+    {
+     "on": "en personne",
+     "title": "Enseigne en personne",
+     "sub": "Élèves à tes côtés, sans vidéo"
+    }
+   ]
+  },
+  "tutor:std:live-join": {
+   "chapter": "Cours en direct",
+   "title": "Démarre un cours vidéo",
+   "say": "Programme-le pour les élèves choisis. À l'heure du cours, vérifie ta caméra et ton micro, puis appuie sur Rejoindre. Aucune autre appli n'est nécessaire.",
+   "keys": [
+    "Programme-le",
+    "les élèves choisis",
+    "caméra et ton micro",
+    "appuie sur Rejoindre",
+    "autre appli"
+   ],
+   "cam": [
+    {
+     "on": "Programme-le"
+    },
+    {
+     "on": "les élèves choisis"
+    },
+    {
+     "on": "caméra et ton micro"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Programme-le",
+     "off": "les élèves choisis"
+    },
+    {
+     "on": "les élèves choisis",
+     "off": "caméra et ton micro"
+    },
+    {
+     "on": "caméra et ton micro"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Programme-le"
+    },
+    {
+     "on": "les élèves choisis"
+    }
+   ]
+  },
+  "tutor:std:live-incall": {
+   "chapter": "Cours en direct",
+   "title": "À l'intérieur de l'appel",
+   "say": "À côté de la vidéo se trouvent tes onglets : Leçons, Quiz, Devoirs, Cartes et un tableau blanc. Appuie sur Enseigner et chaque écran suit le tien.",
+   "keys": [
+    "tes onglets",
+    "Cartes et un tableau blanc",
+    "Appuie sur Enseigner",
+    "suit le tien"
+   ],
+   "nodes": [
+    {
+     "on": "tes onglets",
+     "title": "Leçons",
+     "sub": "Appuie sur Enseigner"
+    },
+    {
+     "on": "Cartes et un tableau blanc",
+     "title": "Quiz"
+    },
+    {
+     "on": "Appuie sur Enseigner",
+     "title": "Devoirs"
+    },
+    {
+     "on": "suit le tien",
+     "title": "Cartes"
+    },
+    {
+     "on": "tes onglets",
+     "title": "Tableau blanc"
+    }
+   ]
+  },
+  "tutor:std:live-share": {
+   "chapter": "Cours en direct",
+   "title": "Partage avec les élèves",
+   "say": "Pas de vidéo ? Appuie sur Partager avec les élèves. Chaque élève suit sur son appareil et répond seul.",
+   "keys": [
+    "Appuie sur Partager avec les élèves",
+    "son appareil",
+    "répond seul"
+   ],
+   "cam": [
+    {
+     "on": "Appuie sur Partager avec les élèves"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Appuie sur Partager avec les élèves"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Appuie sur Partager avec les élèves"
+    }
+   ]
+  },
+  "tutor:std:live-person": {
+   "chapter": "Cours en direct",
+   "title": "Enseigne en personne",
+   "say": "Dans la salle ? Coche qui est présent et saisis les réponses de chaque élève. Les familles voient les résultats ensuite.",
+   "keys": [
+    "qui est présent",
+    "réponses de chaque élève::réponses de chaque élève",
+    "résultats ensuite"
+   ],
+   "cam": [
+    {
+     "on": "qui est présent"
+    },
+    {
+     "on": "réponses de chaque élève"
+    }
+   ],
+   "rings": [
+    {
+     "on": "qui est présent",
+     "off": "réponses de chaque élève"
+    },
+    {
+     "on": "réponses de chaque élève"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "qui est présent"
+    }
+   ]
+  },
+  "tutor:std:tools-try": {
+   "chapter": "Outils",
+   "title": "Essaie les outils",
+   "say": "Outils, à l'intérieur de Leçons, propose règles, rapporteurs, droites numériques et schémas scientifiques. Ouvre un outil pour l'essayer.",
+   "keys": [
+    "à l'intérieur de Leçons",
+    "rapporteurs, droites numériques",
+    "schémas scientifiques::schémas scientifiques",
+    "Ouvre un outil"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "rapporteurs, droites numériques"
+    }
+   ],
+   "cam": [
+    {
+     "on": "à l'intérieur de Leçons"
+    },
+    {
+     "on": "rapporteurs, droites numériques"
+    }
+   ],
+   "rings": [
+    {
+     "on": "à l'intérieur de Leçons",
+     "off": "rapporteurs, droites numériques"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "à l'intérieur de Leçons"
+    }
+   ]
+  },
+  "tutor:std:tools-give": {
+   "chapter": "Outils",
+   "title": "Donne un outil aux élèves",
+   "say": "Dans Prévisualiser la leçon, ouvre Outils pour cette leçon. Appuie sur Ajouter un outil à cette question, ou Utiliser pour toutes les questions.",
+   "keys": [
+    "Prévisualiser la leçon",
+    "Outils pour cette leçon",
+    "Ajouter un outil à cette question",
+    "toutes les questions"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Outils pour cette leçon"
+    },
+    {
+     "on": "Ajouter un outil à cette question"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Prévisualiser la leçon"
+    },
+    {
+     "on": "Outils pour cette leçon"
+    },
+    {
+     "on": "Ajouter un outil à cette question"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Prévisualiser la leçon",
+     "off": "Outils pour cette leçon"
+    },
+    {
+     "on": "Outils pour cette leçon",
+     "off": "Ajouter un outil à cette question"
+    },
+    {
+     "on": "Ajouter un outil à cette question"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Prévisualiser la leçon"
+    },
+    {
+     "on": "Outils pour cette leçon"
+    }
+   ]
+  },
+  "tutor:std:quiz-make": {
+   "chapter": "Quiz",
+   "title": "Crée un quiz",
+   "say": "Dans Quiz, appuie sur Nouveau quiz, choisis des thèmes dans ta banque de questions, et choisis la matière et la note de passage.",
+   "keys": [
+    "appuie sur Nouveau quiz",
+    "banque de questions::banque de questions",
+    "matière et la note de passage"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "banque de questions"
+    }
+   ],
+   "cam": [
+    {
+     "on": "appuie sur Nouveau quiz"
+    },
+    {
+     "on": "banque de questions"
+    },
+    {
+     "on": "matière et la note de passage"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "appuie sur Nouveau quiz"
+    }
+   ]
+  },
+  "tutor:std:quiz-marked": {
+   "chapter": "Quiz",
+   "title": "Corrigé pour toi",
+   "say": "Les quiz sont corrigés instantanément. Les réponses écrites vont dans Correction, dans ta file unique.",
+   "keys": [
+    "corrigés instantanément",
+    "réponses écrites",
+    "file unique::file unique"
+   ],
+   "cam": [
+    {
+     "on": "corrigés instantanément"
+    }
+   ],
+   "rings": [
+    {
+     "on": "corrigés instantanément"
+    }
+   ]
+  },
+  "tutor:std:quiz-starting": {
+   "chapter": "Quiz",
+   "title": "Quiz de départ",
+   "say": "Les nouveaux élèves passent un quiz de départ une fois. Pas de note de passage, tu vois donc où en est chaque enfant.",
+   "keys": [
+    "quiz de départ",
+    "Pas de note de passage::Pas de note de passage",
+    "où en est chaque enfant"
+   ],
+   "cam": [
+    {
+     "on": "quiz de départ"
+    }
+   ],
+   "rings": [
+    {
+     "on": "quiz de départ"
+    }
+   ]
+  },
+  "tutor:std:quiz-flash": {
+   "chapter": "Quiz",
+   "title": "Cartes mémoire",
+   "say": "Les Cartes mémoire font revenir les cartes qu'un enfant trouve difficiles. En cours en direct, tu peux présenter un jeu à l'écran.",
+   "keys": [
+    "Cartes mémoire",
+    "un enfant trouve difficiles",
+    "présenter un jeu à l'écran"
+   ],
+   "cam": [
+    {
+     "on": "Cartes mémoire"
+    },
+    {
+     "on": "un enfant trouve difficiles"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Cartes mémoire"
+    }
+   ]
+  },
+  "tutor:std:prog-class": {
+   "chapter": "Progrès",
+   "title": "Toute ta classe",
+   "say": "Chaque ligne est un élève. Chaque matière montre un score coloré. Filtre par année ou groupe, ou cherche un nom.",
+   "keys": [
+    "Chaque ligne est un élève",
+    "score coloré",
+    "Filtre par année ou groupe",
+    "cherche un nom"
+   ],
+   "cam": [
+    {
+     "on": "Chaque ligne est un élève"
+    },
+    {
+     "on": "score coloré"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Chaque ligne est un élève",
+     "off": "score coloré"
+    },
+    {
+     "on": "score coloré"
+    }
+   ]
+  },
+  "tutor:std:prog-child": {
+   "chapter": "Progrès",
+   "title": "Un enfant",
+   "say": "Clique sur un élève pour voir chaque thème, sa tendance et ses derniers résultats. Cela se met à jour depuis le travail corrigé.",
+   "keys": [
+    "Clique sur un élève",
+    "chaque thème",
+    "derniers résultats",
+    "travail corrigé"
+   ],
+   "cam": [
+    {
+     "on": "Clique sur un élève"
+    }
+   ]
+  },
+  "tutor:std:prog-levels": {
+   "chapter": "Progrès",
+   "title": "Tes niveaux",
+   "say": "Appuie sur Modifier les niveaux pour les renommer ou changer où ils commencent. Les scores se recalculent aussitôt, aucune note ne change.",
+   "keys": [
+    "Appuie sur Modifier les niveaux",
+    "les renommer",
+    "se recalculent aussitôt",
+    "aucune note ne change"
+   ],
+   "cam": [
+    {
+     "on": "Appuie sur Modifier les niveaux"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Appuie sur Modifier les niveaux"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Appuie sur Modifier les niveaux"
+    }
+   ]
+  },
+  "tutor:std:hw-add-details": {
+   "chapter": "Donner",
+   "title": "Ajoute les détails",
+   "say": "Ajoute un titre. Écris des consignes : quoi faire. Précise quoi rendre. Puis choisis la date limite.",
+   "keys": [
+    "Ajoute un titre",
+    "Écris des consignes",
+    "quoi rendre",
+    "choisis la date limite"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Écris des consignes"
+    },
+    {
+     "on": "quoi rendre"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Ajoute un titre"
+    },
+    {
+     "on": "Écris des consignes"
+    },
+    {
+     "on": "quoi rendre"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ajoute un titre",
+     "off": "Écris des consignes"
+    },
+    {
+     "on": "Écris des consignes",
+     "off": "quoi rendre"
+    },
+    {
+     "on": "quoi rendre"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ajoute un titre"
+    },
+    {
+     "on": "Écris des consignes"
+    },
+    {
+     "on": "quoi rendre"
+    }
+   ]
+  },
+  "tutor:std:hw-mark": {
+   "chapter": "Corriger",
+   "title": "Corrige",
+   "say": "Tout ce qu'il y a à corriger se trouve dans À corriger, du plus ancien au plus récent. Ajoute une note et un retour, puis appuie sur Corriger et suivant.",
+   "keys": [
+    "ce qu'il y a à corriger",
+    "du plus ancien",
+    "note et un retour",
+    "Corriger et suivant"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "du plus ancien"
+    }
+   ],
+   "cam": [
+    {
+     "on": "ce qu'il y a à corriger"
+    },
+    {
+     "on": "du plus ancien"
+    },
+    {
+     "on": "note et un retour"
+    },
+    {
+     "on": "Corriger et suivant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ce qu'il y a à corriger",
+     "off": "du plus ancien"
+    },
+    {
+     "on": "du plus ancien",
+     "off": "note et un retour"
+    },
+    {
+     "on": "note et un retour",
+     "off": "Corriger et suivant"
+    },
+    {
+     "on": "Corriger et suivant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "ce qu'il y a à corriger"
+    },
+    {
+     "on": "du plus ancien"
+    }
+   ]
+  },
+  "tutor:std:msg-all": {
+   "chapter": "Messages",
+   "title": "Tout au même endroit",
+   "say": "Messages regroupe chaque conversation avec les familles au même endroit, classée par enfant.",
+   "keys": [
+    "chaque conversation avec les familles",
+    "au même endroit",
+    "classée par enfant"
+   ],
+   "cam": [
+    {
+     "on": "chaque conversation avec les familles"
+    }
+   ],
+   "rings": [
+    {
+     "on": "chaque conversation avec les familles"
+    }
+   ]
+  },
+  "tutor:std:msg-reply": {
+   "chapter": "Messages",
+   "title": "Réponds",
+   "say": "Ouvre une conversation, écris ta réponse et appuie sur Envoyer. Le parent reçoit une notification.",
+   "keys": [
+    "Ouvre une conversation",
+    "écris ta réponse",
+    "appuie sur Envoyer",
+    "reçoit une notification"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "écris ta réponse"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Ouvre une conversation"
+    },
+    {
+     "on": "écris ta réponse"
+    },
+    {
+     "on": "appuie sur Envoyer"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ouvre une conversation",
+     "off": "écris ta réponse"
+    },
+    {
+     "on": "écris ta réponse"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ouvre une conversation"
+    },
+    {
+     "on": "écris ta réponse"
+    }
+   ]
+  },
+  "tutor:std:msg-auto": {
+   "chapter": "Messages",
+   "title": "Les mises à jour sont automatiques",
+   "say": "Pas besoin d'écrire au sujet des devoirs ou des notes. Les familles sont prévenues automatiquement.",
+   "keys": [
+    "Pas besoin d'écrire::Pas besoin d'écrire",
+    "devoirs ou des notes",
+    "prévenues automatiquement"
+   ],
+   "cam": [
+    {
+     "on": "Pas besoin d'écrire"
+    }
+   ]
+  }
+ }
+}

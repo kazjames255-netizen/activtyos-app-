@@ -8,6 +8,7 @@ import { GROUP_COLOURS, HUB_LIMITS, MAX_VIDEOS, validateHubPatch } from "../../l
 import { hubAssessmentsCrud } from "./assessments";
 import { hubAttemptsApi } from "./attempts";
 import { hubMasteryApi } from "./mastery";
+import { hubPlanApi } from "./planApi";
 import { hubQuestionsApi } from "./questions";
 
 // Learning Hub — config, questions, assessments (quiz + diagnostic), attempts &
@@ -72,3 +73,4 @@ hubAssessmentsApi.use(hubQuestionsApi);
 hubAssessmentsApi.use(hubAssessmentsCrud);
 hubAssessmentsApi.use(hubAttemptsApi);
 hubAssessmentsApi.use(hubMasteryApi);
+hubAssessmentsApi.use(hubPlanApi);

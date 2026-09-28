@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { requestOpenLesson } from "../hubIntent";
 import { FOCUS } from "../kit";
@@ -16,6 +17,7 @@ const UNDO_MS = 6_000;
  *  opens that lesson in the Lessons tab, where "Go live" already offers "Resume broadcasting" for a session
  *  still marked live (RemoteSyncApp's own `listLiveRemoteSync` check). */
 export function TutorLiveBanner({ qs, goTo }: { qs: string; goTo?: (tab: "notes") => void }) {
+  const t = useT();
   const [live, setLive] = useState<RsSession[]>([]);
   // Session id currently in its "Undo" window, the pending timer, and any error from the End call.
   const [ending, setEnding] = useState<{ id: string; title: string } | null>(null);
@@ -35,7 +37,7 @@ export function TutorLiveBanner({ qs, goTo }: { qs: string; goTo?: (tab: "notes"
 
   const endNow = (id: string) => {
     timer.current = null; pendingId.current = null;
-    endRemoteSync(qs, id).then(() => { setEnding(null); poll(); }).catch(() => { setEnding(null); setEndErr("Couldn't end the lesson. Please try again."); });
+    endRemoteSync(qs, id).then(() => { setEnding(null); poll(); }).catch(() => { setEnding(null); setEndErr(t("hublive.dEndErr")); });
   };
   const endLesson = (id: string, title: string) => {
     setEndErr(null); setEnding({ id, title }); pendingId.current = id;
@@ -46,9 +48,9 @@ export function TutorLiveBanner({ qs, goTo }: { qs: string; goTo?: (tab: "notes"
   if (ending) {
     return (
       <div role="status" data-testid="tutor-live-ended" className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[13.5px] font-bold text-[var(--ink)]">
-        <span className="min-w-0 flex-1">Ending “{ending.title}” for everyone…</span>
+        <span className="min-w-0 flex-1">{t("hublive.dEndingFor", { title: ending.title })}</span>
         <button type="button" onClick={undo} data-testid="tutor-live-undo"
-          className={`min-h-[44px] rounded-full border border-[var(--ink-2)] px-4 text-[13px] font-extrabold ${FOCUS}`}>Undo</button>
+          className={`min-h-[44px] rounded-full border border-[var(--ink-2)] px-4 text-[13px] font-extrabold ${FOCUS}`}>{t("hublive.dUndo")}</button>
       </div>
     );
   }
@@ -59,11 +61,11 @@ export function TutorLiveBanner({ qs, goTo }: { qs: string; goTo?: (tab: "notes"
 
   return (
     <div role="status" data-testid="tutor-live-banner" className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--green-line)] bg-[var(--green-soft)] px-4 py-3 text-[13.5px] font-bold text-[var(--hub-green-ink)]">
-      <span className="min-w-0 flex-1">You're broadcasting “{s.title}” — {s.connectedCount} of {s.totalCount} connected{live.length > 1 ? ` (+${live.length - 1} more live)` : ""}.</span>
+      <span className="min-w-0 flex-1">{live.length > 1 ? t("hublive.dBroadcastingMore", { title: s.title, connected: s.connectedCount, total: s.totalCount, n: live.length - 1 }) : t("hublive.dBroadcasting", { title: s.title, connected: s.connectedCount, total: s.totalCount })}</span>
       <button type="button" onClick={rejoin} data-testid="tutor-live-rejoin"
-        className="min-h-[40px] rounded-full border border-[#0a6b3d] bg-[#0a6b3d] px-4 text-[13px] font-extrabold text-white hover:brightness-110">Rejoin</button>
+        className="min-h-[40px] rounded-full border border-[#0a6b3d] bg-[#0a6b3d] px-4 text-[13px] font-extrabold text-white hover:brightness-110">{t("hublive.dRejoin")}</button>
       <button type="button" onClick={() => endLesson(s.id, s.title)} data-testid="tutor-live-end"
-        className={`min-h-[44px] rounded-full border border-[#0a6b3d] bg-transparent px-4 text-[13px] font-extrabold text-[var(--hub-green-ink)] ${FOCUS}`}>End lesson</button>
+        className={`min-h-[44px] rounded-full border border-[#0a6b3d] bg-transparent px-4 text-[13px] font-extrabold text-[var(--hub-green-ink)] ${FOCUS}`}>{t("hublive.dEndLesson")}</button>
       {endErr && <span role="alert" className="basis-full text-[12.5px] font-semibold text-[var(--red)]">{endErr}</span>}
     </div>
   );

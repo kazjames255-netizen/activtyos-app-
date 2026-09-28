@@ -1,0 +1,3489 @@
+{
+ "ui": {
+  "eyebrow": "{hub} · Sut mae’n gweithio",
+  "hubTeaching": "Hyb Addysgu",
+  "hubLearning": "Hyb Dysgu",
+  "pickShort": "Dewiswch fideo byr.",
+  "pickShortLong": "Dewiswch fideo byr. Mae pob un yn cymryd ychydig funudau.",
+  "whoWatching": "Pwy sy’n gwylio",
+  "allVideos": "Pob fideo",
+  "allVideosPlay": "▶ Pob fideo",
+  "fullTour": "▶ Y daith lawn",
+  "nextTopic": "▶ Nesaf: {title}",
+  "chooseVideo": "Dewiswch fideo",
+  "loading": "Wrthi’n llwytho…",
+  "sheetTitle": "Sut mae’n gweithio",
+  "whichVideo": "Pa fideo",
+  "close": "Cau",
+  "minScenes": "{m} munud · {n} golygfa",
+  "watched": " · Wedi’i wylio",
+  "stageAria": "{script} — golygfa {i} o {n}: {title}",
+  "sceneLive": "Golygfa {i} o {n}: {title}",
+  "playAria": "Chwarae: {title}",
+  "soundOnCaps": "Mae’r sain ymlaen. Dangosir y capsiynau isod bob amser.",
+  "capsBelow": "Dangosir y capsiynau isod.",
+  "startsAt": "Yn dechrau yn “{title}”.",
+  "thatsTheLot": "Dyna’r cyfan",
+  "watchAgain": "↺ Gwylio eto",
+  "captions": "Capsiynau",
+  "controls": "Rheolyddion y chwaraewr",
+  "scenesJump": "Golygfeydd — neidio at un",
+  "sceneN": "Golygfa {k}: {title}",
+  "prev": "Golygfa flaenorol",
+  "prevT": "Golygfa flaenorol (←)",
+  "pause": "Oedi",
+  "play": "Chwarae",
+  "replay": "Ailchwarae",
+  "pauseT": "Oedi (bylchwr)",
+  "playT": "Chwarae (bylchwr)",
+  "restart": "Ailddechrau o’r dechrau",
+  "restartT": "Ailddechrau (R)",
+  "next": "Golygfa nesaf",
+  "nextT": "Golygfa nesaf (→)",
+  "captionsT": "Capsiynau (C)",
+  "captionsOn": "Capsiynau ymlaen",
+  "captionsOff": "Capsiynau i ffwrdd",
+  "soundT": "Sain (M)",
+  "soundOn": "Sain ymlaen",
+  "soundOff": "Sain i ffwrdd",
+  "musicT": "Cerddoriaeth gefndir",
+  "musicOn": "Cerddoriaeth ymlaen",
+  "musicOff": "Cerddoriaeth i ffwrdd",
+  "speed": "Cyflymder",
+  "voice": "Llais",
+  "autoVoice": "Llais awtomatig",
+  "scenes": "Golygfeydd",
+  "readScript": "Darllen y sgript gyfan",
+  "noVoice": "Dim llais ar gyfer yr iaith hon ar y ddyfais hon: capsiynau’n unig.",
+  "tryNow": "Rho gynnig nawr →",
+  "nextVideo": "Fideo nesaf: {title}"
+ },
+ "scripts": {
+  "tutor:std:main": {
+   "title": "Rhedeg eich Hyb Addysgu",
+   "tagline": "Cael teuluoedd ar eich rhestr, dysgu yn y ffordd sy’n addas i chi, a gweld sut mae pob plentyn yn dod yn ei flaen.",
+   "audience": "I diwtoriaid"
+  },
+  "parent:std:main": {
+   "title": "Hyb Dysgu eich plentyn",
+   "tagline": "Gweld gwersi a gwaith cartref eich plentyn, gwybod ar unwaith sut mae’n dod yn ei flaen, ac argraffu adroddiad cynnydd.",
+   "audience": "Hyb Dysgu i rieni"
+  },
+  "kid:std:main": {
+   "title": "Sut mae’n gweithio",
+   "tagline": "Eich lle dysgu eich hun. Gwyliwch, gwrandewch, a rhowch gynnig arni!",
+   "audience": "I blant",
+   "viewLabel": "Golwg eich plentyn"
+  },
+  "tutor:std:roster": {
+   "title": "Cael teuluoedd ar eich rhestr",
+   "tagline": "Dewch â theuluoedd at eich rhestr, a threfnwch bob plentyn.",
+   "audience": "I diwtoriaid",
+   "blurb": "Eich sgrin Cartref, a’r tair ffordd y gall teulu ymuno â chi: archebu, dolen wahoddiad, neu eich tudalen gyhoeddus."
+  },
+  "tutor:std:students": {
+   "title": "Eich disgyblion",
+   "tagline": "Gofalu am eich rhestr.",
+   "audience": "I diwtoriaid",
+   "blurb": "Cerdyn pob plentyn, grwpiau, a’r gosodiadau cymorth na all neb ond chi eu newid."
+  },
+  "tutor:std:lessons": {
+   "title": "Gwersi a’r cwricwlwm",
+   "tagline": "Dod o hyd i wersi, eu hagor a’u llunio.",
+   "audience": "I diwtoriaid",
+   "blurb": "Dewch o hyd i wers barod, agorwch hi, neu lluniwch eich un eich hun gyda’r adeiladwr sleidiau."
+  },
+  "tutor:std:tools": {
+   "title": "Offer",
+   "tagline": "Offer i’ch plant eu defnyddio.",
+   "audience": "I diwtoriaid",
+   "blurb": "Y maes Offer, a rhoi offeryn i’ch plant."
+  },
+  "tutor:std:live": {
+   "title": "Gwersi byw a wyneb yn wyneb",
+   "tagline": "Dysgu’n fyw, ar-lein neu yn yr ystafell.",
+   "audience": "I diwtoriaid",
+   "blurb": "Tair ffordd o ddysgu, gwersi fideo, beth sydd y tu mewn i’r alwad, a dysgu wyneb yn wyneb."
+  },
+  "tutor:std:homework": {
+   "title": "Gwaith cartref: ei osod, ei gasglu, ei farcio",
+   "tagline": "Gosodwch waith cartref, a marciwch yr hyn sy’n dod yn ôl.",
+   "audience": "I diwtoriaid",
+   "blurb": "Gosod gwaith cartref, atodi taflen waith, gweld y gwaith a gyflwynwyd, a’i farcio."
+  },
+  "tutor:std:quizzes": {
+   "title": "Cwisiau a chardiau fflach",
+   "tagline": "Gwiriwch beth mae plant yn ei wybod.",
+   "audience": "I diwtoriaid",
+   "blurb": "Creu cwis, marcio, cwisiau cychwynnol a chardiau fflach."
+  },
+  "tutor:std:progress": {
+   "title": "Cynnydd",
+   "tagline": "Gweld sut mae pob plentyn yn dod yn ei flaen.",
+   "audience": "I diwtoriaid",
+   "blurb": "Eich dosbarth cyfan ar un cipolwg, un plentyn yn fanwl, a’ch lefelau eich hun."
+  },
+  "parent:std:start": {
+   "title": "Dechrau arni",
+   "tagline": "Cael popeth yn barod a gwybod ble i edrych.",
+   "audience": "Hyb Dysgu i rieni",
+   "blurb": "Sut mae eich plentyn yn dechrau arni, ymuno drwy ddolen eich tiwtor, a’r dyfarniad un llinell ar y Cartref."
+  },
+  "parent:std:homework": {
+   "title": "Gwaith cartref yn yr Hyb Dysgu",
+   "tagline": "Gweld beth sydd wedi’i osod, pryd mae’n ddyledus a sut aeth.",
+   "audience": "Hyb Dysgu i rieni",
+   "blurb": "Beth sydd wedi’i osod, pryd mae’n ddyledus, sut mae eich plentyn yn ei gyflwyno, a ble mae’r marciau’n ymddangos."
+  },
+  "parent:std:week": {
+   "title": "Wythnos eich plentyn",
+   "tagline": "Dilyn yr hyn sy’n digwydd, a gofyn pan fydd angen.",
+   "audience": "Hyb Dysgu i rieni",
+   "blurb": "Gwersi, gwersi byw, cynnydd, yr adroddiad argraffadwy, a gofyn i’ch tiwtor."
+  },
+  "parent:std:handover": {
+   "title": "Trosglwyddo i’ch plentyn",
+   "tagline": "Gadewch i’ch plentyn ddysgu ar ei ben ei hun.",
+   "audience": "Hyb Dysgu i rieni",
+   "blurb": "Rhowch ei le syml ei hun i’ch plentyn, a sut i ddod yn ôl."
+  },
+  "kid:std:homework": {
+   "title": "Fy ngwaith cartref",
+   "tagline": "Dod o hyd iddo, ei wneud, ei gyflwyno.",
+   "audience": "I blant",
+   "blurb": "Dewch o hyd i’ch gwaith cartref, ei wneud a’i gyflwyno."
+  },
+  "kid:ks1:main": {
+   "title": "Sut mae’n gweithio",
+   "tagline": "Gwyliwch a gwrandewch. Mae’n fyr!",
+   "audience": "I blant",
+   "viewLabel": "Golwg eich plentyn"
+  },
+  "tutor:std:home": {
+   "title": "Dy sgrin Gartref",
+   "tagline": "Man cychwyn pob diwrnod.",
+   "audience": "I diwtoriaid",
+   "blurb": "Dy feysydd, Angen dy sylw, a Sut mae'n gweithio."
+  },
+  "tutor:std:families": {
+   "title": "Cael teuluoedd ar dy restr",
+   "tagline": "Dwg deuluoedd i dy restr.",
+   "audience": "I diwtoriaid",
+   "blurb": "Y tair ffordd mae teulu'n ymuno: archebu, dolen wahoddiad, neu dy dudalen gyhoeddus."
+  },
+  "tutor:std:messages": {
+   "title": "Negeseuon",
+   "tagline": "Siarad â theuluoedd, un edefyn i bob plentyn.",
+   "audience": "I diwtoriaid",
+   "blurb": "Pob sgwrs â theulu, a sut mae ateb yn cyrraedd."
+  }
+ },
+ "scenes": {
+  "tutor:std:tour": {
+   "chapter": "Eich Hyb",
+   "title": "Eich sgrin Cartref",
+   "say": "Dyma eich Cartref. Ar hyd y top mae eich saith maes: Cartref, Gwersi, Disgyblion, Cynnydd, Cwisiau, Gwaith cartref a Negeseuon. Mae Gwersi hefyd yn cynnwys Gwersi byw, Offer a Chardiau fflach. Mae’r Cartref yn dangos eich gwers nesaf, a rhestr o’r enw Angen eich sylw, felly rydych chi bob amser yn gwybod beth i’w wneud yn gyntaf. Ac mae’r botwm Sut mae’n gweithio yma bob amser.",
+   "keys": [
+    "Eich saith maes",
+    "Eich gwers nesaf",
+    "Angen eich sylw",
+    "Sut mae’n gweithio"
+   ],
+   "cam": [
+    {
+     "on": "Ar hyd y top"
+    },
+    {
+     "on": "Mae’r Cartref yn dangos"
+    },
+    {
+     "on": "rhestr o’r enw"
+    },
+    {
+     "on": "Ac mae’r botwm Sut mae’n gweithio"
+    }
+   ],
+   "rings": [
+    {
+     "on": "saith maes",
+     "off": "Mae Gwersi hefyd"
+    },
+    {
+     "on": "Mae’r Cartref yn dangos",
+     "off": "a rhestr o’r enw"
+    },
+    {
+     "on": "rhestr o’r enw",
+     "off": "Ac mae’r botwm"
+    },
+    {
+     "on": "Ac mae’r botwm Sut mae’n gweithio"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Cartref, Gwersi"
+    },
+    {
+     "on": "rhestr o’r enw"
+    },
+    {
+     "on": "Ac mae’r botwm Sut mae’n gweithio"
+    }
+   ]
+  },
+  "tutor:std:ways-in": {
+   "chapter": "Cael teuluoedd ar fwrdd",
+   "title": "Tair ffordd i deulu ymuno â chi",
+   "say": "Mae tair ffordd i deulu ymuno â’ch rhestr. Un: maen nhw’n archebu gyda chi. Dau: rydych chi’n anfon dolen wahoddiad breifat atyn nhw. Tri: maen nhw’n dod o hyd i’ch tudalen gyhoeddus. Gadewch i ni edrych ar bob un.",
+   "keys": [
+    "Tair ffordd i ymuno::tair ffordd",
+    "Maen nhw’n archebu gyda chi",
+    "Dolen wahoddiad breifat",
+    "Tudalen gyhoeddus"
+   ],
+   "nodes": [
+    {
+     "on": "Un:",
+     "title": "Maen nhw’n archebu gyda chi",
+     "sub": "Mae eu plentyn yn ymddangos yn Cofrestru disgybl"
+    },
+    {
+     "on": "Dau:",
+     "title": "Dolen wahoddiad breifat",
+     "sub": "Rydych chi’n ei hanfon. Maen nhw’n dewis eu plant"
+    },
+    {
+     "on": "Tri:",
+     "title": "Eich tudalen gyhoeddus",
+     "sub": "Maen nhw’n cofrestru, yna rydych chi’n eu cofrestru nhw"
+    }
+   ]
+  },
+  "tutor:std:enrol-book": {
+   "chapter": "Cael teuluoedd ar fwrdd",
+   "title": "1. Maen nhw’n archebu gyda chi",
+   "say": "Y ffordd gyntaf. Mae rhiant yn cofrestru, ac yn archebu sesiwn gyda chi. Nawr mae ei blentyn yn ymddangos yn Cofrestru disgybl. Dewch o hyd iddo, a gwasgwch Cofrestru. Yna dewiswch pa bynciau y gall eu gweld, a’u grŵp blwyddyn. Gwasgwch Cofrestru disgybl, ac o hynny ymlaen bydd ei deulu’n gweld yr Hyb Dysgu.",
+   "keys": [
+    "Cofrestru disgybl",
+    "Gwasgwch Cofrestru",
+    "Pa bynciau",
+    "Grŵp blwyddyn",
+    "Yr Hyb Dysgu"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Yna dewiswch"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Nawr mae ei blentyn"
+    },
+    {
+     "on": "Dewch o hyd iddo"
+    },
+    {
+     "on": "Yna dewiswch"
+    },
+    {
+     "on": "pa bynciau"
+    },
+    {
+     "on": "a’u grŵp blwyddyn"
+    },
+    {
+     "on": "Gwasgwch Cofrestru disgybl"
+    },
+    {
+     "on": "ac o hynny ymlaen"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dewch o hyd iddo",
+     "off": "Yna dewiswch"
+    },
+    {
+     "on": "pa bynciau",
+     "off": "a’u grŵp"
+    },
+    {
+     "on": "a’u grŵp blwyddyn",
+     "off": "Gwasgwch Cofrestru disgybl"
+    },
+    {
+     "on": "Gwasgwch Cofrestru disgybl",
+     "off": "ac o hynny ymlaen"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "a gwasgwch Cofrestru."
+    },
+    {
+     "on": "Gwasgwch Cofrestru disgybl"
+    }
+   ]
+  },
+  "tutor:std:enrol-invite": {
+   "chapter": "Cael teuluoedd ar fwrdd",
+   "title": "2. Dolen wahoddiad breifat",
+   "say": "Yr ail ffordd, ar gyfer teulu sydd heb archebu. Teipiwch ar gyfer pwy mae hi, yna gwasgwch Creu dolen wahoddiad. Copïwch hi a’i hanfon at y rhiant eich hun. Mae’r ddolen yn para tri deg diwrnod, ac yn gweithio i un teulu. Maen nhw’n ei hagor, yn dewis pa rai o’u plant i’w hychwanegu, ac mae’r plant yn ymddangos ar eich rhestr yn awtomatig.",
+   "keys": [
+    "Ar gyfer pwy mae hi?::Teipiwch ar gyfer pwy",
+    "Creu dolen wahoddiad",
+    "Rydych chi’n ei hanfon eich hun::hanfon at y rhiant eich hun",
+    "Tri deg diwrnod, un teulu::tri deg diwrnod",
+    "Plant yn ymddangos yn awtomatig::yn awtomatig"
+   ],
+   "cam": [
+    {
+     "on": "Yr ail ffordd"
+    },
+    {
+     "on": "Teipiwch ar gyfer"
+    },
+    {
+     "on": "yna gwasgwch"
+    },
+    {
+     "on": "Copïwch hi"
+    },
+    {
+     "on": "Mae’r ddolen yn para"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Teipiwch ar gyfer",
+     "off": "yna gwasgwch"
+    },
+    {
+     "on": "yna gwasgwch",
+     "off": "Copïwch hi"
+    },
+    {
+     "on": "Copïwch hi",
+     "off": "Mae’r ddolen yn para"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "yna gwasgwch"
+    },
+    {
+     "on": "Copïwch hi"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "hanfon at y rhiant",
+     "text": "Ni chaiff dim ei e-bostio ar eich rhan: rydych chi’n ei anfon"
+    }
+   ]
+  },
+  "tutor:std:enrol-page": {
+   "chapter": "Cael teuluoedd ar fwrdd",
+   "title": "3. Dolen eich tudalen gyhoeddus",
+   "say": "Y drydedd ffordd. Pan nad oes neb i’w gofrestru eto, mae’r ffenestr Cofrestru yn dangos dolen eich tudalen, gyda botwm Copïo. Anfonwch hi at y rhiant. Maen nhw’n ei hagor, yn mewngofnodi neu’n cofrestru fel rhiant, ac unwaith y byddan nhw wedi gwneud hynny, mae eu plant yn ymddangos yn y rhestr, yn barod i chi eu cofrestru. Nid oes angen archebu.",
+   "keys": [
+    "Dolen eich tudalen",
+    "Botwm Copïo",
+    "Cofrestru fel rhiant::cofrestru fel rhiant",
+    "Yn barod i chi eu cofrestru",
+    "Nid oes angen archebu"
+   ],
+   "cam": [
+    {
+     "on": "dangos dolen eich tudalen"
+    },
+    {
+     "on": "yn barod i chi"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dangos dolen eich tudalen",
+     "off": "yn barod i chi"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gyda botwm Copïo"
+    }
+   ]
+  },
+  "tutor:std:roster": {
+   "chapter": "Eich disgyblion",
+   "title": "Eich rhestr",
+   "say": "Ar ôl cofrestru, mae gan bob plentyn gerdyn ar eich tudalen Disgyblion, gyda’i flwyddyn ysgol, ei bynciau a’i gylch cynnydd. Crëwch grŵp, a gallwch osod gwaith cartref, cwis neu wers i’r grŵp cyfan gydag un clic. Defnyddiwch y tri dot ar gerdyn i oedi neu ddad-gofrestru plentyn ar unrhyw adeg.",
+   "keys": [
+    "Cerdyn i bob plentyn::gan bob plentyn gerdyn",
+    "Ei gylch cynnydd::gylch cynnydd",
+    "Grwpiau gydag un clic::Crëwch grŵp",
+    "Oedi neu ddad-gofrestru"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Crëwch grŵp"
+    },
+    {
+     "on": "Defnyddiwch y tri dot"
+    }
+   ],
+   "cam": [
+    {
+     "on": "gan bob plentyn gerdyn"
+    },
+    {
+     "on": "Crëwch grŵp"
+    },
+    {
+     "on": "Defnyddiwch y tri dot"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gan bob plentyn gerdyn",
+     "off": "Crëwch grŵp"
+    },
+    {
+     "on": "Crëwch grŵp",
+     "off": "Defnyddiwch y tri dot"
+    },
+    {
+     "on": "Defnyddiwch y tri dot"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gydag un clic"
+    },
+    {
+     "on": "Defnyddiwch y tri dot"
+    }
+   ]
+  },
+  "tutor:std:support": {
+   "chapter": "Eich disgyblion",
+   "title": "Cymorth i bob plentyn",
+   "say": "Gall pob plentyn gael ei osodiadau cymorth ei hun. Agorwch Golygu manylion ar blentyn. Diffoddwch amseryddion ar gwisiau, trowch y modd tawel ymlaen, ychwanegwch amser ychwanegol, gwnewch y testun yn fwy, neu gadewch i’r atebion gael eu darllen yn uchel. Chi yn unig sy’n ei osod. Ni all y plentyn na’i deulu ei newid.",
+   "keys": [
+    "Cymorth i bob plentyn::osodiadau cymorth",
+    "Dim amseryddion::Diffoddwch amseryddion",
+    "Modd tawel",
+    "Amser ychwanegol",
+    "Darllen yn uchel",
+    "Chi yn unig sy’n ei osod"
+   ],
+   "cam": [
+    {
+     "on": "Diffoddwch"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Diffoddwch",
+     "off": "Chi yn unig"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Diffoddwch"
+    },
+    {
+     "on": "trowch y modd tawel"
+    }
+   ]
+  },
+  "tutor:std:lessons": {
+   "chapter": "Gwersi",
+   "title": "Llyfrgell o wersi parod",
+   "say": "Nawr, Gwersi. Daw eich llyfrgell yn llawn gwersi parod a thaflenni gwaith, miloedd ohonyn nhw. Maen nhw’n cael eu trefnu ar y map cwricwlwm. Dewiswch bwnc, dewiswch flwyddyn, a gweld pa bynciau sydd â gwersi, a faint. Mae Chwilio yn dod o hyd i unrhyw faes neu wers wrth ei enw.",
+   "keys": [
+    "Gwersi parod",
+    "Y map cwricwlwm",
+    "Dewiswch bwnc",
+    "Dewiswch flwyddyn",
+    "Chwilio wrth enw::Mae Chwilio"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Dewiswch bwnc"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Maen nhw’n cael eu trefnu"
+    },
+    {
+     "on": "Dewiswch bwnc"
+    },
+    {
+     "on": "dewiswch flwyddyn"
+    },
+    {
+     "on": "a gweld pa bynciau"
+    },
+    {
+     "on": "Mae Chwilio"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Dewiswch bwnc",
+     "off": "dewiswch flwyddyn"
+    },
+    {
+     "on": "dewiswch flwyddyn",
+     "off": "a gweld pa bynciau"
+    },
+    {
+     "on": "Mae Chwilio"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dewiswch bwnc"
+    },
+    {
+     "on": "dewiswch flwyddyn"
+    },
+    {
+     "on": "Mae Chwilio"
+    }
+   ]
+  },
+  "tutor:std:lesson-view": {
+   "chapter": "Gwersi",
+   "title": "Agor gwers",
+   "say": "Agorwch unrhyw wers i weld ei chynllun. Gwers ryngweithiol yw hi: mae plant yn mynd drwyddi un syniad ar y tro, gyda sleidiau, cwestiynau cynhesu a chwis ar y diwedd. Gwasgwch Rhagolwg o’r wers i glicio drwy’r union beth y bydd plentyn yn ei weld.",
+   "keys": [
+    "Agorwch unrhyw wers",
+    "Gwers ryngweithiol",
+    "Un syniad ar y tro",
+    "Rhagolwg o’r wers"
+   ],
+   "cam": [
+    {
+     "on": "Agorwch unrhyw wers"
+    },
+    {
+     "on": "Gwers ryngweithiol yw hi"
+    },
+    {
+     "on": "Gwasgwch Rhagolwg o’r wers"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Gwers ryngweithiol yw hi",
+     "off": "Gwasgwch Rhagolwg"
+    },
+    {
+     "on": "Gwasgwch Rhagolwg o’r wers"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Gwasgwch Rhagolwg o’r wers"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Agorwch unrhyw wers",
+     "text": "Ei gosod i blant"
+    }
+   ]
+  },
+  "tutor:std:builder": {
+   "chapter": "Gwersi",
+   "title": "Lluniwch eich un eich hun gyda’r adeiladwr sleidiau",
+   "say": "Eisiau eich gwers eich hun? Gwasgwch Creu gwers newydd a dewiswch bwnc. Mae’r adeiladwr sleidiau yn gadael i chi ysgrifennu sleidiau, ac ychwanegu testun, geiriau allweddol, tapio i ddatgelu, amlddewis, trefnu a chyfateb. Gwelwch ragolwg o unrhyw sleid wrth fynd, yna cadwch. Mae’n ymuno â’ch llyfrgell.",
+   "keys": [
+    "Creu gwers newydd",
+    "Adeiladwr sleidiau",
+    "Testun, trefnu, cyfateb::trefnu a chyfateb",
+    "Rhagolwg wrth fynd::Gwelwch ragolwg",
+    "Mae’n ymuno â’ch llyfrgell"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Mae’r adeiladwr sleidiau"
+    },
+    {
+     "on": "amlddewis"
+    },
+    {
+     "on": "Gwelwch ragolwg"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Mae’r adeiladwr sleidiau"
+    }
+   ]
+  },
+  "tutor:std:tools": {
+   "chapter": "Offer",
+   "title": "Y maes Offer",
+   "say": "Nesaf, Offer, a welwch y tu mewn i Gwersi. Pren mesur, onglyddion, llinellau rhif, diagramau gwyddoniaeth a mwy. Maes gwylio yw hwn: agorwch unrhyw offeryn i roi cynnig arno. Nid oes dim yma wedi’i roi i’r plant eto. Mae hynny’n digwydd y tu mewn i wers neu gwestiwn.",
+   "keys": [
+    "Y maes Offer::Nesaf, Offer",
+    "Pren mesur, onglyddion, llinellau rhif",
+    "Maes gwylio",
+    "Rhoddir mewn gwers::y tu mewn i wers"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "agorwch unrhyw offeryn"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Pren mesur, onglyddion"
+    },
+    {
+     "on": "Maes gwylio yw hwn"
+    },
+    {
+     "on": "agorwch unrhyw offeryn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Maes gwylio yw hwn",
+     "off": "agorwch unrhyw offeryn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "agorwch unrhyw offeryn"
+    }
+   ]
+  },
+  "tutor:std:tool-assign": {
+   "chapter": "Offer",
+   "title": "Rhoi offeryn i’ch plant",
+   "say": "I roi offeryn i’ch plant, agorwch wers a gwasgwch Rhagolwg o’r wers. Yna agorwch Offer ar gyfer y wers hon, ar y gwaelod ar y dde. Mae’n dweud wrthych pa offeryn y byddai plentyn yn ei gael ar bob cwestiwn. Gwasgwch Ychwanegu offeryn at y cwestiwn hwn, a dewiswch un. Yna gwasgwch Ei ddefnyddio ar bob cwestiwn, ac mae’n mynd i bob cwestiwn yn y wers.",
+   "keys": [
+    "Agor gwers, Rhagolwg::gwasgwch Rhagolwg o’r wers",
+    "Offer ar gyfer y wers hon",
+    "Ychwanegu offeryn at y cwestiwn hwn",
+    "Ei ddefnyddio ar bob cwestiwn"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Mae’n dweud wrthych"
+    },
+    {
+     "on": "Gwasgwch Ychwanegu offeryn"
+    },
+    {
+     "on": "a dewiswch un"
+    },
+    {
+     "on": "Yna gwasgwch Ei ddefnyddio"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Yna agorwch Offer"
+    },
+    {
+     "on": "Mae’n dweud wrthych"
+    },
+    {
+     "on": "Gwasgwch Ychwanegu offeryn"
+    },
+    {
+     "on": "a dewiswch un"
+    },
+    {
+     "on": "Yna gwasgwch Ei ddefnyddio"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Yna agorwch Offer",
+     "off": "Mae’n dweud wrthych"
+    },
+    {
+     "on": "Mae’n dweud wrthych",
+     "off": "Gwasgwch Ychwanegu offeryn"
+    },
+    {
+     "on": "Gwasgwch Ychwanegu offeryn",
+     "off": "a dewiswch un"
+    },
+    {
+     "on": "Yna gwasgwch Ei ddefnyddio"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Yna agorwch Offer"
+    },
+    {
+     "on": "Gwasgwch Ychwanegu offeryn"
+    },
+    {
+     "on": "a dewiswch un"
+    },
+    {
+     "on": "Yna gwasgwch Ei ddefnyddio"
+    }
+   ]
+  },
+  "tutor:std:teach-modes": {
+   "chapter": "Dysgu",
+   "title": "Tair ffordd o ddysgu gwers",
+   "say": "Mae tair ffordd o ddysgu. Galwad fideo, ar gyfer plant sydd rywle arall. Rhannu gyda phlant, lle mae pob plentyn yn dilyn ar ei ddyfais ei hun. Neu wyneb yn wyneb, gyda’r plant wrth eich ymyl. Chi sy’n dewis bob tro.",
+   "keys": [
+    "Tair ffordd o ddysgu",
+    "Galwad fideo",
+    "Rhannu gyda phlant",
+    "Wyneb yn wyneb"
+   ],
+   "nodes": [
+    {
+     "on": "Galwad fideo",
+     "title": "Gwers fideo fyw",
+     "sub": "Ymunwch â’r alwad y tu mewn i’r Hyb"
+    },
+    {
+     "on": "Rhannu gyda phlant",
+     "title": "Rhannu gyda phlant",
+     "sub": "Mae pob plentyn yn dilyn ar ei ddyfais ei hun"
+    },
+    {
+     "on": "wyneb yn wyneb",
+     "title": "Dysgu wyneb yn wyneb",
+     "sub": "Plant wrth eich ymyl, dim fideo"
+    }
+   ]
+  },
+  "tutor:std:live": {
+   "chapter": "Dysgu",
+   "title": "Gwersi fideo byw",
+   "say": "Ar gyfer gwers fideo fyw, trefnwch hi ar gyfer y plant rydych chi’n eu dewis. Pan ddaw’r amser, rydych chi’n gwirio eich camera a’ch meicroffon mewn cyntedd cyflym, ac yn gwasgu Ymuno. Mae’r cyfan yn digwydd yma, dim ap arall. Gallwch ddysgu gwers ryngweithiol yn yr alwad, ac mae sgrin pob plentyn yn dilyn eich sgrin chi.",
+   "keys": [
+    "Trefnu gwers fideo::trefnwch hi",
+    "Gwirio camera a meicroffon::camera a’ch meicroffon",
+    "Gwasgu Ymuno",
+    "Dim ap arall"
+   ],
+   "cam": [
+    {
+     "on": "trefnwch hi"
+    },
+    {
+     "on": "rydych chi’n gwirio eich camera"
+    },
+    {
+     "on": "gwasgu Ymuno"
+    },
+    {
+     "on": "Mae’r cyfan yn digwydd"
+    }
+   ],
+   "rings": [
+    {
+     "on": "trefnwch hi",
+     "off": "Pan ddaw’r amser"
+    },
+    {
+     "on": "rydych chi’n gwirio eich camera",
+     "off": "ac yn gwasgu Ymuno"
+    },
+    {
+     "on": "gwasgu Ymuno",
+     "off": "Mae’r cyfan yn digwydd"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "trefnwch hi"
+    },
+    {
+     "on": "gwasgu Ymuno"
+    }
+   ]
+  },
+  "tutor:std:in-call": {
+   "chapter": "Dysgu",
+   "title": "Y tu mewn i’r alwad",
+   "say": "Wrth ymyl y fideo cewch weithle gyda saith tab. Disgyblion, Gwersi, lle rydych chi’n gwasgu Addysgu i gynnal gwers ryngweithiol, Cynnydd, Gwaith cartref, Cwis, cardiau fflach, a bwrdd gwyn byw. Gall plentyn gamu oddi ar eich sgrin ac ymlwybro ar ei gyflymder ei hun, os oes angen.",
+   "keys": [
+    "Saith tab wrth ymyl y fideo::saith tab",
+    "Gwasgu Addysgu",
+    "Bwrdd gwyn byw",
+    "Ei gyflymder ei hun"
+   ],
+   "nodes": [
+    {
+     "on": "Disgyblion",
+     "title": "Disgyblion"
+    },
+    {
+     "on": "Gwersi,",
+     "title": "Gwersi",
+     "sub": "Gwasgu Addysgu"
+    },
+    {
+     "on": "Cynnydd",
+     "title": "Cynnydd"
+    },
+    {
+     "on": "Gwaith cartref",
+     "title": "Gwaith cartref"
+    },
+    {
+     "on": "Cwis",
+     "title": "Cwis"
+    },
+    {
+     "on": "cardiau fflach",
+     "title": "Cardiau"
+    },
+    {
+     "on": "bwrdd gwyn",
+     "title": "Bwrdd",
+     "sub": "Bwrdd gwyn byw"
+    }
+   ]
+  },
+  "tutor:std:share": {
+   "chapter": "Dysgu",
+   "title": "Rhannu gyda phlant",
+   "say": "Agorwch wers a chewch ddau ddewis. Rhannu gyda phlant sydd orau pan fydd gan bob plentyn ei ddyfais ei hun. Maen nhw’n dilyn ac yn ateb drostyn nhw eu hunain, lle bynnag y maen nhw. Dim galwad fideo. Mae eu sgrin nhw’n dilyn eich sgrin chi.",
+   "keys": [
+    "Dau ddewis",
+    "Rhannu gyda phlant",
+    "Ei ddyfais ei hun",
+    "Dim galwad fideo"
+   ],
+   "cam": [
+    {
+     "on": "Agorwch wers"
+    },
+    {
+     "on": "Rhannu gyda phlant sydd orau"
+    }
+   ],
+   "rings": [
+    {
+     "on": "chewch ddau ddewis",
+     "off": "Rhannu gyda phlant sydd orau"
+    },
+    {
+     "on": "Rhannu gyda phlant sydd orau"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Rhannu gyda phlant sydd orau"
+    }
+   ]
+  },
+  "tutor:std:in-person": {
+   "chapter": "Dysgu",
+   "title": "Dysgu wyneb yn wyneb",
+   "say": "Dysgu wyneb yn wyneb? Ticiwch pwy sydd gyda chi. Yna dysgwch y wers gyda’ch gilydd ar un sgrin, gan dapio ateb pob plentyn i mewn. Mae pob plentyn yn cael canlyniad go iawn y gall ei riant ei weld wedyn.",
+   "keys": [
+    "Ticiwch pwy sydd gyda chi",
+    "Un sgrin gyda’ch gilydd::un sgrin",
+    "Canlyniad go iawn",
+    "Gall rhieni ei weld::gall ei riant ei weld"
+   ],
+   "cam": [
+    {
+     "on": "Ticiwch pwy sydd"
+    },
+    {
+     "on": "Yna dysgwch"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ticiwch pwy sydd",
+     "off": "Yna dysgwch"
+    },
+    {
+     "on": "Yna dysgwch",
+     "off": "Mae pob plentyn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Yna dysgwch"
+    }
+   ]
+  },
+  "tutor:std:quizzes": {
+   "chapter": "Cwisiau",
+   "title": "Cwisiau a chwisiau cychwynnol",
+   "say": "Mae cwisiau’n cael eu hadeiladu o’ch banc cwestiynau, ac yn cael eu marcio ar unwaith. Mae atebion ysgrifenedig yn aros amdanoch yn y ciw. Mae cwis cychwynnol yn cael ei sefyll gan ddisgyblion newydd unwaith, heb farc pasio a heb bwysau, felly rydych chi’n gwybod ble mae pob plentyn yn dechrau.",
+   "keys": [
+    "Eu hadeiladu o’ch banc cwestiynau",
+    "Eu marcio ar unwaith",
+    "Cwis cychwynnol",
+    "Ble mae pob plentyn yn dechrau"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Mae cwis cychwynnol"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Mae cwisiau’n cael eu hadeiladu"
+    },
+    {
+     "on": "eu marcio ar unwaith"
+    },
+    {
+     "on": "Mae cwis cychwynnol"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae cwisiau’n cael eu hadeiladu",
+     "off": "Mae cwis cychwynnol"
+    },
+    {
+     "on": "Mae cwis cychwynnol"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "eu marcio ar unwaith"
+    }
+   ]
+  },
+  "tutor:std:flashcards": {
+   "chapter": "Cwisiau",
+   "title": "Cardiau fflach",
+   "say": "Mae cardiau fflach yn rhoi ymarfer cofio cyflym. Mae plant yn adolygu’r cardiau sy’n ddyledus heddiw yn gyntaf, ac mae ailadrodd bylchog yn dod â’r rhai anodd yn ôl. Ac mewn gwers fyw, gallwch gyflwyno pecyn ar y sgrin.",
+   "keys": [
+    "Ymarfer cofio cyflym",
+    "Cardiau sy’n ddyledus heddiw yn gyntaf::sy’n ddyledus heddiw",
+    "Ailadrodd bylchog",
+    "Gyflwyno pecyn"
+   ],
+   "cam": [
+    {
+     "on": "Mae cardiau fflach"
+    },
+    {
+     "on": "Mae plant yn adolygu"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae plant yn adolygu"
+    }
+   ]
+  },
+  "tutor:std:progress": {
+   "chapter": "Cynnydd",
+   "title": "Eich dosbarth cyfan ar un cipolwg",
+   "say": "Mae Cynnydd yn rhoi pob disgybl ar un sgrin. Mae pob rhes yn blentyn, ac mae pob pwnc yn cael sgôr liw, wedi’i lliwio yn ôl eich lefelau eich hun. Chwiliwch am enw, neu hidlwch yn ôl blwyddyn neu grŵp. Caiff plentyn sydd heb ddechrau eto ei farcio, fel y gwelwch pwy sydd angen hwb i ddechrau.",
+   "keys": [
+    "Pob disgybl ar un sgrin",
+    "Sgôr liw",
+    "Eich lefelau eich hun",
+    "Chwilio neu hidlo::Chwiliwch am enw",
+    "Pwy sydd angen hwb"
+   ],
+   "cam": [
+    {
+     "on": "Mae pob rhes"
+    },
+    {
+     "on": "Chwiliwch am enw"
+    },
+    {
+     "on": "Caiff plentyn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae pob rhes",
+     "off": "Chwiliwch am enw"
+    },
+    {
+     "on": "Chwiliwch am enw",
+     "off": "Caiff plentyn"
+    },
+    {
+     "on": "Caiff plentyn"
+    }
+   ]
+  },
+  "tutor:std:progress-child": {
+   "chapter": "Cynnydd",
+   "title": "Agor un plentyn",
+   "say": "Cliciwch ar blentyn i agor ei gynnydd. Gwelwch ei bynciau fesul un, sut mae pob un yn datblygu, a’r canlyniadau diweddaraf. Caiff ei adeiladu o’i gwisiau wedi’u marcio, felly mae bob amser yn gyfredol.",
+   "keys": [
+    "Cliciwch ar blentyn",
+    "Pwnc wrth bwnc::ei bynciau fesul un",
+    "Sut mae pob un yn datblygu",
+    "Canlyniadau diweddaraf"
+   ],
+   "cam": [
+    {
+     "on": "Gwelwch ei bynciau"
+    }
+   ]
+  },
+  "tutor:std:progress-levels": {
+   "chapter": "Cynnydd",
+   "title": "Lefelau sy’n eiddo i chi",
+   "say": "Mae’r lefelau’n eiddo i chi hefyd. Gwasgwch Golygu lefelau i’w hailenwi, neu i symud lle mae pob un yn dechrau, i gyd-fynd â’ch dull dysgu. Caiff sgoriau presennol eu hail-fandio ar unwaith, ac nid yw unrhyw farc yn newid. Ac mae Ailgyfrifo yn ailadeiladu cynnydd pob plentyn o’i waith wedi’i farcio.",
+   "keys": [
+    "Gwasgwch Golygu lefelau",
+    "Eu hailenwi, eu symud::i’w hailenwi",
+    "Nid yw unrhyw farc yn newid",
+    "Ailgyfrifo"
+   ],
+   "cam": [
+    {
+     "on": "Gwasgwch Golygu lefelau"
+    }
+   ]
+  },
+  "parent:std:getting-in": {
+   "chapter": "Dechrau arni",
+   "title": "Sut mae eich plentyn yn dechrau arni",
+   "say": "Mae eich plentyn yn ymddangos yn yr Hyb Dysgu ar ôl i’ch tiwtor ei gofrestru. Mae hynny’n digwydd pan fyddwch chi’n archebu gyda’ch tiwtor, ac maen nhw’n ychwanegu eich plentyn. Neu gall eich tiwtor anfon dolen breifat atoch, ac rydych chi’n ychwanegu eich plentyn eich hun. Eich tiwtor sy’n penderfynu pa bynciau y gall eich plentyn eu gweld.",
+   "keys": [
+    "Wedi’i gofrestru gan eich tiwtor::ei gofrestru",
+    "Archebu gyda’ch tiwtor::archebu gyda’ch tiwtor",
+    "Neu ddolen breifat::dolen breifat",
+    "Eich tiwtor sy’n dewis y pynciau::pa bynciau"
+   ],
+   "nodes": [
+    {
+     "on": "pan fyddwch chi’n archebu",
+     "title": "Archebu gyda’ch tiwtor",
+     "sub": "Maen nhw’n ychwanegu eich plentyn"
+    },
+    {
+     "on": "Neu gall eich tiwtor",
+     "title": "Neu defnyddiwch eu dolen breifat",
+     "sub": "Rydych chi’n ychwanegu eich plentyn eich hun"
+    },
+    {
+     "on": "Eich tiwtor sy’n penderfynu",
+     "title": "Mae’r Hyb Dysgu’n agor",
+     "sub": "Gyda’r pynciau a ddewisodd eich tiwtor"
+    }
+   ]
+  },
+  "parent:std:invite": {
+   "chapter": "Dechrau arni",
+   "title": "Os anfonodd eich tiwtor ddolen atoch",
+   "say": "Os bydd eich tiwtor yn anfon dolen breifat atoch, agorwch hi tra byddwch wedi mewngofnodi i’ch cyfrif rhiant. Neu cofrestrwch yn gyntaf. Fe welwch pa diwtor a’ch gwahoddodd. Dewiswch pa rai o’ch plant i’w cofrestru, ac maen nhw’n ymuno ar unwaith. Mae’r ddolen yn gweithio i un teulu, ac yn para tri deg diwrnod.",
+   "keys": [
+    "Agor y ddolen breifat::dolen breifat",
+    "Mewngofnodi fel rhiant::mewngofnodi",
+    "Dewis pa blant::Dewiswch pa rai o’ch plant",
+    "Tri deg diwrnod, un teulu::tri deg diwrnod"
+   ],
+   "cam": [
+    {
+     "on": "Fe welwch pa diwtor"
+    },
+    {
+     "on": "Dewiswch pa rai"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fe welwch pa diwtor",
+     "off": "Dewiswch pa rai"
+    },
+    {
+     "on": "Dewiswch pa rai"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dewiswch pa rai"
+    }
+   ]
+  },
+  "parent:std:home": {
+   "chapter": "Wythnos eich plentyn",
+   "title": "Cartref: y dyfarniad un llinell",
+   "say": "Mae’r Cartref yn dechrau gydag un llinell, y dyfarniad. Mae’n dweud Ar y trywydd iawn, Wedi gorffen popeth yr wythnos hon, neu faint o dasgau gwaith cartref sy’n hwyr. Tapiwch hi i fynd yn syth at le gallwch helpu. Oddi tani, gwelwch y cwisiau a wnaed yr wythnos hon, y gwaith cartref a gyflwynwyd, a’r hyn sy’n aros i’w farcio. Mwy nag un plentyn? Newidiwch rhyngddyn nhw ar y top.",
+   "keys": [
+    "Un llinell, y dyfarniad::un llinell",
+    "Ar y trywydd iawn, neu’n hwyr::Ar y trywydd iawn",
+    "Yr wythnos hon ar un cipolwg::Oddi tani",
+    "Newid rhwng plant::Newidiwch rhyngddyn nhw"
+   ],
+   "cam": [
+    {
+     "on": "Mae’r Cartref yn dechrau"
+    },
+    {
+     "on": "Mae’n dweud"
+    },
+    {
+     "on": "Oddi tani"
+    },
+    {
+     "on": "Mwy nag un plentyn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae’n dweud",
+     "off": "Oddi tani"
+    },
+    {
+     "on": "Oddi tani",
+     "off": "Mwy nag un plentyn"
+    },
+    {
+     "on": "Mwy nag un plentyn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapiwch hi"
+    }
+   ]
+  },
+  "parent:std:lessons": {
+   "chapter": "Wythnos eich plentyn",
+   "title": "Gwersi",
+   "say": "Mae Gwersi yn dangos yr hyn mae eich tiwtor wedi’i rannu. Agorwch un a bydd eich plentyn yn mynd drwyddi un syniad ar y tro, gyda chwis ar y diwedd.",
+   "keys": [
+    "Yr hyn a rannodd eich tiwtor::Mae Gwersi yn dangos",
+    "Un syniad ar y tro",
+    "Cwis ar y diwedd::chwis ar y diwedd"
+   ],
+   "cam": [
+    {
+     "on": "Mae Gwersi yn dangos"
+    },
+    {
+     "on": "Agorwch un"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Agorwch un"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Agorwch un"
+    }
+   ]
+  },
+  "parent:std:live": {
+   "chapter": "Wythnos eich plentyn",
+   "title": "Gwersi byw",
+   "say": "Pan fydd gan eich tiwtor wers fyw ar y gweill, mae’n ymddangos yn Gwersi byw. Pan fydd yn agor, rydych chi’n gwirio’r camera a’r meicroffon yn gyntaf, yna’n gwasgu Ymuno. Os bydd eich tiwtor yn rhannu gwers i ddyfais eich plentyn ei hun, mae baner yn ymddangos fel y gall ymuno â hi.",
+   "keys": [
+    "Gwersi byw ar y gweill::Gwersi byw",
+    "Gwirio camera a meicroffon::camera a’r meicroffon",
+    "Gwasgu Ymuno",
+    "Baner i ymuno::baner"
+   ],
+   "cam": [
+    {
+     "on": "Pan fydd yn agor"
+    }
+   ]
+  },
+  "parent:std:progress": {
+   "chapter": "Cynnydd",
+   "title": "Sut maen nhw’n dod yn eu blaen",
+   "say": "Mae’r tab Cynnydd yn dangos sut mae eich plentyn yn dod yn ei flaen. Gwelwch ei lefel, ar raddfa eich tiwtor ei hun, a’r hyn sydd ei angen i gyrraedd yr un nesaf. Tapiwch O ble daw’r lefel hon, am esboniad clir. Ac mae Fy nhaith cwricwlwm yn dangos pa mor bell drwy bob pwnc maen nhw.",
+   "keys": [
+    "Sut mae’n dod yn ei flaen::sut mae eich plentyn yn dod yn ei flaen",
+    "Ei lefel, mewn geiriau syml::ei lefel",
+    "O ble daw’r lefel hon",
+    "Fy nhaith cwricwlwm"
+   ],
+   "cam": [
+    {
+     "on": "Gwelwch ei lefel"
+    },
+    {
+     "on": "Tapiwch O ble daw"
+    },
+    {
+     "on": "Ac mae Fy nhaith cwricwlwm"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Gwelwch ei lefel",
+     "off": "Tapiwch O ble daw"
+    },
+    {
+     "on": "Tapiwch O ble daw",
+     "off": "Ac mae Fy nhaith"
+    },
+    {
+     "on": "Ac mae Fy nhaith cwricwlwm"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapiwch O ble daw"
+    }
+   ]
+  },
+  "parent:std:report": {
+   "chapter": "Cynnydd",
+   "title": "Adroddiad cynnydd argraffadwy",
+   "say": "Angen rhywbeth ar gyfer cyfarfod, neu ar gyfer drws yr oergell? Gwasgwch Adroddiad cynnydd. Cewch grynodeb glân un dudalen ar gyfer un plentyn, gyda’i bynciau a’i gamau nesaf. Argraffwch ef, neu cadwch ef fel PDF o ffenestr argraffu eich porwr.",
+   "keys": [
+    "Gwasgwch Adroddiad cynnydd",
+    "Crynodeb un dudalen::grynodeb glân un dudalen",
+    "Pynciau a chamau nesaf::gamau nesaf",
+    "Argraffu, neu gadw fel PDF::Argraffwch ef"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Cewch grynodeb glân"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Gwasgwch Adroddiad cynnydd"
+    },
+    {
+     "on": "Cewch grynodeb glân"
+    },
+    {
+     "on": "gyda’i bynciau"
+    },
+    {
+     "on": "a’i gamau nesaf"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Gwasgwch Adroddiad cynnydd",
+     "off": "Cewch grynodeb glân"
+    },
+    {
+     "on": "gyda’i bynciau",
+     "off": "a’i gamau nesaf"
+    },
+    {
+     "on": "a’i gamau nesaf"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Gwasgwch Adroddiad cynnydd"
+    }
+   ]
+  },
+  "parent:std:ask": {
+   "chapter": "Help",
+   "title": "Gofyn i’ch tiwtor",
+   "say": "Oes gennych gwestiwn? Defnyddiwch Gofyn i’ch tiwtor ar y Cartref, neu’r tab Negeseuon. Daw ateb eich tiwtor yn ôl atoch yno. A gallwch wasgu Sut mae’n gweithio bob amser, ar y top, i wylio hyn eto.",
+   "keys": [
+    "Gofyn i’ch tiwtor",
+    "Neu’r tab Negeseuon::Negeseuon",
+    "Sut mae’n gweithio, unrhyw bryd::Sut mae’n gweithio"
+   ],
+   "cam": [
+    {
+     "on": "Defnyddiwch Gofyn i’ch tiwtor"
+    },
+    {
+     "on": "Sut mae’n gweithio bob amser, ar y top"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Defnyddiwch Gofyn i’ch tiwtor",
+     "off": "Sut mae’n gweithio bob amser, ar y top"
+    },
+    {
+     "on": "Sut mae’n gweithio bob amser, ar y top"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Defnyddiwch Gofyn i’ch tiwtor"
+    }
+   ]
+  },
+  "parent:std:hand-over": {
+   "chapter": "Lle eich plentyn ei hun",
+   "title": "Trosglwyddo i’ch plentyn",
+   "say": "Pan fydd eich plentyn yn barod i ddysgu, gwasgwch Trosglwyddo iddyn nhw. Mae’r sgrin yn dod yn lle syml iddyn nhw eu hunain, gyda’u gwersi, cwisiau a gwaith cartref yn unig. I ddod yn ôl i’ch porth, mae oedolyn yn ateb swm cyflym. I weld yn union beth mae eich plentyn yn ei weld, dewiswch Golwg eich plentyn, ar frig y ffenestr hon.",
+   "keys": [
+    "Gwasgwch Trosglwyddo",
+    "Lle syml iddyn nhw eu hunain",
+    "Swm cyflym i ddod yn ôl::swm cyflym",
+    "Golwg eich plentyn"
+   ],
+   "cam": [
+    {
+     "on": "gwasgwch Trosglwyddo"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gwasgwch Trosglwyddo",
+     "off": "Mae’r sgrin yn dod"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gwasgwch Trosglwyddo"
+    }
+   ]
+  },
+  "kid:std:hello": {
+   "chapter": "Helo",
+   "title": "Helo!",
+   "say": "Helo! Dyma dy le dysgu dy hun. Mae’n dangos i ti beth i’w wneud nesaf, ac mae’n dy helpu di i ddysgu. Gad i ni gael golwg sydyn.",
+   "keys": [
+    "Helo",
+    "Dy le dysgu",
+    "beth i’w wneud nesaf"
+   ],
+   "nodes": [
+    {
+     "on": "beth i’w wneud nesaf",
+     "title": "Beth i’w wneud"
+    },
+    {
+     "on": "dy helpu di i ddysgu",
+     "title": "Dysgu"
+    }
+   ]
+  },
+  "kid:std:home": {
+   "chapter": "Cartref",
+   "title": "Dy Gartref",
+   "say": "Dyma dy Gartref. Mae’n dangos un peth mawr i’w wneud nesaf. Tapia Ewch i’w ddechrau. Tapia’r uchelseinydd bach, ac mae’n ei ddarllen yn uchel i ti.",
+   "keys": [
+    "Dy Gartref",
+    "Un peth mawr i’w wneud",
+    "Tapia Ewch::Tapia Ewch",
+    "Ei glywed yn cael ei ddarllen::uchelseinydd bach"
+   ],
+   "cam": [
+    {
+     "on": "un peth mawr"
+    },
+    {
+     "on": "Tapia Ewch"
+    },
+    {
+     "on": "uchelseinydd bach"
+    }
+   ],
+   "rings": [
+    {
+     "on": "un peth mawr",
+     "off": "Tapia Ewch"
+    },
+    {
+     "on": "Tapia Ewch",
+     "off": "uchelseinydd bach"
+    },
+    {
+     "on": "uchelseinydd bach"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia Ewch"
+    },
+    {
+     "on": "uchelseinydd bach"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "un peth mawr",
+     "text": "Dy beth nesaf i’w wneud"
+    },
+    {
+     "on": "Tapia Ewch",
+     "text": "Tapia Ewch i ddechrau"
+    },
+    {
+     "on": "uchelseinydd bach",
+     "text": "Tapia i’w glywed yn cael ei ddarllen"
+    }
+   ]
+  },
+  "kid:std:lessons": {
+   "chapter": "Dysgu",
+   "title": "Gwersi",
+   "say": "Mae gwersi’n dy helpu di i ddysgu rhywbeth newydd. Rwyt ti’n mynd drwyddyn nhw un syniad ar y tro. Mae cwestiynau i roi cynnig arnyn nhw, a chwis ar y diwedd.",
+   "keys": [
+    "Dysgu rhywbeth newydd",
+    "Un syniad ar y tro",
+    "Cwestiynau i roi cynnig arnyn nhw",
+    "Cwis ar y diwedd::chwis ar y diwedd"
+   ],
+   "cam": [
+    {
+     "on": "dysgu rhywbeth newydd"
+    },
+    {
+     "on": "un syniad ar y tro"
+    }
+   ],
+   "rings": [
+    {
+     "on": "un syniad ar y tro"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "un syniad ar y tro"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "dysgu rhywbeth newydd",
+     "text": "Dewis gwers"
+    },
+    {
+     "on": "un syniad ar y tro",
+     "text": "Un syniad ar y tro"
+    },
+    {
+     "on": "cwestiynau i roi cynnig",
+     "text": "Cwestiynau i roi cynnig arnyn nhw"
+    }
+   ]
+  },
+  "kid:std:homework": {
+   "chapter": "Dysgu",
+   "title": "Gwaith cartref",
+   "say": "Dyma dy waith cartref. Agor e, gwna dy orau, ac yna cyflwyna fe. Bydd dy diwtor yn edrych arno ac yn dweud wrthyt ti sut est ti ymlaen.",
+   "keys": [
+    "Dyma dy waith cartref",
+    "Agor e",
+    "Gwna dy orau",
+    "Cyflwyna fe"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Agor e"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Dyma dy waith cartref"
+    },
+    {
+     "on": "gwna dy orau"
+    },
+    {
+     "on": "cyflwyna fe"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gwna dy orau",
+     "off": "cyflwyna fe"
+    },
+    {
+     "on": "cyflwyna fe"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gwna dy orau"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Agor e",
+     "text": "Ei agor"
+    },
+    {
+     "on": "gwna dy orau",
+     "text": "Gwna dy orau"
+    },
+    {
+     "on": "cyflwyna fe",
+     "text": "Ei gyflwyno"
+    }
+   ]
+  },
+  "kid:std:quizzes": {
+   "chapter": "Chwarae",
+   "title": "Cwisiau",
+   "say": "Setiau byr o gwestiynau yw cwisiau. Darllena bob un, a dewis dy ateb. Ddim yn hollol iawn? Popeth yn iawn. Gelli di roi cynnig arall arni.",
+   "keys": [
+    "Setiau byr o gwestiynau",
+    "Dewis dy ateb",
+    "Popeth yn iawn::Popeth yn iawn",
+    "Rhoi cynnig arall arni::cynnig arall"
+   ],
+   "cam": [
+    {
+     "on": "Setiau byr"
+    },
+    {
+     "on": "dewis dy ateb"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dewis dy ateb"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "dewis dy ateb"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Darllena bob un",
+     "text": "Darllen y cwestiwn"
+    },
+    {
+     "on": "dewis dy ateb",
+     "text": "Dewis dy ateb"
+    },
+    {
+     "on": "cynnig arall",
+     "text": "Rho gynnig arall arni!"
+    }
+   ]
+  },
+  "kid:std:tools": {
+   "chapter": "Chwarae",
+   "title": "Offer help",
+   "say": "Mae gan rai cwestiynau offeryn help, fel pren mesur neu onglydd. Tapia’r botwm offeryn, ac mae’n agor reit yno i dy helpu i weithio allan yr ateb. A thapia’r uchelseinydd i glywed y cwestiwn yn cael ei ddarllen yn uchel.",
+   "keys": [
+    "offeryn help",
+    "Tapia’r botwm offeryn",
+    "uchelseinydd"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "agor reit yno"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Mae gan rai cwestiynau"
+    },
+    {
+     "on": "Tapia’r botwm offeryn"
+    },
+    {
+     "on": "agor reit yno"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae gan rai cwestiynau",
+     "off": "Tapia’r botwm offeryn"
+    },
+    {
+     "on": "Tapia’r botwm offeryn",
+     "off": "agor reit yno"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia’r botwm offeryn"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tapia’r botwm offeryn",
+     "text": "Y botwm offeryn"
+    }
+   ]
+  },
+  "kid:std:cards": {
+   "chapter": "Chwarae",
+   "title": "Cardiau fflach",
+   "say": "Mae cardiau fflach yn dy helpu di i gofio pethau. Tapia gerdyn i’w droi. Yna dywed pa mor dda oeddet ti’n ei wybod. Mae’r cardiau rwyt ti’n eu cael yn anodd yn dod yn ôl eto cyn hir.",
+   "keys": [
+    "I gofio pethau",
+    "Tapio cerdyn i’w droi::Tapia gerdyn",
+    "Pa mor dda oeddet ti",
+    "Anodd? Dod yn ôl::dod yn ôl eto"
+   ],
+   "cam": [
+    {
+     "on": "Mae cardiau fflach"
+    },
+    {
+     "on": "Tapia gerdyn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tapia gerdyn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia gerdyn"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tapia gerdyn",
+     "text": "Tapia’r cerdyn i’w droi"
+    },
+    {
+     "on": "pa mor dda oeddet",
+     "text": "Pa mor dda roeddet ti’n ei wybod?"
+    },
+    {
+     "on": "dod yn ôl eto",
+     "text": "Y rhai anodd yn dod yn ôl"
+    }
+   ]
+  },
+  "kid:std:grown-up": {
+   "chapter": "Wedi gorffen",
+   "title": "Pan fyddi di wedi gorffen",
+   "say": "Pan fyddi di wedi gorffen, gofyn i oedolyn dy helpu di i adael. Maen nhw’n ateb swm bach, ac yna rwyt ti wedi gorffen. Gelli di dapio Sut mae’n gweithio unrhyw bryd i wylio hyn eto.",
+   "keys": [
+    "gofyn i oedolyn",
+    "swm bach",
+    "Sut mae’n gweithio"
+   ],
+   "nodes": [
+    {
+     "on": "gofyn i oedolyn",
+     "title": "Gofyn i oedolyn"
+    },
+    {
+     "on": "swm bach",
+     "title": "Swm bach"
+    },
+    {
+     "on": "rwyt ti wedi gorffen",
+     "title": "Wedi gorffen!"
+    }
+   ]
+  },
+  "tutor:std:hw-set": {
+   "chapter": "Gosod",
+   "title": "Gosod gwaith cartref",
+   "say": "Yn Gwaith cartref, pwysa Gosod gwaith cartref. Dewisa grŵp, neu ticia blant unigol.",
+   "keys": [
+    "pwysa Gosod gwaith cartref",
+    "Dewisa grŵp",
+    "ticia blant unigol"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Dewisa grŵp"
+    }
+   ],
+   "cam": [
+    {
+     "on": "pwysa Gosod gwaith cartref"
+    },
+    {
+     "on": "Dewisa grŵp"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pwysa Gosod gwaith cartref",
+     "off": "Dewisa grŵp"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pwysa Gosod gwaith cartref"
+    }
+   ]
+  },
+  "tutor:std:hw-worksheet": {
+   "chapter": "Gosod",
+   "title": "Atodi taflen waith",
+   "say": "Ticia daflenni gwaith o'th lyfrgell. Mae'r rhai rhyngweithiol yn marcio eu hunain. Atebir PDFs yn ysgrifenedig neu â llun.",
+   "keys": [
+    "Ticia daflenni gwaith",
+    "o'th lyfrgell",
+    "marcio eu hunain::marcio eu hunain",
+    "ysgrifenedig neu â llun::ysgrifenedig neu â llun"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "o'th lyfrgell"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Ticia daflenni gwaith"
+    },
+    {
+     "on": "o'th lyfrgell"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ticia daflenni gwaith"
+    }
+   ]
+  },
+  "tutor:std:hw-assign": {
+   "chapter": "Ei osod",
+   "title": "Ei anfon",
+   "say": "Gwasgwch Neilltuo gwaith cartref. Mae pob plentyn yn cael ei gopi ei hun, ac mae teuluoedd yn cael gwybod ar unwaith.",
+   "keys": [
+    "Gwasgwch Neilltuo gwaith cartref",
+    "Ei gopi ei hun",
+    "Cael gwybod::yn cael gwybod ar unwaith"
+   ],
+   "cam": [
+    {
+     "on": "gwasgwch Neilltuo gwaith cartref"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gwasgwch Neilltuo gwaith cartref"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gwasgwch Neilltuo gwaith cartref"
+    }
+   ]
+  },
+  "tutor:std:hw-tasks": {
+   "chapter": "Casglu",
+   "title": "Olrhain",
+   "say": "Mae pob cerdyn gwaith cartref yn dangos pwy sy'n dal i weithio, pwy sydd wedi cyflwyno, a phwy sydd wedi'i farcio.",
+   "keys": [
+    "pob cerdyn gwaith cartref",
+    "dal i weithio",
+    "cyflwyno",
+    "wedi'i farcio"
+   ],
+   "cam": [
+    {
+     "on": "pob cerdyn gwaith cartref"
+    }
+   ]
+  },
+  "tutor:std:hw-handin": {
+   "chapter": "Casglu",
+   "title": "Sut mae plant yn cyflwyno",
+   "say": "Mae plant yn gwneud y daflen ar y sgrin, neu'n ysgrifennu, ychwanegu llun neu PDF, yna'n pwyso Cyflwyno gwaith cartref.",
+   "keys": [
+    "gwneud y daflen ar y sgrin",
+    "ysgrifennu, ychwanegu llun::ysgrifennu, ychwanegu llun",
+    "neu PDF",
+    "Cyflwyno gwaith cartref"
+   ],
+   "cam": [
+    {
+     "on": "gwneud y daflen ar y sgrin"
+    },
+    {
+     "on": "ysgrifennu, ychwanegu llun"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gwneud y daflen ar y sgrin",
+     "off": "ysgrifennu, ychwanegu llun"
+    },
+    {
+     "on": "ysgrifennu, ychwanegu llun"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gwneud y daflen ar y sgrin"
+    }
+   ]
+  },
+  "tutor:std:mark": {
+   "chapter": "Ei farcio",
+   "title": "Un ciw i’w farcio",
+   "say": "Mae popeth sydd angen ei farcio yn glanio mewn un ciw, y rhai sydd wedi aros hiraf yn gyntaf. Gwaith cartref a gyflwynwyd, atebion cwis ysgrifenedig ac atebion cwis cychwynnol, i gyd gyda’i gilydd. Agorwch un, marciwch ef, a defnyddiwch y botwm nesaf i symud yn syth ymlaen at y nesaf.",
+   "keys": [
+    "Un ciw i’w farcio::Un ciw",
+    "Aros hiraf yn gyntaf",
+    "Agorwch un",
+    "Y botwm nesaf"
+   ],
+   "cam": [
+    {
+     "on": "Mae popeth sydd angen"
+    },
+    {
+     "on": "Agorwch un"
+    },
+    {
+     "on": "botwm nesaf"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae popeth sydd angen",
+     "off": "Agorwch un"
+    },
+    {
+     "on": "Agorwch un",
+     "off": "a defnyddiwch y botwm"
+    },
+    {
+     "on": "a defnyddiwch y botwm nesaf"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Agorwch un"
+    }
+   ]
+  },
+  "tutor:std:hw-marking": {
+   "chapter": "Ei farcio",
+   "title": "Ei farcio a symud ymlaen",
+   "say": "Agorwch waith a gyflwynwyd i weld ei ateb. Rhowch sgôr, a beth yw’r cyfanswm, ac ysgrifennwch ychydig o adborth. Gwasgwch Marcio a nesaf, a chaiff y teulu wybod. Mae taflenni gwaith rhyngweithiol eisoes wedi’u marcio i chi.",
+   "keys": [
+    "Ei ateb",
+    "Rhowch sgôr",
+    "Ysgrifennu adborth::ysgrifennwch ychydig o adborth",
+    "Marcio a nesaf"
+   ],
+   "cam": [
+    {
+     "on": "weld ei ateb"
+    },
+    {
+     "on": "Rhowch sgôr"
+    },
+    {
+     "on": "ysgrifennwch ychydig o adborth"
+    },
+    {
+     "on": "Gwasgwch Marcio a nesaf"
+    }
+   ],
+   "rings": [
+    {
+     "on": "weld ei ateb",
+     "off": "Rhowch sgôr"
+    },
+    {
+     "on": "Rhowch sgôr",
+     "off": "ysgrifennwch ychydig"
+    },
+    {
+     "on": "ysgrifennwch ychydig o adborth",
+     "off": "Gwasgwch Marcio"
+    },
+    {
+     "on": "Gwasgwch Marcio a nesaf"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Rhowch sgôr"
+    },
+    {
+     "on": "Gwasgwch Marcio a nesaf"
+    }
+   ]
+  },
+  "tutor:std:hw-results": {
+   "chapter": "Canlyniadau",
+   "title": "Mae pawb yn gweld",
+   "say": "Mae'r plentyn yn gweld ei sgôr a'th adborth. Mae ei deulu hefyd yn gweld hyn yn yr Hyb Dysgu.",
+   "keys": [
+    "Mae'r plentyn yn gweld",
+    "ei sgôr a'th adborth::ei sgôr a'th adborth",
+    "hefyd yn gweld hyn",
+    "Hyb Dysgu"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "ei sgôr a'th adborth"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Mae'r plentyn yn gweld"
+    },
+    {
+     "on": "ei sgôr a'th adborth"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae'r plentyn yn gweld",
+     "off": "ei sgôr a'th adborth"
+    },
+    {
+     "on": "ei sgôr a'th adborth"
+    }
+   ]
+  },
+  "parent:std:hw-list": {
+   "chapter": "Gwaith cartref",
+   "title": "Beth sydd wedi’i osod",
+   "say": "Mae’r tab Gwaith cartref yn rhestru popeth y mae tiwtor eich plentyn wedi’i osod. Mae pob darn yn dangos pryd mae’n ddyledus, ac a yw wedi’i gyflwyno neu ei farcio. Os oes rhywbeth yn hwyr, fe’i gwelwch yma, ac ar ddyfarniad y Cartref. Mae gwaith cartref newydd yn ymddangos yma cyn gynted ag y caiff ei osod.",
+   "keys": [
+    "Popeth sydd wedi’i osod::wedi’i osod",
+    "Pryd mae’n ddyledus",
+    "Wedi’i gyflwyno, neu ei farcio::wedi’i gyflwyno",
+    "Mae’r hwyr yn dangos yma::yn hwyr"
+   ],
+   "cam": [
+    {
+     "on": "Mae’r tab Gwaith cartref"
+    },
+    {
+     "on": "Mae pob darn yn dangos"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae pob darn yn dangos",
+     "off": "Mae gwaith cartref newydd"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Mae pob darn yn dangos"
+    }
+   ]
+  },
+  "parent:std:hw-open": {
+   "chapter": "Gwaith cartref",
+   "title": "Agor darn o waith cartref",
+   "say": "Agorwch un i weld y cyfarwyddiadau, ac unrhyw daflen waith neu wers i’w gwneud yn gyntaf. Gall eich plentyn deipio ateb, neu ychwanegu llun neu PDF, yna gwasgu Cyflwyno gwaith cartref. Gall ei newid nes i’r tiwtor ei farcio.",
+   "keys": [
+    "Cyfarwyddiadau a thaflen waith::y cyfarwyddiadau",
+    "Teipio, neu ychwanegu llun::deipio ateb",
+    "Cyflwyno gwaith cartref",
+    "Ei newid nes ei farcio::nes i’r tiwtor ei farcio"
+   ],
+   "cam": [
+    {
+     "on": "Agorwch un"
+    },
+    {
+     "on": "unrhyw daflen waith"
+    }
+   ],
+   "rings": [
+    {
+     "on": "unrhyw daflen waith",
+     "off": "Gall eich plentyn"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Agorwch un",
+     "text": "Cyfarwyddiadau"
+    },
+    {
+     "on": "unrhyw daflen waith",
+     "text": "Taflen waith i’w gwneud"
+    },
+    {
+     "on": "Gall eich plentyn deipio",
+     "text": "Teipio, llun neu PDF"
+    }
+   ]
+  },
+  "parent:std:hw-marks": {
+   "chapter": "Gwaith cartref",
+   "title": "Marciau ac adborth",
+   "say": "Ar ôl i’r tiwtor ei farcio, mae’r sgôr a’i adborth yn ymddangos o dan y gwaith cartref, a chewch wybod. Mae cynnydd eich plentyn yn ei godi hefyd, felly gallwch weld sut mae’n dod yn ei flaen.",
+   "keys": [
+    "Y sgôr a’r adborth::sgôr",
+    "Chewch wybod",
+    "Cynnydd yn ei godi::cynnydd"
+   ],
+   "cam": [
+    {
+     "on": "mae’r sgôr"
+    }
+   ],
+   "rings": [
+    {
+     "on": "mae’r sgôr"
+    }
+   ]
+  },
+  "kid:std:hw-find": {
+   "chapter": "Gwaith cartref",
+   "title": "Dod o hyd i dy waith cartref",
+   "say": "Tapia Gwaith cartref i weld beth mae dy diwtor wedi’i osod. Tapia un i’w agor. Mae’n dweud wrthyt ti beth i’w wneud, a phryd mae’n ddyledus.",
+   "keys": [
+    "Tapia Gwaith cartref",
+    "Tapia un i’w agor",
+    "Beth i’w wneud",
+    "Pryd mae’n ddyledus::ddyledus"
+   ],
+   "cam": [
+    {
+     "on": "Tapia Gwaith cartref"
+    },
+    {
+     "on": "Tapia un"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tapia un"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia un"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tapia Gwaith cartref",
+     "text": "Gwaith cartref"
+    },
+    {
+     "on": "Tapia un",
+     "text": "Tapia un i’w agor"
+    }
+   ]
+  },
+  "kid:std:hw-do": {
+   "chapter": "Gwaith cartref",
+   "title": "Ei wneud a’i gyflwyno",
+   "say": "Darllena beth i’w wneud. Yna gwna’r daflen waith, ar y sgrin neu ar bapur, ac ysgrifenna dy ateb. Pan fyddi di wedi gorffen, cyflwyna fe. Gelli di ei newid nes bod dy diwtor wedi edrych arno.",
+   "keys": [
+    "Darllena beth i’w wneud",
+    "Gwna’r daflen waith",
+    "Cyflwyna fe",
+    "Ei newid nes ei farcio::ei newid"
+   ],
+   "cam": [
+    {
+     "on": "Darllena beth i’w wneud"
+    },
+    {
+     "on": "Yna gwna’r daflen waith"
+    },
+    {
+     "on": "cyflwyna fe"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Yna gwna’r daflen waith",
+     "off": "Pan fyddi di"
+    },
+    {
+     "on": "Pan fyddi di wedi gorffen"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Yna gwna’r daflen waith"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Yna gwna’r daflen waith",
+     "text": "Gwneud y daflen waith"
+    },
+    {
+     "on": "Pan fyddi di wedi gorffen",
+     "text": "Ei gyflwyno"
+    }
+   ]
+  },
+  "kid:std:hw-back": {
+   "chapter": "Gwaith cartref",
+   "title": "Gweld sut est ti ymlaen",
+   "say": "Pan fydd dy diwtor wedi’i farcio, byddi di’n gweld dy sgôr a neges oddi wrtho. Da iawn ti am roi cynnig arni!",
+   "keys": [
+    "Dy sgôr",
+    "Neges gan dy diwtor::neges",
+    "Da iawn ti!::Da iawn ti"
+   ],
+   "cam": [
+    {
+     "on": "Pan fydd dy diwtor"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pan fydd dy diwtor"
+    }
+   ]
+  },
+  "kid:ks1:hello": {
+   "chapter": "Helo",
+   "title": "Helo!",
+   "say": "Helo! Dyma dy le di. Gad i ni weld sut mae’n gweithio.",
+   "keys": [
+    "Helo",
+    "dy le di"
+   ],
+   "nodes": [
+    {
+     "on": "dy le di",
+     "title": "Heddiw"
+    },
+    {
+     "on": "Gad i ni weld",
+     "title": "Chwarae a dysgu"
+    },
+    {
+     "on": "sut mae’n gweithio",
+     "title": "Sêr"
+    }
+   ]
+  },
+  "kid:ks1:today": {
+   "chapter": "Heddiw",
+   "title": "Heddiw",
+   "say": "Dyma Heddiw. Mae’n dangos un peth i’w wneud. Tapia’r botwm Ewch mawr. Tapia’r uchelseinydd i’w glywed.",
+   "keys": [
+    "Heddiw",
+    "Un peth i’w wneud::un peth",
+    "Tapia’r botwm Ewch mawr",
+    "Ei glywed::uchelseinydd"
+   ],
+   "cam": [
+    {
+     "on": "un peth"
+    },
+    {
+     "on": "Tapia’r botwm Ewch"
+    },
+    {
+     "on": "Tapia’r uchelseinydd"
+    }
+   ],
+   "rings": [
+    {
+     "on": "un peth",
+     "off": "Tapia’r botwm Ewch"
+    },
+    {
+     "on": "Tapia’r botwm Ewch",
+     "off": "Tapia’r uchelseinydd"
+    },
+    {
+     "on": "Tapia’r uchelseinydd"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia’r botwm Ewch"
+    },
+    {
+     "on": "Tapia’r uchelseinydd"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "un peth",
+     "text": "Un peth i’w wneud"
+    },
+    {
+     "on": "botwm Ewch mawr",
+     "text": "Tapia Ewch"
+    },
+    {
+     "on": "Tapia’r uchelseinydd",
+     "text": "Ei glywed"
+    }
+   ]
+  },
+  "kid:ks1:play": {
+   "chapter": "Chwarae",
+   "title": "Chwarae a dysgu",
+   "say": "Tapia Chwarae a dysgu. Dyma dy gwisiau. Tapia un. Rho gynnig arni!",
+   "keys": [
+    "Chwarae a dysgu",
+    "Dy gwisiau::gwisiau",
+    "Rho gynnig arni!"
+   ],
+   "cam": [
+    {
+     "on": "Tapia Chwarae"
+    },
+    {
+     "on": "Dyma dy gwisiau"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tapia Chwarae",
+     "off": "Dyma dy"
+    },
+    {
+     "on": "Tapia un"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia Chwarae"
+    },
+    {
+     "on": "Tapia un"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tapia Chwarae",
+     "text": "Chwarae a dysgu"
+    },
+    {
+     "on": "gwisiau",
+     "text": "Cwisiau"
+    }
+   ]
+  },
+  "kid:ks1:stars": {
+   "chapter": "Sêr",
+   "title": "Sêr",
+   "say": "Tapia Sêr. Gwna gwis, ac mae dy sêr yn disgleirio yma. Da iawn ti!",
+   "keys": [
+    "Sêr",
+    "Dy sêr yn disgleirio yma::sêr yn disgleirio",
+    "Da iawn ti!::Da iawn ti"
+   ],
+   "cam": [
+    {
+     "on": "Tapia Sêr"
+    },
+    {
+     "on": "Gwna gwis"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tapia Sêr",
+     "off": "Gwna gwis"
+    },
+    {
+     "on": "Gwna gwis"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tapia Sêr"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tapia Sêr",
+     "text": "Sêr"
+    },
+    {
+     "on": "dy sêr yn disgleirio",
+     "text": "Dy sêr"
+    }
+   ]
+  },
+  "kid:ks1:grown-up": {
+   "chapter": "Wedi gorffen",
+   "title": "Wedi gorffen",
+   "say": "Wedi gorffen? Gofyn i oedolyn dy helpu. Hwyl fawr am nawr!",
+   "keys": [
+    "oedolyn",
+    "Hwyl fawr"
+   ],
+   "nodes": [
+    {
+     "on": "Gofyn i oedolyn",
+     "title": "Gofyn i oedolyn"
+    },
+    {
+     "on": "Hwyl fawr am nawr",
+     "title": "Hwyl fawr!"
+    }
+   ]
+  },
+  "tutor:std:home-tour": {
+   "chapter": "Hafan",
+   "title": "Dy feysydd",
+   "say": "Ar y brig mae dy feysydd: Gwersi, Disgyblion, Cynnydd, Cwisiau, Gwaith cartref a Negeseuon. Hafan yw'r man cychwyn.",
+   "keys": [
+    "dy feysydd",
+    "Gwersi, Disgyblion, Cynnydd",
+    "Cwisiau, Gwaith cartref",
+    "Hafan yw'r man"
+   ],
+   "cam": [
+    {
+     "on": "dy feysydd"
+    }
+   ],
+   "rings": [
+    {
+     "on": "dy feysydd",
+     "off": "Gwersi, Disgyblion, Cynnydd"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "dy feysydd"
+    }
+   ]
+  },
+  "tutor:std:home-attention": {
+   "chapter": "Hafan",
+   "title": "Angen dy sylw",
+   "say": "Angen dy sylw sy'n rhestru beth i'w wneud nesaf: gwaith cartref i'w farcio, atebion ysgrifenedig, a gwaith hwyr. Dechreua ar y brig.",
+   "keys": [
+    "Angen dy sylw",
+    "beth i'w wneud nesaf",
+    "gwaith cartref i'w farcio",
+    "gwaith hwyr",
+    "Dechreua ar y brig"
+   ],
+   "cam": [
+    {
+     "on": "Angen dy sylw"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Angen dy sylw"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Angen dy sylw"
+    }
+   ]
+  },
+  "tutor:std:home-help": {
+   "chapter": "Hafan",
+   "title": "Mae cymorth wrth law bob amser",
+   "say": "Mae dy wers nesaf yma. Ac mae Sut mae'n gweithio ar bob tudalen, pryd bynnag mae angen atgof arnat.",
+   "keys": [
+    "wers nesaf",
+    "Sut mae'n gweithio",
+    "ar bob tudalen",
+    "atgof"
+   ],
+   "cam": [
+    {
+     "on": "wers nesaf"
+    },
+    {
+     "on": "Sut mae'n gweithio"
+    }
+   ],
+   "rings": [
+    {
+     "on": "wers nesaf",
+     "off": "Sut mae'n gweithio"
+    },
+    {
+     "on": "Sut mae'n gweithio"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "wers nesaf"
+    }
+   ]
+  },
+  "tutor:std:fam-ways": {
+   "chapter": "Teuluoedd",
+   "title": "Tair ffordd i ymuno",
+   "say": "Gall teulu ymuno â thi dair ffordd: maen nhw'n archebu gyda thi, ti'n anfon dolen wahoddiad, neu maen nhw'n dod o hyd i dy dudalen gyhoeddus.",
+   "keys": [
+    "dair ffordd",
+    "archebu gyda thi",
+    "dolen wahoddiad",
+    "dudalen gyhoeddus"
+   ],
+   "nodes": [
+    {
+     "on": "dair ffordd",
+     "title": "Archebu gyda thi",
+     "sub": "Mae'r plentyn yn ymddangos yn Cofrestru disgybl"
+    },
+    {
+     "on": "archebu gyda thi",
+     "title": "Anfon dolen wahoddiad",
+     "sub": "Yn gweithio unwaith, am 30 diwrnod"
+    },
+    {
+     "on": "dolen wahoddiad",
+     "title": "Dy dudalen gyhoeddus",
+     "sub": "Maen nhw'n cofrestru, wedyn ti'n eu cofrestru"
+    }
+   ]
+  },
+  "tutor:std:fam-book": {
+   "chapter": "Teuluoedd",
+   "title": "Maen nhw'n archebu gyda thi",
+   "say": "Pan fydd rhiant yn archebu, mae'r plentyn yn ymddangos yn Cofrestru disgybl. Pwysa Cofrestru, dewisa'r pynciau a'r flwyddyn, yna Cofrestru'r disgybl.",
+   "keys": [
+    "ymddangos yn Cofrestru disgybl",
+    "Pwysa Cofrestru",
+    "pynciau a'r flwyddyn",
+    "Cofrestru'r disgybl"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Pwysa Cofrestru"
+    }
+   ],
+   "cam": [
+    {
+     "on": "ymddangos yn Cofrestru disgybl"
+    },
+    {
+     "on": "Pwysa Cofrestru"
+    },
+    {
+     "on": "pynciau a'r flwyddyn"
+    },
+    {
+     "on": "Cofrestru'r disgybl"
+    },
+    {
+     "on": "ymddangos yn Cofrestru disgybl"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ymddangos yn Cofrestru disgybl",
+     "off": "Pwysa Cofrestru"
+    },
+    {
+     "on": "Pwysa Cofrestru",
+     "off": "pynciau a'r flwyddyn"
+    },
+    {
+     "on": "pynciau a'r flwyddyn",
+     "off": "Cofrestru'r disgybl"
+    },
+    {
+     "on": "Cofrestru'r disgybl"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "ymddangos yn Cofrestru disgybl"
+    },
+    {
+     "on": "Pwysa Cofrestru"
+    }
+   ]
+  },
+  "tutor:std:fam-invite": {
+   "chapter": "Teuluoedd",
+   "title": "Anfon dolen wahoddiad",
+   "say": "Dim archeb? Ysgrifenna ar gyfer pwy mae, a phwysa Creu dolen wahoddiad. Anfona hi at y rhiant. Mae'n gweithio unwaith, am 30 diwrnod.",
+   "keys": [
+    "ar gyfer pwy mae",
+    "Creu dolen wahoddiad",
+    "Anfona hi at y rhiant",
+    "unwaith, am 30 diwrnod"
+   ],
+   "cam": [
+    {
+     "on": "ar gyfer pwy mae"
+    },
+    {
+     "on": "Creu dolen wahoddiad"
+    },
+    {
+     "on": "Anfona hi at y rhiant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ar gyfer pwy mae",
+     "off": "Creu dolen wahoddiad"
+    },
+    {
+     "on": "Creu dolen wahoddiad",
+     "off": "Anfona hi at y rhiant"
+    },
+    {
+     "on": "Anfona hi at y rhiant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "ar gyfer pwy mae"
+    },
+    {
+     "on": "Creu dolen wahoddiad"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "ar gyfer pwy mae",
+     "text": "Does dim byd yn cael ei anfon yn awtomatig ar dy ran: ti sy'n ei anfon"
+    }
+   ]
+  },
+  "tutor:std:fam-page": {
+   "chapter": "Teuluoedd",
+   "title": "Rhannu dy dudalen gyhoeddus",
+   "say": "Neu gopïa ddolen dy dudalen a'i hanfon. Cyn gynted ag y bydd y rhiant yn cofrestru, mae ei blant yn ymddangos yma, yn barod i'w cofrestru.",
+   "keys": [
+    "gopïa ddolen",
+    "anfon",
+    "yn cofrestru",
+    "barod i'w cofrestru"
+   ],
+   "cam": [
+    {
+     "on": "gopïa ddolen"
+    },
+    {
+     "on": "anfon"
+    }
+   ],
+   "rings": [
+    {
+     "on": "gopïa ddolen",
+     "off": "anfon"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "gopïa ddolen"
+    }
+   ]
+  },
+  "tutor:std:std-cards": {
+   "chapter": "Disgyblion",
+   "title": "Mae gan bob plentyn gerdyn",
+   "say": "Mae gan bob plentyn cofrestredig gerdyn sy'n dangos ei flwyddyn, ei bynciau, a chylch cynnydd.",
+   "keys": [
+    "bob plentyn cofrestredig",
+    "gerdyn",
+    "flwyddyn, ei bynciau",
+    "a chylch cynnydd"
+   ],
+   "cam": [
+    {
+     "on": "bob plentyn cofrestredig"
+    }
+   ],
+   "rings": [
+    {
+     "on": "bob plentyn cofrestredig"
+    }
+   ]
+  },
+  "tutor:std:std-groups": {
+   "chapter": "Disgyblion",
+   "title": "Creu grŵp",
+   "say": "Rho blant mewn grŵp. Yna gelli osod gwaith cartref, cwis neu wers i'r grŵp cyfan mewn un clic.",
+   "keys": [
+    "Rho blant mewn grŵp",
+    "mewn un clic",
+    "waith cartref, cwis",
+    "grŵp cyfan"
+   ],
+   "cam": [
+    {
+     "on": "Rho blant mewn grŵp"
+    },
+    {
+     "on": "mewn un clic"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Rho blant mewn grŵp",
+     "off": "mewn un clic"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Rho blant mewn grŵp"
+    }
+   ]
+  },
+  "tutor:std:std-support": {
+   "chapter": "Disgyblion",
+   "title": "Gosodiadau cymorth",
+   "say": "Agor Golygu manylion i ddiffodd amserydd cwisiau, troi ymlaen modd tawel, ychwanegu amser ychwanegol, mwyhau testun neu ddarllen atebion yn uchel.",
+   "keys": [
+    "Agor Golygu manylion",
+    "amserydd cwisiau",
+    "modd tawel",
+    "amser ychwanegol",
+    "mwyhau testun",
+    "ddarllen atebion yn uchel"
+   ],
+   "cam": [
+    {
+     "on": "Agor Golygu manylion"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Agor Golygu manylion"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Agor Golygu manylion"
+    },
+    {
+     "on": "amserydd cwisiau"
+    }
+   ]
+  },
+  "tutor:std:std-owner": {
+   "chapter": "Disgyblion",
+   "title": "Ti'n unig all eu newid",
+   "say": "Ni all teuluoedd newid y gosodiadau hyn. Defnyddia'r tri dot ar y cerdyn i atal neu ddadgofrestru plentyn.",
+   "keys": [
+    "Ni all teuluoedd newid::Ni all teuluoedd newid",
+    "tri dot",
+    "atal",
+    "ddadgofrestru"
+   ],
+   "cam": [
+    {
+     "on": "Ni all teuluoedd newid"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ni all teuluoedd newid"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ni all teuluoedd newid"
+    }
+   ]
+  },
+  "tutor:std:les-library": {
+   "chapter": "Gwersi",
+   "title": "Dy lyfrgell wersi",
+   "say": "Mae Gwersi'n dal miloedd o wersi parod, wedi'u trefnu ar fap cwricwlwm. Dewisa bwnc a blwyddyn.",
+   "keys": [
+    "miloedd o wersi parod::miloedd o wersi parod",
+    "fap cwricwlwm",
+    "Dewisa bwnc",
+    "a blwyddyn"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "fap cwricwlwm"
+    }
+   ],
+   "cam": [
+    {
+     "on": "miloedd o wersi parod"
+    },
+    {
+     "on": "fap cwricwlwm"
+    },
+    {
+     "on": "Dewisa bwnc"
+    }
+   ],
+   "rings": [
+    {
+     "on": "miloedd o wersi parod",
+     "off": "fap cwricwlwm"
+    },
+    {
+     "on": "fap cwricwlwm"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "miloedd o wersi parod"
+    },
+    {
+     "on": "fap cwricwlwm"
+    }
+   ]
+  },
+  "tutor:std:les-find": {
+   "chapter": "Gwersi",
+   "title": "Dod o hyd i wers",
+   "say": "Mae pob pwnc yn dangos sawl gwers sydd ganddo. Neu deipia yn Chwilio i fynd yn syth at un.",
+   "keys": [
+    "pob pwnc",
+    "sawl gwers",
+    "deipia yn Chwilio"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "sawl gwers"
+    }
+   ],
+   "cam": [
+    {
+     "on": "pob pwnc"
+    },
+    {
+     "on": "sawl gwers"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pob pwnc"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pob pwnc"
+    }
+   ]
+  },
+  "tutor:std:les-preview": {
+   "chapter": "Gwersi",
+   "title": "Rhagolwg ohoni",
+   "say": "Agor gwers i weld ei chynllun. Pwysa Rhagolwg o'r wers i weld yn union beth fydd plentyn yn ei weld.",
+   "keys": [
+    "Agor gwers",
+    "ei chynllun",
+    "Rhagolwg o'r wers",
+    "plentyn yn ei weld"
+   ],
+   "cam": [
+    {
+     "on": "Agor gwers"
+    },
+    {
+     "on": "ei chynllun"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Agor gwers"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Agor gwers"
+    }
+   ]
+  },
+  "tutor:std:les-build": {
+   "chapter": "Gwersi",
+   "title": "Adeilada dy un dy hun",
+   "say": "Pwysa Creu gwers newydd. Ychwanega sleidiau, geiriau allweddol, dewis lluosog, didoli neu baru, yna Cadw. Mae'n ymuno â dy lyfrgell.",
+   "keys": [
+    "Creu gwers newydd",
+    "sleidiau, geiriau allweddol::sleidiau, geiriau allweddol",
+    "didoli neu baru",
+    "Cadw",
+    "dy lyfrgell"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "sleidiau, geiriau allweddol"
+    },
+    {
+     "on": "didoli neu baru"
+    },
+    {
+     "on": "Cadw"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Creu gwers newydd"
+    }
+   ]
+  },
+  "tutor:std:live-modes": {
+   "chapter": "Gwersi byw",
+   "title": "Tair ffordd o addysgu",
+   "say": "Addysga ar alwad fideo, rhannu ar ddyfais pob plentyn, neu addysgu wyneb yn wyneb. Rwyt ti'n dewis bob tro.",
+   "keys": [
+    "alwad fideo",
+    "ddyfais pob plentyn",
+    "wyneb yn wyneb",
+    "dewis bob tro"
+   ],
+   "nodes": [
+    {
+     "on": "alwad fideo",
+     "title": "Galwad fideo",
+     "sub": "Ymuno â'r alwad yn y Ganolfan"
+    },
+    {
+     "on": "ddyfais pob plentyn",
+     "title": "Rhannu â phlant",
+     "sub": "Pob plentyn ar ei ddyfais ei hun"
+    },
+    {
+     "on": "wyneb yn wyneb",
+     "title": "Addysgu wyneb yn wyneb",
+     "sub": "Plant wrth dy ochr, heb fideo"
+    }
+   ]
+  },
+  "tutor:std:live-join": {
+   "chapter": "Gwersi byw",
+   "title": "Dechrau gwers fideo",
+   "say": "Amserlena hi ar gyfer y plant a ddewisi. Ar amser y wers, gwiria dy gamera a'th feicroffon, yna pwysa Ymuno. Does dim angen ap arall.",
+   "keys": [
+    "Amserlena hi",
+    "plant a ddewisi",
+    "gamera a'th feicroffon",
+    "pwysa Ymuno",
+    "ap arall"
+   ],
+   "cam": [
+    {
+     "on": "Amserlena hi"
+    },
+    {
+     "on": "plant a ddewisi"
+    },
+    {
+     "on": "gamera a'th feicroffon"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Amserlena hi",
+     "off": "plant a ddewisi"
+    },
+    {
+     "on": "plant a ddewisi",
+     "off": "gamera a'th feicroffon"
+    },
+    {
+     "on": "gamera a'th feicroffon"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Amserlena hi"
+    },
+    {
+     "on": "plant a ddewisi"
+    }
+   ]
+  },
+  "tutor:std:live-incall": {
+   "chapter": "Gwersi byw",
+   "title": "Y tu mewn i'r alwad",
+   "say": "Wrth ymyl y fideo mae dy dabiau: Gwersi, Cwis, Gwaith cartref, Cardiau fflach a bwrdd gwyn. Pwysa Addysgu ac mae pob sgrin yn dilyn dy un di.",
+   "keys": [
+    "dy dabiau",
+    "Cardiau fflach a bwrdd gwyn",
+    "Pwysa Addysgu",
+    "dilyn dy un di"
+   ],
+   "nodes": [
+    {
+     "on": "dy dabiau",
+     "title": "Gwersi",
+     "sub": "Pwysa Addysgu"
+    },
+    {
+     "on": "Cardiau fflach a bwrdd gwyn",
+     "title": "Cwis"
+    },
+    {
+     "on": "Pwysa Addysgu",
+     "title": "Gwaith cartref"
+    },
+    {
+     "on": "dilyn dy un di",
+     "title": "Cardiau fflach"
+    },
+    {
+     "on": "dy dabiau",
+     "title": "Bwrdd gwyn"
+    }
+   ]
+  },
+  "tutor:std:live-share": {
+   "chapter": "Gwersi byw",
+   "title": "Rhannu â phlant",
+   "say": "Dim fideo? Pwysa Rhannu â phlant. Mae pob plentyn yn dilyn ar ei ddyfais ei hun ac yn ateb drosto'i hun.",
+   "keys": [
+    "Pwysa Rhannu â phlant",
+    "ei ddyfais ei hun",
+    "ateb drosto'i hun"
+   ],
+   "cam": [
+    {
+     "on": "Pwysa Rhannu â phlant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pwysa Rhannu â phlant"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Pwysa Rhannu â phlant"
+    }
+   ]
+  },
+  "tutor:std:live-person": {
+   "chapter": "Gwersi byw",
+   "title": "Addysgu wyneb yn wyneb",
+   "say": "Yn yr ystafell? Ticia pwy sy'n bresennol a mewnbynna atebion pob plentyn. Mae teuluoedd yn gweld y canlyniadau wedyn.",
+   "keys": [
+    "pwy sy'n bresennol",
+    "atebion pob plentyn::atebion pob plentyn",
+    "canlyniadau wedyn"
+   ],
+   "cam": [
+    {
+     "on": "pwy sy'n bresennol"
+    },
+    {
+     "on": "atebion pob plentyn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pwy sy'n bresennol",
+     "off": "atebion pob plentyn"
+    },
+    {
+     "on": "atebion pob plentyn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pwy sy'n bresennol"
+    }
+   ]
+  },
+  "tutor:std:tools-try": {
+   "chapter": "Offer",
+   "title": "Rho gynnig ar yr offer",
+   "say": "Mae Offer, y tu mewn i Wersi, yn cynnwys pren mesur, onglyddion, llinellau rhif a diagramau gwyddonol. Agor unrhyw declyn i roi cynnig arno.",
+   "keys": [
+    "y tu mewn i Wersi",
+    "onglyddion, llinellau rhif",
+    "diagramau gwyddonol::diagramau gwyddonol",
+    "Agor unrhyw declyn"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "onglyddion, llinellau rhif"
+    }
+   ],
+   "cam": [
+    {
+     "on": "y tu mewn i Wersi"
+    },
+    {
+     "on": "onglyddion, llinellau rhif"
+    }
+   ],
+   "rings": [
+    {
+     "on": "y tu mewn i Wersi",
+     "off": "onglyddion, llinellau rhif"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "y tu mewn i Wersi"
+    }
+   ]
+  },
+  "tutor:std:tools-give": {
+   "chapter": "Offer",
+   "title": "Rho declyn i blant",
+   "say": "Yn Rhagolwg o'r wers, agor Offer ar gyfer y wers hon. Pwysa Ychwanegu teclyn at y cwestiwn hwn, neu Ddefnyddio ar bob cwestiwn.",
+   "keys": [
+    "Rhagolwg o'r wers",
+    "Offer ar gyfer y wers hon",
+    "Ychwanegu teclyn at y cwestiwn hwn",
+    "bob cwestiwn"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Offer ar gyfer y wers hon"
+    },
+    {
+     "on": "Ychwanegu teclyn at y cwestiwn hwn"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Rhagolwg o'r wers"
+    },
+    {
+     "on": "Offer ar gyfer y wers hon"
+    },
+    {
+     "on": "Ychwanegu teclyn at y cwestiwn hwn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Rhagolwg o'r wers",
+     "off": "Offer ar gyfer y wers hon"
+    },
+    {
+     "on": "Offer ar gyfer y wers hon",
+     "off": "Ychwanegu teclyn at y cwestiwn hwn"
+    },
+    {
+     "on": "Ychwanegu teclyn at y cwestiwn hwn"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Rhagolwg o'r wers"
+    },
+    {
+     "on": "Offer ar gyfer y wers hon"
+    }
+   ]
+  },
+  "tutor:std:quiz-make": {
+   "chapter": "Cwisiau",
+   "title": "Creu cwis",
+   "say": "Yn Cwisiau, pwysa Cwis newydd, dewisa bynciau o'th fanc cwestiynau, a dewisa'r pwnc a'r marc pasio.",
+   "keys": [
+    "pwysa Cwis newydd",
+    "fanc cwestiynau::fanc cwestiynau",
+    "pwnc a'r marc pasio"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "fanc cwestiynau"
+    }
+   ],
+   "cam": [
+    {
+     "on": "pwysa Cwis newydd"
+    },
+    {
+     "on": "fanc cwestiynau"
+    },
+    {
+     "on": "pwnc a'r marc pasio"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pwysa Cwis newydd"
+    }
+   ]
+  },
+  "tutor:std:quiz-marked": {
+   "chapter": "Cwisiau",
+   "title": "Wedi'i farcio i ti",
+   "say": "Mae cwisiau'n cael eu marcio ar unwaith. Mae atebion ysgrifenedig yn mynd i Farcio, yn dy giw unigol.",
+   "keys": [
+    "marcio ar unwaith",
+    "atebion ysgrifenedig",
+    "giw unigol::giw unigol"
+   ],
+   "cam": [
+    {
+     "on": "marcio ar unwaith"
+    }
+   ],
+   "rings": [
+    {
+     "on": "marcio ar unwaith"
+    }
+   ]
+  },
+  "tutor:std:quiz-starting": {
+   "chapter": "Cwisiau",
+   "title": "Cwis cychwyn",
+   "say": "Mae disgyblion newydd yn sefyll cwis cychwyn unwaith. Does dim marc pasio, felly rwyt ti'n gweld lle mae pob plentyn yn dechrau.",
+   "keys": [
+    "cwis cychwyn",
+    "Does dim marc pasio::Does dim marc pasio",
+    "lle mae pob plentyn yn dechrau"
+   ],
+   "cam": [
+    {
+     "on": "cwis cychwyn"
+    }
+   ],
+   "rings": [
+    {
+     "on": "cwis cychwyn"
+    }
+   ]
+  },
+  "tutor:std:quiz-flash": {
+   "chapter": "Cwisiau",
+   "title": "Cardiau fflach",
+   "say": "Mae Cardiau fflach yn dod â'r cardiau y mae plentyn yn eu cael yn anodd yn ôl. Mewn gwers fyw, gelli gyflwyno pecyn ar y sgrin.",
+   "keys": [
+    "Cardiau fflach",
+    "plentyn yn eu cael yn anodd",
+    "gyflwyno pecyn ar y sgrin"
+   ],
+   "cam": [
+    {
+     "on": "Cardiau fflach"
+    },
+    {
+     "on": "plentyn yn eu cael yn anodd"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Cardiau fflach"
+    }
+   ]
+  },
+  "tutor:std:prog-class": {
+   "chapter": "Cynnydd",
+   "title": "Dy ddosbarth cyfan",
+   "say": "Mae pob rhes yn blentyn. Mae pob pwnc yn dangos sgôr lliw. Hidla yn ôl blwyddyn neu grŵp, neu chwilia am enw.",
+   "keys": [
+    "Mae pob rhes yn blentyn",
+    "sgôr lliw",
+    "Hidla yn ôl blwyddyn neu grŵp",
+    "chwilia am enw"
+   ],
+   "cam": [
+    {
+     "on": "Mae pob rhes yn blentyn"
+    },
+    {
+     "on": "sgôr lliw"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Mae pob rhes yn blentyn",
+     "off": "sgôr lliw"
+    },
+    {
+     "on": "sgôr lliw"
+    }
+   ]
+  },
+  "tutor:std:prog-child": {
+   "chapter": "Cynnydd",
+   "title": "Un plentyn",
+   "say": "Clicia ar blentyn i weld pob pwnc, sut mae'n newid, a'i ganlyniadau diweddaraf. Mae'n diweddaru o'r gwaith sydd wedi'i farcio.",
+   "keys": [
+    "Clicia ar blentyn",
+    "pob pwnc",
+    "ganlyniadau diweddaraf",
+    "gwaith sydd wedi'i farcio"
+   ],
+   "cam": [
+    {
+     "on": "Clicia ar blentyn"
+    }
+   ]
+  },
+  "tutor:std:prog-levels": {
+   "chapter": "Cynnydd",
+   "title": "Dy lefelau",
+   "say": "Pwysa Golygu lefelau i'w hailenwi neu newid lle maen nhw'n dechrau. Mae sgorau'n ailfandio ar unwaith, a does dim marc yn newid.",
+   "keys": [
+    "Pwysa Golygu lefelau",
+    "hailenwi",
+    "ailfandio ar unwaith",
+    "does dim marc yn newid"
+   ],
+   "cam": [
+    {
+     "on": "Pwysa Golygu lefelau"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pwysa Golygu lefelau"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Pwysa Golygu lefelau"
+    }
+   ]
+  },
+  "tutor:std:hw-add-details": {
+   "chapter": "Gosod",
+   "title": "Ychwanegu'r manylion",
+   "say": "Ychwanega deitl. Ysgrifenna gyfarwyddiadau: beth i'w wneud. Dywed beth i'w gyflwyno. Yna dewisa'r dyddiad cau.",
+   "keys": [
+    "Ychwanega deitl",
+    "Ysgrifenna gyfarwyddiadau",
+    "beth i'w gyflwyno",
+    "dewisa'r dyddiad cau"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Ysgrifenna gyfarwyddiadau"
+    },
+    {
+     "on": "beth i'w gyflwyno"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Ychwanega deitl"
+    },
+    {
+     "on": "Ysgrifenna gyfarwyddiadau"
+    },
+    {
+     "on": "beth i'w gyflwyno"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Ychwanega deitl",
+     "off": "Ysgrifenna gyfarwyddiadau"
+    },
+    {
+     "on": "Ysgrifenna gyfarwyddiadau",
+     "off": "beth i'w gyflwyno"
+    },
+    {
+     "on": "beth i'w gyflwyno"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Ychwanega deitl"
+    },
+    {
+     "on": "Ysgrifenna gyfarwyddiadau"
+    },
+    {
+     "on": "beth i'w gyflwyno"
+    }
+   ]
+  },
+  "tutor:std:hw-mark": {
+   "chapter": "Marcio",
+   "title": "Marcio",
+   "say": "Mae popeth i'w farcio yn I'w Farcio, yr hynaf yn gyntaf. Ychwanega sgôr ac adborth, yna pwysa Marcio a nesaf.",
+   "keys": [
+    "popeth i'w farcio",
+    "yr hynaf yn gyntaf",
+    "sgôr ac adborth",
+    "Marcio a nesaf"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "yr hynaf yn gyntaf"
+    }
+   ],
+   "cam": [
+    {
+     "on": "popeth i'w farcio"
+    },
+    {
+     "on": "yr hynaf yn gyntaf"
+    },
+    {
+     "on": "sgôr ac adborth"
+    },
+    {
+     "on": "Marcio a nesaf"
+    }
+   ],
+   "rings": [
+    {
+     "on": "popeth i'w farcio",
+     "off": "yr hynaf yn gyntaf"
+    },
+    {
+     "on": "yr hynaf yn gyntaf",
+     "off": "sgôr ac adborth"
+    },
+    {
+     "on": "sgôr ac adborth",
+     "off": "Marcio a nesaf"
+    },
+    {
+     "on": "Marcio a nesaf"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "popeth i'w farcio"
+    },
+    {
+     "on": "yr hynaf yn gyntaf"
+    }
+   ]
+  },
+  "tutor:std:msg-all": {
+   "chapter": "Negeseuon",
+   "title": "Popeth mewn un lle",
+   "say": "Mae Negeseuon yn cadw pob sgwrs â theuluoedd mewn un lle, wedi'u grwpio yn ôl plentyn.",
+   "keys": [
+    "pob sgwrs â theuluoedd",
+    "mewn un lle",
+    "wedi'u grwpio yn ôl plentyn"
+   ],
+   "cam": [
+    {
+     "on": "pob sgwrs â theuluoedd"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pob sgwrs â theuluoedd"
+    }
+   ]
+  },
+  "tutor:std:msg-reply": {
+   "chapter": "Negeseuon",
+   "title": "Ateb",
+   "say": "Agor sgwrs, ysgrifenna dy ateb a phwysa Anfon. Mae'r rhiant yn cael hysbysiad.",
+   "keys": [
+    "Agor sgwrs",
+    "ysgrifenna dy ateb",
+    "phwysa Anfon",
+    "cael hysbysiad"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "ysgrifenna dy ateb"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Agor sgwrs"
+    },
+    {
+     "on": "ysgrifenna dy ateb"
+    },
+    {
+     "on": "phwysa Anfon"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Agor sgwrs",
+     "off": "ysgrifenna dy ateb"
+    },
+    {
+     "on": "ysgrifenna dy ateb"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Agor sgwrs"
+    },
+    {
+     "on": "ysgrifenna dy ateb"
+    }
+   ]
+  },
+  "tutor:std:msg-auto": {
+   "chapter": "Negeseuon",
+   "title": "Mae diweddariadau'n awtomatig",
+   "say": "Does dim angen i ti neges am waith cartref na marciau. Mae teuluoedd yn cael gwybod yn awtomatig.",
+   "keys": [
+    "Does dim angen i ti neges::Does dim angen i ti neges",
+    "waith cartref na marciau",
+    "cael gwybod yn awtomatig"
+   ],
+   "cam": [
+    {
+     "on": "Does dim angen i ti neges"
+    }
+   ]
+  }
+ }
+}

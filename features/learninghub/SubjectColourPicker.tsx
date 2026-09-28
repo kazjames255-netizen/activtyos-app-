@@ -5,6 +5,7 @@ import { get, put } from "@/lib/api";
 import { mergeHub, subjectColourKey, type HubSettings } from "@/lib/hubConfig";
 import { FOCUS, Icon, Modal } from "./kit";
 import { SubjectTile } from "./subjectArt";
+import { useT } from "@/lib/i18n/provider";
 import { SUBJECT_PALETTE, appliedSubjectColours, applySubjectColours, defaultColourKey, effectiveColourKey } from "./subjectColour";
 import { errMsg } from "./types";
 
@@ -15,12 +16,14 @@ import { errMsg } from "./types";
 
 /** The ten swatches as a radio group. `value` = the palette key in effect; `onPick(key)`. */
 export function SwatchGrid({ subject, value, onPick, disabled }: { subject: string; value: string; onPick: (key: string) => void; disabled?: boolean }) {
+  const tr = useT();
+  const colourName = (key: string, fallback: string) => { const k = `hubshell.k_col_${key}`; const v = tr(k); return v === k ? fallback : v; };
   return (
-    <div role="radiogroup" aria-label={`Colour for ${subject}`} className="flex flex-wrap gap-2">
+    <div role="radiogroup" aria-label={tr("hubshell.k_colourFor", { subject })} className="flex flex-wrap gap-2">
       {SUBJECT_PALETTE.map((p) => {
         const on = p.key === value;
         return (
-          <button key={p.key} type="button" role="radio" aria-checked={on} aria-label={p.label} title={p.label} data-colour={p.key} disabled={disabled} onClick={() => onPick(p.key)}
+          <button key={p.key} type="button" role="radio" aria-checked={on} aria-label={colourName(p.key, p.label)} title={colourName(p.key, p.label)} data-colour={p.key} disabled={disabled} onClick={() => onPick(p.key)}
             className={`grid h-11 w-11 flex-none place-items-center rounded-full border-2 text-white transition-transform hover:scale-105 disabled:opacity-50 ${FOCUS}`}
             style={{ background: p.base, borderColor: on ? "var(--ink)" : "transparent", boxShadow: on ? "0 0 0 2px var(--surface) inset" : undefined }}>
             {on ? <Icon name="check" size={18} strokeWidth={3} /> : null}
@@ -33,6 +36,7 @@ export function SwatchGrid({ subject, value, onPick, disabled }: { subject: stri
 
 /** ⋯ menu -> "Subject colour": pick one and it's saved to the hub and applied everywhere straight away. */
 export function SubjectColourModal({ subject, qs, onClose, onSaved, onError }: { subject: string; qs: string; onClose: () => void; onSaved?: () => void; onError?: (msg: string) => void }) {
+  const tr = useT();
   const [chosen, setChosen] = useState<Record<string, string>>(() => appliedSubjectColours());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export function SubjectColourModal({ subject, qs, onClose, onSaved, onError }: {
       onSaved?.();
     } catch (e) {
       setChosen(before); applySubjectColours(before);
-      const m = errMsg(e, "Couldn't save that colour");
+      const m = errMsg(e, tr("hubshell.k_colourSaveFail"));
       setErr(m); onError?.(m);
     } finally { setBusy(false); }
   };
@@ -64,13 +68,13 @@ export function SubjectColourModal({ subject, qs, onClose, onSaved, onError }: {
   const reset = () => { const next = { ...chosen }; delete next[subjectColourKey(subject)]; void save(next); };
 
   return (
-    <Modal open onClose={onClose} title={<span className="inline-flex items-center gap-2"><SubjectTile subject={subject} size={28} />Colour for {subject}</span>} id="hub-subject-colour"
-      footer={<button type="button" onClick={onClose} className={`hub-press min-h-[44px] rounded-full bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white ${FOCUS}`}>Done</button>}>
-      <p className="mb-3 text-[13px] leading-relaxed text-[var(--ink-2)]">Every card, chip and tile for {subject} in the Teaching Hub — and in My Classroom for your families — will use this colour.</p>
+    <Modal open onClose={onClose} title={<span className="inline-flex items-center gap-2"><SubjectTile subject={subject} size={28} />{tr("hubshell.k_colourFor", { subject })}</span>} id="hub-subject-colour"
+      footer={<button type="button" onClick={onClose} className={`hub-press min-h-[44px] rounded-full bg-[var(--brand)] px-5 text-[13px] font-extrabold text-white ${FOCUS}`}>{tr("hubshell.k_done")}</button>}>
+      <p className="mb-3 text-[13px] leading-relaxed text-[var(--ink-2)]">{tr("hubshell.k_colourExplain", { subject })}</p>
       <SwatchGrid subject={subject} value={value} onPick={pick} disabled={busy} />
       <div className="mt-3 flex items-center gap-3">
-        <button type="button" onClick={reset} disabled={busy || isDefault} className={`min-h-[44px] rounded-full border border-[var(--line)] px-4 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40 ${FOCUS}`}>Use the default colour</button>
-        {busy && <span className="text-[12px] font-semibold text-[var(--ink-2)]">Saving…</span>}
+        <button type="button" onClick={reset} disabled={busy || isDefault} className={`min-h-[44px] rounded-full border border-[var(--line)] px-4 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-40 ${FOCUS}`}>{tr("hubshell.k_useDefaultColour")}</button>
+        {busy && <span className="text-[12px] font-semibold text-[var(--ink-2)]">{tr("hubshell.k_saving")}</span>}
       </div>
       {err && <p role="alert" className="mt-3 rounded-lg bg-[var(--red-soft)] px-3 py-2 text-[12.5px] font-semibold text-[var(--red)]">{err}</p>}
     </Modal>

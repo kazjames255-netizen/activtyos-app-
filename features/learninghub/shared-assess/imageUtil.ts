@@ -1,4 +1,5 @@
 import { post } from "@/lib/api";
+import { hubT } from "../family/hubT";
 
 // Client-side helpers for question pictures. The server accepts PNG / JPEG / WebP /
 // GIF up to 750 KB, so a phone photo (often 3–6 MB) is scaled down on a canvas
@@ -19,7 +20,7 @@ function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error("Couldn't read that file."));
+    r.onerror = () => reject(new Error(hubT("hubfam.asImgRead")));
     r.readAsDataURL(file);
   });
 }
@@ -28,7 +29,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("That doesn't look like a picture we can open."));
+    img.onerror = () => reject(new Error(hubT("hubfam.asImgOpen")));
     img.src = src;
   });
 }
@@ -43,11 +44,11 @@ function canWebp(): boolean {
 
 /** Validate and (if needed) shrink an image file so it fits the upload limit. Throws a friendly Error. */
 export async function prepareImage(file: Blob): Promise<Prepared> {
-  if (!ACCEPT.includes(file.type)) throw new Error("Please choose a PNG, JPEG, WebP or GIF picture.");
+  if (!ACCEPT.includes(file.type)) throw new Error(hubT("hubfam.asImgType"));
   const original = await readAsDataUrl(file);
   const img = await loadImage(original);
   const w0 = img.naturalWidth, h0 = img.naturalHeight;
-  if (!w0 || !h0) throw new Error("That picture looks empty.");
+  if (!w0 || !h0) throw new Error(hubT("hubfam.asImgEmpty"));
   // Small enough and a sensible size already: send it untouched (keeps GIFs animated, PNGs crisp).
   if (bytesOf(original) <= TARGET && Math.max(w0, h0) <= 2400) {
     return { dataUrl: original, bytes: bytesOf(original), width: w0, height: h0, resized: false, type: file.type };
@@ -62,7 +63,7 @@ export async function prepareImage(file: Blob): Promise<Prepared> {
     const canvas = document.createElement("canvas");
     canvas.width = w; canvas.height = h;
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("Your browser couldn't shrink that picture. Try a smaller one.");
+    if (!ctx) throw new Error(hubT("hubfam.asImgShrink"));
     if (!useWebp) { ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); }   // JPEG has no alpha: flatten onto white
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, 0, 0, w, h);
@@ -72,7 +73,7 @@ export async function prepareImage(file: Blob): Promise<Prepared> {
     }
     maxDim = Math.round(maxDim * 0.78);
   }
-  throw new Error("That picture is too detailed to shrink enough. Try a smaller one or crop it first.");
+  throw new Error(hubT("hubfam.asImgTooBig"));
 }
 
 export const fmtKb = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1000))} KB`);

@@ -52,16 +52,30 @@ export function suggestQuestionTools(sig: { subject: string; year: number | null
 export const normaliseQuestionId = (id: string): string =>
   id.replace(/^shared-hubQuestions-/, "").replace(/^(curr|oak)-[A-Za-z0-9]{20}-/, "$1-");
 
+/** Key in the provider's questionToolsAdd map meaning "on EVERY question". */
+export const ALL_QUESTIONS_KEY = "*";
+
 /** THE per-question answer: which help tools show on this question, out of the ones the tutor allowed (`enabled`).
  *  1) a question the agent judging pass decided on (questionToolOverrides.json, incl. explicit "no tool") wins;
  *  2) otherwise the strict wording rules (suggestQuestionTools). No question in view (a slide, the start screen) = no tool. */
-export function toolsForQuestion(q: { id?: string | null; prompt?: string | null; subject?: string; year?: number | null }, enabled: HelpToolId[]): HelpToolId[] {
+export function toolsForQuestion(q: { id?: string | null; prompt?: string | null; subject?: string; year?: number | null }, enabled: HelpToolId[], off?: readonly string[], add?: Record<string, readonly string[]>): HelpToolId[] {
   if (!q.prompt && !q.id) return [];
   const on = new Set<string>(enabled);
+  const key = q.id ? normaliseQuestionId(q.id) : "";
+  // The provider's own choices for this question: the default tool can be switched OFF, and any tool can be ADDED (both saved in their hub settings).
+  const added = [...new Set([...(key ? add?.[key] ?? [] : []), ...(add?.[ALL_QUESTIONS_KEY] ?? [])])].filter((t) => on.has(t)) as HelpToolId[];
+  if (q.id && off?.length && off.includes(key)) return added;
   const map = (overrides as { tools: Record<string, string[]> }).tools;
-  const hit = q.id ? map[normaliseQuestionId(q.id)] : undefined;
-  if (hit) return hit.filter((t) => on.has(t)) as HelpToolId[];
-  return q.prompt ? suggestQuestionTools({ subject: q.subject ?? "", year: q.year ?? null, prompt: q.prompt }, enabled) : [];
+  const hit = q.id ? map[key] : undefined;
+  const base = hit ? (hit.filter((t) => on.has(t)) as HelpToolId[]) : q.prompt ? suggestQuestionTools({ subject: q.subject ?? "", year: q.year ?? null, prompt: q.prompt }, enabled) : [];
+  return [...base, ...added.filter((t) => !base.includes(t))];
+}
+
+/** Tools-page tools (not one of the 20 help-drawer ids) a provider ADDED to this question: registry ids, opened in their own window. */
+export function extraToolsForQuestion(q: { id?: string | null }, add?: Record<string, readonly string[]>, helpIds: readonly string[] = []): string[] {
+  if (!q.id || !add) return [];
+  const list = [...new Set([...(add[normaliseQuestionId(q.id)] ?? []), ...(add[ALL_QUESTIONS_KEY] ?? [])])];
+  return list.filter((t) => !helpIds.includes(t));
 }
 
 /** Live tools (any kind) for a lesson — used by "Tools for this lesson" chips. */

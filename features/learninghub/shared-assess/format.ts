@@ -1,17 +1,18 @@
 import type { HubSettings } from "@/lib/hubConfig";
+import { hubLocale, hubT } from "../family/hubT";
 
 export const fmtDate = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  iso ? new Date(iso).toLocaleDateString(hubLocale(), { day: "numeric", month: "short", year: "numeric" }) : "—";
 export const fmtDateShort = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—";
+  iso ? new Date(iso).toLocaleDateString(hubLocale(), { day: "numeric", month: "short" }) : "—";
 
 export function timeAgo(iso: string | null | undefined): string {
-  if (!iso) return "Never";
+  if (!iso) return hubT("hubfam.asNever");
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (s < 90) return "Just now";
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  if (s < 86400 * 7) return `${Math.round(s / 86400)} d ago`;
+  if (s < 90) return hubT("hubfam.asJustNow");
+  if (s < 3600) return hubT("hubfam.asMinAgo", { n: Math.round(s / 60) });
+  if (s < 86400) return hubT("hubfam.asHourAgo", { n: Math.round(s / 3600) });
+  if (s < 86400 * 7) return hubT("hubfam.asDayAgo", { n: Math.round(s / 86400) });
   return fmtDateShort(iso);
 }
 

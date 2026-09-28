@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Avatar, FOCUS } from "../kit";
-import { Ico } from "../teachIcons";
-import { ParentGate } from "./ParentGate";
+import { useEffect } from "react";
+import { FOCUS, Icon } from "../kit";
+import { useT } from "@/lib/i18n/provider";
+import { hubT } from "./hubT";
 
 // Kid mode ("Hand over to Ava"): the hub becomes a full-screen layer (the hub root itself goes `fixed inset-0`, so the portal's
 // sidebar, top bar and bell are covered), scoped to ONE child: no provider / child pickers, no Progress table, no Live lessons list,
@@ -12,15 +12,33 @@ import { ParentGate } from "./ParentGate";
 const KEY = "aos.hub.kid";
 // "diagnostic" (the placement test) is here so a quiz that is locked behind one can be unlocked from kid mode: the same runner, the same
 // child chip, and the same forced child (there is no picker), just worded as the "Starting quiz" for a child.
-// "live" (join the lesson that is on now) and "dashboard" (the child-scoped stars view, P-03) are reachable from the Home card only:
-// they are on the allow-list but kept off the tab strip (KID_STRIP_HIDDEN).
-export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards", "questions", "live", "dashboard"] as const;
-export const KID_STRIP_HIDDEN: readonly string[] = ["live", "dashboard"];
+// Same tab set as the parent's own view of this child — nothing hidden or held back (Kaz: "I don't want two
+// different pages, this is getting confusing"). KID_STRIP_HIDDEN is kept (now empty) so a re-add later is a
+// one-line change, not a rewrite.
+export const KID_TABS = ["home", "notes", "quizzes", "diagnostic", "homework", "flashcards", "questions", "live", "dashboard", "tools", "games"] as const;
+export const KID_STRIP_HIDDEN: readonly string[] = [];
 /** The tenant's default level names in a child's words. A tutor's own names (anything else) are left exactly as written. */
-const KID_BAND: Record<string, string> = { learning: "Getting started", developing: "Getting there", secure: "Got it!" };
-export const kidBand = (label: string | null | undefined, kid: boolean): string => (label == null ? "" : kid ? KID_BAND[label.trim().toLowerCase()] ?? label : label);
+const KID_BAND_KEY: Record<string, string> = { learning: "bandLearning", developing: "bandDeveloping", secure: "bandSecure" };
+export const kidBand = (label: string | null | undefined, kid: boolean): string => {
+  if (label == null) return "";
+  const k = kid ? KID_BAND_KEY[label.trim().toLowerCase()] : undefined;
+  return k ? hubT(`hubfam.${k}`) : bandName(label);
+};
+const LVL_KEY: Record<string, string> = { learning: "lvlLearning", developing: "lvlDeveloping", secure: "lvlSecure" };
+/** Display-time name for the tenant's DEFAULT level names (Learning / Developing / Secure) in the active language; anything else is shown as authored. */
+export const bandName = (label: string | null | undefined): string => {
+  if (label == null) return "";
+  const k = LVL_KEY[label.trim().toLowerCase()];
+  const r = k ? hubT(`hubfam.${k}`) : "";
+  return r && r !== `hubfam.${k}` ? r : label;
+};
 /** What a tab is called on a child's screen (the rest keep their names). */
-export const KID_TAB_LABEL: Record<string, string> = { diagnostic: "Starting quiz", dashboard: "How I'm doing", questions: "Messages" };
+// Getters so the names follow the active language (read by LearningHubApp outside hubfam).
+export const KID_TAB_LABEL: Record<string, string> = {
+  get diagnostic() { return hubT("hubfam.tabStarting"); },
+  get dashboard() { return hubT("hubfam.tabDash"); },
+  get questions() { return hubT("hubfam.tabMsgs"); },
+};
 
 export interface KidStore { t: string; c: string }
 export function readKid(): KidStore | null {
@@ -53,21 +71,15 @@ export function useKidGuards(on: boolean) {
 }
 
 export function KidBar({ name, onExit }: { name: string; onExit: () => void }) {
-  const [gate, setGate] = useState(false);
-  const first = name.trim().split(/\s+/)[0] || name;
+  const t = useT();
+  // One consistent header everywhere a child's page opens, whether that's a parent clicking through from "All
+  // children" or a child using a handed-over device: same plain back-link style, no separate card/avatar/lock
+  // treatment (Kaz: "I don't want two different pages, this is getting confusing" — the content was already
+  // identical; only this chrome differed).
   return (
-    <>
-      <div id="hub-kid-bar" data-testid="hub-kid-bar" className="mb-3 flex min-h-[56px] items-center gap-3 rounded-2xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5">
-        <Avatar name={name} size={40} />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[17px] font-extrabold text-[var(--brand-strong)]" style={{ fontFamily: "var(--ff-display)" }}>{first}&apos;s learning</div>
-        </div>
-        <button type="button" onClick={() => setGate(true)} data-testid="kid-exit" aria-label="Go back to parent portal"
-          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}>
-          <Ico name="lock" size={15} />Go back to parent portal
-        </button>
-      </div>
-      {gate && <ParentGate name={first} onClose={() => setGate(false)} onUnlock={() => { setGate(false); onExit(); }} />}
-    </>
+    <button type="button" onClick={onExit} data-testid="hub-kid-bar" aria-label={t("hubfam.gateTitle")}
+      className={`mb-3 inline-flex min-h-[44px] items-center gap-1 rounded-lg px-1 text-[12.5px] font-extrabold text-[var(--brand)] ${FOCUS}`}>
+      <Icon name="arrowLeft" size={15} strokeWidth={2.6} />{t("hubfam.gateTitle")}
+    </button>
   );
 }

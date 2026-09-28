@@ -81,13 +81,14 @@ export function groupStatus(g: HubGroup, raw: RawRows, now: number): GroupStatus
 }
 
 /** "Today 14:00", "Tomorrow 09:30", "Sat 14:00", or "12 Oct 14:00" when it's more than a week away. */
-export function shortWhen(at: number, now: number): string {
+export function shortWhen(at: number, now: number, i18n?: { t: (k: string, v?: Record<string, string | number>) => string; locale: string }): string {
   const d = new Date(at), n = new Date(now);
   const day0 = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diff = Math.round((day0(d) - day0(n)) / 86_400_000);
-  const clock = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
-  if (diff === 0) return `Today ${clock}`;
-  if (diff === 1) return `Tomorrow ${clock}`;
-  if (diff > 1 && diff < 7) return `${d.toLocaleDateString("en-GB", { weekday: "short" })} ${clock}`;
-  return `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${clock}`;
+  const loc = i18n?.locale ?? "en-GB";
+  const clock = d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (diff === 0) return i18n ? i18n.t("hubshell.st_todayAt", { time: clock }) : `Today ${clock}`;
+  if (diff === 1) return i18n ? i18n.t("hubshell.st_tomorrowAt", { time: clock }) : `Tomorrow ${clock}`;
+  if (diff > 1 && diff < 7) return `${d.toLocaleDateString(loc, { weekday: "short" })} ${clock}`;
+  return `${d.toLocaleDateString(loc, { day: "numeric", month: "short" })} ${clock}`;
 }

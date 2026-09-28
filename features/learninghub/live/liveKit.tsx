@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { humanSpan, fmtClock, FOCUS } from "../teachKit";
+import { useT } from "@/lib/i18n/provider";
+import { tr } from "./tr";
 import { Ico } from "../teachIcons";
 import { VideoEmbeds } from "../videoKit";
 import { lessonStage, lessonTiming, type Lesson, type Stage } from "./lessonTypes";
@@ -54,8 +56,8 @@ export function stageInfo(lesson: Lesson, now: number, isTutor: boolean): StageI
   const started = lesson.status === "live" || lesson.status === "ended";
   const untilStart = t.startMs - now;
   if (!isTutor && lesson.waitingForTutor && (stage === "soon" || stage === "live" || stage === "grace" || stage === "rejoin")) {
-    return { stage, pill: "Waiting for your tutor", cta: "Waiting for your tutor", canJoin: false, waiting: true, ring: null,
-      sub: "Your tutor ended the lesson. You can come back in as soon as they reopen it — we'll tell you." };
+    return { stage, pill: tr("aKit_waiting"), cta: tr("aKit_waiting"), canJoin: false, waiting: true, ring: null,
+      sub: tr("aKit_waitingSub") };
   }
 
   if (stage === "upcoming") {
@@ -63,46 +65,46 @@ export function stageInfo(lesson: Lesson, now: number, isTutor: boolean): StageI
     const h = Math.floor((untilStart % 86_400_000) / 3_600_000);
     const m = Math.floor((untilStart % 3_600_000) / 60_000);
     const value = d >= 1 ? String(d) : h >= 1 ? `${h}h ${String(m).padStart(2, "0")}` : String(Math.max(1, Math.round(untilStart / 60_000)));
-    const unit = d >= 1 ? (d === 1 ? "day" : "days") : h >= 1 ? "to start" : "min";
+    const unit = d >= 1 ? (d === 1 ? tr("aKit_unitDay") : tr("aKit_unitDays")) : h >= 1 ? tr("aKit_unitToStart") : tr("aKit_unitMin");
     return {
-      stage, pill: "Next lesson", cta: `Opens in ${humanSpan(t.opensMs - now)}`, canJoin: false,
-      sub: `The room opens at ${fmtClock(new Date(t.opensMs).toISOString())}, 10 minutes before the start.`,
-      ring: { progress: Math.max(0.03, 1 - untilStart / (6 * 3_600_000)), value, unit, tone: "white", label: `Starts in ${humanSpan(untilStart)}` },
+      stage, pill: tr("aKit_nextLesson"), cta: tr("aKit_opensIn", { span: humanSpan(t.opensMs - now) }), canJoin: false,
+      sub: tr("aKit_roomOpensAt", { time: fmtClock(new Date(t.opensMs).toISOString()) }),
+      ring: { progress: Math.max(0.03, 1 - untilStart / (6 * 3_600_000)), value, unit, tone: "white", label: tr("aKit_startsIn", { span: humanSpan(untilStart) }) },
     };
   }
   if (stage === "soon") {
     const mins = Math.max(1, Math.round(untilStart / 60_000));
     return {
-      stage, pill: "Room open", canJoin: true, cta: isTutor ? "Start lesson" : "Join lesson",
-      sub: `Starts in ${humanSpan(untilStart)} — the room is open, so you can get set up now.`,
-      ring: { progress: 1 - untilStart / (10 * 60_000), value: String(mins), unit: "min", tone: "green", label: `Starts in ${humanSpan(untilStart)}` },
+      stage, pill: tr("aKit_roomOpen"), canJoin: true, cta: isTutor ? tr("aKit_startLesson") : tr("aKit_joinLesson"),
+      sub: tr("aKit_startsInSub", { span: humanSpan(untilStart) }),
+      ring: { progress: 1 - untilStart / (10 * 60_000), value: String(mins), unit: tr("aKit_unitMin"), tone: "green", label: tr("aKit_startsIn", { span: humanSpan(untilStart) }) },
     };
   }
   if (stage === "live") {
     const left = t.endMs - now;
     return {
-      stage, pill: "Live now", canJoin: true, cta: isTutor ? (started ? "Rejoin lesson" : "Start lesson") : "Join now",
-      sub: `${humanSpan(left)} left of the scheduled ${lesson.durationMins} minutes.`,
-      ring: { progress: (now - t.startMs) / (t.endMs - t.startMs), value: String(Math.max(1, Math.round(left / 60_000))), unit: "min left", tone: "green", label: `${humanSpan(left)} left` },
+      stage, pill: tr("aKit_liveNow"), canJoin: true, cta: isTutor ? (started ? tr("aKit_rejoinLesson") : tr("aKit_startLesson")) : tr("aKit_joinNow"),
+      sub: tr("aKit_leftSub", { span: humanSpan(left), n: lesson.durationMins }),
+      ring: { progress: (now - t.startMs) / (t.endMs - t.startMs), value: String(Math.max(1, Math.round(left / 60_000))), unit: tr("aKit_unitMinLeft"), tone: "green", label: tr("aKit_leftLabel", { span: humanSpan(left) }) },
     };
   }
   if (stage === "rejoin") {
     const closes = t.closesMs - now;
     return {
-      stage, pill: "Ended — rejoin", canJoin: true, cta: "Rejoin lesson",
-      sub: `This lesson was ended, but you can step straight back in until ${fmtClock(new Date(t.closesMs).toISOString())}.`,
-      ring: { progress: Math.min(1, closes / (30 * 60_000)), value: String(Math.max(1, Math.round(closes / 60_000))), unit: "min to rejoin", tone: "amber", label: `Rejoin window closes in ${humanSpan(closes)}` },
+      stage, pill: tr("aKit_endedRejoin"), canJoin: true, cta: tr("aKit_rejoinLesson"),
+      sub: tr("aKit_rejoinSub", { time: fmtClock(new Date(t.closesMs).toISOString()) }),
+      ring: { progress: Math.min(1, closes / (30 * 60_000)), value: String(Math.max(1, Math.round(closes / 60_000))), unit: tr("aKit_unitMinToRejoin"), tone: "amber", label: tr("aKit_rejoinCloses", { span: humanSpan(closes) }) },
     };
   }
   if (stage === "grace") {
     const closes = t.closesMs - now;
     return {
-      stage, pill: "Past its slot", canJoin: true, cta: started ? "Rejoin lesson" : isTutor ? "Open the room" : "Join lesson",
-      sub: `The scheduled time has ended, but the room stays open until ${fmtClock(new Date(t.closesMs).toISOString())}.`,
-      ring: { progress: closes / (30 * 60_000), value: String(Math.max(1, Math.round(closes / 60_000))), unit: "min to join", tone: "amber", label: `Room closes in ${humanSpan(closes)}` },
+      stage, pill: tr("aKit_pastSlot"), canJoin: true, cta: started ? tr("aKit_rejoinLesson") : isTutor ? tr("aKit_openRoom") : tr("aKit_joinLesson"),
+      sub: tr("aKit_graceSub", { time: fmtClock(new Date(t.closesMs).toISOString()) }),
+      ring: { progress: closes / (30 * 60_000), value: String(Math.max(1, Math.round(closes / 60_000))), unit: tr("aKit_unitMinToJoin"), tone: "amber", label: tr("aKit_roomCloses", { span: humanSpan(closes) }) },
     };
   }
-  return { stage, pill: stage === "cancelled" ? "Cancelled" : "Ended", sub: "", cta: null, canJoin: false, ring: null };
+  return { stage, pill: stage === "cancelled" ? tr("aKit_cancelled") : tr("aKit_ended"), sub: "", cta: null, canJoin: false, ring: null };
 }
 
 /** The tutor's note for this lesson (+ its videos) — one component so it reads the same on the hero, every row,
@@ -117,6 +119,7 @@ export function LessonNotes({ lesson, isTutor, tone = "light", className = "", a
   /** Tutor: open the notes & videos editor (add / change them without editing the whole lesson). */
   onEdit?: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const note = lesson.notes?.trim() ?? "";
   const vids = lesson.videos?.length ?? 0;
@@ -125,7 +128,7 @@ export function LessonNotes({ lesson, isTutor, tone = "light", className = "", a
   const editBtn = onEdit && (
     <button type="button" onClick={onEdit} data-action="add-notes"
       className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1.5 rounded-lg px-1.5 text-[12px] font-extrabold hover:underline ${FOCUS} ${dark0 ? "text-white" : "text-[var(--brand)]"}`}>
-      <Ico name={note || vids || attachedN ? "edit" : "plus"} size={13} />{note || vids || attachedN ? "Edit message, lessons & videos" : "Add a message / lessons / videos"}
+      <Ico name={note || vids || attachedN ? "edit" : "plus"} size={13} />{note || vids || attachedN ? t("hublive.aKit_editMsg") : t("hublive.aKit_addMsg")}
     </button>
   );
   if (!note && !vids && !attachedN) return editBtn ? <div data-lesson-notes className={className}>{editBtn}</div> : null;
@@ -135,22 +138,22 @@ export function LessonNotes({ lesson, isTutor, tone = "light", className = "", a
   return (
     <div data-lesson-notes className={className}>
       {note && (
-        <div className={`rounded-xl border-l-[3px] px-3 py-2 ${dark ? "border-white/50 bg-white/10 text-white/95" : "border-[var(--brand)] bg-[var(--panel)] text-[var(--ink-2)]"}`}>
-          <div className={`mb-0.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em] ${dark ? "text-white/70" : "text-[var(--ink-3)]"}`}><Ico name="notes" size={12} />{isTutor ? "Your message for students" : "Message from your tutor"}</div>
+        <div className={`rounded-xl border-s-[3px] px-3 py-2 ${dark ? "border-white/50 bg-white/10 text-white/95" : "border-[var(--brand)] bg-[var(--panel)] text-[var(--ink-2)]"}`}>
+          <div className={`mb-0.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em] ${dark ? "text-white/70" : "text-[var(--ink-3)]"}`}><Ico name="notes" size={12} />{isTutor ? t("hublive.aKit_yourMsg") : t("hublive.aKit_tutorMsg")}</div>
           <p className={`m-0 whitespace-pre-wrap break-words text-[12.5px] leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>{note}</p>
         </div>
       )}
       {long && !alwaysOpen && (
         <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} data-action="notes-toggle"
           className={`mt-1 inline-flex min-h-[44px] lg:min-h-[36px] items-center gap-1 rounded-lg px-1.5 text-[12px] font-extrabold hover:underline ${FOCUS} ${dark ? "text-white" : "text-[var(--brand)]"}`}>
-          {open ? "Show less" : vids > 0 ? `Show more${note ? " & " : " · "}${vids} video${vids > 1 ? "s" : ""}` : "Show more"}
+          {open ? t("hublive.aKit_showLess") : vids > 0 ? t("hublive.aKit_showMoreVids", { n: vids }) : t("hublive.aKit_showMore")}
           <Ico name="chevronDown" size={13} className={open ? "rotate-180" : ""} />
         </button>
       )}
-      {attachedN > 0 && <p className={`m-0 mt-1 flex items-center gap-1.5 text-[12px] font-bold ${dark ? "text-white/85" : "text-[var(--ink-2)]"}`} data-attached-count><Ico name="notes" size={12} />{attachedN} {attachedN === 1 ? "lesson" : "lessons"} attached</p>}
+      {attachedN > 0 && <p className={`m-0 mt-1 flex items-center gap-1.5 text-[12px] font-bold ${dark ? "text-white/85" : "text-[var(--ink-2)]"}`} data-attached-count><Ico name="notes" size={12} />{t("hublive.aKit_attached", { n: attachedN })}</p>}
       {editBtn && <div>{editBtn}</div>}
       {vids > 0 && expanded && (
-        <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[var(--ink)]"><VideoEmbeds videos={lesson.videos} heading="Videos for this lesson" /></div>
+        <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[var(--ink)]"><VideoEmbeds videos={lesson.videos} heading={t("hublive.aKit_videosHeading")} /></div>
       )}
     </div>
   );

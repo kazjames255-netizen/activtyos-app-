@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui";
 import { ImageField } from "../../quiz/ImageField";
@@ -18,14 +19,15 @@ type Mode = "menu" | "upload" | "library";
 /** The slide with its art cleared and locked, ready for a new picture (or none). */
 const cleared = (s: Slide): Slide => { const { art: _a, pics: _p, image: _i, ...rest } = s; void _a; void _p; void _i; return { ...rest, artLock: true }; };
 
-function describe(s: Slide): string {
-  if (s.image) return s.image.alt ? `Your picture: “${s.image.alt}”` : "Your picture";
-  if (s.pics?.length) return `${s.pics.length === 1 ? "A library picture" : `${s.pics.length} library pictures`}`;
-  if (s.art?.length) return "Emoji art";
-  return "No picture";
+function describe(s: Slide, t: (k: string, v?: Record<string, string | number>) => string): string {
+  if (s.image) return s.image.alt ? t("hublessons.pcYourPictureAlt", { alt: s.image.alt }) : t("hublessons.pcYourPicture");
+  if (s.pics?.length) return s.pics.length === 1 ? t("hublessons.pcLibOne") : t("hublessons.pcLibMany", { n: s.pics.length });
+  if (s.art?.length) return t("hublessons.pcEmojiArt");
+  return t("hublessons.pcNoPicture");
 }
 
 export function SlidePicture({ slide, tint, onSave, onClose }: { slide: Slide; tint: [string, string]; onSave: (s: Slide) => Promise<void>; onClose: () => void }) {
+  const t = useT();
   const [draft, setDraft] = useState<Slide>(slide);
   const [mode, setMode] = useState<Mode>("menu");
   const [busy, setBusy] = useState(false);
@@ -39,7 +41,7 @@ export function SlidePicture({ slide, tint, onSave, onClose }: { slide: Slide; t
   useEffect(() => {
     if (mode !== "library" || lib) return;
     let live = true;
-    loadLib().then((l) => { if (live) setLib(l); }).catch(() => { if (live) setErr("The picture library couldn’t load."); });
+    loadLib().then((l) => { if (live) setLib(l); }).catch(() => { if (live) setErr(t("hublessons.pcCouldntLoadLib")); });
     return () => { live = false; };
   }, [mode, lib]);
 
@@ -53,48 +55,48 @@ export function SlidePicture({ slide, tint, onSave, onClose }: { slide: Slide; t
   const changed = draft !== slide;
   const save = async (s: Slide) => {
     setBusy(true); setErr(null);
-    try { await onSave(s); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    try { await onSave(s); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntSave")); setBusy(false); }
   };
   const saveUpload = () => {
-    if (!upload?.id) { setErr("Choose a picture first."); return; }
-    if (!alt.trim()) { setAltErr(true); setErr("Describe the picture so a child using a screen reader isn’t left with a blank."); return; }
+    if (!upload?.id) { setErr(t("hublessons.pcChooseFirst")); return; }
+    if (!alt.trim()) { setAltErr(true); setErr(t("hublessons.pcAltRequired")); return; }
     void save({ ...cleared(slide), image: { id: upload.id, alt: alt.trim(), ...(upload.url ? { url: upload.url } : {}) } });
   };
 
   const tile = `${FOCUS} flex flex-col items-center gap-1 rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] p-2 text-center hover:border-[var(--brand-2)]`;
   const footer = mode === "upload"
-    ? <><Btn tone="ghost" onClick={() => setMode("menu")}>Back</Btn><Btn onClick={saveUpload} disabled={busy || !upload} data-testid="slide-picture-save-upload">{busy ? "Saving…" : "Use this picture"}</Btn></>
+    ? <><Btn tone="ghost" onClick={() => setMode("menu")}>{t("hublessons.back")}</Btn><Btn onClick={saveUpload} disabled={busy || !upload} data-testid="slide-picture-save-upload">{busy ? t("hublessons.saving") : t("hublessons.pcUsePicture")}</Btn></>
     : mode === "library"
-      ? <><Btn tone="ghost" onClick={() => setMode("menu")}>Back</Btn><Btn onClick={() => void save(draft)} disabled={busy || !changed || !draft.pics?.length} data-testid="slide-picture-save-library">{busy ? "Saving…" : "Use this picture"}</Btn></>
-      : <><Btn tone="ghost" onClick={onClose}>Cancel</Btn><Btn onClick={() => void save(draft)} disabled={busy || !changed} data-testid="slide-picture-save">{busy ? "Saving…" : "Save changes"}</Btn></>;
+      ? <><Btn tone="ghost" onClick={() => setMode("menu")}>{t("hublessons.back")}</Btn><Btn onClick={() => void save(draft)} disabled={busy || !changed || !draft.pics?.length} data-testid="slide-picture-save-library">{busy ? t("hublessons.saving") : t("hublessons.pcUsePicture")}</Btn></>
+      : <><Btn tone="ghost" onClick={onClose}>{t("hublessons.cancel")}</Btn><Btn onClick={() => void save(draft)} disabled={busy || !changed} data-testid="slide-picture-save">{busy ? t("hublessons.saving") : t("hublessons.sdSaveChanges")}</Btn></>;
 
   return (
-    <Modal title={hasArt(slide) ? "Change the picture" : "Add a picture"} onClose={onClose} wide footer={footer} id="slide-picture">
+    <Modal title={hasArt(slide) ? t("hublessons.pcChangeThe") : t("hublessons.pcAddA")} onClose={onClose} wide footer={footer} id="slide-picture">
       {mode === "menu" && (
         <div className="grid gap-3">
-          <p className="m-0 text-[13px] text-[var(--ink-2)]">{describe(draft)}{changed && !hasArt(draft) ? " (will be removed when you save)" : ""}. The slide’s words stay exactly as they are.</p>
+          <p className="m-0 text-[13px] text-[var(--ink-2)]">{changed && !hasArt(draft) ? t("hublessons.pcMenuNoteRemoved", { what: describe(draft, t) }) : t("hublessons.pcMenuNote", { what: describe(draft, t) })}</p>
           {hasArt(draft) && <div className="mx-auto w-full max-w-[300px]"><SlideArt slide={draft} tint={tint} /></div>}
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Picture actions">
-            <Btn tone="ghost" onClick={() => setMode("upload")} data-testid="slide-picture-upload">⬆️ {hasArt(draft) ? "Replace with my own picture" : "Upload a picture"}</Btn>
-            <Btn tone="ghost" onClick={() => setMode("library")} data-testid="slide-picture-library">📚 {hasArt(draft) ? "Replace from the picture library" : "Pick from the picture library"}</Btn>
-            {hasArt(draft) && <Btn tone="ghost" onClick={() => setDraft(cleared(slide))} className="!text-[var(--red)]" data-testid="slide-picture-remove">🗑 Remove picture</Btn>}
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("hublessons.pcPictureActions")}>
+            <Btn tone="ghost" onClick={() => setMode("upload")} data-testid="slide-picture-upload">{hasArt(draft) ? t("hublessons.pcReplaceOwn") : t("hublessons.pcUpload")}</Btn>
+            <Btn tone="ghost" onClick={() => setMode("library")} data-testid="slide-picture-library">{hasArt(draft) ? t("hublessons.pcReplaceLib") : t("hublessons.pcPickLib")}</Btn>
+            {hasArt(draft) && <Btn tone="ghost" onClick={() => setDraft(cleared(slide))} className="!text-[var(--red)]" data-testid="slide-picture-remove">{t("hublessons.pcRemove")}</Btn>}
           </div>
         </div>
       )}
       {mode === "upload" && (
         <div className="grid gap-2">
-          <p className="m-0 text-[13px] text-[var(--ink-2)]">PNG, JPEG or WebP from your computer. Big photos are shrunk for you.</p>
+          <p className="m-0 text-[13px] text-[var(--ink-2)]">{t("hublessons.pcUploadHelp")}</p>
           <ImageField value={upload} alt={alt} onPic={(p) => { setUpload(p); setErr(null); }} onAlt={(a) => { setAlt(a); setAltErr(false); }} altError={altErr} />
         </div>
       )}
       {mode === "library" && (
         <div className="grid gap-3">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pictures by name, e.g. triangle, plant cell, fraction" aria-label="Search the picture library" autoFocus className="min-h-[44px] w-full" data-testid="slide-picture-search" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hublessons.pcSearchPh")} aria-label={t("hublessons.pcSearchAria")} autoFocus className="min-h-[44px] w-full" data-testid="slide-picture-search" />
           {lib && <style>{lib.css}</style>}
-          {!lib ? <p className="m-0 text-[13px] text-[var(--ink-3)]">Loading the picture library…</p>
-            : !results.length ? <p className="m-0 text-[13px] text-[var(--ink-3)]">No pictures match “{q}”.</p>
+          {!lib ? <p className="m-0 text-[13px] text-[var(--ink-3)]">{t("hublessons.pcLoadingLib")}</p>
+            : !results.length ? <p className="m-0 text-[13px] text-[var(--ink-3)]">{t("hublessons.pcNoMatch", { q })}</p>
               : (
-                <ul className="m-0 grid max-h-[50vh] list-none grid-cols-2 gap-2 overflow-auto p-0 sm:grid-cols-3 md:grid-cols-4" aria-label="Library pictures">
+                <ul className="m-0 grid max-h-[50vh] list-none grid-cols-2 gap-2 overflow-auto p-0 sm:grid-cols-3 md:grid-cols-4" aria-label={t("hublessons.pcLibPictures")}>
                   {results.map((p) => {
                     const on = draft.pics?.length === 1 && draft.pics[0]!.id === p.id && !draft.image;
                     return (
@@ -110,7 +112,7 @@ export function SlidePicture({ slide, tint, onSave, onClose }: { slide: Slide; t
                   })}
                 </ul>
               )}
-          {lib && results.length === 48 && <p className="m-0 text-[12px] text-[var(--ink-3)]">Showing the first 48 — type to narrow it down.</p>}
+          {lib && results.length === 48 && <p className="m-0 text-[12px] text-[var(--ink-3)]">{t("hublessons.pcFirst48")}</p>}
         </div>
       )}
       {err && <p role="alert" className="m-0 mt-3 text-[13px] font-bold text-[var(--red)]">{err}</p>}

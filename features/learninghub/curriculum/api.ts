@@ -15,7 +15,14 @@ export interface CurriculumMap {
 }
 export interface CellLesson {
   id: string; title: string; excerpt: string; isLesson: boolean; kind: "board" | null; createdByName: string; updatedAt: string;
-  year: number; confidence: number; corrected: boolean; done: boolean; canCorrect: boolean;
+  year: number; confidence: number; corrected: boolean;
+  /** The exit quiz has been handed in — the pre-existing signal (mastery/attempts-based). */
+  done: boolean;
+  /** The child has actually gone through this lesson — set the moment `done` is (a finished quiz proves it too),
+   *  but ALSO true on its own from just opening/reading the lesson (LessonPlayer's own "viewed" write), with no
+   *  quiz needed. See server/src/routes/hub/lessonApi.ts POST /notes/:id/viewed. */
+  viewed: boolean;
+  canCorrect: boolean;
 }
 
 const join = (qs: string, extra: string) => `${qs}${qs.includes("?") ? "&" : "?"}${extra}`;

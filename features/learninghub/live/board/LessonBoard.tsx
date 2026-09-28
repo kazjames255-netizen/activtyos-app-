@@ -3,6 +3,8 @@
 import { Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FOCUS, withQs } from "../../teachKit";
 import { post } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
+import { bt, setBoardT } from "./boardI18n";
 import { prepareImage, uploadHubImage } from "../../shared-assess/imageUtil";
 import { maskName } from "../workspace/wsKit";
 import { BIcon } from "./boardIcons";
@@ -65,6 +67,8 @@ type View = "board" | "work";
 const swId = (cid: string) => `sw-${cid.slice(0, 20)}`;
 
 function LessonBoardInner(p: LessonBoardProps) {
+  const t = useT();
+  setBoardT(t);
   const storeCall = useCallObject();
   const meta = useCallMeta();
   const call = p.callObject ?? storeCall;
@@ -126,7 +130,7 @@ function LessonBoardInner(p: LessonBoardProps) {
       onRemoteGo: (page) => ctrl.onRemoteGo(page),
       peersChanged: (n) => { ctrl.peerCount = n; ctrl.notify(); tick((x) => x + 1); },
       onConn: (ok) => setOnline(ok),
-      onOversize: (clipped, dropped) => ctrl.say(dropped ? "Something on the board was too big to share with everyone and stayed on your screen only" : "Some text was too long to share with everyone in full and was shortened for them"),
+      onOversize: (clipped, dropped) => ctrl.say(dropped ? t("hublive.bOversizeDropped") : t("hublive.bOversizeClipped")),
     }, hub, () => linkRef.current));
     link.presenting = isPresenting();
     linkRef.current = link; ctrl.out = link;
@@ -143,28 +147,28 @@ function LessonBoardInner(p: LessonBoardProps) {
   const shown = useCallback((a: Attendee, i: number) => (p.hideNames ? maskName(i) : a.name.trim().split(/\s+/)[0]!), [p.hideNames]);
 
   // ── actions ──
-  const fail = useCallback((e: unknown) => { const m = e instanceof Error ? e.message : "Something went wrong"; if (p.onError) p.onError(m); ctrl.say(m); setBusy(null); }, [p, ctrl]);
+  const fail = useCallback((e: unknown) => { const m = e instanceof Error ? e.message : t("hublive.bWentWrong"); if (p.onError) p.onError(m); ctrl.say(m); setBusy(null); }, [p, ctrl, t]);
   const src = () => ({ paper: ctrl.paper, images: ctrl.images });
   const saveNotes = async (scope: "page" | "all") => {
-    setBusy("Saving to your lessons…");
+    setBusy(t("hublive.bSavingLessons"));
     try {
       await persist.saveNow();
       const pages = (scope === "all" ? ctrl.state.pages : [ctrl.curPage]).filter((pg) => scope === "page" || pg.els.size > 0 || pg.bg !== "blank").map((page) => ({ page }));
       const r = await saveToLessonNotes({ src: src(), lessonId: p.lessonId, qs: p.qs, lessonTitle: p.lessonTitle, noteIds: p.noteIds ?? [], topicId: p.topicId, fallbackTopicId: p.fallbackTopicId ?? null, pages });
-      ctrl.say(`Saved to your lessons — “${r.title}”`); setBusy(null);
+      ctrl.say(t("hublive.bSavedLesson", { title: r.title })); setBusy(null);
     } catch (e) { fail(e); }
   };
   const saveWork = async () => {
-    setBusy("Saving students' work…");
+    setBusy(t("hublive.bSavingWork"));
     try {
       const pages = attendees.map((a, i) => ({ a, i, pad: hub.pads.get(a.childId) })).filter((r) => r.pad && r.pad.state.pages[0]!.els.size > 0)
         .map((r) => ({ page: r.pad!.state.pages[0]!, label: shown(r.a, r.i) }));
       const r = await saveToLessonNotes({ src: src(), lessonId: p.lessonId, qs: p.qs, lessonTitle: p.lessonTitle, noteIds: p.noteIds ?? [], topicId: p.topicId, fallbackTopicId: p.fallbackTopicId ?? null, pages, kind: "Student work" });
-      ctrl.say(`Saved ${r.pages} ${r.pages === 1 ? "page" : "pages"} of student work (only you can see this lesson)`); setBusy(null);
+      ctrl.say(t("hublive.bSavedWork", { n: r.pages })); setBusy(null);
     } catch (e) { fail(e); }
   };
   const download = async () => {
-    setBusy("Preparing the picture…");
+    setBusy(t("hublive.bPreparing"));
     try { const { blob, ext } = await pageToBlob(src(), ctrl.curPage); downloadBlob(blob, `board-${ctrl.state.pages.findIndex((x) => x.id === ctrl.page) + 1}.${ext}`); setBusy(null); } catch (e) { fail(e); }
   };
   const present_ = () => { const next = !presenting; setPresenting(next); setLocalPresenting(next); linkRef.current?.present(next); if (p.onPresent) p.onPresent(next); else busEmit("present", next); };
@@ -173,36 +177,36 @@ function LessonBoardInner(p: LessonBoardProps) {
     const pad = hub.pads.get(cid), i = attendees.findIndex((a) => a.childId === cid);
     if (!pad || i < 0) return;
     const id = swId(cid);
-    if (!ctrl.state.pages.some((pg) => pg.id === id)) ctrl.commit(showToClassOps(id, pad, `${shown(attendees[i]!, i)}'s working`));
-    ctrl.setPage(id); setView("board"); setOpenPad(null); ctrl.say(`${shown(attendees[i]!, i)}'s page is on the board for everyone`);
+    if (!ctrl.state.pages.some((pg) => pg.id === id)) ctrl.commit(showToClassOps(id, pad, t("hublive.bWv_working", { name: shown(attendees[i]!, i) })));
+    ctrl.setPage(id); setView("board"); setOpenPad(null); ctrl.say(t("hublive.bPageOnBoard", { name: shown(attendees[i]!, i) }));
   };
   const sendBack = (cid: string) => { const id = swId(cid); if (ctrl.state.pages.some((pg) => pg.id === id)) ctrl.deletePage(id); };
   const onBoard = new Set(attendees.filter((a) => ctrl.state.pages.some((pg) => pg.id === swId(a.childId))).map((a) => a.childId));
   const sendQuestion = (q: Question, to: string[]) => {
     const names = Object.fromEntries(attendees.map((a, i) => [a.childId, a.name.trim().split(/\s+/)[0]!]));
     hub.setQuestion(linkRef.current, to, { text: q.text, image: q.image ? { imageId: q.image.imageId, url: q.image.url, w: q.image.w, h: q.image.h } : undefined }, names);
-    setQDialog(false); ctrl.say(`Question sent to ${to.length} ${to.length === 1 ? "student" : "students"}`);
+    setQDialog(false); ctrl.say(t("hublive.bQuestionSent", { n: to.length }));
   };
 
   const pages = ctrl.state.pages;
   const pageNo = Math.max(1, pages.findIndex((x) => x.id === ctrl.page) + 1);
-  const saveLabel = p.isTutor ? ({ loading: "Loading…", saving: "Saving…", saved: "Saved", idle: "Unsaved changes", error: "Couldn't save", toobig: "Too big to save" } as const)[persist.state] : null;
-  const surfaceLabel = `Whiteboard, page ${pageNo} of ${pages.length}. ${ctrl.canDraw ? "You can write here." : "Your tutor is drawing; you can look around."} Keyboard: V select, P pen, H highlighter, E eraser, T text.`;
+  const saveLabel = p.isTutor ? t("hublive.bSave_" + persist.state) : null;
+  const surfaceLabel = t("hublive.bSurface", { page: pageNo, total: pages.length, can: ctrl.canDraw ? t("hublive.bSurfaceCan") : t("hublive.bSurfaceCannot") });
   const doneCount = [...hub.pads.values()].filter((x) => x.done).length;
   const hereCount = present.size;
 
   const saveTemplate = async (name: string) => {
-    setBusy("Saving the template…");
+    setBusy(t("hublive.bSavingTpl"));
     try {
       const els = [...ctrl.curPage.els.values()].filter((e) => e.own === "T").map((e) => { const { url: _u, ...rest } = e; return rest; });
       await post(`/api/learning-hub/board-templates${withQs(p.qs, {})}`, { name, background: ctrl.curPage.bg, elements: els });
-      ctrl.say(`Saved “${name}” to My templates`); setBusy(null);
+      ctrl.say(t("hublive.bSavedTpl", { name })); setBusy(null);
     } catch (e) { fail(e); }
   };
   const importFiles = async (files: FileList | null) => {
     const list = [...(files ?? [])].filter((f) => f.type.startsWith("image/")).slice(0, 12);
-    if (!list.length) { ctrl.say("Choose PNG, JPEG or WebP pictures (export a PDF page as an image first)"); return; }
-    setBusy(`Importing ${list.length} ${list.length === 1 ? "page" : "pages"}…`);
+    if (!list.length) { ctrl.say(t("hublive.bChoosePics")); return; }
+    setBusy(t("hublive.bImporting", { n: list.length }));
     try {
       const out: { id: string; url: string; w: number; h: number }[] = [];
       for (const f of list) { const prep = await prepareImage(f); const up = await uploadHubImage(prep.dataUrl); out.push({ id: up.id, url: up.url, w: prep.width, h: prep.height }); }
@@ -217,14 +221,14 @@ function LessonBoardInner(p: LessonBoardProps) {
     </span>
   ) : (
     <span data-testid="board-write-status" data-can-write={ctrl.canDraw ? "1" : "0"} className={`inline-flex min-h-[28px] items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] font-extrabold ${ctrl.canDraw ? "border-[var(--green-line)] bg-[var(--green-soft)] text-[var(--hub-green-ink)]" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-3)]"}`}>
-      <BIcon name={ctrl.canDraw ? "pen" : "lock"} size={13} />{ctrl.canDraw ? "You can write" : "Tutor is drawing"}
+      <BIcon name={ctrl.canDraw ? "pen" : "lock"} size={13} />{ctrl.canDraw ? t("hublive.bYouCanWrite") : t("hublive.bTutorDrawing")}
     </span>
   );
 
   const statusPill = online ? basePill : (
     <span className="inline-flex items-center gap-1.5">
       <span role="status" data-testid="board-reconnecting" className="inline-flex min-h-[28px] items-center gap-1.5 rounded-full border border-[var(--gold-line)] bg-[var(--gold-soft)] px-2.5 text-[11.5px] font-extrabold text-[var(--ink)]">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--gold)] motion-reduce:animate-none" />Reconnecting…
+        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--gold)] motion-reduce:animate-none" />{t("hublive.bReconnecting")}
       </span>
       {basePill}
     </span>
@@ -238,19 +242,19 @@ function LessonBoardInner(p: LessonBoardProps) {
       <div className="relative min-h-0 flex-1">
         {view === "board" && (
           <BoardShell ctrl={ctrl} active={p.active !== false} label={surfaceLabel} busy={busy} statusPill={statusPill}
-            empty={`A blank board — ${p.isTutor ? "pick a pen and start. Everyone in the lesson sees it live." : "your tutor will draw here."}`}
+            empty={p.isTutor ? t("hublive.bEmptyTutor") : t("hublive.bEmptyStudent")}
             onPicture={() => setPicker("board")} qs={p.isTutor ? p.qs : undefined} onImport={() => importInput.current?.click()} subjectPack={packFromSubject(p.subject)}
             topLeft={<>{viewSwitch}<PageTabs ctrl={ctrl} /></>}
             topRight={(api) => (
               <>
                 {p.isTutor && <StudentsSwitchButton ctrl={ctrl} attendees={attendees} onClick={(e) => api.openPop("students", e.currentTarget)} open={api.pop === "students"} />}
                 {p.isTutor && (
-                  <button type="button" aria-pressed={presenting} data-action="present-board-top" onClick={present_} title="Present the board — it fills the room and the video becomes a small tile"
+                  <button type="button" aria-pressed={presenting} data-action="present-board-top" onClick={present_} title={t("hublive.bPresentTitle")}
                     className={`hidden min-h-[52px] items-center gap-1.5 rounded-2xl border px-3.5 text-[13px] font-extrabold ${FOCUS} @[560px]:inline-flex ${presenting ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-2)] shadow-[var(--shadow)] hover:border-[var(--brand)]"}`}>
-                    <BIcon name="present" size={18} /><span className="hidden @[1100px]:inline">{presenting ? "Stop presenting" : "Present"}</span>
+                    <BIcon name="present" size={18} /><span className="hidden @[1100px]:inline">{presenting ? t("hublive.bStopPresenting") : t("hublive.bPresentShort")}</span>
                   </button>
                 )}
-                <button type="button" data-pop-trigger aria-haspopup="menu" aria-expanded={api.pop === "more"} aria-label="Board menu" title="More — background, save, download, clear" data-testid="board-more" onClick={(e) => api.openPop("more", e.currentTarget)}
+                <button type="button" data-pop-trigger aria-haspopup="menu" aria-expanded={api.pop === "more"} aria-label={t("hublive.bBoardMenu")} title={t("hublive.bMoreTitle")} data-testid="board-more" onClick={(e) => api.openPop("more", e.currentTarget)}
                   className="grid h-[52px] w-[52px] place-items-center rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-2)] shadow-[var(--shadow)] hover:border-[var(--brand)]"><BIcon name="more" size={20} /></button>
               </>
             )}
@@ -268,15 +272,15 @@ function LessonBoardInner(p: LessonBoardProps) {
           <PadBoard key={openPad} hub={hub} cid={openPad} name={shown(attendees.find((a) => a.childId === openPad) ?? { childId: openPad, name: "Student" }, Math.max(0, attendees.findIndex((a) => a.childId === openPad)))}
             role="tutor" linkRef={linkRef} paper={ctrl.paper} palette={ctrl.palette} active={p.active !== false} hideName={p.hideNames} onBack={() => setOpenPad(null)} leading={viewSwitch}
             extraRight={onBoard.has(openPad)
-              ? <button type="button" data-action="send-back" onClick={() => sendBack(openPad)} className={`inline-flex min-h-[52px] items-center rounded-2xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-3 text-[13px] font-extrabold text-[var(--ink)] shadow-[var(--shadow)] ${FOCUS}`}>Send back</button>
-              : <button type="button" data-action="show-to-class" onClick={() => showToClass(openPad)} className={`inline-flex min-h-[52px] items-center gap-1.5 rounded-2xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 text-[13px] font-extrabold text-[var(--brand-strong)] shadow-[var(--shadow)] ${FOCUS}`}><BIcon name="present" size={17} />Show to class</button>} />
+              ? <button type="button" data-action="send-back" onClick={() => sendBack(openPad)} className={`inline-flex min-h-[52px] items-center rounded-2xl border border-[var(--gold-line)] bg-[var(--gold-soft)] px-3 text-[13px] font-extrabold text-[var(--ink)] shadow-[var(--shadow)] ${FOCUS}`}>{t("hublive.bSendBack")}</button>
+              : <button type="button" data-action="show-to-class" onClick={() => showToClass(openPad)} className={`inline-flex min-h-[52px] items-center gap-1.5 rounded-2xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 text-[13px] font-extrabold text-[var(--brand-strong)] shadow-[var(--shadow)] ${FOCUS}`}><BIcon name="present" size={17} />{t("hublive.bShowToClass")}</button>} />
         )}
         {view === "work" && !p.isTutor && (
           <PadBoard hub={hub} cid={cid} name={name} role="student" linkRef={linkRef} paper={ctrl.paper} palette={ctrl.palette} active={p.active !== false} leading={viewSwitch} />
         )}
       </div>
 
-      <input ref={importInput} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" tabIndex={-1} aria-label="Choose worksheet pictures" data-testid="board-import-input" onChange={(e) => { void importFiles(e.target.files); e.target.value = ""; }} />
+      <input ref={importInput} type="file" accept="image/png,image/jpeg,image/webp" multiple className="sr-only" tabIndex={-1} aria-label={t("hublive.bWorksheetAria")} data-testid="board-import-input" onChange={(e) => { void importFiles(e.target.files); e.target.value = ""; }} />
       {picker === "board" && <ImagePicker qs={p.qs} onClose={() => setPicker(null)} onPick={(x) => { ctrl.insertImage(x.id, x.url, x.w, x.h); setPicker(null); }} />}
       {qDialog && <QuestionDialog qs={p.qs} attendees={attendees.filter((a) => present.has(a.childId) || hub.pads.has(a.childId))} shown={(a) => shown(a, attendees.findIndex((x) => x.childId === a.childId))} targets={selected.size ? [...selected] : [...present]} onClose={() => setQDialog(false)} onSend={sendQuestion} />}
     </div>
@@ -293,9 +297,9 @@ class BoardBoundary extends Component<{ children: ReactNode }, { failed: number 
     return (
       <div className="grid h-full place-items-center p-6 text-center" style={{ background: "var(--hub-warm)" }} role="alert" data-testid="board-crashed">
         <div className="max-w-[320px]">
-          <div className="text-[15px] font-extrabold text-[var(--ink)]">The whiteboard hit a problem</div>
-          <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">Your call is fine. Your drawing is saved. Reload the board to carry on.</p>
-          <button type="button" onClick={() => this.setState({ failed: 0 })} className={`mt-3 inline-flex min-h-[44px] items-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>Reload the board</button>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">{bt("bCrashTitle", "The whiteboard hit a problem")}</div>
+          <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">{bt("bCrashBody", "Your call is fine. Your drawing is saved. Reload the board to carry on.")}</p>
+          <button type="button" onClick={() => this.setState({ failed: 0 })} className={`mt-3 inline-flex min-h-[44px] items-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>{bt("bCrashReload", "Reload the board")}</button>
         </div>
       </div>
     );

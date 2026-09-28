@@ -32,7 +32,11 @@ export const SIMPLE_ALLOWED = new Set(["dash", "browse", "bookings", "children",
  *  providers read + one public-library read). Also used by ViewGate to refuse
  *  a switched-off family page typed by URL. */
 export function fetchCustomerArea(): Promise<CustomerArea> {
-  return apiGet<{ tenantId: string }[]>("/api/my/providers")
+  // The Learning Hub is reached through an ENROLMENT (a tutor enrolling the child), not through the family's first provider — so ask the hub
+  // which providers have it on for this family. It runs IN PARALLEL with the provider → library chain (it used to wait for it, so "My Classroom"
+  // popped into the sidebar seconds late). Empty (or a failure) = hidden.
+  const hub = apiGet<unknown[]>("/api/learning-hub/providers").then((r) => (r ?? []).length > 0).catch(() => false);
+  const area = apiGet<{ tenantId: string }[]>("/api/my/providers")
     .then((ps) => ps?.[0]?.tenantId)
     .then((tid) => (tid ? apiGet<{ settings?: Partial<TenantSettings> } | null>(`/api/public/library/${tid}`) : null))
     .then((lib) => {
@@ -50,16 +54,15 @@ export function fetchCustomerArea(): Promise<CustomerArea> {
         && !!full.memberships?.enabled && (full.memberships?.tiers ?? []).some((t) => t.enabled);
       ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
       return ca;
-    })
-    // The Learning Hub is reached through an ENROLMENT (a tutor enrolling the
-    // child), not through the family's first provider — so ask the hub which
-    // providers have it on for this family. Empty (or a failure) = hidden.
-    .then(async (ca) => {
-      try { ca.learninghub = ((await apiGet<unknown[]>("/api/learning-hub/providers")) ?? []).length > 0; }
-      catch { ca.learninghub = false; }
-      return ca;
     });
+  return Promise.all([area, hub]).then(([ca, on]) => { ca.learninghub = on; return ca; });
 }
+
+// The last answer for "does this family have a classroom?", so the sidebar can show "My Classroom" on the very first paint of the next visit
+// instead of waiting for the network. It is only a head start: the live answer replaces it as soon as it arrives.
+const HUB_SEEN_KEY = "aos.ca.learninghub";
+export const readHubSeen = (): boolean => { try { return localStorage.getItem(HUB_SEEN_KEY) === "1"; } catch { return false; } };
+const writeHubSeen = (on: boolean) => { try { localStorage.setItem(HUB_SEEN_KEY, on ? "1" : "0"); } catch { /* storage blocked */ } };
 
 // What a family sees is set by THEIR provider (Setup → Customer area). A parent
 // reads it from their single provider's PUBLIC library slice.
@@ -73,9 +76,13 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
   const [ca, setCa] = useState<CustomerArea>({ ...DEFAULT_SETTINGS.customerArea, learninghub: false });
   const load = useCallback(() => {
     if (portal && portal !== "custdash") return;
-    void fetchCustomerArea().then(setCa).catch(() => {});
+    void fetchCustomerArea().then((c) => { writeHubSeen(!!c.learninghub); setCa(c); }).catch(() => {});
   }, [portal]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (portal && portal !== "custdash") return;
+    if (readHubSeen()) setCa((c) => (c.learninghub ? c : { ...c, learninghub: true })); // head start from the last visit
+    load();
+  }, [load, portal]);
   // Live: the provider's library streams to families (see events.ts parent
   // branch), so switching a module off updates their nav without a refresh.
   useRealtime(["library", "hubEnrolments"], load);

@@ -2,13 +2,16 @@
 
 import { Suspense, createContext, lazy, useContext, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { FOCUS, Icon } from "../kit";
+import { useI18n, useT } from "@/lib/i18n/provider";
 import { FloatingPanel } from "./FloatingPanel";
 import { InstrumentOverlay } from "./InstrumentOverlay";
 import CompassTool from "./CompassTool";
+import { ApparatusBench, BENCH_DEFAULT, type BenchState } from "./ApparatusBench";
 import FractionBars from "./FractionBars";
 import PeriodicTable from "../tools/science/periodic/PeriodicTable";
 import { CALC_DEFAULT, ScientificCalculator, type CalcState } from "./ScientificCalculator";
 import NumberLineTool from "./NumberLineTool";
+import { isRtlDoc } from "../rtl";
 
 // A student's "help board" for remote-sync — every generic tool widget the live lesson whiteboard offers
 // (server/model.ts's StampKind), across every subject it covers, not just maths. On by default (a tutor unselects
@@ -54,23 +57,27 @@ export const HELP_TOOLS: { id: HelpToolId; label: string; icon: string; subject:
   { id: "spinner", label: "Spinner", icon: "🎯", subject: "General" },
   { id: "tally", label: "Tally counter", icon: "🖐️", subject: "General" },
 ];
+/** Translated tool name (HELP_TOOLS.label stays as the English fallback for other callers). */
+export const helpToolLabel = (tr: (k: string) => string, id: HelpToolId) => tr("hublive.eTool_" + id);
 export const HELP_TOOL_SUBJECTS: HelpToolSubject[] = ["Maths", "Science", "Geography", "History", "General"];
 
 /** Every tool a live session can allow (a tutor says just Yes/No; WHICH tool shows is decided per question, see tools/suggest.ts toolsForQuestion). */
+const ExtraToolsRow = lazy(() => import("./ExtraTools")); // lazy: ExtraTools imports ToolHost, which imports this file back
 export const ALL_HELP_TOOL_IDS: HelpToolId[] = HELP_TOOLS.filter((t) => t.ready !== false).map((t) => t.id);
 
 /** The tutor's single Yes / No for tools. Yes = every tool is allowed and each question shows only the ones that fit it (a protractor on a
  *  measure-the-angle question, nothing on a definition question); No = no tools at all. */
 export function HelpToolsSwitch({ value, onChange }: { value: HelpToolId[]; onChange: (v: HelpToolId[]) => void }) {
+  const tr = useT();
   const on = value.length > 0;
   const opt = (yes: boolean) => (
     <button type="button" role="radio" aria-checked={on === yes} onClick={() => onChange(yes ? ALL_HELP_TOOL_IDS : [])} data-testid={`remote-sync-tools-${yes ? "yes" : "no"}`}
-      className={`min-h-[44px] rounded-full border-2 px-5 text-[13.5px] font-extrabold ${FOCUS} ${on === yes ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--brand-2)]"}`}>{yes ? "Yes" : "No"}</button>);
+      className={`min-h-[44px] rounded-full border-2 px-5 text-[13.5px] font-extrabold ${FOCUS} ${on === yes ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--brand-2)]"}`}>{yes ? tr("hublive.eYes") : tr("hublive.eNo")}</button>);
   return (
     <div data-testid="remote-sync-tools-switch">
-      <h3 className="m-0 mb-1 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Let students use tools?</h3>
-      <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">A tool only appears on a question it is meant for (a protractor to measure an angle, a ruler to measure a line) and never on a question it would give the answer to.</p>
-      <div role="radiogroup" aria-label="Let students use tools" className="flex gap-2">{opt(true)}{opt(false)}</div>
+      <h3 className="m-0 mb-1 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{tr("hublive.eUseToolsQ")}</h3>
+      <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">{tr("hublive.eUseToolsHint")}</p>
+      <div role="radiogroup" aria-label={tr("hublive.eUseToolsQ")} className="flex gap-2">{opt(true)}{opt(false)}</div>
     </div>
   );
 }
@@ -81,6 +88,7 @@ export function HelpToolsSwitch({ value, onChange }: { value: HelpToolId[]; onCh
 export function HelpToolsPicker({ value, onChange, suggested }: { value: HelpToolId[]; onChange: (v: HelpToolId[]) => void;
   /** Tools that fit THIS lesson (from the lesson title via tools/suggest.ts). When given, only these show up front — every other subject's tools sit behind "More tools". */
   suggested?: HelpToolId[] }) {
+  const tr = useT();
   const [more, setMore] = useState(false);
   const set = new Set(value);
   const focus = suggested && suggested.length > 0 ? HELP_TOOLS.filter((t) => suggested.includes(t.id)) : null;
@@ -94,28 +102,28 @@ export function HelpToolsPicker({ value, onChange, suggested }: { value: HelpToo
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="m-0 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">Help tools for students</h3>
+        <h3 className="m-0 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{tr("hublive.ePickerTitle")}</h3>
         <button type="button" onClick={() => onChange(allOn ? [] : HELP_TOOLS.map((t) => t.id))} className={`text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>
-          {allOn ? "Clear all" : "Select all"}
+          {allOn ? tr("hublive.eClearAll") : tr("hublive.eSelectAll")}
         </button>
       </div>
       {focus ? (
         <>
-          <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">Picked for this lesson. Tap to turn a tool off or on.</p>
+          <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">{tr("hublive.ePickedForLesson")}</p>
           <div className="flex flex-wrap gap-2" data-testid="remote-sync-tools-suggested">
             {focus.map((t) => (
               <button key={t.id} type="button" onClick={() => toggle(t.id)} aria-pressed={set.has(t.id)} data-testid={`remote-sync-tool-${t.id}`}
                 className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full border-2 px-3 text-[12.5px] font-extrabold transition ${FOCUS} ${set.has(t.id) ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}>
-                <span aria-hidden>{t.icon}</span>{t.label}
+                <span aria-hidden>{t.icon}</span>{helpToolLabel(tr, t.id)}
               </button>
             ))}
           </div>
           <button type="button" onClick={() => setMore((v) => !v)} aria-expanded={more} data-testid="remote-sync-tools-more" className={`mt-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>
-            {more ? "Hide other tools" : `More tools (${HELP_TOOLS.length - focus.length} for other subjects)`}
+            {more ? tr("hublive.eHideOther") : tr("hublive.eMoreTools", { n: HELP_TOOLS.length - focus.length })}
           </button>
         </>
       ) : (
-        <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">On by default — a side panel of the same tools the board offers, across every subject. Unselect a whole subject, or just one tool.</p>
+        <p className="m-0 mb-2 text-[12px] text-[var(--ink-3)]">{tr("hublive.ePickerDefault")}</p>
       )}
       <div className={`space-y-2.5 ${focus && !more ? "hidden" : ""} ${focus ? "mt-2.5" : ""}`}>
         {HELP_TOOL_SUBJECTS.map((subject) => {
@@ -125,13 +133,13 @@ export function HelpToolsPicker({ value, onChange, suggested }: { value: HelpToo
             <div key={subject}>
               <button type="button" onClick={() => toggleSubject(subject)} aria-pressed={subjectOn} data-testid={`remote-sync-tool-subject-${subject.toLowerCase()}`}
                 className={`mb-1.5 text-[11.5px] font-extrabold uppercase tracking-[0.04em] ${subjectOn ? "text-[var(--brand)]" : "text-[var(--ink-3)]"} hover:underline`}>
-                {subject}
+                {tr("hublive.eSubj_" + subject)}
               </button>
               <div className="flex flex-wrap gap-2">
                 {tools.map((t) => (
                   <button key={t.id} type="button" onClick={() => toggle(t.id)} aria-pressed={set.has(t.id)} data-testid={`remote-sync-tool-${t.id}`}
                     className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full border-2 px-3 text-[12.5px] font-extrabold transition ${FOCUS} ${set.has(t.id) ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand-2)]"}`}>
-                    <span aria-hidden>{t.icon}</span>{t.label}
+                    <span aria-hidden>{t.icon}</span>{helpToolLabel(tr, t.id)}
                   </button>
                 ))}
               </div>
@@ -169,8 +177,9 @@ const LessonCardCtx = createContext<RefObject<HTMLDivElement | null> | null>(nul
 /** The question on screen (its wording), so a tool can frame itself to it — e.g. the number line opens fitted to the question's own numbers. */
 const QuestionPromptCtx = createContext<string | undefined>(undefined);
 function GridForQuestion() {
+  const tr = useT();
   const prompt = useContext(QuestionPromptCtx);
-  return <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GridLazy key={prompt ?? "none"} compact help prompt={prompt} /></Suspense>;
+  return <Suspense fallback={<p className="m-0 text-[13px]">{tr("hublive.eLoading")}</p>}><GridLazy key={prompt ?? "none"} compact help prompt={prompt} /></Suspense>;
 }
 function NumberLineForQuestion() {
   const prompt = useContext(QuestionPromptCtx);
@@ -179,6 +188,7 @@ function NumberLineForQuestion() {
 /** Ruler / protractor with a "put the question's picture on the paper" button: measure the ACTUAL diagram in the lesson,
  *  not a blank sheet. Takes the largest real picture inside the lesson card as it is right now (so it follows the slide/question). */
 function GeoOnLesson({ preset, offer, generatorIds }: { preset: ("ruler15" | "protractor180")[]; offer: typeof GEO_OFFER; generatorIds: string[] }) {
+  const tr = useT();
   const cardRef = useContext(LessonCardCtx);
   const [pic, setPic] = useState<string | undefined>();
   const [msg, setMsg] = useState<string | null>(null);
@@ -191,16 +201,16 @@ function GeoOnLesson({ preset, offer, generatorIds }: { preset: ("ruler15" | "pr
     root?.querySelectorAll("img").forEach((i) => { const r = i.getBoundingClientRect(); const src = i.currentSrc || i.src; if (src && r.width >= 100 && r.height >= 60) cands.push({ area: r.width * r.height, src }); });
     root?.querySelectorAll("svg").forEach((v) => { const r = v.getBoundingClientRect(); if (r.width >= 100 && r.height >= 60 && !v.closest("button")) cands.push({ area: r.width * r.height, src: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(v))}` }); });
     const best = cands.sort((a, b) => b.area - a.area)[0];
-    if (best) { setPic(best.src); setMsg("Picture added — drag the protractor onto it."); } else setMsg(root ? "No picture found on this question." : "Couldn't find the lesson to take a picture from.");
+    if (best) { setPic(best.src); setMsg(tr("hublive.ePicAdded")); } else setMsg(root ? tr("hublive.eNoPicture") : tr("hublive.eNoLesson"));
   };
   return (
     <div>
-      {!focus && <div className="mb-2 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={grab} data-testid="geo-use-question-picture" className={`min-h-[36px] rounded-full border-2 border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[12.5px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>🖼 Use this question's picture</button>
-        {pic && <button type="button" onClick={() => setPic(undefined)} className={`min-h-[36px] rounded-full border border-[var(--line)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>Remove picture</button>}
+      {!focus && <div data-tool-strip className="mb-2 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={grab} data-testid="geo-use-question-picture" className={`min-h-[36px] rounded-full border-2 border-[var(--brand)] bg-[var(--brand-soft)] px-3 text-[12.5px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>{tr("hublive.eUsePicture")}</button>
+        {pic && <button type="button" onClick={() => setPic(undefined)} className={`min-h-[36px] rounded-full border border-[var(--line)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>{tr("hublive.eRemovePicture")}</button>}
         {msg && <span role="status" className="text-[12px] font-semibold text-[var(--ink-3)]">{msg}</span>}
       </div>}
-      <Suspense fallback={<p className="m-0 text-[13px]">Loading…</p>}><GeoBoard compact preset={preset} offer={offer} generatorIds={generatorIds} backdropUrl={pic} focus={focus} onFocusChange={setFocus} /></Suspense>
+      <Suspense fallback={<p className="m-0 text-[13px]">{tr("hublive.eLoading")}</p>}><GeoBoard compact preset={preset} offer={offer} generatorIds={generatorIds} backdropUrl={pic} focus={focus} onFocusChange={setFocus} /></Suspense>
     </div>
   );
 }
@@ -221,7 +231,7 @@ const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: Too
   protractor: () => <GeoOnLesson preset={["protractor180"]} offer={["protractor180", "protractor360"]} generatorIds={["M-G01.measure", "M-G01.draw"]} />,
   periodic: () => <PeriodicTable />,
   bohr: (v, set) => <Bohr value={v as BohrState} onChange={set} />,
-  apparatus: () => <Apparatus />,
+  apparatus: (v, set) => <ApparatusBench value={v as BenchState} onChange={set} />,
   lens: () => <Lens />,
   map: () => <CompassTool />,
   timeline: (v, set) => <Timeline value={v as TimelineState} onChange={set} />,
@@ -236,7 +246,7 @@ const TOOL_RENDER: Record<HelpToolId, (v: ToolStateFor<HelpToolId>, set: (v: Too
 // Per-tool default size + minimum size. Content reflows inside; nothing is cut off at these defaults.
 const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: number }> = {
   calculator: { w: 350, h: 540, minW: 310, minH: 500 },
-  numberline: { w: 640, h: 480, minW: 460, minH: 430 },
+  numberline: { w: 700, h: 560, minW: 480, minH: 480 },
   timestable: { w: 300, h: 360, minW: 260, minH: 300 },
   fractions: { w: 560, h: 440, minW: 420, minH: 340 },
   grid: { w: 470, h: 720, minW: 340, minH: 520 },
@@ -245,7 +255,7 @@ const TOOL_SIZE: Record<HelpToolId, { w: number; h: number; minW: number; minH: 
   protractor: { w: 600, h: 620, minW: 440, minH: 480 },
   periodic: { w: 740, h: 700, minW: 480, minH: 560 },
   bohr: { w: 280, h: 320, minW: 240, minH: 280 },
-  apparatus: { w: 300, h: 220, minW: 260, minH: 200 },
+  apparatus: { w: 620, h: 560, minW: 420, minH: 420 },
   lens: { w: 320, h: 220, minW: 280, minH: 180 },
   map: { w: 260, h: 260, minW: 220, minH: 220 },
   timeline: { w: 340, h: 320, minW: 280, minH: 280 },
@@ -273,13 +283,14 @@ type ToolStateFor<T extends HelpToolId> = T extends "calculator" ? CalcState
   : T extends "timestable" ? TimesTableState : T extends "grid" ? GridState
   : T extends "plot" ? BarChartState : T extends "bohr" ? BohrState : T extends "timer" ? TimerState
   : T extends "dice" ? DiceState : T extends "spinner" ? SpinnerState : T extends "tally" ? TallyState
-  : T extends "timeline" ? TimelineState : undefined;
+  : T extends "timeline" ? TimelineState : T extends "apparatus" ? BenchState : undefined;
 const TOOL_DEFAULTS: Partial<Record<HelpToolId, unknown>> = {
   calculator: CALC_DEFAULT,
   timestable: { n: 2 } as TimesTableState,
   grid: { pts: [] } as GridState,
   plot: { text: "3,7,4,9,5" } as BarChartState,
   bohr: { electrons: 11 } as BohrState,
+  apparatus: BENCH_DEFAULT,
   timer: { secs: 300, left: 300, running: false } as TimerState,
   dice: { vals: [1], n: 1 } as DiceState,
   spinner: { seg: 4, angle: 0 } as SpinnerState,
@@ -296,7 +307,14 @@ const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
  *  open tool as its own floating window over the lesson card (never over the sidebar) — see FloatingPanel.tsx
  *  for the window mechanics and the comment at the top of this file for why that's a new component rather than
  *  a forced reuse of the board or the video tile. */
-export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, questionTools, questionKey, questionPrompt }: {
+export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, questionTools, questionKey, questionPrompt, extraIds, qs, addedIds, onRemoveAdded }: {
+  /** Tutor preview: which of the shown tools the provider ADDED (they get a small ✕ to take them off again). */
+  addedIds?: string[];
+  onRemoveAdded?: (id: string) => void;
+  /** Tools-page tools the provider ADDED to this question (registry ids that are not one of the 20 help tools): shown as extra pills that open in their own window. */
+  extraIds?: string[];
+  /** The hub query string those tools need. */
+  qs?: string;
   tools: HelpToolId[];
   /** The wording of the question on screen (tools frame themselves to it). */
   questionPrompt?: string;
@@ -306,12 +324,13 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
   questionKey?: string | null;
   /** Tools to put under "Suggested for this lesson", best first (tools/suggest.ts works them out from the lesson). Absent/empty = the fixed default six. */
   suggested?: HelpToolId[];
-  /** The left-column lesson card — new windows spawn from its top-right corner; the minimised tray docks at its
+  /** The start-column lesson card (left in LTR, right in RTL) — new windows spawn from its inner top corner (top-right in LTR, top-left in RTL); the minimised tray docks at its
    *  bottom-left. Drag itself still clamps to the VIEWPORT, not this box, once a window is open. */
   lessonCardRef: RefObject<HTMLDivElement | null>;
   /** Collapses just the Suggested/Subject-groups list card — any open windows and the minimised tray stay exactly as they are. */
   hideList?: boolean;
 }) {
+  const tr = useT();
   const [cards, setCards] = useState<OpenCard[]>([]);
   // Ruler / protractor open as a single instrument laid directly over the lesson; this set = the ones switched to the full drawing board window.
   const [boardMode, setBoardMode] = useState<Set<HelpToolId>>(new Set());
@@ -346,15 +365,20 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
         const z = ++zRef.current;
         return cs.map((c) => (c.id === id ? { ...c, minimized: false, z } : c));
       }
-      if (cs.length >= MAX_OPEN) { showToast("Close a tool to open another."); return cs; }
+      if (cs.length >= MAX_OPEN) { showToast(tr("hublive.eCloseToOpen")); return cs; }
       const size = TOOL_SIZE[id];
       const last = cs[cs.length - 1];
       const rect = lessonCardRef.current?.getBoundingClientRect();
       const vw = window.innerWidth, vh = window.innerHeight;
-      const baseX = rect ? rect.right - 24 - size.w : vw - size.w - 24;
+      // Open at the preset size — but never bigger than the screen, and always FULLY on screen (the tool must be usable without dragging or resizing).
+      const w = Math.min(size.w, vw - 24), h = Math.min(size.h, vh - 24);
+      // Direction-aware: the lesson card is the START-side column, so in RTL it sits on the right and new windows spawn from its top-LEFT corner
+      // (mirror of "top-right"), cascading the other way. `left: x` stays a physical viewport coordinate either way.
+      const rtl = isRtlDoc();
+      const baseX = rect ? (rtl ? rect.left + 24 : rect.right - 24 - w) : (rtl ? 24 : vw - w - 24);
       const baseY = rect ? rect.top + 96 : 96;
-      const x = clamp(last ? last.x - 32 : baseX, 12, vw - 12), y = clamp(last ? last.y + 32 : baseY, 12, vh - 12);
-      return [...cs, { id, x, y, w: size.w, h: size.h, z: ++zRef.current, minimized: false }];
+      const x = clamp(last ? last.x + (rtl ? 32 : -32) : baseX, 12, Math.max(12, vw - w - 12)), y = clamp(last ? last.y + 32 : baseY, 12, Math.max(12, vh - h - 12));
+      return [...cs, { id, x, y, w, h, z: ++zRef.current, minimized: false }];
     });
   };
   const update = (id: HelpToolId, patch: Partial<OpenCard>) => setCards((cs) => cs.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -385,10 +409,10 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
     const activeId = cards[0]?.id ?? null;
     return (
       <QuestionPromptCtx.Provider value={questionPrompt}><LessonCardCtx.Provider value={lessonCardRef}>
-        <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
+        <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} flat={perQuestion} addedIds={addedIds} onRemoveAdded={onRemoveAdded} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
           onPick={(id, el) => { if (isOpen(id)) closeTool(id); else { setCards([]); openTool(id, el); } }} />
         {activeId && (
-          <MobileToolSheet id={activeId} label={HELP_TOOLS.find((t) => t.id === activeId)!.label} icon={HELP_TOOLS.find((t) => t.id === activeId)!.icon}
+          <MobileToolSheet id={activeId} label={helpToolLabel(tr, activeId)} icon={HELP_TOOLS.find((t) => t.id === activeId)!.icon}
             onClose={() => closeTool(activeId)}>
             {TOOL_RENDER[activeId]((toolState[activeId] ?? TOOL_DEFAULTS[activeId]) as never, (v) => setToolValue(activeId, v))}
           </MobileToolSheet>
@@ -403,17 +427,17 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
 
   return (
     <QuestionPromptCtx.Provider value={questionPrompt}><LessonCardCtx.Provider value={lessonCardRef}>
-      <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
+      <ToolsListCard tools={shownTools} suggested={perQuestion ? shownTools : suggested} flat={perQuestion} addedIds={addedIds} onRemoveAdded={onRemoveAdded} isOpen={isOpen} openGroups={openGroups} setOpenGroups={setOpenGroups} hidden={!!hideList || (perQuestion && !shownTools.length)}
         onPick={(id, el) => openTool(id, el)} />
       {floating.map((c) => {
         const t = HELP_TOOLS.find((x) => x.id === c.id)!;
         if ((c.id === "protractor" || c.id === "ruler") && !boardMode.has(c.id)) {
-          return <InstrumentOverlay key={c.id} kind={c.id === "ruler" ? "ruler15" : "protractor180"} label={t.label} lessonCardRef={lessonCardRef}
+          return <InstrumentOverlay key={c.id} kind={c.id === "ruler" ? "ruler15" : "protractor180"} label={helpToolLabel(tr, t.id)} lessonCardRef={lessonCardRef}
             onClose={() => closeTool(c.id)} onBoard={() => setBoardMode((m) => new Set(m).add(c.id))} />;
         }
         const size = TOOL_SIZE[c.id];
         return (
-          <FloatingPanel key={c.id} title={t.label} icon={t.icon} x={c.x} y={c.y} w={c.w} h={c.h} z={1000 + c.z}
+          <FloatingPanel key={c.id} title={helpToolLabel(tr, t.id)} icon={t.icon} x={c.x} y={c.y} w={c.w} h={c.h} z={1000 + c.z}
             minW={size.minW} minH={size.minH}
             onFocus={() => bringFront(c.id)}
             onMove={(x, y) => update(c.id, { x, y })}
@@ -427,14 +451,14 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
         );
       })}
       {minimized.length > 0 && (
-        <div className="fixed z-[1300] flex flex-wrap gap-1.5 rounded-full bg-transparent"
+        <div className="fixed z-[1150] flex flex-wrap gap-1.5 rounded-full bg-transparent"
           style={{ left: trayRect ? trayRect.left + 12 : 12, top: trayRect ? trayRect.bottom - TRAY_H - 12 : window.innerHeight - TRAY_H - 12 }}>
           {minimized.map((c) => {
             const t = HELP_TOOLS.find((x) => x.id === c.id)!;
             return (
               <button key={c.id} type="button" onClick={() => openTool(c.id, null)} data-testid={`tool-tray-${c.id}`}
                 className="flex h-11 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] shadow-[0_6px_18px_rgba(0,0,0,0.16)] hover:bg-[var(--panel)]">
-                <span aria-hidden>{t.icon}</span>{t.label}
+                <span aria-hidden>{t.icon}</span>{helpToolLabel(tr, t.id)}
               </button>
             );
           })}
@@ -445,6 +469,7 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
           {toast}
         </div>
       )}
+      {extraIds && extraIds.length > 0 && <Suspense fallback={null}><ExtraToolsRow ids={extraIds} qs={qs ?? ""} lessonCardRef={lessonCardRef} onRemove={onRemoveAdded} /></Suspense>}
     </LessonCardCtx.Provider></QuestionPromptCtx.Provider>
   );
 }
@@ -452,11 +477,13 @@ export function HelpToolsPanel({ tools, lessonCardRef, hideList, suggested, ques
 /** The sidebar card itself — same chrome as the Homework/Flashcards cards. "Suggested for this lesson" is
  *  always expanded; every other subject group is a collapsible section, closed by default except the one
  *  matching this lesson's own subject. */
-function ToolsListCard({ tools, suggested: suggestedProp, isOpen, openGroups, setOpenGroups, hidden, onPick }: {
-  tools: HelpToolId[]; suggested?: HelpToolId[]; isOpen: (id: HelpToolId) => boolean;
+function ToolsListCard({ tools, suggested: suggestedProp, flat, addedIds, onRemoveAdded, isOpen, openGroups, setOpenGroups, hidden, onPick }: {
+  addedIds?: string[]; onRemoveAdded?: (id: string) => void;
+  tools: HelpToolId[]; suggested?: HelpToolId[]; /** A question decided the tools: one plain row, no "suggested" + subject-group repeat. */ flat?: boolean; isOpen: (id: HelpToolId) => boolean;
   openGroups: Set<string>; setOpenGroups: (s: Set<string>) => void; hidden: boolean;
   onPick: (id: HelpToolId, el: HTMLElement | null) => void;
 }) {
+  const tr = useT();
   if (hidden) return null;
   const ready = new Set(HELP_TOOLS.filter((t) => t.ready !== false).map((t) => t.id));
   const enabled = new Set(tools.filter((id) => ready.has(id)));
@@ -470,17 +497,45 @@ function ToolsListCard({ tools, suggested: suggestedProp, isOpen, openGroups, se
     return (
       <button key={id} type="button" onClick={(e) => onPick(id, e.currentTarget)} aria-pressed={isOpen(id)} data-testid={`remote-sync-open-${id}`}
         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-extrabold ${isOpen(id) ? "bg-[var(--brand)] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:brightness-95"}`}>
-        <span aria-hidden>{t.icon}</span>{t.label}
+        <span aria-hidden>{t.icon}</span>{helpToolLabel(tr, t.id)}
       </button>
     );
   };
+
+  if (flat) {
+    // A question decided the tool: one calm, tinted button per tool (colour by kind) — noticeable, not shouting.
+    const COLOUR: Record<string, string> = { Maths: "var(--brand)", Science: "var(--sem-ok, #1f9d55)", Geography: "#0e8f8f", History: "#c9700a", General: "var(--violet, #7c4dff)" };
+    const soft = (id: HelpToolId) => {
+      const t = HELP_TOOLS.find((x) => x.id === id)!;
+      const c = COLOUR[t.subject] ?? "var(--brand)";
+      const on = isOpen(id);
+      return (
+        <span key={id} className="inline-flex items-center overflow-hidden rounded-full" style={{ background: on ? c : `color-mix(in srgb, ${c} 12%, var(--surface))`, border: `1.5px solid ${c}` }}>
+          <button type="button" onClick={(e) => onPick(id, e.currentTarget)} aria-pressed={on} data-testid={`remote-sync-open-${id}`}
+            className={`inline-flex min-h-[38px] items-center gap-2 ps-3.5 pe-3 text-[14px] font-extrabold transition hover:brightness-95 ${FOCUS}`} style={{ color: on ? "#fff" : c }}>
+            <span aria-hidden className="text-[18px] leading-none">{t.icon}</span>{helpToolLabel(tr, id)}{on ? " ✓" : ""}
+          </button>
+          {onRemoveAdded && addedIds?.includes(id) && (
+            <button type="button" onClick={() => onRemoveAdded(id)} aria-label={tr("hublive.eRemoveFromQ", { tool: helpToolLabel(tr, id) })} title={tr("hublive.eTakeOff")} data-testid={`tool-remove-${id}`}
+              className={`grid h-[38px] w-8 place-items-center border-s text-[13px] font-extrabold ${FOCUS}`} style={{ color: on ? "#fff" : c, borderColor: c }}>✕</button>
+          )}
+        </span>
+      );
+    };
+    return (
+      <div className="rounded-[14px] px-3 py-2.5" style={{ background: "var(--surface)", border: "1px solid var(--line)" }} data-testid="tools-card">
+        <div className="mb-1.5 px-1 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("hublive.eToolForQ")}</div>
+        <div className="flex flex-wrap gap-2">{[...enabled].map(soft)}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-hidden rounded-[14px] bg-white" style={{ border: "1px solid #E4E4EE" }} data-testid="tools-card">
       <div className="max-h-[420px] overflow-y-auto p-3">
         {suggested.length > 0 && (
           <div className="mb-3">
-            <div className="mb-1.5 px-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Suggested for this lesson</div>
+            <div className="mb-1.5 px-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("hublive.eSuggested")}</div>
             <div className="flex flex-wrap gap-1.5">{suggested.map(pill)}</div>
           </div>
         )}
@@ -491,8 +546,8 @@ function ToolsListCard({ tools, suggested: suggestedProp, isOpen, openGroups, se
           return (
             <div key={g.key} className="border-t border-[#F0F0F5] pt-2 first:border-t-0 first:pt-0">
               <button type="button" onClick={() => toggleGroup(g.key)} aria-expanded={open} data-testid={`tools-group-${g.key}`}
-                className="flex w-full items-center gap-1.5 py-1 text-left">
-                <span className="flex-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{g.label} <span className="font-bold text-[var(--ink-3)]/70">· {items.length}</span></span>
+                className="flex w-full items-center gap-1.5 py-1 text-start">
+                <span className="flex-1 text-[10.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{tr("hublive.eGrp_" + g.key)} <span className="font-bold text-[var(--ink-3)]/70">· {items.length}</span></span>
                 <Icon name="chevronDown" size={13} className={`text-[var(--ink-3)] transition-transform ${open ? "" : "-rotate-90"}`} />
               </button>
               {open && <div className="mb-1 mt-1 flex flex-wrap gap-1.5">{items.map(pill)}</div>}
@@ -507,12 +562,14 @@ function ToolsListCard({ tools, suggested: suggestedProp, isOpen, openGroups, se
 /** Small screens: one tool at a time, as a bottom sheet instead of a floating window — drag the handle (or tap
  *  it) to expand from 60% to 90% of the viewport height. */
 function MobileToolSheet({ id, label, icon, onClose, children }: { id: HelpToolId; label: string; icon: string; onClose: () => void; children: ReactNode }) {
+  const tr = useT();
   const [expanded, setExpanded] = useState(false);
+  const [ghost, setGhost] = useState(false); // see-through: fade the sheet so the question behind it shows
   const dragStart = useRef<number | null>(null);
   return (
-    <div role="dialog" aria-label={label} aria-modal="false" data-testid={`tool-sheet-${id}`}
+    <div role="dialog" aria-label={label} aria-modal="false" data-testid={`tool-sheet-${id}`} data-ghost={ghost ? "1" : "0"}
       className="fixed inset-x-0 bottom-0 z-[1200] flex flex-col overflow-hidden rounded-t-2xl border-t border-[var(--line)] bg-[var(--surface)] shadow-[0_-18px_44px_rgba(0,0,0,0.28)] motion-safe:transition-[height] motion-safe:duration-200"
-      style={{ height: expanded ? "90vh" : "60vh" }}>
+      style={{ height: expanded ? "90vh" : "60vh", opacity: ghost ? 0.45 : 1 }}>
       <div className="flex flex-none touch-none flex-col items-center pb-1 pt-2"
         onPointerDown={(e) => { dragStart.current = e.clientY; }}
         onPointerUp={(e) => { if (dragStart.current !== null) { if (dragStart.current - e.clientY > 30) setExpanded(true); else if (e.clientY - dragStart.current > 30) setExpanded(false); } dragStart.current = null; }}
@@ -522,7 +579,9 @@ function MobileToolSheet({ id, label, icon, onClose, children }: { id: HelpToolI
       <div className="flex flex-none items-center gap-1.5 border-b border-[var(--line)] px-3 pb-2">
         <span aria-hidden className="text-[14px]">{icon}</span>
         <span className="flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{label}</span>
-        <button type="button" onClick={onClose} aria-label={`Close ${label}`} className="grid h-11 w-11 flex-none place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)]"><Icon name="close" size={16} /></button>
+        <button type="button" onClick={() => setGhost((g) => !g)} aria-pressed={ghost} aria-label={ghost ? tr("hublive.eMakeSolid") : tr("hublive.eMakeSeeThrough")} data-testid="tool-sheet-ghost"
+          className={`flex h-10 flex-none items-center gap-1.5 rounded-full border px-3 text-[12px] font-extrabold ${ghost ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] text-[var(--ink)] hover:bg-[var(--panel)]"}`}><span aria-hidden className="text-[16px] leading-none">◐</span>{ghost ? tr("hublive.eSolid") : tr("hublive.eSeeThrough")}</button>
+        <button type="button" onClick={onClose} aria-label={tr("hublive.eCloseTool", { label })} className="grid h-11 w-11 flex-none place-items-center rounded-lg text-[var(--ink-2)] hover:bg-[var(--panel)]"><Icon name="close" size={16} /></button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3 text-[13px]">{children}</div>
     </div>
@@ -530,15 +589,15 @@ function MobileToolSheet({ id, label, icon, onClose, children }: { id: HelpToolI
 }
 
 function TimesTable({ value, onChange }: { value: TimesTableState; onChange: (v: TimesTableState) => void }) {
+  const tr = useT();
   const n = value.n;
   return (
     <div>
-      <label className="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink-2)]">
-        The
+      <label data-tool-strip className="flex items-center gap-2 text-[13px] font-semibold text-[var(--ink-2)]">
+        {tr("hublive.eTimesTableOf")}
         <select value={n} onChange={(e) => onChange({ n: Number(e.target.value) })} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[13px] font-bold">
           {Array.from({ length: 12 }, (_, i) => i + 1).map((x) => <option key={x} value={x}>{x}</option>)}
         </select>
-        times table
       </label>
       <div className="mt-2.5 grid grid-cols-3 gap-1.5">
         {Array.from({ length: 12 }, (_, i) => i + 1).map((x) => (
@@ -550,6 +609,7 @@ function TimesTable({ value, onChange }: { value: TimesTableState; onChange: (v:
 }
 
 function CoordGrid({ value, onChange }: { value: GridState; onChange: (v: GridState) => void }) {
+  const tr = useT();
   const pts = value.pts;
   const size = 220, cells = 8, step = size / cells, mid = cells / 2;
   const toGrid = (px: number, py: number) => ({ x: Math.round((px - size / 2) / step), y: Math.round((size / 2 - py) / step) });
@@ -567,13 +627,14 @@ function CoordGrid({ value, onChange }: { value: GridState; onChange: (v: GridSt
         <line x1={0} y1={size / 2} x2={size} y2={size / 2} stroke="var(--ink-3)" strokeWidth={1.5} />
         {pts.map((p, i) => <circle key={i} cx={size / 2 + p.x * step} cy={size / 2 - p.y * step} r={4} fill="var(--brand)" />)}
       </svg>
-      <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">Tap the grid to plot a point (−{mid} to {mid}).</p>
-      {pts.length > 0 && <p className="m-0 mt-1 text-[12.5px] font-bold text-[var(--ink)]">Last point: ({pts[pts.length - 1]!.x}, {pts[pts.length - 1]!.y})</p>}
+      <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">{tr("hublive.eGridTap", { n: mid })}</p>
+      {pts.length > 0 && <p className="m-0 mt-1 text-[12.5px] font-bold text-[var(--ink)]">{tr("hublive.eLastPoint", { x: pts[pts.length - 1]!.x, y: pts[pts.length - 1]!.y })}</p>}
     </div>
   );
 }
 
 function Ruler() {
+  const tr = useT();
   const cm = 24;
   return (
     <div>
@@ -586,12 +647,13 @@ function Ruler() {
           </g>
         ))}
       </svg>
-      <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">A {cm}cm ruler — measure against your own screen (won&apos;t match a printed page exactly).</p>
+      <p className="m-0 mt-2 text-[12px] text-[var(--ink-3)]">{tr("hublive.eRulerNote", { cm })}</p>
     </div>
   );
 }
 
 function Protractor() {
+  const tr = useT();
   const r = 90;
   return (
     <div className="flex flex-col items-center">
@@ -606,12 +668,13 @@ function Protractor() {
           return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--ink-2)" />;
         })}
       </svg>
-      <p className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">0°–180° — line up the base with one side of the angle.</p>
+      <p className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">{tr("hublive.eProtractorNote")}</p>
     </div>
   );
 }
 
 function Clock() {
+  const { locale } = useI18n();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   const h = now.getHours() % 12, m = now.getMinutes(), s = now.getSeconds();
@@ -632,12 +695,13 @@ function Clock() {
         {hand(mDeg, 40, 2)}
         {hand(sDeg, 44, 1)}
       </svg>
-      <p className="m-0 mt-1.5 text-[13px] font-bold text-[var(--ink)]">{now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+      <p data-tool-chrome className="m-0 mt-1.5 text-[13px] font-bold text-[var(--ink)]">{now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</p>
     </div>
   );
 }
 
 function Timer({ value, onChange }: { value: TimerState; onChange: (v: TimerState) => void }) {
+  const tr = useT();
   const { secs, left, running } = value;
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
@@ -650,13 +714,13 @@ function Timer({ value, onChange }: { value: TimerState; onChange: (v: TimerStat
   return (
     <div className="flex flex-col items-center">
       <div className="text-[32px] font-extrabold tabular-nums text-[var(--ink)]">{mm}:{ss}</div>
-      <div className="mt-2 flex items-center gap-1.5">
+      <div data-tool-strip className="mt-2 flex items-center gap-1.5">
         <button type="button" onClick={() => onChange({ secs, left, running: !running })} disabled={left === 0}
-          className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{running ? "Pause" : "Start"}</button>
-        <button type="button" onClick={() => onChange({ secs, left: secs, running: false })} className="rounded-full bg-[var(--panel)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[var(--ink-2)]">Reset</button>
+          className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{running ? tr("hublive.ePause") : tr("hublive.eStart")}</button>
+        <button type="button" onClick={() => onChange({ secs, left: secs, running: false })} className="rounded-full bg-[var(--panel)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[var(--ink-2)]">{tr("hublive.eReset")}</button>
       </div>
-      <label className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
-        Minutes
+      <label data-tool-strip className="mt-2 flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
+        {tr("hublive.eMinutes")}
         <input type="number" min={1} max={60} defaultValue={Math.round(secs / 60)} onBlur={(e) => { const s = Math.max(10, Math.min(3600, Number(e.target.value) * 60)); onChange({ secs: s, left: running ? left : s, running }); }}
           className="w-14 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-center" />
       </label>
@@ -665,6 +729,7 @@ function Timer({ value, onChange }: { value: TimerState; onChange: (v: TimerStat
 }
 
 function Dice({ value, onChange }: { value: DiceState; onChange: (v: DiceState) => void }) {
+  const tr = useT();
   const { vals, n } = value;
   const roll = () => onChange({ vals: Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 6)), n });
   const PIPS: Record<number, [number, number][]> = {
@@ -675,27 +740,28 @@ function Dice({ value, onChange }: { value: DiceState; onChange: (v: DiceState) 
     <div className="flex flex-col items-center">
       <div className="flex gap-3">
         {vals.map((v, i) => (
-          <svg key={i} width={54} height={54}>
+          <svg key={i} width={54} height={54} role="button" aria-label={tr("hublive.eRollDice")} tabIndex={0} onClick={roll} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); roll(); } }} style={{ cursor: "pointer" }}>
             <rect x={2} y={2} width={50} height={50} rx={8} fill="var(--surface)" stroke="var(--ink-3)" strokeWidth={2} />
             {PIPS[v]!.map(([r, c], j) => <circle key={j} cx={12 + c * 15} cy={12 + r * 15} r={3.5} fill="var(--ink)" />)}
           </svg>
         ))}
       </div>
-      <div className="mt-3 flex items-center gap-2">
+      <div data-tool-strip className="mt-3 flex items-center gap-2">
         <select value={n} onChange={(e) => onChange({ vals, n: Number(e.target.value) })} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]">
-          <option value={1}>1 die</option><option value={2}>2 dice</option>
+          <option value={1}>{tr("hublive.e1die")}</option><option value={2}>{tr("hublive.e2dice")}</option>
         </select>
-        <button type="button" onClick={roll} className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white">Roll</button>
+        <button type="button" onClick={roll} className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white">{tr("hublive.eRoll")}</button>
       </div>
     </div>
   );
 }
 
 function Tally({ value, onChange }: { value: TallyState; onChange: (v: TallyState) => void }) {
+  const tr = useT();
   const n = value.n;
   const groups = Math.floor(n / 5), rem = n % 5;
   const group = (count: number, key: string) => (
-    <span key={key} className="relative mr-2 inline-block h-6 w-6" aria-hidden>
+    <span key={key} className="relative me-2 inline-block h-6 w-6" aria-hidden>
       {Array.from({ length: Math.min(count, 4) }, (_, i) => <span key={i} className="absolute bottom-0 top-0 w-[2px] bg-[var(--ink)]" style={{ left: `${i * 6}px` }} />)}
       {count >= 5 && <span className="absolute inset-0 rotate-[35deg] bg-[var(--brand)]" style={{ height: 2, top: "50%" }} />}
     </span>
@@ -707,28 +773,29 @@ function Tally({ value, onChange }: { value: TallyState; onChange: (v: TallyStat
         {rem > 0 && group(rem, "rem")}
       </div>
       <div className="mt-2 text-[20px] font-extrabold text-[var(--ink)]">{n}</div>
-      <div className="mt-2 flex gap-1.5">
+      <div data-tool-strip className="mt-2 flex gap-1.5">
         <button type="button" onClick={() => onChange({ n: Math.max(0, n - 1) })} className="h-8 w-8 rounded-full bg-[var(--panel)] text-[16px] font-extrabold text-[var(--ink-2)]">−</button>
         <button type="button" onClick={() => onChange({ n: n + 1 })} className="h-8 w-8 rounded-full bg-[var(--brand)] text-[16px] font-extrabold text-white">+</button>
-        <button type="button" onClick={() => onChange({ n: 0 })} className="rounded-full bg-[var(--panel)] px-3 text-[12px] font-extrabold text-[var(--ink-2)]">Clear</button>
+        <button type="button" onClick={() => onChange({ n: 0 })} className="rounded-full bg-[var(--panel)] px-3 text-[12px] font-extrabold text-[var(--ink-2)]">{tr("hublive.eClear")}</button>
       </div>
     </div>
   );
 }
 
 function BarChart({ value, onChange }: { value: BarChartState; onChange: (v: BarChartState) => void }) {
+  const tr = useT();
   const text = value.text;
   const vals = text.split(",").map((s) => Math.max(0, Number(s.trim()) || 0)).slice(0, 8);
   const max = Math.max(1, ...vals);
   return (
     <div>
-      <label className="block text-[12px] font-semibold text-[var(--ink-2)]">
-        Values (comma-separated)
+      <label data-tool-strip className="block text-[12px] font-semibold text-[var(--ink-2)]">
+        {tr("hublive.eValuesCsv")}
         <input value={text} onChange={(e) => onChange({ text: e.target.value })} className="mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px]" />
       </label>
       <div className="mt-3 flex h-[140px] items-end gap-2">
         {vals.map((v, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1">
+          <div key={i} className="flex flex-1 cursor-pointer flex-col items-center gap-1" title={tr("hublive.eBarTip")} onClick={(e) => onChange({ text: vals.map((x, k) => (k === i ? Math.max(0, x + (e.altKey ? -1 : 1)) : x)).join(",") })}>
             <span className="text-[11px] font-bold text-[var(--ink-2)]">{v}</span>
             <div className="w-full rounded-t-md bg-[var(--brand)]" style={{ height: `${(v / max) * 100}px` }} />
           </div>
@@ -739,6 +806,7 @@ function BarChart({ value, onChange }: { value: BarChartState; onChange: (v: Bar
 }
 
 function Bohr({ value, onChange }: { value: BohrState; onChange: (v: BohrState) => void }) {
+  const tr = useT();
   const electrons = value.electrons;
   const shells: number[] = [];
   let left = electrons;
@@ -746,7 +814,7 @@ function Bohr({ value, onChange }: { value: BohrState; onChange: (v: BohrState) 
   const cx = 90, cy = 90;
   return (
     <div className="flex flex-col items-center">
-      <svg width={180} height={180}>
+      <svg width={180} height={180} role="button" aria-label={tr("hublive.eAddElectron")} tabIndex={0} style={{ cursor: "pointer" }} onClick={() => onChange({ electrons: electrons >= 36 ? 1 : electrons + 1 })}>
         <circle cx={cx} cy={cy} r={6} fill="var(--brand)" />
         {shells.map((count, i) => {
           const r = 22 + i * 20;
@@ -761,8 +829,8 @@ function Bohr({ value, onChange }: { value: BohrState; onChange: (v: BohrState) 
           );
         })}
       </svg>
-      <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
-        Electrons
+      <label data-tool-strip className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]">
+        {tr("hublive.eElectrons")}
         <input type="number" min={1} max={36} value={electrons} onChange={(e) => onChange({ electrons: Math.max(1, Math.min(36, Number(e.target.value))) })}
           className="w-16 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-center" />
       </label>
@@ -770,16 +838,8 @@ function Bohr({ value, onChange }: { value: BohrState; onChange: (v: BohrState) 
   );
 }
 
-const APPARATUS = ["🧪 Test tube", "⚗️ Flask", "🔥 Bunsen burner", "🥽 Goggles", "🧫 Petri dish", "⚖️ Balance", "🌡️ Thermometer", "🧲 Magnet"];
-function Apparatus() {
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {APPARATUS.map((a) => <div key={a} className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-center text-[13px] font-semibold text-[var(--ink)]">{a}</div>)}
-    </div>
-  );
-}
-
 function Lens() {
+  const tr = useT();
   return (
     <div className="flex flex-col items-center">
       <svg width={220} height={110}>
@@ -790,12 +850,13 @@ function Lens() {
         <line x1={130} y1={55} x2={220} y2={20} stroke="var(--brand)" />
         <line x1={130} y1={55} x2={220} y2={90} stroke="var(--brand)" />
       </svg>
-      <p className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">A converging (convex) lens — parallel rays bend inward to a focus.</p>
+      <p data-tool-chrome className="m-0 mt-1 text-[12px] text-[var(--ink-3)]">{tr("hublive.eLensNote")}</p>
     </div>
   );
 }
 
 function Timeline({ value, onChange }: { value: TimelineState; onChange: (v: TimelineState) => void }) {
+  const tr = useT();
   const { events, year, label } = value;
   const add = () => {
     if (!year.trim() || !label.trim()) return;
@@ -803,34 +864,36 @@ function Timeline({ value, onChange }: { value: TimelineState; onChange: (v: Tim
   };
   return (
     <div>
-      <div className="relative border-l-2 border-[var(--line)] pl-4">
+      <div className="relative border-s-2 border-[var(--line)] ps-4">
         {events.map((e, i) => (
           <div key={i} className="relative mb-3 pb-1">
-            <span className="absolute -left-[21px] top-1 h-3 w-3 rounded-full bg-[var(--brand)]" />
+            <span className="absolute -start-[21px] top-1 h-3 w-3 rounded-full bg-[var(--brand)]" />
             <div className="text-[12.5px] font-extrabold text-[var(--ink)]">{e.year}</div>
             <div className="text-[12.5px] text-[var(--ink-2)]">{e.label}</div>
           </div>
         ))}
       </div>
-      <div className="mt-2 flex gap-1.5">
-        <input value={year} onChange={(e) => onChange({ events, year: e.target.value, label })} placeholder="Year" className="w-16 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
-        <input value={label} onChange={(e) => onChange({ events, year, label: e.target.value })} placeholder="Event" className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
-        <button type="button" onClick={add} className="rounded-full bg-[var(--brand)] px-3 text-[12px] font-extrabold text-white">Add</button>
+      <div data-tool-strip className="mt-2 flex gap-1.5">
+        <input value={year} onChange={(e) => onChange({ events, year: e.target.value, label })} placeholder={tr("hublive.eYear")} className="w-16 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
+        <input value={label} onChange={(e) => onChange({ events, year, label: e.target.value })} placeholder={tr("hublive.eEvent")} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12px]" />
+        <button type="button" onClick={add} className="rounded-full bg-[var(--brand)] px-3 text-[12px] font-extrabold text-white">{tr("hublive.eAdd")}</button>
       </div>
     </div>
   );
 }
 
-const SYMBOLS = ["+ plus", "− minus", "× times", "÷ divide", "= equals", "≠ not equal", "≈ approx", "< less than", "> greater than", "≤ ≥ at most/least", "% percent", "√ square root", "π pi", "° degrees", "∞ infinity", "∑ sum"];
+const SYMBOLS = ["plus", "minus", "times", "divide", "equals", "notEqual", "approx", "lessThan", "greaterThan", "atMost", "percent", "squareRoot", "pi", "degrees", "infinity", "sum"];
 function Symbols() {
+  const tr = useT();
   return (
     <div className="grid grid-cols-2 gap-1.5">
-      {SYMBOLS.map((s) => <div key={s} className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]">{s}</div>)}
+      {SYMBOLS.map((s) => <div key={s} className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]">{tr("hublive.eSym_" + s)}</div>)}
     </div>
   );
 }
 
 function Spinner({ value, onChange }: { value: SpinnerState; onChange: (v: SpinnerState) => void }) {
+  const tr = useT();
   const { seg, angle } = value;
   const [spinning, setSpinning] = useState(false);
   const spin = () => {
@@ -844,18 +907,18 @@ function Spinner({ value, onChange }: { value: SpinnerState; onChange: (v: Spinn
   const r = 60, cx = 70, cy = 70;
   return (
     <div className="flex flex-col items-center">
-      <svg width={140} height={140} style={{ transform: `rotate(${angle}deg)`, transition: spinning ? "transform 1.2s cubic-bezier(.2,.8,.2,1)" : undefined }}>
+      <svg width={140} height={140} role="button" aria-label={tr("hublive.eSpin")} tabIndex={0} onClick={spin} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); spin(); } }} style={{ cursor: "pointer", transform: `rotate(${angle}deg)`, transition: spinning ? "transform 1.2s cubic-bezier(.2,.8,.2,1)" : undefined }}>
         {Array.from({ length: seg }, (_, i) => {
           const a0 = (2 * Math.PI * i) / seg - Math.PI / 2, a1 = (2 * Math.PI * (i + 1)) / seg - Math.PI / 2;
           const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0), x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
           return <path key={i} d={`M${cx},${cy} L${x0},${y0} A${r},${r} 0 0 1 ${x1},${y1} Z`} fill={colours[i % colours.length]} />;
         })}
       </svg>
-      <div className="mt-2 flex items-center gap-2">
+      <div data-tool-strip className="mt-2 flex items-center gap-2">
         <select value={seg} onChange={(e) => onChange({ seg: Number(e.target.value), angle })} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]">
-          {[2, 3, 4, 6, 8].map((n) => <option key={n} value={n}>{n} sections</option>)}
+          {[2, 3, 4, 6, 8].map((n) => <option key={n} value={n}>{tr("hublive.eSections", { n })}</option>)}
         </select>
-        <button type="button" onClick={spin} disabled={spinning} className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">Spin</button>
+        <button type="button" onClick={spin} disabled={spinning} className="rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{tr("hublive.eSpin")}</button>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import {
   DEFAULT_PALETTE, ERASER_SIZES, MAX_TEXT_CHARS, mayWrite, HL_SIZES, PEN_SIZES, PT, STICKY_COLOURS, TEXT_SIZES, bindTarget, boundsOf, canHoldText, fromSaved, isConnector, routeConnectors, hitTest, insideShape, isClosedShape, isLineShape, isPolyShape, type PenStyle, inRect, isStudentKey, movePatch, newId, newState, nextV, reserveV, pageOf, rotCentre, round1, scalePatch, shapeTextArea, sorted,
   stampDef, textBox, toSaved, topZ, type BgKind, type BoardState, type El, type Op, type Rect, type SavedPage, type Sender, type ShapeKind, type StampKind,
 } from "./model";
+import { bt } from "./boardI18n";
 import { History, SLICE_PTS, actionOps, applyAll, elementOps, nullify, type Action } from "./reducer";
 import { periodicHit, spinnerItems, timerRunning, widgetAnimating } from "./render-stamps";
 import { DEFAULT_PAPER, ImageCache, LASER_MS, contentBounds, drawCursors, drawElement, drawPage, drawSelection, drawTag, groupBox, groupHandles, handlesOf, installMeasurer, layoutLabel, visibleWorld, type Corner, type Cursor, type HandleKind, type Paper, type View } from "./render";
@@ -279,7 +280,7 @@ export class BoardController {
   setPermission(all: boolean, ids: string[], note?: string) {
     if (!this.isTutor) return;
     this.tutorOp([{ op: "perm", all, ids }]);
-    this.say(note ?? (all ? "Everyone can write now" : ids.length ? "Only the students you picked can write" : "You have the board to yourself again"));
+    this.say(note ?? (all ? bt("bSp_noteAll", "Everyone can write now") : ids.length ? bt("bSp_notePicked", "Only the students you picked can write") : bt("bSp_noteNone", "You have the board to yourself again")));
   }
 
   // ── remote ────────────────────────────────────────────────────────────────
@@ -295,8 +296,8 @@ export class BoardController {
       this.selection.forEach((id) => { if (!this.curPage.els.has(id)) this.selection.delete(id); });
       if (this.editing?.id && !this.curPage.els.has(this.editing.id)) this.editing = null;
       if (!this.isTutor && !this.opts.padMode && couldDraw !== this.canDraw) {
-        if (this.canDraw) { this.ui.tool = "pen"; this.say("You can write on the board now — go for it!"); }
-        else { this.ui.tool = "pan"; this.cancelEdit(); this.say("Your tutor is drawing now"); }
+        if (this.canDraw) { this.ui.tool = "pen"; this.say(bt("bToastCanWrite", "You can write on the board now — go for it!")); }
+        else { this.ui.tool = "pan"; this.cancelEdit(); this.say(bt("bToastTutorDrawing", "Your tutor is drawing now")); }
       }
       this.notify();
     }
@@ -960,19 +961,19 @@ export class BoardController {
     const g = newId("g");
     if (this.selectedEls.filter((e) => this.mayEditEl(e)).length < 2) return;
     this.patchSelection(() => ({ grp: g }));
-    this.say("Grouped — they move together now");
+    this.say(bt("bToastGrouped", "Grouped — they move together now"));
   }
   ungroupSelection() {
     if (!this.selectedEls.some((e) => e.grp && this.mayEditEl(e))) return;
     this.patchSelection((e) => (e.grp ? { grp: undefined } : {}));
-    this.say("Ungrouped — click any part to move, resize or type in it on its own");
+    this.say(bt("bToastUngrouped", "Ungrouped — click any part to move, resize or type in it on its own"));
   }
   toggleLock() {
     const els = this.selectedEls.filter((e) => this.mayEditEl(e));
     if (!els.length) return;
     const lock = !els.every((e) => e.lock);
     this.patchSelection((e) => ({ lock: lock || undefined }));
-    this.say(lock ? "Locked — it can't be moved or rubbed out by accident" : "Unlocked");
+    this.say(lock ? bt("bToastLocked", "Locked — it can't be moved or rubbed out by accident") : bt("bToastUnlocked", "Unlocked"));
   }
   /**
    * The selected TABLE, if the selection is exactly one grouped grid of rectangular cells (a Table / T-chart / KWL… from the toolkit):
@@ -997,7 +998,7 @@ export class BoardController {
     const t = this.selectedTable;
     if (!t || !this.mayEditEl(t.cells[0]![0]!)) return;
     const src = what === "row" ? t.cells[t.cells.length - 1]! : t.cells.map((r) => r[r.length - 1]!);
-    if (what === "row" ? t.cells.length >= 30 : t.cells[0]!.length >= 12) { this.say(`A table holds up to ${what === "row" ? 30 : 12} ${what === "row" ? "rows" : "columns"}`); return; }
+    if (what === "row" ? t.cells.length >= 30 : t.cells[0]!.length >= 12) { this.say(what === "row" ? bt("bToastMaxRows", "A table holds up to {n} rows", { n: 30 }) : bt("bToastMaxCols", "A table holds up to {n} columns", { n: 12 })); return; }
     const z0 = topZ(this.curPage), v = reserveV(src.length);
     const added = src.map((e, i) => {
       const w = Math.abs((e.x2 ?? 0) - (e.x1 ?? 0)), h = Math.abs((e.y2 ?? 0) - (e.y1 ?? 0));
@@ -1068,10 +1069,10 @@ export class BoardController {
       const s = Math.min(1200 / p.w, 800 / p.h, 2), w = Math.round(p.w * s), h = Math.round(p.h * s);
       ops.push({ op: "padd", id: pid, bg: "blank" }, { op: "add", page: pid, el: { id: newId(), k: "image", own: this.self.own, z: 1, v: nextV(), imageId: p.id, url: p.url, x: -Math.round(w / 2), y: -Math.round(h / 2), w, h } });
     });
-    if (!ops.length) { this.say("A board holds up to 30 pages"); return; }
+    if (!ops.length) { this.say(bt("bToastMaxPages", "A board holds up to 30 pages")); return; }
     this.commit(ops);
     if (first) this.setPage(first);
-    this.say(`Added ${ops.length / 2} ${ops.length / 2 === 1 ? "page" : "pages"} — draw and write right on them`);
+    this.say(bt("bToastAddedPages", "Pages added: {n} — draw and write right on them", { n: ops.length / 2 }));
   }
   /** Place saved elements (a "My templates" page) as fresh copies at the middle of the view. */
   placeCopies(src: El[]) {
@@ -1117,7 +1118,7 @@ export class BoardController {
     this.notify();
   }
   setTool(t: Tool) {
-    if (!this.canDraw && t !== "laser" && t !== "pan") { this.say(this.isTutor ? "" : "Only your tutor can draw right now"); return; }
+    if (!this.canDraw && t !== "laser" && t !== "pan") { this.say(this.isTutor ? "" : bt("bToastOnlyTutor", "Only your tutor can draw right now")); return; }
     if (this.editing) this.commitEdit();
     this.ui = { ...this.ui, tool: t };
     if (isShapeTool(t)) this.lastShape = t;

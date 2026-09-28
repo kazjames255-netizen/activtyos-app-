@@ -1,0 +1,1259 @@
+{
+ "home": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "Previewkid muip4kb5",
+   "Previewkid muir9n18"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "101",
+    "157"
+   ]
+  }
+ },
+ "lessons": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "نوٹس، ورک شیٹس، اسباق",
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "Geometry and measures",
+   "Ratio and proportion",
+   "Ratio, proportion and rates of change",
+   "Working mathematically (fluency, reasoni"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "students": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "داخلہ: 27 Sept 2026",
+   "داخلہ: 26 Sept 2026"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "👥طلبہفہرست او",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "homework": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "جمع کرائے گئے کام اور تحریری جوابات",
+   "OFFSCREEN:Maths",
+   "OFFSCREEN:Preview Lab muiojg71",
+   "OFFSCREEN:",
+   "OFFSCREEN:Preview Lab muip4kb5",
+   "OFFSCREEN:Preview Lab muir9n18",
+   "OFFSCREEN:RTL Lab muiwg4xu",
+   "OFFSCREEN:Science",
+   "OFFSCREEN:Spanish",
+   "OFFSCREEN:موضوعات کا انتظام کریں"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "✅جانچنے کے لیے",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "progress": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "quizzes": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "OFFSCREEN:Maths",
+   "OFFSCREEN:Preview Lab muiojg71",
+   "OFFSCREEN:",
+   "OFFSCREEN:Preview Lab muip4kb5",
+   "OFFSCREEN:Preview Lab muir9n18",
+   "OFFSCREEN:RTL Lab muiwg4xu",
+   "OFFSCREEN:Science",
+   "OFFSCREEN:Spanish",
+   "OFFSCREEN:موضوعات کا انتظام کریں",
+   "OFFSCREEN:کوئز آپ کے سوالات کے بینک سے بنتے ہیں او",
+   "OFFSCREEN:+ نیا کوئز",
+   "OFFSCREEN:Preview Lab muir9n181",
+   "OFFSCREEN:RTL Lab muiwg4xu1",
+   "OFFSCREEN:1",
+   "OFFSCREEN:Science1864"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📝کوئزبنائیں، ",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "19th-Century Novel › Year 10 @none",
+   "19th-Century Novel › Year 11 @none",
+   "English Language — Change & Variation › Year 12 @none",
+   "English Language — Change & Variation › Year 13 @none",
+   "English Literature — Critical Theory & Unseen › Ye @none",
+   "English Literature — Drama › Year 12 @none",
+   "English Literature — Drama › Year 13 @none",
+   "English Language — Frameworks & Methods › Year 12 @none",
+   "English Language — Frameworks & Methods › Year 13 @none",
+   "Grammar & punctuation › Year 1 @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "messages": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "reader": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "نوٹس، ورک شیٹس، اسباق",
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "مرحلہ 1:",
+   "مرحلہ 2:",
+   "مرحلہ 3:",
+   "مرحلہ 4:",
+   "مرحلہ 5:",
+   "مرحلہ 6:",
+   "مرحلہ 7:"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "RTL Lab muiwg4xu › Neurones @none",
+   "› @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-start": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "سبق شروع کریں ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-learn": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "کلیدی خیال 1"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-words": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "جاری رکھیں ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-warm": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "آپ کا جواب"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "چھوڑیں ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-quiz": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "کوئز آزمائیں ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-done": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "مرحلہ 1:",
+   "مرحلہ 2:",
+   "مرحلہ 3:",
+   "مرحلہ 4:",
+   "مرحلہ 5:",
+   "مرحلہ 6:",
+   "مرحلہ 7:"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tools-catalogue": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "ٹائمر اور کلاس روم ٹولز"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-M-02": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "ٹائمر اور کلاس روم ٹولز"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-M-21": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "ٹائمر اور کلاس روم ٹولز"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-H-H02": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Nastaliq Urdu\", \"Noto Nastaliq Urdu Fallback\", \"Jameel Noori Nastaleeq\", \"Noto Naskh Arabic\", \"Geeza Pro\", serif",
+  "overflow": [
+   "شروع کریں، شامل ہوں، دوبارہ دیکھیں",
+   "بچے آپ کے ساتھ، ویڈیو کے بغیر",
+   "ٹائمر اور کلاس روم ٹولز",
+   "مرحلہ 1:",
+   "مرحلہ 2:",
+   "مرحلہ 3:",
+   "مرحلہ 4:",
+   "مرحلہ 5:"
+  ],
+  "tabXs": [
+   [
+    "🏠ہوم",
+    950
+   ],
+   [
+    "📚اسباق",
+    873
+   ],
+   [
+    "🧑‍🎓طلبہ",
+    802
+   ],
+   [
+    "📈پیش رفت",
+    709
+   ],
+   [
+    "📝کوئز",
+    635
+   ],
+   [
+    "📓ہوم ورک",
+    543
+   ],
+   [
+    "💬پیغامات",
+    458
+   ],
+   [
+    "📖اسباق اور نص",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ }
+}

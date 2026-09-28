@@ -517,7 +517,7 @@ const cy: Keys = {
   folderChild: "📷 Lluniau o fy mhlentyn ({n})",
   folderWork: "🎨 Eu gwaith ({n})",
   workBadge: "🎨 Eu gwaith",
-  loading: "Wrthi'n llwytho…",
+  loading: "Wrthi’n llwytho…",
   loadFailed: "Methu llwytho",
   sendFailed: "Methu anfon",
   momentsEmpty: "Dim eiliadau eto — byddan nhw'n ymddangos yma pan fydd eich darparwr yn rhannu un.",

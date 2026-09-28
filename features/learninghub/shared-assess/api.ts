@@ -130,6 +130,9 @@ export interface Assessment {
   retakeCooldownHours?: number | null;
   /** Parent overlay: can this child sit it again now? */
   retake?: RetakeInfo;
+  /** Diagnostics only (tutor view): which enrolled children it was actually assigned to by the tutor —
+   *  `null`/absent = legacy (every audience-fitting child counts, same as before per-child assignment). */
+  assignedChildIds?: string[] | null;
 }
 
 export interface StartedAttempt { attemptId: string; timeLimitMins: number | null; startedAt: string; questions: TakeQuestion[]; /** True when the server handed back a paper that was already running. */ resumed?: boolean;

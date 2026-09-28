@@ -1,11 +1,13 @@
 "use client";
 
+import { Mascot, useMascotEnabled, type MascotPose } from "./mascot";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { colorFor } from "@/features/money/finance-kit";
 import { inkForBase, subjectSwatch } from "./subjectColour";
 import type { PanelMeta } from "./panelTypes";
 import { useEscapeLayer } from "./escapeLayer";
+import { useT } from "@/lib/i18n/provider";
 export { useEscapeLayer };
 
 // Shared pieces for every hub panel: icons, empty / loading / coming-soon
@@ -68,15 +70,19 @@ const PATHS: Record<string, ReactNode> = {
   refresh: <><path d="M3 12a9 9 0 0 1 15.3-6.3L21 8M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15.3 6.3L3 16M3 21v-5h5" /></>,
 };
 export type IconName = keyof typeof PATHS;
+/** Glyphs that mean "forward / back": they mirror in RTL (ar, ur) unless the caller already rotates or mirrors them (an expand chevron that
+ *  turns 90deg, or one with its own `rtl:` class, is left alone). */
+const DIRECTIONAL: ReadonlySet<string> = new Set(["chevronRight", "chevronLeft", "arrowRight", "arrowLeft"]);
 export function Icon({ name, size = 18, className = "", strokeWidth = 1.8 }: { name: IconName; size?: number; className?: string; strokeWidth?: number }) {
+  const mirror = DIRECTIONAL.has(name) && !/(^|\s)(rtl:|.*rotate-)/.test(className) ? " rtl:-scale-x-100" : "";
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`flex-none ${className}`}>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`flex-none ${className}${mirror}`}>
       {PATHS[name]}
     </svg>
   );
 }
 /** The tab icon for each hub panel (PanelMeta.key). */
-export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards", questions: "help", tools: "layers" };
+export const PANEL_ICON: Record<string, IconName> = { home: "home", live: "video", students: "users", dashboard: "chart", diagnostic: "compass", quizzes: "quiz", homework: "homework", notes: "notes", flashcards: "cards", questions: "help", tools: "layers", games: "play" };
 
 // ── responsive hook ────────────────────────────────────────────────────────
 /** True at the `lg` breakpoint and up (server / first paint: false). */
@@ -132,6 +138,10 @@ export function HubStyles() {
       .hub-sheet .grid:not([class*="grid-cols"]):not([class*="grid-flow"]) { grid-template-columns: minmax(0, 1fr) }
       .hub-sheet code { background: var(--hub-warm-2) !important }
       .hub-sheet, .hub-pop { --panel: color-mix(in srgb, var(--gold) 9%, var(--surface)); --line: var(--hub-warm-line) }
+      /* M3 (product review): every dialog sheet is ONE surface (plain, like Set homework / Mark / the tool picker), not cream in some
+         places and white in others. Menus and popovers (.hub-pop, .hub-warm) keep the warm tint. The edge colour is a mix, not
+         var(--line), because the rule above defines --line as var(--hub-warm-line) on this same element (a cycle would void both). */
+      .hub-sheet { --hub-warm: var(--surface); --hub-warm-2: color-mix(in srgb, var(--ink) 4%, var(--surface)); --panel: color-mix(in srgb, var(--ink) 4%, var(--surface)); --hub-warm-line: color-mix(in srgb, var(--ink) 14%, var(--surface)); --hub-field: var(--surface); --hub-warm-shadow: var(--shadow) }
       .hub-warm { background: var(--hub-warm); border: 1px solid var(--hub-warm-line) }
       @keyframes hub-sheet-in { from { opacity: 0; transform: translateY(14px) scale(.985) } to { opacity: 1; transform: none } }
       .hub-sheet { animation: hub-sheet-in .22s cubic-bezier(.2,.7,.2,1) both }
@@ -148,6 +158,7 @@ export function HubStyles() {
       .hub-press { transition: transform .12s ease }
       .hub-press:active { transform: scale(.97) }
       .hub-fade-x { --hub-fade-l: 0px; --hub-fade-r: 0px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--hub-fade-l), #000 calc(100% - var(--hub-fade-r)), transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 var(--hub-fade-l), #000 calc(100% - var(--hub-fade-r)), transparent 100%) }
+      [dir="rtl"] .hub-fade-x { -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 var(--hub-fade-l), #000 calc(100% - var(--hub-fade-r)), transparent 100%); mask-image: linear-gradient(270deg, transparent 0, #000 var(--hub-fade-l), #000 calc(100% - var(--hub-fade-r)), transparent 100%) }
       @media (prefers-reduced-motion: reduce) {
         .hub-rise, .hub-ping, .hub-grow, .hub-float, .hub-sheet { animation: none !important }
         .hub-lift, .hub-press { transition: none !important }
@@ -166,7 +177,9 @@ export function Skeleton({ className = "", style }: { className?: string; style?
  *  than grey bars; announces itself to assistive tech.
  *  variant: "row" (default) = list row with a tile + ring; "card" = cover band
  *  card; "roster" = avatar + ring student card. `grid` lays cards in columns. */
-export function SkeletonRows({ rows = 3, label = "Loading", variant = "row", grid }: { rows?: number; label?: string; variant?: "row" | "card" | "roster"; grid?: boolean }) {
+export function SkeletonRows({ rows = 3, label: labelIn, variant = "row", grid }: { rows?: number; label?: string; variant?: "row" | "card" | "roster"; grid?: boolean }) {
+  const t = useT();
+  const label = labelIn ?? t("hubshell.k_loading");
   const cell = (i: number) => {
     if (variant === "card") {
       return (
@@ -217,20 +230,23 @@ export function SkeletonRows({ rows = 3, label = "Loading", variant = "row", gri
 // ── empty states ───────────────────────────────────────────────────────────
 /** Illustrated empty state: layered tiles + sparkles around a gradient icon
  *  tile, a title, one line and an optional CTA. */
-export function EmptyState({ icon, title, body, action, color = "var(--brand)", id }: { icon: IconName; title: string; body?: ReactNode; action?: ReactNode; color?: string; id?: string }) {
+export function EmptyState({ icon, title, body, action, color = "var(--brand)", id, mascot }: { icon: IconName; title: string; body?: ReactNode; action?: ReactNode; color?: string; id?: string; mascot?: MascotPose }) {
+  const mascotOn = useMascotEnabled();
   return (
     <div id={id} data-ui="card" className="relative overflow-hidden rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-6 pb-9 pt-8 text-center">
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-32" style={{ background: `radial-gradient(60% 100% at 50% 0%, ${tint(color, 14)}, transparent)` }} />
+      {mascot && mascotOn ? <div className="relative mx-auto grid place-items-center" aria-hidden="true"><Mascot pose={mascot} size={112} /></div> : (
       <div className="relative mx-auto h-[104px] w-[132px]" aria-hidden="true">
-        <span className="absolute left-2 top-7 h-14 w-14 -rotate-12 rounded-2xl" style={{ background: tint(color, 10), border: `1px solid ${tint(color, 22)}` }} />
-        <span className="absolute right-2 top-4 h-12 w-12 rotate-12 rounded-2xl" style={{ background: tint(color, 18), border: `1px solid ${tint(color, 28)}` }} />
+        <span className="absolute start-2 top-7 h-14 w-14 -rotate-12 rounded-2xl" style={{ background: tint(color, 10), border: `1px solid ${tint(color, 22)}` }} />
+        <span className="absolute end-2 top-4 h-12 w-12 rotate-12 rounded-2xl" style={{ background: tint(color, 18), border: `1px solid ${tint(color, 28)}` }} />
         <span className="hub-float absolute inset-x-0 top-4 mx-auto grid h-[76px] w-[76px] place-items-center rounded-3xl text-white shadow-[0_14px_28px_-10px_rgba(16,26,56,.35)]" style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${color} 78%, white), ${color})` }}>
           <Icon name={icon} size={34} strokeWidth={1.7} />
         </span>
-        <span className="absolute left-0 top-2 text-[var(--ink-3)]"><Icon name="sparkle" size={14} /></span>
-        <span className="absolute bottom-3 right-0" style={{ color }}><Icon name="sparkle" size={18} /></span>
-        <span className="absolute bottom-6 left-3 h-2 w-2 rounded-full" style={{ background: tint(color, 40) }} />
+        <span className="absolute start-0 top-2 text-[var(--ink-3)]"><Icon name="sparkle" size={14} /></span>
+        <span className="absolute bottom-3 end-0" style={{ color }}><Icon name="sparkle" size={18} /></span>
+        <span className="absolute bottom-6 start-3 h-2 w-2 rounded-full" style={{ background: tint(color, 40) }} />
       </div>
+      )}
       <h3 className="relative mt-3 text-[17px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h3>
       {body && <p className="relative mx-auto mt-1.5 max-w-[440px] text-[13px] leading-relaxed text-[var(--ink-2)]">{body}</p>}
       {action && <div className="relative mt-5 flex justify-center">{action}</div>}
@@ -279,6 +295,7 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
 export function Modal({ open, onClose, title, children, footer, wide, id }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; id?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const t = useT();
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
   useEscapeLayer(open, onClose);
@@ -312,7 +329,7 @@ export function Modal({ open, onClose, title, children, footer, wide, id }: { op
         <div className="absolute left-1/2 top-1.5 h-1 w-9 -translate-x-1/2 rounded-full bg-[var(--hub-warm-line)] sm:hidden" aria-hidden="true" />
         <div className="hub-sheet-head flex items-center gap-3 px-5 pb-3 pt-4 sm:py-3.5">
           <h2 id={titleId} className="min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className={`grid h-9 w-9 flex-none place-items-center rounded-full text-[var(--ink-2)] hover:bg-[var(--hub-warm-2)] ${FOCUS}`}><Icon name="close" size={18} /></button>
+          <button type="button" onClick={onClose} aria-label={t("hubshell.k_close")} className={`grid h-9 w-9 flex-none place-items-center rounded-full text-[var(--ink-2)] hover:bg-[var(--hub-warm-2)] ${FOCUS}`}><Icon name="close" size={18} /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && <div className="hub-sheet-foot flex flex-wrap items-center justify-end gap-2 px-5 py-3">{footer}</div>}
@@ -324,8 +341,10 @@ export function Modal({ open, onClose, title, children, footer, wide, id }: { op
 
 /** Own-state confirm: a destructive button that first asks, cancels itself
  *  after a few seconds, on blur-out and on Esc. */
-export function ConfirmButton({ label, confirmLabel = "Confirm", onConfirm, disabled, ariaLabel, children, className = "", roomy }: { label?: ReactNode; confirmLabel?: string; onConfirm: () => void; disabled?: boolean; ariaLabel: string; children?: ReactNode; className?: string; /** 44px tap targets (touch-first cards). */ roomy?: boolean }) {
+export function ConfirmButton({ label, confirmLabel: confirmIn, onConfirm, disabled, ariaLabel, children, className = "", roomy }: { label?: ReactNode; confirmLabel?: string; onConfirm: () => void; disabled?: boolean; ariaLabel: string; children?: ReactNode; className?: string; /** 44px tap targets (touch-first cards). */ roomy?: boolean }) {
   const mh = roomy ? "min-h-[44px] min-w-[44px] justify-center" : "min-h-[44px] min-w-[44px] justify-center lg:min-h-[34px] lg:min-w-[34px]";
+  const t = useT();
+  const confirmLabel = confirmIn ?? t("hubshell.k_confirm");
   const [asking, setAsking] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -341,7 +360,7 @@ export function ConfirmButton({ label, confirmLabel = "Confirm", onConfirm, disa
         <>
           <button type="button" autoFocus disabled={disabled} onClick={() => { setAsking(false); onConfirm(); }} aria-label={`${confirmLabel}: ${ariaLabel}`}
             className={`inline-flex ${mh} items-center rounded-full border px-3 text-[11.5px] font-extrabold ${FOCUS} ${className}`} style={{ background: "var(--red)", borderColor: "var(--red)", color: "#fff" }}>{confirmLabel}</button>
-          <button type="button" onClick={() => setAsking(false)} className={`inline-flex ${mh} items-center rounded-full px-2.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>Keep</button>
+          <button type="button" onClick={() => setAsking(false)} className={`inline-flex ${mh} items-center rounded-full px-2.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>{t("hubshell.k_keep")}</button>
         </>
       ) : (
         <button type="button" disabled={disabled} onClick={() => setAsking(true)} aria-label={ariaLabel}
@@ -356,16 +375,18 @@ export function ConfirmButton({ label, confirmLabel = "Confirm", onConfirm, disa
 /** Developer wording from lib/api ("Couldn't reach the server at http://…", "didn't respond within 15s", "Is the API running?"). */
 const OFFLINE_RE = /reach the server|didn't respond within|Is the API running/i;
 /** Turns a network failure into one plain sentence a parent or child can act on; any other (already human) message passes through. Pure. */
-export function friendlyError(msg: string, hub: string = "the Teaching Hub", kid = false): string {
+export function friendlyError(msg: string, hub: string = "the Teaching Hub", kid = false, t?: (key: string, vars?: Record<string, string | number>) => string): string {
   if (!OFFLINE_RE.test(msg)) return msg;
+  if (t) return kid ? t("hubshell.k_errKid") : t("hubshell.k_errOffline", { hub });
   return kid ? "Oops! Let's try again." : `We can't reach ${hub} right now. Check your connection and try again.`;
 }
 export const isOfflineError = (msg: string | null | undefined): boolean => !!msg && OFFLINE_RE.test(msg);
 
 /** Error banner: dismissible, tokens only. Network failures read as one friendly line plus a "Try again" button (child: bigger, warmer). */
 export function ErrorBanner({ message, onDismiss, onRetry, hub, kid }: { message: string; onDismiss: () => void; onRetry?: () => void; hub?: string; kid?: boolean }) {
+  const t = useT();
   const offline = isOfflineError(message);
-  const text = friendlyError(message, hub, kid);
+  const text = friendlyError(message, hub ?? t("hubshell.k_theHub"), kid, t);
   const retry = !!onRetry && offline;
   return (
     <div role="alert" className="mb-3 flex flex-wrap items-start gap-2.5 rounded-xl border px-4 py-3 text-[12.5px] font-semibold" style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
@@ -373,9 +394,9 @@ export function ErrorBanner({ message, onDismiss, onRetry, hub, kid }: { message
       <span className={`min-w-0 flex-1 break-words text-[var(--ink)] ${kid && offline ? "text-[18px] font-extrabold" : ""}`}>{text}</span>
       {retry && (
         <button type="button" onClick={() => { onDismiss(); onRetry?.(); }}
-          className={`inline-flex ${kid ? "min-h-[56px] px-6 text-[16px]" : "min-h-[44px] px-4 text-[13px]"} flex-none items-center rounded-full font-extrabold ${FOCUS}`} style={{ background: "var(--hub-red-ink, var(--red))", color: "#fff" }}>Try again</button>
+          className={`inline-flex ${kid ? "min-h-[56px] px-6 text-[16px]" : "min-h-[44px] px-4 text-[13px]"} flex-none items-center rounded-full font-extrabold ${FOCUS}`} style={{ background: "var(--hub-red-ink, var(--red))", color: "#fff" }}>{t("hubshell.k_tryAgain")}</button>
       )}
-      <button type="button" onClick={onDismiss} aria-label="Dismiss error" className={`-my-1 -mr-1.5 grid h-11 w-11 flex-none place-items-center rounded-full hover:bg-black/5 ${FOCUS}`} style={{ color: "var(--hub-red-ink, var(--red))" }}><Icon name="close" size={15} /></button>
+      <button type="button" onClick={onDismiss} aria-label={t("hubshell.k_dismissError")} className={`-my-1 -me-1.5 grid h-11 w-11 flex-none place-items-center rounded-full hover:bg-black/5 ${FOCUS}`} style={{ color: "var(--hub-red-ink, var(--red))" }}><Icon name="close" size={15} /></button>
     </div>
   );
 }
@@ -388,6 +409,7 @@ export interface MenuItem { label: string; icon: IconName; onSelect: () => void;
  *  Danger items ask twice. `tone="glass"` suits a button sitting on a cover. */
 export function RowMenu({ label, items, roomy, tone }: { label: string; items: MenuItem[]; roomy?: boolean; tone?: "glass" }) {
   const [pos, setPos] = useState<{ left: number; top: number; host: HTMLElement } | null>(null);
+  const t = useT();
   const [confirm, setConfirm] = useState<string | null>(null);
   const btn = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -446,9 +468,9 @@ export function RowMenu({ label, items, roomy, tone }: { label: string; items: M
             return (
               <button key={it.label} type="button" role="menuitem" tabIndex={-1} disabled={it.disabled}
                 onClick={() => { if (it.danger && !asking) { setConfirm(it.label); return; } close(); it.onSelect(); }}
-                className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13px] font-bold transition hover:bg-[var(--hub-warm-2)] disabled:opacity-50 lg:min-h-[40px] ${FOCUS} ${it.danger ? "text-[var(--red)] hover:bg-[var(--red-soft)]" : "text-[var(--ink)]"}`}
+                className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-2.5 text-start text-[13px] font-bold transition hover:bg-[var(--hub-warm-2)] disabled:opacity-50 lg:min-h-[40px] ${FOCUS} ${it.danger ? "text-[var(--red)] hover:bg-[var(--red-soft)]" : "text-[var(--ink)]"}`}
                 style={asking ? { background: "var(--red)", color: "#fff" } : undefined}>
-                <Icon name={it.icon} size={16} />{asking ? (it.confirmText ?? "Tap again to delete") : it.label}
+                <Icon name={it.icon} size={16} />{asking ? (it.confirmText ?? t("hubshell.k_tapAgainDelete")) : it.label}
               </button>
             );
           })}
@@ -466,12 +488,13 @@ export function RowMenu({ label, items, roomy, tone }: { label: string; items: M
  *  (dashed empty ring). The stroke fills in on mount (skipped when the user
  *  prefers reduced motion — CSS transition, so the final value just shows). */
 export function MiniRing({ pct, size = 52, stroke = 5, color = "var(--brand)", label, sub }: { pct: number | null; size?: number; stroke?: number; color?: string; label?: ReactNode; sub?: string }) {
+  const t = useT();
   const r = size / 2 - stroke / 2, c = 2 * Math.PI * r;
   const v = pct == null ? 0 : Math.min(100, Math.max(0, pct));
   const [shown, setShown] = useState(0);
   useEffect(() => { const t = requestAnimationFrame(() => setShown(v)); return () => cancelAnimationFrame(t); }, [v]);
   return (
-    <div className="relative flex-none" style={{ width: size, height: size }} role="img" aria-label={pct == null ? "No mastery data yet" : `${Math.round(v)}% mastery`}>
+    <div className="relative flex-none" style={{ width: size, height: size }} role="img" aria-label={pct == null ? t("hubshell.k_noMastery") : t("hubshell.k_masteryPct", { n: Math.round(v) })}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--panel)" strokeWidth={stroke} strokeDasharray={pct == null ? "3 5" : undefined} style={pct == null ? { stroke: "var(--line)" } : undefined} />
         {pct != null && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)} className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-700 motion-safe:ease-out" />}

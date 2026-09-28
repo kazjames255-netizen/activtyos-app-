@@ -163,8 +163,7 @@ export async function seedOakLesson(tutorToken: string, o: SeedOpts): Promise<Se
   const points = oak.keyLearningPoints.map((k) => k.keyLearningPoint);
   const keywords = oak.lessonKeywords.map((k) => ({ keyword: k.keyword, description: k.description }));
   const widget = o.widget === undefined ? "neurone" : o.widget;
-  const body = [`**${oak.pupilLessonOutcome}**`, "", ...points.map((p) => `- ${p}`), "", ...keywords.map((k) => `- **${k.keyword}**: ${k.description}`), "",
-    `A ${oak.subjectTitle} lesson by Oak National Academy licensed under Open Government Licence (OGL).`].join("\n");
+  const body = [`**${oak.pupilLessonOutcome}**`, "", ...points.map((p) => `- ${p}`), "", ...keywords.map((k) => `- **${k.keyword}**: ${k.description}`), ""].join("\n");
   // The lesson plan (lesson.plan, features/learninghub/lesson/plan.ts) that replaced the raw video script: built here from the fixture's own facts.
   const outline = oak.lessonOutline.map((x) => x.lessonOutline);
   const half = Math.max(1, Math.ceil(points.length / Math.max(1, outline.length)));

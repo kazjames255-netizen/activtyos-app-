@@ -96,7 +96,7 @@ test.beforeAll(async () => {
 test.beforeEach(async () => { await setHub(accounts.freelancer, true); }); // other specs toggle the hub on this account
 
 async function gotoHub(page: Page, url: string) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url);

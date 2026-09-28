@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { useBareTool } from "../../tools/bareContext";
 import type { WidgetProps } from "./types";
 
 // Explore widget "neurone" — send a nerve impulse down an axon with the myelin sheath on and off.
@@ -19,6 +20,7 @@ function posAt(t: number, myelin: boolean) {
 }
 
 export function Neurone({ onXP }: WidgetProps) {
+  const bare = useBareTool();
   const [myelin, setMyelin] = useState(true);
   const [x, setX] = useState(X0);
   const [shown, setShown] = useState(false);
@@ -45,7 +47,7 @@ export function Neurone({ onXP }: WidgetProps) {
   };
 
   return (
-    <div className="rounded-2xl border-2 border-[var(--brand-line)] p-4" style={{ background: "linear-gradient(180deg, var(--brand-soft), var(--surface))" }} data-widget="neurone">
+    <div className={bare ? "" : "rounded-2xl border-2 border-[var(--brand-line)] p-4"} style={bare ? undefined : { background: "linear-gradient(180deg, var(--brand-soft), var(--surface))" }} data-widget="neurone">
       <svg viewBox="0 0 640 170" className="block h-auto w-full" role="img" aria-label="A neurone with an axon, an optional myelin sheath and a travelling impulse">
         <g stroke="#7b83a3" strokeWidth="3" fill="none" strokeLinecap="round"><path d="M40 40 L60 66M28 84 L58 80M42 128 L62 94" /></g>
         <circle cx="80" cy="80" r="26" fill="#c9d4ff" stroke="#3b5bdb" strokeWidth="3" /><circle cx="80" cy="80" r="9" fill="#3b5bdb" />
@@ -61,10 +63,10 @@ export function Neurone({ onXP }: WidgetProps) {
         <label className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 text-[14px] font-extrabold text-[var(--ink)]">
           <input type="checkbox" checked={myelin} onChange={(e) => { setMyelin(e.target.checked); setTime("—"); }} className="h-5 w-5 accent-[var(--brand)]" /> Myelin sheath
         </label>
-        <span className="text-[13px] text-[var(--ink-3)]" aria-live="polite">Time taken: <span className="text-[18px] font-black tabular-nums text-[var(--brand)]">{time}</span></span>
+        <span data-tool-chrome className="text-[13px] text-[var(--ink-3)]" aria-live="polite">Time taken: <span className="text-[18px] font-black tabular-nums text-[var(--brand)]">{time}</span></span>
         <Button variant="solid" onClick={send} disabled={busy} className="!min-h-[44px]">⚡ Send impulse</Button>
       </div>
-      <p className="m-0 mt-2 text-[13px] text-[var(--ink-3)]" role="status">{myelin ? "With myelin, the impulse jumps between the gaps, so it is much faster." : "Without myelin the impulse has to crawl along the whole axon, so it is slower."}</p>
+      <p data-tool-chrome className="m-0 mt-2 text-[13px] text-[var(--ink-3)]" role="status">{myelin ? "With myelin, the impulse jumps between the gaps, so it is much faster." : "Without myelin the impulse has to crawl along the whole axon, so it is slower."}</p>
     </div>
   );
 }

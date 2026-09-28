@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useI18n, useT } from "@/lib/i18n/provider";
 import type { PanelProps } from "../../panelTypes";
 import { DISPLAY, FOCUS, Avatar } from "../../teachKit";
 import { Ico } from "../../teachIcons";
@@ -41,7 +42,10 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
   p: PanelProps; lesson: Lesson; isTutor: boolean; view: WsView; /** Is the pane visible right now? (drives the 1–6 shortcuts) */ active: boolean; now: number;
   tab: WsTabKey; onTab: (t: WsTabKey) => void;
 }) {
-  const tabs = useMemo(() => WS_TABS(isTutor), [isTutor]);
+  const tx = useT();
+  const locale = useI18n().locale;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tabs = useMemo(() => WS_TABS(isTutor), [isTutor, locale]);
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [drawer, setDrawer] = useState<string | null>(null);
   const attendees = useMemo(() => attendeesOf(lesson, p.students), [lesson, p.students]);
@@ -87,7 +91,7 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
     homework: isTutor ? (data.inbox ?? []).filter((r) => r.status === "submitted" && attendees.some((a) => a.childId === r.childId)).length : 0,
   };
   const drawerIdx = attendees.findIndex((a) => a.childId === drawer);
-  const drawerName = drawerIdx >= 0 ? (view.hideNames ? maskName(drawerIdx) : attendees[drawerIdx]!.name) : "Student";
+  const drawerName = drawerIdx >= 0 ? (view.hideNames ? maskName(drawerIdx) : attendees[drawerIdx]!.name) : tx("hublive.aPanel_student");
 
   return (
     <WsViewCtx.Provider value={view}>
@@ -95,7 +99,7 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
         <LessonShareProvider p={p} isTutor={isTutor}>
         <TeachingWatcher />
         <div className="relative flex h-full min-h-0 flex-col" style={{ background: "var(--hub-warm)" }} data-testid="hub-workspace" data-present={view.present ? "1" : "0"}>
-          <div ref={listRef} role="tablist" aria-label="Lesson workspace" onKeyDown={onTabKey} className="@container flex flex-none items-stretch gap-1 overflow-x-auto border-b border-[var(--hub-warm-line)] px-2 py-1.5" style={{ background: "var(--hub-warm-2)" }}>
+          <div ref={listRef} role="tablist" aria-label={tx("hublive.aStage_workspaceAria")} onKeyDown={onTabKey} className="@container flex flex-none items-stretch gap-1 overflow-x-auto border-b border-[var(--hub-warm-line)] px-2 py-1.5" style={{ background: "var(--hub-warm-2)" }}>
             {tabs.map((t, i) => {
               const on = t.key === current;
               return (
@@ -103,8 +107,8 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
                   title={`${t.label} (${i + 1})`}
                   className={`inline-flex min-h-[44px] flex-none items-center justify-center gap-1.5 rounded-xl px-3 text-[13px] font-extrabold transition-colors motion-reduce:transition-none ${FOCUS} ${on ? "bg-[var(--surface)] text-[var(--brand)] shadow-[var(--shadow-sm)]" : "text-[var(--ink-2)] hover:bg-[var(--surface)]/60"}`}>
                   <Ico name={t.icon} size={15} /><span className={on ? "" : "hidden @[560px]:inline"}>{t.label}</span>
-                  {t.key === "board" && !isTutor && boardLive > 0 && current !== "board" && <span className="h-2 w-2 rounded-full bg-[var(--red)]" aria-label="Your tutor is using the board" />}
-                  {!!badge[t.key] && <span className="rounded-full bg-[var(--brand)] px-1.5 py-px text-[11px] font-extrabold text-white" aria-label={`${badge[t.key]} to mark`}>{badge[t.key]}</span>}
+                  {t.key === "board" && !isTutor && boardLive > 0 && current !== "board" && <span className="h-2 w-2 rounded-full bg-[var(--red)]" aria-label={tx("hublive.aStage_boardLive")} />}
+                  {!!badge[t.key] && <span className="rounded-full bg-[var(--brand)] px-1.5 py-px text-[11px] font-extrabold text-white" aria-label={tx("hublive.aWs_toMark", { n: badge[t.key]! })}>{badge[t.key]}</span>}
                 </button>
               );
             })}
@@ -112,15 +116,15 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
 
           {view.present && (
             <div className="flex flex-none items-center gap-2 border-b border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]" role="status">
-              <Ico name="monitor" size={14} />Presenting — tutor-only controls are hidden{view.hideNames ? "; names are hidden" : ""}. Press P to stop.
+              <Ico name="monitor" size={14} />{tx(view.hideNames ? "hublive.aWs_presentingNames" : "hublive.aWs_presenting")}
             </div>
           )}
 
           {isTutor && !view.present && (lesson.status === "ended" || lessonTiming(lesson, now).phase === "ended") && (
             <div className="flex flex-none flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" data-testid="ws-ended-homework">
-              <span className="min-w-0 flex-1">This lesson has ended.</span>
+              <span className="min-w-0 flex-1">{tx("hublive.aWs_lessonEnded")}</span>
               <WsButton variant="solid" icon="plus" id="ws-ended-set-homework"
-                onClick={() => { const n = lesson.noteIds?.[0]; if (n) { lessonHomeworkIntent({ id: n, title: lesson.title }); p.goTo?.("homework"); } else onTab("homework"); }}>Set homework</WsButton>
+                onClick={() => { const n = lesson.noteIds?.[0]; if (n) { lessonHomeworkIntent({ id: n, title: lesson.title }); p.goTo?.("homework"); } else onTab("homework"); }}>{tx("hublive.aWs_setHomework")}</WsButton>
             </div>
           )}
 
@@ -143,11 +147,11 @@ export function Workspace({ p, lesson, isTutor, view, active, now, tab, onTab }:
           <div ref={setHost} className="pointer-events-none absolute inset-0 z-20 [&>*]:pointer-events-auto" />
           {drawer && isTutor && !view.present && (
             <PaneOverlay>
-              <div role="dialog" aria-label={`${drawerName}: progress`} data-testid="ws-drawer" className="absolute inset-0 z-10 flex flex-col" style={{ background: "var(--hub-warm)" }}>
+              <div role="dialog" aria-label={tx("hublive.aWs_progressOf", { name: drawerName })} data-testid="ws-drawer" className="absolute inset-0 z-10 flex flex-col" style={{ background: "var(--hub-warm)" }}>
                 <div className="flex flex-none items-center gap-2 border-b border-[var(--hub-warm-line)] px-3 py-2">
                   <Avatar name={drawerName} size={30} />
                   <h3 className="m-0 min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{drawerName}</h3>
-                  <WsButton variant="ghost" icon="close" onClick={() => setDrawer(null)} ariaLabel="Close student details">Close</WsButton>
+                  <WsButton variant="ghost" icon="close" onClick={() => setDrawer(null)} ariaLabel={tx("hublive.aWs_closeDetails")}>{tx("hublive.aWs_close")}</WsButton>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto p-3"><ProgressView p={p} childId={drawer} /></div>
               </div>

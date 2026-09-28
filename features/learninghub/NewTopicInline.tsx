@@ -5,6 +5,7 @@ import { Button, Input, Select } from "@/components/ui";
 import { post } from "@/lib/api";
 import { FOCUS } from "./kit";
 import { errMsg, type Topic } from "./types";
+import { useT } from "@/lib/i18n/provider";
 
 // "+ New subject" / "+ New topic" beside any subject or topic picker. Creates through the SAME endpoint the
 // sidebar (TopicFilter) uses — POST /api/learning-hub/topics — so the server's rules (a subject can't be
@@ -62,6 +63,7 @@ interface Props {
 const linkBtn = `inline-flex min-h-[32px] items-center gap-1 rounded-full px-2 text-[12px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`;
 
 export function NewTopicInline({ qs, topics, subject, onCreated, canCreate = true, only, testId = "new-topic", className = "" }: Props) {
+  const tr = useT();
   const [open, setOpen] = useState<Kind | null>(null);
   const [subj, setSubj] = useState("");
   const [name, setName] = useState("");
@@ -76,42 +78,42 @@ export function NewTopicInline({ qs, topics, subject, onCreated, canCreate = tru
   const save = async () => {
     const n = name.trim(), s = subj.trim();
     if (open === "subject") {
-      if (!n) { setErr("Give the subject a name."); return; }
+      if (!n) { setErr(tr("hubshell.k_giveSubjectName")); return; }
       const dup = subjects.find((x) => x.toLowerCase() === n.toLowerCase());
-      if (dup) { setErr(`“${dup}” already exists — choose it from the list.`); return; }
-    } else if (!s || !n) { setErr(s ? "Give the topic a name." : "Pick a subject first."); return; }
+      if (dup) { setErr(tr("hubshell.k_alreadyExists", { name: dup })); return; }
+    } else if (!s || !n) { setErr(s ? tr("hubshell.k_giveTopicName") : tr("hubshell.k_pickSubjectFirst")); return; }
     setBusy(true); setErr(null);
     try {
       // A new subject starts with a "General" topic (the subject can't exist without one); the name field is the subject.
       const t = open === "subject" ? await createHubTopic(qs, { subject: n, topic: "General" }) : await createHubTopic(qs, { subject: s, topic: n });
       onCreated(t, open!);
       setOpen(null); setName("");
-    } catch (e) { setErr(errMsg(e, "Couldn't add that")); }
+    } catch (e) { setErr(errMsg(e, tr("hubshell.k_addFail"))); }
     finally { setBusy(false); }
   };
 
   return (
     <div className={className} data-testid={testId}>
       <div className="flex flex-wrap items-center gap-x-1">
-        {only !== "topic" && <button type="button" className={linkBtn} data-testid={`${testId}-subject-btn`} onClick={() => (open === "subject" ? close() : show("subject"))}>+ New subject</button>}
-        {only !== "subject" && subjects.length > 0 && <button type="button" className={linkBtn} data-testid={`${testId}-topic-btn`} onClick={() => (open === "topic" ? close() : show("topic"))}>+ New topic</button>}
+        {only !== "topic" && <button type="button" className={linkBtn} data-testid={`${testId}-subject-btn`} onClick={() => (open === "subject" ? close() : show("subject"))}>{tr("hubshell.k_newSubject")}</button>}
+        {only !== "subject" && subjects.length > 0 && <button type="button" className={linkBtn} data-testid={`${testId}-topic-btn`} onClick={() => (open === "topic" ? close() : show("topic"))}>{tr("hubshell.k_newTopic")}</button>}
       </div>
       {open && (
-        <div role="group" aria-label={open === "subject" ? "New subject" : "New topic"} data-testid={`${testId}-form`}
+        <div role="group" aria-label={open === "subject" ? tr("hubshell.k_newSubjectLabel") : tr("hubshell.k_newTopicLabel")} data-testid={`${testId}-form`}
           className="mt-1.5 grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5"
           onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); close(); } else if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") { e.preventDefault(); e.stopPropagation(); void save(); } }}>
           {open === "topic" && (
-            <Select aria-label="Subject for the new topic" data-testid={`${testId}-subject-select`} value={subj} onChange={(e) => setSubj(e.target.value)} className="min-h-[40px] w-full">
+            <Select aria-label={tr("hubshell.k_subjectForNewTopic")} data-testid={`${testId}-subject-select`} value={subj} onChange={(e) => setSubj(e.target.value)} className="min-h-[40px] w-full">
               {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
           )}
-          <Input aria-label={open === "subject" ? "New subject name" : "New topic name"} data-testid={`${testId}-name`} data-autofocus autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={open === "subject" ? 80 : 120}
-            placeholder={open === "subject" ? "Subject name (e.g. Geography)" : "Topic name (e.g. Algebra)"} className="min-h-[40px] w-full" />
-          {open === "subject" && <p className="m-0 text-[11.5px] text-[var(--ink-3)]">The subject is created with a first topic called &ldquo;General&rdquo; — add more topics any time.</p>}
+          <Input aria-label={open === "subject" ? tr("hubshell.k_newSubjectName") : tr("hubshell.k_newTopicName")} data-testid={`${testId}-name`} data-autofocus autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={open === "subject" ? 80 : 120}
+            placeholder={open === "subject" ? tr("hubshell.k_subjectPh") : tr("hubshell.k_topicPh")} className="min-h-[40px] w-full" />
+          {open === "subject" && <p className="m-0 text-[11.5px] text-[var(--ink-3)]">{tr("hubshell.k_subjectCreatedNote")}</p>}
           {err && <p role="alert" data-testid={`${testId}-err`} className="m-0 text-[12.5px] font-bold text-[var(--red)]">{err}</p>}
           <div className="flex justify-end gap-2">
-            <Button type="button" sm variant="ghost" onClick={close}>Cancel</Button>
-            <Button type="button" sm variant="solid" disabled={busy} data-testid={`${testId}-save`} onClick={() => void save()}>{busy ? "Adding…" : open === "subject" ? "Add subject" : "Add topic"}</Button>
+            <Button type="button" sm variant="ghost" onClick={close}>{tr("hubshell.k_cancel")}</Button>
+            <Button type="button" sm variant="solid" disabled={busy} data-testid={`${testId}-save`} onClick={() => void save()}>{busy ? tr("hubshell.k_adding") : open === "subject" ? tr("hubshell.k_addSubject") : tr("hubshell.k_addTopic")}</Button>
           </div>
         </div>
       )}

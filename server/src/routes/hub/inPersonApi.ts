@@ -14,7 +14,7 @@ import { assessmentRows } from "../../lib/hubIndex";
 import { diagnosticState } from "./assessments";
 import { cleanResponse, questionOut, refreshMastery, snapshotQuestions, splitOf } from "./attempts";
 import {
-  assessmentsCol, asStr, attemptsCol, childFacts, childRefFor, childSubjectOk, enrolmentId, fitsChild, homeworkCol, nowIso, questionsCol,
+  assessmentsCol, asStr, attemptsCol, childFacts, childRefFor, childSubjectOk, diagnosticAssignedTo, enrolmentId, fitsChild, homeworkCol, nowIso, questionsCol,
   type AnswerDoc, type AssessmentDoc, type AttemptDoc, type ChildRef,
 } from "./shared";
 import { eligibleStudents, lessonsCol, notesCol, submissionsCol } from "./teachingCommon";
@@ -158,7 +158,17 @@ hubInPersonApi.post("/in-person/sessions", async (req, res) => {
     attendance: Object.fromEntries(students.map((s) => [s.childId, now])), tutorJoinedAt: now, endedAt: null,
     noteId, assessmentId, createdBy: ctx.uid, createdAt: now, updatedAt: now,
   };
-  await ref.set(doc);
+  try {
+    // create() is atomic: a parallel double tap with the same key can't overwrite a live session (attendance / step / answers).
+    if (b.key) await ref.create(doc); else await ref.set(doc);
+  } catch (e) {
+    if ((e as { code?: number }).code !== 6) throw e;
+    const again = await ref.get();
+    if (again.exists && again.get("tenantId") === ctx.tenantId && again.get("mode") === "in_person") {
+      res.json(sessionOut({ id: ref.id, ...(again.data() as SessionDoc) }, await namesOf(ctx, again.get("childIds") as string[]))); return;
+    }
+    throw e;
+  }
   pingHub(ctx.tenantId, "hubLessons");
   res.status(201).json(sessionOut({ id: ref.id, ...doc }, names));
 });
@@ -290,13 +300,15 @@ async function gateFor(ctx: HubCtx, child: ChildRef, asm: AssessmentDoc & { id: 
   const finished = mine.docs.filter((d) => d.get("assessmentId") === asm.id && d.get("status") !== "in_progress").map((d) => asStr(d.get("submittedAt")));
   const granted = child.retakeGrants.includes(asm.id);
   const out = (skip: Skip | null) => ({ skip, granted, finished: finished.length });
-  if (audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") return out({ code: "not_for_this_child", message: `${asm.title} isn't set for ${name}'s year group or age.` });
+  // See attempts.ts's own start-attempt check: a lesson's own exit quiz (`asm.lessonId` set) is exempt — whatever
+  // already let this child into the lesson is the real gate, not the quiz's inherited `audience`.
+  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") return out({ code: "not_for_this_child", message: `${asm.title} isn't set for ${name}'s year group or age.` });
   const subjectKey = asm.subject.toLowerCase();
   if (asm.type === "diagnostic" && diag.active.has(subjectKey)) return out({ code: "diagnostic_done", message: `${name} has already taken the ${asm.subject} diagnostic. Reset their baseline first to record another.` });
   if (asm.type === "quiz" && cfg.requireDiagnostic && !diag.taken.has(subjectKey) && !child.waived.includes(subjectKey)) {
     const all = [...(await assessmentRows(ctx.tenantId)).values()];
     const facts = await childFacts(child, cfg.yearGroups);
-    if (all.some((x) => x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no")) {
+    if (all.some((x) => x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no" && diagnosticAssignedTo(x, child.childId))) {
       return out({ code: "diagnostic_required", message: `${name} needs to take the ${asm.subject} diagnostic first.` });
     }
   }
@@ -340,6 +352,29 @@ hubInPersonApi.post("/in-person/sessions/:id/submit", async (req, res) => {
   const seen = new Set<string>();
   const recorded: { child: ChildRef; attemptId: string; a: AttemptDoc }[] = [];
 
+  // A retry of a half-failed submit (the attempt exists but the hand-in / mastery / bell never happened) completes the leftovers.
+  // Every step is idempotent: the hand-in only fires while the submission is still "assigned", mastery is a recompute, and the
+  // family is only told when this retry is the one that actually handed the homework in.
+  const heal = async (child: ChildRef, attemptId: string, a: AttemptDoc) => {
+    try {
+      let handedIn = false;
+      if (a.homeworkId) {
+        const sref = submissionsCol.doc(`${a.homeworkId}__${child.childId}`);
+        const cur = await sref.get();
+        if (cur.exists && (cur.get("status") ?? "assigned") === "assigned") {
+          await sref.update({ status: "submitted", attemptId, text: "", submittedAt: a.submittedAt ?? now, updatedAt: now });
+          pingHub(ctx.tenantId, "hubSubmissions");
+          handedIn = true;
+        }
+      }
+      await refreshMastery(a);
+      if (handedIn) {
+        const shown = a.status === "marked" ? `${a.scoreMarks}/${a.maxMarks} (${a.pct}%)` : `${a.scoreMarks}/${a.maxMarks} so far — written answers still to be marked`;
+        void notifyFamilies({ tenantId: ctx.tenantId, childIds: [child.childId], ref: attemptId, compose: (n) => ({ title: "Lesson done with your tutor", body: `${nameList(n)} did "${asm.title}" in person with ${s.tutorName}: ${shown}. The result is in My Classroom.` }) });
+      }
+    } catch (e) { console.error("[hub] in-person retry heal failed:", (e as Error).message); }
+  };
+
   for (const entry of b.children) {
     if (seen.has(entry.childId)) continue; // one row per child per hand-in
     seen.add(entry.childId);
@@ -355,6 +390,7 @@ hubInPersonApi.post("/in-person/sessions/:id/submit", async (req, res) => {
     if (prior.exists) {
       const a = prior.data() as AttemptDoc;
       if (a.tenantId === ctx.tenantId) {
+        await heal(child, attemptId, a);
         rows.push({ childId: child.childId, childName: child.childName, status: "duplicate", attemptId, attemptStatus: a.status, scoreMarks: a.scoreMarks, maxMarks: a.maxMarks, pct: a.pct, passed: a.status === "marked" ? (a.pct ?? 0) >= a.passMarkPct : null, homeworkId: a.homeworkId, answers: a.answers.map((x) => ({ questionId: x.questionId, correct: x.correct, marksAwarded: x.marksAwarded, marksMax: x.marksMax, pending: x.pending === true })) });
         continue;
       }

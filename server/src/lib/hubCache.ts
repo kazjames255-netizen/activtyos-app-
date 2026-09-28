@@ -21,7 +21,8 @@
 // real rebuild runs in the background exactly like an ordinary stale-while-revalidate refresh — so a restart is
 // never worse than "serves yesterday's counts for a few seconds," not "blocks the tab for a minute."
 
-import { readFileSync, renameSync, unlinkSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,27 +34,48 @@ const MAX_ENTRIES = 600;
 
 // Map values (all the disk-eligible kinds are `Map<id, row>`) don't survive JSON.stringify as-is; tag them so
 // the reader knows to rebuild a Map instead of handing back a plain array.
-// The notes index gained `oakKey` (curriculum map): bump its snapshot version so an OLD snapshot (no oakKey) is never served as if current.
-const SNAPSHOT_VERSION: Partial<Record<HubKind, string>> = { notes: ".v2" };
-const diskPath = (kind: HubKind, tenantId: string) => join(tmpdir(), `aos-hub-cache.${kind}${SNAPSHOT_VERSION[kind] ?? ""}.${tenantId}.json`);
+// Snapshot integrity: EVERY kind is versioned (bump SNAPSHOT_VERSION whenever any cached row shape changes, e.g. the notes index
+// gained `oakKey`) and every file embeds {kind, tenantId, version} that is verified on load, so an old-shape or foreign file is ignored.
+const SNAPSHOT_VERSION = "v3";
+// Snapshots hold a tenant's notes / questions / cards, so they live in a PRIVATE directory (0700, owned by this user, never a
+// symlink) and are written 0600 through an exclusive random temp name — no other local user can read, pre-create or redirect them.
+let snapDir: string | null | undefined;
+function privateDir(): string | null {
+  if (snapDir !== undefined) return snapDir;
+  try {
+    const d = join(tmpdir(), `aos-hub-cache-${process.getuid?.() ?? "u"}`);
+    mkdirSync(d, { recursive: true, mode: 0o700 });
+    const st = lstatSync(d);
+    snapDir = st.isDirectory() && !st.isSymbolicLink() && (process.getuid === undefined || st.uid === process.getuid()) && (st.mode & 0o077) === 0 ? d : null;
+  } catch { snapDir = null; }
+  return snapDir;
+}
+const diskPath = (kind: HubKind, tenantId: string): string | null => {
+  const d = privateDir();
+  return d ? join(d, `${kind}.${createHash("sha256").update(`${kind}|${tenantId}`).digest("hex").slice(0, 32)}.json`) : null;
+};
 // Fire-and-forget from the caller (never awaited): a snapshot write is best-effort bookkeeping, not something a
 // request should wait on. The big kinds serialize to tens of MB (the shared-library questions snapshot alone is
-// ~47MB) — `writeFileSync` blocked the event loop for the actual disk syscalls on every background rebuild, on
-// top of the unavoidable synchronous `JSON.stringify`/`.entries()` cost. Using the async `fs/promises` write (still
-// write-then-rename for atomicity) removes that syscall-blocking portion so a rebuild's disk write no longer stalls
-// every other in-flight request on the process.
+// ~47MB) — the async `fs/promises` write (still write-then-rename for atomicity) keeps a rebuild's disk write from
+// stalling every other in-flight request on the process.
 async function diskWrite(kind: HubKind, tenantId: string, v: unknown): Promise<void> {
   try {
-    const payload = JSON.stringify(v instanceof Map ? { __map: true, entries: [...v.entries()] } : { __map: false, v });
     const p = diskPath(kind, tenantId);
-    const tmp = `${p}.${process.pid}.tmp`;
-    await writeFile(tmp, payload);
+    if (!p) return;
+    const payload = JSON.stringify({ version: SNAPSHOT_VERSION, kind, tenantId, ...(v instanceof Map ? { __map: true, entries: [...v.entries()] } : { __map: false, v }) });
+    const tmp = `${p}.${randomBytes(8).toString("hex")}.tmp`;
+    await writeFile(tmp, payload, { mode: 0o600, flag: "wx" });
     renameSync(tmp, p);
   } catch { /* best effort — a rebuild still happens on the next restart */ }
 }
 function diskRead<T>(kind: HubKind, tenantId: string): T | null {
   try {
-    const parsed = JSON.parse(readFileSync(diskPath(kind, tenantId), "utf8")) as { __map: boolean; entries?: [string, unknown][]; v?: unknown };
+    const p = diskPath(kind, tenantId);
+    if (!p) return null;
+    const st = lstatSync(p);
+    if (!st.isFile() || (process.getuid !== undefined && st.uid !== process.getuid()) || (st.mode & 0o077) !== 0) return null;
+    const parsed = JSON.parse(readFileSync(p, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
+    if (parsed.version !== SNAPSHOT_VERSION || parsed.kind !== kind || parsed.tenantId !== tenantId) return null;
     return (parsed.__map ? new Map(parsed.entries) : parsed.v) as T;
   } catch { return null; }
 }
@@ -139,7 +161,7 @@ export function forgetHub(tenantId: string, ...kinds: HubKind[]) {
     // built from the same stale state, so it must not be resurrected by the next cold-miss disk read either. Rare
     // (structural edits: topic rename/delete, roster changes), so paying one real rebuild here is the same cost
     // this call always had — this just stops it from being skipped by the disk shortcut.
-    try { unlinkSync(diskPath(kind, tenantId)); } catch { /* no snapshot for this kind, or already gone */ }
+    try { const dp = diskPath(kind, tenantId); if (dp) unlinkSync(dp); } catch { /* no snapshot for this kind, or already gone */ }
   }
 }
 

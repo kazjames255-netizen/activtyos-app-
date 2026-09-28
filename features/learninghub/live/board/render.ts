@@ -1,4 +1,5 @@
 import { drawExtraStamp } from "./render-stamps";
+import { bt } from "./boardI18n";
 import { LINE_H, PT, boundsOf, canHoldText, isLineShape, isPolyShape, measureText, polyPoints, rad, rotCentre, setTextMeasurer, shapeTextArea, sorted, stampDef, type BgKind, type El, type Page, type Rect } from "./model";
 
 // Canvas rendering for the whiteboard: backgrounds, every element kind, the
@@ -179,10 +180,10 @@ function drawFrame(ctx: CanvasRenderingContext2D, bg: "storymap" | "diagram" | "
   } else if (bg === "diagram") {
     // a title line, a big drawing area and four dashed label boxes each side with leader lines pointing at it
     ctx.beginPath(); ctx.moveTo(L + 200, T + 40); ctx.lineTo(R - 200, T + 40); ctx.stroke();
-    ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("Title:", L + 200, T + 34);
+    ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(bt("bTitleColon", "Title:"), L + 200, T + 34);
     const dx = L + 340, dy = T + 90, dw = F.w - 680, dh = F.h - 130;
     ctx.save(); ctx.setLineDash([10 / k, 8 / k]); ctx.strokeStyle = P.gridStrong; ctx.strokeRect(dx, dy, dw, dh); ctx.restore();
-    ctx.font = `600 15px ${P.font}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = P.axis; ctx.fillText("Draw your diagram here", dx + dw / 2, dy + 10);
+    ctx.font = `600 15px ${P.font}`; ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = P.axis; ctx.fillText(bt("bDrawDiagram", "Draw your diagram here"), dx + dw / 2, dy + 10);
     ctx.font = `700 18px ${P.font}`; ctx.fillStyle = P.label;
     for (let i = 0; i < 4; i++) {
       const y = dy + 40 + i * ((dh - 80) / 3), bw = 250, bh = 56;
@@ -202,7 +203,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, bg: "storymap" | "diagram" | "
     ctx.beginPath(); ctx.moveTo(L, T + hh); ctx.lineTo(R, T + hh); ctx.stroke();
     let x = L;
     ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    cols.forEach((f, i) => { ctx.fillText(VOCAB_COLS[i]!, x + 14, T + hh / 2); if (i) { ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, B); ctx.stroke(); } x += f * F.w; });
+    cols.forEach((f, i) => { ctx.fillText(bt("bVocabCol" + i, VOCAB_COLS[i]!), x + 14, T + hh / 2); if (i) { ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, B); ctx.stroke(); } x += f * F.w; });
     ctx.strokeStyle = P.grid; ctx.lineWidth = hair; ctx.beginPath();
     for (let i = 1; i < rows; i++) { const y = T + hh + i * rh; ctx.moveTo(L, y); ctx.lineTo(R, y); }
     ctx.stroke();
@@ -424,7 +425,7 @@ function drawImage(ctx: CanvasRenderingContext2D, e: El, env: Env) {
   ctx.fillStyle = env.paper.brandSoft; ctx.strokeStyle = env.paper.grid; ctx.lineWidth = 1.5 / env.k;
   rrect(ctx, x, y, w, h, 8); ctx.fill(); ctx.stroke();
   ctx.fillStyle = env.paper.label; ctx.font = `600 14px ${env.paper.font}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillText(rec.state === "bad" ? "Picture unavailable" : "Loading picture…", x + w / 2, y + h / 2);
+  ctx.fillText(rec.state === "bad" ? bt("bPicUnavailable", "Picture unavailable") : bt("bPicLoading", "Loading picture…"), x + w / 2, y + h / 2);
   ctx.restore();
 }
 

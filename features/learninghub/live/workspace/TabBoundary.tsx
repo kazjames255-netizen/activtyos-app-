@@ -2,6 +2,7 @@
 
 import { Component, type ReactNode } from "react";
 import { FOCUS } from "../../teachKit";
+import { tr } from "../tr";
 
 // One in-call workspace tab (or the whole workspace) throwing while it renders must NEVER take the video call down with it.
 // The Daily frame lives in the same React tree, so an uncaught render error unmounts the call for everyone. This boundary
@@ -16,10 +17,10 @@ export class TabBoundary extends Component<{ children: ReactNode; label: string 
     return (
       <div className="grid h-full min-h-[160px] place-items-center p-6 text-center" role="alert" data-testid="ws-tab-crashed" data-tab-crashed={this.props.label}>
         <div className="max-w-[320px]">
-          <div className="text-[15px] font-extrabold text-[var(--ink)]">This tab hit a problem</div>
-          <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">Your call is fine. Reload the tab to carry on, or use one of the others.</p>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">{tr("aTab_crashTitle")}</div>
+          <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">{tr("aTab_crashBody")}</p>
           <button type="button" onClick={() => this.setState((s) => ({ failed: 0, attempt: s.attempt + 1 }))} data-action="reload-tab"
-            className={`mt-3 inline-flex min-h-[44px] items-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>Reload tab</button>
+            className={`mt-3 inline-flex min-h-[44px] items-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>{tr("aTab_reload")}</button>
         </div>
       </div>
     );

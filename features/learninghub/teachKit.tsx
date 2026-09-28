@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CS
 import { createPortal } from "react-dom";
 import { Ico, type IcoName } from "./teachIcons";
 import { useEscapeLayer } from "./escapeLayer";
+import { useT } from "@/lib/i18n/provider";
 
 // Shared building blocks for the three teaching panels (Live lessons, Homework,
 // Flashcards). Kept in its own file so the shell/notes owners can reshape kit.tsx
@@ -43,18 +44,32 @@ export function useNow(intervalMs = 1000): number {
 }
 
 const MIN = 60_000;
-export const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-export const fmtClock = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+/** The active UI language (the provider mirrors it on <html lang>); the date/time helpers are plain functions, so they read it here. */
+export const uiLocale = (): string => {
+  const l = typeof document !== "undefined" ? document.documentElement.lang : "";
+  return !l || l === "en" ? "en-GB" : l;
+};
+export const fmtDay = (iso: string) => new Date(iso).toLocaleDateString(uiLocale(), { weekday: "short", day: "numeric", month: "short" });
+export const fmtClock = (iso: string) => new Date(iso).toLocaleTimeString(uiLocale(), { hour: "2-digit", minute: "2-digit" });
 export const fmtDayTime = (iso: string) => `${fmtDay(iso)} · ${fmtClock(iso)}`;
 /** The viewer's local timezone label, e.g. "BST" or "GMT+1". */
 export const tzLabel = () => {
-  try { return new Date().toLocaleTimeString("en-GB", { timeZoneName: "short" }).split(" ").pop() ?? ""; } catch { return ""; }
+  try { return new Date().toLocaleTimeString(uiLocale(), { timeZoneName: "short" }).split(" ").pop() ?? ""; } catch { return ""; }
 };
 export const endOf = (startsAt: string, mins: number) => new Date(new Date(startsAt).getTime() + mins * MIN).toISOString();
 
 /** "3 days", "2 h 10 min", "45 min" — coarse, for chips and copy. */
 export function humanSpan(ms: number): string {
   const a = Math.abs(ms);
+  const loc = uiLocale();
+  if (!loc.startsWith("en")) {
+    const u = (n: number, unit: "day" | "hour" | "minute") => new Intl.NumberFormat(loc, { style: "unit", unit, unitDisplay: "short" }).format(n);
+    const dd = Math.floor(a / 86_400_000);
+    if (dd >= 2) return u(dd, "day");
+    const hh = Math.floor(a / 3_600_000), mm = Math.round((a % 3_600_000) / MIN);
+    if (hh >= 1) return mm && hh < 24 ? `${u(hh, "hour")} ${u(mm, "minute")}` : u(hh, "hour");
+    return u(Math.max(1, Math.round(a / MIN)), "minute");
+  }
   const days = Math.floor(a / 86_400_000);
   if (days >= 2) return `${days} days`;
   const h = Math.floor(a / 3_600_000);
@@ -70,9 +85,12 @@ export function relDay(iso: string, now = Date.now()): string {
   const a = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
   const b = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diff = Math.round((b - a) / 86_400_000);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomorrow";
-  if (diff === -1) return "Yesterday";
+  if (diff >= -1 && diff <= 1) {
+    const loc = uiLocale();
+    if (loc.startsWith("en")) return diff === 0 ? "Today" : diff === 1 ? "Tomorrow" : "Yesterday";
+    const w = new Intl.RelativeTimeFormat(loc, { numeric: "auto" }).format(diff, "day");
+    return w.charAt(0).toLocaleUpperCase(loc) + w.slice(1);
+  }
   return fmtDay(iso);
 }
 
@@ -92,7 +110,7 @@ export const ACCEPT_FILES = "application/pdf,image/png,image/jpeg,image/webp,ima
 export const readAsDataUrl = (f: File) => new Promise<string>((resolve, reject) => {
   const r = new FileReader();
   r.onload = () => resolve(String(r.result));
-  r.onerror = () => reject(new Error("Couldn't read that file"));
+  r.onerror = () => reject(new Error("Couldn't read that file")); // surfaced by callers via errMsg fallbacks
   r.readAsDataURL(f);
 });
 
@@ -132,10 +150,11 @@ export function Avatar({ name, size = 28, tone = "brand" }: { name: string; size
 /** A dismissible error strip, local to a panel (panels also bubble to props.onError). */
 export function Notice({ tone = "red", children, onClose }: { tone?: Tone; children: ReactNode; onClose?: () => void }) {
   const t = TONES[tone];
+  const tr = useT();
   return (
     <div role={tone === "red" ? "alert" : "status"} className="flex items-start gap-2 rounded-xl border px-3.5 py-2.5 text-[12.5px] font-semibold" style={{ background: t.bg, color: t.fg, borderColor: t.line }}>
       <span className="min-w-0 flex-1 break-words">{children}</span>
-      {onClose && <button type="button" aria-label="Dismiss" onClick={onClose} className={`-mr-1 grid h-6 w-6 flex-none place-items-center rounded-md hover:bg-black/5 ${FOCUS}`}><Ico name="close" size={14} /></button>}
+      {onClose && <button type="button" aria-label={tr("hubshell.k_dismiss")} onClick={onClose} className={`-me-1 grid h-6 w-6 flex-none place-items-center rounded-md hover:bg-black/5 ${FOCUS}`}><Ico name="close" size={14} /></button>}
     </div>
   );
 }
@@ -183,10 +202,49 @@ export function ProgressBar({ pct, tone = "brand", label }: { pct: number; tone?
 // ── dialog ───────────────────────────────────────────────────────────────────
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
+/** Kaz: "still no scrol bar" — confirmed the dialog DOES scroll (trackpad/keys), just with no visible
+ *  bar to grab: macOS's "show scroll bars: automatically based on mouse or trackpad" setting hides the
+ *  native bar for trackpad users in some browsers even with `::-webkit-scrollbar` styling (a system-level
+ *  choice CSS can't override there). This draws our own always-visible thumb over the scroll area instead,
+ *  so it never depends on the OS/browser's own scrollbar visibility rules. */
+function DialogScrollBody({ children }: { children: ReactNode }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [thumb, setThumb] = useState<{ top: number; height: number } | null>(null);
+  const recalc = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight <= clientHeight + 1) { setThumb(null); return; }
+    const height = Math.max(32, (clientHeight / scrollHeight) * clientHeight);
+    const top = (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
+    setThumb({ top, height });
+  }, []);
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    recalc();
+    const ro = new ResizeObserver(recalc);
+    ro.observe(el);
+    [...el.children].forEach((c) => ro.observe(c));
+    return () => ro.disconnect();
+  }, [recalc, children]);
+  return (
+    <div className="relative min-h-0 flex-1">
+      <div ref={scrollerRef} onScroll={recalc} className="hub-sheet-scroll h-full overflow-y-auto px-5 py-4">{children}</div>
+      {thumb && (
+        <div aria-hidden className="pointer-events-none absolute inset-y-1 right-1 w-2.5 rounded-full" style={{ background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}>
+          <div className="absolute w-full rounded-full" style={{ top: thumb.top, height: thumb.height, background: "var(--ink-2)" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Modal dialog: bottom sheet on phones, centred card on desktop. Esc closes,
  *  focus is trapped inside and restored on close, body scroll is locked. */
-export function Dialog({ title, subtitle, onClose, children, footer, size = "md", id }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; size?: "md" | "lg" | "xl"; id?: string }) {
+export function Dialog({ title, subtitle, onClose, children, footer, size = "md", id, plain = false }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; size?: "md" | "lg" | "xl" | "2xl"; id?: string; /** Lessons-area look: plain surface instead of the warm cream sheet (homework screens). */ plain?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  const tr = useT();
   const closeRef = useRef(onClose);
   const [ready, setReady] = useState(false);
   const markReady = useCallback(() => setReady(true), []);
@@ -211,20 +269,22 @@ export function Dialog({ title, subtitle, onClose, children, footer, size = "md"
     document.addEventListener("keydown", onKey, true);
     return () => { document.removeEventListener("keydown", onKey, true); document.body.style.overflow = overflow; prev?.focus?.({ preventScroll: true }); };
   }, [ready]);
-  const width = size === "xl" ? "sm:max-w-[920px]" : size === "lg" ? "sm:max-w-[680px]" : "sm:max-w-[520px]";
+  // Kaz: "wider so i dont have to scrol" — "Set homework" has dense rows (students, subjects, year chips)
+  // that wrap to many lines at 920px; "2xl" gives them room to lay out in fewer, wider rows.
+  const width = size === "2xl" ? "sm:max-w-[1200px]" : size === "xl" ? "sm:max-w-[920px]" : size === "lg" ? "sm:max-w-[680px]" : "sm:max-w-[520px]";
   return (
     <FullscreenPortal onReady={markReady}>
     <div className="hub-layer fixed inset-0 z-[400] flex items-end justify-center sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={ref} id={id} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
-        className={`hub-sheet flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl outline-none sm:max-h-[90dvh] sm:rounded-3xl ${width}`}>
+        className={`hub-sheet${plain ? " hub-plain" : ""} flex max-h-[94dvh] w-full flex-col overflow-hidden rounded-t-3xl outline-none sm:max-h-[90dvh] sm:rounded-3xl ${width}`}>
         <div className="hub-sheet-head flex items-start gap-3 px-5 py-4">
           <div className="min-w-0 flex-1">
             <h2 className="m-0 truncate text-[17px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{title}</h2>
             {subtitle && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{subtitle}</div>}
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={`grid h-10 w-10 flex-none place-items-center rounded-xl text-[15px] text-[var(--ink-3)] hover:bg-[var(--hub-warm-2)] ${FOCUS}`}><Ico name="close" size={16} /></button>
+          <button type="button" onClick={onClose} aria-label={tr("hubshell.k_close")} className={`grid h-10 w-10 flex-none place-items-center rounded-xl text-[15px] text-[var(--ink-3)] hover:bg-[var(--hub-warm-2)] ${FOCUS}`}><Ico name="close" size={16} /></button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <DialogScrollBody>{children}</DialogScrollBody>
         {footer && <div className="hub-sheet-foot flex flex-wrap items-center justify-end gap-2 px-5 py-3">{footer}</div>}
       </div>
     </div>
@@ -236,11 +296,12 @@ export function Dialog({ title, subtitle, onClose, children, footer, size = "md"
  *  "select all shown" (so "everyone in Year 5 except two" is: filter, select shown, untick two). `flags` marks students
  *  the thing being set can't reach (childId → why): they stay tickable but carry a warning marker. */
 export function StudentPicker({ students, value, onChange, idPrefix = "student", flags }: { students: { childId: string; childName: string; yearGroup?: string | null }[]; value: string[]; onChange: (ids: string[]) => void; idPrefix?: string; flags?: Record<string, string> }) {
+  const tr = useT();
   const [q, setQ] = useState("");
   const [yg, setYg] = useState("");
   const set = new Set(value);
   const toggle = (id: string) => onChange(set.has(id) ? value.filter((x) => x !== id) : [...value, id]);
-  if (!students.length) return <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-[12.5px] text-[var(--ink-3)]">No students enrolled yet — add students in the roster first.</p>;
+  if (!students.length) return <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-[12.5px] text-[var(--ink-3)]">{tr("hubshell.k_noStudentsYet")}</p>;
   const years = [...new Set(students.map((s) => s.yearGroup).filter((y): y is string => !!y))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const needle = q.trim().toLowerCase();
   const shown = students.filter((s) => (!needle || s.childName.toLowerCase().includes(needle)) && (!yg || s.yearGroup === yg));
@@ -256,19 +317,19 @@ export function StudentPicker({ students, value, onChange, idPrefix = "student",
       {(searchable || years.length > 1) && (
         <div className="mb-2 flex flex-wrap items-center gap-2">
           {searchable && (
-            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search students…" aria-label="Search students" id={`${idPrefix}-search`}
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("hubshell.k_searchStudentsPh")} aria-label={tr("hubshell.k_searchStudents")} id={`${idPrefix}-search`}
               className={`min-h-[40px] min-w-[140px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${FOCUS}`} />
           )}
           {years.length > 1 && (
-            <select value={yg} onChange={(e) => setYg(e.target.value)} aria-label="Filter by year group" className={`min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] text-[var(--ink)] ${FOCUS}`}>
-              <option value="">All year groups</option>
+            <select value={yg} onChange={(e) => setYg(e.target.value)} aria-label={tr("hubshell.k_filterYearGroup")} className={`min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] text-[var(--ink)] ${FOCUS}`}>
+              <option value="">{tr("hubshell.k_allYearGroups")}</option>
               {years.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           )}
         </div>
       )}
-      <div className="flex max-h-[210px] flex-wrap gap-1.5 overflow-y-auto" role="group" aria-label="Students">
-        {shown.length === 0 && <p className="px-1 py-2 text-[12.5px] text-[var(--ink-3)]">No students match.</p>}
+      <div className="flex max-h-[210px] flex-wrap gap-1.5 overflow-y-auto" role="group" aria-label={tr("hubshell.k_students")}>
+        {shown.length === 0 && <p className="px-1 py-2 text-[12.5px] text-[var(--ink-3)]">{tr("hubshell.k_noStudentsMatch")}</p>}
         {shown.map((s) => {
           const on = set.has(s.childId);
           const flag = flags?.[s.childId];
@@ -277,7 +338,7 @@ export function StudentPicker({ students, value, onChange, idPrefix = "student",
               className={`inline-flex min-h-[44px] lg:min-h-[40px] items-center gap-1.5 rounded-full border px-3 text-[12.5px] font-bold transition-colors ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`}>
               <span aria-hidden className={`grid h-4 w-4 place-items-center rounded-full ${on ? "bg-[var(--brand)] text-white" : "border border-[var(--line)]"}`}>{on ? <Ico name="check" size={11} strokeWidth={3} /> : null}</span>
               {s.childName}
-              {flag && <span aria-label="Can't open this" className="text-[var(--gold)]">⚠</span>}
+              {flag && <span aria-label={tr("hubshell.k_cantOpen")} className="text-[var(--gold)]">⚠</span>}
             </button>
           );
         })}
@@ -285,9 +346,9 @@ export function StudentPicker({ students, value, onChange, idPrefix = "student",
       {students.length > 1 && (
         <div className="mt-2 flex flex-wrap items-center gap-x-3">
           <button type="button" onClick={toggleShown} disabled={shown.length === 0} className={`min-h-[44px] lg:min-h-[32px] rounded-md px-1 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>
-            {allShown ? (filtering ? "Clear those shown" : "Clear all") : filtering ? `Select all ${shown.length} shown` : "Select everyone"}
+            {allShown ? (filtering ? tr("hubshell.k_clearShown") : tr("hubshell.k_clearAll")) : filtering ? tr("hubshell.k_selectAllShown", { n: shown.length }) : tr("hubshell.k_selectEveryone")}
           </button>
-          {students.length > 8 && <span className="text-[11.5px] text-[var(--ink-3)]">{value.length} of {students.length} selected</span>}
+          {students.length > 8 && <span className="text-[11.5px] text-[var(--ink-3)]">{tr("hubshell.k_nOfNSelected", { n: value.length, total: students.length })}</span>}
         </div>
       )}
     </div>
@@ -372,7 +433,7 @@ export function MoreMenu({ label, children, className = "" }: { label: string; c
         <Ico name="more" size={20} />
       </button>
       {open && (
-        <div role="menu" aria-label={label} className={`hub-pop absolute right-0 z-40 min-w-[196px] rounded-xl p-1 ${up ? "bottom-full mb-1" : "top-full mt-1"}`}>
+        <div role="menu" aria-label={label} className={`hub-pop absolute end-0 z-40 min-w-[196px] rounded-xl p-1 ${up ? "bottom-full mb-1" : "top-full mt-1"}`}>
           {children(() => setOpen(false))}
         </div>
       )}
@@ -383,7 +444,7 @@ export function MoreMenu({ label, children, className = "" }: { label: string; c
 export function MenuItem({ icon, tone = "neutral", onClick, children, disabled }: { icon?: IcoName; tone?: "neutral" | "danger"; onClick: () => void; children: ReactNode; disabled?: boolean }) {
   return (
     <button type="button" role="menuitem" disabled={disabled} onClick={onClick}
-      className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13px] font-bold disabled:opacity-50 ${FOCUS} ${tone === "danger" ? "text-[var(--red)] hover:bg-[var(--red-soft)]" : "text-[var(--ink)] hover:bg-[var(--hub-warm-2)]"}`}>
+      className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-lg px-3 text-start text-[13px] font-bold disabled:opacity-50 ${FOCUS} ${tone === "danger" ? "text-[var(--red)] hover:bg-[var(--red-soft)]" : "text-[var(--ink)] hover:bg-[var(--hub-warm-2)]"}`}>
       {icon && <Ico name={icon} size={16} />}{children}
     </button>
   );

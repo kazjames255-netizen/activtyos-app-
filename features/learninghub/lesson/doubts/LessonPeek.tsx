@@ -7,6 +7,7 @@ import type { HubSettings } from "@/lib/hubConfig";
 import { ruleOf } from "../../shared-assess/api";
 import { QuestionView } from "../../shared-assess/QuestionView";
 import { errMsg } from "../../types";
+import { useT } from "@/lib/i18n/provider";
 import { fetchLessonQuestions, type LessonQuestions } from "../api";
 import { LessonStyles, StepCard, Tag, display } from "../lessonUi";
 import { SlideDeck } from "../slides/SlideDeck";
@@ -33,6 +34,7 @@ export function LessonPeek({ qs, noteId, step, slide, questionId, lessonTitle, c
 }) {
   // The caller already knows the lesson's title (it's the thread's own header) — show it immediately
   // instead of waiting on a round-trip, and only correct it if slide-peek's own response disagrees.
+  const t = useT();
   const [title, setTitle] = useState<string | null>(lessonTitle);
   const [slideData, setSlideData] = useState<Slide | null | undefined>(undefined);
   const [data, setData] = useState<LessonQuestions | null>(null);
@@ -43,9 +45,9 @@ export function LessonPeek({ qs, noteId, step, slide, questionId, lessonTitle, c
     if (step === "slides") {
       get<{ title: string; slide: Slide | null }>(`/api/learning-hub/notes/${noteId}/slide-peek${qs}${qs.includes("?") ? "&" : "?"}slide=${slide}`)
         .then((r) => { if (alive) { setTitle(r.title); setSlideData(r.slide); } })
-        .catch((e) => { if (alive) setErr(errMsg(e, "Couldn't load this")); });
+        .catch((e) => { if (alive) setErr(errMsg(e, t("hublessons.lpCouldntLoad"))); });
     } else if (step === "warm" || step === "quiz") {
-      fetchLessonQuestions(noteId, qs, step === "quiz").then((d) => { if (alive) setData(d); }).catch((e) => { if (alive) setErr(errMsg(e, "Couldn't load this")); });
+      fetchLessonQuestions(noteId, qs, step === "quiz").then((d) => { if (alive) setData(d); }).catch((e) => { if (alive) setErr(errMsg(e, t("hublessons.lpCouldntLoad"))); });
     }
     return () => { alive = false; };
   }, [noteId, qs, step, slide]);
@@ -56,7 +58,7 @@ export function LessonPeek({ qs, noteId, step, slide, questionId, lessonTitle, c
   if (err) body = <p role="alert" className="m-0 text-[14px] font-semibold text-[var(--red)]">{err}</p>;
   else if (step === "slides") {
     if (slideData === undefined) body = <div className="h-40 animate-pulse rounded-xl bg-[var(--panel)]" />;
-    else if (slideData === null) body = <p className="m-0 text-[14px] text-[var(--ink-2)]">That slide isn&apos;t there any more.</p>;
+    else if (slideData === null) body = <p className="m-0 text-[14px] text-[var(--ink-2)]">{t("hublessons.lpSlideGone")}</p>;
     else body = <SlideDeck slides={[slideData]} addXP={() => undefined} onDone={onClose} onBack={onClose} />;
   } else if (step === "warm" || step === "quiz") {
     body = !data
@@ -64,24 +66,24 @@ export function LessonPeek({ qs, noteId, step, slide, questionId, lessonTitle, c
       : question
         ? (
           <StepCard>
-            <Tag>{step === "quiz" ? "Quiz" : "Warm-up"}</Tag>
+            <Tag>{step === "quiz" ? t("hublessons.quizTag") : t("hublessons.kindWarmup")}</Tag>
             <div className="mt-3">
               <QuestionView q={question} rule={ruleOf(config.questionKinds, question.kind)} value={undefined} onChange={() => undefined} disabled />
             </div>
           </StepCard>
         )
-        : <p className="m-0 text-[14px] text-[var(--ink-2)]">That question isn&apos;t there any more.</p>;
+        : <p className="m-0 text-[14px] text-[var(--ink-2)]">{t("hublessons.lpQuestionGone")}</p>;
   } else {
-    body = <p className="m-0 text-[14px] text-[var(--ink-2)]">This part of the lesson doesn&apos;t have a specific page to show.</p>;
+    body = <p className="m-0 text-[14px] text-[var(--ink-2)]">{t("hublessons.lpNoPage")}</p>;
   }
 
   return (
     <Portal>
       <div className="fixed inset-0 z-[520] flex items-stretch justify-center bg-[color-mix(in_srgb,var(--ink)_45%,transparent)] md:items-center md:p-6" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <div role="dialog" aria-modal="true" aria-label="What the student saw" className="flex max-h-full w-full flex-col overflow-hidden bg-[var(--surface)] shadow-[var(--shadow-pop)] md:max-h-[90vh] md:max-w-[720px] md:rounded-2xl">
+        <div role="dialog" aria-modal="true" aria-label={t("hublessons.lpDialogAria")} className="flex max-h-full w-full flex-col overflow-hidden bg-[var(--surface)] shadow-[var(--shadow-pop)] md:max-h-[90vh] md:max-w-[720px] md:rounded-2xl">
           <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
-            <h2 className="min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={display}>{title ?? "Lesson"}</h2>
-            <button type="button" onClick={onClose} aria-label="Close" className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[20px] leading-none text-[var(--ink-2)] hover:bg-[var(--panel)]">×</button>
+            <h2 className="min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={display}>{title ?? t("hublessons.stepLesson")}</h2>
+            <button type="button" onClick={onClose} aria-label={t("hublessons.close")} className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[20px] leading-none text-[var(--ink-2)] hover:bg-[var(--panel)]">×</button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <LessonStyles />

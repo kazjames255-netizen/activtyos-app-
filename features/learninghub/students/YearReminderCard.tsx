@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import { put } from "@/lib/api";
 import { Modal, friendlyError } from "../kit";
+import { DirArrow } from "../rtl";
 import type { PanelProps } from "../panelTypes";
 import { errMsg } from "../types";
 import { isDismissed, loadHandled, manualYearStudents, markDone, pendingRows, saveHandled, shouldShow, snooze, type YearRow } from "./yearReminder";
@@ -21,6 +23,7 @@ type Done = { kind: "moved" | "kept" | "auto"; from: string; to?: string };
  * pending row to review, full stop, and Settings shows a neutral "up to date" line instead when there's nothing to do.
  */
 export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, students, yearGroups, refreshStudents, now, alwaysShow }: Pick<PanelProps, "tenantId" | "qs" | "canEdit" | "readOnly" | "franchiseId" | "students" | "refreshStudents"> & { yearGroups: string[]; now?: () => Date; alwaysShow?: boolean }) {
+  const t = useT();
   const clock = useCallback(() => (now ? now() : new Date()), [now]);
   const [ready, setReady] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -49,7 +52,7 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
 
   const mark = (ids: string[], on: boolean) => setHandled((h) => { const n = new Set(h); for (const id of ids) { if (on) n.add(id); else n.delete(id); } saveHandled(tenantId, n, clock()); return n; });
   const putYear = (childId: string, body: { yearGroup: string } | { yearGroupAuto: true }) => put(`/api/learning-hub/students/${childId}${qs}`, body);
-  const fail = (childId: string, e: unknown) => setErrs((x) => ({ ...x, [childId]: friendlyError(errMsg(e, "Could not change the year group")) }));
+  const fail = (childId: string, e: unknown) => setErrs((x) => ({ ...x, [childId]: friendlyError(errMsg(e, t("hubshell.st_yrChangeFail"))) }));
   const without = <T,>(o: Record<string, T>, k: string): Record<string, T> => Object.fromEntries(Object.entries(o).filter(([id]) => id !== k));
   const clearErr = (childId: string) => setErrs((x) => without(x, childId));
 
@@ -59,7 +62,7 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
     try {
       await putYear(r.childId, { yearGroup: r.next });
       setDone((d) => ({ ...d, [r.childId]: { kind: "moved", from: r.current, to: r.next! } })); mark([r.childId], true);
-      setLive(`${r.name} moved up to ${r.next}.`); refreshStudents?.();
+      setLive(t("hubshell.st_yrMovedTo", { name: r.name, to: r.next })); refreshStudents?.();
     } catch (e) { fail(r.childId, e); } finally { setBusy(null); }
   };
   const undoOne = async (r: YearRow) => {
@@ -68,16 +71,16 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
     try {
       await putYear(r.childId, { yearGroup: d.from });
       setDone((x) => without(x, r.childId)); mark([r.childId], false);
-      setLive(`${r.name} put back to ${d.from}.`); refreshStudents?.();
+      setLive(t("hubshell.st_yrPutBackTo", { name: r.name, from: d.from })); refreshStudents?.();
     } catch (e) { fail(r.childId, e); } finally { setBusy(null); }
   };
-  const keep = (r: YearRow) => { setDone((d) => ({ ...d, [r.childId]: { kind: "kept", from: r.current } })); mark([r.childId], true); setLive(`${r.name} stays in ${r.current}.`); };
+  const keep = (r: YearRow) => { setDone((d) => ({ ...d, [r.childId]: { kind: "kept", from: r.current } })); mark([r.childId], true); setLive(t("hubshell.st_yrStays", { name: r.name, year: r.current })); };
   const setAuto = async (r: YearRow) => {
     setBusy(r.childId); clearErr(r.childId);
     try {
       await putYear(r.childId, { yearGroupAuto: true });
       setDone((d) => ({ ...d, [r.childId]: { kind: "auto", from: r.current } })); mark([r.childId], true);
-      setLive(`${r.name} now moves up automatically from the date of birth.`); refreshStudents?.();
+      setLive(t("hubshell.st_yrNowAuto", { name: r.name })); refreshStudents?.();
     } catch (e) { fail(r.childId, e); } finally { setBusy(null); }
   };
 
@@ -91,9 +94,9 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
     }
     const ids = Object.keys(prev);
     mark(ids, true); setBusy(null); refreshStudents?.();
-    setLive(`${ids.length} ${ids.length === 1 ? "student" : "students"} moved up a year${failed ? `, ${failed} could not be changed` : ""}.`);
+    setLive(failed ? t("hubshell.st_yrMovedFail", { n: ids.length, failed }) : t("hubshell.st_yrMoved", { n: ids.length }));
     if (ids.length) {
-      setUndo({ label: `Moved ${ids.length} up a year`, prev });
+      setUndo({ label: t("hubshell.st_yrMovedLabel", { n: ids.length }), prev });
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => setUndo(null), 10_000);
     }
@@ -108,7 +111,7 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
       catch (e) { fail(id, e); }
     }
     mark(back, false); setBusy(null); refreshStudents?.();
-    setLive(`Put ${back.length} ${back.length === 1 ? "student" : "students"} back.`);
+    setLive(t("hubshell.st_yrPutBack", { n: back.length }));
   };
 
   const close = () => { setOpen(false); setConfirmAll(false); setDone({}); setErrs({}); };
@@ -119,42 +122,42 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
     <>
       <div aria-live="polite" role="status" className="sr-only">{live}</div>
       {settled && (
-        <p data-testid="year-reminder-settled" className="text-[13px] font-semibold text-[var(--ink-2)]"><span aria-hidden>✅ </span>All students&apos; year groups are up to date.</p>
+        <p data-testid="year-reminder-settled" className="text-[13px] font-semibold text-[var(--ink-2)]"><span aria-hidden>✅ </span>{t("hubshell.st_yrUpToDate")}</p>
       )}
       {show && (
-        <section data-testid="year-reminder" aria-label="New school year" className="flex flex-wrap items-center gap-3 rounded-2xl border p-3 sm:p-4" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)" }}>
+        <section data-testid="year-reminder" aria-label={t("hubshell.st_yrNewYear")} className="flex flex-wrap items-center gap-3 rounded-2xl border p-3 sm:p-4" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)" }}>
           <div className="min-w-0 flex-1 basis-[220px]">
-            <p className="text-[14px] font-extrabold leading-snug text-[var(--ink)]"><span aria-hidden>🎒 </span>New school year</p>
-            <p className="text-[12.5px] font-semibold text-[var(--ink-2)]">{pending.length} {pending.length === 1 ? "student has" : "students have"} a year group set by hand. These don&apos;t move up on their own.</p>
+            <p className="text-[14px] font-extrabold leading-snug text-[var(--ink)]"><span aria-hidden>🎒 </span>{t("hubshell.st_yrNewYear")}</p>
+            <p className="text-[12.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.st_yrPendingBody", { n: pending.length })}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button sm className="!min-h-[44px] lg:!min-h-[36px]" onClick={() => setOpen(true)}>Review year groups</Button>
-            <button type="button" onClick={() => { snooze(tenantId, clock()); setDismissed(true); }} className="min-h-[44px] rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] lg:min-h-[36px]">Not now</button>
+            <Button sm className="!min-h-[44px] lg:!min-h-[36px]" onClick={() => setOpen(true)}>{t("hubshell.st_yrReview")}</Button>
+            <button type="button" onClick={() => { snooze(tenantId, clock()); setDismissed(true); }} className="min-h-[44px] rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] lg:min-h-[36px]">{t("hubshell.st_yrNotNow")}</button>
           </div>
         </section>
       )}
-      <Modal open={open} onClose={close} wide title="Review year groups"
+      <Modal open={open} onClose={close} wide title={t("hubshell.st_yrReview")}
         footer={<>
           {confirmAll ? (
-            <span className="mr-auto flex flex-wrap items-center gap-2" role="alertdialog" aria-label="Confirm move all up">
-              <span className="text-[13px] font-bold text-[var(--ink)]">Move {movable} {movable === 1 ? "student" : "students"} up a year?</span>
-              <Button sm onClick={moveAll} className="!min-h-[44px] lg:!min-h-[36px]">Yes, move {movable} up</Button>
-              <button type="button" onClick={() => setConfirmAll(false)} className="min-h-[44px] rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] lg:min-h-[36px]">Cancel</button>
+            <span className="me-auto flex flex-wrap items-center gap-2" role="alertdialog" aria-label={t("hubshell.st_yrConfirmAria")}>
+              <span className="text-[13px] font-bold text-[var(--ink)]">{t("hubshell.st_yrMoveQ", { n: movable })}</span>
+              <Button sm onClick={moveAll} className="!min-h-[44px] lg:!min-h-[36px]">{t("hubshell.st_yrYesMove", { n: movable })}</Button>
+              <button type="button" onClick={() => setConfirmAll(false)} className="min-h-[44px] rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] lg:min-h-[36px]">{t("hubshell.st_cancel")}</button>
             </span>
           ) : (
-            <Button sm variant="ghost" disabled={movable === 0 || busy !== null} onClick={() => setConfirmAll(true)} className="mr-auto !min-h-[44px] lg:!min-h-[36px]">Move all up a year{movable ? ` (${movable})` : ""}</Button>
+            <Button sm variant="ghost" disabled={movable === 0 || busy !== null} onClick={() => setConfirmAll(true)} className="me-auto !min-h-[44px] lg:!min-h-[36px]">{movable ? t("hubshell.st_yrMoveAllN", { n: movable }) : t("hubshell.st_yrMoveAll")}</Button>
           )}
-          <Button sm onClick={allDone} className="!min-h-[44px] lg:!min-h-[36px]">All done</Button>
+          <Button sm onClick={allDone} className="!min-h-[44px] lg:!min-h-[36px]">{t("hubshell.st_yrAllDone")}</Button>
         </>}>
-        <p className="mb-3 text-[13px] text-[var(--ink-2)]">The new school year starts on 1 September. Students set to automatic have already moved up. These were typed in by hand.</p>
+        <p className="mb-3 text-[13px] text-[var(--ink-2)]">{t("hubshell.st_yrIntro")}</p>
         {undo && (
           <div role="status" data-testid="year-undo" className="mb-3 flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] font-bold text-[var(--ink)]">
             <span className="flex-1">{undo.label}.</span>
-            <button type="button" onClick={undoAll} className="min-h-[44px] rounded-lg px-3 font-extrabold text-[var(--brand-ink)] underline lg:min-h-[34px]">Undo</button>
+            <button type="button" onClick={undoAll} className="min-h-[44px] rounded-lg px-3 font-extrabold text-[var(--brand-ink)] underline lg:min-h-[34px]">{t("hubshell.st_undo")}</button>
           </div>
         )}
-        {listed.length === 0 && <p className="py-6 text-center text-[13px] font-semibold text-[var(--ink-2)]">Nothing left to review.</p>}
-        <ul className="divide-y divide-[var(--line)]" aria-label="Students with a year group set by hand">
+        {listed.length === 0 && <p className="py-6 text-center text-[13px] font-semibold text-[var(--ink-2)]">{t("hubshell.st_yrNothingLeft")}</p>}
+        <ul className="divide-y divide-[var(--line)]" aria-label={t("hubshell.st_yrListAria")}>
           {listed.map((r) => {
             const d = done[r.childId]; const b = busy === r.childId || busy === "all";
             return (
@@ -163,17 +166,17 @@ export function YearReminder({ tenantId, qs, canEdit, readOnly, franchiseId, stu
                   <div className="min-w-0 flex-1 basis-[150px]">
                     <p className="truncate text-[14px] font-extrabold text-[var(--ink)]">{r.name}</p>
                     <p className="text-[12.5px] font-semibold text-[var(--ink-2)]">
-                      {d?.kind === "moved" ? <>{d.from} → <b>{d.to}</b> <span aria-hidden>✓</span></>
-                        : d?.kind === "kept" ? <>Stays in {d.from} <span aria-hidden>✓</span></>
-                        : d?.kind === "auto" ? <>Now automatic <span aria-hidden>✓</span></>
-                        : r.next ? <>{r.current} → <b>{r.next}</b></> : <>{r.current}. Leave or left school?</>}
+                      {d?.kind === "moved" ? <>{d.from} <DirArrow /> <b>{d.to}</b> <span aria-hidden>✓</span></>
+                        : d?.kind === "kept" ? <>{t("hubshell.st_yrStaysIn", { year: d.from })} <span aria-hidden>✓</span></>
+                        : d?.kind === "auto" ? <>{t("hubshell.st_yrNowAutomatic")} <span aria-hidden>✓</span></>
+                        : r.next ? <>{r.current} <DirArrow /> <b>{r.next}</b></> : <>{t("hubshell.st_yrLeft", { year: r.current })}</>}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {d?.kind === "moved" && <button type="button" disabled={b} onClick={() => undoOne(r)} aria-label={`Undo ${r.name}`} className="min-h-[44px] rounded-lg px-3 text-[13px] font-extrabold text-[var(--brand-ink)] underline lg:min-h-[34px]">Undo</button>}
-                    {!d && r.next && <Button sm disabled={b} onClick={() => moveOne(r)} aria-label={`Move ${r.name} up to ${r.next}`} className="!min-h-[44px] lg:!min-h-[34px]">Move up</Button>}
-                    {!d && <Button sm variant="ghost" disabled={b} onClick={() => keep(r)} aria-label={`Keep ${r.name} in ${r.current}`} className="!min-h-[44px] lg:!min-h-[34px]">Keep</Button>}
-                    {!d && r.canAuto && <Button sm variant="ghost" disabled={b} onClick={() => setAuto(r)} aria-label={`Set ${r.name} to automatic`} className="!min-h-[44px] lg:!min-h-[34px]">Set to automatic</Button>}
+                    {d?.kind === "moved" && <button type="button" disabled={b} onClick={() => undoOne(r)} aria-label={t("hubshell.st_yrUndoName", { name: r.name })} className="min-h-[44px] rounded-lg px-3 text-[13px] font-extrabold text-[var(--brand-ink)] underline lg:min-h-[34px]">{t("hubshell.st_undo")}</button>}
+                    {!d && r.next && <Button sm disabled={b} onClick={() => moveOne(r)} aria-label={t("hubshell.st_yrMoveNameTo", { name: r.name, to: r.next })} className="!min-h-[44px] lg:!min-h-[34px]">{t("hubshell.st_yrMoveUp")}</Button>}
+                    {!d && <Button sm variant="ghost" disabled={b} onClick={() => keep(r)} aria-label={t("hubshell.st_yrKeepNameIn", { name: r.name, year: r.current })} className="!min-h-[44px] lg:!min-h-[34px]">{t("hubshell.st_yrKeep")}</Button>}
+                    {!d && r.canAuto && <Button sm variant="ghost" disabled={b} onClick={() => setAuto(r)} aria-label={t("hubshell.st_yrSetAutoName", { name: r.name })} className="!min-h-[44px] lg:!min-h-[34px]">{t("hubshell.st_yrSetAuto")}</Button>}
                   </div>
                 </div>
                 {errs[r.childId] && <p role="alert" className="mt-1 text-[12.5px] font-semibold" style={{ color: "var(--red)" }}>{errs[r.childId]}</p>}

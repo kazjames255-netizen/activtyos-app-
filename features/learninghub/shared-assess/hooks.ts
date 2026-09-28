@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { get } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { errMsg } from "../types";
+import { hubT } from "../family/hubT";
 
 /** GET a hub path (null = don't fetch), refetch on realtime changes, keep the
  *  last good data while refetching. `error` is the last failure (cleared on success). */
@@ -25,7 +26,7 @@ export function useHubData<T>(path: string | null, channels: string[] = []) {
       setData(d); setError(null);
     } catch (e) {
       if (mine !== seq.current) return;
-      setError(errMsg(e, "Couldn't load that"));
+      setError(errMsg(e, hubT("hubfam.asCouldntLoad")));
     } finally { if (mine === seq.current) setLoading(false); }
   }, [path]);
 

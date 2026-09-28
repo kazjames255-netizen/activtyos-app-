@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui";
 import { ApiError } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
+import { tr } from "./tr";
 import { useIsDesktop } from "../kit";
 import { DISPLAY, FOCUS, Notice, Skeleton, fmtClock, humanSpan, useNow } from "../teachKit";
 import { Ico, type IcoName } from "../teachIcons";
@@ -47,22 +49,23 @@ function readDailyTheme(host: HTMLElement) {
 }
 
 const CAMERA_HELP: Record<string, string> = {
-  permissions: "Your browser is blocking the camera or microphone. Click the camera icon in the address bar, choose Allow, then rejoin.",
-  "cam-in-use": "Your camera is being used by another app or tab. Close it and try again.",
-  "mic-in-use": "Your microphone is being used by another app or tab. Close it and try again.",
-  "cam-mic-in-use": "Your camera and microphone are being used by another app or tab. Close it and try again.",
-  "not-found": "We couldn't find a camera or microphone. Plug one in, or join without video.",
-  "undefined-mediadevices": "This browser can't reach a camera. Try Chrome, Edge, Safari or Firefox over a secure (https) page.",
+  permissions: "aStage_camPermissions",
+  "cam-in-use": "aStage_camInUse",
+  "mic-in-use": "aStage_micInUse",
+  "cam-mic-in-use": "aStage_camMicInUse",
+  "not-found": "aStage_notFound",
+  "undefined-mediadevices": "aStage_noMediaDevices",
 };
 
 /** Why the video connection failed — Daily's own fatal-error type, put into words a parent understands (not just "the connection dropped"). */
 export type FrameFailKind = "full" | "expired" | "removed" | "drop";
 export interface FrameFail { kind: FrameFailKind; message: string }
+/** Keys (no "hublive." prefix) resolved at render / failure time so the language is the current one. */
 const FRAME_FAIL: Record<FrameFailKind, { title: string; text: string }> = {
-  full: { title: "This lesson's room is full", text: "The video room has reached its limit, so it can't take another device. Close any other tab or device that is already in this lesson, then try again — or message your tutor to make room." },
-  expired: { title: "The link for this lesson has expired", text: "Your joining time for this lesson has passed. If the lesson is still going, go back to Live lessons and join again." },
-  removed: { title: "You were removed from the call", text: "Your tutor took you out of the call. Message them if that wasn't expected." },
-  drop: { title: "The connection dropped", text: "" },
+  full: { title: "aStage_failFullTitle", text: "aStage_failFullText" },
+  expired: { title: "aStage_failExpiredTitle", text: "aStage_failExpiredText" },
+  removed: { title: "aStage_failRemovedTitle", text: "aStage_failRemovedText" },
+  drop: { title: "aStage_failDropTitle", text: "" },
 };
 /** Map a Daily fatal error (daily-js `error` event, or a rejected `join()`) to a failure kind. */
 export function frameFailOf(type: string | undefined, message: string | undefined): FrameFail {
@@ -71,7 +74,7 @@ export function frameFailOf(type: string | undefined, message: string | undefine
   const kind: FrameFailKind = t === "meeting-full" || /\b(meeting|room)\b.*\bfull\b|max(imum)?[_ ]participants/i.test(m) ? "full"
     : t === "exp-room" || t === "exp-token" || t === "nbf-room" || t === "nbf-token" || t === "no-room" ? "expired"
     : t === "ejected" ? "removed" : "drop";
-  return { kind, message: kind === "drop" ? (m || "The video connection dropped.") : FRAME_FAIL[kind].text };
+  return { kind, message: kind === "drop" ? (m || tr("aStage_failDropMsg")) : tr(FRAME_FAIL[kind].text) };
 }
 
 /** The Daily frame. Mount it only once there's a join token. */
@@ -98,7 +101,7 @@ export function DailyFrame({ join, onLeft, onFail, onCameraIssue, camOn = true, 
       f.on("left-meeting", () => { if (!cancelled) cb.current.onLeft(); });
       f.on("camera-error", (ev) => {
         const type = (ev as { error?: { type?: string }; errorMsg?: { errorMsg?: string } } | undefined)?.error?.type ?? "";
-        if (!cancelled) cb.current.onCameraIssue(CAMERA_HELP[type] ?? "We couldn't start your camera or microphone. Check your browser's permissions, then rejoin.");
+        if (!cancelled) cb.current.onCameraIssue(tr(CAMERA_HELP[type] ?? "aStage_camGeneric"));
       });
       f.on("error", (ev) => {
         const m = (ev as { errorMsg?: string; error?: { type?: string; msg?: string } } | undefined);
@@ -107,7 +110,7 @@ export function DailyFrame({ join, onLeft, onFail, onCameraIssue, camOn = true, 
       try {
         await f.join({ url: join.url, token: join.token, userName: join.userName });
       } catch (e) {
-        if (!cancelled) cb.current.onFail(frameFailOf((e as { error?: { type?: string } } | undefined)?.error?.type, e instanceof Error && e.message ? e.message : "Couldn't connect to the lesson."));
+        if (!cancelled) cb.current.onFail(frameFailOf((e as { error?: { type?: string } } | undefined)?.error?.type, e instanceof Error && e.message ? e.message : tr("aStage_connectFail")));
       }
     })();
     return () => {
@@ -188,6 +191,7 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
   camOn?: boolean;
   micOn?: boolean;
 }) {
+  const tx = useT();
   const now = useNow(1000);
   const boardLive = useUnseenBoardOps();
   const t = lessonTiming(lesson, now);
@@ -271,11 +275,11 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
     try {
       const r = await onExtend();
       setExtra(Date.parse(r.roomExpiresAt));
-      setToast("15 more minutes");
+      setToast(tx("hublive.aStage_toast15"));
     } catch (e) {
       const code = e instanceof ApiError && e.body && typeof e.body === "object" ? (e.body as { code?: string }).code : undefined;
       if (code === "extension_limit") setLimit(true);
-      else setStayErr(e instanceof Error && e.message ? e.message : "Couldn't extend the call — try again.");
+      else setStayErr(e instanceof Error && e.message ? e.message : tx("hublive.aStage_extendFail"));
     } finally { setStaying(false); }
   };
 
@@ -341,46 +345,46 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
   // ── what the video pane shows ──
   let stage: ReactNode;
   if (state.kind === "connecting") {
-    stage = <div className="flex h-full min-h-[200px] w-full flex-col items-center justify-center gap-3 text-white"><div className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/25 border-t-white motion-reduce:animate-none" /><div className="text-[13px] font-semibold text-white/85">Connecting you to the lesson…</div></div>;
+    stage = <div className="flex h-full min-h-[200px] w-full flex-col items-center justify-center gap-3 text-white"><div className="h-9 w-9 animate-spin rounded-full border-[3px] border-white/25 border-t-white motion-reduce:animate-none" /><div className="text-[13px] font-semibold text-white/85">{tx("hublive.aStage_connecting")}</div></div>;
   } else if (state.kind === "failed") {
     const f = state.reason;
     const map: Record<JoinFailure, { icon: IcoName; title: string }> = {
-      not_open: { icon: "hourglass", title: "The lesson isn't open yet" },
-      ended: { icon: "flag", title: "This lesson has finished" },
-      unavailable: { icon: "camOff", title: "Video isn't available right now" },
-      forbidden: { icon: "lock", title: "You can't join this lesson" },
-      waiting: { icon: "hourglass", title: "Waiting for your tutor" },
-      child: { icon: "lock", title: "Which child is joining?" },
-      other: { icon: "warning", title: "We couldn't connect you" },
+      not_open: { icon: "hourglass", title: tx("hublive.aStage_notOpen") },
+      ended: { icon: "flag", title: tx("hublive.aStage_finished") },
+      unavailable: { icon: "camOff", title: tx("hublive.aStage_videoUnavail") },
+      forbidden: { icon: "lock", title: tx("hublive.aStage_forbidden") },
+      waiting: { icon: "hourglass", title: tx("hublive.aKit_waiting") },
+      child: { icon: "lock", title: tx("hublive.aLobby_whichChild") },
+      other: { icon: "warning", title: tx("hublive.aStage_couldntConnect") },
     };
     stage = (
       <StageMessage icon={map[f].icon} title={map[f].title}
         actions={<>
-          {f === "child" && (state.children ?? []).map((c) => <Button key={c.childId} variant="solid" className={solidOnDark} onClick={() => onRejoin(c.childId)} data-action="join-as" data-child-id={c.childId}>Join as {c.childName.trim().split(/\s+/)[0] || c.childName}</Button>)}
-          {(f === "other" || f === "unavailable" || f === "not_open" || f === "waiting") && <Button variant="solid" className={solidOnDark} onClick={() => onRejoin()}>Try again</Button>}
-          <Button variant="ghost" className={ghostOnDark} onClick={onLeavePage}>Back to live lessons</Button>
+          {f === "child" && (state.children ?? []).map((c) => <Button key={c.childId} variant="solid" className={solidOnDark} onClick={() => onRejoin(c.childId)} data-action="join-as" data-child-id={c.childId}>{tx("hublive.aStage_joinAs", { name: c.childName.trim().split(/\s+/)[0] || c.childName })}</Button>)}
+          {(f === "other" || f === "unavailable" || f === "not_open" || f === "waiting") && <Button variant="solid" className={solidOnDark} onClick={() => onRejoin()}>{tx("hublive.aStage_tryAgain")}</Button>}
+          <Button variant="ghost" className={ghostOnDark} onClick={onLeavePage}>{tx("hublive.aStage_backLive")}</Button>
         </>}>
         {state.message}
-        {f === "unavailable" && <> Your tutor may need to switch video calling on — try again in a minute, or message them.</>}
+        {f === "unavailable" && <> {tx("hublive.aStage_unavailNote")}</>}
       </StageMessage>
     );
   } else if (frameFail) {
     stage = (
-      <StageMessage icon={frameFail.kind === "full" ? "users" : "warning"} title={FRAME_FAIL[frameFail.kind].title} actions={<><Button variant="solid" className={bigBtn} onClick={() => onRejoin()} data-action="rejoin-call">{frameFail.kind === "full" ? "Try again" : "Rejoin call"}</Button><Button variant="ghost" className={ghostOnDark} onClick={onLeavePage}>Leave page</Button></>}>
+      <StageMessage icon={frameFail.kind === "full" ? "users" : "warning"} title={tx("hublive." + FRAME_FAIL[frameFail.kind].title)} actions={<><Button variant="solid" className={bigBtn} onClick={() => onRejoin()} data-action="rejoin-call">{frameFail.kind === "full" ? tx("hublive.aStage_tryAgain") : tx("hublive.aStage_rejoinCall")}</Button><Button variant="ghost" className={ghostOnDark} onClick={onLeavePage}>{tx("hublive.aStage_leavePage")}</Button></>}>
         <span data-testid="hub-frame-fail" data-kind={frameFail.kind}>{frameFail.message}</span>
       </StageMessage>
     );
   } else if (state.kind === "left" || leftLocal) {
     stage = (
       <StageMessage icon={closed ? "flag" : timeUp ? "hourglass" : "hand"}
-        title={closed ? "This lesson has finished" : timeUp ? "The call has ended (time's up)" : lesson.status === "ended" ? "The call was ended" : "You've left the call"}
+        title={closed ? tx("hublive.aStage_finished") : timeUp ? tx("hublive.aStage_timeUp") : lesson.status === "ended" ? tx("hublive.aStage_callEnded") : tx("hublive.aStage_leftCall")}
         actions={<>
-          {!closed && <Button variant="solid" className={bigBtn} onClick={() => onRejoin()} data-action="rejoin-call">Rejoin call</Button>}
-          <Button variant={closed ? "solid" : "ghost"} className={closed ? solidOnDark : `${ghostOnDark} !min-h-[56px]`} onClick={onLeavePage}>Leave page</Button>
+          {!closed && <Button variant="solid" className={bigBtn} onClick={() => onRejoin()} data-action="rejoin-call">{tx("hublive.aStage_rejoinCall")}</Button>}
+          <Button variant={closed ? "solid" : "ghost"} className={closed ? solidOnDark : `${ghostOnDark} !min-h-[56px]`} onClick={onLeavePage}>{tx("hublive.aStage_leavePage")}</Button>
         </>}>
         {closed
-          ? (lesson.status === "cancelled" ? "This lesson was cancelled." : "The joining window has closed. Your lessons are still in the Lessons tab whenever you need them.")
-          : <>You can hop straight back in{isTutor ? " — your students can too" : ""} until <b>{closesLabel}</b>.{timeUp && <> Time ran out because nobody pressed &ldquo;Stay on the call&rdquo;.</>}</>}
+          ? (lesson.status === "cancelled" ? tx("hublive.aStage_cancelledMsg") : tx("hublive.aStage_windowClosed"))
+          : <>{tx(isTutor ? "hublive.aStage_hopBackTutor" : "hublive.aStage_hopBack", { time: closesLabel })}{timeUp && <> {tx("hublive.aStage_timeRanOut")}</>}</>}
       </StageMessage>
     );
   } else {
@@ -396,56 +400,56 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
   const tog = (on: boolean) => `inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-xl border px-3 text-[12.5px] font-extrabold ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`;
 
   return (
-    <section ref={roomRef} tabIndex={-1} aria-label={`Lesson: ${lesson.title}`} id="hub-call-room" data-layout={layout.mode} data-present={present ? "1" : "0"}
+    <section ref={roomRef} tabIndex={-1} aria-label={tx("hublive.aStage_roomAria", { title: lesson.title })} id="hub-call-room" data-layout={layout.mode} data-present={present ? "1" : "0"}
       className={`flex h-full w-full flex-col overflow-hidden outline-none ${placement === "inline" ? "rounded-3xl border border-[var(--hub-warm-line)] shadow-[var(--shadow)]" : mini ? "rounded-2xl border border-[var(--hub-warm-line)] shadow-[0_18px_44px_rgba(0,0,0,0.35)]" : ""}`} style={{ background: "color-mix(in srgb, var(--gold) 6%, var(--bg))", color: "var(--ink)" }}>
       <header hidden={mini} className="@container relative flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--hub-warm-line)] px-2.5 py-2 sm:px-4" style={{ background: "var(--hub-warm)" }}>
-        <button type="button" onClick={onMinimize} data-action="back-to-lessons" title="Back to live lessons — your call keeps running in a small window" className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}><Ico name="arrowLeft" size={15} /><span className="hidden sm:inline">Live lessons</span></button>
+        <button type="button" onClick={onMinimize} data-action="back-to-lessons" title={tx("hublive.aStage_backTitle")} className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-1.5 rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}><Ico name="arrowLeft" size={15} className="rtl:-scale-x-100" /><span className="hidden sm:inline">{tx("hublive.aLobby_liveLessons")}</span></button>
         <div className="min-w-[200px] flex-1 basis-[240px]">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="m-0 truncate text-[16px] font-extrabold text-[var(--ink)] sm:text-[18px]" style={DISPLAY}>{lesson.title}</h2>
-            {inCall && <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--red)] px-2.5 py-[3px] text-[11px] font-extrabold uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none" />Live</span>}
+            {inCall && <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--red)] px-2.5 py-[3px] text-[11px] font-extrabold uppercase tracking-wide text-white"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white motion-reduce:animate-none" />{tx("hublive.aStage_livePill")}</span>}
           </div>
           <div className="truncate text-[12px] text-[var(--ink-3)]">
             {tutorLabel} · {fmtClock(lesson.startsAt)}–{fmtClock(new Date(t.endMs).toISOString())}
-            {inCall && (remaining > 0 ? ` · ${humanSpan(remaining)} left` : " · running over the scheduled time")}
+            {inCall && (remaining > 0 ? tx("hublive.aStage_timeLeft", { span: humanSpan(remaining) }) : tx("hublive.aStage_overrun"))}
           </div>
         </div>
 
         <div className="flex w-full flex-none items-center gap-1.5 overflow-x-auto pb-0.5 @[720px]:w-auto @[720px]:flex-wrap @[720px]:overflow-visible @[720px]:pb-0">
-          <div role="group" aria-label="Layout" className="inline-flex items-center gap-0.5 rounded-2xl border border-[var(--hub-warm-line)] p-0.5" style={{ background: "var(--hub-warm-2)" }}>
-            <button type="button" aria-pressed={presetOn("video")} onClick={() => preset("video")} title="Video only (W)" data-preset="video" className={seg(presetOn("video"))}><Ico name="video" size={16} /><span className="hidden @[1200px]:inline">Video only</span></button>
-            <button type="button" aria-pressed={presetOn("split", 0.35)} onClick={() => preset("split", 0.35)} title="65% video · 35% workspace" data-preset="65-35" className={seg(presetOn("split", 0.35))}><Ico name="panelRight" size={16} /><span className="hidden @[1200px]:inline">65 / 35</span></button>
-            <button type="button" aria-pressed={presetOn("split", 0.5)} onClick={() => preset("split", 0.5)} title="Half video · half workspace" data-preset="50-50" className={seg(presetOn("split", 0.5))}><Ico name="layers" size={16} /><span className="hidden @[1200px]:inline">50 / 50</span></button>
-            <button type="button" aria-pressed={presetOn("work")} onClick={() => preset("work")} title="Workspace only — video becomes a small tile" data-preset="work" className={seg(presetOn("work"))}><Ico name="maximize" size={16} /><span className="hidden @[1200px]:inline">Workspace only</span></button>
+          <div role="group" aria-label={tx("hublive.aStage_layout")} className="inline-flex items-center gap-0.5 rounded-2xl border border-[var(--hub-warm-line)] p-0.5" style={{ background: "var(--hub-warm-2)" }}>
+            <button type="button" aria-pressed={presetOn("video")} onClick={() => preset("video")} title={tx("hublive.aStage_videoOnlyTip")} data-preset="video" className={seg(presetOn("video"))}><Ico name="video" size={16} /><span className="hidden @[1200px]:inline">{tx("hublive.aStage_videoOnly")}</span></button>
+            <button type="button" aria-pressed={presetOn("split", 0.35)} onClick={() => preset("split", 0.35)} title={tx("hublive.aStage_split6535Tip")} data-preset="65-35" className={seg(presetOn("split", 0.35))}><Ico name="panelRight" size={16} /><span className="hidden @[1200px]:inline">65 / 35</span></button>
+            <button type="button" aria-pressed={presetOn("split", 0.5)} onClick={() => preset("split", 0.5)} title={tx("hublive.aStage_split5050Tip")} data-preset="50-50" className={seg(presetOn("split", 0.5))}><Ico name="layers" size={16} /><span className="hidden @[1200px]:inline">50 / 50</span></button>
+            <button type="button" aria-pressed={presetOn("work")} onClick={() => preset("work")} title={tx("hublive.aStage_workOnlyTip")} data-preset="work" className={seg(presetOn("work"))}><Ico name="maximize" size={16} /><span className="hidden @[1200px]:inline">{tx("hublive.aStage_workOnly")}</span></button>
           </div>
-          {isTutor && <button type="button" aria-pressed={tab === "board" && wsOpen} onClick={() => { setTab("board"); setLayout((c) => ({ mode: "split", frac: Math.max(c.frac, 0.55) })); }} title="Open the whiteboard" data-action="open-board" className={tog(tab === "board" && wsOpen)}><Ico name="edit" size={16} /><span className="hidden @[1000px]:inline">Board</span></button>}
-          {isTutor && <button type="button" aria-pressed={present} onClick={togglePresent} title="Present mode (P) — big type, tutor-only controls hidden" data-action="present" className={tog(present)}><Ico name="monitor" size={16} /><span className="hidden @[1100px]:inline">Present</span></button>}
-          {isTutor && attendeeCount > 1 && <button type="button" aria-pressed={hideNames} onClick={() => setHideNames((v) => !v)} title="Privacy — hide students' names and scores on a shared screen" data-action="privacy" className={tog(hideNames)}><Ico name="eyeOff" size={16} /><span className="hidden @[1250px]:inline">Privacy: hide names</span></button>}
-          <button type="button" aria-pressed={bigPref} onClick={() => setBigPref((v) => !v)} title="Large type" data-action="large-type" className={tog(bigPref)}><Ico name="type" size={16} /><span className="sr-only">Large type</span></button>
-          <button type="button" onClick={onTogglePlacement} aria-pressed={full} title={full ? "Exit full screen" : "Full screen (presentation view)"} data-action="fullscreen" className={tog(full)}><Ico name="maximize" size={16} /><span className="hidden @[1000px]:inline">{full ? "Exit full screen" : "Full screen"}</span></button>
-          <button type="button" aria-expanded={help} onClick={() => setHelp((v) => !v)} title="Keyboard shortcuts (?)" className={tog(help)}><Ico name="keyboard" size={16} /><span className="sr-only">Keyboard shortcuts</span></button>
+          {isTutor && <button type="button" aria-pressed={tab === "board" && wsOpen} onClick={() => { setTab("board"); setLayout((c) => ({ mode: "split", frac: Math.max(c.frac, 0.55) })); }} title={tx("hublive.aStage_openBoardTip")} data-action="open-board" className={tog(tab === "board" && wsOpen)}><Ico name="edit" size={16} /><span className="hidden @[1000px]:inline">{tx("hublive.aStage_board")}</span></button>}
+          {isTutor && <button type="button" aria-pressed={present} onClick={togglePresent} title={tx("hublive.aStage_presentTip")} data-action="present" className={tog(present)}><Ico name="monitor" size={16} /><span className="hidden @[1100px]:inline">{tx("hublive.aStage_present")}</span></button>}
+          {isTutor && attendeeCount > 1 && <button type="button" aria-pressed={hideNames} onClick={() => setHideNames((v) => !v)} title={tx("hublive.aStage_privacyTip")} data-action="privacy" className={tog(hideNames)}><Ico name="eyeOff" size={16} /><span className="hidden @[1250px]:inline">{tx("hublive.aStage_privacy")}</span></button>}
+          <button type="button" aria-pressed={bigPref} onClick={() => setBigPref((v) => !v)} title={tx("hublive.aStage_largeType")} data-action="large-type" className={tog(bigPref)}><Ico name="type" size={16} /><span className="sr-only">{tx("hublive.aStage_largeType")}</span></button>
+          <button type="button" onClick={onTogglePlacement} aria-pressed={full} title={full ? tx("hublive.aStage_exitFull") : tx("hublive.aStage_fullTip")} data-action="fullscreen" className={tog(full)}><Ico name="maximize" size={16} /><span className="hidden @[1000px]:inline">{full ? tx("hublive.aStage_exitFull") : tx("hublive.aStage_full")}</span></button>
+          <button type="button" aria-expanded={help} onClick={() => setHelp((v) => !v)} title={tx("hublive.aStage_shortcutsTip")} className={tog(help)}><Ico name="keyboard" size={16} /><span className="sr-only">{tx("hublive.aStage_shortcuts")}</span></button>
           {isTutor && inCall && !closed && (
-            <button type="button" aria-expanded={confirmEnd} onClick={() => setConfirmEnd((v) => !v)} data-action="end-lesson" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--red-line)] bg-[var(--red-soft)] px-3.5 text-[12.5px] font-extrabold text-[var(--hub-red-ink)] hover:brightness-95 ${FOCUS}`}>End lesson</button>
+            <button type="button" aria-expanded={confirmEnd} onClick={() => setConfirmEnd((v) => !v)} data-action="end-lesson" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-[var(--red-line)] bg-[var(--red-soft)] px-3.5 text-[12.5px] font-extrabold text-[var(--hub-red-ink)] hover:brightness-95 ${FOCUS}`}>{tx("hublive.aStage_endLesson")}</button>
           )}
         </div>
 
         {help && (
-          <div role="dialog" aria-label="Keyboard shortcuts" className="hub-pop absolute right-3 top-full z-[70] mt-1.5 w-[280px] rounded-2xl p-3.5 text-[12.5px]">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">Keyboard shortcuts</div>
+          <div role="dialog" aria-label={tx("hublive.aStage_shortcuts")} className="hub-pop absolute end-3 top-full z-[70] mt-1.5 w-[280px] rounded-2xl p-3.5 text-[12.5px]">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">{tx("hublive.aStage_shortcuts")}</div>
             <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5">
-              {[["W", "Show / hide the workspace"], ...(isTutor ? [["P", "Present mode"]] : []), [`1–${WS_TABS(isTutor).length}`, "Switch workspace tab"], ["?", "This help"], ["Space ← →", "Flip / step flashcards"], ["Esc", "Close a view"]].map(([k, d]) => (
+              {[["W", tx("hublive.aStage_scWorkspace")], ...(isTutor ? [["P", tx("hublive.aStage_scPresent")]] : []), [`1–${WS_TABS(isTutor).length}`, tx("hublive.aStage_scTab")], ["?", tx("hublive.aStage_scHelp")], ["Space ← →", tx("hublive.aStage_scFlash")], ["Esc", tx("hublive.aStage_scClose")]].map(([k, d]) => (
                 <div key={k} className="contents"><dt><kbd className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-px font-mono text-[11px] font-bold">{k}</kbd></dt><dd className="m-0 text-[var(--ink-2)]">{d}</dd></div>
               ))}
             </dl>
           </div>
         )}
         {confirmEnd && (
-          <div role="alertdialog" aria-label="End the lesson for everyone?" data-testid="hub-end-confirm" className="hub-pop absolute right-3 top-full z-[70] mt-1.5 w-[320px] max-w-[calc(100vw-24px)] rounded-2xl p-4">
-            <div className="text-[15px] font-extrabold text-[var(--ink)]" style={DISPLAY}>End the lesson for everyone?</div>
-            <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">This disconnects everyone. You and your students can still rejoin until <b>{closesLabel}</b>.</p>
+          <div role="alertdialog" aria-label={tx("hublive.aStage_endTitle")} data-testid="hub-end-confirm" className="hub-pop absolute end-3 top-full z-[70] mt-1.5 w-[320px] max-w-[calc(100vw-24px)] rounded-2xl p-4">
+            <div className="text-[15px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{tx("hublive.aStage_endTitle")}</div>
+            <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">{tx("hublive.aStage_endBody", { time: closesLabel })}</p>
             <div className="mt-3 flex gap-2">
-              <button type="button" disabled={ending} onClick={() => { setConfirmEnd(false); onEnd(); }} data-action="confirm-end" className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-[var(--red)] px-3 text-[13px] font-extrabold text-white hover:brightness-110 disabled:opacity-60 ${FOCUS}`}>{ending ? "Ending…" : "End for everyone"}</button>
-              <button type="button" onClick={() => setConfirmEnd(false)} className={`inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--ink-2)] ${FOCUS}`}>Keep going</button>
+              <button type="button" disabled={ending} onClick={() => { setConfirmEnd(false); onEnd(); }} data-action="confirm-end" className={`inline-flex min-h-[44px] flex-1 items-center justify-center rounded-xl bg-[var(--red)] px-3 text-[13px] font-extrabold text-white hover:brightness-110 disabled:opacity-60 ${FOCUS}`}>{ending ? tx("hublive.aStage_ending") : tx("hublive.aStage_endBtn")}</button>
+              <button type="button" onClick={() => setConfirmEnd(false)} className={`inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-4 text-[13px] font-bold text-[var(--ink-2)] ${FOCUS}`}>{tx("hublive.aStage_keepGoing")}</button>
             </div>
           </div>
         )}
@@ -461,15 +465,15 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
           <div key="stage" className={work ? tile.stageClass : "h-full w-full"}>{stage}</div>
           {mini && (
             <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-1.5 bg-gradient-to-b from-black/60 to-transparent p-1.5">
-              <button type="button" onClick={onRestore} data-action="return-to-call" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-white px-3 text-[12.5px] font-extrabold text-[var(--brand-strong)] shadow-[var(--shadow-sm)] ${FOCUS}`}><Ico name="video" size={15} />Return to call</button>
+              <button type="button" onClick={onRestore} data-action="return-to-call" className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-white px-3 text-[12.5px] font-extrabold text-[var(--brand-strong)] shadow-[var(--shadow-sm)] ${FOCUS}`}><Ico name="video" size={15} />{tx("hublive.aStage_returnCall")}</button>
               <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold text-white/90">{lesson.title}</span>
-              <button type="button" onClick={onLeavePage} data-action="mini-leave" aria-label="Leave the call" title="Leave the call" className={`grid h-11 w-11 flex-none place-items-center rounded-xl bg-black/45 text-white hover:bg-[var(--red)] ${FOCUS}`}><Ico name="close" size={16} /></button>
+              <button type="button" onClick={onLeavePage} data-action="mini-leave" aria-label={tx("hublive.aStage_leaveCall")} title={tx("hublive.aStage_leaveCall")} className={`grid h-11 w-11 flex-none place-items-center rounded-xl bg-black/45 text-white hover:bg-[var(--red)] ${FOCUS}`}><Ico name="close" size={16} /></button>
             </div>
           )}
         </div>
 
         {split && !mini && (
-          <div role="separator" tabIndex={0} aria-orientation={desktop ? "vertical" : "horizontal"} aria-label="Resize the workspace" aria-valuemin={20} aria-valuemax={75} aria-valuenow={Math.round(layout.frac * 100)} data-testid="ws-handle"
+          <div role="separator" tabIndex={0} aria-orientation={desktop ? "vertical" : "horizontal"} aria-label={tx("hublive.aStage_resize")} aria-valuemin={20} aria-valuemax={75} aria-valuenow={Math.round(layout.frac * 100)} data-testid="ws-handle"
             onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); setDragging(true); }} onPointerMove={onHandleMove} onPointerUp={() => setDragging(false)} onPointerCancel={() => setDragging(false)} onKeyDown={onHandleKey}
             className={`group flex flex-none touch-none items-center justify-center ${desktop ? "w-3.5 cursor-col-resize" : "h-6 cursor-row-resize"} ${FOCUS}`}>
             <span aria-hidden className={`rounded-full bg-[var(--hub-warm-line)] transition-colors group-hover:bg-[var(--brand)] group-focus-visible:bg-[var(--brand)] ${dragging ? "!bg-[var(--brand)]" : ""} ${desktop ? "h-12 w-1" : "h-1 w-12"}`} />
@@ -477,7 +481,7 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
         )}
 
         {(everOpen || inCall) && (
-          <aside aria-label="Lesson workspace" hidden={!wsOpen || mini} style={wsStyle} data-testid="ws-pane"
+          <aside aria-label={tx("hublive.aStage_workspaceAria")} hidden={!wsOpen || mini} style={wsStyle} data-testid="ws-pane"
             className={`min-h-0 min-w-0 overflow-hidden rounded-2xl border border-[var(--hub-warm-line)] shadow-[var(--shadow)] ${wsOpen && !mini ? "" : "hidden"}`}>
             {renderWorkspace({ view, active: wsOpen && !mini, now, tab, onTab: setTab })}
           </aside>
@@ -490,10 +494,10 @@ export function CallRoom({ lesson, state, isTutor, tutorLabel, placement, onMini
       </div>
 
       {!desktop && !wsOpen && !mini && (
-        <nav aria-label="Open the workspace" className="flex flex-none gap-1 overflow-x-auto border-t border-[var(--hub-warm-line)] px-2 py-1.5" style={{ background: "var(--hub-warm)" }}>
+        <nav aria-label={tx("hublive.aStage_openWorkspace")} className="flex flex-none gap-1 overflow-x-auto border-t border-[var(--hub-warm-line)] px-2 py-1.5" style={{ background: "var(--hub-warm)" }}>
           {WS_TABS(isTutor).map((tb) => (
             <button key={tb.key} type="button" data-open-tab={tb.key} onClick={() => { setTab(tb.key); setLayout({ mode: "split", frac: 0.6 }); }}
-              className={`inline-flex min-h-[44px] flex-1 flex-none items-center justify-center gap-1.5 rounded-xl px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--surface)] ${FOCUS}`}><Ico name={tb.icon} size={15} />{tb.label}{tb.key === "board" && !isTutor && boardLive > 0 && <span className="h-2 w-2 rounded-full bg-[var(--red)]" aria-label="Your tutor is using the board" data-testid="board-live-dot" />}</button>
+              className={`inline-flex min-h-[44px] flex-1 flex-none items-center justify-center gap-1.5 rounded-xl px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--surface)] ${FOCUS}`}><Ico name={tb.icon} size={15} />{tb.label}{tb.key === "board" && !isTutor && boardLive > 0 && <span className="h-2 w-2 rounded-full bg-[var(--red)]" aria-label={tx("hublive.aStage_boardLive")} data-testid="board-live-dot" />}</button>
           ))}
         </nav>
       )}

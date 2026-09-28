@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { KeywordText } from "./KeywordText";
 import { Btn, StepCard, Tag, display } from "./lessonUi";
@@ -17,6 +18,7 @@ export function LearnStep({ lesson, widget, addXP, onDone, onBack }: { lesson: L
     if (widget) c.splice(Math.min(3, c.length), 0, { t: "explore" });
     return c;
   }, [lesson.points, widget]);
+  const t = useT();
   const [i, setI] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => { box.current?.focus({ preventScroll: true }); }, [i]);
@@ -26,16 +28,16 @@ export function LearnStep({ lesson, widget, addXP, onDone, onBack }: { lesson: L
 
   return (
     <StepCard key={i}>
-      <div ref={box} tabIndex={-1} className="outline-none" aria-label={`Idea ${i + 1} of ${cards.length}`}>
+      <div ref={box} tabIndex={-1} className="outline-none" aria-label={t("hublessons.ideaXofY", { n: i + 1, total: cards.length })}>
         {card.t === "point" ? (
           <>
             <div className="mb-3 grid h-10 w-10 place-items-center rounded-full bg-[var(--brand-soft)] text-[16px] font-black text-[var(--brand)]" aria-hidden="true">{card.i + 1}</div>
-            <h2 className="sr-only">Key idea {card.i + 1}</h2>
+            <h2 className="sr-only">{t("hublessons.keyIdeaN", { n: card.i + 1 })}</h2>
             <KeywordText text={card.text} keywords={lesson.keywords} className="m-0 text-[19px] font-bold leading-[1.45] text-[var(--ink)] sm:text-[21px]" />
           </>
         ) : widget ? (
           <>
-            <Tag>Explore</Tag>
+            <Tag>{t("hublessons.explore")}</Tag>
             <h2 className="m-0 mb-1.5 mt-2 text-[21px] font-extrabold text-[var(--ink)]" style={display}>{widget.title}</h2>
             {widget.intro && <p className="m-0 mb-3 text-[14.5px] text-[var(--ink-2)]">{widget.intro}</p>}
             <widget.Component onXP={addXP} />
@@ -47,8 +49,8 @@ export function LearnStep({ lesson, widget, addXP, onDone, onBack }: { lesson: L
         {cards.map((_, k) => <i key={k} className={`h-2 rounded-full transition-all duration-300 ${k === i ? "w-[22px] bg-[var(--brand)]" : "w-2 bg-[var(--line)]"}`} />)}
       </div>
       <div className="mt-5 flex items-center justify-between gap-3">
-        <Btn tone="ghost" onClick={() => (i === 0 ? onBack() : setI(i - 1))}>Back</Btn>
-        <Btn onClick={() => { if (last) { addXP(10); onDone(); } else { addXP(2); setI(i + 1); } }} data-testid="lesson-next">{last ? "Continue →" : "Next"}</Btn>
+        <Btn tone="ghost" onClick={() => (i === 0 ? onBack() : setI(i - 1))}>{t("hublessons.back")}</Btn>
+        <Btn onClick={() => { if (last) { addXP(10); onDone(); } else { addXP(2); setI(i + 1); } }} data-testid="lesson-next">{last ? t("hublessons.continue") : t("hublessons.next")}</Btn>
       </div>
     </StepCard>
   );

@@ -54,29 +54,23 @@ twoFa.post("/send", async (req, res) => {
   const uid = req.user!.uid;
   const found = await loadPlatformUser(uid);
   if (!found) { res.status(403).json({ error: "Two-factor codes are only issued to platform accounts.", code: "not_platform" }); return; }
-  const { ref, data } = found;
-
-  const lastSentAt = Number(data.twoFaLastSentAt) || 0;
-  const sinceLast = Date.now() - lastSentAt;
-  if (lastSentAt && sinceLast < RESEND_COOLDOWN_MS) {
-    const retryAfterMs = RESEND_COOLDOWN_MS - sinceLast;
-    res.status(429).json({ error: `Please wait ${Math.ceil(retryAfterMs / 1000)}s before requesting another code.`, code: "2fa_resend_throttled", retryAfterMs });
-    return;
-  }
+  const { ref } = found;
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
   const salt = randomBytes(16).toString("hex");
-  const now = Date.now();
-  await ref.set(
-    {
-      twoFaCodeHash: hashCode(code, salt),
-      twoFaCodeSalt: salt,
-      twoFaCodeExpiresAt: now + CODE_TTL_MS,
-      twoFaAttempts: 0,
-      twoFaLastSentAt: now,
-    },
-    { merge: true },
-  );
+  // Cooldown check + write in ONE transaction: parallel /send calls can't all pass the check and each mail a fresh code.
+  const wait = await db.runTransaction(async (tx) => {
+    const cur = (await tx.get(ref)).data() ?? {};
+    const lastSentAt = Number(cur.twoFaLastSentAt) || 0;
+    const now = Date.now();
+    if (lastSentAt && now - lastSentAt < RESEND_COOLDOWN_MS) return RESEND_COOLDOWN_MS - (now - lastSentAt);
+    tx.set(ref, { twoFaCodeHash: hashCode(code, salt), twoFaCodeSalt: salt, twoFaCodeExpiresAt: now + CODE_TTL_MS, twoFaAttempts: 0, twoFaLastSentAt: now }, { merge: true });
+    return 0;
+  });
+  if (wait) {
+    res.status(429).json({ error: `Please wait ${Math.ceil(wait / 1000)}s before requesting another code.`, code: "2fa_resend_throttled", retryAfterMs: wait });
+    return;
+  }
 
   const html = `
     <p>Your ActivityOS platform sign-in code is:</p>
@@ -93,41 +87,28 @@ twoFa.post("/verify", async (req, res) => {
   const uid = req.user!.uid;
   const found = await loadPlatformUser(uid);
   if (!found) { res.status(403).json({ error: "Two-factor codes are only issued to platform accounts.", code: "not_platform" }); return; }
-  const { ref, data } = found;
+  const { ref } = found;
 
   const parsed = verifySchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: "Enter the 6-digit code." }); return; }
 
-  const expiresAt = Number(data.twoFaCodeExpiresAt) || 0;
-  const attempts = Number(data.twoFaAttempts) || 0;
-  const hash = typeof data.twoFaCodeHash === "string" ? data.twoFaCodeHash : null;
-  const salt = typeof data.twoFaCodeSalt === "string" ? data.twoFaCodeSalt : null;
-
-  if (attempts >= MAX_ATTEMPTS) {
-    res.status(429).json({ error: "Too many attempts — request a new code.", code: "2fa_locked" });
-    return;
-  }
-  if (!hash || !salt || !expiresAt || Date.now() > expiresAt) {
-    res.status(400).json({ error: "Code is wrong or has expired.", code: "2fa_invalid" });
-    return;
-  }
-
-  const candidate = hashCode(parsed.data.code, salt);
-  if (!safeEqual(candidate, hash)) {
-    await ref.set({ twoFaAttempts: attempts + 1 }, { merge: true });
-    res.status(401).json({ error: "Code is wrong or has expired.", code: "2fa_invalid" });
-    return;
-  }
-
-  await ref.set(
-    {
-      twoFaVerifiedAt: Date.now(),
-      twoFaCodeHash: null,
-      twoFaCodeSalt: null,
-      twoFaCodeExpiresAt: null,
-      twoFaAttempts: 0,
-    },
-    { merge: true },
-  );
+  // Read, count the guess and (on a match) consume the code in ONE transaction: parallel guesses each see the previous
+  // count, so the 5-attempt limit holds. The attempt is counted BEFORE the compare result is acted on.
+  type Out = "locked" | "invalid" | "wrong" | "ok";
+  const out: Out = await db.runTransaction(async (tx) => {
+    const data = (await tx.get(ref)).data() ?? {};
+    const expiresAt = Number(data.twoFaCodeExpiresAt) || 0;
+    const attempts = Number(data.twoFaAttempts) || 0;
+    const hash = typeof data.twoFaCodeHash === "string" ? data.twoFaCodeHash : null;
+    const salt = typeof data.twoFaCodeSalt === "string" ? data.twoFaCodeSalt : null;
+    if (attempts >= MAX_ATTEMPTS) return "locked";
+    if (!hash || !salt || !expiresAt || Date.now() > expiresAt) return "invalid";
+    if (!safeEqual(hashCode(parsed.data.code, salt), hash)) { tx.set(ref, { twoFaAttempts: attempts + 1 }, { merge: true }); return "wrong"; }
+    tx.set(ref, { twoFaVerifiedAt: Date.now(), twoFaCodeHash: null, twoFaCodeSalt: null, twoFaCodeExpiresAt: null, twoFaAttempts: 0 }, { merge: true });
+    return "ok";
+  });
+  if (out === "locked") { res.status(429).json({ error: "Too many attempts — request a new code.", code: "2fa_locked" }); return; }
+  if (out === "invalid") { res.status(400).json({ error: "Code is wrong or has expired.", code: "2fa_invalid" }); return; }
+  if (out === "wrong") { res.status(401).json({ error: "Code is wrong or has expired.", code: "2fa_invalid" }); return; }
   res.json({ verified: true });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent, type RefObject } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { FOCUS } from "../kit";
 import { InstrumentArt } from "../tools/maths/geometry/InstrumentArt";
 import { SIZE, barLen, flipInstrument, isProtractor } from "../tools/maths/geometry/instruments";
@@ -43,9 +44,11 @@ export function InstrumentOverlay({ kind: kind0, label, lessonCardRef, questionK
   /** Optional: switch to the full drawing board (a window with paper). */
   onBoard?: () => void;
 }) {
+  const t = useT();
   const [kind, setKind] = useState<Kind>(kind0);
   const [zoom, setZoom] = useState(1);
   const [rot, setRot] = useState(0);
+  const [ghost, setGhost] = useState(false); // fade the instrument so the picture shows through
   const k = BASE_K * zoom;
   const isProt = isProtractor(kind);
   const len = isProt ? SIZE.protractor.r : barLen(kind);
@@ -139,10 +142,10 @@ export function InstrumentOverlay({ kind: kind0, label, lessonCardRef, questionK
       <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible" }}>
         <g transform={`translate(${pos.x} ${pos.y}) rotate(${-rot}) scale(${k})`}>
           {/* The see-through instrument itself never catches clicks. */}
-          <g style={{ pointerEvents: "none" }}><InstrumentArt i={inst} /></g>
+          <g style={{ pointerEvents: "none", opacity: ghost ? 0.3 : 1, transition: "opacity .15s ease" }}><InstrumentArt i={inst} /></g>
           {/* Grab zones: the outline + baseline (stroke only) and the centre cross — everything else is click-through. */}
           <g onPointerDown={down("move")} onPointerMove={move} onPointerUp={up} onPointerCancel={up} tabIndex={0} role="application" onKeyDown={onKey} className="outline-none"
-            aria-label={`${label}. Drag to move, arrow keys move, square brackets turn, F flips, plus and minus resize.`} data-testid="instrument-body">
+            aria-label={t("hublive.dInstrAria", { label })} data-testid="instrument-body">
             {isProt ? (
               <>
                 {kind === "protractor360"
@@ -157,18 +160,19 @@ export function InstrumentOverlay({ kind: kind0, label, lessonCardRef, questionK
           </g>
           <line x1={len} y1={0} x2={hx - 6} y2={0} stroke="var(--brand)" strokeWidth={0.5} pointerEvents="none" />
           <circle cx={hx} cy={0} r={6.5} fill="var(--surface)" stroke="var(--brand)" strokeWidth={1} onPointerDown={down("turn")} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-            style={{ pointerEvents: "all", cursor: "grab", touchAction: "none" }} data-testid="instrument-turn-handle"><title>Drag to turn</title></circle>
+            style={{ pointerEvents: "all", cursor: "grab", touchAction: "none" }} data-testid="instrument-turn-handle"><title>{t("hublive.dDragTurn")}</title></circle>
           <path d={`M ${hx - 3} 1.2 A 3.4 3.4 0 1 1 ${hx + 2.6} -2`} fill="none" stroke="var(--brand)" strokeWidth={0.9} strokeLinecap="round" pointerEvents="none" />
         </g>
       </svg>
-      <div className="pointer-events-none fixed flex flex-wrap items-center gap-1.5 rounded-3xl bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] p-1.5 shadow-md backdrop-blur" style={{ left: barLeft, top: barTop, maxWidth: barW }} role="toolbar" aria-label={`${label} controls`}>
-        <button type="button" onClick={flip} data-testid="instrument-flip" className={`${pill} ${FOCUS}`}>⇅ Flip</button>
-        <button type="button" onClick={() => setRot((r) => norm360(r + 90))} aria-label="Turn a quarter" className={`${pill} ${FOCUS}`}>↻ 90°</button>
-        <button type="button" onClick={smaller} aria-label="Smaller" data-testid="instrument-smaller" className={`${pill} ${FOCUS}`}>Smaller</button>
-        <button type="button" onClick={bigger} aria-label="Bigger" data-testid="instrument-bigger" className={`${pill} ${FOCUS}`}>Bigger</button>
-        <button type="button" onClick={other} data-testid="instrument-kind" className={`${pill} ${FOCUS}`}>{kind === "protractor180" ? "360° protractor" : kind === "protractor360" ? "180° protractor" : kind === "ruler15" ? "30 cm ruler" : "15 cm ruler"}</button>
-        {onBoard && <button type="button" onClick={onBoard} className={`${pill} ${FOCUS}`}>Drawing board</button>}
-        <button type="button" onClick={onClose} aria-label={`Close ${label}`} data-testid="instrument-close" className={`${pill} ${FOCUS}`}>✕</button>
+      <div className="pointer-events-none fixed flex flex-wrap items-center gap-1.5 rounded-3xl bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] p-1.5 shadow-md backdrop-blur" style={{ left: barLeft, top: barTop, maxWidth: barW }} role="toolbar" aria-label={t("hublive.dInstrControls", { label })}>
+        <button type="button" onClick={() => setGhost((g) => !g)} aria-pressed={ghost} data-testid="instrument-ghost" title={t("hublive.dFadeTitle")} className={`${pill} ${FOCUS} ${ghost ? "!border-[var(--brand)] !bg-[var(--brand)] !text-white" : ""}`}>◐ {ghost ? t("hublive.dSolid") : t("hublive.dSeeThrough")}</button>
+        <button type="button" onClick={flip} data-testid="instrument-flip" className={`${pill} ${FOCUS}`}>{t("hublive.dFlipArrow")}</button>
+        <button type="button" onClick={() => setRot((r) => norm360(r + 90))} aria-label={t("hublive.dTurnQuarter")} className={`${pill} ${FOCUS}`}>↻ 90°</button>
+        <button type="button" onClick={smaller} aria-label={t("hublive.dSmaller")} data-testid="instrument-smaller" className={`${pill} ${FOCUS}`}>{t("hublive.dSmaller")}</button>
+        <button type="button" onClick={bigger} aria-label={t("hublive.dBigger")} data-testid="instrument-bigger" className={`${pill} ${FOCUS}`}>{t("hublive.dBigger")}</button>
+        <button type="button" onClick={other} data-testid="instrument-kind" className={`${pill} ${FOCUS}`}>{kind === "protractor180" ? t("hublive.dProt360") : kind === "protractor360" ? t("hublive.dProt180") : kind === "ruler15" ? t("hublive.dRuler30") : t("hublive.dRuler15")}</button>
+        {onBoard && <button type="button" onClick={onBoard} className={`${pill} ${FOCUS}`}>{t("hublive.dDrawingBoard")}</button>}
+        <button type="button" onClick={onClose} aria-label={t("hublive.dCloseLabel", { label })} data-testid="instrument-close" className={`${pill} ${FOCUS}`}>✕</button>
       </div>
     </div>
   );

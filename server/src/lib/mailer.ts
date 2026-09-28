@@ -97,6 +97,8 @@ if (MAIL_LIVE) {
   );
 }
 const maySend = (to: string): boolean => MAIL_LIVE || MAIL_ALLOWLIST.has(to.trim().toLowerCase());
+/** Would sendMail really deliver to this address right now? (Callers that keep a sent-log use it so a suppressed dev send doesn't burn the log.) */
+export const mailIsLiveFor = maySend;
 
 /** A file to attach — e.g. a child's EHCP plan on a booking notification.
  *  `content` is the raw bytes (Buffer) or a base64 string with `encoding`. */
@@ -117,7 +119,7 @@ export interface MailAttachment {
  *  `sender` brands the mail for one provider: their name on the From line and
  *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
  *  adds files (or inline `cid:` images). */
-export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[] }): Promise<boolean> {
+export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<boolean> {
   if (!maySend(to)) {
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
     return true;
@@ -135,6 +137,7 @@ export async function sendMail(to: string, subject: string, html: string, sender
       subject,
       html,
       ...(opts?.attachments?.length ? { attachments: opts.attachments } : {}),
+      ...(opts?.headers ? { headers: opts.headers } : {}),
     });
     console.log(
       `[mail] "${subject}" → ${to}` +

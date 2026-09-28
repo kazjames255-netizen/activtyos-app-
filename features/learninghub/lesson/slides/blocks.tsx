@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FOCUS } from "../../kit";
+import { useT } from "@/lib/i18n/provider";
+import { rich } from "../tRich";
 import { Btn } from "../lessonUi";
 import { SlideArt, hasArt } from "./SlideArt";
 import type { Block, Chip, Slide } from "./types";
@@ -77,6 +79,7 @@ export function KeyWordsCard({ title, intro, items, art, corner, editable, onIte
   editable?: boolean;
   onItemsChange?: (items: { term: string; def: string }[]) => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState<number | null>(null);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const showArt = !!art && hasArt(art);
@@ -89,7 +92,7 @@ export function KeyWordsCard({ title, intro, items, art, corner, editable, onIte
       <div className={`grid gap-5 px-5 py-6 sm:px-8 sm:py-8 md:items-start md:gap-8 ${showArt ? "md:grid-cols-[minmax(0,0.85fr)_170px_minmax(0,1.05fr)]" : "md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]"}`}>
         <div className="min-w-0">
           {corner && <div className="mb-2 flex justify-end md:hidden">{corner}</div>}
-          <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--violet)" }}>Key words</span>
+          <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: "var(--violet)" }}>{t("hublessons.keyWordsTag")}</span>
           <h2 className="m-0 mt-2 text-[28px] font-extrabold leading-[1.15] sm:text-[34px]" style={{ fontFamily: "var(--ff-display)" }}>{title}</h2>
           {intro && <p className="m-0 mt-3 max-w-[38ch] text-[13.5px] font-semibold leading-snug text-white/65">{intro}</p>}
         </div>
@@ -109,26 +112,26 @@ export function KeyWordsCard({ title, intro, items, art, corner, editable, onIte
                     <div className="min-w-0 flex-1">
                       {editingThis ? (
                         <input autoFocus value={it.term} onChange={(e) => setField(i, "term", e.target.value)}
-                          data-testid="kw-term-input" aria-label={`Term ${i + 1}`}
+                          data-testid="kw-term-input" aria-label={t("hublessons.bkTermN", { n: i + 1 })}
                           className="w-full rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[16px] font-semibold text-white outline-none focus:border-white/70 sm:text-[17px]" />
                       ) : (
                         <button type="button" onClick={() => setEditIdx(i)} data-testid="kw-term-edit"
-                          className={`-mx-1 block w-full rounded px-1 text-left text-[16px] font-semibold hover:bg-white/10 sm:text-[17px] ${FOCUS}`}>{it.term}</button>
+                          className={`-mx-1 block w-full rounded px-1 text-start text-[16px] font-semibold hover:bg-white/10 sm:text-[17px] ${FOCUS}`}>{it.term}</button>
                       )}
                       {editingThis ? (
                         <textarea value={it.def} onChange={(e) => setField(i, "def", e.target.value)} rows={2}
-                          data-testid="kw-def-input" aria-label={`Definition ${i + 1}`}
+                          data-testid="kw-def-input" aria-label={t("hublessons.bkDefN", { n: i + 1 })}
                           className="mt-1 w-full rounded-lg border border-white/30 bg-white/10 px-2 py-1 text-[13px] leading-snug text-white outline-none focus:border-white/70" />
                       ) : (
                         <button type="button" onClick={() => setEditIdx(i)} data-testid="kw-def-edit"
-                          className={`-mx-1 mt-1 block w-full rounded px-1 text-left text-[13px] leading-snug text-white/70 hover:bg-white/10 ${FOCUS}`}>{it.def}</button>
+                          className={`-mx-1 mt-1 block w-full rounded px-1 text-start text-[13px] leading-snug text-white/70 hover:bg-white/10 ${FOCUS}`}>{it.def}</button>
                       )}
                     </div>
-                    {editingThis && <button type="button" onClick={() => setEditIdx(null)} className="mt-1 flex-none rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Done</button>}
+                    {editingThis && <button type="button" onClick={() => setEditIdx(null)} className="mt-1 flex-none rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">{t("hublessons.stepDone")}</button>}
                   </div>
                 ) : (
                   <button type="button" aria-expanded={on} onClick={() => setOpen(on ? null : i)}
-                    className={`flex w-full items-start justify-between gap-3 py-3 text-left transition ${FOCUS} hover:opacity-90`}>
+                    className={`flex w-full items-start justify-between gap-3 py-3 text-start transition ${FOCUS} hover:opacity-90`}>
                     <span className="min-w-0">
                       <span className="block text-[16px] font-semibold sm:text-[17px]">{it.term}</span>
                       {on && <span className="mt-1 block text-[13px] leading-snug text-white/70">{it.def}</span>}
@@ -141,12 +144,13 @@ export function KeyWordsCard({ title, intro, items, art, corner, editable, onIte
           })}
         </ul>
       </div>
-      {corner && <div className="absolute right-4 top-4 hidden md:block">{corner}</div>}
+      {corner && <div className="absolute end-4 top-4 hidden md:block">{corner}</div>}
     </div>
   );
 }
 
 function Define({ items }: { items: { term: string; def: string }[] }) {
+  const t = useT();
   const [open, setOpen] = useState<Set<number>>(new Set());
   return (
     <div className="grid gap-2.5 sm:grid-cols-2">
@@ -154,9 +158,9 @@ function Define({ items }: { items: { term: string; def: string }[] }) {
         const on = open.has(i);
         return (
           <button key={i} type="button" aria-pressed={on} onClick={() => setOpen((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n; })}
-            className={`min-h-[55px] rounded-2xl border-2 p-3.5 text-left transition ${FOCUS} ${on ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--brand-2)]"}`}>
+            className={`min-h-[55px] rounded-2xl border-2 p-3.5 text-start transition ${FOCUS} ${on ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--brand-2)]"}`}>
             <span className="block text-[15px] font-extrabold" style={{ color: "var(--violet)" }}>{it.term}</span>
-            <span className="mt-1 block text-[12px] leading-snug text-[var(--ink-2)]">{on ? it.def : "Tap to see what it means"}</span>
+            <span className="mt-1 block text-[12px] leading-snug text-[var(--ink-2)]">{on ? it.def : t("hublessons.bkTapMeaning")}</span>
           </button>
         );
       })}
@@ -165,6 +169,7 @@ function Define({ items }: { items: { term: string; def: string }[] }) {
 }
 
 function Formula({ rows }: { rows: { root: string; add: string; result: string; note?: string }[] }) {
+  const t = useT();
   const [shown, setShown] = useState<Set<number>>(new Set());
   return (
     <div className="grid gap-2.5">
@@ -178,7 +183,7 @@ function Formula({ rows }: { rows: { root: string; add: string; result: string; 
             <span aria-hidden="true" className="text-[16px] font-black text-[var(--ink-3)]">=</span>
             {on
               ? <span className="ls-enter rounded-xl border-2 border-[var(--green)] bg-[var(--green-soft)] px-3 py-1 text-[19px] font-extrabold text-[var(--ink)]"><Inline text={r.result} /></span>
-              : <button type="button" onClick={() => setShown((s) => new Set(s).add(i))} className={`${pill} ${idle} !min-h-[34px] !py-0 text-[13px]`}>Make the word ✨</button>}
+              : <button type="button" onClick={() => setShown((s) => new Set(s).add(i))} className={`${pill} ${idle} !min-h-[34px] !py-0 text-[13px]`}>{t("hublessons.bkMakeWord")}</button>}
             {on && r.note && <span className="basis-full text-[13px] text-[var(--ink-2)]">{r.note}</span>}
           </div>
         );
@@ -202,13 +207,15 @@ function Cards({ items }: { items: { emoji?: string; title: string; sub?: string
 }
 
 function Reveal({ label: lab, text }: { label?: string; text: string }) {
+  const t = useT();
   const [on, setOn] = useState(false);
   return on
     ? <p className="ls-enter m-0 rounded-2xl border-2 border-[var(--green)] bg-[var(--green-soft)] p-3.5 text-[14px] font-semibold leading-snug text-[var(--ink)]"><Inline text={text} /></p>
-    : <button type="button" onClick={() => setOn(true)} className={`${pill} ${idle}`}>{lab ?? "Show the answer"}</button>;
+    : <button type="button" onClick={() => setOn(true)} className={`${pill} ${idle}`}>{lab || t("hublessons.bkShowAnswer")}</button>;
 }
 
 function Roots({ items }: { items: { word: string; root: string }[] }) {
+  const t = useT();
   const [open, setOpen] = useState<Set<number>>(new Set());
   return (
     <div className="grid gap-2.5 sm:grid-cols-2">
@@ -216,9 +223,9 @@ function Roots({ items }: { items: { word: string; root: string }[] }) {
         const on = open.has(i);
         return (
           <button key={i} type="button" aria-pressed={on} onClick={() => setOpen((s) => new Set(s).add(i))}
-            className={`flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border-2 px-4 py-2.5 text-left transition ${FOCUS} ${on ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--brand-2)]"}`}>
+            className={`flex min-h-[48px] items-center justify-between gap-3 rounded-2xl border-2 px-4 py-2.5 text-start transition ${FOCUS} ${on ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--brand-2)]"}`}>
             <span className="text-[17px] font-extrabold text-[var(--ink)]"><Inline text={it.word} /></span>
-            <span className={`text-[13px] font-bold ${on ? "ls-enter text-[var(--brand)]" : "text-[var(--ink-3)]"}`}>{on ? `root: ${it.root}` : "Tap for the root word"}</span>
+            <span className={`text-[13px] font-bold ${on ? "ls-enter text-[var(--brand)]" : "text-[var(--ink-3)]"}`}>{on ? t("hublessons.bkRootIs", { root: it.root }) : t("hublessons.bkTapRoot")}</span>
           </button>
         );
       })}
@@ -228,13 +235,14 @@ function Roots({ items }: { items: { word: string; root: string }[] }) {
 
 /** One multiple-choice question: a wrong pick shakes and can be retried; the first-try win is worth XP. */
 function Mcq({ q, options, answer, why, xp }: { q?: string; options: string[]; answer: number; why?: string; xp: Xp }) {
+  const t = useT();
   const [picked, setPicked] = useState<number | null>(null);
   const [wrong, setWrong] = useState<number[]>([]);
   const done = picked === answer;
   return (
     <div>
       {q && <p className={label}><Inline text={q} /></p>}
-      <div className="flex flex-wrap gap-2.5" role="group" aria-label={q ? plain(q) : "Choose one"}>
+      <div className="flex flex-wrap gap-2.5" role="group" aria-label={q ? plain(q) : t("hublessons.bkChooseOne")}>
         {options.map((o, i) => (
           <button key={i} type="button" disabled={done} aria-pressed={picked === i}
             onClick={() => { setPicked(i); if (i === answer) { if (!wrong.length) xp(5); } else setWrong((w) => (w.includes(i) ? w : [...w, i])); }}
@@ -243,13 +251,14 @@ function Mcq({ q, options, answer, why, xp }: { q?: string; options: string[]; a
           </button>
         ))}
       </div>
-      {done && <p className="ls-enter m-0 mt-2.5 text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">{wrong.length ? "Got it!" : "Correct!"}{why ? <span className="font-semibold text-[var(--ink-2)]"> {why}</span> : null}</p>}
-      {!done && wrong.length > 0 && <p className="m-0 mt-2.5 text-[12px] font-bold text-[var(--red)]" role="status">Not quite. Have another go.</p>}
+      {done && <p className="ls-enter m-0 mt-2.5 text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">{wrong.length ? t("hublessons.bkGotIt") : t("hublessons.cheer3")}{why ? <span className="font-semibold text-[var(--ink-2)]"> {why}</span> : null}</p>}
+      {!done && wrong.length > 0 && <p className="m-0 mt-2.5 text-[12px] font-bold text-[var(--red)]" role="status">{t("hublessons.bkNotQuiteAgain")}</p>}
     </div>
   );
 }
 
 function Sort({ q, columns, items, xp }: { q: string; columns: string[]; items: { text: string; col: number }[]; xp: Xp }) {
+  const t = useT();
   const [placed, setPlaced] = useState<Record<number, boolean>>({});
   const [sel, setSel] = useState<number | null>(null);
   const [shake, setShake] = useState<number | null>(null);
@@ -263,14 +272,14 @@ function Sort({ q, columns, items, xp }: { q: string; columns: string[]; items: 
   return (
     <div>
       <p className={label}><Inline text={q} /></p>
-      <div className="mb-3 flex min-h-[45px] flex-wrap gap-2.5" aria-label="Words to sort">
+      <div className="mb-3 flex min-h-[45px] flex-wrap gap-2.5" aria-label={t("hublessons.bkWordsToSort")}>
         {left.map(({ it, i }) => <button key={i} type="button" aria-pressed={sel === i} onClick={() => setSel(i)} className={`${pill} ${sel === i ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]" : idle}`}>{it.text}</button>)}
-        {!left.length && <p className="ls-enter m-0 self-center text-[13px] font-extrabold text-[var(--hub-green-ink)]" role="status">All sorted!</p>}
+        {!left.length && <p className="ls-enter m-0 self-center text-[13px] font-extrabold text-[var(--hub-green-ink)]" role="status">{t("hublessons.bkAllSorted")}</p>}
       </div>
       <div className="grid gap-2.5 sm:grid-cols-3">
         {columns.map((c, ci) => (
           <button key={ci} type="button" onClick={() => put(ci)} disabled={sel == null}
-            className={`min-h-[103px] rounded-2xl border-2 border-dashed p-3 text-left transition ${FOCUS} ${shake === ci ? "border-[var(--red)] ls-shake" : sel != null ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)]"}`}>
+            className={`min-h-[103px] rounded-2xl border-2 border-dashed p-3 text-start transition ${FOCUS} ${shake === ci ? "border-[var(--red)] ls-shake" : sel != null ? "border-[var(--brand-2)] bg-[var(--brand-soft)]" : "border-[var(--line)]"}`}>
             <span className="block text-[13px] font-extrabold leading-snug text-[var(--ink-2)]">{c}</span>
             <span className="mt-2 flex flex-wrap gap-1.5">
               {items.map((it, i) => (placed[i] && it.col === ci ? <span key={i} className="ls-enter rounded-lg border-2 border-[var(--green)] bg-[var(--green-soft)] px-2.5 py-1 text-[13px] font-bold text-[var(--ink)]">{it.text}</span> : null))}
@@ -278,12 +287,13 @@ function Sort({ q, columns, items, xp }: { q: string; columns: string[]; items: 
           </button>
         ))}
       </div>
-      {sel != null && <p className="m-0 mt-2 text-[13px] font-semibold text-[var(--ink-2)]">Now tap the column for “{items[sel]!.text}”.</p>}
+      {sel != null && <p className="m-0 mt-2 text-[13px] font-semibold text-[var(--ink-2)]">{t("hublessons.bkNowTapColumn", { w: items[sel]!.text })}</p>}
     </div>
   );
 }
 
 function Match({ q, pairs, xp }: { q: string; pairs: { a: string; b: string }[]; xp: Xp }) {
+  const t = useT();
   const rights = useMemo(() => pairs.map((p, i) => ({ text: p.b, i })).reverse(), [pairs]);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [sel, setSel] = useState<number | null>(null);
@@ -305,12 +315,13 @@ function Match({ q, pairs, xp }: { q: string; pairs: { a: string; b: string }[];
           {rights.map((r) => <button key={r.i} type="button" disabled={done.has(r.i)} onClick={() => tapRight(r.i)} className={`${pill} justify-center text-center !text-[13px] ${done.has(r.i) ? good : shake === r.i ? bad : idle}`}>{done.has(r.i) && <Tick />}<span><Inline text={r.text} /></span></button>)}
         </div>
       </div>
-      <p className="m-0 mt-2 text-[13px] font-semibold text-[var(--ink-2)]" role="status">{done.size === pairs.length ? "All matched!" : "Tap one on the left, then its match on the right."}</p>
+      <p className="m-0 mt-2 text-[13px] font-semibold text-[var(--ink-2)]" role="status">{done.size === pairs.length ? t("hublessons.bkAllMatched") : t("hublessons.bkTapMatch")}</p>
     </div>
   );
 }
 
 function SpellWord({ word, n, xp }: { word: string; n: number; xp: Xp }) {
+  const t = useT();
   const [v, setV] = useState("");
   const [st, setSt] = useState<"idle" | "ok" | "bad">("idle");
   const tries = useRef(0);
@@ -325,29 +336,30 @@ function SpellWord({ word, n, xp }: { word: string; n: number; xp: Xp }) {
     <li className="rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] p-3">
       <div className="flex flex-wrap items-center gap-2.5">
         <span className="w-6 text-[14px] font-extrabold text-[var(--ink-3)]">{n})</span>
-        <button type="button" onClick={() => { if (!speak(word)) setHint(true); }} aria-label={`Hear word ${n}`} className={`${pill} ${idle} !px-3`}><span aria-hidden="true">🔊</span> Hear it</button>
+        <button type="button" onClick={() => { if (!speak(word)) setHint(true); }} aria-label={t("hublessons.bkHearWordN", { n })} className={`${pill} ${idle} !px-3`}><span aria-hidden="true">🔊</span> {t("hublessons.bkHearIt")}</button>
         <input value={v} onChange={(e) => { setV(e.target.value); if (st === "bad") setSt("idle"); }} onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") check(); }} disabled={st === "ok"}
-          aria-label={`Type word ${n}`} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Type the word"
+          aria-label={t("hublessons.bkTypeWordN", { n })} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder={t("hublessons.bkTypeTheWord")}
           className={`min-h-[38px] min-w-[140px] flex-1 rounded-xl border-2 px-3 text-[15px] font-bold text-[var(--ink)] outline-none ${st === "ok" ? "border-[var(--green)] bg-[var(--green-soft)]" : st === "bad" ? "border-[var(--red)] ls-shake" : "border-[var(--line)] bg-[var(--panel)] focus:border-[var(--brand-2)]"}`} />
-        <Btn tone="ghost" onClick={check} disabled={st === "ok" || !v.trim()} className="!min-h-[33px] !px-4">Check</Btn>
+        <Btn tone="ghost" onClick={check} disabled={st === "ok" || !v.trim()} className="!min-h-[33px] !px-4">{t("hublessons.check")}</Btn>
         {st === "ok" && <Tick />}
       </div>
-      {(!speech || hint) && <button type="button" onClick={() => setHint(true)} className="mt-2 text-[12px] font-bold text-[var(--brand)] underline">{hint ? `The word is “${word}”.` : "Can’t hear it? Show the word"}</button>}
-      {st === "bad" && <p className="m-0 mt-2 text-[13px] font-bold text-[var(--red)]" role="status">Not quite. Sound it out, think of the root word, then try again.</p>}
-      {st === "ok" && <p className="ls-enter m-0 mt-2 text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">Correct: {word}</p>}
+      {(!speech || hint) && <button type="button" onClick={() => setHint(true)} className="mt-2 text-[12px] font-bold text-[var(--brand)] underline">{hint ? t("hublessons.bkWordIs", { w: word }) : t("hublessons.bkCantHear")}</button>}
+      {st === "bad" && <p className="m-0 mt-2 text-[13px] font-bold text-[var(--red)]" role="status">{t("hublessons.bkSpellBad")}</p>}
+      {st === "ok" && <p className="ls-enter m-0 mt-2 text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">{t("hublessons.bkCorrectWord", { w: word })}</p>}
     </li>
   );
 }
 function Spell({ q, words, tips, xp }: { q?: string; words: string[]; tips?: string[]; xp: Xp }) {
+  const t = useT();
   return (
     <div>
       {q && <p className={label}><Inline text={q} /></p>}
-      <p className="m-0 mb-2.5 text-[14.5px] text-[var(--ink-2)]">Tap 🔊 to hear each word, then type it.</p>
+      <p className="m-0 mb-2.5 text-[14.5px] text-[var(--ink-2)]">{t("hublessons.bkSpellHelp")}</p>
       <ol className="m-0 grid list-none gap-2.5 p-0">{words.map((w, i) => <SpellWord key={w + i} word={w} n={i + 1} xp={xp} />)}</ol>
       {tips && tips.length > 0 && (
         <div className="mt-3 rounded-2xl bg-[var(--panel)] p-3.5">
-          <p className="m-0 mb-1 text-[13px] font-extrabold text-[var(--ink)]">Remember to</p>
-          <ul className="m-0 list-disc pl-5 text-[12px] text-[var(--ink-2)]">{tips.map((t) => <li key={t}>{t}</li>)}</ul>
+          <p className="m-0 mb-1 text-[13px] font-extrabold text-[var(--ink)]">{t("hublessons.bkRememberTo")}</p>
+          <ul className="m-0 list-disc ps-5 text-[12px] text-[var(--ink-2)]">{tips.map((tip) => <li key={tip}>{tip}</li>)}</ul>
         </div>
       )}
     </div>
@@ -355,6 +367,7 @@ function Spell({ q, words, tips, xp }: { q?: string; words: string[]; tips?: str
 }
 
 function LcwcWord({ word, xp }: { word: string; xp: Xp }) {
+  const t = useT();
   const [phase, setPhase] = useState<"look" | "write" | "ok" | "bad">("look");
   const [v, setV] = useState("");
   return (
@@ -362,19 +375,19 @@ function LcwcWord({ word, xp }: { word: string; xp: Xp }) {
       {phase === "look" ? (
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-[22px] font-extrabold tracking-wide text-[var(--ink)]">{word}</span>
-          <span className="text-[13px] text-[var(--ink-2)]">1. Look. Say it. Notice the tricky parts.</span>
-          <Btn onClick={() => setPhase("write")} className="!min-h-[33px]">Cover it</Btn>
+          <span className="text-[13px] text-[var(--ink-2)]">{t("hublessons.bkLook")}</span>
+          <Btn onClick={() => setPhase("write")} className="!min-h-[33px]">{t("hublessons.bkCoverIt")}</Btn>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2.5">
-          <span aria-hidden="true" className="grid h-9 min-w-[140px] place-items-center rounded-xl bg-[var(--line)] px-3 text-[13px] font-bold text-[var(--ink-3)]">covered</span>
+          <span aria-hidden="true" className="grid h-9 min-w-[140px] place-items-center rounded-xl bg-[var(--line)] px-3 text-[13px] font-bold text-[var(--ink-3)]">{t("hublessons.bkCovered")}</span>
           <input value={v} onChange={(e) => { setV(e.target.value); if (phase === "bad") setPhase("write"); }} disabled={phase === "ok"} autoCapitalize="none" autoCorrect="off" spellCheck={false}
             onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter" && v.trim()) { const ok = norm(v) === norm(word); setPhase(ok ? "ok" : "bad"); if (ok) xp(5); } }}
-            aria-label={`Write the word (covered)`} placeholder="Write it from memory"
+            aria-label={t("hublessons.bkWriteCovered")} placeholder={t("hublessons.bkWriteMemory")}
             className={`min-h-[38px] min-w-[150px] flex-1 rounded-xl border-2 px-3 text-[15px] font-bold text-[var(--ink)] outline-none ${phase === "ok" ? "border-[var(--green)] bg-[var(--green-soft)]" : phase === "bad" ? "border-[var(--red)]" : "border-[var(--line)] bg-[var(--panel)] focus:border-[var(--brand-2)]"}`} />
-          <Btn tone="ghost" disabled={phase === "ok" || !v.trim()} onClick={() => { const ok = norm(v) === norm(word); setPhase(ok ? "ok" : "bad"); if (ok) xp(5); }} className="!min-h-[33px] !px-4">Check</Btn>
-          {phase === "bad" && <span className="basis-full text-[12px] font-bold text-[var(--red)]" role="status">Not quite. The word is <b>{word}</b>. <button type="button" className="underline" onClick={() => { setV(""); setPhase("look"); }}>Look again</button></span>}
-          {phase === "ok" && <span className="ls-enter basis-full text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">✓ You spelt it correctly: {word}</span>}
+          <Btn tone="ghost" disabled={phase === "ok" || !v.trim()} onClick={() => { const ok = norm(v) === norm(word); setPhase(ok ? "ok" : "bad"); if (ok) xp(5); }} className="!min-h-[33px] !px-4">{t("hublessons.check")}</Btn>
+          {phase === "bad" && <span className="basis-full text-[12px] font-bold text-[var(--red)]" role="status">{rich(t("hublessons.bkLcwcBad"), { word: <b>{word}</b>, again: <button type="button" className="underline" onClick={() => { setV(""); setPhase("look"); }}>{t("hublessons.bkLookAgain")}</button> })}</span>}
+          {phase === "ok" && <span className="ls-enter basis-full text-[12px] font-bold text-[var(--hub-green-ink)]" role="status">{t("hublessons.bkSpeltCorrect", { w: word })}</span>}
         </div>
       )}
     </li>
@@ -390,6 +403,7 @@ function Lcwc({ q, words, xp }: { q: string; words: string[]; xp: Xp }) {
 }
 
 function ClapWord({ word, chunks }: { word: string; chunks: string[] }) {
+  const t = useT();
   const [at, setAt] = useState(-1);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
@@ -400,7 +414,7 @@ function ClapWord({ word, chunks }: { word: string; chunks: string[] }) {
   };
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border-2 border-[var(--line)] bg-[var(--panel)] p-3.5">
-      <button type="button" onClick={play} aria-label={`Clap ${word}`} className={`${pill} ${idle}`}><span aria-hidden="true">👏</span> Clap it</button>
+      <button type="button" onClick={play} aria-label={t("hublessons.bkClapAria", { w: word })} className={`${pill} ${idle}`}><span aria-hidden="true">👏</span> {t("hublessons.bkClapIt")}</button>
       <span className="text-[13px] font-bold text-[var(--ink-2)]">{word} =</span>
       <span className="flex flex-wrap gap-1.5" aria-label={chunks.join(" ")}>
         {chunks.map((c, i) => <span key={i} className={`rounded-lg px-3 py-1.5 text-[17px] font-extrabold transition ${at === i ? "scale-110 bg-[var(--brand)] text-white" : "bg-[var(--surface)] text-[var(--ink)]"}`}>{c}</span>)}
@@ -415,7 +429,7 @@ export function BlockView({ b, k, xp }: { b: Block; k: number; xp: Xp }) {
   switch (b.t) {
     case "text": return <p key={k} className="m-0 mt-3 text-[15px] leading-[1.5] text-[var(--ink)] first:mt-0"><Inline text={b.text} /></p>;
     case "lead": return <p key={k} className="m-0 mt-3 text-[20px] font-extrabold leading-[1.3] text-[var(--ink)] first:mt-0 sm:text-[23px]"><Inline text={b.text} /></p>;
-    case "callout": return <p key={k} className="m-0 mt-4 rounded-2xl border-l-[6px] border-[var(--gold)] bg-[var(--gold-soft)] px-4 py-3 text-[15px] font-bold leading-snug text-[var(--ink)]"><Inline text={b.text} /></p>;
+    case "callout": return <p key={k} className="m-0 mt-4 rounded-2xl border-s-[6px] border-[var(--gold)] bg-[var(--gold-soft)] px-4 py-3 text-[15px] font-bold leading-snug text-[var(--ink)]"><Inline text={b.text} /></p>;
     case "list": return <ul key={k} className="m-0 mt-3 grid list-none gap-2 p-0">{b.items.map((t) => <li key={t} className="flex items-start gap-2.5 text-[15px] leading-snug text-[var(--ink)]"><span aria-hidden="true" className="mt-[9px] h-2.5 w-2.5 flex-none rounded-full bg-[var(--brand-2)]" /><span><Inline text={t} /></span></li>)}</ul>;
     case "chips": return box(<ChipRow items={b.items} />, k);
     case "cards": return box(<Cards items={b.items} />, k);

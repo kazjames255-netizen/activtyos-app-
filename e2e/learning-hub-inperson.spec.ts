@@ -461,3 +461,57 @@ test.describe("setup: year filter + send to the children's portals", () => {
     await ctx.close();
   });
 });
+
+// The shared LessonPicker (features/learninghub/lesson/picker) on step 1 of Teach in person: subject tiles + year chips + card grid, the
+// "All A–Z" list, subject chips, selection, and the quiz cards. Screenshots at three widths go to docs/lesson-picker-shots/.
+test.describe("shared LessonPicker on Teach in person", () => {
+  test("browse, filter, select; cards in the Lessons-area style; screenshots at 1440 / 768 / 390", async ({ browser }) => {
+    test.setTimeout(300_000);
+    const shots = path.join(ROOT, "docs/lesson-picker-shots");
+    fs.mkdirSync(shots, { recursive: true });
+    const ctx = await ctxFor(browser, "freelancer");
+    const page = await ctx.newPage();
+    await gotoHub(page, "/freelancer/learninghub?tab=home");
+    await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 25_000 });
+    await openTab(page, /Teach in person/);
+    const app = page.getByTestId("inperson-app");
+    await expect(app).toBeVisible();
+    const picker = app.getByTestId("ip-filters");
+    // Landing: search + subject tiles with counts + year chips (no radio list, no dropdown).
+    await expect(picker.getByTestId("ip-lesson-subjects")).toBeVisible({ timeout: 30_000 });
+    await expect(app.locator("select#ip-subject")).toHaveCount(0);
+    await expect(picker.getByRole("tab", { name: "Year 4", exact: true })).toBeVisible();
+    for (const [w, h] of [[1440, 900], [768, 1024], [390, 844]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await picker.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(shots, `setup-landing-${w}.png`), fullPage: true });
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // A–Z list of the same cards (first page shows at once), narrowed by a subject chip.
+    const t0 = Date.now();
+    await picker.getByTestId("ip-lesson-all").click();
+    await expect(picker.locator("[data-ui=card]").first()).toBeVisible({ timeout: 20_000 });
+    const firstCards = Date.now() - t0;
+    console.log(`PICKER first A-Z page in ${firstCards}ms`);
+    expect(await picker.locator("[data-ui=card]").count()).toBeLessThanOrEqual(24);
+    await picker.getByRole("button", { name: subject, exact: true }).click();
+    const card = picker.locator("[data-ui=card]", { hasText: L.title });
+    await expect(card).toHaveCount(1, { timeout: 20_000 });
+    await expect(card).toContainText("Interactive");
+    await card.locator("[data-pick]").click();
+    await expect(card.locator("[data-pick]")).toHaveAttribute("aria-checked", "true");
+    await expect(app.getByTestId("ip-chosen")).toContainText(L.title);
+    await expect(app).not.toContainText(/\boak\b/i);
+    for (const [w, h] of [[1440, 900], [768, 1024], [390, 844]] as const) {
+      await page.setViewportSize({ width: w, height: h });
+      await picker.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(shots, `setup-selected-${w}.png`), fullPage: true });
+    }
+    // Quiz tab: the same card language.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await app.getByRole("tab", { name: "A quiz or placement test" }).click();
+    await expect(app.getByTestId("ip-quiz-cards")).toBeVisible({ timeout: 20_000 });
+    await page.screenshot({ path: path.join(shots, "setup-quiz-1440.png"), fullPage: true });
+    await ctx.close();
+  });
+});

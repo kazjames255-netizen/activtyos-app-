@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+import { feedbackText, genLabel, instrLabel, paperLabel, promptText } from "../../toolText";
 import { FOCUS, Icon } from "../../../kit";
 import { angDiff, closestOnSeg, dirOf, dist, norm360, projectOnLine, rotateAbout, round, type Pt } from "../../engine/geometry";
 import { canRedo, canUndo, commit, newHistory, redo, replacePresent, undo, unwrap, wrap, type History } from "../../engine/state";
@@ -12,6 +14,7 @@ import type { ToolMode } from "../../types";
 import { GENERATORS, markProblem, type Problem } from "./generators";
 import type { PublicProblem } from "../../problems";
 import { Paper, PaperDefs } from "./papers";
+import { useBareTool } from "../../bareContext";
 import { CompassArt, InstrumentArt } from "./InstrumentArt";
 import { arcFromSweep, barLen, bodyOf, compassPen, drawAlongEdge, edgesOf, flipInstrument, isProtractor, makeInstrument, nearestEdge, nearestPoint, protractorReading, snapCompass, snapEdgeToPoints, snapPoints, snapProtractor, snapSetSquare, SIZE, withRadius } from "./instruments";
 import { DEFAULT_TOL, GEO_SCHEMA_VERSION, GEO_TOOL_ID, INSTR_LABEL, PAPERS, PAPER_H, PAPER_W, initialGeoState, uid, type GeoState, type InstrKind, type Instrument, type Mark, type PaperKind, type Tol } from "./model";
@@ -29,7 +32,7 @@ const AB = [MARGIN_X(), MARGIN_Y()] as const;
 function MARGIN_X() { return 20; }
 function MARGIN_Y() { return 20; }
 const VIEW_W = PAPER_W + 2 * AB[0], VIEW_H = PAPER_H + 2 * AB[1];
-const TOOLS = [["move", "Move"], ["line", "Line"], ["point", "Point"], ["pen", "Pencil"], ["erase", "Rub out"]] as const;
+const TOOLS = [["move", "b_move"], ["line", "b_line"], ["point", "b_point"], ["pen", "b_pencil"], ["erase", "b_rubout"]] as const;
 type Tool = (typeof TOOLS)[number][0];
 const ALL_INSTR: InstrKind[] = ["ruler15", "ruler30", "straightedge", "protractor180", "protractor360", "compass", "setsquare45", "setsquare3060"];
 
@@ -81,6 +84,9 @@ const inPoly = (poly: readonly Pt[], p: Pt) => { let c = false; for (let i = 0, 
 const stateFrom = (paper: PaperKind, preset: InstrKind[], given: Mark[] = []): GeoState => ({ paper, instruments: preset.map((k, i) => newInstr(k, homeFor(k, i))), marks: given });
 
 export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15", "protractor180", "compass"], offer, paper = "plain", problem: problemProp = null, backdropUrl, focus: focusProp, onFocusChange, generatorIds = [], tol = DEFAULT_TOL, compact = false, saveAs, onSubmit, initialAnswer, onAnswer }: GeometryBoardProps) {
+  const t = useT();
+  const il = (k: InstrKind) => instrLabel(t, k, INSTR_LABEL[k]);
+  const bare = useBareTool(); // "Just the tool": only the instruments, floating on whatever is underneath
   const assess = mode === "assess";
   const [problem, setProblem] = useState<Problem | PublicProblem | null>(problemProp);
   const [hist, setHist] = useState<History<GeoState>>(() => newHistory(stateFrom(problemProp?.paper ?? paper, preset, [...(problemProp?.given ?? []), ...(initialAnswer?.marks ?? [])])));
@@ -234,7 +240,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
     const base = fx0.state ?? live ?? hist.present;
     if (d.k === "move" || d.k === "rotate" || d.k === "radius" || d.k === "two") {
       const id = d.k === "two" || d.k === "move" || d.k === "rotate" || d.k === "radius" ? d.id : "";
-      const next = patchInstr(id, (i) => settle(i, base), base); setLive(null); setHist((h) => commit(replacePresent(h, hist.present), next)); say_(`${label(base, id)} placed`);
+      const next = patchInstr(id, (i) => settle(i, base), base); setLive(null); setHist((h) => commit(replacePresent(h, hist.present), next)); say_(t("hubtoolsa.b_placed", { name: label(base, id) }));
     } else if (d.k === "sweep") {
       const ins = base.instruments.find((i) => i.id === d.id), total = dd.k === "sweep" ? dd.total : d.total;
       setLive(null);
@@ -258,8 +264,8 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
   const setFocusMode = (b: boolean) => { setFocusInt(b); onFocusChange?.(b); };
   const selIns = state.instruments.find((i) => i.id === sel) ?? null;
   // Turn the selected instrument over 180° (protractor about its centre cross, others about their middle) — works for every instrument.
-  const flipSel = () => { if (!selIns || selIns.kind === "compass") return; const n2 = settle(flipInstrument(selIns), state); apply(patchInstr(selIns.id, () => n2)); say_(`${INSTR_LABEL[selIns.kind]} flipped, turned ${round(n2.rot, 1)} degrees`); };
-  const label = (s: GeoState, id: string) => { const i = s.instruments.find((x) => x.id === id); return i ? INSTR_LABEL[i.kind] : "Instrument"; };
+  const flipSel = () => { if (!selIns || selIns.kind === "compass") return; const n2 = settle(flipInstrument(selIns), state); apply(patchInstr(selIns.id, () => n2)); say_(t("hubtoolsa.b_flipped", { name: il(selIns.kind), deg: round(n2.rot, 1) })); };
+  const label = (s: GeoState, id: string) => { const i = s.instruments.find((x) => x.id === id); return i ? il(i.kind) : ""; };
 
   // ── keyboard: works on the focused instrument ──
   const onKeyInstr = (e: React.KeyboardEvent, ins: Instrument) => {
@@ -275,14 +281,14 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
     else if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); apply({ ...state, instruments: state.instruments.filter((i) => i.id !== ins.id) }); setSel(null); return; }
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(ins.id); return; }
     else if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && ins.kind !== "compass") next = flipInstrument(ins);
-    if (next) { e.preventDefault(); const n2 = settle(next, state); apply(patchInstr(ins.id, () => n2)); setSel(ins.id); say_(`${INSTR_LABEL[ins.kind]} at ${round(n2.x, 1)}, ${round(n2.y, 1)}, turned ${round(n2.rot, 1)} degrees`); }
+    if (next) { e.preventDefault(); const n2 = settle(next, state); apply(patchInstr(ins.id, () => n2)); setSel(ins.id); say_(t("hubtoolsa.b_moved", { name: il(ins.kind), x: round(n2.x, 1), y: round(n2.y, 1), deg: round(n2.rot, 1) })); }
   };
   const onKeyBoard = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); setHist((h) => (e.shiftKey ? redo(h) : undo(h))); }
   };
 
   // ── toolbar actions ──
-  const addInstr = (k: InstrKind) => { if (state.instruments.some((i) => i.kind === k) && k !== "straightedge") { setSel(state.instruments.find((i) => i.kind === k)!.id); return; } const i = newInstr(k, homeFor(k, state.instruments.filter((x) => x.kind === k).length)); apply({ ...state, instruments: [...state.instruments, i] }); setSel(i.id); say_(`${INSTR_LABEL[k]} added`); };
+  const addInstr = (k: InstrKind) => { if (state.instruments.some((i) => i.kind === k) && k !== "straightedge") { setSel(state.instruments.find((i) => i.kind === k)!.id); return; } const i = newInstr(k, homeFor(k, state.instruments.filter((x) => x.kind === k).length)); apply({ ...state, instruments: [...state.instruments, i] }); setSel(i.id); say_(t("hubtoolsa.b_added", { name: il(k) })); };
   const zoom = (f: number) => setView((v) => { const w = Math.max(60, Math.min(VIEW_W * 2, v.w * f)), k = w / v.w; return { x: v.x + (v.w - w) / 2, y: v.y + ((v.w - w) / 2) * (VIEW_H / VIEW_W), w: w === v.w * k ? w : w }; });
   const fit = () => setView({ x: -AB[0], y: -AB[1], w: VIEW_W });
   const clearMarks = () => { apply({ ...state, marks: state.marks.filter((m) => "given" in m && m.given) }); setResult(null); };
@@ -327,70 +333,82 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
 
   return (
     <div className="grid gap-3" onKeyDown={onKeyBoard} data-testid="geometry-board">
-      {problem && (
-        <div role="region" aria-label="Question" className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{problem.prompt}</p>
+      {problem && !bare && (
+        <div role="region" aria-label={t("hubtoolsa.c_question")} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{promptText(t, problem.prompt)}</p>
           {problem.expects === "number" && (
-            <label className="mt-2 flex items-center gap-2 text-[13px] font-bold text-[var(--ink)]">Your answer
+            <label className="mt-2 flex items-center gap-2 text-[13px] font-bold text-[var(--ink)]">{t("hubtoolsa.c_yourAnswer")}
               <input inputMode="decimal" value={answer} onChange={(e) => setAnswer(e.target.value)} className={`min-h-[44px] w-28 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-[15px] font-bold ${FOCUS}`} /> {problem.unit}
             </label>
           )}
-          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>}{!assess && generatorIds.length > 0 && <Button onClick={newQuestion}>Try another</Button>}</div>
+          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? t("hubtoolsa.c_handIn") : t("hubtoolsa.c_check")}</Button>}{!assess && generatorIds.length > 0 && <Button onClick={newQuestion}>{t("hubtoolsa.c_tryAnother")}</Button>}</div>
           {result && !assess && (
-            <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b className="text-[14px]">{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{f}</span>)}</div>
+            <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b className="text-[14px]">{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{feedbackText(t, f)}</span>)}</div>
           )}
-          {result && assess && <p role="status" className="m-0 mt-2 text-[13px] font-bold text-[var(--ink)]">Handed in.</p>}
+          {result && assess && <p role="status" className="m-0 mt-2 text-[13px] font-bold text-[var(--ink)]">{t("hubtoolsa.c_handedIn")}</p>}
         </div>
       )}
-      {!focusMode && !problem && !assess && generatorIds.length > 0 && (
+      {!bare && !focusMode && !problem && !assess && generatorIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-[12.5px] font-bold text-[var(--ink-2)]">Practise a question
-            <select value={genId} onChange={(e) => setGenId(e.target.value)} className={`ml-2 min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`}>{generatorIds.map((g) => <option key={g} value={g}>{GEN_LABEL[g] ?? g}</option>)}</select>
+          <label className="text-[12.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.b_practiseQ")}
+            <select value={genId} onChange={(e) => setGenId(e.target.value)} className={`ms-2 min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`}>{generatorIds.map((g) => <option key={g} value={g}>{genLabel(t, g, GEN_LABEL[g] ?? g)}</option>)}</select>
           </label>
-          <Button variant="primary" onClick={newQuestion}>New question</Button>
+          <Button variant="primary" onClick={newQuestion}>{t("hubtoolsa.b_newQ")}</Button>
         </div>
       )}
 
-      {focusMode && (
-        <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Focus mode">
-          <button type="button" onClick={() => setFocusMode(false)} data-testid="geo-focus-off" className={`${btn} ${on(false)}`}>⤡ Show tools</button>
-          <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Undo">↶</button>
-          <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Redo">↷</button>
-          {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} className={`${btn} ${on(false)}`}>⇅ Flip</button>}
+      {focusMode && !bare && (
+        <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label={t("hubtoolsa.b_focusMode")}>
+          <button type="button" onClick={() => setFocusMode(false)} data-testid="geo-focus-off" className={`${btn} ${on(false)}`}>⤡ {t("hubtoolsa.b_showTools")}</button>
+          <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_undo")}>↶</button>
+          <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_redo")}>↷</button>
+          {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} className={`${btn} ${on(false)}`}>⇅ {t("hubtoolsa.c_flip")}</button>}
         </div>
       )}
-      {!focusMode && (<>
-      <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Drawing tools">
-        <button type="button" onClick={() => setFocusMode(true)} data-testid="geo-focus-on" title="Hide every button and tab so you can just work on the task" className={`${btn} ${on(false)}`}>⤢ Focus</button>
-        {TOOLS.map(([id, t]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => setTool(id)} className={`${btn} ${on(tool === id)}`}>{t}</button>)}
-        {compass && <button type="button" aria-pressed={penDown} onClick={() => setPenDown(!penDown)} className={`${btn} ${on(penDown)}`} title="When on, dragging the compass pencil draws an arc; when off, it changes the radius.">Draw arc {penDown ? "on" : "off"}</button>}
+      {!focusMode && !bare && (<>
+      <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label={t("hubtoolsa.b_drawTools")}>
+        <button type="button" onClick={() => setFocusMode(true)} data-testid="geo-focus-on" title={t("hubtoolsa.b_focusTitle")} className={`${btn} ${on(false)}`}>⤢ {t("hubtoolsa.b_focus")}</button>
+        {TOOLS.map(([id, k]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => setTool(id)} className={`${btn} ${on(tool === id)}`}>{t(`hubtoolsa.${k}`)}</button>)}
+        {compass && <button type="button" aria-pressed={penDown} onClick={() => setPenDown(!penDown)} className={`${btn} ${on(penDown)}`} title={t("hubtoolsa.b_arcTitle")}>{penDown ? t("hubtoolsa.b_arcOn") : t("hubtoolsa.b_arcOff")}</button>}
         <span className="mx-1 h-6 w-px bg-[var(--line)]" aria-hidden />
-        <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Undo">↶</button>
-        <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Redo">↷</button>
-        <button type="button" onClick={clearMarks} className={`${btn} ${on(false)}`}>Clear drawing</button>
+        <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_undo")}>↶</button>
+        <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_redo")}>↷</button>
+        <button type="button" onClick={clearMarks} className={`${btn} ${on(false)}`}>{t("hubtoolsa.b_clearDrawing")}</button>
         <span className="mx-1 h-6 w-px bg-[var(--line)]" aria-hidden />
-        <button type="button" onClick={() => zoom(0.8)} className={`${btn} ${on(false)}`} aria-label="Zoom in">＋</button>
-        <button type="button" onClick={() => zoom(1.25)} className={`${btn} ${on(false)}`} aria-label="Zoom out">−</button>
-        <button type="button" onClick={fit} className={`${btn} ${on(false)}`}>Fit</button>
-        {!assess && <label className="ml-auto inline-flex min-h-[40px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={readouts} onChange={(e) => setReadouts(e.target.checked)} className="accent-[var(--brand)]" />Show readings</label>}
+        <button type="button" onClick={() => zoom(0.8)} className={`${btn} ${on(false)}`} aria-label={t("hubtoolsa.g_zoomIn")}>＋</button>
+        <button type="button" onClick={() => zoom(1.25)} className={`${btn} ${on(false)}`} aria-label={t("hubtoolsa.g_zoomOut")}>−</button>
+        <button type="button" onClick={fit} className={`${btn} ${on(false)}`}>{t("hubtoolsa.b_fit")}</button>
+        {!assess && <label className="ms-auto inline-flex min-h-[40px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={readouts} onChange={(e) => setReadouts(e.target.checked)} className="accent-[var(--brand)]" />{t("hubtoolsa.b_showReadings")}</label>}
       </div>
-      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Instruments">
-        {(offer ?? ALL_INSTR).map((k) => <button key={k} type="button" onClick={() => addInstr(k)} className={`${btn} ${on(state.instruments.some((i) => i.kind === k) && sel === state.instruments.find((i) => i.kind === k)?.id)}`}>{INSTR_LABEL[k]}</button>)}
-        {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} data-testid="geo-flip" title="Turn the selected instrument over so it can measure the other way round (or press F)" className={`${btn} ${on(false)}`}>⇅ Flip {INSTR_LABEL[selIns.kind]}</button>}
-        {!problem && <select value={state.paper} onChange={(e) => apply({ ...state, paper: e.target.value as PaperKind })} aria-label="Paper" className={`ml-auto min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[12.5px] font-semibold text-[var(--ink)] ${FOCUS}`}>{PAPERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}</select>}
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("hubtoolsa.b_instruments")}>
+        {(offer ?? ALL_INSTR).map((k) => <button key={k} type="button" onClick={() => addInstr(k)} className={`${btn} ${on(state.instruments.some((i) => i.kind === k) && sel === state.instruments.find((i) => i.kind === k)?.id)}`}>{il(k)}</button>)}
+        {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} data-testid="geo-flip" title={t("hubtoolsa.b_flipTitle")} className={`${btn} ${on(false)}`}>⇅ {t("hubtoolsa.b_flipNamed", { name: il(selIns.kind) })}</button>}
+        {!problem && <select value={state.paper} onChange={(e) => apply({ ...state, paper: e.target.value as PaperKind })} aria-label={t("hubtoolsa.b_paper")} className={`ms-auto min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[12.5px] font-semibold text-[var(--ink)] ${FOCUS}`}>{PAPERS.map((p) => <option key={p.id} value={p.id}>{paperLabel(t, p.id, p.label)}</option>)}</select>}
       </div>
 
       </>)}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
-        <svg ref={svgRef} viewBox={`${view.x} ${view.y} ${view.w} ${viewH}`} role="application" aria-label="Geometry paper. Use the Tab key to reach an instrument, then arrow keys to move it and Shift with left or right to turn it."
-          style={{ width: "100%", maxHeight: compact ? "52vh" : "68vh", touchAction: "none", cursor: tool === "move" ? "default" : "crosshair", display: "block" }}
+      <div data-bare-pass={bare ? "1" : undefined} className={bare ? "relative" : "overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]"}>
+        {bare && (
+          // "Just the tool" keeps only the few actions the instrument itself needs: flip it over, undo / redo, wipe the pencil marks.
+          <div className="absolute start-1 top-1 z-10 flex flex-wrap items-center gap-1" role="toolbar" aria-label={t("hubtoolsa.b_instrActions")} data-testid="geo-bare-actions" onPointerDown={(e) => e.stopPropagation()}>
+            {selIns && selIns.kind !== "compass" && <button type="button" onClick={flipSel} data-testid="geo-flip" title={t("hubtoolsa.b_flipTitleShort")} className={`${btn} ${on(false)} shadow-md`}>⇅ {t("hubtoolsa.c_flip")}</button>}
+            {!selIns && state.instruments.some((i) => i.kind !== "compass") && <span className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] shadow-md">{t("hubtoolsa.b_tapToFlip")}</span>}
+            <button type="button" onClick={() => setHist((h) => undo(h))} disabled={!canUndo(hist)} className={`${btn} ${on(false)} shadow-md disabled:opacity-40`} aria-label={t("hubtoolsa.c_undo")}>↶</button>
+            <button type="button" onClick={() => setHist((h) => redo(h))} disabled={!canRedo(hist)} className={`${btn} ${on(false)} shadow-md disabled:opacity-40`} aria-label={t("hubtoolsa.c_redo")}>↷</button>
+            {state.marks.length > 0 && <button type="button" onClick={clearMarks} className={`${btn} ${on(false)} shadow-md`}>{t("hubtoolsa.b_clearDrawing")}</button>}
+          </div>
+        )}
+        <svg ref={svgRef} viewBox={`${view.x} ${view.y} ${view.w} ${viewH}`} role="application" aria-label={t("hubtoolsa.b_paperAria")} data-bare-pass={bare ? "1" : undefined}
+          style={{ width: "100%", maxHeight: compact ? "52vh" : "68vh", touchAction: "none", cursor: tool === "move" ? "default" : "crosshair", display: "block", pointerEvents: bare ? "none" : undefined }}
           onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)}>
           <PaperDefs id={cid} />
-          <Paper id={cid} kind={state.paper} />
+          {/* "Just the tool": the svg root lets taps fall through to the lesson beneath; only while a drawing tool is active does a transparent layer catch the grid. */}
+          {bare && tool !== "move" && <rect x={view.x} y={view.y} width={view.w} height={viewH} fill="transparent" style={{ pointerEvents: "all" }} data-testid="geo-bare-hit" />}
+          {!bare && <Paper id={cid} kind={state.paper} />}
           {backdropUrl && <image href={backdropUrl} x={0} y={0} width={PAPER_W} height={PAPER_H} preserveAspectRatio="xMidYMid meet" style={{ pointerEvents: "none" }} data-testid="geo-backdrop" />}
           {state.instruments.filter((i) => i.kind !== "compass").map((i) => (
-            <g key={i.id} transform={`translate(${i.x} ${i.y}) rotate(${-i.rot})`} tabIndex={0} role="button" aria-label={`${INSTR_LABEL[i.kind]}. Arrow keys move, Shift and left or right arrow turns, Delete removes.`}
-              aria-pressed={sel === i.id} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", cursor: tool === "move" ? "grab" : "crosshair" }}>
+            <g key={i.id} transform={`translate(${i.x} ${i.y}) rotate(${-i.rot})`} tabIndex={0} role="button" aria-label={t("hubtoolsa.b_instrAria", { name: il(i.kind) })}
+              aria-pressed={sel === i.id} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", cursor: tool === "move" ? "grab" : "crosshair", pointerEvents: "all" }}>
               <InstrumentArt i={i} />
               {sel === i.id && <SelectRing i={i} />}
             </g>
@@ -407,7 +425,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
             {drag?.k === "sweep" && Math.abs(drag.total) > 1 && <path d={arcPath({ id: "p", k: "arc", ...arcFromSweep([drag.orig.x, drag.orig.y], drag.orig.r ?? 60, drag.orig.pen ?? 0, drag.total) })} stroke="var(--brand)" strokeWidth={0.6} />}
           </g>
           {state.instruments.filter((i) => i.kind === "compass").map((i) => (
-            <g key={i.id} tabIndex={0} role="button" aria-label="Compasses. Arrow keys move, plus and minus change the radius, Delete removes." onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none" }}>
+            <g key={i.id} tabIndex={0} role="button" aria-label={t("hubtoolsa.b_compassAria")} onKeyDown={(e) => onKeyInstr(e, i)} onFocus={() => setSel(i.id)} style={{ outline: "none", pointerEvents: "all" }}>
               <CompassArt i={i} showRadius={showRead} />
               {sel === i.id && <><circle cx={i.x} cy={i.y} r={6} fill="none" stroke="var(--brand)" strokeWidth={0.5} strokeDasharray="1.5 1.2" /><circle cx={compassPen(i)[0]} cy={compassPen(i)[1]} r={6} fill="none" stroke="var(--brand)" strokeWidth={0.5} strokeDasharray="1.5 1.2" /></>}
             </g>
@@ -417,9 +435,9 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         </svg>
       </div>
 
-      {sELECTED && !focusMode && (
+      {sELECTED && !focusMode && !bare && (
         <details className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3" open={!compact}>
-          <summary className={`cursor-pointer text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>Precise controls — {INSTR_LABEL[sELECTED.kind]}</summary>
+          <summary className={`cursor-pointer text-[13px] font-extrabold text-[var(--ink)] ${FOCUS}`}>{t("hubtoolsa.b_precise", { name: il(sELECTED.kind) })}</summary>
           <Precise ins={sELECTED} assess={assess} onChange={(n2) => apply(patchInstr(sELECTED.id, () => settle(n2, state)))}
             onArc={(a0, a1) => { const c: Pt = [sELECTED.x, sELECTED.y]; apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "arc", c, r: sELECTED.r ?? 60, a0: norm360(a0), a1: norm360(a0) + (((a1 - a0) % 360) + 360) % 360 || norm360(a0) + 360 }] }); }}
             onLine={(from, to) => { const e = edgesOf(sELECTED)[0]; if (!e) return; const len = dist(e.a, e.b), t0 = Math.max(0, Math.min(len, from)) / len, t1 = Math.max(0, Math.min(len, to)) / len; const a: Pt = [e.a[0] + (e.b[0] - e.a[0]) * t0, e.a[1] + (e.b[1] - e.a[1]) * t0], b: Pt = [e.a[0] + (e.b[0] - e.a[0]) * t1, e.a[1] + (e.b[1] - e.a[1]) * t1]; if (dist(a, b) >= 1) apply({ ...state, marks: [...state.marks, { id: uid("m"), k: "seg", a, b, ruled: true }] }); }}
@@ -427,7 +445,7 @@ export function GeometryBoard({ mode = "practise", qs = "", preset = ["ruler15",
         </details>
       )}
       <p className="sr-only" role="status" aria-live="polite">{say}</p>
-      {!focusMode && <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Drag an instrument to move it · drag the round handle to turn it · with two fingers you can move and turn together · Draw ▸ Line along a ruler edge for a straight line.</p>}
+      {!focusMode && !bare && <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">{t("hubtoolsa.b_help")}</p>}
     </div>
   );
 }
@@ -472,7 +490,8 @@ function SelectRing({ i }: { i: Instrument }) {
 }
 
 function Precise({ ins, assess, onChange, onArc, onLine, onRemove }: { ins: Instrument; assess: boolean; onChange: (i: Instrument) => void; onArc: (a0: number, a1: number) => void; onLine: (from: number, to: number) => void; onRemove: () => void }) {
-  const [a0, setA0] = useState("0"), [a1, setA1] = useState("90"), [f, setF] = useState("0"), [t, setT] = useState("50");
+  const t = useT();
+  const [a0, setA0] = useState("0"), [a1, setA1] = useState("90"), [f, setF] = useState("0"), [tt, setT] = useState("50");
   const num = (v: string) => (v.trim() === "" || Number.isNaN(Number(v)) ? 0 : Number(v));
   const fld = "min-h-[40px] w-20 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-2 text-[13px] font-semibold text-[var(--ink)] " + FOCUS;
   const Field = ({ label, value, on }: { label: string; value: number; on: (n: number) => void }) => (
@@ -481,25 +500,25 @@ function Precise({ ins, assess, onChange, onArc, onLine, onRemove }: { ins: Inst
   return (
     <div className="mt-3 grid gap-3">
       <div className="flex flex-wrap items-end gap-2">
-        <Field label="Across (mm)" value={ins.x} on={(n) => onChange({ ...ins, x: n })} />
-        <Field label="Down (mm)" value={ins.y} on={(n) => onChange({ ...ins, y: n })} />
-        {ins.kind !== "compass" && <Field label="Turn (°)" value={ins.rot} on={(n) => onChange({ ...ins, rot: norm360(n) })} />}
-        {ins.kind === "compass" && <><Field label="Radius (mm)" value={ins.r ?? 60} on={(n) => onChange(withRadius(ins, n))} /><Field label="Pencil direction (°)" value={ins.pen ?? 0} on={(n) => onChange({ ...ins, pen: norm360(n) })} /></>}
-        {ins.kind !== "compass" && <Button onClick={() => onChange(flipInstrument(ins))}>⇅ Flip</Button>}
-        <Button onClick={onRemove}>Remove</Button>
+        <Field label={t("hubtoolsa.b_across")} value={ins.x} on={(n) => onChange({ ...ins, x: n })} />
+        <Field label={t("hubtoolsa.b_down")} value={ins.y} on={(n) => onChange({ ...ins, y: n })} />
+        {ins.kind !== "compass" && <Field label={t("hubtoolsa.b_turn")} value={ins.rot} on={(n) => onChange({ ...ins, rot: norm360(n) })} />}
+        {ins.kind === "compass" && <><Field label={t("hubtoolsa.b_radius")} value={ins.r ?? 60} on={(n) => onChange(withRadius(ins, n))} /><Field label={t("hubtoolsa.b_penDir")} value={ins.pen ?? 0} on={(n) => onChange({ ...ins, pen: norm360(n) })} /></>}
+        {ins.kind !== "compass" && <Button onClick={() => onChange(flipInstrument(ins))}>⇅ {t("hubtoolsa.c_flip")}</Button>}
+        <Button onClick={onRemove}>{t("hubtoolsa.c_remove")}</Button>
       </div>
       {ins.kind === "compass" && (
-        <div className="flex flex-wrap items-end gap-2"><b className="text-[12.5px] text-[var(--ink)]">Draw an arc</b>
-          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">from (°)<input value={a0} onChange={(e) => setA0(e.target.value)} className={fld} /></label>
-          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">to (°)<input value={a1} onChange={(e) => setA1(e.target.value)} className={fld} /></label>
-          <Button variant="primary" onClick={() => onArc(num(a0), num(a1))}>Draw arc</Button><Button onClick={() => onArc(0, 360)}>Full circle</Button></div>)}
+        <div className="flex flex-wrap items-end gap-2"><b className="text-[12.5px] text-[var(--ink)]">{t("hubtoolsa.b_drawArcTitle")}</b>
+          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.b_fromDeg")}<input value={a0} onChange={(e) => setA0(e.target.value)} className={fld} /></label>
+          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.b_toDeg")}<input value={a1} onChange={(e) => setA1(e.target.value)} className={fld} /></label>
+          <Button variant="primary" onClick={() => onArc(num(a0), num(a1))}>{t("hubtoolsa.b_drawArcBtn")}</Button><Button onClick={() => onArc(0, 360)}>{t("hubtoolsa.b_fullCircle")}</Button></div>)}
       {edge && (ins.kind.startsWith("ruler") || ins.kind === "straightedge" || ins.kind.startsWith("setsquare")) && (
-        <div className="flex flex-wrap items-end gap-2"><b className="text-[12.5px] text-[var(--ink)]">Draw a line along the {ins.kind.startsWith("setsquare") ? "longest-drawn" : "top"} edge</b>
-          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">from (mm)<input value={f} onChange={(e) => setF(e.target.value)} className={fld} /></label>
-          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">to (mm)<input value={t} onChange={(e) => setT(e.target.value)} className={fld} /></label>
-          <Button variant="primary" onClick={() => onLine(num(f), num(t))}>Draw line</Button></div>)}
-      {isProtractor(ins.kind) && !assess && <p className="m-0 text-[12px] font-semibold text-[var(--ink-2)]">Put the centre cross on the corner and the baseline along one line, then read the other line on the scale that starts at 0.</p>}
-      <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">Keys: arrows move · Shift+←/→ turn · F flips · +/− radius (compass) · Delete removes.</p>
+        <div className="flex flex-wrap items-end gap-2"><b className="text-[12.5px] text-[var(--ink)]">{ins.kind.startsWith("setsquare") ? t("hubtoolsa.b_edgeLong") : t("hubtoolsa.b_edgeTop")}</b>
+          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.b_fromMm")}<input value={f} onChange={(e) => setF(e.target.value)} className={fld} /></label>
+          <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.b_toMm")}<input value={tt} onChange={(e) => setT(e.target.value)} className={fld} /></label>
+          <Button variant="primary" onClick={() => onLine(num(f), num(tt))}>{t("hubtoolsa.b_drawLine")}</Button></div>)}
+      {isProtractor(ins.kind) && !assess && <p className="m-0 text-[12px] font-semibold text-[var(--ink-2)]">{t("hubtoolsa.b_protHelp")}</p>}
+      <p className="m-0 text-[11.5px] font-semibold text-[var(--ink-3)]">{t("hubtoolsa.b_keys")}</p>
     </div>
   );
 }

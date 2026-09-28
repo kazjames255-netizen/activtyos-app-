@@ -1,6 +1,7 @@
 // Unit helpers for the formula calculator — PURE (no React, no DOM).
 import { toSF } from "../../engine/quantity";
 import type { Rng } from "../../engine/rng";
+import { say, type Tr } from "../tr";
 
 export { toSF };
 
@@ -100,16 +101,16 @@ export function formatNum(v: number): string {
 }
 
 /** Read what a pupil typed into a value box: "20", "20 cm", "3.2 × 10^4", "3e4 J". A typed unit beats the selector. Returns the value in `baseUnit`. */
-export function readValue(text: string, selectedUnit: string, baseUnit: string): { value: number; unit: string } | { error: string } {
+export function readValue(text: string, selectedUnit: string, baseUnit: string, tr?: Tr): { value: number; unit: string } | { error: string } {
   const s = text.trim().replace(/−|–/g, "-").replace(/,(?=\d{3}\b)/g, "").replace(/\s*[×x*]\s*10\s*\^?\s*(-?\d+)/i, "e$1").replace(/\s*[×x*]\s*10([⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+)/, (_m, sup: string) => "e" + [...sup].map((c) => Object.keys(SUP).find((k) => SUP[k] === c) ?? "").join(""));
   const m = /^(-?\d*\.?\d+(?:e-?\d+)?)\s*(.*)$/i.exec(s);
-  if (!m) return { error: "Type a number" };
+  if (!m) return { error: say(tr, "sc_fc_typeNum", "Type a number") };
   const n = Number(m[1]);
-  if (!Number.isFinite(n)) return { error: "Type a number" };
+  if (!Number.isFinite(n)) return { error: say(tr, "sc_fc_typeNum", "Type a number") };
   const typed = (m[2] ?? "").trim();
   const unit = typed || selectedUnit;
   const c = convertUnit(n, unit, baseUnit);
-  if (c === null) return baseUnit === "" && !typed ? { value: n, unit: "" } : { error: `“${unit}” does not match ${baseUnit || "a plain number"}` };
+  if (c === null) return baseUnit === "" && !typed ? { value: n, unit: "" } : { error: say(tr, "sc_fc_unitMismatch", "“{unit}” does not match {base}", { unit, base: baseUnit || say(tr, "sc_fc_plainNumber", "a plain number") }) };
   return { value: c, unit };
 }
 

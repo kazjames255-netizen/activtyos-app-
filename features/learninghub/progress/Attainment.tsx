@@ -9,6 +9,8 @@ import { display, FOCUS, TAP } from "../shared-assess/ui";
 import { bandRanges, type Band } from "./levels";
 import { useFamily } from "../family/FamilyContext";
 import { kidBand } from "../family/KidMode";
+import { useT } from "@/lib/i18n/provider";
+import { Rich } from "./Rich";
 
 // "Where am I, really?" — the child's REAL attainment level, from GET /mastery
 // (`overall`): the band their average mastery falls in against the levels the tutor
@@ -30,14 +32,14 @@ interface Props {
   maxSubjects?: number;
 }
 
-const EXPLAIN = "This comes from your quiz results measured against the levels your tutor set. It is where you are now, not a game score. It moves as you practise.";
-const EXPLAIN_KID = "This shows how well you know things, from your quizzes. It goes up as you practise.";
 
-export function Attainment({ overall, bands, subjects = [], variant = "card", onEmptyAction, emptyActionLabel = "Browse quizzes", bare, maxSubjects = 6 }: Props) {
+export function Attainment({ overall, bands, subjects = [], variant = "card", onEmptyAction, emptyActionLabel, bare, maxSubjects = 6 }: Props) {
+  const t = useT();
   const fam = useFamily();
+  const EXPLAIN = t("hubfam.pgExplain");
+  const EXPLAIN_KID = t("hubfam.pgExplainKid");
   const kidMode = fam.kid; // kid mode: "My level", not "Attainment"
   const parent = fam.active && !fam.kid; // a parent reads "level" (plain words), a tutor keeps "mastery"
-  const word = parent ? "level" : "mastery";
   const hero = variant === "hero";
   const [why, setWhy] = useState(false);
   const pct = overall?.masteryPct ?? null;
@@ -55,36 +57,36 @@ export function Attainment({ overall, bands, subjects = [], variant = "card", on
   const fillBg = (i: number) => (hero ? "white" : toneAt(i, n).fill);
   const named = subjects.filter((s) => s.band && s.masteryPct != null).slice(0, maxSubjects);
 
-  const valueText = has ? `${lab(overall!.band ?? ranges[cur]?.label)}, ${Math.round(pct!)} percent${kidMode ? "" : " " + word}${overall!.next && overall!.toNext != null ? `. ${Math.round(overall!.toNext)} percent to reach ${lab(overall!.next.label)}` : ". Top level reached"}` : "No level yet";
+  const valueText = has ? `${t(kidMode ? "hubfam.pgValKid" : parent ? "hubfam.pgValLevel" : "hubfam.pgValMastery", { band: lab(overall!.band ?? ranges[cur]?.label), pct: Math.round(pct!) })}${overall!.next && overall!.toNext != null ? t("hubfam.pgValNext", { pct: Math.round(overall!.toNext), next: lab(overall!.next.label) }) : t("hubfam.pgValTop")}` : t("hubfam.pgNoLevel");
 
   const body = (
     <div data-testid="hub-attainment" data-state={has ? "level" : "empty"}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${hero ? "text-white/70" : "text-[var(--ink-3)]"}`}>{kidMode ? "My level" : parent ? "Level" : "Attainment"}</div>
+          <div className={`text-[11px] font-extrabold uppercase tracking-[0.12em] ${hero ? "text-white/70" : "text-[var(--ink-3)]"}`}>{kidMode ? t("hubfam.pgMyLevel") : parent ? t("hubfam.pgLevelCap") : t("hubfam.pgAttainmentCap")}</div>
           {has ? (
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
               <span className={`text-[26px] font-extrabold leading-tight sm:text-[30px] ${ink}`} style={display} data-testid="hub-attainment-band">{lab(overall!.band ?? ranges[cur]?.label)}</span>
-              <span className={`text-[13px] font-bold tabular-nums ${soft}`}>{Math.round(pct!)}%{kidMode ? "" : " " + word}</span>
+              <span className={`text-[13px] font-bold tabular-nums ${soft}`}>{t(kidMode ? "hubfam.pgPctKid" : parent ? "hubfam.pgPctLevel" : "hubfam.pgPctMastery", { pct: Math.round(pct!) })}</span>
             </div>
           ) : (
-            <div className={`mt-0.5 text-[18px] font-extrabold leading-tight ${ink}`} style={display}>Take a quiz to see where you are</div>
+            <div className={`mt-0.5 text-[18px] font-extrabold leading-tight ${ink}`} style={display}>{t("hubfam.pgTakeQuiz")}</div>
           )}
         </div>
-        <button type="button" aria-expanded={why} aria-controls="hub-attain-why" aria-label="Where does this level come from?" title={kidMode ? EXPLAIN_KID : EXPLAIN} onClick={() => setWhy((v) => !v)}
-          className={`-mr-2 -mt-1.5 grid h-11 w-11 flex-none place-items-center rounded-full ${hero ? "text-white/85 hover:bg-white/15" : "text-[var(--ink-3)] hover:bg-[var(--panel)]"} ${FOCUS}`}><InfoDot /></button>
+        <button type="button" aria-expanded={why} aria-controls="hub-attain-why" aria-label={t("hubfam.pgWhyAria")} title={kidMode ? EXPLAIN_KID : EXPLAIN} onClick={() => setWhy((v) => !v)}
+          className={`-me-2 -mt-1.5 grid h-11 w-11 flex-none place-items-center rounded-full ${hero ? "text-white/85 hover:bg-white/15" : "text-[var(--ink-3)] hover:bg-[var(--panel)]"} ${FOCUS}`}><InfoDot /></button>
       </div>
       {why && <p id="hub-attain-why" className={`m-0 mt-1.5 rounded-xl px-3 py-2 text-[12px] leading-relaxed ${hero ? "bg-black/15 text-white/90" : "bg-[var(--panel)] text-[var(--ink-2)]"}`}>{kidMode ? EXPLAIN_KID : EXPLAIN}</p>}
 
       <div className="mt-3.5">
-        <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={has ? Math.round(pct!) : undefined} aria-valuetext={valueText} aria-label={kidMode ? "My level" : "Attainment level"} className="relative">
+        <div role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={has ? Math.round(pct!) : undefined} aria-valuetext={valueText} aria-label={kidMode ? t("hubfam.pgMyLevel") : t("hubfam.pgAttLevelAria")} className="relative">
           <div className="flex h-3 gap-[3px]">
             {ranges.map((r, i) => {
               const span = r.to + 1 - r.from;
               const f = has ? Math.min(1, Math.max(0, (grow - r.from) / span)) : 0;
               return (
                 <span key={`${r.label}-${r.from}`} className="relative overflow-hidden rounded-full" style={{ flex: `${Math.max(1, span)} 1 0`, background: trackBg(i), minWidth: 8 }}>
-                  <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${f * 100}%`, background: fillBg(i), opacity: hero && i !== cur ? 0.7 : 1, transition: reduced ? "none" : "width 700ms cubic-bezier(.2,.8,.2,1)" }} />
+                  <span className="absolute inset-y-0 start-0 rounded-full" style={{ width: `${f * 100}%`, background: fillBg(i), opacity: hero && i !== cur ? 0.7 : 1, transition: reduced ? "none" : "width 700ms cubic-bezier(.2,.8,.2,1)" }} />
                 </span>
               );
             })}
@@ -111,25 +113,25 @@ export function Attainment({ overall, bands, subjects = [], variant = "card", on
       <div className="mt-3">
         {has ? (
           overall!.next && overall!.toNext != null ? (
-            <p className={`m-0 text-[13px] font-semibold ${hero ? "text-white/90" : "text-[var(--ink-2)]"}`} data-testid="hub-attainment-next"><b className={`tabular-nums ${ink}`}>{Math.round(overall!.toNext)}%</b> to reach <b className={ink}>{lab(overall!.next.label)}</b></p>
+            <p className={`m-0 text-[13px] font-semibold ${hero ? "text-white/90" : "text-[var(--ink-2)]"}`} data-testid="hub-attainment-next"><Rich text={t("hubfam.pgToReach", { pct: Math.round(overall!.toNext), level: lab(overall!.next.label) })} bClass={ink} /></p>
           ) : (
-            <p className={`m-0 text-[13px] font-extrabold ${ink}`} data-testid="hub-attainment-next">Top level reached. Keep it up.</p>
+            <p className={`m-0 text-[13px] font-extrabold ${ink}`} data-testid="hub-attainment-next">{t("hubfam.pgTopReached")}</p>
           )
         ) : (
           <>
-            <p className={`m-0 text-[12.5px] leading-snug ${soft}`}>{kidMode ? "Your level shows up here after your first quiz." : "Your level appears here after your first marked quiz, measured against the levels your tutor set."}</p>
-            {onEmptyAction && <button type="button" onClick={onEmptyAction} className={`${TAP} mt-2 inline-flex items-center gap-1.5 rounded-full px-4 text-[13px] font-extrabold ${hero ? "bg-white text-[var(--brand-strong)]" : "bg-[var(--brand)] text-white"}`}>{emptyActionLabel}<Icon name="chevronRight" size={14} strokeWidth={2.4} /></button>}
+            <p className={`m-0 text-[12.5px] leading-snug ${soft}`}>{kidMode ? t("hubfam.pgEmptyKid") : t("hubfam.pgEmptyParent")}</p>
+            {onEmptyAction && <button type="button" onClick={onEmptyAction} className={`${TAP} mt-2 inline-flex items-center gap-1.5 rounded-full px-4 text-[13px] font-extrabold ${hero ? "bg-white text-[var(--brand-strong)]" : "bg-[var(--brand)] text-white"}`}>{emptyActionLabel ?? t("hubfam.pgBrowseQuizzes")}<Icon name="chevronRight" size={14} strokeWidth={2.4} className="rtl:rotate-180" /></button>}
           </>
         )}
       </div>
 
       {named.length > 0 && (
-        <ul className="m-0 mt-3 flex list-none flex-wrap gap-1.5 p-0" aria-label="Level in each subject" data-testid="hub-attainment-subjects">
+        <ul className="m-0 mt-3 flex list-none flex-wrap gap-1.5 p-0" aria-label={t("hubfam.pgSubjLevels")} data-testid="hub-attainment-subjects">
           {named.map((s) => {
             const idx = ranges.findIndex((r) => r.label === s.band);
             const t = toneAt(Math.max(0, idx), n);
             return (
-              <li key={s.subject} className="inline-flex max-w-full items-center gap-1.5 rounded-full py-1 pl-2 pr-2.5 text-[11.5px] font-bold" style={hero ? { background: "color-mix(in srgb, white 16%, transparent)", color: "white" } : { background: "var(--panel)", color: "var(--ink)" }}>
+              <li key={s.subject} className="inline-flex max-w-full items-center gap-1.5 rounded-full py-1 ps-2 pe-2.5 text-[11.5px] font-bold" style={hero ? { background: "color-mix(in srgb, white 16%, transparent)", color: "white" } : { background: "var(--panel)", color: "var(--ink)" }}>
                 <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: hero ? "white" : t.fill }} />
                 <span className="truncate">{s.subject}</span>
                 <span className={`flex-none ${hero ? "text-white/80" : ""}`} style={hero ? undefined : { color: t.ink }}>{lab(s.band)}</span>
@@ -142,7 +144,7 @@ export function Attainment({ overall, bands, subjects = [], variant = "card", on
   );
 
   if (bare || hero) return body;
-  return <section aria-label={kidMode ? "My level" : "Attainment"} data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5">{body}</section>;
+  return <section aria-label={kidMode ? t("hubfam.pgMyLevel") : t("hubfam.pgAttainmentCap")} data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)] sm:p-5">{body}</section>;
 }
 
 function InfoDot() {

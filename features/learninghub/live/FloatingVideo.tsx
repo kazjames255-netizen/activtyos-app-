@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { FOCUS } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { findSpot, type R } from "./tileSpot";
@@ -76,6 +77,7 @@ export function useFloatingTile({ active, boundsRef, storageKey = KEY, onExpand,
   /** Adds an "expand" button (e.g. back to the split layout). */
   onExpand?: () => void;
 }): FloatingTile {
+  const t = useT();
   const [st, setSt] = useState<TileState>(DEFAULT);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [drag, setDrag] = useState<{ x: number; y: number } | null>(null);
@@ -161,7 +163,7 @@ export function useFloatingTile({ active, boundsRef, storageKey = KEY, onExpand,
   };
 
   const sizeBtn = (k: Size, label: string) => (
-    <button key={k} type="button" data-tile-btn data-tile-size={k} aria-pressed={st.size === k && !min} aria-label={`${label} video`} onClick={() => { setMin(false); save({ ...st, size: k }); }}
+    <button key={k} type="button" data-tile-btn data-tile-size={k} aria-pressed={st.size === k && !min} aria-label={label} onClick={() => { setMin(false); save({ ...st, size: k }); }}
       className={`grid h-11 w-9 place-items-center rounded-lg text-[12px] font-extrabold ${FOCUS} ${st.size === k && !min ? "bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "text-[var(--ink-2)] hover:bg-[var(--panel)]"}`}>{k.toUpperCase()}</button>
   );
   const iconBtn = (label: string, icon: "close" | "refresh" | "video" | "maximize", on: () => void, attr: string) => (
@@ -171,19 +173,19 @@ export function useFloatingTile({ active, boundsRef, storageKey = KEY, onExpand,
   const chrome = active ? (
     <div className={`flex flex-none touch-none select-none items-center gap-0.5 border-b border-[var(--hub-warm-line)] px-1 ${docked ? "" : drag ? "cursor-grabbing" : "cursor-grab"}`} style={{ height: BAR, background: "var(--hub-warm)" }}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} data-testid="video-tile-bar">
-      <button type="button" data-tile-grip aria-label="Move the video. Use the arrow keys; hold Shift to move faster." onKeyDown={onKey}
-        className={`flex h-11 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1.5 text-left text-[11.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>
+      <button type="button" data-tile-grip aria-label={t("hublive.aVid_move")} onKeyDown={onKey}
+        className={`flex h-11 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-1.5 text-start text-[11.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>
         <span aria-hidden className="grid grid-cols-3 gap-[3px] opacity-60">{Array.from({ length: 6 }, (_, i) => <i key={i} className="h-[3px] w-[3px] rounded-full bg-[var(--ink-2)]" />)}</span>
-        <span className="truncate">Video</span>
+        <span className="truncate">{t("hublive.aVid_video")}</span>
       </button>
-      {!min && !phone && (<>{sizeBtn("s", "Small")}{sizeBtn("m", "Medium")}{sizeBtn("l", "Large")}</>)}
+      {!min && !phone && (<>{sizeBtn("s", t("hublive.aVid_sizeS"))}{sizeBtn("m", t("hublive.aVid_sizeM"))}{sizeBtn("l", t("hublive.aVid_sizeL"))}</>)}
       {!min && !phone && (
-        <button type="button" data-tile-btn data-tile-dock aria-pressed={docked} title={docked ? "Let the video float over the workspace" : "Dock the video beside the workspace so it covers nothing"}
-          onClick={() => save({ ...st, docked: !docked })} className={`grid h-11 min-w-[44px] place-items-center rounded-lg px-1.5 text-[11.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>{docked ? "Float" : "Dock"}</button>
+        <button type="button" data-tile-btn data-tile-dock aria-pressed={docked} title={docked ? t("hublive.aVid_float") : t("hublive.aVid_dockTip")}
+          onClick={() => save({ ...st, docked: !docked })} className={`grid h-11 min-w-[44px] place-items-center rounded-lg px-1.5 text-[11.5px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>{docked ? t("hublive.aVid_floatBtn") : t("hublive.aVid_dockBtn")}</button>
       )}
-      {onExpand && !min && iconBtn("Show the video larger", "maximize", onExpand, "data-tile-expand")}
-      {min ? iconBtn("Restore the video", "video", () => setMin(false), "data-tile-restore") : iconBtn("Minimise the video", "close", () => setMin(true), "data-tile-min")}
-      {iconBtn("Reset position and size", "refresh", () => { setMin(false); save(DEFAULT); }, "data-tile-reset")}
+      {onExpand && !min && iconBtn(t("hublive.aVid_larger"), "maximize", onExpand, "data-tile-expand")}
+      {min ? iconBtn(t("hublive.aVid_restore"), "video", () => setMin(false), "data-tile-restore") : iconBtn(t("hublive.aVid_minimise"), "close", () => setMin(true), "data-tile-min")}
+      {iconBtn(t("hublive.aVid_reset"), "refresh", () => { setMin(false); save(DEFAULT); }, "data-tile-reset")}
     </div>
   ) : null;
 

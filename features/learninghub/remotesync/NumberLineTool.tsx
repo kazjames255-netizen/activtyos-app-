@@ -6,13 +6,15 @@
 // are the import path and swapping literal hex colours for this app's own design tokens.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
+import { useBareTool } from "../tools/bareContext";
 import { parseStep, suggestRange, tickLabel, zoomRange } from "../tools/numberline/range";
 
 type Jump = { from: number; to: number };
 type Props = { initial?: { start?: number; end?: number; step?: number }; /** The question on screen: the line opens framed to ITS numbers (never marking or solving anything). */ prompt?: string };
-const PRESETS: { id: string; label: string; start: number; end: number; step: number }[] = [
-  { id: "0-10", label: "0 to 10", start: 0, end: 10, step: 1 }, { id: "0-20", label: "0 to 20", start: 0, end: 20, step: 2 }, { id: "0-100", label: "0 to 100", start: 0, end: 100, step: 10 },
-  { id: "-10-10", label: "−10 to 10", start: -10, end: 10, step: 1 }, { id: "-20-20", label: "−20 to 20", start: -20, end: 20, step: 2 }, { id: "0-1", label: "0 to 1", start: 0, end: 1, step: 0.1 },
+const PRESETS: { id: string; a: string; b: string; start: number; end: number; step: number }[] = [
+  { id: "0-10", a: "0", b: "10", start: 0, end: 10, step: 1 }, { id: "0-20", a: "0", b: "20", start: 0, end: 20, step: 2 }, { id: "0-100", a: "0", b: "100", start: 0, end: 100, step: 10 },
+  { id: "-10-10", a: "−10", b: "10", start: -10, end: 10, step: 1 }, { id: "-20-20", a: "−20", b: "20", start: -20, end: 20, step: 2 }, { id: "0-1", a: "0", b: "1", start: 0, end: 1, step: 0.1 },
 ];
 
 const PAD = 32;
@@ -32,6 +34,8 @@ const decimals = (n: number) => {
 const fmt = (n: number, d: number) => Number(n.toFixed(d)).toString();
 
 export default function NumberLineTool({ initial, prompt }: Props) {
+  const t = useT();
+  const bare = useBareTool();
   const fit = useMemo(() => (prompt ? suggestRange(prompt) : null), [prompt]);
   const [start, setStart] = useState(initial?.start ?? fit?.start ?? 0);
   const [end, setEnd] = useState(initial?.end ?? fit?.end ?? 100);
@@ -173,7 +177,7 @@ export default function NumberLineTool({ initial, prompt }: Props) {
   };
 
   const numInput = (label: string, value: number, set: (n: number) => void) => (
-    <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: MUTED }}>
+    <label data-tool-chrome style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: MUTED }}>
       {label}
       <input
         type="number"
@@ -201,64 +205,65 @@ export default function NumberLineTool({ initial, prompt }: Props) {
   });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16, boxSizing: "border-box", height: "100%" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 10 }}>
-        {numInput("Start", start, setStart)}
-        {numInput("End", end, setEnd)}
-        <label style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: MUTED }}>
-          Step
-          <input type="text" inputMode="decimal" value={stepText} data-testid="nl-step" aria-label="Step (a number, decimal or fraction like 1/4)"
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: bare ? 0 : 16, boxSizing: "border-box", height: "100%" }}>
+      {/* The LINE comes first on screen (CSS order), the set-up controls sit under it: the line is the point of the tool and must never be pushed out of view. */}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: 10, order: 2 }} data-tool-strip>
+        {numInput(t("hublive.dNlStart"), start, setStart)}
+        {numInput(t("hublive.dNlEnd"), end, setEnd)}
+        <label data-tool-chrome style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 700, color: MUTED }}>
+          {t("hublive.dNlStep")}
+          <input type="text" inputMode="decimal" value={stepText} data-testid="nl-step" aria-label={t("hublive.dNlStepAria")}
             onChange={(e) => { setStepText(e.target.value); const n = parseStep(e.target.value); if (n !== null && n > 0) setStep(n); }}
             style={{ width: 76, height: 40, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 10px", fontSize: 15, color: INK }} />
         </label>
         <div style={{ flexGrow: 1 }} />
-        <div role="group" aria-label="Mode" style={{ display: "flex", gap: 6 }}>
-          <button type="button" style={btn(mode === "mark")} aria-pressed={mode === "mark"} onClick={() => { setMode("mark"); setPending(null); }}>Mark</button>
-          <button type="button" style={btn(mode === "jump")} aria-pressed={mode === "jump"} onClick={() => setMode("jump")}>Jump</button>
-          <button type="button" style={btn(mode === "label")} aria-pressed={mode === "label"} onClick={() => { setMode("label"); setPending(null); }} data-testid="nl-label">Label</button>
+        <div role="group" aria-label={t("hublive.dMode")} style={{ display: "flex", gap: 6 }}>
+          <button type="button" style={btn(mode === "mark")} aria-pressed={mode === "mark"} onClick={() => { setMode("mark"); setPending(null); }}>{t("hublive.dMark")}</button>
+          <button type="button" style={btn(mode === "jump")} aria-pressed={mode === "jump"} onClick={() => setMode("jump")}>{t("hublive.dJump")}</button>
+          <button type="button" style={btn(mode === "label")} aria-pressed={mode === "label"} onClick={() => { setMode("label"); setPending(null); }} data-testid="nl-label">{t("hublive.dLabelBtn")}</button>
         </div>
-        <button type="button" style={btn()} onClick={undo} disabled={!history.length} data-testid="nl-undo">Undo</button>
-        <button type="button" style={btn()} onClick={clearAll} data-testid="nl-clear">Clear</button>
+        <button type="button" style={btn()} onClick={undo} disabled={!history.length} data-testid="nl-undo">{t("hublive.dUndo")}</button>
+        <button type="button" style={btn()} onClick={clearAll} data-testid="nl-clear">{t("hublive.dClear")}</button>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }} role="group" aria-label="Line size">
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, order: 3 }} role="group" aria-label={t("hublive.dLineSize")} data-tool-strip>
         {PRESETS.map((p) => (
-          <button key={p.id} type="button" style={{ ...btn(start === p.start && end === p.end && step === p.step), minHeight: 44, padding: "0 12px" }} data-testid={`nl-preset-${p.id}`}
-            onClick={() => { setStart(p.start); setEnd(p.end); setStep(p.step); setStepText(String(p.step)); }}>{p.label}</button>
+          <button key={p.id} data-tool-chrome type="button" style={{ ...btn(start === p.start && end === p.end && step === p.step), minHeight: 44, padding: "0 12px" }} data-testid={`nl-preset-${p.id}`}
+            onClick={() => { setStart(p.start); setEnd(p.end); setStep(p.step); setStepText(String(p.step)); }}>{t("hublive.dRangeTo", { a: p.a, b: p.b })}</button>
         ))}
-        <span style={{ width: 8 }} aria-hidden />
-        <button type="button" style={{ ...btn(), minHeight: 44 }} data-testid="nl-zoom-in" aria-label="Zoom in" onClick={() => { const r = zoomRange({ start, end, step }, 0.5); setStart(r.start); setEnd(r.end); setStep(r.step); setStepText(String(r.step)); }}>Zoom in</button>
-        <button type="button" style={{ ...btn(), minHeight: 44 }} data-testid="nl-zoom-out" aria-label="Zoom out" onClick={() => { const r = zoomRange({ start, end, step }, 2); setStart(r.start); setEnd(r.end); setStep(r.step); setStepText(String(r.step)); }}>Zoom out</button>
-        <button type="button" style={{ ...btn(asFraction), minHeight: 44 }} aria-pressed={asFraction} data-testid="nl-fractions" onClick={() => setAsFraction((f) => !f)}>Fractions</button>
+        <span data-tool-chrome style={{ width: 8 }} aria-hidden />
+        <button type="button" style={{ ...btn(), minHeight: 44 }} data-testid="nl-zoom-in" aria-label={t("hublive.dZoomIn")} onClick={() => { const r = zoomRange({ start, end, step }, 0.5); setStart(r.start); setEnd(r.end); setStep(r.step); setStepText(String(r.step)); }}>{t("hublive.dZoomIn")}</button>
+        <button type="button" style={{ ...btn(), minHeight: 44 }} data-testid="nl-zoom-out" aria-label={t("hublive.dZoomOut")} onClick={() => { const r = zoomRange({ start, end, step }, 2); setStart(r.start); setEnd(r.end); setStep(r.step); setStepText(String(r.step)); }}>{t("hublive.dZoomOut")}</button>
+        <button type="button" style={{ ...btn(asFraction), minHeight: 44 }} aria-pressed={asFraction} data-testid="nl-fractions" onClick={() => setAsFraction((f) => !f)}>{t("hublive.dFractions")}</button>
       </div>
       {editing !== null && (
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: INK }}>
-          Label for {lbl(editing)}:
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: INK, order: 1 }}>
+          {t("hublive.dLabelFor", { v: lbl(editing) })}
           <input autoFocus data-testid="nl-label-input" value={labels[String(editing)] ?? ""} maxLength={14} placeholder={lbl(editing)}
             onChange={(e) => setLabels((l) => ({ ...l, [String(editing)]: e.target.value }))} onBlur={() => setEditing(null)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditing(null); }}
             style={{ width: 130, height: 40, border: `1px solid ${BORDER}`, borderRadius: 8, padding: "0 10px", fontSize: 15, color: INK }} />
         </label>
       )}
 
-      <div style={{ fontSize: 13, color: MUTED, minHeight: 18 }}>
+      <div data-tool-chrome style={{ fontSize: 13, color: MUTED, minHeight: 18, order: 1 }}>
         {!valid
-          ? "End must be bigger than Start, and Step must be above 0."
+          ? t("hublive.dNlBad")
           : mode === "mark"
-          ? "Tap the line to add a marker. Drag a marker to move it, tap it to remove it."
+          ? t("hublive.dNlMarkHint")
           : mode === "label"
-          ? "Label mode: tap a marker to give it a name."
+          ? t("hublive.dNlLabelHint")
           : pending === null
-          ? "Jump mode: tap where the jump starts."
-          : `Jump from ${fmt(pending, d)}: now tap where it lands.`}
+          ? t("hublive.dNlJumpStart")
+          : t("hublive.dNlJumpFrom", { v: fmt(pending, d) })}
       </div>
 
-      <div ref={wrapRef} style={{ width: "100%", flexGrow: 1, minHeight: H }}>
+      <div ref={wrapRef} style={{ width: "100%", flexGrow: 1, minHeight: H, order: 0 }}>
         {valid && (
           <svg
             ref={svgRef}
             width={width}
             height={H}
             role="img"
-            aria-label={`Number line from ${fmt(start, d)} to ${fmt(end, d)} in steps of ${fmt(step, d)}`}
+            aria-label={t("hublive.dNlAria", { a: fmt(start, d), b: fmt(end, d), s: fmt(step, d) })}
             style={{ display: "block", touchAction: "none", cursor: "crosshair", userSelect: "none" }}
             onPointerDown={onSvgPointerDown}
             onPointerMove={onPointerMove}
@@ -320,9 +325,9 @@ export default function NumberLineTool({ initial, prompt }: Props) {
         )}
       </div>
 
-      <div aria-live="polite" style={{ fontSize: 13, color: MUTED }}>
-        {markers.length ? `Markers: ${markers.map((m) => fmt(m, d)).join(", ")}` : "No markers yet"}
-        {jumps.length ? ` · Jumps: ${jumps.map((j) => `${fmt(j.from, d)}→${fmt(j.to, d)}`).join(", ")}` : ""}
+      <div data-tool-chrome aria-live="polite" style={{ fontSize: 13, color: MUTED }}>
+        {markers.length ? t("hublive.dNlMarkers", { list: markers.map((m) => fmt(m, d)).join(", ") }) : t("hublive.dNlNoMarkers")}
+        {jumps.length ? t("hublive.dNlJumps", { list: `\u2066${jumps.map((j) => `${fmt(j.from, d)}→${fmt(j.to, d)}`).join(", ")}\u2069` }) : ""}
       </div>
     </div>
   );

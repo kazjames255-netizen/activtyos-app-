@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { FOCUS } from "../../teachKit";
+import { useT } from "@/lib/i18n/provider";
 import { BIcon } from "./boardIcons";
 import { BoardShell } from "./BoardShell";
 import { useCtrl } from "./BoardUi";
@@ -19,6 +20,7 @@ export function PadBoard({ hub, cid, name, role, linkRef, paper, palette, active
   hub: PadHub; cid: string; name: string; role: "student" | "tutor"; linkRef: { current: BoardLink | null };
   paper: Paper; palette: string[]; active: boolean; onBack?: () => void; extraRight?: React.ReactNode; hideName?: boolean; leading?: React.ReactNode;
 }) {
+  const t = useT();
   const pad = hub.pad(cid, name);
   const ctrl = useMemo(() => {
     const isTutor = role === "tutor";
@@ -41,16 +43,16 @@ export function PadBoard({ hub, cid, name, role, linkRef, paper, palette, active
 
   return (
     <div className="h-full" data-testid="pad-board" data-role={role} data-elements={ctrl.curPage.els.size} data-can-draw="1">
-    <BoardShell ctrl={ctrl} active={active} label={role === "student" ? "Your private page. Your tutor can see it; other students can't." : `${hideName ? "Student" : name}'s private page`}
-      empty={role === "student" ? "This page is just for you and your tutor. Write your working out here." : undefined}
+    <BoardShell ctrl={ctrl} active={active} label={role === "student" ? t("hublive.bPb_ownLabel") : t("hublive.bPb_theirLabel", { name: hideName ? t("hublive.bStudent") : name })}
+      empty={role === "student" ? t("hublive.bPb_emptyStudent") : undefined}
       topLeft={<>{leading}{role === "tutor" ? (
         <div className="flex items-center gap-1.5 rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] p-1 shadow-[var(--shadow)]">
-          <button type="button" data-action="back-to-work" onClick={onBack} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><BIcon name="chevron" size={16} className="rotate-90" />All students</button>
-          <span className="truncate pr-2 text-[13.5px] font-extrabold text-[var(--ink)]" data-testid="pad-title">{name}</span>
-          {done && <span className="mr-1 inline-flex items-center gap-1 rounded-full bg-[var(--green)] px-2.5 py-1 text-[11.5px] font-extrabold text-white"><BIcon name="check" size={13} sw={2.6} />Done</span>}
+          <button type="button" data-action="back-to-work" onClick={onBack} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><BIcon name="chevron" size={16} className="rotate-90" />{t("hublive.bPb_allStudents")}</button>
+          <span className="truncate pe-2 text-[13.5px] font-extrabold text-[var(--ink)]" data-testid="pad-title">{name}</span>
+          {done && <span className="me-1 inline-flex items-center gap-1 rounded-full bg-[var(--green)] px-2.5 py-1 text-[11.5px] font-extrabold text-white"><BIcon name="check" size={13} sw={2.6} />{t("hublive.bDone")}</span>}
         </div>
       ) : (
-        <div className="rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] shadow-[var(--shadow)]"><BIcon name="lock" size={14} className="mr-1.5 inline align-[-2px]" />Private — only you and your tutor</div>
+        <div className="rounded-2xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] shadow-[var(--shadow)]"><BIcon name="lock" size={14} className="me-1.5 inline align-[-2px]" />{t("hublive.bPb_private")}</div>
       )}</>}
       topRight={() => (
         <>
@@ -58,12 +60,12 @@ export function PadBoard({ hub, cid, name, role, linkRef, paper, palette, active
           {role === "student" && (
             <button type="button" data-action="pad-done" aria-pressed={done} disabled={busyDone} onClick={() => { setBusyDone(true); hub.setDone(linkRef.current, !done); setTimeout(() => setBusyDone(false), 400); }}
               className={`inline-flex min-h-[52px] items-center gap-1.5 rounded-2xl border px-4 text-[14px] font-extrabold shadow-[var(--shadow)] ${FOCUS} ${done ? "border-[var(--green)] bg-[var(--green)] text-white" : "border-[var(--hub-warm-line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[var(--green)]"}`}>
-              <BIcon name="check" size={17} sw={2.6} />{done ? "Done — tap to undo" : "I'm done"}
+              <BIcon name="check" size={17} sw={2.6} />{done ? t("hublive.bPb_doneUndo") : t("hublive.bPb_imDone")}
             </button>
           )}
         </>
       )}
-      statusPill={<span className="inline-flex min-h-[28px] items-center gap-1.5 rounded-full border border-[var(--hub-warm-line)] bg-[var(--surface)] px-2.5 text-[11.5px] font-bold text-[var(--ink-3)]">{role === "tutor" ? "Marking in red · the student sees your marks" : "Your tutor sees this as you write"}</span>}
+      statusPill={<span className="inline-flex min-h-[28px] items-center gap-1.5 rounded-full border border-[var(--hub-warm-line)] bg-[var(--surface)] px-2.5 text-[11.5px] font-bold text-[var(--ink-3)]">{role === "tutor" ? t("hublive.bPb_marking") : t("hublive.bPb_tutorSees")}</span>}
     />
     </div>
   );

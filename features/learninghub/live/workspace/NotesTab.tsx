@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
+import { tr } from "../tr";
 import { renderMarkdown } from "@/lib/markdown";
 import type { PanelProps } from "../../panelTypes";
 import { get } from "@/lib/api";
@@ -27,6 +29,7 @@ const fileChip = (a: Attachment) => (
 );
 
 export function NotesTab({ p, lesson, isTutor }: { p: PanelProps; lesson: Lesson; isTutor: boolean }) {
+  const tx = useT();
   const { big } = useWsView();
   const { notes, reload } = useNotesList(p.qs);
   const [open, setOpen] = useState<string | null>(null);
@@ -55,17 +58,17 @@ export function NotesTab({ p, lesson, isTutor }: { p: PanelProps; lesson: Lesson
     return (
       <div key={n.id} className="overflow-hidden rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)]" data-note={n.id}>
         <div className="flex items-center">
-          <button type="button" aria-expanded={on} onClick={() => setOpen(on ? null : n.id)} className={`flex min-h-[48px] min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left ${FOCUS}`}>
+          <button type="button" aria-expanded={on} onClick={() => setOpen(on ? null : n.id)} className={`flex min-h-[48px] min-w-0 flex-1 items-center gap-2 px-3 py-2 text-start ${FOCUS}`}>
             <span className="min-w-0 flex-1">
               <span className={`block truncate font-extrabold text-[var(--ink)] ${big ? "text-[16px]" : "text-[13.5px]"}`}>{n.title}</span>
               {(tag || (!topic && topicOf(n)) || scope === "subject") && <span className="block truncate text-[11px] text-[var(--ink-3)]">{tag ?? (topicOf(n) ? topicLabel(topicOf(n)!) : "")}</span>}
             </span>
-            {tag && <Pill tone="brand">For this lesson</Pill>}
-            {n.kind === "board" && <Pill tone="gold">Board snapshot</Pill>}
-            {!n.published && <Pill tone="gold">Draft</Pill>}
+            {tag && <Pill tone="brand">{tx("hublive.aNotes_forLesson")}</Pill>}
+            {n.kind === "board" && <Pill tone="gold">{tx("hublive.aNotes_boardSnap")}</Pill>}
+            {!n.published && <Pill tone="gold">{tx("hublive.aNotes_draft")}</Pill>}
             <Ico name="chevronDown" size={15} className={`flex-none text-[var(--ink-3)] transition-transform motion-reduce:transition-none ${on ? "rotate-180" : ""}`} />
           </button>
-          <button type="button" onClick={() => setReading(n)} aria-label={`Present ${n.title}`} title="Present — big reading view" className={`mr-1.5 inline-flex min-h-[44px] flex-none items-center gap-1 rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><Ico name="monitor" size={15} />Present</button>
+          <button type="button" onClick={() => setReading(n)} aria-label={tx("hublive.aNotes_presentX", { title: n.title })} title={tx("hublive.aNotes_presentTip")} className={`me-1.5 inline-flex min-h-[44px] flex-none items-center gap-1 rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}><Ico name="monitor" size={15} />{tx("hublive.aNotes_present")}</button>
         </div>
         {on && (
           <div className="border-t border-[var(--line)] px-3 py-3">
@@ -81,39 +84,39 @@ export function NotesTab({ p, lesson, isTutor }: { p: PanelProps; lesson: Lesson
   const loading = notes === null;
   return (
     <div className="grid gap-3">
-      <WsSection title="This live lesson" icon="notes" aside={topic ? <Pill tone="brand">{topicLabel(topic)}</Pill> : null}>
+      <WsSection title={tx("hublive.aNotes_thisLive")} icon="notes" aside={topic ? <Pill tone="brand">{topicLabel(topic)}</Pill> : null}>
         {isTutor
           ? <LessonNotesEditor p={p} lesson={lesson} notes={notes} reloadNotes={reload} ids={ids} onIds={setIds} controlRef={ctl} />
-          : hasLessonNote ? <LessonNotes lesson={lesson} isTutor={false} alwaysOpen /> : <p className="m-0 text-[12.5px] leading-relaxed text-[var(--ink-3)]">No message for this live lesson.</p>}
+          : hasLessonNote ? <LessonNotes lesson={lesson} isTutor={false} alwaysOpen /> : <p className="m-0 text-[12.5px] leading-relaxed text-[var(--ink-3)]">{tx("hublive.aNotes_noMessage")}</p>}
       </WsSection>
 
       {attached.length > 0 && (
-        <WsSection title={`Lessons for this live lesson · ${attached.length}`} icon="notes">
-          <div className="grid gap-2" data-testid="attached-notes">{attached.map((n) => noteCard(n, "Attached by your tutor"))}</div>
+        <WsSection title={tx("hublive.aNotes_attachedTitle", { n: attached.length })} icon="notes">
+          <div className="grid gap-2" data-testid="attached-notes">{attached.map((n) => noteCard(n, tx("hublive.aNotes_attachedByTutor")))}</div>
         </WsSection>
       )}
 
-      <WsSection title={scope === "subject" && topic ? `All ${topic.subject} lessons` : topic ? "Topic lessons" : "Lessons"} icon="notes"
+      <WsSection title={scope === "subject" && topic ? tx("hublive.aNotes_allSubj", { subject: topic.subject }) : topic ? tx("hublive.aNotes_topicLessons") : tx("hublive.aNotes_lessons")} icon="notes"
         aside={topic ? (
           <button type="button" onClick={() => setScope((v) => (v === "topic" ? "subject" : "topic"))} aria-pressed={scope === "subject"} data-action="browse-all"
-            className={`min-h-[44px] lg:min-h-[36px] rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>{scope === "subject" ? "Just this topic" : `Browse all ${topic.subject} lessons`}</button>
+            className={`min-h-[44px] lg:min-h-[36px] rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>{scope === "subject" ? tx("hublive.aNotes_justTopic") : tx("hublive.aNotes_browseAll", { subject: topic.subject })}</button>
         ) : null}>
         {loading ? <div className="grid gap-2"><Skeleton className="h-11" /><Skeleton className="h-11" /></div> : shown.length === 0 ? (
-          <WsEmpty icon="notes" title={topic ? "No lessons for this topic yet" : "No lessons yet"}
-            body={isTutor ? (scope === "topic" && topic ? "Attach one from your library, write a new one, or browse everything in this subject." : "Attach one from your library or write a new one — students see it right here in the call.") : "No lessons have been shared for this topic yet."}
+          <WsEmpty icon="notes" title={topic ? tx("hublive.aNotes_noneTopic") : tx("hublive.aNotes_none")}
+            body={isTutor ? (scope === "topic" && topic ? tx("hublive.aNotes_noneBodyTopic") : tx("hublive.aNotes_noneBodyTutor")) : tx("hublive.aNotes_noneBodyFam")}
             action={isTutor ? (
               <div className="flex flex-wrap justify-center gap-2">
-                <WsButton variant="soft" icon="plus" onClick={() => ctl.current?.attach()}>Attach a lesson</WsButton>
-                <WsButton variant="ghost" icon="edit" onClick={() => ctl.current?.create()}>New lesson</WsButton>
-                {topic && scope === "topic" && <WsButton variant="ghost" onClick={() => setScope("subject")}>Browse all {topic.subject} lessons</WsButton>}
+                <WsButton variant="soft" icon="plus" onClick={() => ctl.current?.attach()}>{tx("hublive.aNotes_attachLesson")}</WsButton>
+                <WsButton variant="ghost" icon="edit" onClick={() => ctl.current?.create()}>{tx("hublive.aNotes_newLesson")}</WsButton>
+                {topic && scope === "topic" && <WsButton variant="ghost" onClick={() => setScope("subject")}>{tx("hublive.aNotes_browseAll", { subject: topic.subject })}</WsButton>}
               </div>
             ) : undefined} />
         ) : <div className="grid gap-2">{shown.map((n) => noteCard(n))}</div>}
       </WsSection>
 
       {files.length > 0 && (
-        <WsSection title={`Worksheets & files · ${files.length}`} icon="folder">
-          <div className="flex flex-wrap gap-2">{files.map(({ a, note }) => <span key={a.id} title={`From “${note}”`}>{fileChip(a)}</span>)}</div>
+        <WsSection title={tx("hublive.aNotes_files", { n: files.length })} icon="folder">
+          <div className="flex flex-wrap gap-2">{files.map(({ a, note }) => <span key={a.id} title={tx("hublive.aNotes_fromNote", { note })}>{fileChip(a)}</span>)}</div>
         </WsSection>
       )}
 
@@ -129,7 +132,7 @@ function useFullNote(qs: string, n: NoteLite): { full: Note | null; error: strin
     let live = true;
     get<Note>(`/api/learning-hub/notes/${encodeURIComponent(n.id)}${withQs(qs, {})}`)
       .then((full) => { if (live) setState({ id: n.id, stamp: n.updatedAt, full, error: null }); })
-      .catch((e) => { if (live) setState({ id: n.id, stamp: n.updatedAt, full: null, error: errMsg(e, "Couldn't open that lesson") }); });
+      .catch((e) => { if (live) setState({ id: n.id, stamp: n.updatedAt, full: null, error: errMsg(e, tr("aNotes_openFail")) }); });
     return () => { live = false; };
   }, [qs, n.id, n.updatedAt]);
   return state && state.id === n.id ? { full: state.full, error: state.error } : { full: null, error: null };
@@ -141,7 +144,7 @@ function NoteBody({ n, qs, big }: { n: NoteLite; qs: string; big: boolean }) {
   if (!full) return <Skeleton className="h-16" />;
   return full.body.trim()
     ? <div className={`space-y-2 leading-relaxed text-[var(--ink-2)] ${big ? "text-[16px]" : "text-[13px]"}`}>{renderMarkdown(full.body)}</div>
-    : <p className="m-0 text-[12.5px] text-[var(--ink-3)]">No written text — see the attached files.</p>;
+    : <p className="m-0 text-[12.5px] text-[var(--ink-3)]">{tr("aNotes_noText")}</p>;
 }
 
 function ReadingView({ note, qs, onClose }: { note: NoteLite; qs: string; onClose: () => void }) {
@@ -155,14 +158,14 @@ function ReadingView({ note, qs, onClose }: { note: NoteLite; qs: string; onClos
     return () => { document.removeEventListener("keydown", key, true); prev?.focus?.({ preventScroll: true }); };
   }, [onClose]);
   return (
-    <div ref={root} tabIndex={-1} role="dialog" aria-label={`Reading: ${note.title}`} data-testid="ws-reading" className="absolute inset-0 z-20 flex flex-col outline-none" style={{ background: "var(--hub-warm)" }}>
+    <div ref={root} tabIndex={-1} role="dialog" aria-label={tr("aNotes_readingAria", { title: note.title })} data-testid="ws-reading" className="absolute inset-0 z-20 flex flex-col outline-none" style={{ background: "var(--hub-warm)" }}>
       <div className="flex items-center gap-2 border-b border-[var(--hub-warm-line)] px-4 py-2.5">
         <h3 className="m-0 min-w-0 flex-1 truncate text-[20px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{note.title}</h3>
-        <WsButton variant="ghost" icon="close" onClick={onClose} ariaLabel="Close reading view">Close</WsButton>
+        <WsButton variant="ghost" icon="close" onClick={onClose} ariaLabel={tr("aNotes_closeReading")}>{tr("aNotes_close")}</WsButton>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-10">
         <div className="mx-auto max-w-[760px]">
-          <div className="space-y-4 text-[clamp(18px,2.4vw,26px)] leading-[1.6] text-[var(--ink)]">{error ? <p role="alert">{error}</p> : !full ? <Skeleton className="h-24" /> : full.body.trim() ? renderMarkdown(full.body) : <p>No written text.</p>}</div>
+          <div className="space-y-4 text-[clamp(18px,2.4vw,26px)] leading-[1.6] text-[var(--ink)]">{error ? <p role="alert">{error}</p> : !full ? <Skeleton className="h-24" /> : full.body.trim() ? renderMarkdown(full.body) : <p>{tr("aNotes_noWritten")}</p>}</div>
           {(note.videos?.length ?? 0) > 0 && <VideoEmbeds videos={note.videos} heading={null} className="mt-6" />}
         </div>
       </div>

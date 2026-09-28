@@ -33,6 +33,7 @@ import franchise from "./areas/franchise";
 import account from "./areas/account";
 import feed from "./areas/feed";
 import staffp from "./areas/staffp";
+import chrome from "./areas/chrome";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
@@ -55,7 +56,9 @@ const BASE: Record<LocaleCode, Namespaces> = {
 };
 
 // area namespace -> its per-locale dictionaries.
-const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp };
+// The Teaching Hub catalogues (hub*) are NOT here: they are ~half of all message text and only the hub needs them, so they live in ./hub
+// (served per-locale by app/i18n/hub/[locale]/route.ts and fetched by lib/i18n/hubMessages.ts). A NEW hub area: add it to ./hub.
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp, chrome };
 
 const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
 
@@ -70,7 +73,11 @@ function buildLocale(L: LocaleCode): Namespaces {
   return out;
 }
 
-export const CATALOGS = Object.fromEntries(LOCALE_CODES.map((L) => [L, buildLocale(L)])) as Record<LocaleCode, Namespaces>;
+// Built LAZILY, one locale at a time, on first use: the merge above copies every key of every area (tens of thousands x 11 locales) —
+// doing all 11 at module load was pure startup cost on every page for a user who reads one language. `in` / `[]` behave as before.
+const built: Partial<Record<LocaleCode, Namespaces>> = {};
+export const CATALOGS = {} as Record<LocaleCode, Namespaces>;
+for (const L of LOCALE_CODES) Object.defineProperty(CATALOGS, L, { enumerable: true, get: () => (built[L] ??= buildLocale(L)) });
 
 export type { Messages };
 export { enBase as en };

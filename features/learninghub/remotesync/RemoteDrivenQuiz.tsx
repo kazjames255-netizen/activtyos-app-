@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import type { HubSettings } from "@/lib/hubConfig";
 import { ruleOf, type StartedAttempt } from "../shared-assess/api";
 import { startQuizAttempt, submitQuizAttempt } from "../lesson/api";
@@ -24,6 +25,7 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
   quiz: { id: string; title: string; questionCount: number }; config: HubSettings; homeworkId?: string | null;
   onBack: () => void; onFinish: () => void;
 }) {
+  const t = useT();
   const [runs, setRuns] = useState<Record<string, StartedAttempt> | null>(null);
   const [failed, setFailed] = useState<{ childId: string; childName: string; message: string }[]>([]);
   const [idx, setIdx] = useState(0);
@@ -40,7 +42,7 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
       const bad: { childId: string; childName: string; message: string }[] = [];
       await Promise.all(roster.map(async (c) => {
         try { ok[c.childId] = await startQuizAttempt(qs, quiz.id, c.childId, homeworkId ?? undefined); }
-        catch (e) { bad.push({ childId: c.childId, childName: c.childName, message: errMsg(e, "Couldn't start their quiz") }); }
+        catch (e) { bad.push({ childId: c.childId, childName: c.childName, message: errMsg(e, t("hublive.dErrStartQuiz")) }); }
       }));
       if (alive) { setRuns(ok); setFailed(bad); }
     })();
@@ -51,9 +53,9 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
   const live = useMemo(() => roster.filter((c) => runs?.[c.childId]), [roster, runs]);
   const canonical = live.length ? runs![live[0]!.childId]!.questions[idx] : null;
 
-  if (err) return <StepCard><p role="alert" className="m-0 text-[14px] font-semibold text-[var(--red)]">{err}</p><div className="mt-4"><Btn tone="ghost" onClick={onBack}>Back</Btn></div></StepCard>;
-  if (!runs) return <StepCard><div role="status" aria-label="Starting the quiz for the class" className="h-40 animate-pulse rounded-xl bg-[var(--panel)]" /></StepCard>;
-  if (!live.length) return <StepCard><p className="m-0 text-[14.5px] text-[var(--ink-2)]">Nobody's quiz could be started.</p>{failed.map((f) => <p key={f.childId} className="m-0 mt-1 text-[13px] text-[var(--red)]">{f.childName}: {f.message}</p>)}<div className="mt-4"><Btn tone="ghost" onClick={onBack}>Back</Btn></div></StepCard>;
+  if (err) return <StepCard><p role="alert" className="m-0 text-[14px] font-semibold text-[var(--red)]">{err}</p><div className="mt-4"><Btn tone="ghost" onClick={onBack}>{t("hublive.dBack")}</Btn></div></StepCard>;
+  if (!runs) return <StepCard><div role="status" aria-label={t("hublive.dStartingQuizAria")} className="h-40 animate-pulse rounded-xl bg-[var(--panel)]" /></StepCard>;
+  if (!live.length) return <StepCard><p className="m-0 text-[14.5px] text-[var(--ink-2)]">{t("hublive.dNobodyQuiz")}</p>{failed.map((f) => <p key={f.childId} className="m-0 mt-1 text-[13px] text-[var(--red)]">{f.childName}: {f.message}</p>)}<div className="mt-4"><Btn tone="ghost" onClick={onBack}>{t("hublive.dBack")}</Btn></div></StepCard>;
   if (!canonical) return null;
 
   const rule = ruleOf(config.questionKinds, canonical.kind);
@@ -74,26 +76,26 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
       }));
       setConfirm(false);
       onFinish();
-    } catch (e) { setErr(errMsg(e, "Couldn't hand the class's quiz in")); setConfirm(false); }
+    } catch (e) { setErr(errMsg(e, t("hublive.dErrHandIn"))); setConfirm(false); }
     finally { setBusy(false); }
   };
 
   return (
     <StepCard>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <Tag>Quiz · {idx + 1} of {quiz.questionCount}</Tag>
-        <span className="text-[12px] font-semibold text-[var(--ink-3)]">{answeredCount} of {live.length} recorded for this question</span>
+        <Tag>{t("hublive.dQuizXofY", { i: idx + 1, n: quiz.questionCount })}</Tag>
+        <span className="text-[12px] font-semibold text-[var(--ink-3)]">{t("hublive.dRecordedFor", { a: answeredCount, b: live.length })}</span>
       </div>
-      {failed.length > 0 && <p role="alert" className="mb-3 text-[12.5px] font-semibold text-[var(--red)]">Couldn't include {failed.map((f) => f.childName).join(", ")} — {failed[0]!.message}</p>}
+      {failed.length > 0 && <p role="alert" className="mb-3 text-[12.5px] font-semibold text-[var(--red)]">{t("hublive.dCouldntInclude", { names: failed.map((f) => f.childName).join(", "), msg: failed[0]!.message })}</p>}
 
       <h2 className="m-0 whitespace-pre-wrap text-[22px] font-extrabold leading-snug text-[var(--ink)] [overflow-wrap:anywhere] sm:text-[26px]" style={display} tabIndex={-1} data-autofocus>{canonical.prompt}</h2>
-      <span className="mt-2 inline-block rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--ink-3)]">{canonical.marks} {canonical.marks === 1 ? "mark" : "marks"}{rule === "multi" ? " · choose all that apply" : ""}</span>
+      <span className="mt-2 inline-block rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--ink-3)]">{t(rule === "multi" ? "hublive.dMarksMulti" : "hublive.dMarksCount", { n: canonical.marks })}</span>
       {canonical.image?.url && <div className="mt-3"><QImage pic={canonical.image} /></div>}
 
       {(rule === "choice" || rule === "multi") ? (
         <>
-          <p className="m-0 mt-3 text-[12.5px] font-semibold text-[var(--ink-3)]">{armed ? `Now tap what ${roster.find((r) => r.childId === armed)?.childName ?? ""} said` : "Tap a child, then tap the option they said"}</p>
-          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Children">
+          <p className="m-0 mt-3 text-[12.5px] font-semibold text-[var(--ink-3)]">{armed ? t("hublive.dNowTap", { name: roster.find((r) => r.childId === armed)?.childName ?? "" }) : t("hublive.dTapChild")}</p>
+          <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={t("hublive.dChildren")}>
             {live.map((c) => {
               const on = armed === c.childId;
               const picked = respOf(c.childId);
@@ -119,7 +121,7 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
                         setPick(armed, arr.includes(o.id) ? arr.filter((x) => x !== o.id) : [...arr, o.id]);
                       } else { setPick(armed, o.id); setArmed(null); }
                     }}
-                    className={`flex w-full min-h-[52px] flex-wrap items-center gap-2 rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-left transition ${FOCUS} ${armed ? "hover:border-[var(--brand)] cursor-pointer" : "cursor-default"}`}>
+                    className={`flex w-full min-h-[52px] flex-wrap items-center gap-2 rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-start transition ${FOCUS} ${armed ? "hover:border-[var(--brand)] cursor-pointer" : "cursor-default"}`}>
                     <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] font-extrabold text-[var(--ink-2)]" aria-hidden>{LETTERS[i] ?? i + 1}</span>
                     <span className="min-w-0 flex-1 text-[16px] font-semibold text-[var(--ink)] [overflow-wrap:anywhere]">{o.text}</span>
                     {named.map((c) => <span key={c.childId} className="inline-flex items-center gap-1 rounded-full border-2 border-[var(--violet)] bg-[var(--violet)] px-2.5 py-1 text-[12px] font-extrabold text-white">{c.childName}</span>)}
@@ -130,29 +132,29 @@ export function RemoteDrivenQuizGrid({ qs, roster, quiz, config, homeworkId, onB
           </ol>
         </>
       ) : rule === "exact" || rule === "numeric" ? (
-        <ul className="m-0 mt-4 grid list-none gap-2 p-0" aria-label="Each child's answer">
+        <ul className="m-0 mt-4 grid list-none gap-2 p-0" aria-label={t("hublive.dEachAnswer")}>
           {live.map((c) => (
             <li key={c.childId} className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5">
               <span className="w-[112px] flex-none truncate text-[14px] font-extrabold text-[var(--ink)]">{c.childName}</span>
-              <input type="text" inputMode={rule === "numeric" ? "decimal" : "text"} autoComplete="off" spellCheck={false} aria-label={`${c.childName}'s answer`} placeholder="What they said"
+              <input type="text" inputMode={rule === "numeric" ? "decimal" : "text"} autoComplete="off" spellCheck={false} aria-label={t("hublive.dAnswerOf", { name: c.childName })} placeholder={t("hublive.dWhatTheySaid")}
                 value={typeof respOf(c.childId) === "string" ? respOf(c.childId) as string : ""} onChange={(e) => setPick(c.childId, e.target.value)}
                 className="min-h-[44px] w-full max-w-[260px] rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
             </li>
           ))}
         </ul>
       ) : (
-        <p role="note" className="mt-4 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--gold)] bg-[var(--panel)] px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--ink)]">This question type ({canonical.kind}) can't be captured here yet — it'll go in for the class unanswered (no marks). Marking is still per child and real for everything else.</p>
+        <p role="note" className="mt-4 rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3.5 py-2.5 text-[13.5px] font-semibold text-[var(--ink)]">{t("hublive.dUncapturable", { kind: canonical.kind })}</p>
       )}
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        {idx === 0 ? <Btn tone="ghost" onClick={onBack}>Back</Btn> : <Btn tone="ghost" onClick={() => setIdx(idx - 1)}>← Previous</Btn>}
-        {!last ? <Btn onClick={() => { setArmed(null); setIdx(idx + 1); }} data-testid="rs-quiz-next">Next →</Btn> : <Btn tone="good" onClick={() => setConfirm(true)} data-testid="rs-quiz-mark">Hand in for the class →</Btn>}
+        {idx === 0 ? <Btn tone="ghost" onClick={onBack}>{t("hublive.dBack")}</Btn> : <Btn tone="ghost" onClick={() => setIdx(idx - 1)}>{t("hublive.dPrevious")}</Btn>}
+        {!last ? <Btn onClick={() => { setArmed(null); setIdx(idx + 1); }} data-testid="rs-quiz-next">{t("hublive.dNext")}</Btn> : <Btn tone="good" onClick={() => setConfirm(true)} data-testid="rs-quiz-mark">{t("hublive.dHandInClass")}</Btn>}
       </div>
 
       {confirm && (
-        <Dialog title="Hand in the class's quiz?" onClose={() => setConfirm(false)}
-          footer={<><Btn tone="ghost" onClick={() => setConfirm(false)}>Keep going</Btn><Btn tone="good" onClick={submitAll} disabled={busy} data-testid="rs-quiz-confirm">{busy ? "Submitting…" : "Submit and record results"}</Btn></>}>
-          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">This records a real result for each of the {live.length} {live.length === 1 ? "child" : "children"} connected. Their parents see it, and it counts towards progress.</p>
+        <Dialog title={t("hublive.dHandInTitle")} onClose={() => setConfirm(false)}
+          footer={<><Btn tone="ghost" onClick={() => setConfirm(false)}>{t("hublive.dKeepGoing")}</Btn><Btn tone="good" onClick={submitAll} disabled={busy} data-testid="rs-quiz-confirm">{busy ? t("hublive.dSubmitting") : t("hublive.dSubmitRecord")}</Btn></>}>
+          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{t("hublive.dConfirmBody", { n: live.length })}</p>
         </Dialog>
       )}
     </StepCard>

@@ -6,6 +6,14 @@ import type { HubSettings } from "@/lib/hubConfig";
 
 export type Bands = HubSettings["masteryBands"];
 
+/** A backlog of tens of thousands of flashcards is real (a whole imported deck), but showing the raw
+ *  due+new total anywhere it's surfaced as a single number reads as an absurd, tacky "41955 TO REVIEW".
+ *  Every place that shows "how many flashcards today" caps the DISPLAYED number to this — what's
+ *  actually due/new never changes, only what a single glance shows. Shared so StudentHome's big badge
+ *  and FamilyOverview's per-child row always agree (docs/learning-hub-redesign-brief.md §4: this should
+ *  become a real tutor-configurable setting; this is the interim fix). */
+export const DAILY_CARD_CAP = 20;
+
 export interface AttemptRow {
   id: string;
   assessmentId: string;
@@ -152,11 +160,11 @@ export function improvement(attempts: AttemptRow[]): { childId: string; childNam
 }
 
 /** The last 7 calendar days (oldest first) and whether there was activity on each. */
-export function weekDots(activityMs: number[], now: number): { day: number; letter: string; active: boolean; today: boolean }[] {
+export function weekDots(activityMs: number[], now: number, locale = "en-GB"): { day: number; letter: string; active: boolean; today: boolean }[] {
   const days = new Set(activityMs.map(dayKey));
   const today = startOfDay(now);
   return Array.from({ length: 7 }, (_, i) => {
     const day = today - (6 - i) * DAY;
-    return { day, letter: new Date(day).toLocaleDateString("en-GB", { weekday: "narrow" }), active: days.has(dayKey(day)), today: i === 6 };
+    return { day, letter: new Date(day).toLocaleDateString(locale, { weekday: "narrow" }), active: days.has(dayKey(day)), today: i === 6 };
   });
 }

@@ -1,0 +1,4080 @@
+{
+ "- - - probability": [
+  "probSim"
+ ],
+ "— pick the noun and options that give it": [
+  "langAgree"
+ ],
+ ", {0} painted wrongly (dashed)": [
+  "wordClass"
+ ],
+ ", painted": [
+  "wordClass"
+ ],
+ "! Next one:": [
+  "cellExplorer"
+ ],
+ "¡Adiós!": [
+  "langDialogue"
+ ],
+ "¡Buenas tardes! ¿Qué quieres tomar?": [
+  "langDialogue"
+ ],
+ "¡Gracias a ti! ¡Hasta luego!": [
+  "langDialogue"
+ ],
+ "¡Hola! ¿Necesitas ayuda?": [
+  "langDialogue"
+ ],
+ "¡Muy bien! Diálogo terminado.": [
+  "langDialogue"
+ ],
+ "¿Está lejos?": [
+  "langDialogue"
+ ],
+ ". It is still": [
+  "atomBuilder"
+ ],
+ ". Tap one of the dashed green circles.": [
+  "foodWeb"
+ ],
+ "'{0}' is not right.": [
+  "wordMaker"
+ ],
+ "“et un” — with 21, 31, 41, 51, 61 (and 71) French says et: vingt et un.": [
+  "langNumbers"
+ ],
+ "\"Look at that!\" said Mia.": [
+  "punctFixer"
+ ],
+ "\"Stop!\" shouted the guard.": [
+  "punctFixer"
+ ],
+ "\"We won,\" said Zoe.": [
+  "punctFixer"
+ ],
+ "\"Where is my hat?\" asked Sam.": [
+  "punctFixer"
+ ],
+ "{0} {1} <span>{2}</span><span>{3}</span>": [
+  "langAgree"
+ ],
+ "{0} / {1} known": [
+  "langFlash"
+ ],
+ "{0} <span>irregular</span>": [
+  "tenseTimeline"
+ ],
+ "{0} = {1} + {2}: from 31 on, tens and units are separate words joined by y.": [
+  "langNumbers"
+ ],
+ "{0} = {1} + {2}: German says the UNITS first — {3}-and-{4}, written as one word.": [
+  "langNumbers"
+ ],
+ "{0} = 4 × 20 + {1}: quatre-vingt + {2}.": [
+  "langNumbers"
+ ],
+ "{0} = 60 + {1}: French counts 70–79 as soixante + 10–19.": [
+  "langNumbers"
+ ],
+ "{0} cm {1} mm = {2} cm": [
+  "measure"
+ ],
+ "{0} g = {1} kg": [
+  "measure"
+ ],
+ "{0} hop{1} of {2}{3}. Total jump {4} {5}.": [
+  "numberLine"
+ ],
+ "{0} hundredths shaded = {1}{2}{3}{4}": [
+  "percentGrid"
+ ],
+ "{0} left over, so {1} doesn't go into {2} exactly — the {3} left over form the remainder.": [
+  "sharing"
+ ],
+ "{0} minute{1} past {2}": [
+  "clockFace"
+ ],
+ "{0} minute{1} to {2}": [
+  "clockFace"
+ ],
+ "{0} ml = {1} litres": [
+  "measure"
+ ],
+ "{0} more to fill the frame. {1} − {2} = {3}": [
+  "tenFrame"
+ ],
+ "{0} o'clock": [
+  "clockFace"
+ ],
+ "{0} of {1} dealt": [
+  "sharing"
+ ],
+ "{0} rows of {1}. Turn it: {2} rows of {3} — same total, {4} × {5} = {6}.": [
+  "arrayBuilder"
+ ],
+ "{0}- means \"{1}\".": [
+  "wordMaker"
+ ],
+ "{0}: {1} out of {2} = {3}. Theory says {4} = {5}.{6}": [
+  "probSim"
+ ],
+ "{0}:{1}{2}One part is {3} ÷ {4} = {5}, so A is {6} × {7} = {8} and B is {9} × {10} = {11}.": [
+  "ratioBar"
+ ],
+ "{0}<span>{1}</span>": [
+  "tenseTimeline"
+ ],
+ "{0}{1}{2}<small>{3}</small>": [
+  "langDialogue"
+ ],
+ "{0}<small>{1}</small>": [
+  "clauseCombiner"
+ ],
+ "{0} box": [
+  "langGender"
+ ],
+ "{0} out of {1}": [
+  "fractionWall"
+ ],
+ "{0} slot": [
+  "langVerbs"
+ ],
+ "{0}: {1} → {2} {3}</span>": [
+  "equationBalancer"
+ ],
+ "{0} kg": [
+  "forceMotion"
+ ],
+ "({0} wrong turn{1})": [
+  "langDialogue"
+ ],
+ "(a half star is": [
+  "chartBuilder"
+ ],
+ "(prefers-reduced-motion: reduce)": [
+  "arrayBuilder",
+  "atomBuilder",
+  "balance",
+  "circuitBuilder",
+  "clockFace",
+  "coordGrid",
+  "forceMotion",
+  "functionMachine",
+  "langCore",
+  "numberLine",
+  "particleModel",
+  "placeValue",
+  "probSim",
+  "separation",
+  "sharing",
+  "transformGrid",
+  "waves"
+ ],
+ "&lsaquo;": [
+  "wordMaker"
+ ],
+ "&nbsp;": [
+  "phonicsBlender",
+  "tenseTimeline"
+ ],
+ "&rsaquo;": [
+  "wordMaker"
+ ],
+ "→ <span>{0}′ ({1}, {2})</span>": [
+  "coordGrid"
+ ],
+ "↻ Again": [
+  "langFlash"
+ ],
+ "↻ Play again (try different replies)": [
+  "langDialogue"
+ ],
+ "↻ Turn": [
+  "arrayBuilder"
+ ],
+ "+ 1 both sides": [
+  "balance"
+ ],
+ "÷ 10: every digit moves one column to the right.": [
+  "placeValue"
+ ],
+ "÷ both sides": [
+  "balance"
+ ],
+ "× 10: every digit moves one column to the left.": [
+  "placeValue"
+ ],
+ "<b>{0}</b> has disappeared.": [
+  "foodWeb"
+ ],
+ "<b>{0}</b> shows how certain we are (bar). The main verb stays in its base form: <b>{1}</b>.": [
+  "tenseTimeline"
+ ],
+ "<b>▲ likely to increase:</b> {0} (fewer of them are eaten, or there is less competition)": [
+  "foodWeb"
+ ],
+ "<b>▼ likely to decrease:</b> {0} (they lose a food source, or lose food they used to have)": [
+  "foodWeb"
+ ],
+ "<b>c (y-intercept)</b> <span></span>": [
+  "linearGraph"
+ ],
+ "<b>Challenge:</b> which part {0}? <span>Tap it in the cell.</span>{1}": [
+  "cellExplorer"
+ ],
+ "<b>m (gradient)</b> <span></span>": [
+  "linearGraph"
+ ],
+ "<mark>$1</mark>": [
+  "clauseCombiner"
+ ],
+ "<small>{0}</small>": [
+  "storyMountain"
+ ],
+ "<small>Correct spelling</small>{0}": [
+  "spellingLCWC"
+ ],
+ "<small>Decimal</small><b></b>": [
+  "percentGrid"
+ ],
+ "<small>Fraction</small><b></b>": [
+  "percentGrid"
+ ],
+ "<small>Percent</small><b></b>": [
+  "percentGrid"
+ ],
+ "<small>RULE</small><span></span>": [
+  "functionMachine"
+ ],
+ "<small>You wrote</small>{0}": [
+  "spellingLCWC"
+ ],
+ "<span>.</span>": [
+  "placeValue"
+ ],
+ "<span>'{0}' is not a real word.</span> Try another ending.": [
+  "wordMaker"
+ ],
+ "<span>{0} <span>({1}, {2})</span> → <span>{3}′ ({4}, {5})</span></span>": [
+  "transformGrid"
+ ],
+ "<span>{0} <span>({1}, {2})</span>{3}</span>": [
+  "coordGrid"
+ ],
+ "<span>{0} =</span>": [
+  "transformGrid"
+ ],
+ "<span>{0} of {1} right{2}. Dotted words were missed. Try again or move on.</span>": [
+  "wordClass"
+ ],
+ "<span>{0} place{1} to fix. Red = wrong, dashed amber = something missing. <a>Show the answer</a></span>": [
+  "punctFixer"
+ ],
+ "<span>{0},</span>": [
+  "tenseTimeline"
+ ],
+ "<span>{0}{1}</span>": [
+  "tenseTimeline"
+ ],
+ "<span>{0}</span>": [
+  "averagesDots",
+  "langVerbs"
+ ],
+ "<span>{0}</span> {1}": [
+  "langGender"
+ ],
+ "<span>{0}</span> <span>{1}</span><span>{2}</span> {3}": [
+  "langAgree"
+ ],
+ "<span>{0}</span> Think: {1}": [
+  "wordMaker"
+ ],
+ "<span>{0}</span><span>": [
+  "atomBuilder"
+ ],
+ "<span>{0}</span><span></span>": [
+  "phonicsBlender"
+ ],
+ "<span>{0}</span></span>": [
+  "equationBalancer"
+ ],
+ "<span>({0}{1})</span>": [
+  "langAgree"
+ ],
+ "<span>→</span>": [
+  "equationBalancer"
+ ],
+ "<span>+</span>": [
+  "equationBalancer"
+ ],
+ "<span></span>{0}": [
+  "langGender"
+ ],
+ "<span></span><small>tap to flip</small>": [
+  "langFlash"
+ ],
+ "<span><b>{0}</b><u>{1}</u></span>": [
+  "fractionWall",
+  "percentGrid"
+ ],
+ "<span><span>●</span> {0}": [
+  "chartBuilder"
+ ],
+ "<span>0</span> <span>edges</span></span>": [
+  "areaPerimeter"
+ ],
+ "<span>0</span> <span>squares</span></span><span>Perimeter": [
+  "areaPerimeter"
+ ],
+ "<span>1</span>": [
+  "numberLine"
+ ],
+ "<span>14</span>": [
+  "sharing"
+ ],
+ "<span>2</span>": [
+  "coordGrid",
+  "ratioBar"
+ ],
+ "<span>3</span>": [
+  "coordGrid",
+  "ratioBar"
+ ],
+ "<span>4</span>": [
+  "sharing"
+ ],
+ "<span>All {0} known! Pick another topic.</span>": [
+  "langFlash"
+ ],
+ "<span>All six — {0}, {1}. Tap 🔊 to hear any of them.</span>": [
+  "langVerbs"
+ ],
+ "<span>Also correct: {0}</span>": [
+  "langOrder"
+ ],
+ "<span>Angle of incidence <b></b></span><span>Angle of reflection <b></b></span>": [
+  "lightRays"
+ ],
+ "<span>Area": [
+  "areaPerimeter"
+ ],
+ "<span>Arrows show the flow of energy: they point from the food to the eater.</span>": [
+  "foodWeb"
+ ],
+ "<span>Bulbs</span>": [
+  "circuitBuilder"
+ ],
+ "<span>Cells</span>": [
+  "circuitBuilder"
+ ],
+ "<span>Complex sentence: '{0}' makes one clause subordinate (it cannot stand alone).{1}</span>": [
+  "clauseCombiner"
+ ],
+ "<span>Compound sentence: '{0}' joins two main clauses of equal weight (comma before it).</span>": [
+  "clauseCombiner"
+ ],
+ "<span>Current from the cells <b></b></span><span>Voltage across each bulb <b></b></span><span>Total resistance <b></b></span>": [
+  "circuitBuilder"
+ ],
+ "<span>Every mark is in the right place. Read it aloud: <i>{0}</i></span>": [
+  "punctFixer"
+ ],
+ "<span>Frame</span>": [
+  "tenFrame"
+ ],
+ "<span>Friction</span> <b>2 N</b>": [
+  "forceMotion"
+ ],
+ "<span>Groups</span>": [
+  "sharing"
+ ],
+ "<span>Hmm — that doesn't answer the question. Read it again.</span>": [
+  "langDialogue"
+ ],
+ "<span>Hmm, that changes the meaning. Try another. </span>": [
+  "clauseCombiner"
+ ],
+ "<span>How do you say “{0}”?</span>": [
+  "langListen"
+ ],
+ "<span>Input: <span>4</span></span>": [
+  "functionMachine"
+ ],
+ "<span>It was {0} ({1}).</span>": [
+  "langListen"
+ ],
+ "<span>It was {0}, not {1}. ({2} / {3})</span>": [
+  "langSounds"
+ ],
+ "<span>Items</span>": [
+  "sharing"
+ ],
+ "<span>Jump size</span>": [
+  "numberLine"
+ ],
+ "<span>Line</span>{0}": [
+  "numberLine"
+ ],
+ "<span>Liquid</span><span>Average energy of movement: <b></b></span>": [
+  "particleModel"
+ ],
+ "<span>Makes sense! </span>": [
+  "clauseCombiner"
+ ],
+ "<span>Mass</span>": [
+  "forceMotion"
+ ],
+ "<span>Move right</span>": [
+  "coordGrid"
+ ],
+ "<span>Move up</span>": [
+  "coordGrid"
+ ],
+ "<span>Nearly. The amber letters are the ones to remember.</span>": [
+  "spellingLCWC"
+ ],
+ "<span>Negative</span>": [
+  "langNegate"
+ ],
+ "<span>Not quite — try again.</span>": [
+  "langNumbers"
+ ],
+ "<span>Not that one. Which ending goes with “{0}”?</span>": [
+  "langVerbs"
+ ],
+ "<span>Not there. Ask: what has just happened? What comes next?</span>": [
+  "storyMountain"
+ ],
+ "<span>Not this box for “{0}”. Try another!</span>": [
+  "langGender"
+ ],
+ "<span>nothing here</span>": [
+  "equationBalancer"
+ ],
+ "<span>Nothing left over</span>": [
+  "sharing"
+ ],
+ "<span>Past</span><span>Now</span><span>Future</span>": [
+  "tenseTimeline"
+ ],
+ "<span>Perfect. All {0} words sorted!</span>": [
+  "wordClass"
+ ],
+ "<span>Positive</span>": [
+  "langNegate"
+ ],
+ "<span>Resultant force <b>2 N →</b></span><span>Acceleration <b></b></span><span>Speed <b>0.0 m/s</b></span>": [
+  "forceMotion"
+ ],
+ "<span>Right word, but check the accents: {0}</span>": [
+  "langListen"
+ ],
+ "<span>Rule</span>{0}": [
+  "functionMachine"
+ ],
+ "<span>Scale factor</span>": [
+  "transformGrid"
+ ],
+ "<span>Sentences done: <b>0</b></span>": [
+  "wordClass"
+ ],
+ "<span>Split</span>": [
+  "arrayBuilder"
+ ],
+ "<span>Tap sets:</span>": [
+  "fractionWall"
+ ],
+ "<span>Temperature of water</span><span>20 °C</span>": [
+  "particleModel"
+ ],
+ "<span>The whole story climbs the mountain. Read it aloud from the bottom left!</span>": [
+  "storyMountain"
+ ],
+ "<span>tomorrow.</span>": [
+  "tenseTimeline"
+ ],
+ "<span>Total to share</span><span>50</span>": [
+  "ratioBar"
+ ],
+ "<span>Try:</span>{0}": [
+  "percentGrid"
+ ],
+ "<span>Wavelength <b></b></span><span>Time period <b></b></span><span>Speed = frequency × wavelength</span>": [
+  "waves"
+ ],
+ "<span>Yes — {0} ({1})</span>": [
+  "langListen"
+ ],
+ "<span>Yes — {0}! ({1} / {2})</span>": [
+  "langSounds"
+ ],
+ "<span>Yes — {0}!</span>": [
+  "langNumbers"
+ ],
+ "<span>Yes! “{0}” — well done.</span>": [
+  "langAgree"
+ ],
+ "<span>Yes! {0}</span>{1}": [
+  "langOrder"
+ ],
+ "<span>Yes! <b>{0}</b> uses <b>{1}</b> for this sound.</span>": [
+  "phonicsBlender"
+ ],
+ "<span>Your sentence goes here…</span>": [
+  "langOrder"
+ ],
+ "<sub>$1</sub>": [
+  "equationBalancer"
+ ],
+ "= {0}:{1} in simplest form.": [
+  "ratioBar"
+ ],
+ "= vector (": [
+  "coordGrid"
+ ],
+ "− 1 both sides": [
+  "balance"
+ ],
+ "▶ Slide it": [
+  "coordGrid"
+ ],
+ "◀ Hop back": [
+  "numberLine"
+ ],
+ "✓ Got it": [
+  "langFlash"
+ ],
+ "✓ That is the smallest possible perimeter!": [
+  "areaPerimeter"
+ ],
+ "🎧 Which word did you hear?": [
+  "langSounds"
+ ],
+ "🎯 Challenge me": [
+  "langAgree"
+ ],
+ "🎯 Test me": [
+  "langNumbers"
+ ],
+ "🐢 Slow": [
+  "langListen",
+  "langSounds"
+ ],
+ "🐢 Slowly": [
+  "langFlash",
+  "langNumbers"
+ ],
+ "🔊 Hear all": [
+  "langVerbs"
+ ],
+ "🔊 Hear it": [
+  "langFlash",
+  "langNegate",
+  "langNumbers"
+ ],
+ "🔊 Play again": [
+  "langSounds"
+ ],
+ "0 (neutral atom)": [
+  "atomBuilder"
+ ],
+ "0 N (balanced)": [
+  "forceMotion"
+ ],
+ "1 across": [
+  "linearGraph"
+ ],
+ "1 kg": [
+  "forceMotion"
+ ],
+ "1 part": [
+  "ratioBar"
+ ],
+ "10 counters swapped for 1 counter in the next column!": [
+  "placeValue"
+ ],
+ "100 is cien on its own, but ciento before another number: ciento uno.": [
+  "langNumbers"
+ ],
+ "16–29 are written as ONE word: dieciséis, veintiuno, veintitrés (note the accents on 16, 22, 23, 26).": [
+  "langNumbers"
+ ],
+ "1fr 1fr": [
+  "langAgree"
+ ],
+ "2 kg": [
+  "forceMotion"
+ ],
+ "3px solid var(--brand2)": [
+  "atomBuilder"
+ ],
+ "4 × 3 rectangle": [
+  "areaPerimeter"
+ ],
+ "5 kg": [
+  "forceMotion"
+ ],
+ "80 = 4 × 20: quatre-vingts (the s disappears if another number follows: quatre-vingt-un).": [
+  "langNumbers"
+ ],
+ "90° anticlockwise": [
+  "transformGrid"
+ ],
+ "90° clockwise": [
+  "transformGrid"
+ ],
+ "A (blue)": [
+  "fractionWall"
+ ],
+ "a / an": [
+  "langGender"
+ ],
+ "a / no": [
+  "langAgree"
+ ],
+ "a / no (ein-words)": [
+  "langAgree"
+ ],
+ "A bar means one sound made with more than one letter.": [
+  "phonicsBlender"
+ ],
+ "A cell diagram. Tap a part to learn about it.": [
+  "cellExplorer"
+ ],
+ "A circuit with cells, a switch and bulbs. Moving dots show the current.": [
+  "circuitBuilder"
+ ],
+ "A coffee, please.": [
+  "langDialogue"
+ ],
+ "A consonant then y: change the y to i and add -es.": [
+  "wordMaker"
+ ],
+ "A dot means one letter, one sound.": [
+  "phonicsBlender"
+ ],
+ "A food chain starts with a producer: a plant that makes its own food.": [
+  "foodWeb"
+ ],
+ "A huge crane swings down and threatens to scoop Pip up!": [
+  "storyMountain"
+ ],
+ "A jelly-like substance where most of the chemical reactions in the cell happen.": [
+  "cellExplorer"
+ ],
+ "A lemonade, please.": [
+  "langDialogue"
+ ],
+ "A meadow food web. Arrows point from the food to the animal that eats it.": [
+  "foodWeb"
+ ],
+ "A negative gradient slopes downhill.": [
+  "linearGraph"
+ ],
+ "A neutral atom has equal numbers of protons and electrons. Change the number of PROTONS to make a different element.": [
+  "atomBuilder"
+ ],
+ "A new classmate": [
+  "langDialogue"
+ ],
+ "A ray of light meeting a surface with the normal and angles marked": [
+  "lightRays"
+ ],
+ "A rectangle: {0} × {1} = {2} squares, perimeter 2 × ({3} + {4}) = {5}.": [
+  "areaPerimeter"
+ ],
+ "A small robot called Pip wakes up alone in a quiet junkyard.": [
+  "storyMountain"
+ ],
+ "A story mountain with a climber": [
+  "storyMountain"
+ ],
+ "A sudden gust of wind snatches the string from her fingers.": [
+  "storyMountain"
+ ],
+ "A tortilla and a drink. That's five euros.": [
+  "langDialogue"
+ ],
+ "A trolley with a forward push arrow and a backward resistive force arrow, above a speed-time graph": [
+  "forceMotion"
+ ],
+ "A whip-like tail that spins to move the bacterium along.": [
+  "cellExplorer"
+ ],
+ "A.. brave.J firefighter.N climbed.V slowly.A up.. the.. tall.J ladder.N": [
+  "wordClass"
+ ],
+ "A.. huge.J wave.N crashed.V noisily.A over.. the.. small.J boat.N": [
+  "wordClass"
+ ],
+ "ä|Like “e” in “bed” (longer in Mädchen).|Mädchen,Käse;ö|Round your lips and say “e”.|schön,Öl;ü|Round your lips as for “oo” and say “ee”.|Tür,müde;ie|A long “ee”.|Brief,Liebe;ei|Like “eye”.|nein,Eis;eu / äu|Like “oy” in “boy”.|neun,Häuser;ch after e, i|A soft hiss made with your tongue high in the mouth.|ich,Milch;ch after a, o, u|Made further back in the throat, like clearing it gently.|Buch,acht;sch|Like “sh”.|Schule,Fisch;sp / st at the start|Sounds like “shp” and “sht”.|Sport,Stuhl;z|Like “ts” in “cats”.|Zeit,Zimmer;w|Sounds like English “v”.|Wasser,Wein;v|Usually sounds like “f”.|Vater,Vogel;s before a vowel|Sounds like “z”.|Sonne,sieben;ß|A sharp “ss”.|Straße,heiß;j|Sounds like English “y”.|ja,Junge": [
+  "langSounds"
+ ],
+ "Aa": [
+  "punctFixer"
+ ],
+ "aba,abas,aba,ábamos,abais,aban": [
+  "langVerbs"
+ ],
+ "above / beyond": [
+  "wordMaker"
+ ],
+ "Accusative": [
+  "langAgree"
+ ],
+ "Add an outlier": [
+  "averagesDots"
+ ],
+ "Add cells and bulbs, flip between series and parallel, click the switch, and tap a bulb to unscrew it. What happens to the brightness?": [
+  "circuitBuilder"
+ ],
+ "add one to {0}": [
+  "placeValue"
+ ],
+ "Add protons, neutrons and electrons, or tap an element. What decides which element you have? What makes it an ion or an isotope?": [
+  "atomBuilder"
+ ],
+ "Add some counters to make a number.": [
+  "placeValue"
+ ],
+ "Add some data to see the slices.": [
+  "chartBuilder"
+ ],
+ "Adjective": [
+  "wordClass"
+ ],
+ "Adjective agreement": [
+  "langAgree"
+ ],
+ "Adjectives": [
+  "langOrder"
+ ],
+ "Adverb": [
+  "wordClass"
+ ],
+ "After lunch, we played outside.": [
+  "punctFixer"
+ ],
+ "After weil and dass the verb goes to the END. With a modal (kann, will, muss) or the perfect tense, the second verb (infinitive or participle) also goes to the end.": [
+  "langOrder"
+ ],
+ "again / back": [
+  "wordMaker"
+ ],
+ "aimé": [
+  "langVerbs"
+ ],
+ "Air → glass": [
+  "lightRays"
+ ],
+ "air resistance": [
+  "forceMotion"
+ ],
+ "Air resistance at 10 m/s": [
+  "forceMotion"
+ ],
+ "Al": [
+  "equationBalancer"
+ ],
+ "all .35s": [
+  "probSim"
+ ],
+ "All sorted ({0} slip{1}).": [
+  "langGender"
+ ],
+ "All sorted, first time!": [
+  "langGender"
+ ],
+ "allé": [
+  "langVerbs"
+ ],
+ "aller + infinitive: the infinitive never changes.": [
+  "langVerbs"
+ ],
+ "alto,alta,altos,altas;pequeño,pequeña,pequeños,pequeñas;simpático,simpática,simpáticos,simpáticas;inteligente,inteligente,inteligentes,inteligentes;trabajador,trabajadora,trabajadores,trabajadoras;español,española,españoles,españolas;feliz,feliz,felices,felices;grande,grande,grandes,grandes": [
+  "langAgree"
+ ],
+ "aluminium + oxygen → aluminium oxide": [
+  "equationBalancer"
+ ],
+ "amplitude": [
+  "waves"
+ ],
+ "Amplitude": [
+  "waves"
+ ],
+ "An animated wave with its wavelength and amplitude marked": [
+  "waves"
+ ],
+ "An atom with a nucleus and electron shells": [
+  "atomBuilder"
+ ],
+ "An orange juice, please.": [
+  "langDialogue"
+ ],
+ "and a half square": [
+  "percentGrid"
+ ],
+ "And where do you come from?": [
+  "langDialogue"
+ ],
+ "Angle explorer": [
+  "angleExplorer"
+ ],
+ "Angle of incidence": [
+  "lightRays"
+ ],
+ "Angle of incidence <b></b>": [
+  "lightRays"
+ ],
+ "Angle of reflection": [
+  "lightRays"
+ ],
+ "Angle of refraction": [
+  "lightRays"
+ ],
+ "Angles around a point add up to 360°. Drag the rays.": [
+  "angleExplorer"
+ ],
+ "Angles on a straight line add up to 180°. Drag the ray.": [
+  "angleExplorer"
+ ],
+ "Animal cell": [
+  "cellExplorer"
+ ],
+ "animal cells": [
+  "cellExplorer"
+ ],
+ "Animal cells have a nucleus but no cell wall, chloroplasts or permanent vacuole.": [
+  "cellExplorer"
+ ],
+ "Answer: <b>{0}</b>": [
+  "punctFixer"
+ ],
+ "Apostrophes": [
+  "punctFixer"
+ ],
+ "Apparatus for separating a mixture": [
+  "separation"
+ ],
+ "Aquí tienes. Gracias.": [
+  "langDialogue"
+ ],
+ "Area = {0} cm × {1} cm = {2} cm².": [
+  "arrayBuilder"
+ ],
+ "Area and perimeter builder": [
+  "areaPerimeter"
+ ],
+ "Area squares": [
+  "arrayBuilder"
+ ],
+ "Art": [
+  "chartBuilder"
+ ],
+ "as object (accusative)": [
+  "langGender"
+ ],
+ "as subject": [
+  "langGender"
+ ],
+ "Asking the way": [
+  "langDialogue"
+ ],
+ "At 0° the ray goes straight along the normal and does not bend.": [
+  "lightRays"
+ ],
+ "At exactly 0 °C, ice is melting. Energy from heating breaks the bonds between particles, so the temperature stays at 0 °C until all the ice has melted.": [
+  "particleModel"
+ ],
+ "At exactly 100 °C, water is boiling. The energy goes into separating the particles, so the temperature stays at 100 °C until all the water has become gas.": [
+  "particleModel"
+ ],
+ "At the bakery": [
+  "langDialogue"
+ ],
+ "At the café": [
+  "langDialogue"
+ ],
+ "At the tapas bar": [
+  "langDialogue"
+ ],
+ "Atomic number (protons): <b>{0}</b>": [
+  "atomBuilder"
+ ],
+ "Auto": [
+  "langAgree"
+ ],
+ "auto repeat(4,1fr)": [
+  "langAgree"
+ ],
+ "Autos": [
+  "langAgree"
+ ],
+ "B (orange)": [
+  "fractionWall"
+ ],
+ "Bacteria are prokaryotes: tiny cells with no nucleus. The DNA is a loop in the cytoplasm.": [
+  "cellExplorer"
+ ],
+ "Bacterium": [
+  "cellExplorer"
+ ],
+ "balance scales": [
+  "balance"
+ ],
+ "Balance the equation": [
+  "equationBalancer"
+ ],
+ "Balance the scales": [
+  "balance"
+ ],
+ "Balanced — whatever you do to one side, do to the other.": [
+  "balance"
+ ],
+ "Balanced forces and the trolley is at rest, so it stays at rest.": [
+  "forceMotion"
+ ],
+ "Balanced forces, so no resultant force and no acceleration. The trolley keeps moving at a constant speed.": [
+  "forceMotion"
+ ],
+ "Balanced, but the numbers can be made smaller. Divide them all by": [
+  "equationBalancer"
+ ],
+ "Balanced! The same atoms are on both sides, because atoms are never created or destroyed in a reaction (conservation of mass).": [
+  "equationBalancer"
+ ],
+ "Bar chart": [
+  "chartBuilder"
+ ],
+ "Bar model: each block is 1 part": [
+  "ratioBar"
+ ],
+ "Ben asked, \"Can I come?\"": [
+  "punctFixer"
+ ],
+ "Bend a light ray": [
+  "lightRays"
+ ],
+ "Biggest: {0} ({1}). Smallest: {2} ({3}). Drag to change a value.": [
+  "chartBuilder"
+ ],
+ "Bitte schön.": [
+  "langDialogue"
+ ],
+ "Blend it": [
+  "phonicsBlender"
+ ],
+ "blocks equally between the": [
+  "balance"
+ ],
+ "Blue": [
+  "probSim"
+ ],
+ "boiling point": [
+  "particleModel"
+ ],
+ "Bonjour ! Qu'est-ce que vous désirez ?": [
+  "langDialogue"
+ ],
+ "bonjour|hello, good day;salut|hi, bye (informal);au revoir|goodbye;merci|thank you;s'il vous plaît|please;oui|yes;non|no;ça va ?|how are you?": [
+  "langCore"
+ ],
+ "Brackets & dashes": [
+  "punctFixer"
+ ],
+ "Bravo ! Dialogue terminé.": [
+  "langDialogue"
+ ],
+ "Brilliant listening!": [
+  "langListen"
+ ],
+ "Bring a torch: the cave is dark.": [
+  "punctFixer"
+ ],
+ "Bruder": [
+  "langSounds"
+ ],
+ "Brüder": [
+  "langSounds"
+ ],
+ "btn st": [
+  "cellExplorer",
+  "circuitBuilder",
+  "foodWeb",
+  "forceMotion",
+  "lightRays",
+  "separation",
+  "waves"
+ ],
+ "Build a chart": [
+  "chartBuilder"
+ ],
+ "Build a circuit": [
+  "circuitBuilder"
+ ],
+ "Build a food chain": [
+  "foodWeb"
+ ],
+ "Build a food chain by tapping organisms from the producer upwards. Then switch mode and see what happens when one organism disappears.": [
+  "foodWeb"
+ ],
+ "Build a number with place-value counters": [
+  "placeValue"
+ ],
+ "Build a verb table": [
+  "langVerbs"
+ ],
+ "Build an array": [
+  "arrayBuilder"
+ ],
+ "Build an atom": [
+  "atomBuilder"
+ ],
+ "Build the sentence: tap words (or drag them) into the box in the right order. Tap a placed word to take it back.": [
+  "langOrder"
+ ],
+ "Bulb {0}. Activate to {1}": [
+  "circuitBuilder"
+ ],
+ "but not B.": [
+  "separation"
+ ],
+ "By tomorrow": [
+  "tenseTimeline"
+ ],
+ "By yesterday": [
+  "tenseTimeline"
+ ],
+ "Bye!": [
+  "langDialogue"
+ ],
+ "Ça va bien, merci.": [
+  "langDialogue"
+ ],
+ "calcium carbonate + hydrochloric acid → calcium chloride + water + carbon dioxide": [
+  "equationBalancer"
+ ],
+ "Can we play outside?": [
+  "punctFixer"
+ ],
+ "can, to be able to": [
+  "langVerbs"
+ ],
+ "Capacity": [
+  "measure"
+ ],
+ "capital letter": [
+  "punctFixer"
+ ],
+ "capital letters": [
+  "langCore"
+ ],
+ "Capitals & full stops": [
+  "punctFixer"
+ ],
+ "carries small extra rings of DNA": [
+  "cellExplorer"
+ ],
+ "cat:s box:es bus:es dish:es church:es fox:es wish:es city:ies baby:ies lady:ies party:ies day:s key:s monkey:s leaf:ves wolf:ves knife:ves shelf:ves roof:s potato:es hero:es piano:s photo:s child:irregular man:irregular mouse:irregular tooth:irregular foot:irregular": [
+  "wordMaker"
+ ],
+ "Cell membrane": [
+  "cellExplorer"
+ ],
+ "Cell part": [
+  "cellExplorer"
+ ],
+ "Cell wall": [
+  "cellExplorer"
+ ],
+ "Challenge me": [
+  "areaPerimeter",
+  "cellExplorer"
+ ],
+ "Challenge score:": [
+  "cellExplorer"
+ ],
+ "Challenge: fill exactly {0} squares with the smallest perimeter you can.": [
+  "areaPerimeter"
+ ],
+ "Chance and probability lab": [
+  "probSim"
+ ],
+ "Change the big numbers in front of each formula until every element has the same number of atoms on both sides. You cannot change the small numbers!": [
+  "equationBalancer"
+ ],
+ "Change the frequency, amplitude and speed. Switch between a transverse and a longitudinal wave. What happens to the wavelength?": [
+  "waves"
+ ],
+ "Change the numbers with the − and + buttons, or drag and tap on the chart itself. Switch charts: the data stays the same, only the picture changes.": [
+  "chartBuilder"
+ ],
+ "Changing the number of electrons never changes the element.": [
+  "atomBuilder"
+ ],
+ "Charge: <b>{0}</b>": [
+  "atomBuilder"
+ ],
+ "Chart": [
+  "chartBuilder"
+ ],
+ "Check": [
+  "langListen",
+  "langNumbers",
+  "langOrder",
+  "punctFixer",
+  "spellingLCWC"
+ ],
+ "Check my colours": [
+  "wordClass"
+ ],
+ "Chess": [
+  "chartBuilder"
+ ],
+ "Chloroplasts": [
+  "cellExplorer"
+ ],
+ "Choose a technique, press Play (or drag the slider) and watch what happens to each part of the mixture.": [
+  "separation"
+ ],
+ "Choose how many things and how many groups, then deal them out one at a time. What is left over?": [
+  "sharing"
+ ],
+ "Chromatography": [
+  "separation"
+ ],
+ "Circular DNA loop": [
+  "cellExplorer"
+ ],
+ "class=\"tgb\" fill=\"#3b5bdb\" fill-opacity=\".25\" stroke=\"#1e3a8a\" stroke-width=\"3\" stroke-linejoin=\"round\" style=\"cursor:grab\"": [
+  "transformGrid"
+ ],
+ "Clear": [
+  "areaPerimeter",
+  "placeValue",
+  "probSim",
+  "tenFrame",
+  "wordClass"
+ ],
+ "Clear B": [
+  "fractionWall"
+ ],
+ "Clear table": [
+  "functionMachine"
+ ],
+ "Climax": [
+  "storyMountain"
+ ],
+ "Climb the story mountain": [
+  "storyMountain"
+ ],
+ "clock face": [
+  "clockFace"
+ ],
+ "Close to the probability now.": [
+  "probSim"
+ ],
+ "Clover": [
+  "foodWeb"
+ ],
+ "Club survey": [
+  "chartBuilder"
+ ],
+ "Coin": [
+  "probSim"
+ ],
+ "cold water in ↗": [
+  "separation"
+ ],
+ "Colons & semi-colons": [
+  "punctFixer"
+ ],
+ "Colour the word classes": [
+  "wordClass"
+ ],
+ "Colours": [
+  "langCore"
+ ],
+ "Comma only needed when the subordinate clause comes first.": [
+  "clauseCombiner"
+ ],
+ "Commas": [
+  "punctFixer"
+ ],
+ "Complete!": [
+  "foodWeb"
+ ],
+ "Compound words": [
+  "spellingLCWC"
+ ],
+ "compression": [
+  "waves"
+ ],
+ "condenser (cold water jacket)": [
+  "separation"
+ ],
+ "Consonant + y: change the y to an i before the ending.": [
+  "wordMaker"
+ ],
+ "Contain chlorophyll and are where photosynthesis takes place.": [
+  "cellExplorer"
+ ],
+ "Contains the cell's DNA (genetic material), which controls the activities of the cell.": [
+  "cellExplorer"
+ ],
+ "contains the DNA that controls the cell": [
+  "cellExplorer"
+ ],
+ "controls what goes into and out of the cell": [
+  "cellExplorer"
+ ],
+ "Controls which substances move into and out of the cell.": [
+  "cellExplorer"
+ ],
+ "Cool! Shall we play football together?": [
+  "langDialogue"
+ ],
+ "Cool! Wollen wir zusammen Fußball spielen?": [
+  "langDialogue"
+ ],
+ "Coordinate grid showing a shape and its transformed image": [
+  "transformGrid"
+ ],
+ "Coordinates on a grid": [
+  "coordGrid"
+ ],
+ "Corner {0} at {1}, {2}": [
+  "coordGrid"
+ ],
+ "Count the orange edges: perimeter {0}. Squares: {1}.": [
+  "areaPerimeter"
+ ],
+ "counter, {0}": [
+  "tenFrame"
+ ],
+ "Counting the {0}s: {1}": [
+  "arrayBuilder"
+ ],
+ "Cover it": [
+  "spellingLCWC"
+ ],
+ "Cytoplasm": [
+  "cellExplorer"
+ ],
+ "D'accord ! On joue ensemble à la récré ?": [
+  "langDialogue"
+ ],
+ "D'accord. Ça fait trois euros.": [
+  "langDialogue"
+ ],
+ "Dad (who hates mornings) made toast.": [
+  "punctFixer"
+ ],
+ "Dance": [
+  "chartBuilder"
+ ],
+ "Danke schön! Auf Wiedersehen!": [
+  "langDialogue"
+ ],
+ "darf,darfst,darf,dürfen,dürft,dürfen": [
+  "langVerbs"
+ ],
+ "das Brot|bread;der Käse|cheese;die Milch|milk;der Kaffee|coffee;der Apfel|apple;der Kuchen|cake;der Orangensaft|orange juice;das Wasser|water": [
+  "langCore"
+ ],
+ "Das macht vier Euro fünfzig.": [
+  "langDialogue"
+ ],
+ "Data in order: {0}": [
+  "averagesDots"
+ ],
+ "Dative": [
+  "langAgree"
+ ],
+ "Days": [
+  "langCore"
+ ],
+ "Deal all": [
+  "sharing"
+ ],
+ "Deal one": [
+  "sharing"
+ ],
+ "Decimals": [
+  "placeValue"
+ ],
+ "decrease number in front of {0}": [
+  "equationBalancer"
+ ],
+ "Dice": [
+  "probSim"
+ ],
+ "Die Bäckerin": [
+  "langDialogue"
+ ],
+ "die Mutter|mother;der Vater|father;die Schwester|sister;der Bruder|brother;die Oma|grandma;der Opa|grandad;der Onkel|uncle;die Tante|aunt": [
+  "langCore"
+ ],
+ "die Schule|school;die Klasse|class;der Lehrer|teacher (male);das Buch|book;das Heft|exercise book;der Kuli|pen;das Mäppchen|pencil case;die Schultasche|school bag": [
+  "langCore"
+ ],
+ "dieciséis": [
+  "langNumbers"
+ ],
+ "Different clauses": [
+  "clauseCombiner"
+ ],
+ "Different pieces, same length — these are equivalent fractions.": [
+  "fractionWall"
+ ],
+ "Digits would fall off the end — clear a little space first.": [
+  "placeValue"
+ ],
+ "Digits would fall off the end.": [
+  "placeValue"
+ ],
+ "Distillation": [
+  "separation"
+ ],
+ "does not eat": [
+  "foodWeb"
+ ],
+ "Dónde vives|Where do you live?;Cuántos años tienes|How old are you?;Cómo te llamas|What are you called?;Qué haces los sábados|What do you do on Saturdays?;Vives en Madrid|Do you live in Madrid?;Cuándo es tu cumpleaños|When is your birthday?": [
+  "langOrder"
+ ],
+ "Dot plot on a number line from 0 to 10": [
+  "averagesDots"
+ ],
+ "Dots": [
+  "arrayBuilder"
+ ],
+ "Double letters where prefix and root meet: keep both.": [
+  "wordMaker"
+ ],
+ "Drag (or tap) a conjunction to join the two clauses. Which ones make sense? Watch the labels: main clause or subordinate clause?": [
+  "clauseCombiner"
+ ],
+ "Drag a ray or a corner and read the angle. What always stays the same?": [
+  "angleExplorer"
+ ],
+ "Drag across the 100 squares to shade some of them. See how the fraction, decimal and percentage all say the same thing.": [
+  "percentGrid"
+ ],
+ "Drag an ending onto the box (or just tap it).": [
+  "wordMaker"
+ ],
+ "Drag the blue ray. Watch the reading and the name of the angle.": [
+  "angleExplorer"
+ ],
+ "Drag the corner handle to change the rows and columns. Tap a row to skip count along it. Try turning the array or splitting it.": [
+  "arrayBuilder"
+ ],
+ "Drag the corners of the shape. Read each coordinate: across first, then up. Then translate it!": [
+  "coordGrid"
+ ],
+ "Drag the corners. The four angles in a quadrilateral always add up to 360°.": [
+  "angleExplorer"
+ ],
+ "Drag the corners. The three angles in a triangle always add up to 180°.": [
+  "angleExplorer"
+ ],
+ "Drag the dots along the line, tap the line to add one, drag a dot down to remove it. Which average moves most? Which stays put?": [
+  "averagesDots"
+ ],
+ "Drag the force arrows (or use the sliders). Find out what balanced and unbalanced forces do to the speed of the trolley.": [
+  "forceMotion"
+ ],
+ "Drag the long minute hand or the short hour hand round the clock face. Watch the digital time and the words change.": [
+  "clockFace"
+ ],
+ "Drag the marker along the timeline (or tap Yesterday / Today / Tomorrow). Then try the Progressive, Perfect and Modal tabs.": [
+  "tenseTimeline"
+ ],
+ "Drag the orange dot to change c (where the line crosses the y-axis) and the blue dot to change m (how steep it is). What do you notice?": [
+  "linearGraph"
+ ],
+ "Drag the pencil's end, the water level or the needle. Read the scale, then check the numbers underneath.": [
+  "measure"
+ ],
+ "Drag the temperature slider (or tap a state). Watch how the particles move and how far apart they are.": [
+  "particleModel"
+ ],
+ "Drag the torch around (or use the slider) and pick a surface. Watch the angles measured from the normal, the dotted line at right angles to the surface.": [
+  "lightRays"
+ ],
+ "dreißig": [
+  "langNumbers"
+ ],
+ "drop here": [
+  "clauseCombiner"
+ ],
+ "dürfen": [
+  "langVerbs"
+ ],
+ "é,aste,ó,amos,asteis,aron": [
+  "langVerbs"
+ ],
+ "Each division on this jug is 100 ml. 1000 ml make 1 litre.": [
+  "measure"
+ ],
+ "Each group gets {0}, nothing left over.": [
+  "sharing"
+ ],
+ "Each outcome is equally likely: probability": [
+  "probSim"
+ ],
+ "Each small mark is 1 mm. 10 mm make 1 cm.": [
+  "measure"
+ ],
+ "Each small mark is 20 g. 1000 g make 1 kilogram.": [
+  "measure"
+ ],
+ "Each star is worth {0}{1}. Tap a star to set a row (left half of a star = half).": [
+  "chartBuilder"
+ ],
+ "each star stands for {0}": [
+  "chartBuilder"
+ ],
+ "écrire": [
+  "langVerbs"
+ ],
+ "écris,écris,écrit,écrivons,écrivez,écrivent": [
+  "langVerbs"
+ ],
+ "écrit": [
+  "langVerbs"
+ ],
+ "écriv": [
+  "langVerbs"
+ ],
+ "él / ella": [
+  "langVerbs"
+ ],
+ "El camarero": [
+  "langDialogue"
+ ],
+ "el chico": [
+  "langAgree"
+ ],
+ "el colegio|school;la clase|class;el profesor|teacher;el libro|book;el cuaderno|exercise book;el bolígrafo|pen;el estuche|pencil case;la mochila|school bag": [
+  "langCore"
+ ],
+ "el gato": [
+  "langAgree"
+ ],
+ "el niño": [
+  "langAgree"
+ ],
+ "el pan|bread;el queso|cheese;la leche|milk;el café|coffee;la manzana|apple;la tarta|cake;el zumo de naranja|orange juice;el helado|ice cream": [
+  "langCore"
+ ],
+ "El parque está al final de la calle, a la derecha.": [
+  "langDialogue"
+ ],
+ "Electronic structure: <b>{0}</b>": [
+  "atomBuilder"
+ ],
+ "Electrons (−)": [
+  "atomBuilder"
+ ],
+ "ellos / ellas": [
+  "langVerbs"
+ ],
+ "Enchanté, Maya ! Tu as quel âge ?": [
+  "langDialogue"
+ ],
+ "Ending": [
+  "storyMountain"
+ ],
+ "Endings to place": [
+  "langVerbs"
+ ],
+ "Enlarge": [
+  "transformGrid"
+ ],
+ "Enlarge by scale factor {0} from centre ({1}, {2}): every distance from the centre is multiplied by {3}.": [
+  "transformGrid"
+ ],
+ "Enter": [
+  "cellExplorer",
+  "circuitBuilder",
+  "clauseCombiner",
+  "foodWeb",
+  "langGender",
+  "langListen",
+  "langNumbers",
+  "spellingLCWC",
+  "storyMountain",
+  "wordMaker"
+ ],
+ "er / sie / es": [
+  "langVerbs"
+ ],
+ "era,eras,era,éramos,erais,eran": [
+  "langVerbs"
+ ],
+ "Est-ce que goes at the start and the rest stays in normal order. Question words (où, comment, qu'est-ce que) usually come first.": [
+  "langOrder"
+ ],
+ "Est-ce que tu aimes le chocolat|Do you like chocolate?;Où est-ce que tu habites|Where do you live?;Qu'est-ce que tu fais|What are you doing?;Est-ce que vous avez un chien|Do you have a dog?;Comment est-ce qu'il s'appelle|What is he called?": [
+  "langOrder"
+ ],
+ "estar + -ando / -iendo (the -ando / -iendo part never changes).": [
+  "langVerbs"
+ ],
+ "estoy,estás,está,estamos,estáis,están": [
+  "langVerbs"
+ ],
+ "ét": [
+  "langVerbs"
+ ],
+ "été": [
+  "langVerbs"
+ ],
+ "être": [
+  "langVerbs"
+ ],
+ "evaporating dish": [
+  "separation"
+ ],
+ "Evaporation": [
+  "separation"
+ ],
+ "Evaporation: heating makes the water evaporate and escape as vapour. The salt does not evaporate, so it is left behind as crystals. (To make bigger crystals, heat gently, then leave the concentrated solution to cool: crystallisation.)": [
+  "separation"
+ ],
+ "Every day": [
+  "tenseTimeline"
+ ],
+ "Every formula needs at least 1 in front of it: the substances are all needed.": [
+  "equationBalancer"
+ ],
+ "Every input goes through “{0}”.": [
+  "functionMachine"
+ ],
+ "Every night, Sam hears scratching from the cellar under the bakery.": [
+  "storyMountain"
+ ],
+ "Every noun has a gender. Drag (or tap, then tap a box) each noun to the box where it belongs.": [
+  "langGender"
+ ],
+ "Exactly {0} groups of {1}, nothing left over.": [
+  "sharing"
+ ],
+ "Explore angles": [
+  "angleExplorer"
+ ],
+ "Explore inside a cell": [
+  "cellExplorer"
+ ],
+ "Explore the fraction wall": [
+  "fractionWall"
+ ],
+ "fahre,fährst,fährt,fahren,fahrt,fahren": [
+  "langVerbs"
+ ],
+ "Family": [
+  "langCore"
+ ],
+ "Favourite after-school club": [
+  "chartBuilder"
+ ],
+ "Fe": [
+  "equationBalancer"
+ ],
+ "feminine": [
+  "langAgree"
+ ],
+ "fewer {0}": [
+  "atomBuilder"
+ ],
+ "fewer bulbs": [
+  "circuitBuilder"
+ ],
+ "fewer cells": [
+  "circuitBuilder"
+ ],
+ "Fewer electrons than protons, so it is a positive ion.": [
+  "atomBuilder"
+ ],
+ "Fill": [
+  "tenFrame"
+ ],
+ "Fill the ten frame": [
+  "tenFrame"
+ ],
+ "fill=\"#3b5bdb\" fill-opacity=\".22\" stroke=\"#1e3a8a\" stroke-width=\"3\" stroke-linejoin=\"round\"": [
+  "coordGrid"
+ ],
+ "fill=\"#ff5a3c\" fill-opacity=\".16\" stroke=\"#ff5a3c\" stroke-width=\"2.5\" stroke-dasharray=\"6 4\" stroke-linejoin=\"round\"": [
+  "coordGrid"
+ ],
+ "fill=\"#ff5a3c\" fill-opacity=\".18\" stroke=\"#ff5a3c\" stroke-width=\"2.5\" stroke-linejoin=\"round\"": [
+  "transformGrid"
+ ],
+ "Filled with cell sap. It helps keep the cell firm, supporting the plant.": [
+  "cellExplorer"
+ ],
+ "Filling groups of {0}…": [
+  "sharing"
+ ],
+ "filter paper": [
+  "separation"
+ ],
+ "filter:drop-shadow(0 0 7px #f08c00)": [
+  "cellExplorer"
+ ],
+ "Filtration": [
+  "separation"
+ ],
+ "Filtration: the tiny water particles pass through the holes in the filter paper, but the sand grains are too big, so they stay behind as the residue. The liquid that comes through is the filtrate.": [
+  "separation"
+ ],
+ "First, mix the flour.": [
+  "punctFixer"
+ ],
+ "Flagellum": [
+  "cellExplorer"
+ ],
+ "flashcard, tap to flip": [
+  "langFlash"
+ ],
+ "flask of salty water": [
+  "separation"
+ ],
+ "Flip the switch to turn the sentence negative and watch which words move in. Orange = new word, blue = a word that changed.": [
+  "langNegate"
+ ],
+ "Flip, hear, remember": [
+  "langFlash"
+ ],
+ "fm-num out": [
+  "functionMachine"
+ ],
+ "Food & drink": [
+  "langCore"
+ ],
+ "Food chains and webs": [
+  "foodWeb"
+ ],
+ "Football": [
+  "chartBuilder"
+ ],
+ "football|foot + ball|foot,ball;sunflower|sun + flower|sun,flower;playground|play + ground|play,ground;rainbow|rain + bow|rain,bow;classroom|class + room|class,room;notebook|note + book|note,book;bedroom|bed + room|bed,room;homework|home + work|home,work;butterfly|butter + fly|butter,fly;lighthouse|light + house|light,house;cupboard|cup + board (the p is silent!)|cup,board;grandmother|grand + mother|grand,mother;weekend|week + end|week,end;fireman|fire + man|fire,man;birthday|birth + day|birth,day;anyone|any + one|any,one": [
+  "spellingLCWC"
+ ],
+ "For every 1 across, the line goes {0} {1}. It crosses the y-axis at (0, {2}).{3}": [
+  "linearGraph"
+ ],
+ "Found in: {0}": [
+  "cellExplorer"
+ ],
+ "Four quadrant coordinate grid with a draggable shape": [
+  "coordGrid"
+ ],
+ "Fox": [
+  "foodWeb"
+ ],
+ "Fractions, decimals and percentages": [
+  "percentGrid"
+ ],
+ "French": [
+  "langCore"
+ ],
+ "Frequency": [
+  "waves"
+ ],
+ "Freut mich, Lea! Wie alt bist du?": [
+  "langDialogue"
+ ],
+ "Friction": [
+  "forceMotion"
+ ],
+ "Friction: constant": [
+  "forceMotion"
+ ],
+ "Frog": [
+  "foodWeb"
+ ],
+ "From then on, the dragon heats the bakery ovens every morning.": [
+  "storyMountain"
+ ],
+ "Full frame! {0} and {1} make {2}.": [
+  "tenFrame"
+ ],
+ "full row": [
+  "percentGrid"
+ ],
+ "full turn": [
+  "angleExplorer"
+ ],
+ "full turn / zero": [
+  "angleExplorer"
+ ],
+ "Function machine": [
+  "functionMachine"
+ ],
+ "fünf": [
+  "langNumbers"
+ ],
+ "fünfzehn": [
+  "langNumbers"
+ ],
+ "fünfzig": [
+  "langNumbers"
+ ],
+ "Future": [
+  "tenseTimeline"
+ ],
+ "gap {0}{1}": [
+  "punctFixer"
+ ],
+ "Gas": [
+  "particleModel"
+ ],
+ "Gas (steam)": [
+  "particleModel"
+ ],
+ "GAS: particles are far apart and move fast in all directions with almost no forces between them. A gas spreads out to fill its container.": [
+  "particleModel"
+ ],
+ "gb n": [
+  "langGender"
+ ],
+ "Gender sorter": [
+  "langGender"
+ ],
+ "German": [
+  "langCore"
+ ],
+ "Gerne! Sonst noch etwas?": [
+  "langDialogue"
+ ],
+ "Get rid of the loose blocks first, then share the": [
+  "balance"
+ ],
+ "Gladly! Anything else?": [
+  "langDialogue"
+ ],
+ "Glass → air": [
+  "lightRays"
+ ],
+ "Going from air into glass the light slows down, so it bends TOWARDS the normal. The faint ray is the small amount that is also reflected.": [
+  "lightRays"
+ ],
+ "Going from glass into air the light speeds up, so it bends AWAY from the normal. The faint ray is the small amount that is also reflected.": [
+  "lightRays"
+ ],
+ "Going to / will": [
+  "langVerbs"
+ ],
+ "gone": [
+  "circuitBuilder"
+ ],
+ "Good afternoon! What would you like to drink?": [
+  "langDialogue"
+ ],
+ "Good morning! What would you like?": [
+  "langDialogue"
+ ],
+ "Good practice — try another round.": [
+  "langListen"
+ ],
+ "Goodbye!": [
+  "langDialogue"
+ ],
+ "Got it!": [
+  "spellingLCWC"
+ ],
+ "Grandma.N baked.V a.. warm.J loaf.N and.. gently.A cut.V it..": [
+  "wordClass"
+ ],
+ "Graph of y = mx + c": [
+  "linearGraph"
+ ],
+ "Grass": [
+  "foodWeb"
+ ],
+ "Grasshopper": [
+  "foodWeb"
+ ],
+ "Great! Do you have brothers or sisters?": [
+  "langDialogue"
+ ],
+ "Great! Do you like football?": [
+  "langDialogue"
+ ],
+ "Green": [
+  "probSim"
+ ],
+ "Greetings": [
+  "langCore"
+ ],
+ "Grid to paint squares on": [
+  "areaPerimeter"
+ ],
+ "groß": [
+  "langAgree"
+ ],
+ "Group size": [
+  "sharing"
+ ],
+ "Groups": [
+  "sharing"
+ ],
+ "Guten Morgen! Was möchten Sie?": [
+  "langDialogue"
+ ],
+ "H He Li Be B C N O F Ne Na Mg Al Si P S Cl Ar K Ca": [
+  "atomBuilder"
+ ],
+ "habité": [
+  "langVerbs"
+ ],
+ "hago,haces,hace,hacemos,hacéis,hacen": [
+  "langVerbs"
+ ],
+ "half past": [
+  "clockFace"
+ ],
+ "half past {0}": [
+  "clockFace"
+ ],
+ "Hallo! Ich bin Jonas. Wie heißt du?": [
+  "langDialogue"
+ ],
+ "Hallo|hello;Guten Morgen|good morning;Guten Tag|good day, hello;Gute Nacht|good night;Tschüss|bye;Danke|thank you;Bitte|please, you're welcome;Wie geht's?|how are you?": [
+  "langCore"
+ ],
+ "happy:un kind:un appear:dis,re agree:dis like:dis,un spell:mis,re behave:mis lead:mis do:un,re write:re build:re view:pre,re,inter heat:pre,re marine:sub merge:sub human:super market:super possible:im legal:il regular:ir visible:in polite:im movable:im national:inter active:inter,re clockwise:anti biography:auto place:mis,re,dis cover:un,re,dis connect:dis,re trust:dis,mis solve:dis": [
+  "wordMaker"
+ ],
+ "Haus": [
+  "langAgree"
+ ],
+ "Häuser": [
+  "langAgree"
+ ],
+ "Häusern": [
+  "langAgree"
+ ],
+ "Hawk": [
+  "foodWeb"
+ ],
+ "Heads": [
+  "probSim"
+ ],
+ "hear it": [
+  "langDialogue",
+  "langVerbs"
+ ],
+ "Hear it": [
+  "spellingLCWC"
+ ],
+ "hear the sentence": [
+  "langAgree"
+ ],
+ "Hear the word": [
+  "phonicsBlender"
+ ],
+ "Heat up the particles": [
+  "particleModel"
+ ],
+ "Hello! Do you need help?": [
+  "langDialogue"
+ ],
+ "Hello! I'm Jonas. What's your name?": [
+  "langDialogue"
+ ],
+ "Hello! What would you like?": [
+  "langDialogue"
+ ],
+ "Here is your drink! Would you like something to eat too?": [
+  "langDialogue"
+ ],
+ "Here you are, 3 euros.": [
+  "langDialogue"
+ ],
+ "Here you are, 4.50.": [
+  "langDialogue"
+ ],
+ "Here you are.": [
+  "langDialogue"
+ ],
+ "Here you are. Thanks.": [
+  "langDialogue"
+ ],
+ "Hi! I'm Hugo. And you, what are you called?": [
+  "langDialogue"
+ ],
+ "Hide the rule": [
+  "functionMachine"
+ ],
+ "hola|hello;adiós|goodbye;buenos días|good morning;buenas noches|good night;gracias|thank you;por favor|please;sí|yes;¿qué tal?|how are you?": [
+  "langCore"
+ ],
+ "holds the bacterium's DNA as a loop": [
+  "cellExplorer"
+ ],
+ "Homophones": [
+  "spellingLCWC"
+ ],
+ "Hop along the number line": [
+  "numberLine"
+ ],
+ "Hop on ▶": [
+  "numberLine"
+ ],
+ "hop:ing,ed,er stop:ing,ed,er swim:ing,er run:ing,er big:er,est sad:er,est,ly,ness admit:ed,ing forget:ing,able,ful hope:ing,ed,ful,less make:ing,er bake:ing,ed,er nice:er,est,ly,ness care:ing,ed,ful,less use:ing,ed,ful,less excite:ing,ed,ment admire:ing,ed,able notice:ing,ed,able agree:ing,ed,ment,able happy:er,est,ly,ness easy:er,est,ly,ness lucky:er,est,ly,ness carry:ing,ed,er hurry:ing,ed empty:ness,er,ed,ing beauty:ful play:ing,ed,er,ful enjoy:ing,ed,ment,able help:ing,ed,er,ful,less kind:ly,ness,er,est quick:ly,er,est,ness real:ise,ly,ity special:ly,ise active:ity pure:ity,ly final:ly,ise comfort:able": [
+  "wordMaker"
+ ],
+ "horizontal line y =": [
+  "transformGrid"
+ ],
+ "how it all finishes": [
+  "storyMountain"
+ ],
+ "Hugo": [
+  "langDialogue"
+ ],
+ "Hund": [
+  "langAgree"
+ ],
+ "Hunde": [
+  "langAgree"
+ ],
+ "Hunden": [
+  "langAgree"
+ ],
+ "hundred square": [
+  "percentGrid"
+ ],
+ "Hundreds": [
+  "placeValue"
+ ],
+ "Hundreds agree like adjectives: doscientos, quinientos (irregular!), setecientos, novecientos.": [
+  "langNumbers"
+ ],
+ "Hundredths": [
+  "placeValue"
+ ],
+ "hydrogen + oxygen → water": [
+  "equationBalancer"
+ ],
+ "Hz": [
+  "waves"
+ ],
+ "I am tall.": [
+  "langDialogue"
+ ],
+ "I am very happy.": [
+  "langDialogue"
+ ],
+ "I come from England.": [
+  "langDialogue"
+ ],
+ "I don't like peas.": [
+  "punctFixer"
+ ],
+ "I have a cat.": [
+  "langDialogue"
+ ],
+ "I have a dog.": [
+  "langDialogue"
+ ],
+ "I like chocolate.": [
+  "langDialogue"
+ ],
+ "I like football.": [
+  "langDialogue"
+ ],
+ "I like ice cream.": [
+  "langDialogue"
+ ],
+ "I live in Berlin.": [
+  "langDialogue"
+ ],
+ "I live in London.": [
+  "langDialogue"
+ ],
+ "I live in Manchester.": [
+  "langDialogue"
+ ],
+ "I packed a coat, a hat, a scarf and gloves.": [
+  "punctFixer"
+ ],
+ "í,iste,ió,imos,isteis,ieron": [
+  "langVerbs"
+ ],
+ "I'd like a loaf of bread, please.": [
+  "langDialogue"
+ ],
+ "I'd like two bread rolls, please.": [
+  "langDialogue"
+ ],
+ "I'm called Lea.": [
+  "langDialogue"
+ ],
+ "I'm called Maya.": [
+  "langDialogue"
+ ],
+ "I'm fine, thanks.": [
+  "langDialogue"
+ ],
+ "I'm twelve years old.": [
+  "langDialogue"
+ ],
+ "I'm twelve.": [
+  "langDialogue"
+ ],
+ "ía,ías,ía,íamos,íais,ían": [
+  "langVerbs"
+ ],
+ "iba,ibas,iba,íbamos,ibais,iban": [
+  "langVerbs"
+ ],
+ "Ich bin zwölf Jahre alt.": [
+  "langDialogue"
+ ],
+ "Ich bin zwölf.": [
+  "langDialogue"
+ ],
+ "Ich gehe heute ins Kino/Heute gehe ich ins Kino|I go to the cinema today;Wir spielen am Samstag Fußball/Am Samstag spielen wir Fußball|We play football on Saturday;Meine Schwester wohnt jetzt in Berlin/Jetzt wohnt meine Schwester in Berlin|My sister lives in Berlin now;Ich esse in der Schule einen Apfel/In der Schule esse ich einen Apfel|I eat an apple at school;Morgen gehen wir in den Park/Wir gehen morgen in den Park|Tomorrow we are going to the park;Er liest oft Bücher/Oft liest er Bücher|He often reads books": [
+  "langOrder"
+ ],
+ "Ich habe einen Bruder|Ich habe ~keinen Bruder|I have a brother|I don't have a brother|kein replaces ein for nouns: einen Bruder → keinen Bruder.;Sie hat ein Auto|Sie hat ~kein Auto|She has a car|She doesn't have a car|ein Auto → kein Auto (kein takes the same endings as ein).;Ich mache Hausaufgaben|Ich mache +keine Hausaufgaben|I do homework|I'm not doing homework|No article at all? Use kein-: keine Hausaufgaben.;Er kommt heute|Er kommt heute +nicht|He comes today|He isn't coming today|nicht often goes at the end of the sentence.;Ich mag den Film|Ich mag den Film +nicht|I like the film|I don't like the film|With der / die / das nouns use nicht, not kein.;Wir gehen ins Kino|Wir gehen +nicht ins Kino|We go to the cinema|We aren't going to the cinema|nicht goes before a place or direction.;Das Wetter ist schön|Das Wetter ist +nicht schön|The weather is nice|The weather isn't nice|nicht goes before an adjective.": [
+  "langNegate"
+ ],
+ "Ich habe einen Hund.": [
+  "langDialogue"
+ ],
+ "Ich habe keinen Bruder|I don't have a brother;Er kommt heute nicht|He isn't coming today;Wir gehen nicht ins Kino|We are not going to the cinema;Sie hat kein Auto|She doesn't have a car;Ich mag den Film nicht|I don't like the film;Ich mache keine Hausaufgaben|I'm not doing homework": [
+  "langOrder"
+ ],
+ "Ich heiße Anna.": [
+  "langDialogue"
+ ],
+ "Ich heiße Lea.": [
+  "langDialogue"
+ ],
+ "Ich komme aus England.": [
+  "langDialogue"
+ ],
+ "Ich lerne Deutsch, weil es Spaß macht|I learn German because it is fun;Ich bleibe zu Hause, weil ich müde bin|I'm staying home because I'm tired;Er sagt, dass er Hunger hat|He says that he is hungry;Ich kann heute Tennis spielen|I can play tennis today;Wir wollen morgen ins Kino gehen|We want to go to the cinema tomorrow;Sie hat gestern Fußball gespielt|She played football yesterday": [
+  "langOrder"
+ ],
+ "Ich möchte ein Brot, bitte.": [
+  "langDialogue"
+ ],
+ "Ich möchte zwei Brötchen, bitte.": [
+  "langDialogue"
+ ],
+ "Ich wohne in Berlin.": [
+  "langDialogue"
+ ],
+ "If it rains, we will stay in.": [
+  "punctFixer"
+ ],
+ "il / elle": [
+  "langVerbs"
+ ],
+ "Il est trois heures.": [
+  "langDialogue"
+ ],
+ "ils / elles": [
+  "langVerbs"
+ ],
+ "Imperfect": [
+  "langVerbs"
+ ],
+ "In the dark corner two glowing eyes blink open and a tiny dragon sneezes fire!": [
+  "storyMountain"
+ ],
+ "In years, German says “hundreds”: neunzehnhundert… (nineteen hundred …).": [
+  "langNumbers"
+ ],
+ "increase number in front of {0}": [
+  "equationBalancer"
+ ],
+ "ink ?": [
+  "separation"
+ ],
+ "Ink (a mixture of coloured substances)": [
+  "separation"
+ ],
+ "Input": [
+  "functionMachine"
+ ],
+ "input number": [
+  "functionMachine"
+ ],
+ "ir + a + infinitive.": [
+  "langVerbs"
+ ],
+ "iron(III) oxide + carbon monoxide → iron + carbon dioxide": [
+  "equationBalancer"
+ ],
+ "Irregular plural: the whole word changes.": [
+  "wordMaker"
+ ],
+ "is already in its simplest form.": [
+  "ratioBar"
+ ],
+ "is at the top: nothing in this web eats it (an apex predator).": [
+  "foodWeb"
+ ],
+ "is filled with cell sap": [
+  "cellExplorer"
+ ],
+ "Is it far?": [
+  "langDialogue"
+ ],
+ "is the jelly-like part where most chemical reactions happen": [
+  "cellExplorer"
+ ],
+ "is where photosynthesis happens": [
+  "cellExplorer"
+ ],
+ "is where proteins are made": [
+  "cellExplorer"
+ ],
+ "is where respiration releases energy": [
+  "cellExplorer"
+ ],
+ "it was raining": [
+  "clauseCombiner"
+ ],
+ "It's three o'clock.": [
+  "langDialogue"
+ ],
+ "J'ai douze ans.": [
+  "langDialogue"
+ ],
+ "J'ai un chat noir|I have a black cat;Elle habite dans une grande maison|She lives in a big house;Il a un livre intéressant|He has an interesting book;Voici une petite fille|Here is a little girl;Nous avons une voiture rouge|We have a red car;Ils ont un nouveau professeur|They have a new teacher": [
+  "langOrder"
+ ],
+ "J'aime le chocolat.": [
+  "langDialogue"
+ ],
+ "J'habite à Londres.": [
+  "langDialogue"
+ ],
+ "J'habite à Manchester.": [
+  "langDialogue"
+ ],
+ "Ja, einen Apfelkuchen, bitte.": [
+  "langDialogue"
+ ],
+ "Ja, gerne!": [
+  "langDialogue"
+ ],
+ "Ja, ich habe eine Schwester.": [
+  "langDialogue"
+ ],
+ "Je m'appelle Léa.": [
+  "langDialogue"
+ ],
+ "Je m'appelle Maya.": [
+  "langDialogue"
+ ],
+ "Je ne parle pas anglais|I don't speak English;Il n'aime pas le sport|He doesn't like sport;Elle ne joue pas au football|She doesn't play football;Nous ne mangeons pas de viande|We don't eat meat;Tu n'as pas de frère|You don't have a brother;Ils ne sont pas contents|They are not happy": [
+  "langOrder"
+ ],
+ "Je parle français|Je +ne parle +pas français|I speak French|I don't speak French|ne goes before the verb, pas goes after it.;Elle joue au tennis|Elle +ne joue +pas au tennis|She plays tennis|She doesn't play tennis|The verb is wrapped: ne + verb + pas.;Il aime le chocolat|Il ~n'aime +pas le chocolat|He likes chocolate|He doesn't like chocolate|Before a vowel sound ne becomes n'.;J'ai un frère|~Je ~n'ai +pas ~de frère|I have a brother|I don't have a brother|After pas, un / une / du / des change to de (d' before a vowel).;Nous mangeons du pain|Nous +ne mangeons +pas ~de pain|We eat bread|We don't eat bread|du becomes de after pas.;Il y a un chat|Il ~n'y a +pas ~de chat|There is a cat|There isn't a cat|il y a → il n'y a pas de.;Ils sont contents|Ils +ne sont +pas contents|They are happy|They are not happy|être works the same way: ne sont pas.": [
+  "langNegate"
+ ],
+ "Je suis très contente.": [
+  "langDialogue"
+ ],
+ "Join the clauses": [
+  "clauseCombiner"
+ ],
+ "Jonas": [
+  "langDialogue"
+ ],
+ "joué": [
+  "langVerbs"
+ ],
+ "juego,juegas,juega,jugamos,jugáis,juegan": [
+  "langVerbs"
+ ],
+ "Just add it on: the root word does not change.": [
+  "wordMaker"
+ ],
+ "Just the drink. That's two euros.": [
+  "langDialogue"
+ ],
+ "Kai found a shell on the beach.": [
+  "punctFixer"
+ ],
+ "kann,kannst,kann,können,könnt,können": [
+  "langVerbs"
+ ],
+ "Katze": [
+  "langAgree"
+ ],
+ "Katzen": [
+  "langAgree"
+ ],
+ "Keep the e after c or g so the sound stays soft.": [
+  "wordMaker"
+ ],
+ "kein negates a noun with ein/no article (kein Auto, keinen Bruder). nicht negates everything else and often sits near the end, before a place or an adjective.": [
+  "langOrder"
+ ],
+ "knife|silent k at the start|kn;knee|silent k: bends in the middle of your leg|kn;gnat|silent g: a tiny biting fly|gn;wrist|silent w: joins hand and arm|wr;write|silent w: use a pen to ___|wr;lamb|silent b: a baby sheep|mb;comb|silent b: tidies your hair|mb;thumb|silent b: your short, fat finger|mb;listen|silent t: use your ears|st;castle|silent t: has towers and a moat|st;whistle|silent t: blow to make a sharp sound|st;island|silent s: land with sea all round|s;answer|silent w: reply to a question|w;honest|silent h: tells the truth|h;autumn|silent n: leaves fall|mn;climb|silent b: go up a tree|mb": [
+  "spellingLCWC"
+ ],
+ "Knock-on effects (fainter badges), which may also happen: {0}{1}{2}": [
+  "foodWeb"
+ ],
+ "können": [
+  "langVerbs"
+ ],
+ "l'école|school;la classe|class;le professeur|teacher;le livre|book;le cahier|exercise book;le stylo|pen;la trousse|pencil case;le cartable|school bag": [
+  "langCore"
+ ],
+ "la chatte": [
+  "langAgree"
+ ],
+ "la chica": [
+  "langAgree"
+ ],
+ "la fille": [
+  "langAgree"
+ ],
+ "la gata": [
+  "langAgree"
+ ],
+ "la madre|mother;el padre|father;la hermana|sister;el hermano|brother;la abuela|grandmother;el abuelo|grandfather;el tío|uncle;la tía|aunt": [
+  "langCore"
+ ],
+ "la mère|mother;le père|father;la sœur|sister;le frère|brother;la grand-mère|grandmother;le grand-père|grandfather;l'oncle|uncle;la tante|aunt": [
+  "langCore"
+ ],
+ "la niña": [
+  "langAgree"
+ ],
+ "Landed on": [
+  "probSim"
+ ],
+ "las chicas": [
+  "langAgree"
+ ],
+ "las gatas": [
+  "langAgree"
+ ],
+ "las niñas": [
+  "langAgree"
+ ],
+ "le chat": [
+  "langAgree"
+ ],
+ "le garçon": [
+  "langAgree"
+ ],
+ "le pain|bread;le fromage|cheese;le lait|milk;le café|coffee;la pomme|apple;le gâteau|cake;le jus d'orange|orange juice;l'eau|water": [
+  "langCore"
+ ],
+ "Le serveur": [
+  "langDialogue"
+ ],
+ "left behind": [
+  "separation"
+ ],
+ "Length": [
+  "measure"
+ ],
+ "les amies": [
+  "langAgree"
+ ],
+ "les amis": [
+  "langAgree"
+ ],
+ "les chats": [
+  "langAgree"
+ ],
+ "les chattes": [
+  "langAgree"
+ ],
+ "les filles": [
+  "langAgree"
+ ],
+ "les garçons": [
+  "langAgree"
+ ],
+ "less {0}": [
+  "chartBuilder"
+ ],
+ "less right": [
+  "coordGrid"
+ ],
+ "less up": [
+  "coordGrid"
+ ],
+ "libro|book|m;lápiz|pencil|m;gato|cat|m;perro|dog|m;chico|boy|m;hermano|brother|m;bolígrafo|pen|m;ordenador|computer|m;cuaderno|exercise book|m;padre|father|m;día*|day|m;mapa*|map|m;mesa|table|f;silla|chair|f;puerta|door|f;ventana|window|f;chica|girl|f;hermana|sister|f;casa|house|f;mochila|school bag|f;escuela|school|f;ciudad|city|f;mano*|hand|f;madre|mother|f": [
+  "langGender"
+ ],
+ "Line graph": [
+  "chartBuilder"
+ ],
+ "Liquid": [
+  "particleModel"
+ ],
+ "Liquid (water)": [
+  "particleModel"
+ ],
+ "LIQUID: particles are still close and touching, but they can slide past each other. That is why a liquid flows and takes the shape of its container.": [
+  "particleModel"
+ ],
+ "Listen, then pick or type": [
+  "langListen"
+ ],
+ "livre|book|m;stylo|pen|m;chat|cat|m;chien|dog|m;garçon|boy|m;frère|brother|m;sac|bag|m;cahier|exercise book|m;père|father|m;fromage|cheese|m;table|table|f;chaise|chair|f;porte|door|f;fenêtre|window|f;fille|girl|f;sœur|sister|f;maison|house|f;trousse|pencil case|f;souris|mouse|f;voiture|car|f;mère|mother|f;pomme|apple|f": [
+  "langGender"
+ ],
+ "Longitudinal": [
+  "waves"
+ ],
+ "Longitudinal wave (like sound): the particles vibrate backwards and forwards, parallel to the direction the wave travels, making compressions (squashed up) and rarefactions (spread out). Wavelength = compression to compression.": [
+  "waves"
+ ],
+ "Look again": [
+  "spellingLCWC"
+ ],
+ "Look at the dashed lines: the {0} one reaches further, so it is bigger. Sum = {1}.": [
+  "fractionWall"
+ ],
+ "Look at the tricky part (highlighted). Say it, trace it in the air, then cover.": [
+  "spellingLCWC"
+ ],
+ "Look out!": [
+  "punctFixer"
+ ],
+ "Look, cover, write, check": [
+  "spellingLCWC"
+ ],
+ "los chicos": [
+  "langAgree"
+ ],
+ "los gatos": [
+  "langAgree"
+ ],
+ "los niños": [
+  "langAgree"
+ ],
+ "lundi|Monday;mardi|Tuesday;mercredi|Wednesday;jeudi|Thursday;vendredi|Friday;samedi|Saturday;dimanche|Sunday;aujourd'hui|today": [
+  "langCore"
+ ],
+ "lunes|Monday;martes|Tuesday;miércoles|Wednesday;jueves|Thursday;viernes|Friday;sábado|Saturday;domingo|Sunday;hoy|today": [
+  "langCore"
+ ],
+ "m = 0: a flat line. c = {0}: it crosses the y-axis at (0, {1}).": [
+  "linearGraph"
+ ],
+ "mag,magst,mag,mögen,mögt,mögen": [
+  "langVerbs"
+ ],
+ "magnesium + hydrochloric acid → magnesium chloride + hydrogen": [
+  "equationBalancer"
+ ],
+ "magnesium + oxygen → magnesium oxide": [
+  "equationBalancer"
+ ],
+ "Make this sentence: <b>{0}</b>": [
+  "langAgree"
+ ],
+ "Mass number (protons + neutrons): <b>{0}</b>": [
+  "atomBuilder"
+ ],
+ "Me gusta el fútbol.": [
+  "langDialogue"
+ ],
+ "Me too! Where do you live?": [
+  "langDialogue"
+ ],
+ "mean {0}": [
+  "averagesDots"
+ ],
+ "Mean = {0} ÷ {1} = {2} · Range = {3} − {4} = {5}": [
+  "averagesDots"
+ ],
+ "median {0}": [
+  "averagesDots"
+ ],
+ "melting/freezing point": [
+  "particleModel"
+ ],
+ "Merci et bonne journée !": [
+  "langDialogue"
+ ],
+ "Merci, au revoir !": [
+  "langDialogue"
+ ],
+ "methane + oxygen → carbon dioxide + water": [
+  "equationBalancer"
+ ],
+ "möchte,möchtest,möchte,möchten,möchtet,möchten": [
+  "langVerbs"
+ ],
+ "möchten": [
+  "langVerbs"
+ ],
+ "mögen": [
+  "langVerbs"
+ ],
+ "Moi aussi, j'ai douze ans ! Tu habites où ?": [
+  "langDialogue"
+ ],
+ "Montag|Monday;Dienstag|Tuesday;Mittwoch|Wednesday;Donnerstag|Thursday;Freitag|Friday;Samstag|Saturday;Sonntag|Sunday;heute|today": [
+  "langCore"
+ ],
+ "more {0}": [
+  "atomBuilder",
+  "chartBuilder"
+ ],
+ "Most adjectives add -e for feminine and -s for plural. Watch the special ones: blanc → blanche, heureux → heureuse, and adjectives already ending in -e (rouge) don't add another -e.": [
+  "langAgree"
+ ],
+ "Most French adjectives go AFTER the noun. A few short, common ones (grand, petit, beau, bon, nouveau, jeune, vieux) go BEFORE it.": [
+  "langOrder"
+ ],
+ "Most plurals just add -s (also after a vowel + y: keys, days).": [
+  "wordMaker"
+ ],
+ "Most Spanish adjectives go AFTER the noun and agree with it: un gato negro, una casa grande.": [
+  "langOrder"
+ ],
+ "Muchas gracias. ¡Adiós!": [
+  "langDialogue"
+ ],
+ "Mum said, \"Dinner is ready.\"": [
+  "punctFixer"
+ ],
+ "muss,musst,muss,müssen,müsst,müssen": [
+  "langVerbs"
+ ],
+ "müssen": [
+  "langVerbs"
+ ],
+ "Mütter": [
+  "langSounds"
+ ],
+ "Muy bien. ¿Quieres algo de comer?": [
+  "langDialogue"
+ ],
+ "My cat (a fluffy tabby) sleeps all day.": [
+  "punctFixer"
+ ],
+ "My name is Léa.": [
+  "langDialogue"
+ ],
+ "n / kn": [
+  "phonicsBlender"
+ ],
+ "Na": [
+  "equationBalancer"
+ ],
+ "ne goes before the verb and pas after it: je ne parle pas. Before a vowel, ne becomes n'. After pas, un/une/du/des become de: je n'ai pas de frère.": [
+  "langOrder"
+ ],
+ "necessary|one collar (c), two sleeves (ss)|c,ss;separate|there is 'a rat' in sep-a-rat-e|a;familiar|it sounds like fa-mil-yar, but ends -iar|iar;believe|never believe a lie|lie;February|say it slowly: Feb-ru-ary|ru;library|li-BRAR-y, not 'liberry'|brar;favourite|favour + ite: keep the 'our'|our;interesting|in-ter-est-ing: four beats|ter;different|diff-er-ent: three beats|er;business|bus-i-ness: busy + ness|si;calendar|ends -ar, not -er|dar;actually|actual + ly|ual;because|be + cause|cau;beautiful|beauty + ful: y becomes i|eau;surprise|sur + prise: the r in the middle|rpr;address|two d's and two s's|dd,ss": [
+  "spellingLCWC"
+ ],
+ "Negation": [
+  "langOrder"
+ ],
+ "Nein, danke. Das ist alles.": [
+  "langDialogue"
+ ],
+ "Nein, ich habe keine Geschwister.": [
+  "langDialogue"
+ ],
+ "Neutrons (0)": [
+  "atomBuilder"
+ ],
+ "New pair": [
+  "langSounds"
+ ],
+ "New puzzle": [
+  "balance"
+ ],
+ "New round": [
+  "langGender"
+ ],
+ "New sentence": [
+  "wordClass"
+ ],
+ "New set": [
+  "spellingLCWC"
+ ],
+ "Next sentence": [
+  "langNegate",
+  "langOrder",
+  "punctFixer"
+ ],
+ "next word": [
+  "wordMaker"
+ ],
+ "Next word": [
+  "phonicsBlender",
+  "spellingLCWC"
+ ],
+ "Next word →": [
+  "langListen"
+ ],
+ "Nia holds a bright red balloon at the village fair.": [
+  "storyMountain"
+ ],
+ "Nia ties the balloon to her wrist and skips all the way home.": [
+  "storyMountain"
+ ],
+ "Nice to meet you, Lea! How old are you?": [
+  "langDialogue"
+ ],
+ "Nice to meet you, Maya! How old are you?": [
+  "langDialogue"
+ ],
+ "nitrogen + hydrogen → ammonia": [
+  "equationBalancer"
+ ],
+ "No {0} voice is available on this device, so there is no sound. Read it aloud yourself, then check the spelling.": [
+  "langCore"
+ ],
+ "No hablo inglés|I don't speak English;Mi hermano no come pescado|My brother doesn't eat fish;No tengo hermanos|I don't have siblings;Ellas no viven aquí|They (f) don't live here;No me gusta el fútbol|I don't like football;Yo no bailo|I don't dance": [
+  "langOrder"
+ ],
+ "no movement": [
+  "coordGrid"
+ ],
+ "No other row lines up exactly with this length.": [
+  "fractionWall"
+ ],
+ "No speaker on this device: say each sound out loud yourself as it lights up.": [
+  "phonicsBlender"
+ ],
+ "No, está cerca. Está a cinco minutos.": [
+  "langDialogue"
+ ],
+ "No, gracias.": [
+  "langDialogue"
+ ],
+ "No, I don't like football.": [
+  "langDialogue"
+ ],
+ "No, I have no siblings.": [
+  "langDialogue"
+ ],
+ "No, it's close. It's five minutes away.": [
+  "langDialogue"
+ ],
+ "No, thank you.": [
+  "langDialogue"
+ ],
+ "No, thanks. That's all.": [
+  "langDialogue"
+ ],
+ "Nominative": [
+  "langAgree"
+ ],
+ "Non, je n'aime pas le foot.": [
+  "langDialogue"
+ ],
+ "Non, merci.": [
+  "langDialogue"
+ ],
+ "normal": [
+  "lightRays"
+ ],
+ "not (before l)": [
+  "wordMaker"
+ ],
+ "not (before m, p, b)": [
+  "wordMaker"
+ ],
+ "not (before r)": [
+  "wordMaker"
+ ],
+ "not / the opposite": [
+  "wordMaker"
+ ],
+ "Not balanced — the {0} side is heavier.": [
+  "balance"
+ ],
+ "Not balanced yet. Look at the red tally boxes: which element has too many or too few atoms on one side?": [
+  "equationBalancer"
+ ],
+ "Not finished yet — use every word.": [
+  "langOrder"
+ ],
+ "Not that one, try again.": [
+  "cellExplorer"
+ ],
+ "Not that one. Try again!": [
+  "phonicsBlender"
+ ],
+ "Nothing left to take away from the left except the sack — try dividing instead.": [
+  "balance"
+ ],
+ "Nothing rolled yet. {0}": [
+  "probSim"
+ ],
+ "Nothing shaded yet.": [
+  "percentGrid"
+ ],
+ "Nothing to add here!": [
+  "langAgree"
+ ],
+ "Noun": [
+  "wordClass"
+ ],
+ "Now": [
+  "tenseTimeline"
+ ],
+ "Now flip the switch…": [
+  "langNegate"
+ ],
+ "Now tap the part of the mountain where it belongs.": [
+  "storyMountain"
+ ],
+ "Nucleus": [
+  "cellExplorer"
+ ],
+ "number line": [
+  "numberLine"
+ ],
+ "number of shaded squares": [
+  "percentGrid"
+ ],
+ "o,as,a,amos,áis,an": [
+  "langVerbs"
+ ],
+ "o,es,e,emos,éis,en": [
+  "langVerbs"
+ ],
+ "o,es,e,imos,ís,en": [
+  "langVerbs"
+ ],
+ "OK! Shall we play together at break?": [
+  "langDialogue"
+ ],
+ "OK. That's 3 euros.": [
+  "langDialogue"
+ ],
+ "On a line": [
+  "angleExplorer"
+ ],
+ "on an axis": [
+  "coordGrid"
+ ],
+ "One bulb has been removed from the series loop, so the circuit is broken and every bulb goes out.": [
+  "circuitBuilder"
+ ],
+ "One each, round and round…": [
+  "sharing"
+ ],
+ "One evening he creeps down the steps, holding a candle.": [
+  "storyMountain"
+ ],
+ "Ones": [
+  "placeValue"
+ ],
+ "Only one e where they meet.": [
+  "wordMaker"
+ ],
+ "Opening": [
+  "storyMountain"
+ ],
+ "Or choose an element:": [
+  "atomBuilder"
+ ],
+ "ou|Like “oo” in “food”.|rouge,jour;u|Round your lips as for “oo”, but say “ee”.|tu,rue;on|Nasal: air goes through the nose, and you don't say the n.|bon,maison;an / en|Nasal “ah”: again no n sound.|dans,enfant;in / ain|Nasal, like the “e” in “bed” said through the nose.|matin,pain;eu|Round your lips and say “uh”.|deux,peu;oi|Sounds like “wa”.|moi,trois;ch|Like “sh”.|chat,chien;j / ge / gi|Like the “s” in “measure”.|jaune,orange;gn|Like “ny” in “canyon”.|montagne,espagnol;é|A tight, closed “ay” sound.|été,écoute;è / ê|More open, like “e” in “bed”.|mère,fête;qu|Just a “k” — the u is silent.|qui,quatre;h|Always silent.|hôtel,homme;final letters|The last consonant is usually silent (t, d, s, x).|petit,grand,vous;liaison|A silent final s links to the next vowel and sounds like z.|les amis,vous avez": [
+  "langSounds"
+ ],
+ "Oui, avec plaisir !": [
+  "langDialogue"
+ ],
+ "Oui, j'aime le foot !": [
+  "langDialogue"
+ ],
+ "Oui, un croissant, s'il vous plaît.": [
+  "langDialogue"
+ ],
+ "Our teacher, Mr Lee, smiled.": [
+  "punctFixer"
+ ],
+ "Our.. noisy.J puppy.N barked.V loudly.A at.. the.. shy.J postman.N": [
+  "wordClass"
+ ],
+ "Output": [
+  "functionMachine"
+ ],
+ "Paper chromatography: the solvent soaks up the paper and carries the substances with it. Substances that dissolve better in the solvent are carried further. Draw the start line in pencil, because pencil does not dissolve and run. Rf = distance moved by the substance ÷ distance moved by the solvent.": [
+  "separation"
+ ],
+ "paper strip": [
+  "separation"
+ ],
+ "Parallel": [
+  "circuitBuilder"
+ ],
+ "Parallel: each bulb is connected straight across the cells, so each gets the full voltage and stays just as bright. The current splits between the branches and adds up again. Adding branches lowers the total resistance.": [
+  "circuitBuilder"
+ ],
+ "Parallel: the other bulbs are still lit because each has its own complete loop back to the cell.": [
+  "circuitBuilder"
+ ],
+ "parlé": [
+  "langVerbs"
+ ],
+ "Particles in a container that change as the temperature changes": [
+  "particleModel"
+ ],
+ "Past": [
+  "tenseTimeline"
+ ],
+ "Pause": [
+  "separation",
+  "waves"
+ ],
+ "peña": [
+  "langSounds"
+ ],
+ "pencil start line": [
+  "separation"
+ ],
+ "Perfect": [
+  "langVerbs",
+  "tenseTimeline"
+ ],
+ "Permanent vacuole": [
+  "cellExplorer"
+ ],
+ "petit,petite,petits,petites;grand,grande,grands,grandes;content,contente,contents,contentes;intelligent,intelligente,intelligents,intelligentes;français,française,français,françaises;vert,verte,verts,vertes;blanc,blanche,blancs,blanches;heureux,heureuse,heureux,heureuses;sportif,sportive,sportifs,sportives;rouge,rouge,rouges,rouges": [
+  "langAgree"
+ ],
+ "Pick a colour, then tap the words in the sentence that belong to that word class. Little words like 'the' and 'and' stay unpainted.": [
+  "wordClass"
+ ],
+ "Pick a root word, then drag an ending (or a beginning) onto the machine. Watch what happens to the spelling: which letters get dropped, doubled or changed?": [
+  "wordMaker"
+ ],
+ "Pick a rule, choose an input and send it through the machine. Fill the table, then hide the rule and see if you can work it out.": [
+  "functionMachine"
+ ],
+ "Pick a transformation. Drag the blue shape, the mirror line or the centre of turn and watch the image move.": [
+  "transformGrid"
+ ],
+ "Pick a type of cell and tap its parts to find out what each one does. Then try the challenge!": [
+  "cellExplorer"
+ ],
+ "Pick it": [
+  "langListen"
+ ],
+ "Pictogram": [
+  "chartBuilder"
+ ],
+ "Pie chart": [
+  "chartBuilder"
+ ],
+ "Pip follows a trail of glowing screws towards a strange humming sound.": [
+  "storyMountain"
+ ],
+ "Pip scrambles into a tunnel, and the driver spots him and stops.": [
+  "storyMountain"
+ ],
+ "Plant cell": [
+  "cellExplorer"
+ ],
+ "plant cells": [
+  "cellExplorer"
+ ],
+ "Plant cells have everything an animal cell has, plus a cell wall, chloroplasts and a permanent vacuole.": [
+  "cellExplorer"
+ ],
+ "Plasmids": [
+  "cellExplorer"
+ ],
+ "Play": [
+  "separation",
+  "waves"
+ ],
+ "Play again ↻": [
+  "langListen"
+ ],
+ "play the word": [
+  "langListen"
+ ],
+ "Plurals": [
+  "wordMaker"
+ ],
+ "plus one": [
+  "langNumbers"
+ ],
+ "Pointer at ({0}, {1}) — {2}": [
+  "coordGrid"
+ ],
+ "Prefixes": [
+  "wordMaker"
+ ],
+ "Present": [
+  "langVerbs"
+ ],
+ "Press + to add a counter to a column. Get to 10 and they swap for one counter in the next column. Try × 10 and ÷ 10 too.": [
+  "placeValue"
+ ],
+ "Press the speaker and listen closely. Pick the word you heard, or switch to typing it — the special-letter keys are there to help.": [
+  "langListen"
+ ],
+ "Preterite": [
+  "langVerbs"
+ ],
+ "previous word": [
+  "wordMaker"
+ ],
+ "primary consumer": [
+  "foodWeb"
+ ],
+ "Progress of the experiment": [
+  "separation"
+ ],
+ "Progressive": [
+  "tenseTimeline"
+ ],
+ "Protons (+)": [
+  "atomBuilder"
+ ],
+ "puedo,puedes,puede,podemos,podéis,pueden": [
+  "langVerbs"
+ ],
+ "Punctuation fixer": [
+  "punctFixer"
+ ],
+ "pure water collected": [
+  "separation"
+ ],
+ "Purple sounds are a split digraph: two letters make ONE sound.": [
+  "phonicsBlender"
+ ],
+ "push {0} N": [
+  "forceMotion"
+ ],
+ "Push <b>4 N</b>": [
+  "forceMotion"
+ ],
+ "Push, resist, accelerate": [
+  "forceMotion"
+ ],
+ "Put it back": [
+  "clauseCombiner"
+ ],
+ "Put no straight before the verb: no hablo. There is no second word like French pas. With gustar: no me gusta.": [
+  "langOrder"
+ ],
+ "Quadrilateral": [
+  "angleExplorer"
+ ],
+ "quarter past": [
+  "clockFace"
+ ],
+ "quarter past {0}": [
+  "clockFace"
+ ],
+ "quarter to": [
+  "clockFace"
+ ],
+ "quarter to {0}": [
+  "clockFace"
+ ],
+ "Questions": [
+  "langOrder"
+ ],
+ "quiero,quieres,quiere,queremos,queréis,quieren": [
+  "langVerbs"
+ ],
+ "r / wr": [
+  "phonicsBlender"
+ ],
+ "Rabbit": [
+  "foodWeb"
+ ],
+ "Range": [
+  "averagesDots"
+ ],
+ "range {0}": [
+  "averagesDots"
+ ],
+ "rarefaction": [
+  "waves"
+ ],
+ "Ratio bar model": [
+  "ratioBar"
+ ],
+ "Read the scale": [
+  "measure"
+ ],
+ "Ready to roll": [
+  "probSim"
+ ],
+ "Real ecosystems are complicated, so these are the likely first changes.": [
+  "foodWeb"
+ ],
+ "Red": [
+  "probSim"
+ ],
+ "Reflect": [
+  "transformGrid"
+ ],
+ "Reflect in {0}{1}: each point lands the same distance on the other side of the mirror.": [
+  "transformGrid"
+ ],
+ "relative frequency": [
+  "probSim"
+ ],
+ "Relative frequency bar chart": [
+  "probSim"
+ ],
+ "remainder {0}": [
+  "sharing"
+ ],
+ "Remember this: always look both ways.": [
+  "punctFixer"
+ ],
+ "remove one from {0}": [
+  "placeValue"
+ ],
+ "repeat({0},1fr)": [
+  "placeValue",
+  "sharing"
+ ],
+ "Replay": [
+  "separation"
+ ],
+ "Reset": [
+  "averagesDots",
+  "foodWeb",
+  "forceMotion",
+  "langVerbs",
+  "numberLine",
+  "sharing"
+ ],
+ "Resistance: air (grows with speed)": [
+  "forceMotion"
+ ],
+ "Resolution": [
+  "storyMountain"
+ ],
+ "Reveal x": [
+  "balance"
+ ],
+ "Rf of A =": [
+  "separation"
+ ],
+ "Rf of B =": [
+  "separation"
+ ],
+ "Rf of C =": [
+  "separation"
+ ],
+ "Ribosomes": [
+  "cellExplorer"
+ ],
+ "right angle": [
+  "angleExplorer"
+ ],
+ "Right now": [
+  "tenseTimeline"
+ ],
+ "Right now (-ing)": [
+  "langVerbs"
+ ],
+ "rojo|red;azul|blue;verde|green;amarillo|yellow;negro|black;blanco|white;gris|grey;rosa|pink": [
+  "langCore"
+ ],
+ "Role-play: choose your reply": [
+  "langDialogue"
+ ],
+ "Roll ×1": [
+  "probSim"
+ ],
+ "Roll it once, then roll it a hundred times. Do the bars match what you predicted? Then make it unfair and see what changes.": [
+  "probSim"
+ ],
+ "Rolled a": [
+  "probSim"
+ ],
+ "rot|red;blau|blue;grün|green;gelb|yellow;schwarz|black;weiß|white;grau|grey;rosa|pink": [
+  "langCore"
+ ],
+ "Rotate": [
+  "transformGrid"
+ ],
+ "Rotate {0}° {1} about ({2}, {3}): the shape turns but keeps its size.": [
+  "transformGrid"
+ ],
+ "rouge|red;bleu|blue;vert|green;jaune|yellow;noir|black;blanc|white;gris|grey;rose|pink": [
+  "langCore"
+ ],
+ "Round a point": [
+  "angleExplorer"
+ ],
+ "rub out": [
+  "punctFixer"
+ ],
+ "Rule of thumb: nouns ending in -o are usually el, ending in -a usually la. Watch out for the ★ ones: el día, el mapa, la mano. And -ción is always la (la canción).": [
+  "langGender"
+ ],
+ "Run 1 s": [
+  "forceMotion"
+ ],
+ "salt crystals": [
+  "separation"
+ ],
+ "Salt solution (a soluble solid dissolved in a liquid)": [
+  "separation"
+ ],
+ "Salty water (to collect the water)": [
+  "separation"
+ ],
+ "Salut ! Je m'appelle Hugo. Et toi, comment tu t'appelles ?": [
+  "langDialogue"
+ ],
+ "Sam offers the dragon a warm bun and it calms right down.": [
+  "storyMountain"
+ ],
+ "Same length as:": [
+  "fractionWall"
+ ],
+ "Same number of protons but a different number of neutrons: this is an isotope of": [
+  "atomBuilder"
+ ],
+ "Sand and water (an insoluble solid and a liquid)": [
+  "separation"
+ ],
+ "Say each sound": [
+  "phonicsBlender"
+ ],
+ "Say it in the negative": [
+  "langNegate"
+ ],
+ "Say it with numbers": [
+  "langNumbers"
+ ],
+ "Say the word out loud, tap the card to check, and hear it. Words you miss come round again. Colours show the gender: blue masculine, pink feminine, green neuter.": [
+  "langFlash"
+ ],
+ "Say the word, then choose the spelling that looks right.": [
+  "phonicsBlender"
+ ],
+ "schlafe,schläfst,schläft,schlafen,schlaft,schlafen": [
+  "langVerbs"
+ ],
+ "schön": [
+  "langSounds"
+ ],
+ "School": [
+  "langCore"
+ ],
+ "screw it back in": [
+  "circuitBuilder"
+ ],
+ "secondary consumer": [
+  "foodWeb"
+ ],
+ "See score →": [
+  "langListen"
+ ],
+ "Sehr gut! Dialog beendet.": [
+  "langDialogue"
+ ],
+ "Send a few numbers through and look for the pattern in the table.": [
+  "functionMachine"
+ ],
+ "Send a number through the machine.": [
+  "functionMachine"
+ ],
+ "Send it through ▶": [
+  "functionMachine"
+ ],
+ "Separate the mixture": [
+  "separation"
+ ],
+ "Series": [
+  "circuitBuilder"
+ ],
+ "Series: there is only one loop, so the current is the same everywhere. The cell's voltage is shared between the bulbs, so more bulbs means dimmer bulbs. Total resistance =": [
+  "circuitBuilder"
+ ],
+ "Set complete: {0} of {1} first time.": [
+  "spellingLCWC"
+ ],
+ "Set the clock": [
+  "clockFace"
+ ],
+ "Set the ratio, then change the total to share. Drag the slider to scale the ratio up and see the table fill in.": [
+  "ratioBar"
+ ],
+ "Share and group": [
+  "sharing"
+ ],
+ "Share between groups": [
+  "sharing"
+ ],
+ "She couldn't find it.": [
+  "punctFixer"
+ ],
+ "She grabs the string a whisker before the thorns can pop it.": [
+  "storyMountain"
+ ],
+ "she kept on running": [
+  "clauseCombiner"
+ ],
+ "she loves swimming": [
+  "clauseCombiner"
+ ],
+ "she was very tired": [
+  "clauseCombiner"
+ ],
+ "ship:sh,i,p chop:ch,o,p thin:th,i,n frog:f,r,o,g clap:c,l,a,p cake:c,a^,k,e^ kite:k,i^,t,e^ rain:r,ai,n moon:m,oo,n night:n,igh,t boat:b,oa,t sheep:sh,ee,p torch:t,or,ch farm:f,ar,m queen:qu,ee,n duck:d,u,ck song:s,o,ng smile:s,m,i^,l,e^ phone:ph,o^,n,e^ knife:kn,i^,f,e^ train:t,r,ai,n green:g,r,ee,n brown:b,r,ow,n flower:f,l,ow,er spoon:s,p,oo,n snow:s,n,ow tune:t,u^,n,e^": [
+  "phonicsBlender"
+ ],
+ "Short vowel + one consonant at the end: double the consonant before a vowel ending.": [
+  "wordMaker"
+ ],
+ "Show English": [
+  "langDialogue"
+ ],
+ "Show me": [
+  "langVerbs"
+ ],
+ "show the English": [
+  "langListen"
+ ],
+ "Show y = x": [
+  "linearGraph"
+ ],
+ "Shuffle data": [
+  "averagesDots"
+ ],
+ "Sí, ¿dónde está el parque, por favor?": [
+  "langDialogue"
+ ],
+ "Sí, una tortilla, por favor.": [
+  "langDialogue"
+ ],
+ "sie / Sie": [
+  "langVerbs"
+ ],
+ "Silent e: drop it before an ending that starts with a vowel.": [
+  "wordMaker"
+ ],
+ "Silent letters": [
+  "spellingLCWC"
+ ],
+ "Simple": [
+  "tenseTimeline"
+ ],
+ "Simple distillation: the solution boils and the water evaporates. The vapour is cooled in the condenser and turns back into liquid (condenses), which is collected as pure water. The salt stays behind in the flask. The thermometer reads about 100 °C while pure water boils.": [
+  "separation"
+ ],
+ "Simple past": [
+  "langVerbs"
+ ],
+ "Skip →": [
+  "langListen"
+ ],
+ "slide 0 to 100": [
+  "langNumbers"
+ ],
+ "Slowly, the door creaked open.": [
+  "punctFixer"
+ ],
+ "Small extra rings of DNA that carry a few extra genes.": [
+  "cellExplorer"
+ ],
+ "Snap to 5 min": [
+  "clockFace"
+ ],
+ "So far today": [
+  "tenseTimeline"
+ ],
+ "sodium + chlorine → sodium chloride": [
+  "equationBalancer"
+ ],
+ "soixante et onze": [
+  "langNumbers"
+ ],
+ "Solid": [
+  "particleModel"
+ ],
+ "Solid (ice)": [
+  "particleModel"
+ ],
+ "SOLID: particles are packed close together in a regular pattern. Strong forces hold them in place, so they only vibrate. That is why a solid keeps its shape.": [
+  "particleModel"
+ ],
+ "Solo la bebida. Son dos euros.": [
+  "langDialogue"
+ ],
+ "solvent front": [
+  "separation"
+ ],
+ "Some words ending in f or fe change to -ves.": [
+  "wordMaker"
+ ],
+ "Something is not fair here…": [
+  "probSim"
+ ],
+ "something starts to go wrong": [
+  "storyMountain"
+ ],
+ "sound {0}": [
+  "phonicsBlender"
+ ],
+ "Sound buttons": [
+  "phonicsBlender"
+ ],
+ "Sound buttons and spelling choices": [
+  "phonicsBlender"
+ ],
+ "Sound explorer": [
+  "langSounds"
+ ],
+ "Soy alto.": [
+  "langDialogue"
+ ],
+ "Spanish": [
+  "langCore"
+ ],
+ "Special characters": [
+  "langCore"
+ ],
+ "Speech marks": [
+  "punctFixer"
+ ],
+ "speed (m/s)": [
+  "forceMotion"
+ ],
+ "Spinner": [
+  "probSim"
+ ],
+ "spins like a tail to move the bacterium": [
+  "cellExplorer"
+ ],
+ "Spot on first time!": [
+  "spellingLCWC"
+ ],
+ "Start again": [
+  "punctFixer"
+ ],
+ "Start at": [
+  "numberLine"
+ ],
+ "Step": [
+  "waves"
+ ],
+ "Stop challenge": [
+  "cellExplorer"
+ ],
+ "straight line": [
+  "angleExplorer"
+ ],
+ "Straight-line graphs: y = mx + c": [
+  "linearGraph"
+ ],
+ "strengthens and supports the cell": [
+  "cellExplorer"
+ ],
+ "Strengthens the cell and supports it. In plant cells it is made of cellulose.": [
+  "cellExplorer"
+ ],
+ "stroke-dasharray=\"6 5\"": [
+  "foodWeb"
+ ],
+ "Study the word, cover it, write it from memory, then check. The amber letters show what to remember next time.": [
+  "spellingLCWC"
+ ],
+ "subordinate clause": [
+  "clauseCombiner"
+ ],
+ "Subordinate clause first, so it is followed by a comma.": [
+  "clauseCombiner"
+ ],
+ "Suffixes": [
+  "wordMaker"
+ ],
+ "suis,es,est,sommes,êtes,sont": [
+  "langVerbs"
+ ],
+ "Super ! Tu aimes le foot ?": [
+  "langDialogue"
+ ],
+ "Swap the clauses": [
+  "clauseCombiner"
+ ],
+ "Swim": [
+  "chartBuilder"
+ ],
+ "switch {0}": [
+  "circuitBuilder"
+ ],
+ "Switch between masculine, feminine, singular and plural — and watch the ending of the adjective change.": [
+  "langAgree"
+ ],
+ "Switch, currently {0}. Activate to toggle": [
+  "circuitBuilder"
+ ],
+ "Tails": [
+  "probSim"
+ ],
+ "Tap a <b>producer</b> (a plant) to start your food chain.": [
+  "foodWeb"
+ ],
+ "Tap a part of the cell to find out what it does.": [
+  "cellExplorer"
+ ],
+ "Tap a piece to make fraction A (blue). Tap again on another row to make B (orange). Lighter pieces show equal lengths.": [
+  "fractionWall"
+ ],
+ "Tap a spelling to see how it sounds, then tap the example words to hear them. Try the slow button, then the listening game below.": [
+  "langSounds"
+ ],
+ "Tap a square to add a counter. Tap a counter to change its colour, or drag it to a new square. The number bond shows the whole and its two parts.": [
+  "tenFrame"
+ ],
+ "Tap an organism to remove it, then see which populations rise (▲) or fall (▼).": [
+  "foodWeb"
+ ],
+ "Tap each sound, then blend them into a word. Or switch to 'Which spelling?' to pick the letters that make a sound. Turn your sound on!": [
+  "phonicsBlender"
+ ],
+ "Tap or drag on the grid to paint squares. Tap a painted square to rub it out.": [
+  "areaPerimeter"
+ ],
+ "Tap the line to move the start, then hop in {0}s.": [
+  "numberLine"
+ ],
+ "Tap the line to place the counter, choose a step size, then hop forwards or back. Watch the jumps add up.": [
+  "numberLine"
+ ],
+ "tap to fit": [
+  "circuitBuilder"
+ ],
+ "Tasche": [
+  "langAgree"
+ ],
+ "Taschen": [
+  "langAgree"
+ ],
+ "Temperature": [
+  "chartBuilder"
+ ],
+ "Temperature in degrees Celsius": [
+  "particleModel"
+ ],
+ "Temperature through the day": [
+  "chartBuilder"
+ ],
+ "Tengo doce años.": [
+  "langDialogue"
+ ],
+ "Tengo un gato negro|I have a black cat;Vivo en una casa grande|I live in a big house;Mi hermana tiene el pelo largo|My sister has long hair;Tenemos un perro pequeño|We have a small dog;Es una chica simpática|She is a nice girl;Compro una mochila azul|I buy a blue school bag": [
+  "langOrder"
+ ],
+ "Tengo un gato.": [
+  "langDialogue"
+ ],
+ "tengo,tienes,tiene,tenemos,tenéis,tienen": [
+  "langVerbs"
+ ],
+ "Tens": [
+  "placeValue"
+ ],
+ "Tens are joined to units with a hyphen: vingt-deux, trente-cinq. Deux cents takes an s only when nothing follows.": [
+  "langNumbers"
+ ],
+ "Tense": [
+  "langVerbs"
+ ],
+ "Tenths": [
+  "placeValue"
+ ],
+ "tertiary consumer": [
+  "foodWeb"
+ ],
+ "Th": [
+  "placeValue"
+ ],
+ "Thank you very much. Goodbye!": [
+  "langDialogue"
+ ],
+ "Thank you, have a nice day!": [
+  "langDialogue"
+ ],
+ "Thank you! Goodbye!": [
+  "langDialogue"
+ ],
+ "Thank you! See you later!": [
+  "langDialogue"
+ ],
+ "Thanks, goodbye!": [
+  "langDialogue"
+ ],
+ "That change is not possible for this word.": [
+  "wordMaker"
+ ],
+ "That comes to four euros fifty.": [
+  "langDialogue"
+ ],
+ "That's the biggest column — can't go higher here!": [
+  "placeValue"
+ ],
+ "the (der-words)": [
+  "langAgree"
+ ],
+ "the baby giggled": [
+  "clauseCombiner"
+ ],
+ "The bacterium's genetic material floats free in the cytoplasm. There is no nucleus.": [
+  "cellExplorer"
+ ],
+ "The balloon drifts towards a thorny hedge and Nia dives to save it!": [
+  "storyMountain"
+ ],
+ "the battery was flat": [
+  "clauseCombiner"
+ ],
+ "The bus (which was late) finally arrived.": [
+  "punctFixer"
+ ],
+ "the bus arrives": [
+  "clauseCombiner"
+ ],
+ "the cake will burn": [
+  "clauseCombiner"
+ ],
+ "The cats' bowls are empty.": [
+  "punctFixer"
+ ],
+ "the children": [
+  "tenseTimeline"
+ ],
+ "The coin, die or spinner": [
+  "probSim"
+ ],
+ "The counter can't hop off the end of the line!": [
+  "numberLine"
+ ],
+ "the dog barked": [
+  "clauseCombiner"
+ ],
+ "The dog's bone is big.": [
+  "punctFixer"
+ ],
+ "The driver takes Pip home and mends his wobbly wheel.": [
+  "storyMountain"
+ ],
+ "The ending starts with a consonant, so the silent e stays.": [
+  "wordMaker"
+ ],
+ "The fox ran home.": [
+  "punctFixer"
+ ],
+ "The frame is empty.": [
+  "tenFrame"
+ ],
+ "The girls' coats hang here.": [
+  "punctFixer"
+ ],
+ "The ink contains A and C,": [
+  "separation"
+ ],
+ "The law of reflection: the angle of reflection is always equal to the angle of incidence. Both are measured from the normal, not from the mirror.": [
+  "lightRays"
+ ],
+ "the line y = −x": [
+  "transformGrid"
+ ],
+ "the line y = x": [
+  "transformGrid"
+ ],
+ "The Lost Robot": [
+  "storyMountain"
+ ],
+ "The Midnight Dragon": [
+  "storyMountain"
+ ],
+ "The moon — bright and full — rose over the hill.": [
+  "punctFixer"
+ ],
+ "the most exciting, scary moment": [
+  "storyMountain"
+ ],
+ "the origin": [
+  "coordGrid"
+ ],
+ "The park is at the end of the street, on the right.": [
+  "langDialogue"
+ ],
+ "the postman came": [
+  "clauseCombiner"
+ ],
+ "the problem is solved": [
+  "storyMountain"
+ ],
+ "the puppy licked her toes": [
+  "clauseCombiner"
+ ],
+ "The root word does not change.": [
+  "wordMaker"
+ ],
+ "The Runaway Balloon": [
+  "storyMountain"
+ ],
+ "The sack weighs {0}. Can you get there by balancing?": [
+  "balance"
+ ],
+ "The sack x has a secret weight. Drag 1-blocks on and off the pans, or press the buttons to do the same thing to both sides, until the sack is alone. What does x weigh?": [
+  "balance"
+ ],
+ "The speed has stopped rising: this is the terminal velocity.": [
+  "forceMotion"
+ ],
+ "The switch is open, so the circuit is broken. There is no complete loop, so no current flows and the bulbs are off.": [
+  "circuitBuilder"
+ ],
+ "the torch would not work": [
+  "clauseCombiner"
+ ],
+ "The verb is always the SECOND idea in a statement. If you start with time or place, the subject moves after the verb: Heute gehe ich … (not Heute ich gehe).": [
+  "langOrder"
+ ],
+ "the visitors arrived": [
+  "clauseCombiner"
+ ],
+ "the water is cold": [
+  "clauseCombiner"
+ ],
+ "The.. children.N laughed.V happily.A and.. splashed.V in.. the.. muddy.J puddle.N": [
+  "wordClass"
+ ],
+ "The.. old.J clock.N ticked.V steadily.A in.. the.. dark.J hall.N": [
+  "wordClass"
+ ],
+ "The.. silver.J rocket.N zoomed.V swiftly.A past.. a.. distant.J planet.N": [
+  "wordClass"
+ ],
+ "The.. tiny.J frog.N leapt.V quickly.A across.. the.. cold.J stream.N": [
+  "wordClass"
+ ],
+ "their|belongs to them: ___ coats are on the pegs|ei;there|a place: put it over ___|ere;hear|you do it with your ear|ear;here|not there: come ___|ere;whole|all of it, not a part|wh;hole|a gap you can dig|ole;knight|wore armour in old tales|kn,igh;night|when it is dark|igh;weather|rain, wind and sun|ea;whether|if: I wonder ___ it will rain|wh;break|to snap in two|ea;brake|slows a bike down|ake;flour|used to bake bread|our;flower|grows in the garden|ow;peace|calm and quiet|ea;piece|a slice of cake|ie;blew|the wind ___ hard|ew;blue|the colour of the sea|ue": [
+  "spellingLCWC"
+ ],
+ "There is only one sack — nothing to divide.": [
+  "balance"
+ ],
+ "These five events are jumbled. Drag each one (or tap it, then tap a part of the mountain) to the right place: opening, build-up, climax, resolution, ending.": [
+  "storyMountain"
+ ],
+ "they will wait here": [
+  "clauseCombiner"
+ ],
+ "This sentence has lost its punctuation! Choose a pen, then tap the gaps between words (or letters) where it belongs. Use Aa on a word for a capital letter.": [
+  "punctFixer"
+ ],
+ "Thousands": [
+  "placeValue"
+ ],
+ "time (s)": [
+  "forceMotion"
+ ],
+ "Time marker": [
+  "tenseTimeline"
+ ],
+ "Timeline": [
+  "tenseTimeline"
+ ],
+ "Tisch": [
+  "langAgree"
+ ],
+ "Tisch|table|m;Hund|dog|m;Stuhl|chair|m;Bruder|brother|m;Lehrer|teacher|m;Apfel|apple|m;Kuli|pen|m;Bleistift|pencil|m;Vater|father|m;Tür|door|f;Katze|cat|f;Schule|school|f;Schwester|sister|f;Mutter|mother|f;Lampe|lamp|f;Tasche|bag|f;Lehrerin|teacher (f)|f;Banane|banana|f;Buch|book|n;Haus|house|n;Auto|car|n;Mädchen*|girl|n;Fenster|window|n;Heft|exercise book|n;Kind|child|n;Zimmer|room|n;Handy|mobile phone|n": [
+  "langGender"
+ ],
+ "Tische": [
+  "langAgree"
+ ],
+ "Tischen": [
+  "langAgree"
+ ],
+ "to be": [
+  "langVerbs"
+ ],
+ "to be (state, place)": [
+  "langVerbs"
+ ],
+ "to be (traits)": [
+  "langVerbs"
+ ],
+ "to be able to": [
+  "langVerbs"
+ ],
+ "to become, will": [
+  "langVerbs"
+ ],
+ "to buy": [
+  "langVerbs"
+ ],
+ "to choose": [
+  "langVerbs"
+ ],
+ "to come": [
+  "langVerbs"
+ ],
+ "to dance": [
+  "langVerbs"
+ ],
+ "to do, make": [
+  "langVerbs"
+ ],
+ "to drink": [
+  "langVerbs"
+ ],
+ "to eat": [
+  "langVerbs"
+ ],
+ "to finish": [
+  "langVerbs"
+ ],
+ "to get the simplest whole numbers.": [
+  "equationBalancer"
+ ],
+ "to give": [
+  "langVerbs"
+ ],
+ "to go": [
+  "langVerbs"
+ ],
+ "to go out": [
+  "langVerbs"
+ ],
+ "to have": [
+  "langVerbs"
+ ],
+ "to hear": [
+  "langVerbs"
+ ],
+ "to learn": [
+  "langVerbs"
+ ],
+ "to like": [
+  "langVerbs"
+ ],
+ "to like, love": [
+  "langVerbs"
+ ],
+ "to listen": [
+  "langVerbs"
+ ],
+ "to live": [
+  "langVerbs"
+ ],
+ "to make, do": [
+  "langVerbs"
+ ],
+ "to open": [
+  "langVerbs"
+ ],
+ "to play": [
+  "langVerbs"
+ ],
+ "to read": [
+  "langVerbs"
+ ],
+ "to say": [
+  "langVerbs"
+ ],
+ "to see": [
+  "langVerbs"
+ ],
+ "to sell": [
+  "langVerbs"
+ ],
+ "to sleep": [
+  "langVerbs"
+ ],
+ "to speak": [
+  "langVerbs"
+ ],
+ "to study": [
+  "langVerbs"
+ ],
+ "to take": [
+  "langVerbs"
+ ],
+ "to the left": [
+  "numberLine"
+ ],
+ "to the right": [
+  "numberLine"
+ ],
+ "to travel, drive": [
+  "langVerbs"
+ ],
+ "to want": [
+  "langVerbs"
+ ],
+ "to work": [
+  "langVerbs"
+ ],
+ "to write": [
+  "langVerbs"
+ ],
+ "Today": [
+  "tenseTimeline"
+ ],
+ "Toll! Hast du Geschwister?": [
+  "langDialogue"
+ ],
+ "Tom's kite is red.": [
+  "punctFixer"
+ ],
+ "Tomorrow": [
+  "tenseTimeline"
+ ],
+ "Tomorrow at noon": [
+  "tenseTimeline"
+ ],
+ "Too few trials to trust! Roll more.": [
+  "probSim"
+ ],
+ "Total {0}: each slice is its value ÷ {1} of the 360° circle.": [
+  "chartBuilder"
+ ],
+ "Total internal reflection: the angle of incidence is bigger than the critical angle (about 42° for glass), so ALL the light is reflected back inside the glass. Optical fibres use this.": [
+  "lightRays"
+ ],
+ "total to share": [
+  "ratioBar"
+ ],
+ "transform .45s": [
+  "arrayBuilder"
+ ],
+ "Transform a shape": [
+  "transformGrid"
+ ],
+ "Transverse": [
+  "waves"
+ ],
+ "Transverse wave (like light or a wave on a rope): the particles vibrate up and down, at right angles to the direction the wave travels. The red dot shows one particle: it does not travel along with the wave.": [
+  "waves"
+ ],
+ "Travel through time with a verb": [
+  "tenseTimeline"
+ ],
+ "Très bien. Ça fait quatre euros cinquante.": [
+  "langDialogue"
+ ],
+ "Triangle": [
+  "angleExplorer"
+ ],
+ "Tricky words": [
+  "spellingLCWC"
+ ],
+ "Tschüss!": [
+  "langDialogue"
+ ],
+ "tú": [
+  "langVerbs"
+ ],
+ "Two.. sleepy.J owls.N watched.V silently.A from.. a.. bare.J branch.N": [
+  "wordClass"
+ ],
+ "Type a number (or slide, or tap a quick pick) to see it written out and to hear it. Then test yourself.": [
+  "langNumbers"
+ ],
+ "Type it": [
+  "langListen"
+ ],
+ "type what you hear": [
+  "langListen"
+ ],
+ "Un café, s'il vous plaît.": [
+  "langDialogue"
+ ],
+ "Un jus d'orange, s'il vous plaît.": [
+  "langDialogue"
+ ],
+ "Un zumo de naranja, por favor.": [
+  "langDialogue"
+ ],
+ "Una limonada, por favor.": [
+  "langDialogue"
+ ],
+ "Una señora": [
+  "langDialogue"
+ ],
+ "Una tortilla y una bebida. Son cinco euros.": [
+  "langDialogue"
+ ],
+ "Unbalanced: the resultant force is backwards, so the trolley slows down.": [
+  "forceMotion"
+ ],
+ "Unbalanced: the resultant force is forwards, so the trolley speeds up. Resultant force = mass × acceleration, so a heavier trolley accelerates less.": [
+  "forceMotion"
+ ],
+ "Und woher kommst du?": [
+  "langDialogue"
+ ],
+ "Unpacked 1 counter into 10 in the column to the right.": [
+  "placeValue"
+ ],
+ "unscrew it": [
+  "circuitBuilder"
+ ],
+ "veintidós": [
+  "langNumbers"
+ ],
+ "veintiséis": [
+  "langNumbers"
+ ],
+ "veintitrés": [
+  "langNumbers"
+ ],
+ "Verb": [
+  "langVerbs",
+  "wordClass"
+ ],
+ "Verb 2nd": [
+  "langOrder"
+ ],
+ "Verb at the end": [
+  "langOrder"
+ ],
+ "vertical line x =": [
+  "transformGrid"
+ ],
+ "Very good. That's 4.50.": [
+  "langDialogue"
+ ],
+ "Very good. Would you like something to eat?": [
+  "langDialogue"
+ ],
+ "Vivo en Londres.": [
+  "langDialogue"
+ ],
+ "Voilà votre boisson ! Vous voulez aussi manger quelque chose ?": [
+  "langDialogue"
+ ],
+ "Voilà, quatre euros cinquante.": [
+  "langDialogue"
+ ],
+ "Voilà, trois euros.": [
+  "langDialogue"
+ ],
+ "vowels a e i o u|Five short, pure vowels. Say each the same way every time, with no gliding.|casa,mesa,sí,sol,uno;j / ge / gi|A strong “h” from the back of the throat.|jugar,gente,jirafa;ll|Like “y” in “yes” in most places.|calle,llave;ñ|Like “ny” in “canyon”.|niño,España;h|Always silent.|hola,hombre;qu|Just a “k” — the u is silent.|queso,quince;gu (before e / i)|A hard “g” — the u is silent.|guerra,guitarra;c (before e / i) and z|In Spain like “th” in “think”.|cine,zapato;v and b|The SAME sound in Spanish, a soft “b”.|vaca,barco;r and rr|Single r is a quick tap — rr and a word-initial r are rolled.|pero,perro,rojo;ch|Like “ch” in “chip”.|chico,leche;d between vowels|Soft, like “th” in “this”.|nada,todo": [
+  "langSounds"
+ ],
+ "water out": [
+  "separation"
+ ],
+ "water vapour escapes": [
+  "separation"
+ ],
+ "Wave speed": [
+  "waves"
+ ],
+ "wave travels this way": [
+  "waves"
+ ],
+ "wavelength": [
+  "waves"
+ ],
+ "We bought apples, pears, plums and figs.": [
+  "punctFixer"
+ ],
+ "we can play at home": [
+  "clauseCombiner"
+ ],
+ "we can walk to the park": [
+  "clauseCombiner"
+ ],
+ "We saw a whale in the sea.": [
+  "punctFixer"
+ ],
+ "we stayed inside": [
+  "clauseCombiner"
+ ],
+ "we tidied the classroom": [
+  "clauseCombiner"
+ ],
+ "We're late.": [
+  "punctFixer"
+ ],
+ "What a lovely day!": [
+  "punctFixer"
+ ],
+ "What if it disappears?": [
+  "foodWeb"
+ ],
+ "What is the machine doing to every input? Untick 'Hide the rule' to check.": [
+  "functionMachine"
+ ],
+ "What number is this? Type the digits.": [
+  "langNumbers"
+ ],
+ "Where aerobic respiration happens, releasing the energy the cell needs.": [
+  "cellExplorer"
+ ],
+ "Where proteins are made (protein synthesis).": [
+  "cellExplorer"
+ ],
+ "Which spelling?": [
+  "phonicsBlender"
+ ],
+ "Whole numbers": [
+  "placeValue"
+ ],
+ "Will Priya come to the party?": [
+  "punctFixer"
+ ],
+ "With aller, venir, sortir the participle agrees with the subject: elle est allée, ils sont allés.": [
+  "langVerbs"
+ ],
+ "With verbs of movement or change (gehen, fahren, sein) the helper is sein, not haben.": [
+  "langVerbs"
+ ],
+ "Word-maker machine": [
+  "wordMaker"
+ ],
+ "Word-order workshop": [
+  "langOrder"
+ ],
+ "Words ending in s, x, z, ch, sh (and a few -o words) add -es.": [
+  "wordMaker"
+ ],
+ "Words made:": [
+  "wordMaker"
+ ],
+ "would like": [
+  "langVerbs"
+ ],
+ "write it from memory": [
+  "spellingLCWC"
+ ],
+ "Write the word from memory": [
+  "spellingLCWC"
+ ],
+ "x = {0}! The sack is on its own and the scales still balance.": [
+  "balance"
+ ],
+ "Yellow": [
+  "probSim"
+ ],
+ "Yes, a croissant, please.": [
+  "langDialogue"
+ ],
+ "Yes, a tortilla, please.": [
+  "langDialogue"
+ ],
+ "Yes, an apple cake, please.": [
+  "langDialogue"
+ ],
+ "Yes, gladly!": [
+  "langDialogue"
+ ],
+ "Yes, I have a sister.": [
+  "langDialogue"
+ ],
+ "Yes, I like football!": [
+  "langDialogue"
+ ],
+ "Yes, that was the": [
+  "cellExplorer"
+ ],
+ "Yes, where is the park, please?": [
+  "langDialogue"
+ ],
+ "Yesterday": [
+  "tenseTimeline"
+ ],
+ "Yesterday at noon": [
+  "tenseTimeline"
+ ],
+ "Yo hablo inglés|Yo +no hablo inglés|I speak English|I don't speak English|Just put no directly before the verb.;Mi hermano come pescado|Mi hermano +no come pescado|My brother eats fish|My brother doesn't eat fish|There is no second word, unlike French pas.;Ellas viven aquí|Ellas +no viven aquí|They (f) live here|They (f) don't live here|no + verb, whoever the subject is.;A mí me gusta el fútbol|A mí +no me gusta el fútbol|I like football|I don't like football|With gustar, no goes before me: no me gusta.;Nosotros bailamos|Nosotros +no bailamos|We dance|We don't dance|no + verb again.;Yo tengo algo|Yo +no tengo ~nada|I have something|I have nothing|Spanish uses a double negative: no … nada, no … nunca.": [
+  "langNegate"
+ ],
+ "You are in the conversation. Read (or listen to) what the other person says, then choose the reply that makes sense.": [
+  "langDialogue"
+ ],
+ "You have {0} so far.": [
+  "areaPerimeter"
+ ],
+ "You have {0} squares and perimeter {1}. Can you get it lower?": [
+  "areaPerimeter"
+ ],
+ "you leave it in the oven": [
+  "clauseCombiner"
+ ],
+ "You will need three things: a bowl, a spoon and a whisk.": [
+  "punctFixer"
+ ],
+ "your answer": [
+  "langNumbers"
+ ],
+ "Your new sentence will appear here.": [
+  "clauseCombiner"
+ ],
+ "zéro": [
+  "langNumbers"
+ ],
+ "zwölf": [
+  "langNumbers"
+ ],
+ "nothing here": [
+  "supplement"
+ ],
+ "tap to flip": [
+  "supplement"
+ ],
+ "squares": [
+  "supplement"
+ ],
+ "producer": [
+  "supplement"
+ ],
+ "o'clock": [
+  "supplement"
+ ],
+ "many": [
+  "supplement"
+ ],
+ "irregular": [
+  "supplement"
+ ],
+ "edges": [
+  "supplement"
+ ],
+ "masculine": [
+  "supplement"
+ ],
+ "one": [
+  "supplement"
+ ],
+ "more than one": [
+  "supplement"
+ ],
+ "Rf of A = {0}": [
+  "supplement"
+ ],
+ "Rf of B = {0}": [
+  "supplement"
+ ],
+ "Rf of C = {0}": [
+  "supplement"
+ ],
+ "neuter": [
+  "supplement"
+ ]
+}

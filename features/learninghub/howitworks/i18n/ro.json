@@ -1,0 +1,3489 @@
+{
+ "ui": {
+  "eyebrow": "{hub} · Cum funcționează",
+  "hubTeaching": "Centrul de predare",
+  "hubLearning": "Centrul de învățare",
+  "pickShort": "Alege un scurt clip video.",
+  "pickShortLong": "Alege un scurt clip video. Fiecare durează câteva minute.",
+  "whoWatching": "Cine se uită",
+  "allVideos": "Toate clipurile",
+  "allVideosPlay": "▶ Toate clipurile",
+  "fullTour": "▶ Turul complet",
+  "nextTopic": "▶ Următorul: {title}",
+  "chooseVideo": "Alege un clip",
+  "loading": "Se încarcă…",
+  "sheetTitle": "Cum funcționează",
+  "whichVideo": "Ce clip",
+  "close": "Închide",
+  "minScenes": "{m} min · {n} scene",
+  "watched": " · Vizionat",
+  "stageAria": "{script} — scena {i} din {n}: {title}",
+  "sceneLive": "Scena {i} din {n}: {title}",
+  "playAria": "Redă: {title}",
+  "soundOnCaps": "Sunetul este pornit. Subtitrările apar mereu dedesubt.",
+  "capsBelow": "Subtitrările apar dedesubt.",
+  "startsAt": "Începe la „{title}”.",
+  "thatsTheLot": "Asta a fost tot",
+  "watchAgain": "↺ Vezi din nou",
+  "captions": "Subtitrări",
+  "controls": "Comenzi player",
+  "scenesJump": "Scene — sari la una",
+  "sceneN": "Scena {k}: {title}",
+  "prev": "Scena anterioară",
+  "prevT": "Scena anterioară (←)",
+  "pause": "Pauză",
+  "play": "Redă",
+  "replay": "Redă din nou",
+  "pauseT": "Pauză (spațiu)",
+  "playT": "Redă (spațiu)",
+  "restart": "Reia de la început",
+  "restartT": "Reia (R)",
+  "next": "Scena următoare",
+  "nextT": "Scena următoare (→)",
+  "captionsT": "Subtitrări (C)",
+  "captionsOn": "Subtitrări pornite",
+  "captionsOff": "Subtitrări oprite",
+  "soundT": "Sunet (M)",
+  "soundOn": "Sunet pornit",
+  "soundOff": "Sunet oprit",
+  "musicT": "Muzică de fundal",
+  "musicOn": "Muzică pornită",
+  "musicOff": "Muzică oprită",
+  "speed": "Viteză",
+  "voice": "Voce",
+  "autoVoice": "Voce automată",
+  "scenes": "Scene",
+  "readScript": "Citește tot textul",
+  "noVoice": "Nu există voce pentru această limbă pe acest dispozitiv: doar subtitrări.",
+  "tryNow": "Încearcă acum →",
+  "nextVideo": "Videoclipul următor: {title}"
+ },
+ "scripts": {
+  "tutor:std:main": {
+   "title": "Conduce-ți Centrul de predare",
+   "tagline": "Adu familiile în lista ta, predă în felul care ți se potrivește și vezi cum se descurcă fiecare copil.",
+   "audience": "Pentru tutori"
+  },
+  "parent:std:main": {
+   "title": "Centrul de învățare al copilului tău",
+   "tagline": "Vezi lecțiile și temele copilului tău, află dintr-o privire cum se descurcă și tipărește un raport de progres.",
+   "audience": "Centrul de învățare pentru părinți"
+  },
+  "kid:std:main": {
+   "title": "Cum funcționează",
+   "tagline": "Propriul tău spațiu de învățare. Privește, ascultă și încearcă!",
+   "audience": "Pentru copii",
+   "viewLabel": "Ce vede copilul tău"
+  },
+  "tutor:std:roster": {
+   "title": "Adu familiile în lista ta",
+   "tagline": "Adu familiile în lista ta și configurează fiecare copil.",
+   "audience": "Pentru tutori",
+   "blurb": "Ecranul tău Acasă și cele trei moduri prin care ți se alătură o familie: rezervare, link de invitație sau pagina ta publică."
+  },
+  "tutor:std:students": {
+   "title": "Elevii tăi",
+   "tagline": "Ai grijă de lista ta.",
+   "audience": "Pentru tutori",
+   "blurb": "Cardul fiecărui copil, grupurile și setările de sprijin pe care le poți schimba doar tu."
+  },
+  "tutor:std:lessons": {
+   "title": "Lecții și programa",
+   "tagline": "Găsește, deschide și construiește lecții.",
+   "audience": "Pentru tutori",
+   "blurb": "Găsește o lecție gata făcută, deschide-o sau construiește-ți una cu editorul de diapozitive."
+  },
+  "tutor:std:tools": {
+   "title": "Instrumente",
+   "tagline": "Instrumente pe care le folosesc copiii tăi.",
+   "audience": "Pentru tutori",
+   "blurb": "Zona Instrumente și cum le dai copiilor tăi."
+  },
+  "tutor:std:live": {
+   "title": "Lecții live și față în față",
+   "tagline": "Predă live, online sau în sală.",
+   "audience": "Pentru tutori",
+   "blurb": "Trei moduri de a preda: lecții video, ce găsești în apel și predarea față în față."
+  },
+  "tutor:std:homework": {
+   "title": "Teme: dă-le, strânge-le, corectează-le",
+   "tagline": "Dă teme și corectează ce se întoarce.",
+   "audience": "Pentru tutori",
+   "blurb": "Dă o temă, atașează o fișă de lucru, vezi ce s-a predat și corectează."
+  },
+  "tutor:std:quizzes": {
+   "title": "Teste și cartonașe",
+   "tagline": "Verifică ce știu copiii.",
+   "audience": "Pentru tutori",
+   "blurb": "Construiește un test, corectarea, testele de start și cartonașele."
+  },
+  "tutor:std:progress": {
+   "title": "Progres",
+   "tagline": "Vezi cum se descurcă fiecare copil.",
+   "audience": "Pentru tutori",
+   "blurb": "Toată clasa dintr-o privire, un copil în detaliu și nivelurile tale."
+  },
+  "parent:std:start": {
+   "title": "Primii pași",
+   "tagline": "Configurează totul și află unde să te uiți.",
+   "audience": "Centrul de învățare pentru părinți",
+   "blurb": "Cum ajunge copilul tău aici, alăturarea printr-un link de la tutore și verdictul dintr-o linie de pe Acasă."
+  },
+  "parent:std:homework": {
+   "title": "Temele în Centrul de învățare",
+   "tagline": "Vezi ce s-a dat, ce scadent este și cum a mers.",
+   "audience": "Centrul de învățare pentru părinți",
+   "blurb": "Ce s-a dat, când trebuie predat, cum predă copilul tău și unde apar notele."
+  },
+  "parent:std:week": {
+   "title": "Săptămâna copilului tău",
+   "tagline": "Urmărește și întreabă când ai nevoie.",
+   "audience": "Centrul de învățare pentru părinți",
+   "blurb": "Lecții, lecții live, progres, raportul de tipărit și întrebările către tutore."
+  },
+  "parent:std:handover": {
+   "title": "Predă-i copilului",
+   "tagline": "Lasă-ți copilul să învețe singur.",
+   "audience": "Centrul de învățare pentru părinți",
+   "blurb": "Dă-i copilului propriul spațiu simplu și află cum te întorci."
+  },
+  "kid:std:homework": {
+   "title": "Tema mea",
+   "tagline": "Găsește-o, fă-o, predă-o.",
+   "audience": "Pentru copii",
+   "blurb": "Găsește-ți tema, fă-o și predă-o."
+  },
+  "kid:ks1:main": {
+   "title": "Cum funcționează",
+   "tagline": "Privește și ascultă. Este scurt!",
+   "audience": "Pentru copii",
+   "viewLabel": "Ce vede copilul tău"
+  },
+  "tutor:std:home": {
+   "title": "Ecranul tău de start",
+   "tagline": "De aici începi fiecare zi.",
+   "audience": "Pentru profesori",
+   "blurb": "Zonele tale, Necesită atenția ta și Cum funcționează."
+  },
+  "tutor:std:families": {
+   "title": "Adaugă familii pe lista ta",
+   "tagline": "Adu familii pe lista ta.",
+   "audience": "Pentru profesori",
+   "blurb": "Trei moduri în care o familie se alătură: rezervare, un link de invitație sau pagina ta publică."
+  },
+  "tutor:std:messages": {
+   "title": "Mesaje",
+   "tagline": "Vorbește cu familiile, un fir per copil.",
+   "audience": "Pentru profesori",
+   "blurb": "Fiecare conversație cu o familie și cum ajunge un răspuns la ea."
+  }
+ },
+ "scenes": {
+  "tutor:std:tour": {
+   "chapter": "Centrul tău",
+   "title": "Ecranul tău Acasă",
+   "say": "Acesta este ecranul tău Acasă. Sus ai cele șapte zone: Acasă, Lecții, Elevi, Progres, Teste, Teme pentru acasă și Mesaje. Lecții cuprinde și Lecții live, Instrumente și Cartonașe. Acasă îți arată următoarea lecție și o listă numită Necesită atenția ta, ca să știi mereu ce ai de făcut mai întâi. Iar butonul Cum funcționează este mereu aici.",
+   "keys": [
+    "Cele șapte zone",
+    "Următoarea lecție",
+    "Necesită atenția ta",
+    "Cum funcționează"
+   ],
+   "cam": [
+    {
+     "on": "Sus ai"
+    },
+    {
+     "on": "Acasă îți arată"
+    },
+    {
+     "on": "o listă numită"
+    },
+    {
+     "on": "Iar butonul Cum funcționează"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Acasă, Lecții"
+    },
+    {
+     "on": "o listă numită"
+    },
+    {
+     "on": "Iar butonul Cum funcționează"
+    }
+   ],
+   "rings": [
+    {
+     "on": "șapte zone",
+     "off": "Lecții cuprinde"
+    },
+    {
+     "on": "Acasă îți arată",
+     "off": "și o listă"
+    },
+    {
+     "on": "o listă numită",
+     "off": "Iar butonul"
+    },
+    {
+     "on": "Iar butonul Cum funcționează"
+    }
+   ]
+  },
+  "tutor:std:ways-in": {
+   "chapter": "Familii noi",
+   "title": "Trei moduri prin care o familie ți se alătură",
+   "say": "O familie se poate alătura listei tale în trei moduri. Unu: face o rezervare la tine. Doi: îi trimiți un link privat de invitație. Trei: îți găsește pagina publică. Să le vedem pe fiecare.",
+   "keys": [
+    "Trei moduri de alăturare::trei moduri",
+    "Face o rezervare la tine",
+    "Un link privat de invitație",
+    "Pagina publică"
+   ],
+   "nodes": [
+    {
+     "on": "Unu:",
+     "title": "Face o rezervare la tine",
+     "sub": "Copilul apare în Înscrie un elev"
+    },
+    {
+     "on": "Doi:",
+     "title": "Un link privat de invitație",
+     "sub": "Îl trimiți tu. Familia își alege copiii"
+    },
+    {
+     "on": "Trei:",
+     "title": "Pagina ta publică",
+     "sub": "Își face cont, apoi tu îi înscrii"
+    }
+   ]
+  },
+  "tutor:std:enrol-book": {
+   "chapter": "Familii noi",
+   "title": "1. Fac o rezervare la tine",
+   "say": "Prima cale. Un părinte își face cont și rezervă o ședință la tine. Copilul lui apare acum în Înscrie un elev. Găsește-l și apasă Înscrie. Apoi alege la ce materii are acces și clasa lui. Apasă Înscrie elevul și, de atunci, familia lui vede Centrul de învățare.",
+   "keys": [
+    "Înscrie un elev",
+    "Apasă Înscrie",
+    "La ce materii",
+    "Clasa lui",
+    "Centrul de învățare"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Apoi alege"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Copilul lui apare"
+    },
+    {
+     "on": "Găsește-l"
+    },
+    {
+     "on": "Apoi alege"
+    },
+    {
+     "on": "la ce materii"
+    },
+    {
+     "on": "și clasa lui"
+    },
+    {
+     "on": "Apasă Înscrie elevul"
+    },
+    {
+     "on": "și, de atunci"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apasă Înscrie."
+    },
+    {
+     "on": "Apasă Înscrie elevul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Găsește-l",
+     "off": "Apoi alege"
+    },
+    {
+     "on": "la ce materii",
+     "off": "și clasa lui"
+    },
+    {
+     "on": "și clasa lui",
+     "off": "Apasă Înscrie elevul"
+    },
+    {
+     "on": "Apasă Înscrie elevul",
+     "off": "și, de atunci"
+    }
+   ]
+  },
+  "tutor:std:enrol-invite": {
+   "chapter": "Familii noi",
+   "title": "2. Un link privat de invitație",
+   "say": "A doua cale, pentru o familie care nu a rezervat. Scrie pentru cine este, apoi apasă Creează link de invitație. Copiază-l și trimite-l chiar tu părintelui. Linkul este valabil treizeci de zile și funcționează pentru o singură familie. Părintele îl deschide, alege ce copii adaugă, iar copiii apar automat în lista ta.",
+   "keys": [
+    "Pentru cine este?::Scrie pentru cine este",
+    "Creează link de invitație",
+    "Îl trimiți chiar tu::trimite-l chiar tu",
+    "Treizeci de zile, o familie::treizeci de zile",
+    "Copiii apar automat::automat"
+   ],
+   "cam": [
+    {
+     "on": "A doua cale"
+    },
+    {
+     "on": "Scrie pentru cine"
+    },
+    {
+     "on": "apoi apasă"
+    },
+    {
+     "on": "Copiază-l"
+    },
+    {
+     "on": "Linkul este valabil"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apoi apasă"
+    },
+    {
+     "on": "Copiază-l"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Scrie pentru cine",
+     "off": "apoi apasă"
+    },
+    {
+     "on": "apoi apasă",
+     "off": "Copiază-l"
+    },
+    {
+     "on": "Copiază-l",
+     "off": "Linkul este valabil"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "trimite-l chiar tu",
+     "text": "Nu se trimite niciun e-mail în locul tău: îl trimiți tu"
+    }
+   ]
+  },
+  "tutor:std:enrol-page": {
+   "chapter": "Familii noi",
+   "title": "3. Linkul paginii tale publice",
+   "say": "A treia cale. Când nu ai pe cine să înscrii încă, fereastra Înscrie afișează linkul paginii tale, cu un buton Copiază. Trimite-l părintelui. Acesta îl deschide, se conectează sau își face cont de părinte, iar apoi copiii lui apar în listă, gata să-i înscrii. Nu e nevoie de rezervare.",
+   "keys": [
+    "Linkul paginii tale",
+    "Un buton Copiază",
+    "Își face cont de părinte::își face cont de părinte",
+    "Gata să-i înscrii",
+    "Nu e nevoie de rezervare"
+   ],
+   "cam": [
+    {
+     "on": "afișează linkul paginii"
+    },
+    {
+     "on": "gata să-i înscrii"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "cu un buton Copiază"
+    }
+   ],
+   "rings": [
+    {
+     "on": "afișează linkul paginii",
+     "off": "gata să-i înscrii"
+    }
+   ]
+  },
+  "tutor:std:roster": {
+   "chapter": "Elevii tăi",
+   "title": "Lista ta de elevi",
+   "say": "După înscriere, fiecare copil are un card pe pagina Elevi, cu clasa, materiile și inelul de progres. Creează un grup și poți da o temă, un test sau o lecție întregului grup dintr-un singur clic. Cu cele trei puncte de pe card poți pune pe pauză sau scoate un copil din listă oricând.",
+   "keys": [
+    "Un card pentru fiecare copil::fiecare copil are un card",
+    "Inelul lui de progres::inelul de progres",
+    "Grupuri dintr-un clic::Creează un grup",
+    "Pune pe pauză sau scoate"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Creează un grup"
+    },
+    {
+     "on": "Cu cele trei puncte"
+    }
+   ],
+   "cam": [
+    {
+     "on": "fiecare copil are un card"
+    },
+    {
+     "on": "Creează un grup"
+    },
+    {
+     "on": "Cu cele trei puncte"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "dintr-un singur clic"
+    },
+    {
+     "on": "Cu cele trei puncte"
+    }
+   ],
+   "rings": [
+    {
+     "on": "fiecare copil are un card",
+     "off": "Creează un grup"
+    },
+    {
+     "on": "Creează un grup",
+     "off": "Cu cele trei puncte"
+    },
+    {
+     "on": "Cu cele trei puncte"
+    }
+   ]
+  },
+  "tutor:std:support": {
+   "chapter": "Elevii tăi",
+   "title": "Sprijin pentru fiecare copil",
+   "say": "Fiecare copil poate avea propriile setări de sprijin. Deschide Editează detaliile unui copil. Oprește cronometrele la teste, pornește modul calm, adaugă timp în plus, mărește textul sau ascultă răspunsurile citite cu voce tare. Le setezi doar tu. Copilul și familia nu le pot schimba.",
+   "keys": [
+    "Sprijin pentru fiecare copil::setări de sprijin",
+    "Fără cronometru::Oprește cronometrele",
+    "Modul calm",
+    "Timp în plus",
+    "Citite cu voce tare",
+    "Le setezi doar tu"
+   ],
+   "cam": [
+    {
+     "on": "Oprește cronometrele"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Oprește cronometrele"
+    },
+    {
+     "on": "pornește modul calm"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Oprește cronometrele",
+     "off": "Le setezi doar tu"
+    }
+   ]
+  },
+  "tutor:std:lessons": {
+   "chapter": "Lecții",
+   "title": "O bibliotecă de lecții gata făcute",
+   "say": "Acum, Lecții. Biblioteca ta vine cu mii de lecții gata făcute și fișe de lucru. Sunt așezate pe o hartă a programei. Alege o materie, alege un an și vezi la ce teme există lecții și câte. Căutarea găsește orice zonă sau lecție după nume.",
+   "keys": [
+    "Lecții gata făcute",
+    "O hartă a programei",
+    "Alege o materie",
+    "Alege un an",
+    "Caută după nume::Căutarea găsește"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Alege o materie"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Sunt așezate"
+    },
+    {
+     "on": "Alege o materie"
+    },
+    {
+     "on": "alege un an"
+    },
+    {
+     "on": "și vezi la ce"
+    },
+    {
+     "on": "Căutarea găsește"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Alege o materie"
+    },
+    {
+     "on": "alege un an"
+    },
+    {
+     "on": "Căutarea găsește"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Alege o materie",
+     "off": "alege un an"
+    },
+    {
+     "on": "alege un an",
+     "off": "și vezi la ce"
+    },
+    {
+     "on": "Căutarea găsește"
+    }
+   ]
+  },
+  "tutor:std:lesson-view": {
+   "chapter": "Lecții",
+   "title": "Deschide o lecție",
+   "say": "Deschide orice lecție ca să vezi planul ei. Este o lecție interactivă: copiii parcurg câte o idee pe rând, cu diapozitive, întrebări de încălzire și un test la final. Apasă Previzualizează lecția ca să vezi exact ce va vedea un copil.",
+   "keys": [
+    "Deschide orice lecție",
+    "O lecție interactivă",
+    "O idee pe rând",
+    "Previzualizează lecția"
+   ],
+   "cam": [
+    {
+     "on": "Deschide orice lecție"
+    },
+    {
+     "on": "Este o lecție interactivă"
+    },
+    {
+     "on": "Apasă Previzualizează lecția"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apasă Previzualizează lecția"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Este o lecție interactivă",
+     "off": "Apasă Previzualizează"
+    },
+    {
+     "on": "Apasă Previzualizează lecția"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Deschide orice lecție",
+     "text": "Dă-o copiilor"
+    }
+   ]
+  },
+  "tutor:std:builder": {
+   "chapter": "Lecții",
+   "title": "Creează-ți propria lecție cu editorul de diapozitive",
+   "say": "Vrei o lecție a ta? Apasă Creează o lecție nouă și alege o temă. Editorul de diapozitive te lasă să scrii diapozitive și să adaugi text, cuvinte-cheie, atinge pentru a afișa, alegere multiplă, sortare și potrivire. Previzualizează orice diapozitiv pe parcurs, apoi salvează. Lecția intră în biblioteca ta.",
+   "keys": [
+    "Creează o lecție nouă",
+    "Editorul de diapozitive",
+    "Text, sortare, potrivire::sortare și potrivire",
+    "Previzualizezi pe parcurs::Previzualizează orice diapozitiv",
+    "Intră în biblioteca ta"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Editorul de diapozitive"
+    },
+    {
+     "on": "alegere multiplă"
+    },
+    {
+     "on": "Previzualizează orice"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Editorul de diapozitive"
+    }
+   ]
+  },
+  "tutor:std:tools": {
+   "chapter": "Instrumente",
+   "title": "Zona Instrumente",
+   "say": "Apoi, Instrumente, pe care le găsești în Lecții. Rigle, raportoare, axe numerice, diagrame de științe și altele. Aceasta este o zonă de vizualizare: deschide orice instrument ca să-l încerci. Aici nu se dă încă nimic copiilor. Asta se face în interiorul unei lecții sau al unei întrebări.",
+   "keys": [
+    "Zona Instrumente::Apoi, Instrumente",
+    "Rigle, raportoare, axe numerice",
+    "O zonă de vizualizare",
+    "Dat în interiorul unei lecții::interiorul unei lecții"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "deschide orice instrument"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Rigle, raportoare"
+    },
+    {
+     "on": "Aceasta este o zonă"
+    },
+    {
+     "on": "deschide orice instrument"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "deschide orice instrument"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Aceasta este o zonă",
+     "off": "deschide orice instrument"
+    }
+   ]
+  },
+  "tutor:std:tool-assign": {
+   "chapter": "Instrumente",
+   "title": "Dă un instrument copiilor",
+   "say": "Ca să dai un instrument copiilor, deschide o lecție și apasă Previzualizează lecția. Apoi deschide Instrumente pentru această lecție, în dreapta jos. Îți arată ce instrument ar primi un copil la fiecare întrebare. Apasă Adaugă instrument la această întrebare și alege unul. Apoi apasă Folosește-l la toate întrebările, iar el ajunge la fiecare întrebare din lecție.",
+   "keys": [
+    "Deschide lecția, Previzualizează::apasă Previzualizează lecția",
+    "Instrumente pentru această lecție",
+    "Adaugă instrument la această întrebare",
+    "Folosește-l la toate întrebările"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Îți arată"
+    },
+    {
+     "on": "Apasă Adaugă instrument"
+    },
+    {
+     "on": "și alege unul"
+    },
+    {
+     "on": "Apoi apasă Folosește"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Apoi deschide Instrumente"
+    },
+    {
+     "on": "Îți arată"
+    },
+    {
+     "on": "Apasă Adaugă instrument"
+    },
+    {
+     "on": "și alege unul"
+    },
+    {
+     "on": "Apoi apasă Folosește"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apoi deschide Instrumente"
+    },
+    {
+     "on": "Apasă Adaugă instrument"
+    },
+    {
+     "on": "și alege unul"
+    },
+    {
+     "on": "Apoi apasă Folosește"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apoi deschide Instrumente",
+     "off": "Îți arată"
+    },
+    {
+     "on": "Îți arată",
+     "off": "Apasă Adaugă instrument"
+    },
+    {
+     "on": "Apasă Adaugă instrument",
+     "off": "și alege unul"
+    },
+    {
+     "on": "Apoi apasă Folosește"
+    }
+   ]
+  },
+  "tutor:std:teach-modes": {
+   "chapter": "Predare",
+   "title": "Trei moduri de a preda o lecție",
+   "say": "Există trei moduri de a preda. Printr-un apel video, pentru copiii care sunt în altă parte. Distribuie copiilor, când fiecare copil urmărește pe propriul dispozitiv. Sau față în față, cu copiii lângă tine. Alegi de fiecare dată.",
+   "keys": [
+    "Trei moduri de a preda",
+    "Un apel video",
+    "Distribuie copiilor",
+    "Față în față"
+   ],
+   "nodes": [
+    {
+     "on": "Printr-un apel video",
+     "title": "Lecție video live",
+     "sub": "Intri în apel chiar din Centru"
+    },
+    {
+     "on": "Distribuie copiilor",
+     "title": "Distribuie copiilor",
+     "sub": "Fiecare copil urmărește pe propriul dispozitiv"
+    },
+    {
+     "on": "față în față",
+     "title": "Predare față în față",
+     "sub": "Copiii lângă tine, fără video"
+    }
+   ]
+  },
+  "tutor:std:live": {
+   "chapter": "Predare",
+   "title": "Lecții video live",
+   "say": "Pentru o lecție video live, programeaz-o pentru copiii pe care îi alegi. Când vine momentul, îți verifici camera și microfonul într-un hol rapid și apeși Intră. Totul se întâmplă chiar aici, fără altă aplicație. Poți preda o lecție interactivă în apel, iar ecranul fiecărui copil o urmărește pe a ta.",
+   "keys": [
+    "Programează o lecție video::programeaz-o",
+    "Verificarea camerei și a microfonului::camera și microfonul",
+    "Apeși Intră",
+    "Fără altă aplicație"
+   ],
+   "cam": [
+    {
+     "on": "programeaz-o"
+    },
+    {
+     "on": "îți verifici camera"
+    },
+    {
+     "on": "apeși Intră"
+    },
+    {
+     "on": "Totul se întâmplă"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "programeaz-o"
+    },
+    {
+     "on": "apeși Intră"
+    }
+   ],
+   "rings": [
+    {
+     "on": "programeaz-o",
+     "off": "Când vine momentul"
+    },
+    {
+     "on": "îți verifici camera",
+     "off": "și apeși Intră"
+    },
+    {
+     "on": "apeși Intră",
+     "off": "Totul se întâmplă"
+    }
+   ]
+  },
+  "tutor:std:in-call": {
+   "chapter": "Predare",
+   "title": "În timpul apelului",
+   "say": "Lângă video ai un spațiu de lucru cu șapte file. Elevi, Lecții, unde apeși Predă ca să rulezi o lecție interactivă, Progres, Teme, Test, cartonașe și o tablă live. Un copil poate ieși de pe ecranul tău și poate merge în ritmul lui, dacă are nevoie.",
+   "keys": [
+    "Șapte file lângă video::șapte file",
+    "Apeși Predă",
+    "O tablă live",
+    "Ritmul lui"
+   ],
+   "nodes": [
+    {
+     "on": "Elevi",
+     "title": "Elevi"
+    },
+    {
+     "on": "Lecții,",
+     "title": "Lecții",
+     "sub": "Apasă Predă"
+    },
+    {
+     "on": "Progres",
+     "title": "Progres"
+    },
+    {
+     "on": "Teme",
+     "title": "Teme"
+    },
+    {
+     "on": "Test",
+     "title": "Test"
+    },
+    {
+     "on": "cartonașe",
+     "title": "Cartonașe"
+    },
+    {
+     "on": "tablă",
+     "title": "Tablă",
+     "sub": "O tablă live"
+    }
+   ]
+  },
+  "tutor:std:share": {
+   "chapter": "Predare",
+   "title": "Distribuie copiilor",
+   "say": "Deschide o lecție și ai două variante. Distribuie copiilor e cel mai bun când fiecare copil are propriul dispozitiv. Urmăresc lecția și răspund fiecare singur, oriunde ar fi. Nu există apel video. Ecranul lor îl urmărește pe al tău.",
+   "keys": [
+    "Două variante",
+    "Distribuie copiilor",
+    "Propriul dispozitiv",
+    "Nu există apel video"
+   ],
+   "cam": [
+    {
+     "on": "Deschide o lecție"
+    },
+    {
+     "on": "Distribuie copiilor e cel mai bun"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Distribuie copiilor e cel mai bun"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ai două variante",
+     "off": "Distribuie copiilor e cel mai bun"
+    },
+    {
+     "on": "Distribuie copiilor e cel mai bun"
+    }
+   ]
+  },
+  "tutor:std:in-person": {
+   "chapter": "Predare",
+   "title": "Predare față în față",
+   "say": "Predai față în față? Bifează cine este cu tine. Apoi predați lecția împreună pe un singur ecran, introducând tu răspunsul fiecărui copil. Fiecare copil primește un rezultat real, pe care părintele îl poate vedea după aceea.",
+   "keys": [
+    "Bifează cine este cu tine",
+    "Un singur ecran::un singur ecran",
+    "Un rezultat real",
+    "Părinții îl pot vedea::părintele îl poate vedea"
+   ],
+   "cam": [
+    {
+     "on": "Bifează cine"
+    },
+    {
+     "on": "Apoi predați"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apoi predați"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Bifează cine",
+     "off": "Apoi predați"
+    },
+    {
+     "on": "Apoi predați",
+     "off": "Fiecare copil"
+    }
+   ]
+  },
+  "tutor:std:quizzes": {
+   "chapter": "Teste",
+   "title": "Teste și teste de start",
+   "say": "Testele se construiesc din banca ta de întrebări și se corectează instant. Răspunsurile scrise te așteaptă în coadă. Un test de start se dă o singură dată elevilor noi, fără notă de trecere și fără presiune, ca să știi de unde începe fiecare copil.",
+   "keys": [
+    "Din banca ta de întrebări",
+    "Se corectează instant",
+    "Un test de start",
+    "De unde începe fiecare copil"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Un test de start"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Testele se construiesc"
+    },
+    {
+     "on": "se corectează instant"
+    },
+    {
+     "on": "Un test de start"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "se corectează instant"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Testele se construiesc",
+     "off": "Un test de start"
+    },
+    {
+     "on": "Un test de start"
+    }
+   ]
+  },
+  "tutor:std:flashcards": {
+   "chapter": "Teste",
+   "title": "Cartonașe",
+   "say": "Cartonașele oferă exerciții rapide de reamintire. Copiii repetă mai întâi cartonașele programate pentru azi, iar repetiția eșalonată readuce cartonașele pe care le găsesc grele. Iar într-o lecție live poți prezenta un pachet pe ecran.",
+   "keys": [
+    "Exerciții rapide de reamintire",
+    "Mai întâi cele de azi::programate pentru azi",
+    "Repetiția eșalonată",
+    "Un pachet pe ecran"
+   ],
+   "cam": [
+    {
+     "on": "Cartonașele oferă"
+    },
+    {
+     "on": "Copiii repetă"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Copiii repetă"
+    }
+   ]
+  },
+  "tutor:std:progress": {
+   "chapter": "Progres",
+   "title": "Toată clasa dintr-o privire",
+   "say": "Progres pune toți elevii pe un singur ecran. Fiecare rând este un copil, iar fiecare materie primește un scor colorat, după nivelurile tale. Caută un nume sau filtrează după an sau după grup. Un copil care nu a început încă este marcat, așa că vezi cine are nevoie de un imbold.",
+   "keys": [
+    "Toți elevii pe un singur ecran",
+    "Un scor colorat",
+    "Nivelurile tale",
+    "Caută sau filtrează::Caută un nume",
+    "Care nu a început încă"
+   ],
+   "cam": [
+    {
+     "on": "Fiecare rând"
+    },
+    {
+     "on": "Caută un nume"
+    },
+    {
+     "on": "Un copil care"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiecare rând",
+     "off": "Caută un nume"
+    },
+    {
+     "on": "Caută un nume",
+     "off": "Un copil care"
+    },
+    {
+     "on": "Un copil care"
+    }
+   ]
+  },
+  "tutor:std:progress-child": {
+   "chapter": "Progres",
+   "title": "Deschide un copil",
+   "say": "Dă clic pe un copil ca să-i deschizi progresul. Îi vezi temele una câte una, cum evoluează fiecare și cele mai recente rezultate. Se bazează pe testele lui corectate, așa că este mereu la zi.",
+   "keys": [
+    "Dă clic pe un copil",
+    "Temă cu temă::temele una câte una",
+    "Cum evoluează fiecare",
+    "Cele mai recente rezultate"
+   ],
+   "cam": [
+    {
+     "on": "Îi vezi temele"
+    }
+   ]
+  },
+  "tutor:std:progress-levels": {
+   "chapter": "Progres",
+   "title": "Niveluri care sunt ale tale",
+   "say": "Nivelurile sunt tot ale tale. Apasă Editează nivelurile ca să le redenumești sau să muți punctul de la care începe fiecare, potrivit felului în care predai. Scorurile existente se reîncadrează imediat, iar notele nu se schimbă. Iar Recalculează reconstruiește progresul fiecărui copil din lucrările lui corectate.",
+   "keys": [
+    "Apasă Editează nivelurile",
+    "Redenumește-le, mută-le::le redenumești",
+    "Notele nu se schimbă",
+    "Recalculează"
+   ],
+   "cam": [
+    {
+     "on": "Apasă Editează nivelurile"
+    }
+   ]
+  },
+  "parent:std:getting-in": {
+   "chapter": "Primii pași",
+   "title": "Cum ajunge copilul tău aici",
+   "say": "Copilul tău apare în Centrul de învățare după ce tutorele l-a înscris. Asta se întâmplă când faci o rezervare la tutore, iar el îți adaugă copilul. Sau tutorele îți poate trimite un link privat, iar tu îți adaugi singur copilul. Tutorele hotărăște la ce materii are acces copilul tău.",
+   "keys": [
+    "Înscris de tutore::înscris",
+    "Rezervi la tutore::rezervare la tutore",
+    "Sau un link privat::link privat",
+    "Tutorele alege materiile::la ce materii"
+   ],
+   "nodes": [
+    {
+     "on": "când faci o rezervare",
+     "title": "Rezervă la tutore",
+     "sub": "Îți adaugă el copilul"
+    },
+    {
+     "on": "Sau tutorele",
+     "title": "Sau folosește linkul lui privat",
+     "sub": "Îți adaugi singur copilul"
+    },
+    {
+     "on": "Tutorele hotărăște",
+     "title": "Centrul de învățare se deschide",
+     "sub": "Cu materiile alese de tutore"
+    }
+   ]
+  },
+  "parent:std:invite": {
+   "chapter": "Primii pași",
+   "title": "Dacă tutorele ți-a trimis un link",
+   "say": "Dacă tutorele îți trimite un link privat, deschide-l cât timp ești conectat în contul tău de părinte. Sau fă-ți mai întâi un cont. Vei vedea ce tutore te-a invitat. Alege ce copii înscrii și ei se alătură imediat. Linkul funcționează pentru o singură familie și este valabil treizeci de zile.",
+   "keys": [
+    "Deschide linkul privat::link privat",
+    "Conectat ca părinte::conectat",
+    "Alege ce copii::alege ce copii înscrii",
+    "Treizeci de zile, o familie::treizeci de zile"
+   ],
+   "cam": [
+    {
+     "on": "Vei vedea ce tutore"
+    },
+    {
+     "on": "Alege ce copii"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Alege ce copii"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Vei vedea ce tutore",
+     "off": "Alege ce copii"
+    },
+    {
+     "on": "Alege ce copii"
+    }
+   ]
+  },
+  "parent:std:home": {
+   "chapter": "Săptămâna copilului tău",
+   "title": "Acasă: verdictul într-o linie",
+   "say": "Acasă începe cu o singură linie, verdictul. Îți spune La zi, Gata pe săptămâna asta sau câte teme sunt întârziate. Atinge-l ca să mergi direct acolo unde poți ajuta. Dedesubt vezi testele făcute săptămâna asta, temele predate și ce așteaptă să fie corectat. Ai mai mulți copii? Treci de la unul la altul sus.",
+   "keys": [
+    "O linie, verdictul::o singură linie",
+    "La zi sau întârziat::La zi",
+    "Săptămâna asta dintr-o privire::Dedesubt",
+    "Între copii::Treci de la unul la altul"
+   ],
+   "cam": [
+    {
+     "on": "Acasă începe"
+    },
+    {
+     "on": "Îți spune"
+    },
+    {
+     "on": "Dedesubt"
+    },
+    {
+     "on": "Ai mai mulți copii"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge-l"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Îți spune",
+     "off": "Dedesubt"
+    },
+    {
+     "on": "Dedesubt",
+     "off": "Ai mai mulți copii"
+    },
+    {
+     "on": "Ai mai mulți copii"
+    }
+   ]
+  },
+  "parent:std:lessons": {
+   "chapter": "Săptămâna copilului tău",
+   "title": "Lecții",
+   "say": "Lecții arată ce a distribuit tutorele. Deschide una și copilul tău o parcurge câte o idee pe rând, cu un test la final.",
+   "keys": [
+    "Ce a distribuit tutorele::Lecții arată",
+    "O idee pe rând",
+    "Un test la final::test la final"
+   ],
+   "cam": [
+    {
+     "on": "Lecții arată"
+    },
+    {
+     "on": "Deschide una"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Deschide una"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Deschide una"
+    }
+   ]
+  },
+  "parent:std:live": {
+   "chapter": "Săptămâna copilului tău",
+   "title": "Lecții live",
+   "say": "Când tutorele are o lecție live, aceasta apare în Lecții live. Când se deschide, verifici mai întâi camera și microfonul, apoi apeși Intră. Dacă tutorele distribuie o lecție pe dispozitivul copilului tău, apare un banner ca să se poată alătura.",
+   "keys": [
+    "Lecții live, în curând::Lecții live",
+    "Verificarea camerei și a microfonului::camera și microfonul",
+    "Apeși Intră",
+    "Un banner de alăturare::banner"
+   ],
+   "cam": [
+    {
+     "on": "Când se deschide"
+    }
+   ]
+  },
+  "parent:std:progress": {
+   "chapter": "Progres",
+   "title": "Cum se descurcă",
+   "say": "Fila Progres arată cum se descurcă copilul tău. Îi vezi nivelul, pe scara propriului tutore, și ce trebuie ca să ajungă la următorul. Atinge Ce stă în spatele acestui nivel pentru o explicație simplă. Iar Parcursul meu prin programă arată cât a înaintat la fiecare materie.",
+   "keys": [
+    "Cum se descurcă copilul tău::se descurcă copilul tău",
+    "Nivelul lui, în cuvinte simple::nivelul",
+    "Ce stă în spatele acestui nivel",
+    "Parcursul meu prin programă"
+   ],
+   "cam": [
+    {
+     "on": "Îi vezi nivelul"
+    },
+    {
+     "on": "Atinge Ce stă"
+    },
+    {
+     "on": "Iar Parcursul meu"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge Ce stă"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Îi vezi nivelul",
+     "off": "Atinge Ce stă"
+    },
+    {
+     "on": "Atinge Ce stă",
+     "off": "Iar Parcursul meu"
+    },
+    {
+     "on": "Iar Parcursul meu"
+    }
+   ]
+  },
+  "parent:std:report": {
+   "chapter": "Progres",
+   "title": "Un raport de progres de tipărit",
+   "say": "Ai nevoie de ceva pentru o întâlnire sau pentru frigider? Apasă Raport de progres. Primești un rezumat curat, de o pagină, pentru un copil, cu materiile și următorii pași. Tipărește-l sau salvează-l ca PDF din fereastra de tipărire a browserului.",
+   "keys": [
+    "Apasă Raport de progres",
+    "Un rezumat de o pagină::rezumat curat, de o pagină",
+    "Materii și următorii pași::următorii pași",
+    "Tipărește sau salvează ca PDF::Tipărește-l"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Primești un rezumat"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Apasă Raport de progres"
+    },
+    {
+     "on": "Primești un rezumat"
+    },
+    {
+     "on": "cu materiile"
+    },
+    {
+     "on": "și următorii pași"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apasă Raport de progres"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apasă Raport de progres",
+     "off": "Primești un rezumat"
+    },
+    {
+     "on": "cu materiile",
+     "off": "și următorii pași"
+    },
+    {
+     "on": "și următorii pași"
+    }
+   ]
+  },
+  "parent:std:ask": {
+   "chapter": "Ajutor",
+   "title": "Întreabă-ți tutorele",
+   "say": "Ai o întrebare? Folosește Întreabă tutorele pe Acasă sau fila Mesaje. Răspunsul tutorelui ajunge tot acolo. Și poți apăsa oricând Cum funcționează, sus, ca să vezi din nou acest clip.",
+   "keys": [
+    "Întreabă tutorele",
+    "Sau fila Mesaje::Mesaje",
+    "Cum funcționează, oricând::Cum funcționează"
+   ],
+   "cam": [
+    {
+     "on": "Folosește Întreabă tutorele"
+    },
+    {
+     "on": "Cum funcționează, sus"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Folosește Întreabă tutorele"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Folosește Întreabă tutorele",
+     "off": "Cum funcționează, sus"
+    },
+    {
+     "on": "Cum funcționează, sus"
+    }
+   ]
+  },
+  "parent:std:hand-over": {
+   "chapter": "Spațiul propriu al copilului",
+   "title": "Predă-i copilului",
+   "say": "Când copilul tău e gata să învețe, apasă Predă-i lui. Ecranul devine spațiul lui simplu, doar cu lecțiile, testele și temele lui. Ca să te întorci în portalul tău, un adult rezolvă un calcul scurt. Ca să vezi exact ce vede copilul tău, alege Ce vede copilul tău, sus, în această fereastră.",
+   "keys": [
+    "Apasă Predă-i lui",
+    "Spațiul lui simplu",
+    "Un calcul scurt pentru întoarcere::calcul scurt",
+    "Ce vede copilul tău"
+   ],
+   "cam": [
+    {
+     "on": "apasă Predă-i lui"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apasă Predă-i lui"
+    }
+   ],
+   "rings": [
+    {
+     "on": "apasă Predă-i lui",
+     "off": "Ecranul devine"
+    }
+   ]
+  },
+  "kid:std:hello": {
+   "chapter": "Bună",
+   "title": "Bună!",
+   "say": "Bună! Acesta este spațiul tău de învățare. Îți arată ce ai de făcut mai departe și te ajută să înveți. Hai să aruncăm o privire rapidă.",
+   "keys": [
+    "Bună",
+    "spațiul tău de învățare",
+    "ce ai de făcut mai departe"
+   ],
+   "nodes": [
+    {
+     "on": "ce ai de făcut mai departe",
+     "title": "Ce ai de făcut"
+    },
+    {
+     "on": "te ajută să înveți",
+     "title": "Învață"
+    }
+   ]
+  },
+  "kid:std:home": {
+   "chapter": "Acasă",
+   "title": "Ecranul tău Acasă",
+   "say": "Acesta este ecranul tău Acasă. Îți arată un singur lucru mare de făcut. Atinge Hai ca să începi. Atinge difuzorul mic și ți-l citește cu voce tare.",
+   "keys": [
+    "Ecranul tău Acasă",
+    "Un singur lucru mare de făcut",
+    "Atinge Hai::Atinge Hai ca să începi",
+    "Ascultă-l citit::difuzorul mic"
+   ],
+   "cam": [
+    {
+     "on": "Îți arată un singur lucru"
+    },
+    {
+     "on": "Atinge Hai"
+    },
+    {
+     "on": "difuzorul mic"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge Hai"
+    },
+    {
+     "on": "difuzorul mic"
+    }
+   ],
+   "rings": [
+    {
+     "on": "un singur lucru mare",
+     "off": "Atinge Hai"
+    },
+    {
+     "on": "Atinge Hai",
+     "off": "difuzorul mic"
+    },
+    {
+     "on": "difuzorul mic"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "un singur lucru mare",
+     "text": "Următorul tău lucru de făcut"
+    },
+    {
+     "on": "Atinge Hai",
+     "text": "Atinge Hai ca să începi"
+    },
+    {
+     "on": "difuzorul mic",
+     "text": "Atinge ca să-l auzi citit"
+    }
+   ]
+  },
+  "kid:std:lessons": {
+   "chapter": "Învață",
+   "title": "Lecții",
+   "say": "Lecțiile te ajută să înveți ceva nou. Parcurgi câte o idee pe rând. Sunt întrebări de încercat și un test la final.",
+   "keys": [
+    "Înveți ceva nou",
+    "O idee pe rând",
+    "Întrebări de încercat",
+    "Un test la final::test la final"
+   ],
+   "cam": [
+    {
+     "on": "înveți ceva nou"
+    },
+    {
+     "on": "câte o idee pe rând"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "câte o idee pe rând"
+    }
+   ],
+   "rings": [
+    {
+     "on": "câte o idee pe rând"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "înveți ceva nou",
+     "text": "Alege o lecție"
+    },
+    {
+     "on": "câte o idee pe rând",
+     "text": "O idee pe rând"
+    },
+    {
+     "on": "întrebări de încercat",
+     "text": "Întrebări de încercat"
+    }
+   ]
+  },
+  "kid:std:homework": {
+   "chapter": "Învață",
+   "title": "Tema pentru acasă",
+   "say": "Tema ta este aici. Deschide-o, fă tot ce poți și predă-o. Tutorele tău se va uita la ea și îți va spune cum te-ai descurcat.",
+   "keys": [
+    "Tema ta este aici",
+    "Deschide-o",
+    "Fă tot ce poți",
+    "Predă-o"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Deschide-o"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Tema ta"
+    },
+    {
+     "on": "fă tot ce poți"
+    },
+    {
+     "on": "predă-o"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "fă tot ce poți"
+    }
+   ],
+   "rings": [
+    {
+     "on": "fă tot ce poți",
+     "off": "predă-o"
+    },
+    {
+     "on": "predă-o"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Deschide-o",
+     "text": "Deschide-o"
+    },
+    {
+     "on": "fă tot ce poți",
+     "text": "Fă tot ce poți"
+    },
+    {
+     "on": "predă-o",
+     "text": "Predă-o"
+    }
+   ]
+  },
+  "kid:std:quizzes": {
+   "chapter": "Joacă",
+   "title": "Teste",
+   "say": "Testele sunt seturi scurte de întrebări. Citește-le pe fiecare și alege răspunsul. Nu ai nimerit? Nu-i nimic. Poți încerca din nou.",
+   "keys": [
+    "Seturi scurte de întrebări",
+    "Alege răspunsul",
+    "Nu ai nimerit? Nu-i nimic::Nu-i nimic",
+    "Încearcă din nou::încerca din nou"
+   ],
+   "cam": [
+    {
+     "on": "Testele sunt seturi"
+    },
+    {
+     "on": "alege răspunsul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "alege răspunsul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "alege răspunsul"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Citește-le pe fiecare",
+     "text": "Citește întrebarea"
+    },
+    {
+     "on": "alege răspunsul",
+     "text": "Alege răspunsul"
+    },
+    {
+     "on": "încerca din nou",
+     "text": "Încearcă din nou!"
+    }
+   ]
+  },
+  "kid:std:tools": {
+   "chapter": "Joacă",
+   "title": "Instrumente de ajutor",
+   "say": "Unele întrebări au un instrument de ajutor, ca o riglă sau un raportor. Atinge butonul instrumentului și se deschide chiar acolo, ca să te ajute să afli răspunsul. Și atinge difuzorul ca să auzi întrebarea citită.",
+   "keys": [
+    "instrument de ajutor",
+    "Atinge butonul instrumentului",
+    "difuzorul"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "se deschide chiar acolo"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Unele întrebări"
+    },
+    {
+     "on": "Atinge butonul"
+    },
+    {
+     "on": "se deschide chiar acolo"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge butonul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Unele întrebări",
+     "off": "Atinge butonul"
+    },
+    {
+     "on": "Atinge butonul",
+     "off": "se deschide chiar acolo"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Atinge butonul",
+     "text": "Butonul instrumentului"
+    }
+   ]
+  },
+  "kid:std:cards": {
+   "chapter": "Joacă",
+   "title": "Cartonașe",
+   "say": "Cartonașele te ajută să ții minte lucruri. Atinge un cartonaș ca să-l întorci. Apoi spune cât de bine îl știai. Cartonașele grele revin curând.",
+   "keys": [
+    "Ții minte lucruri",
+    "Atinge un cartonaș ca să-l întorci::Atinge un cartonaș",
+    "Cât de bine îl știai",
+    "Cele grele revin::revin curând"
+   ],
+   "cam": [
+    {
+     "on": "Cartonașele te ajută"
+    },
+    {
+     "on": "Atinge un cartonaș"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge un cartonaș"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Atinge un cartonaș"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Atinge un cartonaș",
+     "text": "Atinge cartonașul ca să-l întorci"
+    },
+    {
+     "on": "cât de bine îl știai",
+     "text": "Cât de bine îl știai?"
+    },
+    {
+     "on": "revin curând",
+     "text": "Cele grele revin"
+    }
+   ]
+  },
+  "kid:std:grown-up": {
+   "chapter": "Gata",
+   "title": "Când ai terminat",
+   "say": "Când ai terminat, roagă un adult să te ajute să ieși. Rezolvă un calcul mic și gata. Poți atinge oricând Cum funcționează ca să vezi din nou acest clip.",
+   "keys": [
+    "roagă un adult",
+    "calcul mic",
+    "Cum funcționează"
+   ],
+   "nodes": [
+    {
+     "on": "roagă un adult",
+     "title": "Roagă un adult"
+    },
+    {
+     "on": "calcul mic",
+     "title": "Un calcul mic"
+    },
+    {
+     "on": "gata",
+     "title": "Gata!"
+    }
+   ]
+  },
+  "tutor:std:hw-set": {
+   "chapter": "Trimite tema",
+   "title": "Trimite tema",
+   "say": "În Teme, apasă Trimite temă. Alege un grup, sau bifează copii individuali.",
+   "keys": [
+    "apasă Trimite temă",
+    "Alege un grup",
+    "bifează copii individuali"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Alege un grup"
+    }
+   ],
+   "cam": [
+    {
+     "on": "apasă Trimite temă"
+    },
+    {
+     "on": "Alege un grup"
+    }
+   ],
+   "rings": [
+    {
+     "on": "apasă Trimite temă",
+     "off": "Alege un grup"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apasă Trimite temă"
+    }
+   ]
+  },
+  "tutor:std:hw-worksheet": {
+   "chapter": "Trimite tema",
+   "title": "Atașează o fișă de lucru",
+   "say": "Bifează fișe de lucru din biblioteca ta. Cele interactive se corectează singure. PDF-urile se completează în scris sau cu o poză.",
+   "keys": [
+    "Bifează fișe de lucru",
+    "din biblioteca ta",
+    "se corectează singure::se corectează singure",
+    "în scris sau cu o poză::în scris sau cu o poză"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "din biblioteca ta"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Bifează fișe de lucru"
+    },
+    {
+     "on": "din biblioteca ta"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Bifează fișe de lucru"
+    }
+   ]
+  },
+  "tutor:std:hw-assign": {
+   "chapter": "Dă-o",
+   "title": "Trimite-o",
+   "say": "Apasă Atribuie tema. Fiecare copil primește propria copie, iar familiile sunt anunțate imediat.",
+   "keys": [
+    "Apasă Atribuie tema",
+    "Propria copie",
+    "Familiile anunțate imediat::anunțate imediat"
+   ],
+   "cam": [
+    {
+     "on": "Apasă Atribuie tema"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apasă Atribuie tema"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apasă Atribuie tema"
+    }
+   ]
+  },
+  "tutor:std:hw-tasks": {
+   "chapter": "Colectează",
+   "title": "Urmărește-o",
+   "say": "Fiecare fișă de temă arată cine mai lucrează, cine a predat și cine a fost corectat.",
+   "keys": [
+    "Fiecare fișă de temă",
+    "mai lucrează",
+    "a predat",
+    "a fost corectat"
+   ],
+   "cam": [
+    {
+     "on": "Fiecare fișă de temă"
+    }
+   ]
+  },
+  "tutor:std:hw-handin": {
+   "chapter": "Colectează",
+   "title": "Cum predau copiii",
+   "say": "Copiii fac fișa de lucru pe ecran, sau scriu, adaugă o poză sau un PDF, apoi apasă Predă tema.",
+   "keys": [
+    "fac fișa de lucru pe ecran",
+    "scriu, adaugă o poză::scriu, adaugă o poză",
+    "sau un PDF",
+    "Predă tema"
+   ],
+   "cam": [
+    {
+     "on": "fac fișa de lucru pe ecran"
+    },
+    {
+     "on": "scriu, adaugă o poză"
+    }
+   ],
+   "rings": [
+    {
+     "on": "fac fișa de lucru pe ecran",
+     "off": "scriu, adaugă o poză"
+    },
+    {
+     "on": "scriu, adaugă o poză"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "fac fișa de lucru pe ecran"
+    }
+   ]
+  },
+  "tutor:std:mark": {
+   "chapter": "Corectează-o",
+   "title": "O singură coadă de corectat",
+   "say": "Tot ce trebuie corectat ajunge într-o singură coadă, cel mai vechi primul. Temele predate, răspunsurile scrise de la teste și răspunsurile de la testele de start, toate la un loc. Deschide unul, corectează-l și folosește butonul următorul ca să treci direct la următorul.",
+   "keys": [
+    "O singură coadă de corectat::o singură coadă",
+    "Cel mai vechi primul",
+    "Deschide unul",
+    "Butonul următorul"
+   ],
+   "cam": [
+    {
+     "on": "Tot ce trebuie"
+    },
+    {
+     "on": "Deschide unul"
+    },
+    {
+     "on": "butonul următorul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Deschide unul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tot ce trebuie",
+     "off": "Deschide unul"
+    },
+    {
+     "on": "Deschide unul",
+     "off": "și folosește butonul"
+    },
+    {
+     "on": "și folosește butonul următorul"
+    }
+   ]
+  },
+  "tutor:std:hw-marking": {
+   "chapter": "Corectează-o",
+   "title": "Corectează și treci mai departe",
+   "say": "Deschide o temă predată ca să vezi răspunsul. Dă un scor, cu totalul din care este, și scrie un feedback. Apasă Corectează și următorul, iar familia este anunțată. Fișele interactive sunt deja corectate pentru tine.",
+   "keys": [
+    "Răspunsul",
+    "Dă un scor",
+    "Scrie feedback::scrie un feedback",
+    "Corectează și următorul"
+   ],
+   "cam": [
+    {
+     "on": "ca să vezi răspunsul"
+    },
+    {
+     "on": "Dă un scor"
+    },
+    {
+     "on": "scrie un feedback"
+    },
+    {
+     "on": "Apasă Corectează și următorul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Dă un scor"
+    },
+    {
+     "on": "Apasă Corectează și următorul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "ca să vezi răspunsul",
+     "off": "Dă un scor"
+    },
+    {
+     "on": "Dă un scor",
+     "off": "scrie un feedback"
+    },
+    {
+     "on": "scrie un feedback",
+     "off": "Apasă Corectează"
+    },
+    {
+     "on": "Apasă Corectează și următorul"
+    }
+   ]
+  },
+  "tutor:std:hw-results": {
+   "chapter": "Rezultate",
+   "title": "Toată lumea vede",
+   "say": "Copilul își vede scorul și feedbackul tău. Familia lui vede și ea asta în Centrul de învățare.",
+   "keys": [
+    "Copilul își vede",
+    "scorul și feedbackul tău::scorul și feedbackul tău",
+    "vede și ea asta",
+    "Centrul de învățare"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "scorul și feedbackul tău"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Copilul își vede"
+    },
+    {
+     "on": "scorul și feedbackul tău"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Copilul își vede",
+     "off": "scorul și feedbackul tău"
+    },
+    {
+     "on": "scorul și feedbackul tău"
+    }
+   ]
+  },
+  "parent:std:hw-list": {
+   "chapter": "Teme",
+   "title": "Ce s-a dat",
+   "say": "Fila Teme listează tot ce a dat tutorele copilului tău. Fiecare temă arată când trebuie predată și dacă a fost predată sau corectată. Dacă ceva este întârziat, vezi aici și în verdictul de pe Acasă. Temele noi apar aici imediat ce sunt date.",
+   "keys": [
+    "Tot ce s-a dat::a dat tutorele",
+    "Când trebuie predată",
+    "Predată sau corectată::predată sau corectată",
+    "Întârzierile apar aici::întârziat"
+   ],
+   "cam": [
+    {
+     "on": "Fila Teme"
+    },
+    {
+     "on": "Fiecare temă arată"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Fiecare temă arată"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiecare temă arată",
+     "off": "Temele noi"
+    }
+   ]
+  },
+  "parent:std:hw-open": {
+   "chapter": "Teme",
+   "title": "Deschide o temă",
+   "say": "Deschide una ca să vezi instrucțiunile și orice fișă sau lecție de făcut mai întâi. Copilul tău poate tasta un răspuns sau adăuga o fotografie ori un PDF, apoi apasă Predă tema. Îl poate schimba până când tutorele îl corectează.",
+   "keys": [
+    "Instrucțiuni și fișă::instrucțiunile",
+    "Tastează sau adaugă o fotografie::tasta un răspuns",
+    "Predă tema",
+    "Poate schimba până la corectare::până când tutorele îl corectează"
+   ],
+   "cam": [
+    {
+     "on": "Deschide una"
+    },
+    {
+     "on": "orice fișă"
+    }
+   ],
+   "rings": [
+    {
+     "on": "orice fișă",
+     "off": "Copilul tău poate"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Deschide una",
+     "text": "Instrucțiuni"
+    },
+    {
+     "on": "orice fișă",
+     "text": "Fișă de făcut"
+    },
+    {
+     "on": "Copilul tău poate tasta",
+     "text": "Text, fotografie sau PDF"
+    }
+   ]
+  },
+  "parent:std:hw-marks": {
+   "chapter": "Teme",
+   "title": "Note și feedback",
+   "say": "Când tutorele a corectat-o, scorul și feedbackul lui apar sub temă și ești anunțat. Progresul copilului tău îl preia și el, așa că vezi cum se descurcă.",
+   "keys": [
+    "Scorul și feedbackul::scorul",
+    "Ești anunțat",
+    "Progresul îl preia::progresul"
+   ],
+   "cam": [
+    {
+     "on": "scorul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "scorul"
+    }
+   ]
+  },
+  "kid:std:hw-find": {
+   "chapter": "Teme",
+   "title": "Găsește-ți tema",
+   "say": "Atinge Teme ca să vezi ce ți-a dat tutorele. Atinge una ca s-o deschizi. Îți spune ce ai de făcut și până când.",
+   "keys": [
+    "Atinge Teme",
+    "Atinge una ca s-o deschizi",
+    "Ce ai de făcut",
+    "Până când::până când"
+   ],
+   "cam": [
+    {
+     "on": "Atinge Teme"
+    },
+    {
+     "on": "Atinge una"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge una"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Atinge una"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Atinge Teme",
+     "text": "Teme"
+    },
+    {
+     "on": "Atinge una",
+     "text": "Atinge una ca s-o deschizi"
+    }
+   ]
+  },
+  "kid:std:hw-do": {
+   "chapter": "Teme",
+   "title": "Fă-o și predă-o",
+   "say": "Citește ce ai de făcut. Apoi fă fișa, pe ecran sau pe hârtie, și scrie-ți răspunsul. Când ai terminat, predă-o. O poți schimba până se uită tutorele la ea.",
+   "keys": [
+    "Citește ce ai de făcut",
+    "Fă fișa",
+    "Predă-o",
+    "Poți schimba până se uită::o poți schimba"
+   ],
+   "cam": [
+    {
+     "on": "Citește ce ai de făcut"
+    },
+    {
+     "on": "Apoi fă fișa"
+    },
+    {
+     "on": "predă-o"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apoi fă fișa"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apoi fă fișa",
+     "off": "Când ai terminat"
+    },
+    {
+     "on": "Când ai terminat"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Apoi fă fișa",
+     "text": "Fă fișa"
+    },
+    {
+     "on": "Când ai terminat",
+     "text": "Predă-o"
+    }
+   ]
+  },
+  "kid:std:hw-back": {
+   "chapter": "Teme",
+   "title": "Vezi cum te-ai descurcat",
+   "say": "Când tutorele a corectat-o, îți vei vedea scorul și un mesaj de la el. Bravo că ai încercat!",
+   "keys": [
+    "Scorul",
+    "Un mesaj de la tutore::mesaj",
+    "Bravo!::Bravo"
+   ],
+   "cam": [
+    {
+     "on": "Când tutorele"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Când tutorele"
+    }
+   ]
+  },
+  "kid:ks1:hello": {
+   "chapter": "Bună",
+   "title": "Bună!",
+   "say": "Bună! Acesta este spațiul tău. Hai să vedem cum funcționează.",
+   "keys": [
+    "Bună",
+    "spațiul tău"
+   ],
+   "nodes": [
+    {
+     "on": "spațiul tău",
+     "title": "Azi"
+    },
+    {
+     "on": "Hai să vedem",
+     "title": "Joacă și învață"
+    },
+    {
+     "on": "cum funcționează",
+     "title": "Stele"
+    }
+   ]
+  },
+  "kid:ks1:today": {
+   "chapter": "Azi",
+   "title": "Azi",
+   "say": "Acesta este Azi. Îți arată un singur lucru de făcut. Atinge butonul mare Hai. Atinge difuzorul ca să-l auzi.",
+   "keys": [
+    "Azi",
+    "Un singur lucru de făcut::un singur lucru",
+    "Atinge butonul mare Hai",
+    "Ascultă-l::difuzorul"
+   ],
+   "cam": [
+    {
+     "on": "Îți arată un singur lucru"
+    },
+    {
+     "on": "Atinge butonul mare Hai"
+    },
+    {
+     "on": "difuzorul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge butonul mare Hai"
+    },
+    {
+     "on": "Atinge difuzorul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Îți arată un singur lucru",
+     "off": "Atinge butonul mare Hai"
+    },
+    {
+     "on": "Atinge butonul mare Hai",
+     "off": "Atinge difuzorul"
+    },
+    {
+     "on": "Atinge difuzorul"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "un singur lucru",
+     "text": "Un singur lucru de făcut"
+    },
+    {
+     "on": "butonul mare Hai",
+     "text": "Atinge Hai"
+    },
+    {
+     "on": "difuzorul",
+     "text": "Ascultă-l"
+    }
+   ]
+  },
+  "kid:ks1:play": {
+   "chapter": "Joacă",
+   "title": "Joacă și învață",
+   "say": "Atinge Joacă și învață. Aici sunt testele tale. Atinge unul. Încearcă!",
+   "keys": [
+    "Joacă și învață",
+    "Testele tale::testele",
+    "Încearcă!"
+   ],
+   "cam": [
+    {
+     "on": "Atinge Joacă"
+    },
+    {
+     "on": "Aici sunt testele"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge Joacă"
+    },
+    {
+     "on": "Atinge unul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Atinge Joacă",
+     "off": "Aici sunt"
+    },
+    {
+     "on": "Atinge unul"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Atinge Joacă",
+     "text": "Joacă și învață"
+    },
+    {
+     "on": "testele",
+     "text": "Teste"
+    }
+   ]
+  },
+  "kid:ks1:stars": {
+   "chapter": "Stele",
+   "title": "Stele",
+   "say": "Atinge Stele. Fă un test și stelele tale strălucesc aici. Bravo!",
+   "keys": [
+    "Stele",
+    "Stelele tale strălucesc aici::stelele tale strălucesc",
+    "Bravo!::Bravo"
+   ],
+   "cam": [
+    {
+     "on": "Atinge Stele"
+    },
+    {
+     "on": "Fă un test"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Atinge Stele"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Atinge Stele",
+     "off": "Fă un test"
+    },
+    {
+     "on": "Fă un test"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Atinge Stele",
+     "text": "Stele"
+    },
+    {
+     "on": "stelele tale strălucesc",
+     "text": "Stelele tale"
+    }
+   ]
+  },
+  "kid:ks1:grown-up": {
+   "chapter": "Gata",
+   "title": "Gata",
+   "say": "Ai terminat? Roagă un adult să te ajute. Pa, pe curând!",
+   "keys": [
+    "adult",
+    "Pa"
+   ],
+   "nodes": [
+    {
+     "on": "Roagă un adult",
+     "title": "Roagă un adult"
+    },
+    {
+     "on": "Pa, pe curând",
+     "title": "Pa!"
+    }
+   ]
+  },
+  "tutor:std:home-tour": {
+   "chapter": "Acasă",
+   "title": "Zonele tale",
+   "say": "Sus sunt zonele tale: Lecții, Elevi, Progres, Teste, Teme pentru acasă și Mesaje. Acasă este locul de unde începi.",
+   "keys": [
+    "Zonele tale",
+    "Lecții, Elevi, Progres",
+    "Teste, Teme pentru acasă",
+    "Acasă este locul"
+   ],
+   "cam": [
+    {
+     "on": "Zonele tale"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Zonele tale",
+     "off": "Lecții, Elevi, Progres"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Zonele tale"
+    }
+   ]
+  },
+  "tutor:std:home-attention": {
+   "chapter": "Acasă",
+   "title": "Necesită atenția ta",
+   "say": "Necesită atenția ta arată ce ai de făcut: teme de corectat, răspunsuri scrise și lucrări întârziate. Începe de sus.",
+   "keys": [
+    "Necesită atenția ta",
+    "ce ai de făcut",
+    "teme de corectat",
+    "lucrări întârziate",
+    "Începe de sus"
+   ],
+   "cam": [
+    {
+     "on": "Necesită atenția ta"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Necesită atenția ta"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Necesită atenția ta"
+    }
+   ]
+  },
+  "tutor:std:home-help": {
+   "chapter": "Acasă",
+   "title": "Ajutorul e mereu la îndemână",
+   "say": "Următoarea ta lecție este aici. Iar Cum funcționează este pe fiecare pagină, oricând ai nevoie de o reamintire.",
+   "keys": [
+    "Următoarea ta lecție",
+    "Cum funcționează",
+    "pe fiecare pagină",
+    "o reamintire"
+   ],
+   "cam": [
+    {
+     "on": "Următoarea ta lecție"
+    },
+    {
+     "on": "Cum funcționează"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Următoarea ta lecție",
+     "off": "Cum funcționează"
+    },
+    {
+     "on": "Cum funcționează"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Următoarea ta lecție"
+    }
+   ]
+  },
+  "tutor:std:fam-ways": {
+   "chapter": "Familii",
+   "title": "Trei moduri de a se alătura",
+   "say": "O familie se poate alătura în trei moduri: rezervă la tine, trimiți un link de invitație, sau găsește pagina ta publică.",
+   "keys": [
+    "se poate alătura în trei moduri",
+    "rezervă la tine",
+    "link de invitație",
+    "pagina ta publică"
+   ],
+   "nodes": [
+    {
+     "on": "se poate alătura în trei moduri",
+     "title": "Rezervă la tine",
+     "sub": "Copilul apare în Înscrie un elev"
+    },
+    {
+     "on": "rezervă la tine",
+     "title": "Trimite un link de invitație",
+     "sub": "Funcționează o dată, timp de 30 de zile"
+    },
+    {
+     "on": "link de invitație",
+     "title": "Pagina ta publică",
+     "sub": "Se înscriu, apoi îi înscrii tu"
+    }
+   ]
+  },
+  "tutor:std:fam-book": {
+   "chapter": "Familii",
+   "title": "Rezervă la tine",
+   "say": "Când un părinte rezervă, copilul apare în Înscrie un elev. Apasă Înscrie, alege materiile și clasa, apoi Înscrie elevul.",
+   "keys": [
+    "copilul apare în Înscrie un elev",
+    "Apasă Înscrie",
+    "alege materiile și clasa",
+    "Înscrie elevul"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Apasă Înscrie"
+    }
+   ],
+   "cam": [
+    {
+     "on": "copilul apare în Înscrie un elev"
+    },
+    {
+     "on": "Apasă Înscrie"
+    },
+    {
+     "on": "alege materiile și clasa"
+    },
+    {
+     "on": "Înscrie elevul"
+    },
+    {
+     "on": "copilul apare în Înscrie un elev"
+    }
+   ],
+   "rings": [
+    {
+     "on": "copilul apare în Înscrie un elev",
+     "off": "Apasă Înscrie"
+    },
+    {
+     "on": "Apasă Înscrie",
+     "off": "alege materiile și clasa"
+    },
+    {
+     "on": "alege materiile și clasa",
+     "off": "Înscrie elevul"
+    },
+    {
+     "on": "Înscrie elevul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "copilul apare în Înscrie un elev"
+    },
+    {
+     "on": "Apasă Înscrie"
+    }
+   ]
+  },
+  "tutor:std:fam-invite": {
+   "chapter": "Familii",
+   "title": "Trimite un link de invitație",
+   "say": "Fără rezervare? Scrie pentru cine e și apasă Creează link de invitație. Trimite-l părintelui. Funcționează o dată, timp de 30 de zile.",
+   "keys": [
+    "pentru cine e",
+    "Creează link de invitație",
+    "Trimite-l părintelui",
+    "timp de 30 de zile"
+   ],
+   "cam": [
+    {
+     "on": "pentru cine e"
+    },
+    {
+     "on": "Creează link de invitație"
+    },
+    {
+     "on": "Trimite-l părintelui"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pentru cine e",
+     "off": "Creează link de invitație"
+    },
+    {
+     "on": "Creează link de invitație",
+     "off": "Trimite-l părintelui"
+    },
+    {
+     "on": "Trimite-l părintelui"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pentru cine e"
+    },
+    {
+     "on": "Creează link de invitație"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "pentru cine e",
+     "text": "Nimic nu se trimite automat: tu îl trimiți"
+    }
+   ]
+  },
+  "tutor:std:fam-page": {
+   "chapter": "Familii",
+   "title": "Distribuie pagina ta publică",
+   "say": "Sau copiază linkul paginii tale și trimite-l. Odată ce părintele se înscrie, copiii lui apar aici, gata de înscriere.",
+   "keys": [
+    "copiază linkul",
+    "trimite-l",
+    "părintele se înscrie",
+    "gata de înscriere"
+   ],
+   "cam": [
+    {
+     "on": "copiază linkul"
+    },
+    {
+     "on": "trimite-l"
+    }
+   ],
+   "rings": [
+    {
+     "on": "copiază linkul",
+     "off": "trimite-l"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "copiază linkul"
+    }
+   ]
+  },
+  "tutor:std:std-cards": {
+   "chapter": "Elevi",
+   "title": "Fiecare copil are o fișă",
+   "say": "Fiecare copil înscris are o fișă care arată clasa, materiile și un cerc de progres.",
+   "keys": [
+    "Fiecare copil înscris",
+    "o fișă",
+    "clasa, materiile",
+    "cerc de progres"
+   ],
+   "cam": [
+    {
+     "on": "Fiecare copil înscris"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiecare copil înscris"
+    }
+   ]
+  },
+  "tutor:std:std-groups": {
+   "chapter": "Elevi",
+   "title": "Creează un grup",
+   "say": "Pune copiii într-un grup. Apoi poți seta teme, un test sau o lecție pentru tot grupul dintr-un click.",
+   "keys": [
+    "Pune copiii într-un grup",
+    "dintr-un click",
+    "teme, un test",
+    "tot grupul"
+   ],
+   "cam": [
+    {
+     "on": "Pune copiii într-un grup"
+    },
+    {
+     "on": "dintr-un click"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pune copiii într-un grup",
+     "off": "dintr-un click"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Pune copiii într-un grup"
+    }
+   ]
+  },
+  "tutor:std:std-support": {
+   "chapter": "Elevi",
+   "title": "Setări de sprijin",
+   "say": "Deschide Editează detaliile pentru a opri cronometrul la teste, a activa modul calm, a adăuga timp suplimentar, a mări textul sau a citi răspunsurile cu voce tare.",
+   "keys": [
+    "Deschide Editează detaliile",
+    "opri cronometrul",
+    "modul calm",
+    "timp suplimentar",
+    "mări textul",
+    "citi răspunsurile cu voce tare"
+   ],
+   "cam": [
+    {
+     "on": "Deschide Editează detaliile"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Deschide Editează detaliile"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Deschide Editează detaliile"
+    },
+    {
+     "on": "opri cronometrul"
+    }
+   ]
+  },
+  "tutor:std:std-owner": {
+   "chapter": "Elevi",
+   "title": "Doar tu le poți schimba",
+   "say": "Familiile nu pot schimba aceste setări. Folosește cele trei puncte de pe fișă pentru a suspenda sau retrage un copil.",
+   "keys": [
+    "nu pot schimba::nu pot schimba",
+    "cele trei puncte",
+    "suspenda",
+    "retrage un copil"
+   ],
+   "cam": [
+    {
+     "on": "nu pot schimba"
+    }
+   ],
+   "rings": [
+    {
+     "on": "nu pot schimba"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "nu pot schimba"
+    }
+   ]
+  },
+  "tutor:std:les-library": {
+   "chapter": "Lecții",
+   "title": "Biblioteca ta de lecții",
+   "say": "Lecții conține mii de lecții gata făcute, așezate pe o hartă a curriculumului. Alege o materie și o clasă.",
+   "keys": [
+    "mii de lecții gata făcute::mii de lecții gata făcute",
+    "o hartă a curriculumului",
+    "Alege o materie",
+    "și o clasă"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "o hartă a curriculumului"
+    }
+   ],
+   "cam": [
+    {
+     "on": "mii de lecții gata făcute"
+    },
+    {
+     "on": "o hartă a curriculumului"
+    },
+    {
+     "on": "Alege o materie"
+    }
+   ],
+   "rings": [
+    {
+     "on": "mii de lecții gata făcute",
+     "off": "o hartă a curriculumului"
+    },
+    {
+     "on": "o hartă a curriculumului"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "mii de lecții gata făcute"
+    },
+    {
+     "on": "o hartă a curriculumului"
+    }
+   ]
+  },
+  "tutor:std:les-find": {
+   "chapter": "Lecții",
+   "title": "Găsește o lecție",
+   "say": "Fiecare temă arată câte lecții are. Sau scrie în Căutare pentru a ajunge direct la una.",
+   "keys": [
+    "Fiecare temă",
+    "câte lecții are",
+    "scrie în Căutare"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "câte lecții are"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Fiecare temă"
+    },
+    {
+     "on": "câte lecții are"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiecare temă"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Fiecare temă"
+    }
+   ]
+  },
+  "tutor:std:les-preview": {
+   "chapter": "Lecții",
+   "title": "Previzualizeaz-o",
+   "say": "Deschide o lecție ca să-i vezi planul. Apasă Previzualizează lecția pentru a vedea exact ce va vedea un copil.",
+   "keys": [
+    "Deschide o lecție",
+    "planul",
+    "Previzualizează lecția",
+    "ce va vedea un copil"
+   ],
+   "cam": [
+    {
+     "on": "Deschide o lecție"
+    },
+    {
+     "on": "planul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Deschide o lecție"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Deschide o lecție"
+    }
+   ]
+  },
+  "tutor:std:les-build": {
+   "chapter": "Lecții",
+   "title": "Construiește-ți propria lecție",
+   "say": "Apasă Creează lecție nouă. Adaugă diapozitive, cuvinte cheie, alegere multiplă, sortare sau potrivire, apoi Salvează. Se alătură bibliotecii tale.",
+   "keys": [
+    "Creează lecție nouă",
+    "Adaugă diapozitive, cuvinte cheie::Adaugă diapozitive, cuvinte cheie",
+    "sortare sau potrivire",
+    "Salvează",
+    "bibliotecii tale"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Adaugă diapozitive, cuvinte cheie"
+    },
+    {
+     "on": "sortare sau potrivire"
+    },
+    {
+     "on": "Salvează"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Creează lecție nouă"
+    }
+   ]
+  },
+  "tutor:std:live-modes": {
+   "chapter": "Lecții live",
+   "title": "Trei moduri de a preda",
+   "say": "Predă printr-un apel video, distribuie pe dispozitivul fiecărui copil, sau predă în persoană. Alegi de fiecare dată.",
+   "keys": [
+    "apel video",
+    "dispozitivul fiecărui copil",
+    "în persoană",
+    "Alegi de fiecare dată"
+   ],
+   "nodes": [
+    {
+     "on": "apel video",
+     "title": "Apel video",
+     "sub": "Alătură-te apelului în Centru"
+    },
+    {
+     "on": "dispozitivul fiecărui copil",
+     "title": "Distribuie copiilor",
+     "sub": "Fiecare copil pe dispozitivul lui"
+    },
+    {
+     "on": "în persoană",
+     "title": "Predă în persoană",
+     "sub": "Copiii lângă tine, fără video"
+    }
+   ]
+  },
+  "tutor:std:live-join": {
+   "chapter": "Lecții live",
+   "title": "Începe o lecție video",
+   "say": "Programeaz-o pentru copiii aleși. La ora lecției, verifică-ți camera și microfonul, apoi apasă Alătură-te. Nu ai nevoie de altă aplicație.",
+   "keys": [
+    "Programeaz-o",
+    "copiii aleși",
+    "camera și microfonul",
+    "apasă Alătură-te",
+    "altă aplicație"
+   ],
+   "cam": [
+    {
+     "on": "Programeaz-o"
+    },
+    {
+     "on": "copiii aleși"
+    },
+    {
+     "on": "camera și microfonul"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Programeaz-o",
+     "off": "copiii aleși"
+    },
+    {
+     "on": "copiii aleși",
+     "off": "camera și microfonul"
+    },
+    {
+     "on": "camera și microfonul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Programeaz-o"
+    },
+    {
+     "on": "copiii aleși"
+    }
+   ]
+  },
+  "tutor:std:live-incall": {
+   "chapter": "Lecții live",
+   "title": "În interiorul apelului",
+   "say": "Lângă video sunt filele tale: Lecții, Test, Temă, Cartonașe și o tablă. Apasă Predă și fiecare ecran urmează pe al tău.",
+   "keys": [
+    "filele tale",
+    "Cartonașe și o tablă",
+    "Apasă Predă",
+    "urmează pe al tău"
+   ],
+   "nodes": [
+    {
+     "on": "filele tale",
+     "title": "Lecții",
+     "sub": "Apasă Predă"
+    },
+    {
+     "on": "Cartonașe și o tablă",
+     "title": "Test"
+    },
+    {
+     "on": "Apasă Predă",
+     "title": "Temă"
+    },
+    {
+     "on": "urmează pe al tău",
+     "title": "Cartonașe"
+    },
+    {
+     "on": "filele tale",
+     "title": "Tablă"
+    }
+   ]
+  },
+  "tutor:std:live-share": {
+   "chapter": "Lecții live",
+   "title": "Distribuie copiilor",
+   "say": "Fără video? Apasă Distribuie copiilor. Fiecare copil urmărește pe dispozitivul lui și răspunde singur.",
+   "keys": [
+    "Apasă Distribuie copiilor",
+    "dispozitivul lui",
+    "răspunde singur"
+   ],
+   "cam": [
+    {
+     "on": "Apasă Distribuie copiilor"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apasă Distribuie copiilor"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apasă Distribuie copiilor"
+    }
+   ]
+  },
+  "tutor:std:live-person": {
+   "chapter": "Lecții live",
+   "title": "Predă în persoană",
+   "say": "În sală? Bifează cine e prezent și introdu răspunsurile fiecărui copil. Familiile văd rezultatele mai târziu.",
+   "keys": [
+    "cine e prezent",
+    "răspunsurile fiecărui copil::răspunsurile fiecărui copil",
+    "văd rezultatele mai târziu"
+   ],
+   "cam": [
+    {
+     "on": "cine e prezent"
+    },
+    {
+     "on": "răspunsurile fiecărui copil"
+    }
+   ],
+   "rings": [
+    {
+     "on": "cine e prezent",
+     "off": "răspunsurile fiecărui copil"
+    },
+    {
+     "on": "răspunsurile fiecărui copil"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "cine e prezent"
+    }
+   ]
+  },
+  "tutor:std:tools-try": {
+   "chapter": "Instrumente",
+   "title": "Încearcă instrumentele",
+   "say": "Instrumente, în Lecții, are rigle, raportoare, axe numerice și diagrame științifice. Deschide orice instrument ca să-l încerci.",
+   "keys": [
+    "în Lecții",
+    "raportoare, axe numerice",
+    "diagrame științifice::diagrame științifice",
+    "Deschide orice instrument"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "raportoare, axe numerice"
+    }
+   ],
+   "cam": [
+    {
+     "on": "în Lecții"
+    },
+    {
+     "on": "raportoare, axe numerice"
+    }
+   ],
+   "rings": [
+    {
+     "on": "în Lecții",
+     "off": "raportoare, axe numerice"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "în Lecții"
+    }
+   ]
+  },
+  "tutor:std:tools-give": {
+   "chapter": "Instrumente",
+   "title": "Dă un instrument copiilor",
+   "say": "În Previzualizează lecția, deschide Instrumente pentru această lecție. Apasă Adaugă instrument la această întrebare, sau Folosește la toate întrebările.",
+   "keys": [
+    "Previzualizează lecția",
+    "Instrumente pentru această lecție",
+    "Adaugă instrument la această întrebare",
+    "la toate întrebările"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Instrumente pentru această lecție"
+    },
+    {
+     "on": "Adaugă instrument la această întrebare"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Previzualizează lecția"
+    },
+    {
+     "on": "Instrumente pentru această lecție"
+    },
+    {
+     "on": "Adaugă instrument la această întrebare"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Previzualizează lecția",
+     "off": "Instrumente pentru această lecție"
+    },
+    {
+     "on": "Instrumente pentru această lecție",
+     "off": "Adaugă instrument la această întrebare"
+    },
+    {
+     "on": "Adaugă instrument la această întrebare"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Previzualizează lecția"
+    },
+    {
+     "on": "Instrumente pentru această lecție"
+    }
+   ]
+  },
+  "tutor:std:quiz-make": {
+   "chapter": "Teste",
+   "title": "Creează un test",
+   "say": "În Teste, apasă Test nou, alege teme din banca de întrebări și alege materia și pragul de promovare.",
+   "keys": [
+    "apasă Test nou",
+    "teme din banca de întrebări::teme din banca de întrebări",
+    "materia și pragul de promovare"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "teme din banca de întrebări"
+    }
+   ],
+   "cam": [
+    {
+     "on": "apasă Test nou"
+    },
+    {
+     "on": "teme din banca de întrebări"
+    },
+    {
+     "on": "materia și pragul de promovare"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "apasă Test nou"
+    }
+   ]
+  },
+  "tutor:std:quiz-marked": {
+   "chapter": "Teste",
+   "title": "Corectat pentru tine",
+   "say": "Testele sunt corectate instantaneu. Răspunsurile scrise merg la Corectare, într-o singură coadă.",
+   "keys": [
+    "corectate instantaneu",
+    "Răspunsurile scrise",
+    "o singură coadă::o singură coadă"
+   ],
+   "cam": [
+    {
+     "on": "corectate instantaneu"
+    }
+   ],
+   "rings": [
+    {
+     "on": "corectate instantaneu"
+    }
+   ]
+  },
+  "tutor:std:quiz-starting": {
+   "chapter": "Teste",
+   "title": "Test de start",
+   "say": "Elevii noi susțin un test de start o singură dată. Nu există prag de promovare, așa că vezi de unde pornește fiecare copil.",
+   "keys": [
+    "un test de start",
+    "Nu există prag de promovare::Nu există prag de promovare",
+    "de unde pornește fiecare copil"
+   ],
+   "cam": [
+    {
+     "on": "un test de start"
+    }
+   ],
+   "rings": [
+    {
+     "on": "un test de start"
+    }
+   ]
+  },
+  "tutor:std:quiz-flash": {
+   "chapter": "Teste",
+   "title": "Cartonașe",
+   "say": "Cartonașele readuc cardurile pe care un copil le găsește dificile. Într-o lecție live, poți prezenta un pachet pe ecran.",
+   "keys": [
+    "Cartonașele",
+    "un copil le găsește dificile",
+    "prezenta un pachet pe ecran"
+   ],
+   "cam": [
+    {
+     "on": "Cartonașele"
+    },
+    {
+     "on": "un copil le găsește dificile"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Cartonașele"
+    }
+   ]
+  },
+  "tutor:std:prog-class": {
+   "chapter": "Progres",
+   "title": "Toată clasa ta",
+   "say": "Fiecare rând este un copil. Fiecare materie arată un scor colorat. Filtrează după clasă sau grup, sau caută un nume.",
+   "keys": [
+    "Fiecare rând este un copil",
+    "scor colorat",
+    "Filtrează după clasă sau grup",
+    "caută un nume"
+   ],
+   "cam": [
+    {
+     "on": "Fiecare rând este un copil"
+    },
+    {
+     "on": "scor colorat"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Fiecare rând este un copil",
+     "off": "scor colorat"
+    },
+    {
+     "on": "scor colorat"
+    }
+   ]
+  },
+  "tutor:std:prog-child": {
+   "chapter": "Progres",
+   "title": "Un singur copil",
+   "say": "Dă clic pe un copil ca să vezi fiecare temă, tendința ei și cele mai recente rezultate. Se actualizează din lucrarea corectată.",
+   "keys": [
+    "Dă clic pe un copil",
+    "fiecare temă",
+    "cele mai recente rezultate",
+    "lucrarea corectată"
+   ],
+   "cam": [
+    {
+     "on": "Dă clic pe un copil"
+    }
+   ]
+  },
+  "tutor:std:prog-levels": {
+   "chapter": "Progres",
+   "title": "Nivelurile tale",
+   "say": "Apasă Editează nivelurile pentru a le redenumi sau a schimba unde încep. Scorurile se recalculează instant, iar notele nu se schimbă.",
+   "keys": [
+    "Apasă Editează nivelurile",
+    "le redenumi",
+    "se recalculează instant",
+    "notele nu se schimbă"
+   ],
+   "cam": [
+    {
+     "on": "Apasă Editează nivelurile"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Apasă Editează nivelurile"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Apasă Editează nivelurile"
+    }
+   ]
+  },
+  "tutor:std:hw-add-details": {
+   "chapter": "Trimite tema",
+   "title": "Adaugă detaliile",
+   "say": "Adaugă un titlu. Scrie instrucțiuni: ce trebuie făcut. Spune ce trebuie predat. Apoi alege data limită.",
+   "keys": [
+    "Adaugă un titlu",
+    "Scrie instrucțiuni",
+    "ce trebuie predat",
+    "alege data limită"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Scrie instrucțiuni"
+    },
+    {
+     "on": "ce trebuie predat"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Adaugă un titlu"
+    },
+    {
+     "on": "Scrie instrucțiuni"
+    },
+    {
+     "on": "ce trebuie predat"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Adaugă un titlu",
+     "off": "Scrie instrucțiuni"
+    },
+    {
+     "on": "Scrie instrucțiuni",
+     "off": "ce trebuie predat"
+    },
+    {
+     "on": "ce trebuie predat"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Adaugă un titlu"
+    },
+    {
+     "on": "Scrie instrucțiuni"
+    },
+    {
+     "on": "ce trebuie predat"
+    }
+   ]
+  },
+  "tutor:std:hw-mark": {
+   "chapter": "Corectează",
+   "title": "Corectează",
+   "say": "Tot ce ai de corectat este în De corectat, cel mai vechi primul. Adaugă un punctaj și feedback, apoi apasă Corectează și continuă.",
+   "keys": [
+    "Tot ce ai de corectat",
+    "cel mai vechi primul",
+    "Adaugă un punctaj și feedback",
+    "Corectează și continuă"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "cel mai vechi primul"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Tot ce ai de corectat"
+    },
+    {
+     "on": "cel mai vechi primul"
+    },
+    {
+     "on": "Adaugă un punctaj și feedback"
+    },
+    {
+     "on": "Corectează și continuă"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tot ce ai de corectat",
+     "off": "cel mai vechi primul"
+    },
+    {
+     "on": "cel mai vechi primul",
+     "off": "Adaugă un punctaj și feedback"
+    },
+    {
+     "on": "Adaugă un punctaj și feedback",
+     "off": "Corectează și continuă"
+    },
+    {
+     "on": "Corectează și continuă"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tot ce ai de corectat"
+    },
+    {
+     "on": "cel mai vechi primul"
+    }
+   ]
+  },
+  "tutor:std:msg-all": {
+   "chapter": "Mesaje",
+   "title": "Totul într-un singur loc",
+   "say": "Mesaje păstrează fiecare conversație cu familiile într-un singur loc, grupată pe copil.",
+   "keys": [
+    "fiecare conversație cu familiile",
+    "un singur loc",
+    "grupată pe copil"
+   ],
+   "cam": [
+    {
+     "on": "fiecare conversație cu familiile"
+    }
+   ],
+   "rings": [
+    {
+     "on": "fiecare conversație cu familiile"
+    }
+   ]
+  },
+  "tutor:std:msg-reply": {
+   "chapter": "Mesaje",
+   "title": "Răspunde",
+   "say": "Deschide o conversație, scrie răspunsul și apasă Trimite. Părintele primește o notificare.",
+   "keys": [
+    "Deschide o conversație",
+    "scrie răspunsul",
+    "apasă Trimite",
+    "primește o notificare"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "scrie răspunsul"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Deschide o conversație"
+    },
+    {
+     "on": "scrie răspunsul"
+    },
+    {
+     "on": "apasă Trimite"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Deschide o conversație",
+     "off": "scrie răspunsul"
+    },
+    {
+     "on": "scrie răspunsul"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Deschide o conversație"
+    },
+    {
+     "on": "scrie răspunsul"
+    }
+   ]
+  },
+  "tutor:std:msg-auto": {
+   "chapter": "Mesaje",
+   "title": "Actualizările sunt automate",
+   "say": "Nu trebuie să scrii despre teme sau note. Familiile sunt anunțate automat.",
+   "keys": [
+    "Nu trebuie să scrii::Nu trebuie să scrii",
+    "teme sau note",
+    "anunțate automat"
+   ],
+   "cam": [
+    {
+     "on": "Nu trebuie să scrii"
+    }
+   ]
+  }
+ }
+}

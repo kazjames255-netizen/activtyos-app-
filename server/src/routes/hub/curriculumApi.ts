@@ -2,9 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../../firebase";
 import { canSee, canSeeStudent, canWriteRow, okId, requireEdit, resolveCtx, scopedChildren, type HubCtx } from "../../lib/hubCore";
+import { familyNoteRule } from "../../lib/hubAccess";
 import { childAssignedNoteIds, noteIndex, tenantRoster, type NoteRow } from "../../lib/hubIndex";
 import { frameworkIds, framework, tally, type CurFramework, type Placement } from "../../lib/curriculum";
 import { attemptsCol, nowIso } from "./teachingCommon";
+import { lessonViewsCol } from "./lessonApi";
 
 // Learning Hub — "Where do these lessons fit the curriculum?" A read-mostly view over a static reference map
 // (lib/curriculum.ts: the National Curriculum, GCSE/AQA…) plus the provider's own corrections (`hubNcTags`).
@@ -56,7 +58,22 @@ function finishedQuizzes(tenantId: string, childId: string): Promise<Set<string>
   return v;
 }
 
-interface Scope { rows: NoteRow[]; mode: "tutor" | "child"; done: Set<string>; childId: string | null }
+// A child's "actually studied this" lesson ids (LessonPlayer reaching "done" — see lessonApi.ts POST /notes/:id/viewed),
+// cached the same way as `finishedQuizzes` above. Independent of the exit quiz: a lesson can be "viewed" without ever
+// being "done" (no quiz, or the quiz not yet finished/available) — see cells.ts / CurriculumCard.tsx for how both show.
+const viewedCache = new Map<string, { at: number; v: Promise<Set<string>> }>();
+function viewedNoteIds(tenantId: string, childId: string): Promise<Set<string>> {
+  const key = `${tenantId}|${childId}`, hit = viewedCache.get(key);
+  if (hit && Date.now() - hit.at < 15_000) return hit.v;
+  if (viewedCache.size > 500) viewedCache.clear();
+  const v = lessonViewsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).select("noteId").get()
+    .then((snap) => new Set(snap.docs.map((d) => d.get("noteId") as string)));
+  viewedCache.set(key, { at: Date.now(), v });
+  v.catch(() => viewedCache.delete(key));
+  return v;
+}
+
+interface Scope { rows: NoteRow[]; mode: "tutor" | "child"; done: Set<string>; viewed: Set<string>; childId: string | null }
 /** The lessons this caller's map is drawn from. */
 async function scopeFor(ctx: HubCtx): Promise<Scope | { error: string; status: number }> {
   const all = await noteIndex(ctx.tenantId);
@@ -65,15 +82,18 @@ async function scopeFor(ctx: HubCtx): Promise<Scope | { error: string; status: n
     if (!ctx.childId && ctx.children.length > 1) return { error: "Which child? Pass ?childId=", status: 400 };
     const kid = scopedChildren(ctx)[0];
     if (!kid) return { error: "Which child? Pass ?childId=", status: 400 };
+    // Which lessons this child can open follows the provider's "lessons families can open" setting (all / their year / only set).
+    const rule = await familyNoteRule(ctx);
     const assigned = await childAssignedNoteIds(ctx.tenantId, kid.childId);
-    const rows = [...assigned].map((id) => all.get(id)).filter((r): r is NoteRow => !!r && usable(r) && canSee(ctx, r.franchiseId));
-    // "Done" = the lesson's exit quiz has been handed in for THIS child.
-    const finished = await finishedQuizzes(ctx.tenantId, kid.childId);
+    const rows = [...all.values()].filter((r) => usable(r) && canSee(ctx, r.franchiseId) && (assigned.has(r.id) || !rule || rule(r)));
+    // "Done" = the lesson's exit quiz has been handed in for THIS child. "Viewed" = the child has actually gone
+    // through the lesson at all (independent signal — see lessonViewsCol), whether or not it has/finished a quiz.
+    const [finished, viewed] = await Promise.all([finishedQuizzes(ctx.tenantId, kid.childId), viewedNoteIds(ctx.tenantId, kid.childId)]);
     const done = new Set(rows.filter((r) => r.lessonQuizId && finished.has(r.lessonQuizId)).map((r) => r.id));
-    return { rows, mode: "child", done, childId: kid.childId };
+    return { rows, mode: "child", done, viewed, childId: kid.childId };
   }
   const rows = [...all.values()].filter((r) => usable(r) && canSee(ctx, r.franchiseId));
-  return { rows, mode: "tutor", done: new Set(), childId: null };
+  return { rows, mode: "tutor", done: new Set(), viewed: new Set(), childId: null };
 }
 const fwParam = (q: unknown) => (typeof q === "string" && frameworkIds().includes(q) ? q : "nc2014");
 
@@ -167,14 +187,14 @@ hubCurriculumApi.get("/curriculum/lessons", async (req, res) => {
   const scope = await scopeFor(ctx);
   if ("error" in scope) { res.status(scope.status).json({ error: scope.error }); return; }
   const tags = await tenantTags(ctx.tenantId, fw.id);
-  const out: { id: string; title: string; excerpt: string; isLesson: boolean; kind: "board" | null; createdByName: string; updatedAt: string; year: number; confidence: number; corrected: boolean; done: boolean; canCorrect: boolean }[] = [];
+  const out: { id: string; title: string; excerpt: string; isLesson: boolean; kind: "board" | null; createdByName: string; updatedAt: string; year: number; confidence: number; corrected: boolean; done: boolean; viewed: boolean; canCorrect: boolean }[] = [];
   for (const r of scope.rows) {
     const p = place(fw, r, tags);
     const hits = p && (p.areaIdx === areaIdx || (!p.corrected && r.oakKey && p.areaIdx !== areaIdx && fw.secondary?.[r.oakKey]?.includes(areaIdx)));
     if (!hits || (yearQ && p!.year !== yearQ)) continue;
     out.push({
       id: r.id, title: r.title, excerpt: r.excerpt, isLesson: r.isLesson, kind: r.kind, createdByName: r.createdByName, updatedAt: r.updatedAt,
-      year: p!.year, confidence: p!.confidence, corrected: p!.corrected, done: scope.done.has(r.id), canCorrect: ctx.canEdit && canWriteRow(ctx, r.franchiseId),
+      year: p!.year, confidence: p!.confidence, corrected: p!.corrected, done: scope.done.has(r.id), viewed: scope.viewed.has(r.id) || scope.done.has(r.id), canCorrect: ctx.canEdit && canWriteRow(ctx, r.franchiseId),
     });
   }
   out.sort((a, b) => a.year - b.year || a.title.localeCompare(b.title));

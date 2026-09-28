@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+import { feedbackText, promptText } from "../toolText";
 import { FOCUS } from "../../kit";
+import { useBareTool } from "../bareContext";
 import type { Pt } from "../engine/geometry";
 import { canRedo, canUndo, commit, newHistory, redo, undo, type History } from "../engine/state";
 import { newSeed } from "../engine/rng";
@@ -22,6 +25,8 @@ interface GridState { pts: Pt[]; join: boolean; lines: [Pt, Pt][] }
 const clean = (n: number) => Number(n.toFixed(6));
 
 export default function CoordGrid({ mode = "practise", compact = false, help = false, prompt, problem: problemProp = null, initialPoints, onAnswer }: Partial<ToolProps> & { compact?: boolean; help?: boolean; prompt?: string; problem?: Problem | PublicProblem | null; initialPoints?: Pt[]; onAnswer?: (a: { points: Pt[] }) => void }) {
+  const t = useT();
+  const bareTool = useBareTool();
   const assess = mode === "assess";
   const [h, setH] = useState<History<GridState>>(() => newHistory({ pts: initialPoints ?? [], join: false, lines: [] }));
   const [axes, setAxes] = useState<GridAxes>(() => (prompt ? suggestGridAxes(prompt) : null) ?? DEFAULT_AXES);
@@ -29,7 +34,8 @@ export default function CoordGrid({ mode = "practise", compact = false, help = f
   const [tool, setTool] = useState<"plot" | "line" | "erase">("plot");
   const [extend, setExtend] = useState(true);
   const [pending, setPending] = useState<Pt | null>(null);
-  const [readout, setReadout] = useState(!assess);
+  const [readout, setReadout] = useState(!assess && !bareTool);
+  useEffect(() => { setReadout(!assess && !bareTool); }, [bareTool, assess]); // "Just the tool" starts with the read-outs off; the strip keeps the switch
   const [hover, setHover] = useState<Pt | null>(null);
   const [dragI, setDragI] = useState<number | null>(null);
   const [problem, setProblem] = useState<Problem | PublicProblem | null>(problemProp);
@@ -88,36 +94,36 @@ export default function CoordGrid({ mode = "practise", compact = false, help = f
   const ends = (l: [Pt, Pt]) => (extend ? extendLine(l[0], l[1], axes) ?? l : l);
   return (
     <div className="grid gap-3" data-testid="coord-grid">
-      {!help && (problem ? (
-        <div role="region" aria-label="Question" className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-          <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{problem.prompt}</p>
-          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? "Hand in" : "Check"}</Button>}{!assess && <Button onClick={newQ}>Try another</Button>}</div>
-          {result && !assess && <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b>{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{f}</span>)}</div>}
+      <div data-tool-chrome className="contents">{!help && (problem ? (
+        <div role="region" aria-label={t("hubtoolsa.c_question")} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <p className="m-0 text-[15px] font-extrabold text-[var(--ink)]">{promptText(t, problem.prompt)}</p>
+          <div className="mt-2 flex flex-wrap gap-2">{!onAnswer && <Button variant="primary" onClick={check}>{assess ? t("hubtoolsa.c_handIn") : t("hubtoolsa.c_check")}</Button>}{!assess && <Button onClick={newQ}>{t("hubtoolsa.c_tryAnother")}</Button>}</div>
+          {result && !assess && <div role="status" className="mt-2 grid gap-1 text-[13px] font-semibold text-[var(--ink)]"><b>{result.score} / {result.max}</b>{result.feedback.map((f, i) => <span key={i}>{feedbackText(t, f)}</span>)}</div>}
         </div>
-      ) : !assess && <div><Button variant="primary" onClick={newQ}>Practise: plot the points</Button></div>)}
+      ) : !assess && <div><Button variant="primary" onClick={newQ}>{t("hubtoolsa.g_practisePlot")}</Button></div>)}</div>
 
-      <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label="Grid tools">
-        {([["Plot", "plot"], ["Line", "line"], ["Rub out", "erase"]] as const).map(([t, id]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => { setTool(id); setPending(null); }} data-testid={`grid-tool-${id}`} className={`${btn} ${on(tool === id)}`}>{t}</button>)}
-        {tool === "line" && <label className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={extend} onChange={(e) => setExtend(e.target.checked)} className="accent-[var(--brand)]" data-testid="grid-extend" />Extend to the edges</label>}
-        <label className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={half} onChange={(e) => setHalf(e.target.checked)} className="accent-[var(--brand)]" />Half steps</label>
-        <label className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={state.join} onChange={(e) => put({ join: e.target.checked })} className="accent-[var(--brand)]" />Join the points</label>
-        <button type="button" disabled={!canUndo(h)} onClick={() => setH(undo)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Undo" data-testid="grid-undo">↶</button>
-        <button type="button" disabled={!canRedo(h)} onClick={() => setH(redo)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label="Redo">↷</button>
-        <button type="button" onClick={() => { put({ pts: [], lines: [] }); setPending(null); }} className={`${btn} ${on(false)}`} data-testid="grid-clear">Clear</button>
-        {!assess && <label className="ml-auto inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={readout} onChange={(e) => setReadout(e.target.checked)} className="accent-[var(--brand)]" />Show coordinates</label>}
+      <div className="flex flex-wrap items-center gap-1.5" role="toolbar" aria-label={t("hubtoolsa.g_tools")} data-tool-strip>
+        {([[t("hubtoolsa.g_plot"), "plot"], [t("hubtoolsa.b_line"), "line"], [t("hubtoolsa.b_rubout"), "erase"]] as const).map(([label, id]) => <button key={id} type="button" aria-pressed={tool === id} onClick={() => { setTool(id); setPending(null); }} data-testid={`grid-tool-${id}`} className={`${btn} ${on(tool === id)}`}>{label}</button>)}
+        {tool === "line" && <label className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={extend} onChange={(e) => setExtend(e.target.checked)} className="accent-[var(--brand)]" data-testid="grid-extend" />{t("hubtoolsa.g_extend")}</label>}
+        <label data-tool-chrome className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={half} onChange={(e) => setHalf(e.target.checked)} className="accent-[var(--brand)]" />{t("hubtoolsa.g_half")}</label>
+        <label className="inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={state.join} onChange={(e) => put({ join: e.target.checked })} className="accent-[var(--brand)]" />{t("hubtoolsa.g_join")}</label>
+        <button type="button" disabled={!canUndo(h)} onClick={() => setH(undo)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_undo")} data-testid="grid-undo">↶</button>
+        <button type="button" disabled={!canRedo(h)} onClick={() => setH(redo)} className={`${btn} ${on(false)} disabled:opacity-40`} aria-label={t("hubtoolsa.c_redo")}>↷</button>
+        <button type="button" onClick={() => { put({ pts: [], lines: [] }); setPending(null); }} className={`${btn} ${on(false)}`} data-testid="grid-clear">{t("hubtoolsa.c_clear")}</button>
+        {!assess && <label className="ms-auto inline-flex min-h-[44px] items-center gap-1.5 text-[12.5px] font-bold text-[var(--ink)]"><input type="checkbox" checked={readout} onChange={(e) => setReadout(e.target.checked)} className="accent-[var(--brand)]" />{t("hubtoolsa.g_showCoords")}</label>}
       </div>
 
-      <div className="flex flex-wrap items-end gap-2" role="group" aria-label="Axes">
-        <b className="text-[12.5px] text-[var(--ink)]">Axes</b>
-        <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">from<input type="number" value={axes.min} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ min: v }); }} className={num} data-testid="grid-axis-min" aria-label="Axes from" /></label>
-        <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">to<input type="number" value={axes.max} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ max: v }); }} className={num} data-testid="grid-axis-max" aria-label="Axes to" /></label>
-        <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">step<input type="number" step="any" value={axes.step} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ step: v }); }} className={num} data-testid="grid-axis-step" aria-label="Grid step" /></label>
-        <button type="button" onClick={() => zoom(0.5)} className={`${btn} ${on(false)}`} data-testid="grid-zoom-in" aria-label="Zoom in">Zoom in</button>
-        <button type="button" onClick={() => zoom(2)} className={`${btn} ${on(false)}`} data-testid="grid-zoom-out" aria-label="Zoom out">Zoom out</button>
+      <div className="flex flex-wrap items-end gap-2" role="group" aria-label={t("hubtoolsa.g_axes")} data-tool-strip>
+        <b data-tool-chrome className="text-[12.5px] text-[var(--ink)]">{t("hubtoolsa.g_axes")}</b>
+        <label data-tool-chrome className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.g_from")}<input type="number" value={axes.min} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ min: v }); }} className={num} data-testid="grid-axis-min" aria-label={t("hubtoolsa.g_axesFrom")} /></label>
+        <label data-tool-chrome className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.g_to")}<input type="number" value={axes.max} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ max: v }); }} className={num} data-testid="grid-axis-max" aria-label={t("hubtoolsa.g_axesTo")} /></label>
+        <label data-tool-chrome className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.g_step")}<input type="number" step="any" value={axes.step} onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) setAxis({ step: v }); }} className={num} data-testid="grid-axis-step" aria-label={t("hubtoolsa.g_gridStep")} /></label>
+        <button type="button" onClick={() => zoom(0.5)} className={`${btn} ${on(false)}`} data-testid="grid-zoom-in" aria-label={t("hubtoolsa.g_zoomIn")}>{t("hubtoolsa.g_zoomIn")}</button>
+        <button type="button" onClick={() => zoom(2)} className={`${btn} ${on(false)}`} data-testid="grid-zoom-out" aria-label={t("hubtoolsa.g_zoomOut")}>{t("hubtoolsa.g_zoomOut")}</button>
       </div>
 
-      <div className="mx-auto w-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]" style={{ maxWidth: compact ? 420 : 560 }}>
-        <svg ref={svgRef} viewBox={`${min - pad} ${-(max + pad)} ${span + 2 * pad} ${span + 2 * pad}`} role="application" aria-label={`Coordinate grid from ${min} to ${max} on both axes. Use the boxes below to add points by typing.`} style={{ width: "100%", touchAction: "none", cursor: erase ? "not-allowed" : "crosshair", display: "block" }}
+      <div className={`mx-auto w-full overflow-hidden ${bareTool ? "" : "rounded-2xl border border-[var(--line)] bg-[var(--surface)]"}`} style={{ maxWidth: compact ? 420 : 560 }}>
+        <svg ref={svgRef} viewBox={`${min - pad} ${-(max + pad)} ${span + 2 * pad} ${span + 2 * pad}`} role="application" aria-label={t("hubtoolsa.g_svgAria", { min, max })} style={{ width: "100%", touchAction: "none", cursor: erase ? "not-allowed" : "crosshair", display: "block" }}
           onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={() => setHover(null)}>
           <g stroke="color-mix(in srgb, var(--brand-2) 22%, transparent)" strokeWidth={0.05 * k}>{ticks.map((t) => <g key={t}><line x1={t} y1={-max} x2={t} y2={-min} /><line x1={min} y1={-t} x2={max} y2={-t} /></g>)}</g>
           <g stroke="var(--ink)" strokeWidth={0.13 * k}><line x1={min - arrow} y1={-oy} x2={max + arrow} y2={-oy} /><line x1={ox} y1={-(min - arrow)} x2={ox} y2={-(max + arrow)} /></g>
@@ -133,13 +139,13 @@ export default function CoordGrid({ mode = "practise", compact = false, help = f
           {readout && hover && hover[0] >= min - 0.5 * k && hover[0] <= max + 0.5 * k && hover[1] >= min - 0.5 * k && hover[1] <= max + 0.5 * k && <text x={min - pad + 0.4 * k} y={-(max + pad) + 1.1 * k} fontSize={0.7 * k} fontWeight={800} fill="var(--brand)" style={{ userSelect: "none" }}>({snap(hover)[0]}, {snap(hover)[1]})</text>}
         </svg>
       </div>
-      {tool === "line" && <p className="m-0 text-[12.5px] font-semibold text-[var(--ink-2)]" role="status">{pending ? `From (${pending[0]}, ${pending[1]}): now tap where the line goes.` : "Line: tap two points to draw a straight line through them."}</p>}
+      {tool === "line" && <p data-tool-chrome className="m-0 text-[12.5px] font-semibold text-[var(--ink-2)]" role="status">{pending ? t("hubtoolsa.g_pending", { x: pending[0], y: pending[1] }) : t("hubtoolsa.g_lineHelp")}</p>}
 
-      <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
-        <b className="text-[12.5px] text-[var(--ink)]">Add a point by typing</b>
+      <div data-tool-chrome className="flex flex-wrap items-end gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+        <b className="text-[12.5px] text-[var(--ink)]">{t("hubtoolsa.g_addTyped")}</b>
         {[["x", tx, setTx], ["y", ty, setTy]].map(([l, v, f]) => <label key={String(l)} className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{l as string}<input type="number" step="any" value={v as string} onChange={(e) => (f as (s: string) => void)(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addTyped(); }} className={num} /></label>)}
-        <Button variant="primary" onClick={addTyped}>Add point</Button>
-        {pts.length > 0 && <ul className="m-0 flex w-full list-none flex-wrap gap-1.5 p-0" aria-label="Plotted points">{pts.map((p, i) => <li key={i}><button type="button" onClick={() => setPts(pts.filter((_, j) => j !== i))} className={`min-h-[36px] rounded-full border border-[var(--line)] px-2.5 text-[12px] font-bold text-[var(--ink)] ${FOCUS}`} aria-label={`Remove point ${p[0]}, ${p[1]}`}>({p[0]}, {p[1]}) ✕</button></li>)}</ul>}
+        <Button variant="primary" onClick={addTyped}>{t("hubtoolsa.g_addPoint")}</Button>
+        {pts.length > 0 && <ul className="m-0 flex w-full list-none flex-wrap gap-1.5 p-0" aria-label={t("hubtoolsa.g_plotted")}>{pts.map((p, i) => <li key={i}><button type="button" onClick={() => setPts(pts.filter((_, j) => j !== i))} className={`min-h-[36px] rounded-full border border-[var(--line)] px-2.5 text-[12px] font-bold text-[var(--ink)] ${FOCUS}`} aria-label={t("hubtoolsa.g_removePoint", { x: p[0], y: p[1] })}>({p[0]}, {p[1]}) ✕</button></li>)}</ul>}
       </div>
     </div>
   );

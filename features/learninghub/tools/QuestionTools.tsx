@@ -5,6 +5,8 @@ import { FOCUS } from "../kit";
 import { logToolEvent } from "./api";
 import { suggestLiveTools } from "./suggest";
 import { ToolHost } from "./ToolHost";
+import { useI18n } from "@/lib/i18n/provider";
+import { toolName } from "./toolTextB";
 import type { ToolMeta } from "./types";
 
 // "Tools for this question": the same automatic rules that suggest tools for a lesson, run over a QUESTION (its wording + the subject / year it
@@ -22,21 +24,22 @@ export function useQuestionTools(ctx: QuestionToolCtx | undefined, prompt: strin
 }
 
 export default function QuestionTools({ ctx, prompt, variant }: { ctx: QuestionToolCtx; prompt: string; variant: "child" | "tutor" }) {
+  const { t } = useI18n();
   const found = useQuestionTools(ctx, prompt, variant === "tutor" ? 3 : 2);
   const [open, setOpen] = useState<ToolMeta | null>(null);
   if (!found.length) return null;
   const tutor = variant === "tutor";
   return (
     <div className="mt-4 grid gap-2" data-testid={tutor ? "form-tools" : "question-tools"}>
-      <p className="m-0 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tutor ? "Tools pupils will be offered with this question" : "Tools for this question"}</p>
+      <p className="m-0 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tutor ? t("hubtoolsb.qt_headTutor") : t("hubtoolsb.qt_headChild")}</p>
       <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
         {found.map(({ tool, why }) => (
           <li key={tool.id} className="min-w-0">
             <button type="button" data-testid={`${tutor ? "form" : "question"}-tool-${tool.id}`} onClick={() => { setOpen(tool); if (ctx.qs) logToolEvent(ctx.qs, tool.id, "open"); }}
               className={`inline-flex min-h-[44px] max-w-full items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[14px] font-extrabold text-[var(--ink)] hover:border-[var(--brand)] ${FOCUS}`}>
-              <span aria-hidden>🧰</span><span className="truncate">{tutor ? tool.title : `Open ${tool.title}`}</span>
+              <span aria-hidden>🧰</span><span className="truncate">{tutor ? toolName(t, tool) : t("hubtoolsb.qt_open", { tool: toolName(t, tool) })}</span>
             </button>
-            {tutor && <p className="m-0 mt-1 max-w-[46ch] text-[12px] font-semibold text-[var(--ink-2)]" data-testid={`form-tool-why-${tool.id}`}>Suggested because {why.text ? why.text.charAt(0).toLowerCase() + why.text.slice(1) : `the ${why.field === "unit" ? "topic" : "question"} mentions “${why.match}”`}.</p>}
+            {tutor && <p className="m-0 mt-1 max-w-[46ch] text-[12px] font-semibold text-[var(--ink-2)]" data-testid={`form-tool-why-${tool.id}`}>{why.text ? t("hubtoolsb.qt_whyText", { text: why.text.charAt(0).toLowerCase() + why.text.slice(1) }) : t(why.field === "unit" ? "hubtoolsb.qt_whyTopic" : "hubtoolsb.qt_whyQuestion", { match: why.match })}</p>}
           </li>
         ))}
       </ul>

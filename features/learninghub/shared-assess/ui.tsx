@@ -6,6 +6,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "../kit";
 import { useEscapeLayer } from "../escapeLayer";
+import { useT } from "@/lib/i18n/provider";
 import type { Tone } from "./format";
 import { useCountUp, useGrow, useReducedMotion } from "./motion";
 
@@ -38,18 +39,20 @@ export function CardSkeleton() {
 }
 
 /** A grid of card skeletons (the assessment lists). */
-export function CardGridSkeleton({ count = 4, label = "Loading" }: { count?: number; label?: string }) {
+export function CardGridSkeleton({ count = 4, label }: { count?: number; label?: string }) {
+  const t = useT();
   return (
-    <div role="status" aria-label={label} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <div role="status" aria-label={label ?? t("hubfam.asLoading")} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }, (_, i) => <CardSkeleton key={i} />)}
     </div>
   );
 }
 
 /** List-row skeleton: an avatar/tile, two lines and a trailing pill. */
-export function ListSkeleton({ rows = 3, label = "Loading" }: { rows?: number; label?: string }) {
+export function ListSkeleton({ rows = 3, label }: { rows?: number; label?: string }) {
+  const t = useT();
   return (
-    <div role="status" aria-label={label} className="grid gap-2.5">
+    <div role="status" aria-label={label ?? t("hubfam.asLoading")} className="grid gap-2.5">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} aria-hidden className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
           <Skeleton className="h-10 w-10 flex-none !rounded-full" />
@@ -63,6 +66,7 @@ export function ListSkeleton({ rows = 3, label = "Loading" }: { rows?: number; l
 
 /** Dismissible inline message. */
 export function Notice({ tone = "error", children, onDismiss, action }: { tone?: "error" | "warn" | "ok" | "info"; children: ReactNode; onDismiss?: () => void; action?: ReactNode }) {
+  const tr = useT();
   const t = {
     error: { bg: "var(--red-soft)", line: "var(--red-line)", ink: "color-mix(in srgb, var(--red) 70%, var(--ink))", icon: "warning" as IconName },
     warn: { bg: "var(--gold-soft)", line: "var(--gold-line)", ink: "color-mix(in srgb, var(--gold) 25%, var(--ink))", icon: "warning" as IconName },
@@ -75,7 +79,7 @@ export function Notice({ tone = "error", children, onDismiss, action }: { tone?:
       <div className="min-w-0 flex-1">{children}</div>
       {action}
       {onDismiss && (
-        <button type="button" onClick={onDismiss} aria-label="Dismiss" className={`-my-1 -mr-1.5 grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px] leading-none hover:bg-black/5 ${FOCUS}`}>×</button>
+        <button type="button" onClick={onDismiss} aria-label={tr("hubfam.asDismiss")} className={`-my-1 -me-1.5 grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px] leading-none hover:bg-black/5 ${FOCUS}`}>×</button>
       )}
     </div>
   );
@@ -98,8 +102,8 @@ export function EmptyState({ icon, title, body, action }: { icon: string; title:
   return (
     <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-6 py-10 text-center">
       <div className="relative mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[var(--brand-soft)] text-[var(--brand)]" aria-hidden>
-        <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full bg-[var(--gold)] opacity-80" />
-        <span className="absolute -bottom-1 -left-1.5 h-2 w-2 rounded-full bg-[var(--green)] opacity-70" />
+        <span className="absolute -end-1.5 -top-1.5 h-3 w-3 rounded-full bg-[var(--gold)] opacity-80" />
+        <span className="absolute -bottom-1 -start-1.5 h-2 w-2 rounded-full bg-[var(--green)] opacity-70" />
         <Icon name={name} size={28} strokeWidth={1.6} />
       </div>
       <div className="mt-3 text-[16px] font-extrabold text-[var(--ink)]" style={display}>{title}</div>
@@ -140,6 +144,7 @@ export function ScoreRing({ pct, size = 120, stroke = 10, tone, label, sub, pass
   /** A dashed halo round the ring: the score may still change (written answers still to be marked). */
   maybe?: number; ariaLabel?: string;
 }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const shown = useGrow(state ? 0 : pct, delay);
   const counted = useCountUp(state ? 0 : pct, duration, delay);
@@ -150,7 +155,7 @@ export function ScoreRing({ pct, size = 120, stroke = 10, tone, label, sub, pass
   const ang = tick != null ? (tick / 100) * 2 * Math.PI : 0;
   const text = label ?? `${Math.round(counted)}%`;
   const numberSize = size * (String(text).length > 3 ? 0.215 : 0.27);
-  const aria = ariaLabel ?? (state === "pending" ? "Awaiting marking" : state === "empty" ? (tick != null ? `Not attempted, pass mark ${tick} percent` : "Not attempted") : `${Math.round(pct)} percent${tick != null ? `, pass mark ${tick} percent` : ""}`);
+  const aria = ariaLabel ?? (state === "pending" ? t("hubfam.asAwaitingMarking") : state === "empty" ? (tick != null ? t("hubfam.asNotAttemptedPass", { n: tick }) : t("hubfam.asNotAttempted")) : tick != null ? t("hubfam.asPercentPass", { pct: Math.round(pct), n: tick }) : t("hubfam.asPercent", { pct: Math.round(pct) }));
   return (
     <div className="relative flex-none" style={{ width: size, height: size }} role="img" aria-label={aria}>
       {glow && (
@@ -232,6 +237,7 @@ export function Switch({ on, onChange, label, id }: { on: boolean; onChange: (v:
 /** Accessible modal: Esc closes, focus moves in and returns, body scroll locked,
  *  full-screen sheet on phones. */
 export function Modal({ title, onClose, children, footer, wide, id, headerExtra }: { title: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; id?: string; headerExtra?: ReactNode }) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -260,7 +266,7 @@ export function Modal({ title, onClose, children, footer, wide, id, headerExtra 
         <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
           <h2 className="min-w-0 flex-1 truncate text-[16px] font-extrabold text-[var(--ink)]" style={display}>{title}</h2>
           {headerExtra}
-          <button type="button" onClick={onClose} aria-label="Close" className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[20px] leading-none text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>×</button>
+          <button type="button" onClick={onClose} aria-label={t("hubfam.asClose")} className={`grid h-11 w-11 flex-none place-items-center rounded-xl text-[20px] leading-none text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>×</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
         {footer && <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3">{footer}</div>}

@@ -103,7 +103,7 @@ test.afterAll(async () => { /* leave the hub on: the standing account is shared 
 
 /** Open a hub URL; other specs flip this shared account's hub switch off, so re-assert it and retry once. */
 async function gotoHub(page: Page, url: string) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url);
@@ -429,7 +429,8 @@ test.describe("live lessons: rejoin, stay prompt and workspace", () => {
     await ws.locator("#ws-attach-notes").click();
     const attach = page.locator("#ws-attach-dialog");
     await expect(attach).toBeVisible();
-    await attach.getByLabel(new RegExp(`Fractions note ${stamp}`)).check();
+    await attach.getByLabel("Search lessons").fill(`Fractions note ${stamp}`);
+    await attach.locator("[data-pick]").first().click();
     await attach.getByRole("button", { name: /Save/ }).click();
     await expect(attach).toHaveCount(0, { timeout: 20_000 });
     await expect(ws.getByTestId("attached-notes")).toBeVisible({ timeout: 20_000 });

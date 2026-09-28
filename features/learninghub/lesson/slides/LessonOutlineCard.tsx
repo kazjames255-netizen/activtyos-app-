@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { subjectColor, tint } from "../../kit";
 
 // The redesigned "Lesson outline" slide (Oak's own template: a title + a pill-per-"learning cycle"-step list, each
@@ -55,6 +56,7 @@ export function LessonOutlineCard({ subject, heading, items, currentPart }: {
    *  before it are already done, this one is current, later ones are plain. Undefined = no status at all. */
   currentPart?: number;
 }) {
+  const t = useT();
   const accent = subjectColor(subject || "");
   const at = currentPart != null ? Math.min(Math.max(currentPart, 0), items.length - 1) : undefined;
   const doneCount = at ?? 0;
@@ -65,13 +67,13 @@ export function LessonOutlineCard({ subject, heading, items, currentPart }: {
       <div className="relative flex flex-none flex-wrap items-center justify-between gap-[2.4cqw] px-[4.5cqw] py-[3.6cqw]"
         style={{ backgroundImage: "radial-gradient(rgba(255,255,255,.14) 1px, transparent 1.6px), var(--side-bg)", backgroundSize: "18px 18px, cover" }}>
         <div className="min-w-0 flex-1">
-          <p className="m-0 text-[1.8cqw] font-extrabold uppercase tracking-[0.08em] text-white/75">{subject ? `${subject} · Lesson outline` : "Lesson outline"}</p>
+          <p className="m-0 text-[1.8cqw] font-extrabold uppercase tracking-[0.08em] text-white/75">{subject ? t("hublessons.loSubjectOutline", { subject }) : t("hublessons.loOutline")}</p>
           <h2 className="m-0 mt-[.7cqw] max-w-[48cqw] text-[3.3cqw] font-extrabold leading-[1.12]" style={{ color: "#fff" }}>{heading}</h2>
         </div>
         {/* Real position, when known (see file header) — "Part N of M starting" / a filled-in progress rail — rather
             than always reading "not started" regardless of where the student actually is in the deck. */}
         <div className="flex flex-none flex-col items-end gap-[.9cqw]" style={{ minWidth: "17cqw" }}>
-          <span className="text-[1.6cqw] font-bold text-white/75">{at != null ? `Part ${at + 1} of ${items.length} starting` : `${items.length} ${items.length === 1 ? "part" : "parts"}`}</span>
+          <span className="text-[1.6cqw] font-bold text-white/75">{at != null ? t("hublessons.loPartStarting", { n: at + 1, total: items.length }) : t("hublessons.loParts", { n: items.length })}</span>
           <div className="h-[.8cqw] w-full overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,.24)" }}>
             <span className="block h-full rounded-full" style={{ width: at != null ? `${Math.round(((at + 0.5) / items.length) * 100)}%` : "4%", background: "var(--gold, #f5b81f)" }} />
           </div>
@@ -88,10 +90,10 @@ export function LessonOutlineCard({ subject, heading, items, currentPart }: {
               style={{ boxShadow: here ? `0 .3cqw 1.3cqw rgba(15,23,42,.08), inset 0 0 0 .18cqw ${accent}` : "0 .3cqw 1.3cqw rgba(15,23,42,.08)", opacity: done ? 0.62 : 1 }}>
               <ItemBadge accent={accent} n={i + 1} done={done} />
               <div className="min-w-0 flex-1">
-                <p className="m-0 text-[1.4cqw] font-extrabold uppercase tracking-[0.06em]" style={{ color: accent }}>Part {i + 1}</p>
+                <p className="m-0 text-[1.4cqw] font-extrabold uppercase tracking-[0.06em]" style={{ color: accent }}>{t("hublessons.loPartN", { n: i + 1 })}</p>
                 {item.editable ?? <p className={ITEM_TITLE_CLASS} style={{ color: "var(--sb-ink, #171534)" }}>{item.title}</p>}
               </div>
-              {here && <span className="flex-none rounded-full px-[2.1cqw] py-[1cqw] text-[1.6cqw] font-extrabold text-white" style={{ background: accent }}>You are here</span>}
+              {here && <span className="flex-none rounded-full px-[2.1cqw] py-[1cqw] text-[1.6cqw] font-extrabold text-white" style={{ background: accent }}>{t("hublessons.loYouAreHere")}</span>}
             </div>
           );
         })}

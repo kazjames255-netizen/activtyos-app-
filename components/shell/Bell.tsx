@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
@@ -52,6 +53,7 @@ function ago(iso: string): string {
 
 export function Bell({ portal }: { portal: PortalKey }) {
   const router = useRouter();
+  const t = useT();
   const [items, setItems] = useState<Notification[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
@@ -93,7 +95,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
     <div ref={wrapRef} className="relative flex-none">
       <button
         onClick={openPanel}
-        aria-label={unread > 0 ? `Notifications (${unread} new)` : "Notifications"}
+        aria-label={unread > 0 ? t("chrome.notifNew", { n: unread }) : t("chrome.notif")}
         className="relative inline-flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-full transition-all hover:-translate-y-px hover:brightness-105"
         style={{ background: "#ffffff", boxShadow: "inset 0 0 0 1px #e3e9f5", color: "#f59e0b" }}
       >
@@ -114,7 +116,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
       {open && (
         <div className="absolute right-0 top-[42px] z-50 w-[min(340px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-sm)]">
           <div className="border-b border-[var(--line)] px-4 py-2.5 text-[12px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">
-            Notifications
+            {t("chrome.notif")}
           </div>
           <div className="max-h-[420px] overflow-y-auto">
             {items.length === 0 && (

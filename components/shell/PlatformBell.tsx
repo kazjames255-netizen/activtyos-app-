@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 
 // The HQ notification bell — new provider signups, cancellations, support
@@ -22,6 +23,7 @@ function ago(iso: string) {
 
 export function PlatformBell() {
   const router = useRouter();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
@@ -61,7 +63,7 @@ export function PlatformBell() {
 
   return (
     <div ref={ref} className="relative">
-      <button type="button" onClick={toggleOpen} aria-label="Notifications" className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]">
+      <button type="button" onClick={toggleOpen} aria-label={t("chrome.notif")} className="relative inline-flex h-[34px] w-[34px] items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
         {unread > 0 && <span className="absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none text-white" style={{ background: "#ef4444" }}>{unread > 9 ? "9+" : unread}</span>}
       </button>
@@ -69,7 +71,7 @@ export function PlatformBell() {
       {open && (
         <div className="absolute right-0 z-50 mt-2 w-[340px] overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl">
           <div className="flex items-center justify-between border-b border-[var(--line)] px-3.5 py-2.5">
-            <span className="text-[13px] font-extrabold">Notifications</span>
+            <span className="text-[13px] font-extrabold">{t("chrome.notif")}</span>
             <button type="button" onClick={() => setSettings((s) => !s)} title="Notification settings" className="text-[13px] text-[var(--ink-3)] hover:text-[var(--ink)]">⚙</button>
           </div>
 

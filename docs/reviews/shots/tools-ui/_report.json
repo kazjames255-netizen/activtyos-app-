@@ -1,0 +1,54 @@
+[
+ {
+  "vp": "768",
+  "scheme": "light",
+  "id": "M-10",
+  "small": []
+ },
+ {
+  "vp": "768",
+  "scheme": "light",
+  "hit": {
+   "over": "BUTTON"
+  }
+ },
+ {
+  "vp": "768",
+  "scheme": "dark",
+  "id": "M-10",
+  "small": []
+ },
+ {
+  "vp": "768",
+  "scheme": "dark",
+  "hit": {
+   "over": "UL"
+  }
+ },
+ {
+  "vp": "1440",
+  "scheme": "light",
+  "id": "M-10",
+  "small": []
+ },
+ {
+  "vp": "1440",
+  "scheme": "light",
+  "hit": {
+   "over": "SPAN"
+  }
+ },
+ {
+  "vp": "1440",
+  "scheme": "dark",
+  "id": "M-10",
+  "small": []
+ },
+ {
+  "vp": "1440",
+  "scheme": "dark",
+  "hit": {
+   "over": "DIV"
+  }
+ }
+]

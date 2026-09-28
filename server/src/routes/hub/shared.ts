@@ -72,6 +72,17 @@ export interface AssessmentDoc {
   /** "inherit" (or unset) = settings.hub.retakePolicy. */
   retakePolicy?: "inherit" | "unlimited" | "once" | "cooldown";
   retakeCooldownHours?: number | null;
+  /** Diagnostics only: which enrolled children this placement test was actually assigned to by a tutor —
+   *  audience fit (year/age) alone is no longer enough to prompt or gate a child with it. `null`/absent
+   *  is the LEGACY case (an assessment saved before per-child assignment existed): every audience-fitting
+   *  child is treated as assigned, exactly as before. A non-null array (even `[]`, a brand-new diagnostic
+   *  nobody has been picked for yet) is a genuine assignment list. Not used for a quiz. */
+  assignedChildIds?: string[] | null;
+  /** Set only on a LESSON's own exit quiz (a hubNotes doc's `lesson.quizId`/`worksheetQuizId`), to that note's id —
+   *  never set on a standalone quiz/diagnostic a family reaches by browsing the Quizzes tab directly. Whatever
+   *  already let a child open that lesson (franchise scope, `lessonAccess`…) is the real gate for its exit quiz too;
+   *  see attempts.ts's `audienceFit` check, which this field exempts a lesson's own quiz from. */
+  lessonId?: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -244,3 +255,10 @@ export const fitsChild = (rowFranchise: string | null | undefined, child: { fran
 
 export const childSubjectOk = (child: ChildRef, subject: string) =>
   !child.subjects.length || child.subjects.some((s) => s.toLowerCase() === subject.toLowerCase());
+
+/** Does a diagnostic actually reach this child? Audience fit is necessary but no longer sufficient — a
+ *  diagnostic only prompts/locks/appears for a child it was explicitly assigned to. `assignedChildIds`
+ *  absent/null is the permanent legacy fallback (a diagnostic saved before assignment existed): every
+ *  audience-fitting child counts as assigned, i.e. today's behaviour. Always true for a quiz. */
+export const diagnosticAssignedTo = (a: Pick<AssessmentDoc, "type" | "assignedChildIds">, childId: string) =>
+  a.type !== "diagnostic" || a.assignedChildIds == null || a.assignedChildIds.includes(childId);

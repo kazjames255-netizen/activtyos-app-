@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { BoardController, Ptr } from "./controller";
+import { bt } from "./boardI18n";
 import { LINE_H, MAX_TEXT_CHARS } from "./model";
 
 // The drawing surface: one canvas (crisp on high-DPI screens), pointer events
@@ -151,10 +152,10 @@ function TextEditor({ ctrl, k }: { ctrl: BoardController; k: number }) {
   const contentH = lay ? Math.max(1, lay.lines.length) * fs * LINE_H + fs * 0.5 : 0;
   const boxH = inShape ? Math.min(d.h * k, contentH) : sticky ? d.h * k : lines * fs * LINE_H + 10;
   const top = inShape ? sy + (d.va === "t" ? 0 : d.va === "b" ? d.h * k - boxH : (d.h * k - boxH) / 2) : sy;
-  const ph = inShape ? (d.ph ?? "Type here…") : sticky ? "Write a note…" : "Type here…";
+  const ph = inShape ? (d.ph ?? bt("bTypeHere", "Type here…")) : sticky ? bt("bWriteNote", "Write a note…") : bt("bTypeHere", "Type here…");
   const commitAndMove = (dir: 1 | -1) => ctrl.tabEdit(dir);
   return (
-    <textarea ref={ref} value={d.text} aria-label={sticky ? "Sticky note text" : inShape ? "Type in the shape" : "Type on the board"} data-testid="board-text-input" spellCheck maxLength={MAX_TEXT_CHARS}
+    <textarea ref={ref} value={d.text} aria-label={sticky ? bt("bStickyText", "Sticky note text") : inShape ? bt("bTypeInShape", "Type in the shape") : bt("bTypeOnBoard", "Type on the board")} data-testid="board-text-input" spellCheck maxLength={MAX_TEXT_CHARS}
       onChange={(e) => ctrl.setEditText(e.target.value)}
       onBlur={() => { if (Date.now() - born.current < 350) { ref.current?.focus({ preventScroll: true }); return; } ctrl.commitEdit(); }}
       onPointerDown={(e) => e.stopPropagation()}

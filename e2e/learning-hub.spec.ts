@@ -57,7 +57,7 @@ async function newLessonSubject(page: Page, subject: string) {
   await expect(page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subject })).toBeVisible({ timeout: 20_000 });
 }
 async function openNotes(page: Page) {
-  await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
   await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
@@ -96,7 +96,7 @@ test.describe("the page on/off switch (Setup → Features)", () => {
     expect((await saved).ok()).toBe(true);
 
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
 
     // With the hub on, Setup gains a "Learning Hub" settings tab.
     await page.goto("/freelancer/setup?tab=hub");
@@ -127,7 +127,7 @@ test.describe("tutor builds topics and notes", () => {
   test("Home leads the tab strip, Live lessons follows; every panel has a tab", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
     // The tutor strip is grouped: seven top tabs, Home first (the default), Lessons second, then a sub-tab row under most of them.
     const tops = page.locator('[role="tab"][data-top]');
     await expect(tops).toHaveCount(7);
@@ -243,7 +243,7 @@ test.describe("tutor enrols a student (Students tab)", () => {
   test("find the child, pick their subjects, enrol — then pause and resume", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
     await openTab(page, /Students/);
     await expect(page.locator("#hub-students")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Enrol a student/ }).first().click();
@@ -299,7 +299,7 @@ test.describe("a family reads it (the student side)", () => {
   test("sees published notes read-only, never drafts or edit controls", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/custdash/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
     const provider = page.getByLabel("Provider");
     if (await provider.isVisible().catch(() => false)) await provider.selectOption(accounts.freelancer.tenantId!);
     // A family with several children picks one in the header (remembered per provider).

@@ -1,7 +1,9 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useMemo, useState } from "react";
 import { Modal } from "../../shared-assess/ui";
+import { rich } from "../tRich";
 import { Btn } from "../lessonUi";
 import type { Slide } from "./types";
 
@@ -13,18 +15,19 @@ type Path = (string | number)[];
 interface Field { path: Path; value: string; label: string; long: boolean }
 
 const SKIP = new Set(["t", "kind", "answer", "col", "art", "pics", "image", "artLock", "emoji"]);
-const NICE: Record<string, string> = { text: "Text", q: "Question", why: "Explanation", term: "Word", def: "Meaning", root: "Root word", add: "Ending", result: "Result", note: "Note", word: "Word", words: "Word", tips: "Reminder", title: "Title", sub: "Caption", label: "Button label", emoji: "Emoji", a: "Left", b: "Right", items: "Item", options: "Option", columns: "Column", chunks: "Chunk", pairs: "Pair" };
+/** i18n KEYS for a field's name. */
+const NICE: Record<string, string> = { text: "hublessons.sfText", q: "hublessons.sfQuestion", why: "hublessons.sfExplanation", term: "hublessons.sfWord", def: "hublessons.sfMeaning", root: "hublessons.sfRoot", add: "hublessons.sfEnding", result: "hublessons.sfResult", note: "hublessons.sfNote", word: "hublessons.sfWord", words: "hublessons.sfWord", tips: "hublessons.sfReminder", title: "hublessons.sfTitle", sub: "hublessons.sfCaption", label: "hublessons.sfButtonLabel", emoji: "hublessons.sfEmoji", a: "hublessons.sfLeft", b: "hublessons.sfRight", items: "hublessons.sfItem", options: "hublessons.sfOption", columns: "hublessons.sfColumn", chunks: "hublessons.sfChunk", pairs: "hublessons.sfPair" };
 
-function collect(node: unknown, path: Path, out: Field[], block: string) {
+function collect(node: unknown, path: Path, out: Field[], block: string, t: (k: string) => string) {
   if (typeof node === "string") {
     const key = [...path].reverse().find((k) => typeof k === "string") as string | undefined;
     const n = typeof path[path.length - 1] === "number" ? ` ${(path[path.length - 1] as number) + 1}` : "";
-    out.push({ path, value: node, label: `${block ? block + " · " : ""}${NICE[key ?? ""] ?? key ?? "Text"}${n}`, long: node.length > 60 || key === "text" || key === "def" || key === "why" });
+    out.push({ path, value: node, label: `${block ? block + " · " : ""}${NICE[key ?? ""] ? t(NICE[key ?? ""]!) : key ?? t("hublessons.sfText")}${n}`, long: node.length > 60 || key === "text" || key === "def" || key === "why" });
     return;
   }
-  if (Array.isArray(node)) { node.forEach((v, i) => collect(v, [...path, i], out, block)); return; }
+  if (Array.isArray(node)) { node.forEach((v, i) => collect(v, [...path, i], out, block, t)); return; }
   if (node && typeof node === "object") {
-    for (const [k, v] of Object.entries(node as Record<string, unknown>)) if (!SKIP.has(k)) collect(v, [...path, k], out, block);
+    for (const [k, v] of Object.entries(node as Record<string, unknown>)) if (!SKIP.has(k)) collect(v, [...path, k], out, block, t);
   }
 }
 function setAt<T>(root: T, path: Path, value: string): T {
@@ -34,27 +37,30 @@ function setAt<T>(root: T, path: Path, value: string): T {
   return { ...(root as Record<string, unknown>), [h as string]: setAt((root as Record<string, unknown>)[h as string], rest, value) } as T;
 }
 
-const BLOCK_NAME: Record<string, string> = { text: "Paragraph", lead: "Big text", callout: "Highlight box", list: "List", chips: "Word chips", cards: "Picture cards", define: "Key words", formula: "Word builder", reveal: "Reveal", roots: "Root words", choice: "Question", choices: "Questions", sort: "Sorting", match: "Matching", spell: "Spelling", lcwc: "Look-cover-write-check", clap: "Clap it" };
+/** i18n KEYS for a block's name. */
+const BLOCK_NAME: Record<string, string> = { text: "hublessons.sbParagraph", lead: "hublessons.sbBigText", callout: "hublessons.sbHighlight", list: "hublessons.sbList", chips: "hublessons.sbChips", cards: "hublessons.sbCards", define: "hublessons.keyWordsTag", formula: "hublessons.sbFormula", reveal: "hublessons.sbReveal", roots: "hublessons.sbRoots", choice: "hublessons.sfQuestion", choices: "hublessons.sbQuestions", sort: "hublessons.sbSorting", match: "hublessons.sbMatching", spell: "hublessons.sbSpelling", lcwc: "hublessons.sbLcwc", clap: "hublessons.bkClapIt" };
 
 export function SlideEditor({ slide, onSave, onClose }: { slide: Slide; onSave: (s: Slide) => Promise<void>; onClose: () => void }) {
+  const t = useT();
   const [draft, setDraft] = useState<Slide>(slide);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fields = useMemo(() => {
     const out: Field[] = [];
-    collect(draft.title, ["title"], out, "Slide");
-    draft.blocks.forEach((b, i) => collect(b, ["blocks", i], out, BLOCK_NAME[b.t] ?? b.t));
+    collect(draft.title, ["title"], out, t("hublessons.sbSlide"), t);
+    draft.blocks.forEach((b, i) => collect(b, ["blocks", i], out, BLOCK_NAME[b.t] ? t(BLOCK_NAME[b.t]!) : b.t, t));
     return out;
-  }, [draft]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, t]);
   const get = (path: Path): string => { let n: unknown = draft; for (const k of path) n = (n as Record<string | number, unknown>)[k]; return String(n ?? ""); };
   const save = async () => {
     setBusy(true); setErr(null);
-    try { await onSave(draft); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    try { await onSave(draft); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntSave")); setBusy(false); }
   };
   return (
-    <Modal title="Edit this slide" onClose={onClose} wide
-      footer={<><Btn tone="ghost" onClick={onClose}>Cancel</Btn><Btn onClick={save} disabled={busy} data-testid="slide-edit-save">{busy ? "Saving…" : "Save changes"}</Btn></>}>
-      <p className="m-0 mb-3 text-[13px] text-[var(--ink-2)]">Change any wording. Use <b>{"{curly brackets}"}</b> to colour part of a word and <b>**two stars**</b> for bold. The right answers stay as they are.</p>
+    <Modal title={t("hublessons.sdEditSlide")} onClose={onClose} wide
+      footer={<><Btn tone="ghost" onClick={onClose}>{t("hublessons.cancel")}</Btn><Btn onClick={save} disabled={busy} data-testid="slide-edit-save">{busy ? t("hublessons.saving") : t("hublessons.sdSaveChanges")}</Btn></>}>
+      <p className="m-0 mb-3 text-[13px] text-[var(--ink-2)]">{rich(t("hublessons.seHelp"), { curly: <b>{"{ }"}</b>, stars: <b>**</b> })}</p>
       <div className="grid gap-2.5">
         {fields.map((f) => (
           <label key={f.path.join(".")} className="block">

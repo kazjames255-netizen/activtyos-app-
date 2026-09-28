@@ -7,11 +7,13 @@ import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../panelTypes";
 import { canChangeRow, errMsg, topicLabel } from "../types";
 import { Icon } from "../kit";
-import { hubPath, kindLabel, ruleOf, type QLite, type QPage, type Question } from "../shared-assess/api";
+import { hubPath, ruleOf, type QLite, type QPage, type Question } from "../shared-assess/api";
 import { NEUTRAL, OK, type Tone } from "../shared-assess/format";
 import { Chip, EmptyState, FOCUS, ListSkeleton, Modal, TAP } from "../shared-assess/ui";
 import { QuestionForm } from "./QuestionForm";
 import { toQuestionBody } from "./questionBody";
+import { kindText } from "./kindLabel";
+import { hubT, useHubI18n } from "../family/hubT";
 
 // Question bank: every question a tutor has written, grouped by topic, narrowed
 // by the sidebar's subject/topic filter. Questions are reusable across quizzes
@@ -31,11 +33,12 @@ export function answerSummary(q: Question, p: PanelProps): string {
   if (rule === "match") return (q.pairs ?? []).map((x) => `${x.term} ↔ ${x.definition}`).join(" · ");
   if (rule === "order") return (q.items ?? []).map((x, i) => `${i + 1}. ${x}`).join("  ");
   if (rule === "exact") return [q.answer, ...(q.acceptedAnswers ?? [])].filter(Boolean).join(" / ");
-  if (rule === "tool") return `${(q.tool && GENERATOR_LABEL[q.tool.generatorId]) || "Tool question"} · marked automatically${q.tool?.seed ? ` · fixed problem ${q.tool.seed}` : " · new numbers each attempt"}`;
-  return "Marked by hand";
+  if (rule === "tool") return hubT(q.tool?.seed ? "hubfam.qzQbToolFixed" : "hubfam.qzQbToolNew", { label: (q.tool && GENERATOR_LABEL[q.tool.generatorId]) || hubT("hubfam.qzQbToolQ"), seed: q.tool?.seed ?? "" });
+  return hubT("hubfam.qzQbByHand");
 }
 
 export function QuestionBank({ p }: { p: PanelProps }) {
+  const { t, tp } = useHubI18n();
   const [editing, setEditing] = useState<Question | "new" | null>(null);
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
@@ -57,7 +60,7 @@ export function QuestionBank({ p }: { p: PanelProps }) {
   const [loaded, setLoaded] = useState(false);
   const seq = useRef(0);
   const count = useRef(PAGE);
-  useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 250); return () => clearTimeout(t); }, [q]);
+  useEffect(() => { const h = setTimeout(() => setDq(q.trim()), 250); return () => clearTimeout(h); }, [q]);
   const listPath = useCallback((cursor: string | null, limit: number) => hubPath(p.qs, "/questions", {
     light: "1", sort: "topic", limit: String(limit), cursor,
     ...(p.filter.topicId ? { topicId: p.filter.topicId } : p.filter.subject ? { subject: p.filter.subject } : {}),
@@ -74,7 +77,7 @@ export function QuestionBank({ p }: { p: PanelProps }) {
         count.current = more ? count.current + r.items.length : Math.max(PAGE, r.items.length);
         setTotal(r.total); setNext(r.nextCursor); setLoaded(true);
       })
-      .catch((e) => { if (mine === seq.current) { setLoaded(true); p.onError(errMsg(e, "Couldn't load the questions")); } })
+      .catch((e) => { if (mine === seq.current) { setLoaded(true); p.onError(errMsg(e, t("hubfam.qzQbLoadFail"))); } })
       .finally(() => { if (mine === seq.current) setLoading(false); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listPath]);
@@ -92,7 +95,7 @@ export function QuestionBank({ p }: { p: PanelProps }) {
   const openEditor = async (x: QLite) => {
     setBusy(x.id);
     try { setEditing(await fetchFull(x)); }
-    catch (e) { p.onError(errMsg(e, "Couldn't open the question")); }
+    catch (e) { p.onError(errMsg(e, t("hubfam.qzQbOpenFail"))); }
     finally { setBusy(null); }
   };
   const togglePublish = async (x: QLite) => {
@@ -101,41 +104,41 @@ export function QuestionBank({ p }: { p: PanelProps }) {
       const full = await fetchFull(x);
       await put(hubPath(p.qs, `/questions/${x.id}`), toQuestionBody(full, { published: !x.published }));
       reload();
-    } catch (e) { p.onError(errMsg(e, "Couldn't update the question")); }
+    } catch (e) { p.onError(errMsg(e, t("hubfam.qzQbUpdateFail"))); }
     finally { setBusy(null); }
   };
   const remove = async (x: QLite) => {
     setBusy(x.id);
     try { await del(hubPath(p.qs, `/questions/${x.id}`)); setConfirmDel(null); reload(); }
-    catch (e) { setConfirmDel(null); p.onError(errMsg(e, "Couldn't delete the question")); }
+    catch (e) { setConfirmDel(null); p.onError(errMsg(e, t("hubfam.qzQbDelFail"))); }
     finally { setBusy(null); }
   };
   const narrowed = !!(p.filter.topicId || p.filter.subject || dq || kind || state || year);
 
-  if (!p.topics.length) return <EmptyState icon="🗂️" title="Add a topic first" body="Questions belong to a topic. Create a subject and topic in the sidebar, then come back to write questions." />;
+  if (!p.topics.length) return <EmptyState icon="🗂️" title={t("hubfam.qzQbAddTopicT")} body={t("hubfam.qzQbAddTopicB")} />;
 
   return (
     <div className="grid gap-3" data-testid="hub-bank">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-[180px] flex-1"><Input aria-label="Search questions" placeholder="Search questions…" value={q} onChange={(e) => setQ(e.target.value)} className="min-h-[44px] w-full !rounded-xl" /></div>
-        <Select aria-label="Filter by year group" value={year} onChange={(e) => setYear(e.target.value)} className="min-h-[44px] !rounded-xl" data-testid="hub-bank-year"><option value="">All years</option>{p.config.yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}<option value="none">No year set</option></Select>
-        <Select aria-label="Filter by type" value={kind} onChange={(e) => setKind(e.target.value)} className="min-h-[44px] !rounded-xl"><option value="">All types</option>{p.config.questionKinds.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</Select>
-        <Select aria-label="Filter by status" value={state} onChange={(e) => setState(e.target.value as typeof state)} className="min-h-[44px] !rounded-xl"><option value="">Any status</option><option value="published">Published</option><option value="draft">Drafts</option></Select>
-        {!p.readOnly && <Button variant="solid" className={`${TAP} !px-5`} onClick={() => setEditing("new")} data-testid="hub-new-question">+ New question</Button>}
+        <div className="min-w-[180px] flex-1"><Input aria-label={t("hubfam.qzQbSearchAria")} placeholder={t("hubfam.qzQbSearchPh")} value={q} onChange={(e) => setQ(e.target.value)} className="min-h-[44px] w-full !rounded-xl" /></div>
+        <Select aria-label={t("hubfam.qzQbFilterYear")} value={year} onChange={(e) => setYear(e.target.value)} className="min-h-[44px] !rounded-xl" data-testid="hub-bank-year"><option value="">{t("hubfam.qzQbAllYears")}</option>{p.config.yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}<option value="none">{t("hubfam.qzQbNoYear")}</option></Select>
+        <Select aria-label={t("hubfam.qzQbFilterType")} value={kind} onChange={(e) => setKind(e.target.value)} className="min-h-[44px] !rounded-xl"><option value="">{t("hubfam.qzQbAllTypes")}</option>{p.config.questionKinds.map((k) => <option key={k.id} value={k.id}>{kindText(t, p.config.questionKinds, k.id)}</option>)}</Select>
+        <Select aria-label={t("hubfam.qzAlFilterStatus")} value={state} onChange={(e) => setState(e.target.value as typeof state)} className="min-h-[44px] !rounded-xl"><option value="">{t("hubfam.qzAlAnyStatus")}</option><option value="published">{t("hubfam.qzAlPublished")}</option><option value="draft">{t("hubfam.qzAlDrafts")}</option></Select>
+        {!p.readOnly && <Button variant="solid" className={`${TAP} !px-5`} onClick={() => setEditing("new")} data-testid="hub-new-question">{t("hubfam.qzNewQuestion")}</Button>}
       </div>
 
-      {loading && !loaded && <ListSkeleton rows={3} label="Loading questions" />}
+      {loading && !loaded && <ListSkeleton rows={3} label={t("hubfam.qzQbLoadingList")} />}
       {loaded && groups.length === 0 && (
-        <EmptyState icon="❓" title={narrowed ? "No questions match" : "No questions yet"} body={narrowed ? "Try clearing the search or filters, or pick another topic on the left." : "Write your first question. You can reuse it across quizzes and placement tests."}
-          action={!narrowed && !p.readOnly ? <Button variant="solid" className={TAP} onClick={() => setEditing("new")}>+ New question</Button> : undefined} />
+        <EmptyState icon="❓" title={narrowed ? t("hubfam.qzQbNoMatch") : t("hubfam.qzQbNone")} body={narrowed ? t("hubfam.qzQbTryClear") : t("hubfam.qzQbFirst")}
+          action={!narrowed && !p.readOnly ? <Button variant="solid" className={TAP} onClick={() => setEditing("new")}>{t("hubfam.qzNewQuestion")}</Button> : undefined} />
       )}
-      {loaded && groups.length > 0 && <p className="m-0 px-1 text-[12px] font-semibold text-[var(--ink-3)]" aria-live="polite">{total} {total === 1 ? "question" : "questions"}{!p.filter.subject && !dq && total > PAGE ? " · pick a subject or topic above to narrow the bank" : ""}</p>}
+      {loaded && groups.length > 0 && <p className="m-0 px-1 text-[12px] font-semibold text-[var(--ink-3)]" aria-live="polite">{tp("hubfam.qzQuestions", total)}{!p.filter.subject && !dq && total > PAGE ? t("hubfam.qzQbNarrowHint") : ""}</p>}
 
       {groups.map(([topicId, items]) => {
-        const t = topicById.get(topicId);
+        const tc = topicById.get(topicId);
         return (
-          <section key={topicId} aria-label={t ? topicLabel(t) : "Topic"}>
-            <h3 className="m-0 mb-1.5 mt-1 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t ? topicLabel(t) : "Unknown topic"} <span className="font-semibold normal-case tracking-normal">· {items.length}</span></h3>
+          <section key={topicId} aria-label={tc ? topicLabel(tc) : t("hubfam.qzQbTopic")}>
+            <h3 className="m-0 mb-1.5 mt-1 px-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{tc ? topicLabel(tc) : t("hubfam.qzQbUnknownTopic")} <span className="font-semibold normal-case tracking-normal">· {items.length}</span></h3>
             <div className="grid gap-2">
               {items.map((x) => (
                 <Card key={x.id} className="p-3.5 sm:p-4" id={`hub-q-${x.id}`}>
@@ -143,22 +146,22 @@ export function QuestionBank({ p }: { p: PanelProps }) {
                     <div className="min-w-0 flex-1">
                       <div className="line-clamp-2 whitespace-pre-wrap text-[14px] font-bold leading-snug text-[var(--ink)] [overflow-wrap:anywhere]">{x.prompt}</div>
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <Chip tone={NEUTRAL}>{kindLabel(p.config.questionKinds, x.kind)}</Chip>
+                        <Chip tone={NEUTRAL}>{kindText(t, p.config.questionKinds, x.kind)}</Chip>
                         {(x.yearGroups ?? []).length > 0 && <Chip tone={NEUTRAL}>{(x.yearGroups ?? []).join(", ")}</Chip>}
-                        <Chip tone={NEUTRAL}>{x.marks} {x.marks === 1 ? "mark" : "marks"}</Chip>
-                        {ruleOf(p.config.questionKinds, x.kind) === "manual" && <Chip tone={BRAND_T} icon={<Icon name="edit" size={11} />}>Written · you mark this</Chip>}
-                        {x.hasImage && <Chip tone={NEUTRAL} icon={<Icon name="image" size={11} />}>Picture</Chip>}
-                        {!!x.usedBy && <Chip tone={NEUTRAL}>In {x.usedBy} {x.usedBy === 1 ? "quiz" : "quizzes"}</Chip>}
-                        {x.published ? <Chip tone={OK}>Published</Chip> : <Chip tone={GOLD}>Draft</Chip>}
+                        <Chip tone={NEUTRAL}>{tp("hubfam.qzMarks", x.marks)}</Chip>
+                        {ruleOf(p.config.questionKinds, x.kind) === "manual" && <Chip tone={BRAND_T} icon={<Icon name="edit" size={11} />}>{t("hubfam.qzQbWrittenChip")}</Chip>}
+                        {x.hasImage && <Chip tone={NEUTRAL} icon={<Icon name="image" size={11} />}>{t("hubfam.qzImgPicture")}</Chip>}
+                        {!!x.usedBy && <Chip tone={NEUTRAL}>{t("hubfam.qzQbUsedIn", { n: x.usedBy })}</Chip>}
+                        {x.published ? <Chip tone={OK}>{t("hubfam.qzAlPublished")}</Chip> : <Chip tone={GOLD}>{t("hubfam.qzAlDraft")}</Chip>}
                       </div>
                     </div>
                     {p.readOnly ? null : !canChangeRow(p.franchiseId, x.franchiseId) ? (
-                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]" title="Head office owns this question. You can use it in your quizzes, but not change it.">From head office</span>
+                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]" title={t("hubfam.qzQbHeadTitle")}>{t("hubfam.qzFromHead")}</span>
                     ) : (
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Button variant="ghost" className={TAP} disabled={busy === x.id} onClick={() => void openEditor(x)}>Edit</Button>
-                      <Button variant="ghost" className={TAP} disabled={busy === x.id} onClick={() => togglePublish(x)}>{x.published ? "Unpublish" : "Publish"}</Button>
-                      <button type="button" aria-label="Delete question" onClick={() => setConfirmDel(x)} className={`grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[15px] text-[var(--red)] hover:bg-[var(--red-soft)] ${FOCUS}`}>🗑</button>
+                      <Button variant="ghost" className={TAP} disabled={busy === x.id} onClick={() => void openEditor(x)}>{t("hubfam.qzEdit")}</Button>
+                      <Button variant="ghost" className={TAP} disabled={busy === x.id} onClick={() => togglePublish(x)}>{x.published ? t("hubfam.qzUnpublish") : t("hubfam.qzPublish")}</Button>
+                      <button type="button" aria-label={t("hubfam.qzQbDelAria")} onClick={() => setConfirmDel(x)} className={`grid h-11 w-11 place-items-center rounded-full border border-[var(--line)] text-[15px] text-[var(--red)] hover:bg-[var(--red-soft)] ${FOCUS}`}>🗑</button>
                     </div>
                     )}
                   </div>
@@ -168,13 +171,13 @@ export function QuestionBank({ p }: { p: PanelProps }) {
           </section>
         );
       })}
-      {next && <div className="flex justify-center"><Button onClick={() => load(true, next)} disabled={loading} className={`${TAP} !px-6`}>{loading ? "Loading…" : `Show more (${Math.max(0, total - items.length)} left)`}</Button></div>}
+      {next && <div className="flex justify-center"><Button onClick={() => load(true, next)} disabled={loading} className={`${TAP} !px-6`}>{loading ? t("hubfam.qzLoading") : t("hubfam.qzShowMore", { n: Math.max(0, total - items.length) })}</Button></div>}
 
       {editing && <QuestionForm p={p} question={editing === "new" ? null : editing} defaultTopicId={p.filter.topicId ?? undefined} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); reload(); }} />}
       {confirmDel && (
-        <Modal title="Delete this question?" onClose={() => setConfirmDel(null)}
-          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirmDel(null)}>Keep it</Button><Button variant="danger" className={TAP} disabled={busy === confirmDel.id} onClick={() => remove(confirmDel)} data-autofocus>Delete</Button></>}>
-          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">&ldquo;{confirmDel.prompt.slice(0, 120)}&rdquo; will be removed from your bank. A question used by a published quiz can&apos;t be deleted. Unpublish that quiz first.</p>
+        <Modal title={t("hubfam.qzQbDelTitle")} onClose={() => setConfirmDel(null)}
+          footer={<><Button variant="ghost" className={TAP} onClick={() => setConfirmDel(null)}>{t("hubfam.qzKeepIt")}</Button><Button variant="danger" className={TAP} disabled={busy === confirmDel.id} onClick={() => remove(confirmDel)} data-autofocus>{t("hubfam.qzDelete")}</Button></>}>
+          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{t("hubfam.qzQbDelBody", { prompt: confirmDel.prompt.slice(0, 120) })}</p>
         </Modal>
       )}
     </div>

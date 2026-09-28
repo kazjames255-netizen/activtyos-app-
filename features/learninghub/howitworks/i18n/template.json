@@ -1,0 +1,2497 @@
+{
+ "scripts": {
+  "tutor:std:main": {
+   "title": "Run your Teaching Hub",
+   "tagline": "Get families onto your roster, teach in the way that suits you, and see how every child is doing.",
+   "audience": "For tutors"
+  },
+  "parent:std:main": {
+   "title": "Your child's Learning Hub",
+   "tagline": "See your child's lessons and homework, know at a glance how they're doing, and print a progress report.",
+   "audience": "Learning Hub for parents"
+  },
+  "kid:std:main": {
+   "title": "How it works",
+   "tagline": "Your very own learning space. Watch, listen, and have a go!",
+   "audience": "For children",
+   "viewLabel": "What your child sees"
+  },
+  "tutor:std:home": {
+   "title": "Your Home screen",
+   "tagline": "Where you start every day.",
+   "audience": "For tutors",
+   "blurb": "Your areas, Needs your attention, and How it works."
+  },
+  "tutor:std:families": {
+   "title": "Getting families on your roster",
+   "tagline": "Bring families onto your roster.",
+   "audience": "For tutors",
+   "blurb": "The three ways a family joins you: booking, an invite link, or your public page."
+  },
+  "tutor:std:students": {
+   "title": "Your students",
+   "tagline": "Look after your roster.",
+   "audience": "For tutors",
+   "blurb": "Each child's card, groups, and the support settings only you can change."
+  },
+  "tutor:std:lessons": {
+   "title": "Lessons and the curriculum",
+   "tagline": "Find, open and build lessons.",
+   "audience": "For tutors",
+   "blurb": "Find a ready-made lesson, open it, or build your own with the slide builder."
+  },
+  "tutor:std:live": {
+   "title": "Live and in-person lessons",
+   "tagline": "Teach live, online or in the room.",
+   "audience": "For tutors",
+   "blurb": "Three ways to teach, video lessons, what is inside the call, and teaching in person."
+  },
+  "tutor:std:tools": {
+   "title": "Tools",
+   "tagline": "Tools for your children to use.",
+   "audience": "For tutors",
+   "blurb": "The Tools area, and giving a tool to your children."
+  },
+  "tutor:std:quizzes": {
+   "title": "Quizzes and flashcards",
+   "tagline": "Check what children know.",
+   "audience": "For tutors",
+   "blurb": "Build a quiz, marking, starting quizzes and flashcards."
+  },
+  "tutor:std:homework": {
+   "title": "Homework: set it, collect it, mark it",
+   "tagline": "Set homework, and mark what comes back.",
+   "audience": "For tutors",
+   "blurb": "Set homework, attach a worksheet, see the hand-ins, and mark them."
+  },
+  "tutor:std:progress": {
+   "title": "Progress",
+   "tagline": "See how each child is doing.",
+   "audience": "For tutors",
+   "blurb": "Your whole class at a glance, one child in detail, and your own levels."
+  },
+  "tutor:std:messages": {
+   "title": "Messages",
+   "tagline": "Talk with families, one thread per child.",
+   "audience": "For tutors",
+   "blurb": "Every conversation with a family, and how a reply reaches them."
+  },
+  "parent:std:start": {
+   "title": "Getting started",
+   "tagline": "Get set up and know where to look.",
+   "audience": "Learning Hub for parents",
+   "blurb": "How your child gets in, joining from your tutor's link, and the one-line verdict on Home."
+  },
+  "parent:std:homework": {
+   "title": "Homework in the Learning Hub",
+   "tagline": "See what's set, what's due and how it went.",
+   "audience": "Learning Hub for parents",
+   "blurb": "What has been set, when it's due, how your child hands it in, and where the marks appear."
+  },
+  "parent:std:week": {
+   "title": "Your child's week",
+   "tagline": "Follow along, and ask when you need to.",
+   "audience": "Learning Hub for parents",
+   "blurb": "Lessons, live lessons, progress, the printable report, and asking your tutor."
+  },
+  "parent:std:handover": {
+   "title": "Hand over to your child",
+   "tagline": "Let your child learn on their own.",
+   "audience": "Learning Hub for parents",
+   "blurb": "Give your child their own simple space, and how to come back."
+  },
+  "kid:std:homework": {
+   "title": "My homework",
+   "tagline": "Find it, do it, hand it in.",
+   "audience": "For children",
+   "blurb": "Find your homework, do it and hand it in."
+  },
+  "kid:ks1:main": {
+   "title": "How it works",
+   "tagline": "Watch and listen. It is short!",
+   "audience": "For children",
+   "viewLabel": "What your child sees"
+  }
+ },
+ "scenes": {
+  "tutor:std:home-tour": {
+   "chapter": "Home",
+   "title": "Your areas",
+   "say": "Across the top are your areas: Lessons, Students, Progress, Quizzes, Homework and Messages. Home is where you start.",
+   "keys": [
+    "Your areas",
+    "Lessons, Students, Progress",
+    "Quizzes, Homework and Messages",
+    "Home is where you start"
+   ],
+   "cam": [
+    {
+     "on": "Across the top"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Across the top",
+     "off": "Home is where"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Home is where you start"
+    }
+   ]
+  },
+  "tutor:std:home-attention": {
+   "chapter": "Home",
+   "title": "Needs your attention",
+   "say": "Needs your attention lists what to do next: homework to mark, written answers, and overdue work. Start at the top.",
+   "keys": [
+    "Needs your attention",
+    "What to do next",
+    "Homework to mark",
+    "Overdue work",
+    "Start at the top"
+   ],
+   "cam": [
+    {
+     "on": "Needs your attention lists"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Needs your attention lists"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Start at the top"
+    }
+   ]
+  },
+  "tutor:std:home-help": {
+   "chapter": "Home",
+   "title": "Help is always here",
+   "say": "Your next lesson sits here. And How it works is on every page whenever you need a reminder.",
+   "keys": [
+    "Your next lesson",
+    "How it works",
+    "On every page",
+    "A reminder"
+   ],
+   "cam": [
+    {
+     "on": "Your next lesson sits here"
+    },
+    {
+     "on": "How it works is on every page"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Your next lesson sits here",
+     "off": "And How it works"
+    },
+    {
+     "on": "How it works is on every page"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "How it works is on every page"
+    }
+   ]
+  },
+  "tutor:std:fam-ways": {
+   "chapter": "Families",
+   "title": "Three ways in",
+   "say": "A family can join you three ways: they book with you, you send an invite link, or they find your public page.",
+   "keys": [
+    "Three ways",
+    "They book with you",
+    "Send an invite link",
+    "Your public page"
+   ],
+   "nodes": [
+    {
+     "on": "they book with you",
+     "title": "They book with you",
+     "sub": "Their child appears in Enrol a student"
+    },
+    {
+     "on": "you send an invite link",
+     "title": "Send an invite link",
+     "sub": "Works once, for 30 days"
+    },
+    {
+     "on": "they find your public page",
+     "title": "Your public page",
+     "sub": "They sign up, then you enrol them"
+    }
+   ]
+  },
+  "tutor:std:fam-book": {
+   "chapter": "Families",
+   "title": "They booked with you",
+   "say": "When a parent books, their child appears in Enrol a student. Press Enrol, pick their subjects and year, then Enrol student.",
+   "keys": [
+    "Enrol a student",
+    "Press Enrol",
+    "Subjects and year",
+    "Enrol student"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "pick their subjects"
+    }
+   ],
+   "cam": [
+    {
+     "on": "their child appears"
+    },
+    {
+     "on": "Press Enrol"
+    },
+    {
+     "on": "pick their subjects"
+    },
+    {
+     "on": "and year"
+    },
+    {
+     "on": "then Enrol student"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Press Enrol",
+     "off": "pick their subjects"
+    },
+    {
+     "on": "pick their subjects",
+     "off": "and year"
+    },
+    {
+     "on": "and year",
+     "off": "then Enrol student"
+    },
+    {
+     "on": "then Enrol student"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Press Enrol"
+    },
+    {
+     "on": "then Enrol student"
+    }
+   ]
+  },
+  "tutor:std:fam-invite": {
+   "chapter": "Families",
+   "title": "Send an invite link",
+   "say": "No booking? Type who it's for and press Create invite link. Send it to the parent. It works once, for 30 days.",
+   "keys": [
+    "Type who it's for",
+    "Create invite link",
+    "Send it to the parent",
+    "Once, for 30 days"
+   ],
+   "cam": [
+    {
+     "on": "Type who it's for"
+    },
+    {
+     "on": "press Create invite link"
+    },
+    {
+     "on": "Send it to the parent"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Type who it's for",
+     "off": "press Create invite link"
+    },
+    {
+     "on": "press Create invite link",
+     "off": "Send it to the parent"
+    },
+    {
+     "on": "Send it to the parent"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "press Create invite link"
+    },
+    {
+     "on": "Send it to the parent"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "It works once",
+     "text": "Nothing is emailed for you: you send it"
+    }
+   ]
+  },
+  "tutor:std:fam-page": {
+   "chapter": "Families",
+   "title": "Share your public page",
+   "say": "Or copy your page link and send it. Once the parent signs up, their children appear here, ready to enrol.",
+   "keys": [
+    "Copy your page link",
+    "Send it",
+    "The parent signs up",
+    "Ready to enrol"
+   ],
+   "cam": [
+    {
+     "on": "copy your page link"
+    },
+    {
+     "on": "their children appear here"
+    }
+   ],
+   "rings": [
+    {
+     "on": "copy your page link",
+     "off": "their children appear"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "copy your page link"
+    }
+   ]
+  },
+  "tutor:std:std-cards": {
+   "chapter": "Students",
+   "title": "Every child has a card",
+   "say": "Each enrolled child gets a card showing their year, subjects and a progress ring.",
+   "keys": [
+    "Each enrolled child",
+    "A card",
+    "Year, subjects",
+    "A progress ring"
+   ],
+   "cam": [
+    {
+     "on": "Each enrolled child"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Each enrolled child"
+    }
+   ]
+  },
+  "tutor:std:std-groups": {
+   "chapter": "Students",
+   "title": "Make a group",
+   "say": "Put children in a group. Then you can set homework, a quiz or a lesson for the whole group in one click.",
+   "keys": [
+    "Put children in a group",
+    "Set homework",
+    "A quiz or a lesson",
+    "In one click"
+   ],
+   "cam": [
+    {
+     "on": "Put children in a group"
+    },
+    {
+     "on": "in one click"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Put children in a group",
+     "off": "Then you can"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "in one click"
+    }
+   ]
+  },
+  "tutor:std:std-support": {
+   "chapter": "Students",
+   "title": "Support settings",
+   "say": "Open Edit details to switch off quiz timers, turn on calm mode, add extra time, enlarge text or read answers aloud.",
+   "keys": [
+    "Open Edit details",
+    "Switch off quiz timers",
+    "Calm mode",
+    "Extra time",
+    "Enlarge text",
+    "Read answers aloud"
+   ],
+   "cam": [
+    {
+     "on": "switch off quiz timers"
+    }
+   ],
+   "rings": [
+    {
+     "on": "switch off quiz timers"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "switch off quiz timers"
+    },
+    {
+     "on": "turn on calm mode"
+    }
+   ]
+  },
+  "tutor:std:std-owner": {
+   "chapter": "Students",
+   "title": "Only you can change them",
+   "say": "Families can't change these settings. Use the three dots on a card to pause or un-enrol a child.",
+   "keys": [
+    "Can't change these::can't change these",
+    "The three dots",
+    "Pause",
+    "Un-enrol"
+   ],
+   "cam": [
+    {
+     "on": "Use the three dots"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Use the three dots"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Use the three dots"
+    }
+   ]
+  },
+  "tutor:std:les-library": {
+   "chapter": "Lessons",
+   "title": "Your lesson library",
+   "say": "Lessons holds thousands of ready-made lessons, laid out on a curriculum map. Pick a subject and a year.",
+   "keys": [
+    "Thousands of ready-made lessons::thousands of ready-made",
+    "A curriculum map",
+    "Pick a subject",
+    "And a year"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Pick a subject"
+    }
+   ],
+   "cam": [
+    {
+     "on": "laid out on a curriculum map"
+    },
+    {
+     "on": "Pick a subject"
+    },
+    {
+     "on": "and a year"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Pick a subject",
+     "off": "and a year"
+    },
+    {
+     "on": "and a year"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Pick a subject"
+    },
+    {
+     "on": "and a year"
+    }
+   ]
+  },
+  "tutor:std:les-find": {
+   "chapter": "Lessons",
+   "title": "Find a lesson",
+   "say": "Each topic shows how many lessons it has. Or type in Search to jump straight to one.",
+   "keys": [
+    "How many lessons",
+    "Type in Search",
+    "Jump straight to one"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "type in Search"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Each topic shows"
+    },
+    {
+     "on": "type in Search"
+    }
+   ],
+   "rings": [
+    {
+     "on": "type in Search"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "type in Search"
+    }
+   ]
+  },
+  "tutor:std:les-preview": {
+   "chapter": "Lessons",
+   "title": "Preview it",
+   "say": "Open a lesson to see its plan. Press Preview lesson to click through exactly what a child will see.",
+   "keys": [
+    "Open a lesson",
+    "See its plan",
+    "Press Preview lesson",
+    "What a child will see"
+   ],
+   "cam": [
+    {
+     "on": "Open a lesson"
+    },
+    {
+     "on": "Press Preview lesson"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Press Preview lesson"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Press Preview lesson"
+    }
+   ]
+  },
+  "tutor:std:les-build": {
+   "chapter": "Lessons",
+   "title": "Build your own",
+   "say": "Press Create new lesson. Add slides, key words, multiple choice, sorting or matching, then Save. It joins your library.",
+   "keys": [
+    "Create new lesson",
+    "Add slides, key words::Add slides, key words",
+    "Multiple choice, sorting",
+    "Then Save",
+    "Joins your library"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Add slides"
+    },
+    {
+     "on": "multiple choice"
+    },
+    {
+     "on": "then Save"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Add slides"
+    }
+   ]
+  },
+  "tutor:std:live-modes": {
+   "chapter": "Live lessons",
+   "title": "Three ways to teach",
+   "say": "Teach on a video call, share to each child's device, or teach in person. You choose each time.",
+   "keys": [
+    "A video call",
+    "Each child's device",
+    "Teach in person",
+    "You choose each time"
+   ],
+   "nodes": [
+    {
+     "on": "a video call",
+     "title": "Video call",
+     "sub": "Join the call inside the Hub"
+    },
+    {
+     "on": "each child's device",
+     "title": "Share with children",
+     "sub": "Each child follows on their own device"
+    },
+    {
+     "on": "teach in person",
+     "title": "Teach in person",
+     "sub": "Children beside you, no video"
+    }
+   ]
+  },
+  "tutor:std:live-join": {
+   "chapter": "Live lessons",
+   "title": "Start a video lesson",
+   "say": "Schedule it for the children you pick. At lesson time, check your camera and mic, then press Join. No other app needed.",
+   "keys": [
+    "Schedule it",
+    "Children you pick",
+    "Camera and mic",
+    "Press Join",
+    "No other app"
+   ],
+   "cam": [
+    {
+     "on": "Schedule it"
+    },
+    {
+     "on": "check your camera and mic"
+    },
+    {
+     "on": "then press Join"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Schedule it",
+     "off": "At lesson time"
+    },
+    {
+     "on": "check your camera and mic",
+     "off": "then press Join"
+    },
+    {
+     "on": "then press Join"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Schedule it"
+    },
+    {
+     "on": "then press Join"
+    }
+   ]
+  },
+  "tutor:std:live-incall": {
+   "chapter": "Live lessons",
+   "title": "Inside the call",
+   "say": "Beside the video are your tabs: Lessons, Quiz, Homework, Flashcards and a whiteboard. Press Teach and every screen follows yours.",
+   "keys": [
+    "Beside the video",
+    "Lessons, Quiz, Homework",
+    "Flashcards and a whiteboard",
+    "Press Teach"
+   ],
+   "nodes": [
+    {
+     "on": "Lessons,",
+     "title": "Lessons",
+     "sub": "Press Teach"
+    },
+    {
+     "on": "Quiz",
+     "title": "Quiz"
+    },
+    {
+     "on": "Homework",
+     "title": "Homework"
+    },
+    {
+     "on": "Flashcards",
+     "title": "Flashcards"
+    },
+    {
+     "on": "a whiteboard",
+     "title": "Whiteboard"
+    }
+   ]
+  },
+  "tutor:std:live-share": {
+   "chapter": "Live lessons",
+   "title": "Share with children",
+   "say": "No video? Press Share with children. Each child follows on their own device and answers for themselves.",
+   "keys": [
+    "Press Share with children",
+    "Their own device",
+    "Answers for themselves"
+   ],
+   "cam": [
+    {
+     "on": "Press Share with children"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Press Share with children"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Press Share with children"
+    }
+   ]
+  },
+  "tutor:std:live-person": {
+   "chapter": "Live lessons",
+   "title": "Teach in person",
+   "say": "In the room? Tick who's there and tap in each child's answers. Parents see the results afterwards.",
+   "keys": [
+    "Tick who's there",
+    "Tap in each child's answers::tap in each",
+    "Parents see the results"
+   ],
+   "cam": [
+    {
+     "on": "Tick who's there"
+    },
+    {
+     "on": "tap in each child's answers"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tick who's there",
+     "off": "and tap in"
+    },
+    {
+     "on": "tap in each child's answers"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "tap in each child's answers"
+    }
+   ]
+  },
+  "tutor:std:tools-try": {
+   "chapter": "Tools",
+   "title": "Try the tools",
+   "say": "Tools, inside Lessons, has rulers, protractors, number lines and science diagrams. Open any tool to try it.",
+   "keys": [
+    "Inside Lessons",
+    "Rulers, protractors",
+    "Number lines and science diagrams::number lines and science",
+    "Open any tool"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Open any tool"
+    }
+   ],
+   "cam": [
+    {
+     "on": "has rulers, protractors"
+    },
+    {
+     "on": "Open any tool"
+    }
+   ],
+   "rings": [
+    {
+     "on": "has rulers, protractors",
+     "off": "Open any tool"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Open any tool"
+    }
+   ]
+  },
+  "tutor:std:tools-give": {
+   "chapter": "Tools",
+   "title": "Give a tool to children",
+   "say": "In Preview lesson, open Tools for this lesson. Press Add tool to this question, or Use it on all questions.",
+   "keys": [
+    "In Preview lesson",
+    "Tools for this lesson",
+    "Add tool to this question",
+    "Use it on all questions"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Press Add tool"
+    },
+    {
+     "on": "or Use it on all questions"
+    }
+   ],
+   "cam": [
+    {
+     "on": "open Tools for this lesson"
+    },
+    {
+     "on": "Press Add tool"
+    },
+    {
+     "on": "or Use it on all questions"
+    }
+   ],
+   "rings": [
+    {
+     "on": "open Tools for this lesson",
+     "off": "Press Add tool"
+    },
+    {
+     "on": "Press Add tool",
+     "off": "or Use it on all questions"
+    },
+    {
+     "on": "or Use it on all questions"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "open Tools for this lesson"
+    },
+    {
+     "on": "or Use it on all questions"
+    }
+   ]
+  },
+  "tutor:std:quiz-make": {
+   "chapter": "Quizzes",
+   "title": "Make a quiz",
+   "say": "In Quizzes, press New quiz, pick topics from your question bank, and choose the subject and pass mark.",
+   "keys": [
+    "Press New quiz",
+    "Topics from your question bank::your question bank",
+    "Subject and pass mark"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "pick topics"
+    }
+   ],
+   "cam": [
+    {
+     "on": "press New quiz"
+    },
+    {
+     "on": "pick topics"
+    },
+    {
+     "on": "choose the subject"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "press New quiz"
+    }
+   ]
+  },
+  "tutor:std:quiz-marked": {
+   "chapter": "Quizzes",
+   "title": "Marked for you",
+   "say": "Quizzes are marked instantly. Written answers go to Marking, in your one queue.",
+   "keys": [
+    "Marked instantly",
+    "Written answers",
+    "Marking, your one queue::marking, in your one queue"
+   ],
+   "cam": [
+    {
+     "on": "Marking, in your one queue"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Marking, in your one queue"
+    }
+   ]
+  },
+  "tutor:std:quiz-starting": {
+   "chapter": "Quizzes",
+   "title": "Starting quiz",
+   "say": "New students sit a starting quiz once. There's no pass mark, so you see where each child begins.",
+   "keys": [
+    "A starting quiz",
+    "No pass mark::There's no pass mark",
+    "Where each child begins"
+   ],
+   "cam": [
+    {
+     "on": "There's no pass mark"
+    }
+   ],
+   "rings": [
+    {
+     "on": "There's no pass mark"
+    }
+   ]
+  },
+  "tutor:std:quiz-flash": {
+   "chapter": "Quizzes",
+   "title": "Flashcards",
+   "say": "Flashcards bring back the cards a child finds tricky. In a live lesson, you can present a deck on screen.",
+   "keys": [
+    "Flashcards",
+    "Cards a child finds tricky",
+    "Present a deck on screen"
+   ],
+   "cam": [
+    {
+     "on": "Flashcards bring back"
+    },
+    {
+     "on": "in a live lesson"
+    }
+   ],
+   "rings": [
+    {
+     "on": "in a live lesson"
+    }
+   ]
+  },
+  "tutor:std:prog-class": {
+   "chapter": "Progress",
+   "title": "Your whole class",
+   "say": "Each row is a child. Each subject shows a coloured score. Filter by year or group, or search for a name.",
+   "keys": [
+    "Each row is a child",
+    "A coloured score",
+    "Filter by year or group",
+    "Search for a name"
+   ],
+   "cam": [
+    {
+     "on": "Each row is a child"
+    },
+    {
+     "on": "or search for a name"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Each row is a child",
+     "off": "Filter by year"
+    },
+    {
+     "on": "or search for a name"
+    }
+   ]
+  },
+  "tutor:std:prog-child": {
+   "chapter": "Progress",
+   "title": "One child",
+   "say": "Click a child to see each topic, how it's trending and their latest results. It updates from their marked work.",
+   "keys": [
+    "Click a child",
+    "Each topic",
+    "How it's trending",
+    "Their latest results"
+   ],
+   "cam": [
+    {
+     "on": "to see each topic"
+    }
+   ]
+  },
+  "tutor:std:prog-levels": {
+   "chapter": "Progress",
+   "title": "Your levels",
+   "say": "Press Edit levels to rename levels or change where they start. Scores re-band instantly and no marks change.",
+   "keys": [
+    "Press Edit levels",
+    "Rename levels",
+    "Change where they start",
+    "No marks change"
+   ],
+   "cam": [
+    {
+     "on": "Press Edit levels"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Press Edit levels"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Press Edit levels"
+    }
+   ]
+  },
+  "parent:std:getting-in": {
+   "chapter": "Getting started",
+   "title": "How your child gets in",
+   "say": "Your child appears in the Learning Hub once your tutor has enrolled them. That happens when you book with your tutor, and they add your child. Or, your tutor can send you a private link, and you add your child yourself. Your tutor decides which subjects your child can see.",
+   "keys": [
+    "Enrolled by your tutor::enrolled",
+    "Book with your tutor::book with your tutor",
+    "Or a private link::private link",
+    "Your tutor picks the subjects::which subjects"
+   ],
+   "nodes": [
+    {
+     "on": "when you book",
+     "title": "Book with your tutor",
+     "sub": "They add your child"
+    },
+    {
+     "on": "Or, your tutor",
+     "title": "Or use their private link",
+     "sub": "You add your child yourself"
+    },
+    {
+     "on": "Your tutor decides",
+     "title": "Learning Hub opens",
+     "sub": "With the subjects your tutor chose"
+    }
+   ]
+  },
+  "parent:std:invite": {
+   "chapter": "Getting started",
+   "title": "If your tutor sent you a link",
+   "say": "If your tutor sends you a private link, open it while you're signed in to your parent account. Or sign up first. You'll see which tutor invited you. Choose which of your children to enrol, and they join straight away. The link works for one family, and lasts thirty days.",
+   "keys": [
+    "Open the private link::private link",
+    "Signed in as a parent::signed in",
+    "Choose which children::choose which of your children",
+    "Thirty days, one family::thirty days"
+   ],
+   "cam": [
+    {
+     "on": "You'll see which tutor"
+    },
+    {
+     "on": "Choose which"
+    }
+   ],
+   "rings": [
+    {
+     "on": "You'll see which tutor",
+     "off": "Choose which"
+    },
+    {
+     "on": "Choose which"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Choose which"
+    }
+   ]
+  },
+  "parent:std:home": {
+   "chapter": "Your child's week",
+   "title": "Home: the one-line verdict",
+   "say": "Home starts with one line, the verdict. It says On track, All done this week, or how many homework tasks are overdue. Tap it to go straight to where you can help. Underneath, you see this week's quizzes done, homework handed in, and what's waiting to be marked. More than one child? Switch between them at the top.",
+   "keys": [
+    "One line, the verdict::one line",
+    "On track, or overdue::On track",
+    "This week at a glance::Underneath",
+    "Switch between children::Switch between them"
+   ],
+   "cam": [
+    {
+     "on": "Home starts"
+    },
+    {
+     "on": "It says"
+    },
+    {
+     "on": "Underneath"
+    },
+    {
+     "on": "More than one child"
+    }
+   ],
+   "rings": [
+    {
+     "on": "It says",
+     "off": "Underneath"
+    },
+    {
+     "on": "Underneath",
+     "off": "More than one child"
+    },
+    {
+     "on": "More than one child"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap it"
+    }
+   ]
+  },
+  "parent:std:lessons": {
+   "chapter": "Your child's week",
+   "title": "Lessons",
+   "say": "Lessons shows what your tutor has shared. Open one and your child steps through it one idea at a time, with a quiz at the end.",
+   "keys": [
+    "What your tutor shared::Lessons shows",
+    "One idea at a time",
+    "A quiz at the end::quiz at the end"
+   ],
+   "cam": [
+    {
+     "on": "Lessons shows"
+    },
+    {
+     "on": "Open one"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Open one"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Open one"
+    }
+   ]
+  },
+  "parent:std:live": {
+   "chapter": "Your child's week",
+   "title": "Live lessons",
+   "say": "When your tutor has a live lesson coming up, it shows in Live lessons. When it opens, you check the camera and microphone first, then press Join. If your tutor shares a lesson to your child's own device, a banner appears so they can join it.",
+   "keys": [
+    "Live lessons, coming up::Live lessons",
+    "Camera and microphone check::camera and microphone",
+    "Press Join",
+    "A banner to join::banner"
+   ],
+   "cam": [
+    {
+     "on": "When it opens"
+    }
+   ]
+  },
+  "parent:std:progress": {
+   "chapter": "Progress",
+   "title": "How they're doing",
+   "say": "The Progress tab shows how your child is doing. You see their level, on your tutor's own scale, and what it takes to reach the next one. Tap Where does this level come from, for a plain explanation. And My curriculum journey shows how far through each subject they are.",
+   "keys": [
+    "How your child is doing::how your child is doing",
+    "Their level, in plain words::their level",
+    "Where does this level come from",
+    "My curriculum journey"
+   ],
+   "cam": [
+    {
+     "on": "You see their level"
+    },
+    {
+     "on": "Tap Where does"
+    },
+    {
+     "on": "And My curriculum journey"
+    }
+   ],
+   "rings": [
+    {
+     "on": "You see their level",
+     "off": "Tap Where does"
+    },
+    {
+     "on": "Tap Where does",
+     "off": "And My curriculum"
+    },
+    {
+     "on": "And My curriculum journey"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap Where does"
+    }
+   ]
+  },
+  "parent:std:report": {
+   "chapter": "Progress",
+   "title": "A printable progress report",
+   "say": "Need something for a meeting, or the fridge? Press Progress report. You get a clean one-page summary for one child, with their subjects and next steps. Print it, or save it as a PDF from your browser's print window.",
+   "keys": [
+    "Press Progress report",
+    "A one-page summary::one-page summary",
+    "Subjects and next steps::next steps",
+    "Print, or save as PDF::Print it"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "You get a clean"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Press Progress report"
+    },
+    {
+     "on": "You get a clean"
+    },
+    {
+     "on": "with their subjects"
+    },
+    {
+     "on": "and next steps"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Press Progress report",
+     "off": "You get a clean"
+    },
+    {
+     "on": "with their subjects",
+     "off": "and next steps"
+    },
+    {
+     "on": "and next steps"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Press Progress report"
+    }
+   ]
+  },
+  "parent:std:ask": {
+   "chapter": "Help",
+   "title": "Ask your tutor",
+   "say": "Got a question? Use Ask your tutor on Home, or the Messages tab. Your tutor's reply comes back to you there. And you can always press How it works, at the top, to watch this again.",
+   "keys": [
+    "Ask your tutor",
+    "Or the Messages tab::Messages",
+    "How it works, any time::How it works"
+   ],
+   "cam": [
+    {
+     "on": "Use Ask your tutor"
+    },
+    {
+     "on": "How it works, at the top"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Use Ask your tutor",
+     "off": "How it works, at the top"
+    },
+    {
+     "on": "How it works, at the top"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Use Ask your tutor"
+    }
+   ]
+  },
+  "parent:std:hand-over": {
+   "chapter": "Your child's own space",
+   "title": "Hand over to your child",
+   "say": "When your child is ready to learn, press Hand over to them. The screen becomes their own simple space, with just their lessons, quizzes and homework. To come back to your portal, a grown-up answers a quick sum. To see exactly what your child sees, choose What your child sees, at the top of this window.",
+   "keys": [
+    "Press Hand over",
+    "Their own simple space",
+    "A quick sum to return::quick sum",
+    "What your child sees"
+   ],
+   "cam": [
+    {
+     "on": "press Hand over"
+    }
+   ],
+   "rings": [
+    {
+     "on": "press Hand over",
+     "off": "The screen becomes"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "press Hand over"
+    }
+   ]
+  },
+  "kid:std:hello": {
+   "chapter": "Hello",
+   "title": "Hello!",
+   "say": "Hello! This is your very own learning space. It shows you what to do next, and it helps you learn. Let's take a quick look.",
+   "keys": [
+    "Hello",
+    "learning space",
+    "what to do next"
+   ],
+   "nodes": [
+    {
+     "on": "what to do next",
+     "title": "What to do"
+    },
+    {
+     "on": "helps you learn",
+     "title": "Learn"
+    }
+   ]
+  },
+  "kid:std:home": {
+   "chapter": "Home",
+   "title": "Your Home",
+   "say": "This is your Home. It shows one big thing to do next. Tap Go to start it. Tap the little speaker, and it reads it out loud to you.",
+   "keys": [
+    "Your Home",
+    "One big thing to do",
+    "Tap Go::Tap Go to start",
+    "Hear it read out::little speaker"
+   ],
+   "cam": [
+    {
+     "on": "It shows one big thing"
+    },
+    {
+     "on": "Tap Go"
+    },
+    {
+     "on": "little speaker"
+    }
+   ],
+   "rings": [
+    {
+     "on": "one big thing",
+     "off": "Tap Go"
+    },
+    {
+     "on": "Tap Go",
+     "off": "little speaker"
+    },
+    {
+     "on": "little speaker"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap Go"
+    },
+    {
+     "on": "little speaker"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "one big thing",
+     "text": "Your next thing to do"
+    },
+    {
+     "on": "Tap Go",
+     "text": "Tap Go to start"
+    },
+    {
+     "on": "little speaker",
+     "text": "Tap to hear it read out"
+    }
+   ]
+  },
+  "kid:std:lessons": {
+   "chapter": "Learn",
+   "title": "Lessons",
+   "say": "Lessons help you learn something new. You go through one idea at a time. There are questions to try, and a quiz at the end.",
+   "keys": [
+    "Learn something new",
+    "One idea at a time",
+    "Questions to try",
+    "A quiz at the end::quiz at the end"
+   ],
+   "cam": [
+    {
+     "on": "learn something new"
+    },
+    {
+     "on": "one idea at a time"
+    }
+   ],
+   "rings": [
+    {
+     "on": "one idea at a time"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "one idea at a time"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "learn something new",
+     "text": "Pick a lesson"
+    },
+    {
+     "on": "one idea at a time",
+     "text": "One idea at a time"
+    },
+    {
+     "on": "questions to try",
+     "text": "Questions to try"
+    }
+   ]
+  },
+  "kid:std:homework": {
+   "chapter": "Learn",
+   "title": "Homework",
+   "say": "Your homework is here. Open it, do your best, and hand it in. Your tutor will look at it and tell you how you did.",
+   "keys": [
+    "Your homework is here",
+    "Open it",
+    "Do your best",
+    "Hand it in"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Open it"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Your homework"
+    },
+    {
+     "on": "do your best"
+    },
+    {
+     "on": "hand it in"
+    }
+   ],
+   "rings": [
+    {
+     "on": "do your best",
+     "off": "hand it in"
+    },
+    {
+     "on": "hand it in"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "do your best"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Open it",
+     "text": "Open it"
+    },
+    {
+     "on": "do your best",
+     "text": "Do your best"
+    },
+    {
+     "on": "hand it in",
+     "text": "Hand it in"
+    }
+   ]
+  },
+  "kid:std:quizzes": {
+   "chapter": "Play",
+   "title": "Quizzes",
+   "say": "Quizzes are short sets of questions. Read each one, and pick your answer. Not quite right? That's okay. You can have another go.",
+   "keys": [
+    "Short sets of questions",
+    "Pick your answer",
+    "Not quite right? That's okay::That's okay",
+    "Have another go::another go"
+   ],
+   "cam": [
+    {
+     "on": "Quizzes are short"
+    },
+    {
+     "on": "pick your answer"
+    }
+   ],
+   "rings": [
+    {
+     "on": "pick your answer"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "pick your answer"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Read each one",
+     "text": "Read the question"
+    },
+    {
+     "on": "pick your answer",
+     "text": "Pick your answer"
+    },
+    {
+     "on": "another go",
+     "text": "Have another go!"
+    }
+   ]
+  },
+  "kid:std:tools": {
+   "chapter": "Play",
+   "title": "Helper tools",
+   "say": "Some questions have a helper tool, like a ruler or a protractor. Tap the tool button, and it opens right there to help you work out the answer. And tap the speaker to hear the question read out.",
+   "keys": [
+    "helper tool",
+    "Tap the tool button",
+    "speaker"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "opens right there"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Some questions"
+    },
+    {
+     "on": "Tap the tool button"
+    },
+    {
+     "on": "opens right there"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Some questions",
+     "off": "Tap the tool button"
+    },
+    {
+     "on": "Tap the tool button",
+     "off": "opens right there"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap the tool button"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tap the tool button",
+     "text": "The tool button"
+    }
+   ]
+  },
+  "kid:std:cards": {
+   "chapter": "Play",
+   "title": "Flashcards",
+   "say": "Flashcards help you remember things. Tap a card to flip it. Then say how well you knew it. The cards you find tricky come back again soon.",
+   "keys": [
+    "Remember things",
+    "Tap a card to flip it::Tap a card",
+    "How well you knew it",
+    "Tricky ones come back::come back again"
+   ],
+   "cam": [
+    {
+     "on": "Flashcards help"
+    },
+    {
+     "on": "Tap a card"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tap a card"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap a card"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tap a card",
+     "text": "Tap the card to flip it"
+    },
+    {
+     "on": "how well you knew it",
+     "text": "How well did you know it?"
+    },
+    {
+     "on": "come back again",
+     "text": "Tricky ones come back"
+    }
+   ]
+  },
+  "kid:std:grown-up": {
+   "chapter": "All done",
+   "title": "When you have finished",
+   "say": "When you have finished, ask a grown-up to help you leave. They answer a little sum, and then you are all done. You can tap How it works any time to watch this again.",
+   "keys": [
+    "ask a grown-up",
+    "little sum",
+    "How it works"
+   ],
+   "nodes": [
+    {
+     "on": "ask a grown-up",
+     "title": "Ask a grown-up"
+    },
+    {
+     "on": "little sum",
+     "title": "A little sum"
+    },
+    {
+     "on": "all done",
+     "title": "All done!"
+    }
+   ]
+  },
+  "tutor:std:hw-set": {
+   "chapter": "Set it",
+   "title": "Set homework",
+   "say": "In Homework, press Set homework. Choose a group, or tick individual children.",
+   "keys": [
+    "Press Set homework",
+    "Choose a group",
+    "Or tick individual children"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Choose a group"
+    }
+   ],
+   "cam": [
+    {
+     "on": "press Set homework"
+    },
+    {
+     "on": "Choose a group"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Choose a group",
+     "off": "or tick individual"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Choose a group"
+    }
+   ]
+  },
+  "tutor:std:hw-add-details": {
+   "chapter": "Set it",
+   "title": "Add the details",
+   "say": "Add a title, then write the instructions: what to do and what to hand in. Then pick the due date.",
+   "keys": [
+    "Add a title",
+    "Write the instructions",
+    "What to hand in",
+    "Pick the due date"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "write the instructions"
+    },
+    {
+     "on": "Then pick the due date"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Add a title"
+    },
+    {
+     "on": "write the instructions"
+    },
+    {
+     "on": "Then pick the due date"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Add a title",
+     "off": "write the instructions"
+    },
+    {
+     "on": "write the instructions",
+     "off": "Then pick"
+    },
+    {
+     "on": "Then pick the due date"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Add a title"
+    },
+    {
+     "on": "write the instructions"
+    },
+    {
+     "on": "Then pick the due date"
+    }
+   ]
+  },
+  "tutor:std:hw-worksheet": {
+   "chapter": "Set it",
+   "title": "Attach a worksheet",
+   "say": "Tick worksheets from your library. Interactive ones mark themselves. PDFs are answered in writing or with a photo.",
+   "keys": [
+    "Tick worksheets",
+    "From your library",
+    "Interactive: mark themselves::mark themselves",
+    "PDFs: writing or a photo::writing or with a photo"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Interactive ones"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Tick worksheets"
+    },
+    {
+     "on": "Interactive ones"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tick worksheets"
+    }
+   ]
+  },
+  "tutor:std:hw-assign": {
+   "chapter": "Set it",
+   "title": "Send it",
+   "say": "Press Assign homework. Each child gets their own copy, and families are told straight away.",
+   "keys": [
+    "Press Assign homework",
+    "Their own copy",
+    "Families told straight away::told straight away"
+   ],
+   "cam": [
+    {
+     "on": "press Assign homework"
+    }
+   ],
+   "rings": [
+    {
+     "on": "press Assign homework"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "press Assign homework"
+    }
+   ]
+  },
+  "tutor:std:hw-tasks": {
+   "chapter": "Collect it",
+   "title": "Track it",
+   "say": "Each homework card shows who's still working, who's handed in and who's marked.",
+   "keys": [
+    "Each homework card",
+    "Still working",
+    "Handed in",
+    "Marked"
+   ],
+   "cam": [
+    {
+     "on": "shows who's still working"
+    }
+   ]
+  },
+  "tutor:std:hw-handin": {
+   "chapter": "Collect it",
+   "title": "How children hand in",
+   "say": "Children do the worksheet on screen, or type, add a photo or PDF, then press Hand in homework.",
+   "keys": [
+    "Do the worksheet on screen",
+    "Or type, add a photo::or type, add a photo",
+    "A photo or PDF",
+    "Press Hand in homework"
+   ],
+   "cam": [
+    {
+     "on": "Children do the worksheet"
+    },
+    {
+     "on": "then press Hand in homework"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Children do the worksheet",
+     "off": "or type"
+    },
+    {
+     "on": "then press Hand in homework"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Children do the worksheet"
+    }
+   ]
+  },
+  "tutor:std:hw-mark": {
+   "chapter": "Mark it",
+   "title": "Mark it",
+   "say": "Everything to mark is in To mark, oldest first. Add a score and feedback, then press Mark and next.",
+   "keys": [
+    "Everything to mark",
+    "Oldest first",
+    "Score and feedback",
+    "Mark and next"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Add a score and feedback"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Everything to mark is in To mark"
+    },
+    {
+     "on": "Add a score"
+    },
+    {
+     "on": "and feedback"
+    },
+    {
+     "on": "press Mark and next"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Everything to mark is in To mark",
+     "off": "Add a score"
+    },
+    {
+     "on": "Add a score",
+     "off": "and feedback"
+    },
+    {
+     "on": "and feedback",
+     "off": "then press Mark"
+    },
+    {
+     "on": "press Mark and next"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Add a score"
+    },
+    {
+     "on": "press Mark and next"
+    }
+   ]
+  },
+  "tutor:std:hw-results": {
+   "chapter": "Results",
+   "title": "Everyone sees it",
+   "say": "The child sees their score and your feedback. Their family sees it in the Learning Hub too.",
+   "keys": [
+    "The child sees",
+    "Score and your feedback::score and your feedback",
+    "Their family sees it",
+    "The Learning Hub"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "Their family sees it"
+    }
+   ],
+   "cam": [
+    {
+     "on": "The child sees"
+    },
+    {
+     "on": "Their family sees it"
+    }
+   ],
+   "rings": [
+    {
+     "on": "The child sees",
+     "off": "Their family"
+    },
+    {
+     "on": "Their family sees it"
+    }
+   ]
+  },
+  "tutor:std:msg-all": {
+   "chapter": "Messages",
+   "title": "All in one place",
+   "say": "Messages keeps every conversation with families in one place, grouped by child.",
+   "keys": [
+    "Every conversation",
+    "One place",
+    "Grouped by child"
+   ],
+   "cam": [
+    {
+     "on": "grouped by child"
+    }
+   ],
+   "rings": [
+    {
+     "on": "grouped by child"
+    }
+   ]
+  },
+  "tutor:std:msg-reply": {
+   "chapter": "Messages",
+   "title": "Reply",
+   "say": "Open a conversation, type your reply and press Send. The parent gets a notification.",
+   "keys": [
+    "Open a conversation",
+    "Type your reply",
+    "Press Send",
+    "A notification"
+   ],
+   "shots": [
+    {
+     "on": ""
+    },
+    {
+     "on": "type your reply"
+    }
+   ],
+   "cam": [
+    {
+     "on": "Open a conversation"
+    },
+    {
+     "on": "type your reply"
+    },
+    {
+     "on": "press Send"
+    }
+   ],
+   "rings": [
+    {
+     "on": "type your reply",
+     "off": "and press Send"
+    },
+    {
+     "on": "press Send"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "type your reply"
+    },
+    {
+     "on": "press Send"
+    }
+   ]
+  },
+  "tutor:std:msg-auto": {
+   "chapter": "Messages",
+   "title": "Updates are automatic",
+   "say": "You don't need to message about homework or marks. Families are told automatically.",
+   "keys": [
+    "No need to message::You don't need to message",
+    "Homework or marks",
+    "Told automatically"
+   ],
+   "cam": [
+    {
+     "on": "Families are told automatically"
+    }
+   ]
+  },
+  "parent:std:hw-list": {
+   "chapter": "Homework",
+   "title": "What's been set",
+   "say": "The Homework tab lists everything your child's tutor has set. Each piece shows when it's due, and whether it's been handed in or marked. If something is overdue, you'll see it here, and on the Home verdict. New homework appears here as soon as it's set.",
+   "keys": [
+    "Everything that's been set::has set",
+    "When it's due",
+    "Handed in, or marked::handed in",
+    "Overdue shows here::overdue"
+   ],
+   "cam": [
+    {
+     "on": "The Homework tab"
+    },
+    {
+     "on": "Each piece shows"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Each piece shows",
+     "off": "New homework"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Each piece shows"
+    }
+   ]
+  },
+  "parent:std:hw-open": {
+   "chapter": "Homework",
+   "title": "Open a piece of homework",
+   "say": "Open one to see the instructions, and any worksheet or lesson to do first. Your child can type an answer, or add a photo or a PDF, then press Hand in homework. They can change it until the tutor marks it.",
+   "keys": [
+    "Instructions and worksheet::the instructions",
+    "Type, or add a photo::type an answer",
+    "Hand in homework",
+    "Change it until marked::until the tutor marks it"
+   ],
+   "cam": [
+    {
+     "on": "Open one"
+    },
+    {
+     "on": "any worksheet"
+    }
+   ],
+   "rings": [
+    {
+     "on": "any worksheet",
+     "off": "Your child can"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Open one",
+     "text": "Instructions"
+    },
+    {
+     "on": "any worksheet",
+     "text": "Worksheet to do"
+    },
+    {
+     "on": "Your child can type",
+     "text": "Type, photo or PDF"
+    }
+   ]
+  },
+  "parent:std:hw-marks": {
+   "chapter": "Homework",
+   "title": "Marks and feedback",
+   "say": "When the tutor has marked it, the score and their feedback appear under the homework, and you're told. Your child's progress picks it up too, so you can see how they're getting on.",
+   "keys": [
+    "The score and feedback::score",
+    "You're told",
+    "Progress picks it up::progress"
+   ],
+   "cam": [
+    {
+     "on": "the score"
+    }
+   ],
+   "rings": [
+    {
+     "on": "the score"
+    }
+   ]
+  },
+  "kid:std:hw-find": {
+   "chapter": "Homework",
+   "title": "Find your homework",
+   "say": "Tap Homework to see what your tutor has set. Tap one to open it. It tells you what to do, and when it is due.",
+   "keys": [
+    "Tap Homework",
+    "Tap one to open it",
+    "What to do",
+    "When it is due::due"
+   ],
+   "cam": [
+    {
+     "on": "Tap Homework"
+    },
+    {
+     "on": "Tap one"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tap one"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap one"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tap Homework",
+     "text": "Homework"
+    },
+    {
+     "on": "Tap one",
+     "text": "Tap one to open it"
+    }
+   ]
+  },
+  "kid:std:hw-do": {
+   "chapter": "Homework",
+   "title": "Do it and hand it in",
+   "say": "Read what to do. Then do the worksheet, on the screen or on paper, and write your answer. When you are done, hand it in. You can change it until your tutor has looked at it.",
+   "keys": [
+    "Read what to do",
+    "Do the worksheet",
+    "Hand it in",
+    "Change it until marked::change it"
+   ],
+   "cam": [
+    {
+     "on": "Read what to do"
+    },
+    {
+     "on": "Then do the worksheet"
+    },
+    {
+     "on": "hand it in"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Then do the worksheet",
+     "off": "When you are done"
+    },
+    {
+     "on": "When you are done"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Then do the worksheet"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Then do the worksheet",
+     "text": "Do the worksheet"
+    },
+    {
+     "on": "When you are done",
+     "text": "Hand it in"
+    }
+   ]
+  },
+  "kid:std:hw-back": {
+   "chapter": "Homework",
+   "title": "See how you did",
+   "say": "When your tutor has marked it, you will see your score and a message from them. Well done for trying!",
+   "keys": [
+    "Your score",
+    "A message from your tutor::message",
+    "Well done!::Well done"
+   ],
+   "cam": [
+    {
+     "on": "When your tutor"
+    }
+   ],
+   "rings": [
+    {
+     "on": "When your tutor"
+    }
+   ]
+  },
+  "kid:ks1:hello": {
+   "chapter": "Hello",
+   "title": "Hello!",
+   "say": "Hello! This is your space. Let's see how it works.",
+   "keys": [
+    "Hello",
+    "your space"
+   ],
+   "nodes": [
+    {
+     "on": "your space",
+     "title": "Today"
+    },
+    {
+     "on": "Let's see",
+     "title": "Play & learn"
+    },
+    {
+     "on": "how it works",
+     "title": "Stars"
+    }
+   ]
+  },
+  "kid:ks1:today": {
+   "chapter": "Today",
+   "title": "Today",
+   "say": "This is Today. It shows one thing to do. Tap the big Go button. Tap the speaker to hear it.",
+   "keys": [
+    "Today",
+    "One thing to do::one thing",
+    "Tap the big Go",
+    "Hear it::speaker"
+   ],
+   "cam": [
+    {
+     "on": "It shows one thing"
+    },
+    {
+     "on": "Tap the big Go"
+    },
+    {
+     "on": "the speaker"
+    }
+   ],
+   "rings": [
+    {
+     "on": "It shows one thing",
+     "off": "Tap the big Go"
+    },
+    {
+     "on": "Tap the big Go",
+     "off": "Tap the speaker"
+    },
+    {
+     "on": "Tap the speaker"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap the big Go"
+    },
+    {
+     "on": "Tap the speaker"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "one thing",
+     "text": "One thing to do"
+    },
+    {
+     "on": "big Go button",
+     "text": "Tap Go"
+    },
+    {
+     "on": "the speaker",
+     "text": "Hear it"
+    }
+   ]
+  },
+  "kid:ks1:play": {
+   "chapter": "Play",
+   "title": "Play and learn",
+   "say": "Tap Play and learn. Here are your quizzes. Tap one. Have a go!",
+   "keys": [
+    "Play and learn",
+    "Your quizzes::quizzes",
+    "Have a go!"
+   ],
+   "cam": [
+    {
+     "on": "Tap Play"
+    },
+    {
+     "on": "Here are your quizzes"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tap Play",
+     "off": "Here are"
+    },
+    {
+     "on": "Tap one"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap Play"
+    },
+    {
+     "on": "Tap one"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tap Play",
+     "text": "Play and learn"
+    },
+    {
+     "on": "quizzes",
+     "text": "Quizzes"
+    }
+   ]
+  },
+  "kid:ks1:stars": {
+   "chapter": "Stars",
+   "title": "Stars",
+   "say": "Tap Stars. Do a quiz, and your stars shine here. Well done!",
+   "keys": [
+    "Stars",
+    "Your stars shine here::stars shine here",
+    "Well done!::Well done"
+   ],
+   "cam": [
+    {
+     "on": "Tap Stars"
+    },
+    {
+     "on": "Do a quiz"
+    }
+   ],
+   "rings": [
+    {
+     "on": "Tap Stars",
+     "off": "Do a quiz"
+    },
+    {
+     "on": "Do a quiz"
+    }
+   ],
+   "cursor": [
+    {
+     "on": "Tap Stars"
+    }
+   ],
+   "callouts": [
+    {
+     "on": "Tap Stars",
+     "text": "Stars"
+    },
+    {
+     "on": "your stars shine",
+     "text": "Your stars"
+    }
+   ]
+  },
+  "kid:ks1:grown-up": {
+   "chapter": "All done",
+   "title": "All done",
+   "say": "All done? Ask a grown-up to help you. Bye for now!",
+   "keys": [
+    "grown-up",
+    "Bye"
+   ],
+   "nodes": [
+    {
+     "on": "Ask a grown-up",
+     "title": "Ask a grown-up"
+    },
+    {
+     "on": "Bye for now",
+     "title": "Bye!"
+    }
+   ]
+  }
+ },
+ "ui": {
+  "eyebrow": "{hub} · How it works",
+  "hubTeaching": "Teaching Hub",
+  "hubLearning": "Learning Hub",
+  "pickShort": "Pick a short video.",
+  "pickShortLong": "Pick a short video. Each one takes a few minutes.",
+  "whoWatching": "Who is watching",
+  "allVideos": "All videos",
+  "allVideosPlay": "▶ All videos",
+  "fullTour": "▶ The full tour",
+  "nextTopic": "▶ Next: {title}",
+  "chooseVideo": "Choose a video",
+  "loading": "Loading…",
+  "sheetTitle": "How it works",
+  "whichVideo": "Which video",
+  "close": "Close",
+  "minScenes": "{m} min · {n} scenes",
+  "watched": " · Watched",
+  "stageAria": "{script} — scene {i} of {n}: {title}",
+  "sceneLive": "Scene {i} of {n}: {title}",
+  "playAria": "Play: {title}",
+  "soundOnCaps": "Sound is on. Captions are always shown below.",
+  "capsBelow": "Captions are shown below.",
+  "startsAt": "Starts at “{title}”.",
+  "thatsTheLot": "That's the lot",
+  "watchAgain": "↺ Watch again",
+  "captions": "Captions",
+  "controls": "Player controls",
+  "scenesJump": "Scenes — jump to one",
+  "sceneN": "Scene {k}: {title}",
+  "prev": "Previous scene",
+  "prevT": "Previous scene (←)",
+  "pause": "Pause",
+  "play": "Play",
+  "replay": "Replay",
+  "pauseT": "Pause (space)",
+  "playT": "Play (space)",
+  "restart": "Restart from the beginning",
+  "restartT": "Restart (R)",
+  "next": "Next scene",
+  "nextT": "Next scene (→)",
+  "captionsT": "Captions (C)",
+  "captionsOn": "Captions on",
+  "captionsOff": "Captions off",
+  "soundT": "Sound (M)",
+  "soundOn": "Sound on",
+  "soundOff": "Sound off",
+  "musicT": "Background music",
+  "musicOn": "Music on",
+  "musicOff": "Music off",
+  "speed": "Speed",
+  "voice": "Voice",
+  "autoVoice": "Auto voice",
+  "scenes": "Scenes",
+  "readScript": "Read the whole script",
+  "tryNow": "Try it now →",
+  "nextVideo": "Next video: {title}",
+  "noVoice": "No voice for this language on this device: captions only."
+ }
+}

@@ -83,7 +83,3 @@ export function normalizeLesson(raw: unknown, fallbackTitle = ""): Lesson {
     quizId: str(r.quizId) || null, widget: str(r.widget) || null, slides: normalizeSlides(r.slides), deckSlides: normalizeSlides(r.deckSlides), oakDeck: /^[A-Za-z0-9_-]{20,80}$/.test(str(r.oakDeck)) ? str(r.oakDeck) : null, source: src,
   };
 }
-
-/** The wording Oak's licence asks for ("A {subject} lesson by Oak National Academy licensed under Open Government Licence (OGL)"). */
-export const OGL_URL = "https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/";
-export const isOak = (l: Lesson) => (l.source.provider ?? "").toLowerCase() === "oak" || /oaknational/i.test(l.source.url ?? "");

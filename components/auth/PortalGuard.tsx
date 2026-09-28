@@ -135,7 +135,9 @@ export function PortalGuard({ portal, children }: { portal: string; children: Re
           setAllowed(true);
           // Operator/staff portals: bring this device's rota copy up to date
           // from the server (lib/rotaCache.ts).
-          if (["company", "franchise", "freelancer", "staff"].includes(me.role)) { syncRotaCacheOnce(); startClockSync(); void syncLearning(); if (me.role === "staff") void fetchOnboarding().catch(() => {}); }
+          // Deferred a few seconds: these are background housekeeping (rota copy, clock offset, training + onboarding sync) — about 6 sequential
+          // API calls that used to fire the instant /api/me landed, ahead of the page the person actually opened.
+          if (["company", "franchise", "freelancer", "staff"].includes(me.role)) setTimeout(() => { syncRotaCacheOnce(); startClockSync(); void syncLearning(); if (me.role === "staff") void fetchOnboarding().catch(() => {}); }, 4000);
           return;
         }
         // Wrong portal for this account. Operator email deep-links are minted

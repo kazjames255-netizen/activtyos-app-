@@ -8,7 +8,7 @@ import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { capAreaForView, capLevel, featureKeysForView, firstOff } from "@/lib/accessMap";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import type { Me } from "@/lib/roles";
-import { fetchCustomerArea, type CustomerArea } from "@/lib/use-customer-area";
+import { fetchCustomerArea, readHubSeen, type CustomerArea } from "@/lib/use-customer-area";
 
 // Family pages refused by URL when their provider has switched them off
 // (Setup → Customer area, or the module in Features). The API refuses the
@@ -57,10 +57,12 @@ export function ViewGate({ portal, view, children }: { portal: string; view: str
 
   if (!gated || isDemoMode()) return <>{children}</>;
   if (caKey) {
-    if (ca === null) return <div className="flex min-h-[40vh] items-center justify-center text-[13px] text-[var(--ink-3)]">Checking access…</div>;
+    // A family that had a classroom on their last visit goes straight in: the hub asks the (authorising) API itself and shows its own
+    // "isn't available" page if it is now off, so the gate must not hold the whole page behind a 3-request chain. First-ever visit still checks.
+    if (ca === null && !(view === "learninghub" && readHubSeen())) return <div className="flex min-h-[40vh] items-center justify-center text-[13px] text-[var(--ink-3)]">Checking access…</div>;
     // A family opening a tutor's invite link has no enrolment yet, so the hub reads as "off" for them: let the claim screen through.
     const inviting = view === "learninghub" && typeof window !== "undefined" && new URLSearchParams(window.location.search).has("invite");
-    if ((!ca.simpleMode && ca[caKey] !== false) || inviting) return <>{children}</>;
+    if (ca === null || (!ca.simpleMode && ca[caKey] !== false) || inviting) return <>{children}</>;
     const caLabel = findNavItem(portal as PortalKey, view)?.label ?? "This area";
     return (
       <div className="mx-auto mt-6 max-w-[560px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-[var(--ink)]">

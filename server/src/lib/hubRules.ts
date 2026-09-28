@@ -4,7 +4,7 @@
 // link parsing, the overall attainment band and validation of editable hub settings.
 // Contract: docs/learning-hub.md → "Round 3 additions".
 
-import { SUBJECT_COLOURS_MAX, SUBJECT_PALETTE_KEYS, subjectColourKey, type HubSettings } from "../../../lib/hubConfig";
+import { cleanQuestionToolsAdd, MAX_TOOLS_PER_QUESTION, QUESTION_TOOLS_OFF_MAX, TOOL_ID_RE, SUBJECT_COLOURS_MAX, SUBJECT_PALETTE_KEYS, subjectColourKey, type HubSettings } from "../../../lib/hubConfig";
 
 // ── Year group / age ─────────────────────────────────────────────────────────
 
@@ -307,6 +307,33 @@ export function validateHubPatch(raw: unknown): { ok: true; patch: Partial<HubSe
       case "srsMinEase":
         if (typeof v !== "number" || !Number.isFinite(v) || v < L.srsMinEase.min || v > L.srsMinEase.max) return { ok: false, error: `Minimum ease must be between ${L.srsMinEase.min} and ${L.srsMinEase.max}` };
         patch.srsMinEase = v;
+        break;
+      case "questionToolsOff": {
+        if (!Array.isArray(v) || v.length > QUESTION_TOOLS_OFF_MAX || v.some((x) => typeof x !== "string" || !x || x.length > 200)) return { ok: false, error: "questionToolsOff must be a list of question ids" };
+        patch.questionToolsOff = [...new Set(v as string[])];
+        break;
+      }
+      case "questionToolsAdd": {
+        if (!v || typeof v !== "object" || Array.isArray(v)) return { ok: false, error: "questionToolsAdd must map question ids to tool ids" };
+        for (const [k, ids] of Object.entries(v as Record<string, unknown>)) {
+          if (!k || k.length > 200 || !Array.isArray(ids) || ids.length > MAX_TOOLS_PER_QUESTION || ids.some((x) => typeof x !== "string" || !TOOL_ID_RE.test(x))) return { ok: false, error: "Bad tool id in questionToolsAdd" };
+        }
+        if (Object.keys(v as object).length > QUESTION_TOOLS_OFF_MAX) return { ok: false, error: "Too many questions" };
+        patch.questionToolsAdd = cleanQuestionToolsAdd(v);
+        break;
+      }
+      case "parentDigest":
+      case "homeworkNudges":
+        if (typeof v !== "boolean") return { ok: false, error: `${k} must be true or false` };
+        patch[k] = v;
+        break;
+      case "nudgeLeadHours":
+        if (!int(v, 1, 72)) return { ok: false, error: "The reminder lead time must be a whole number of hours from 1 to 72" };
+        patch.nudgeLeadHours = v;
+        break;
+      case "lessonAccess":
+        if (v !== "all" && v !== "year" && v !== "assigned") return { ok: false, error: "lessonAccess must be all, year or assigned" };
+        patch.lessonAccess = v;
         break;
       case "retakePolicy":
         if (v !== "unlimited" && v !== "once" && v !== "cooldown") return { ok: false, error: "retakePolicy must be unlimited, once or cooldown" };

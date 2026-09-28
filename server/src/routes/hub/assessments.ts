@@ -1,4 +1,5 @@
 import { Router, type Response } from "express";
+import { familyNoteRule } from "../../lib/hubAccess";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../firebase";
@@ -7,9 +8,10 @@ import { assessmentRows, collate, noteIndex, patchAssessment, questionIndex, ten
 import { pingHub } from "../../lib/hubPing";
 import { audienceFit, audienceKey, effectiveRetake, failStreak, isEveryone, normAudience, retakeDecision, type Audience, type Fit } from "../../lib/hubRules";
 import {
-  assessmentsCol, attemptsCol, childFacts, childFor, childSubjectOk, enrolmentId, fitsChild, homeworkCol, loadTopics, nowIso, questionsCol, requestedChild,
+  assessmentsCol, attemptsCol, childFacts, childFor, childSubjectOk, diagnosticAssignedTo, enrolmentId, fitsChild, homeworkCol, loadTopics, nowIso, questionsCol, requestedChild,
   type AssessmentDoc, type ChildRef, type QuestionDoc,
 } from "./shared";
+import { submissionsCol } from "./teachingCommon";
 
 // Learning Hub — assessments: a quiz (practice, feeds mastery) or a diagnostic
 // (placement test, sets the baseline). A tutor authors them from the question
@@ -39,6 +41,10 @@ const assessmentBody = z.object({
   audience: audienceBody.optional(),
   retakePolicy: z.enum(["inherit", "unlimited", "once", "cooldown"]).optional(),
   retakeCooldownHours: z.number().int().min(1).max(720).nullable().optional(),
+  // Diagnostics only. Omitted on an edit = keep what is stored (including the legacy `null`/absent = "everyone
+  // who fits the audience"). A brand-new diagnostic that omits this is given `[]` in `shape()` below — nobody,
+  // forcing the tutor to make an explicit choice.
+  assignedChildIds: z.array(z.string().min(1).max(100)).max(1000).nullable().optional(),
 });
 
 const dedupe = <T,>(xs: T[]) => [...new Set(xs)];
@@ -106,9 +112,15 @@ async function shape(ctx: HubCtx, franchiseId: string | null, b: z.infer<typeof 
   }
   const cfg = await hubConfig(ctx.tenantId, franchiseId);
   const topicIds = dedupe([...b.topicIds, ...questions.map(({ q }) => q.topicId)]);
+  // Diagnostics only. Sent = the tutor's explicit list (deduped; `null` reverts to the legacy "everyone who
+  // fits" fallback). Omitted on an edit keeps whatever is stored (including a legacy assessment's absent
+  // field). Omitted on a brand-new diagnostic = `[]` — nobody yet, so publishing one still forces a choice.
+  const assignedChildIds = b.type !== "diagnostic" ? undefined
+    : b.assignedChildIds !== undefined ? (b.assignedChildIds === null ? null : dedupe(b.assignedChildIds))
+    : before?.type === "diagnostic" ? (before.assignedChildIds ?? null) : [];
   return {
     type: b.type, title: b.title, subject, topicIds, questionIds: qIds, timeLimitMins: b.timeLimitMins,
-    passMarkPct: b.passMarkPct ?? cfg.passMarkPct, published: b.published, audience, retakePolicy, retakeCooldownHours,
+    passMarkPct: b.passMarkPct ?? cfg.passMarkPct, published: b.published, audience, retakePolicy, retakeCooldownHours, assignedChildIds,
     _totalMarks: questions.reduce((n, { q }) => n + q.marks, 0),
   };
 }
@@ -228,7 +240,11 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
     // is FOR their child(ren) — one whose year group / age we can't tell is still shown (flagged), never hidden.
     base = base.filter((a) => {
       if (a.published === false || !subjectAllowed(ctx, a.subject) || (child && !(fitsChild(a.franchiseId, child) && childSubjectOk(child, a.subject)))) return false;
-      const fits = reachable(kidsAll!, a).map((k) => k.fit(normAudience(a.audience)));
+      if (child && !diagnosticAssignedTo(a, child.childId)) return false;
+      // No single child narrowed down (a multi-child family's general list): a diagnostic reaches this
+      // family only through a kid it is actually assigned to — audience fit alone no longer counts.
+      const reach = reachable(kidsAll!, a).filter((k) => diagnosticAssignedTo(a, k.childId));
+      const fits = reach.map((k) => k.fit(normAudience(a.audience)));
       return fits.length > 0 && !fits.every((f) => f === "no");
     });
   }
@@ -239,7 +255,11 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
   const list = base.filter((a) => matches(a, null)).sort(cmp);
 
   const start = paged ? intQ(q.cursor, 0, 1_000_000) : 0;
-  const limit = paged ? intQ(q.limit, 40, 100) : list.length;
+  // Unpaged legacy callers get "the plain array it always was" — but never truly unbounded: an unpaged request
+  // against the full shared library (~9k+ papers) generated a response big enough to crash the process (found
+  // during overnight testing, 27 Sep 2026). A caller that genuinely needs more than this should pass `?limit=`.
+  const UNPAGED_SAFETY_CAP = 2000;
+  const limit = paged ? intQ(q.limit, 40, 100) : Math.min(list.length, UNPAGED_SAFETY_CAP);
   const page = list.slice(start, start + limit);
   const cfg = await hubConfig(ctx.tenantId, ctx.canEdit ? ctx.franchiseId : child?.franchiseId ?? scopedChildren(ctx)[0]?.franchiseId ?? null);
 
@@ -254,6 +274,7 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
       return {
         ...assessmentBase(a, bank, false), ...(light ? {} : { questionIds: a.questionIds ?? [] }), published: a.published !== false, updatedAt: a.updatedAt,
         retakePolicy: a.retakePolicy ?? "inherit", retakeCooldownHours: a.retakeCooldownHours ?? null,
+        ...(a.type === "diagnostic" ? { assignedChildIds: a.assignedChildIds ?? null } : {}),
         eligibleCount: fits.filter((f) => f !== "no").length, audienceUnknownCount: fits.filter((f) => f === "unknown").length,
         // How the paper breaks down by question kind (from the light index) — the card's "3 Multiple choice · 1 Written" without the questions.
         kindCounts: kindCountsOf(a, bank),
@@ -264,8 +285,15 @@ hubAssessmentsCrud.get("/assessments", async (req, res) => {
     const extra = child ? await childOverlay(ctx, child, list, base) : null;
     // A lesson's exit quiz is a normal quiz, but it belongs at the end of its lesson: say which lesson, so the UI doesn't offer it cold.
     const lessonOf = new Map<string, { id: string; title: string }>();
-    if (page.length) for (const n of (await noteIndex(ctx.tenantId)).values()) if (n.published && n.lessonQuizId && !lessonOf.has(n.lessonQuizId)) lessonOf.set(n.lessonQuizId, { id: n.id, title: n.title });
-    items = page.map((a) => {
+    // Only lessons THIS family may open (the tutor's `lessonAccess` rule): a link to any other would land on "Lesson not found",
+    // so a lesson quiz whose lesson is out of reach is not offered at all (product review H1: 39 dead "Start the lesson first" cards).
+    const mayOpen = await familyNoteRule(ctx);
+    const lockedLessonQuiz = new Set<string>();
+    if (page.length) for (const n of (await noteIndex(ctx.tenantId)).values()) if (n.published && n.lessonQuizId) {
+      if (mayOpen && !mayOpen(n)) { lockedLessonQuiz.add(n.lessonQuizId); continue; }
+      if (!lessonOf.has(n.lessonQuizId)) lessonOf.set(n.lessonQuizId, { id: n.id, title: n.title });
+    }
+    items = page.filter((a) => !lockedLessonQuiz.has(a.id) || lessonOf.has(a.id) || !!(extra?.get(a.id) as { lastAttempt?: unknown } | undefined)?.lastAttempt).map((a) => {
       const fits = reachable(kidsAll!, a).map((k) => k.fit(normAudience(a.audience)));
       const les = lessonOf.get(a.id);
       return { ...assessmentBase(a, bank, true), audienceUnknown: !fits.includes("yes"), lessonNoteId: les?.id ?? null, lessonTitle: les?.title ?? null, ...(extra?.get(a.id) ?? { lastAttempt: null }) };
@@ -324,7 +352,8 @@ hubAssessmentsCrud.get("/assessments/:id", async (req, res) => {
     .map((x) => ({ id: x.id, topicId: x.topicId, kind: x.kind, prompt: x.prompt.length > 200 ? `${x.prompt.slice(0, 199)}…` : x.prompt, marks: x.marks, published: x.published }));
   res.json({
     ...assessmentBase(a, bank, false), questionIds: a.questionIds ?? [], published: a.published !== false, updatedAt: a.updatedAt,
-    retakePolicy: a.retakePolicy ?? "inherit", retakeCooldownHours: a.retakeCooldownHours ?? null, questions,
+    retakePolicy: a.retakePolicy ?? "inherit", retakeCooldownHours: a.retakeCooldownHours ?? null,
+    ...(a.type === "diagnostic" ? { assignedChildIds: a.assignedChildIds ?? null } : {}), questions,
   });
 });
 
@@ -355,7 +384,7 @@ async function childOverlay(ctx: HubCtx, child: ChildRef, list: Row[], all: Row[
   const facts = await childFacts(child, cfg.yearGroups);
   // Is there a published diagnostic FOR THIS CHILD (their scope + audience) for each subject? Only then can a
   // quiz honestly be "locked behind" it.
-  const diagSubjects = new Set(all.filter((a) => a.type === "diagnostic" && a.published !== false && fitsChild(a.franchiseId, child) && audienceFit(normAudience(a.audience), facts) !== "no").map((a) => a.subject.toLowerCase()));
+  const diagSubjects = new Set(all.filter((a) => a.type === "diagnostic" && a.published !== false && fitsChild(a.franchiseId, child) && audienceFit(normAudience(a.audience), facts) !== "no" && diagnosticAssignedTo(a, child.childId)).map((a) => a.subject.toLowerCase()));
   const out = new Map<string, Record<string, unknown>>();
   for (const a of list) {
     const l = last.get(a.id);
@@ -415,6 +444,17 @@ async function writableAssessment(ctx: HubCtx, id: string, res: Response): Promi
   return { snap, fork: false };
 }
 
+/** A quiz being unpublished while homework still has a child waiting to start it (never submitted): that submission
+ *  would sit "assigned" forever — the start route 404s a parent on a draft quiz with no explanation. Homework whose
+ *  hand-ins are all in (submitted/marked) is unaffected, so a tutor can still retire a fully-used quiz. Mirrors the
+ *  DELETE route's "in_use" guard, just narrowed to the case that actually strands a family. */
+async function homeworkAwaitingThisQuiz(tenantId: string, assessmentId: string): Promise<boolean> {
+  const hwSnap = await homeworkCol.where("tenantId", "==", tenantId).where("assessmentId", "==", assessmentId).get();
+  if (hwSnap.empty) return false;
+  const subs = await Promise.all(hwSnap.docs.map((d) => submissionsCol.where("tenantId", "==", tenantId).where("homeworkId", "==", d.id).where("status", "==", "assigned").limit(1).get()));
+  return subs.some((s) => !s.empty);
+}
+
 hubAssessmentsCrud.put("/assessments/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
@@ -425,6 +465,10 @@ hubAssessmentsCrud.put("/assessments/:id", async (req, res) => {
   const { snap, fork } = result;
   const before = snap.data() as AssessmentDoc;
   if (parsed.data.type !== before.type) { res.status(400).json({ error: "A quiz can't become a diagnostic (or back) — create a new one" }); return; }
+  if (!fork && before.published !== false && parsed.data.published === false && (await homeworkAwaitingThisQuiz(ctx.tenantId, snap.id))) {
+    res.status(409).json({ error: "Homework is still waiting on this quiz — mark or remove those first, or leave it published", code: "homework_in_use" });
+    return;
+  }
   // On a fork the tenant/franchise/self-id context is the CALLER's, not the shared doc's — a
   // shared assessment's franchiseId is always null (it belongs to no one's franchise), and the
   // fresh id means there's no "self" to exclude from the other-published-diagnostic check.

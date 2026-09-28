@@ -1,0 +1,37 @@
+{
+ "keyboardResize": {
+  "before": 980,
+  "after": 1020,
+  "role": "slider",
+  "tab": "0"
+ },
+ "bareLabels": [
+  "⠿\nMove",
+  "◐\nSee-through",
+  "▣\nBack to window",
+  "−",
+  "+",
+  "",
+  ""
+ ],
+ "headerBtnSizes": [
+  "undefined:61x44",
+  "floating-panel-ghost:109x44",
+  "floating-panel-bare:127x44",
+  "floating-panel-smaller:44x44",
+  "floating-panel-bigger:44x44",
+  "floating-panel-reset-bare:44x44",
+  "floating-panel-close:44x44",
+  "floating-panel-resize:44x44"
+ ],
+ "hit": [
+  "PAGE:UL",
+  "PAGE:BUTTON",
+  "PAGE:BUTTON",
+  "PAGE:SPAN"
+ ],
+ "bareRemembered": true,
+ "gripWhenMin": 0,
+ "closeHit": "close",
+ "escapeClosed": true
+}

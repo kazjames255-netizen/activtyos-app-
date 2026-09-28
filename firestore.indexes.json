@@ -17,6 +17,16 @@
       ]
     },
     {
+      "comment": "Learning Hub parent digest (server/src/lib/hubDigestStore.ts): a child's attempts since a cutoff (range on submittedAt ASC). Needed by GET /digest/preview and POST /digest/run.",
+      "collectionGroup": "hubAttempts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tenantId", "order": "ASCENDING" },
+        { "fieldPath": "childId", "order": "ASCENDING" },
+        { "fieldPath": "submittedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
       "comment": "Learning Hub: a student's attempts, newest first (docs/learning-hub.md). The API currently sorts in memory, so this only matters once a child has many attempts.",
       "collectionGroup": "hubAttempts",
       "queryScope": "COLLECTION",

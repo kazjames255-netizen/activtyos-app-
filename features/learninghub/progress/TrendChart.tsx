@@ -9,6 +9,7 @@ import { display, FOCUS } from "../shared-assess/ui";
 import { subjectColor, subjectInk, tint } from "../kit";
 import { subjectSwatch } from "../subjectColour";
 import { bandRanges, type Band } from "./levels";
+import { useHubI18n } from "../family/hubT";
 
 // "Most recent progress": one smooth line of the last ≤20 marked quiz scores (oldest →
 // newest), drawn on background zones that ARE the tenant's levels (labelled, so colour is
@@ -42,6 +43,7 @@ export function monotonePath(xy: [number, number][]): string {
 }
 
 export function TrendChart({ points, bands, passMark }: { points: TrendPoint[]; bands: Band[]; passMark?: number | null }) {
+  const { t, tp } = useHubI18n();
   const [ref, w] = useWidth<HTMLDivElement>();
   const uid = useId().replace(/:/g, "");
   const reduced = useReducedMotion();
@@ -105,36 +107,36 @@ export function TrendChart({ points, bands, passMark }: { points: TrendPoint[]; 
         {last && (
           <div className="min-w-0 flex-1" aria-live="polite">
             <span className="text-[24px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display} data-testid="hub-trend-latest">{Math.round(last.pct)}%</span>
-            <span className="ml-2 text-[12px] font-semibold text-[var(--ink-3)]">latest{delta != null && delta !== 0 ? <> · <b className="tabular-nums" style={{ color: delta > 0 ? "color-mix(in srgb, var(--green) 55%, var(--ink))" : "color-mix(in srgb, var(--red) 65%, var(--ink))" }}>{delta > 0 ? "▲ +" : "▼ −"}{Math.abs(delta)} pts</b> on the quiz before</> : null}</span>
+            <span className="ms-2 text-[12px] font-semibold text-[var(--ink-3)]">{t("hubfam.pgLatest")}{delta != null && delta !== 0 ? <> · <b className="tabular-nums" style={{ color: delta > 0 ? "color-mix(in srgb, var(--green) 55%, var(--ink))" : "color-mix(in srgb, var(--red) 65%, var(--ink))" }}>{t(delta > 0 ? "hubfam.pgPtsUp" : "hubfam.pgPtsDown", { n: Math.abs(delta) })}</b> {t("hubfam.pgOnPrevQuiz")}</> : null}</span>
           </div>
         )}
-        <button type="button" onClick={() => setTable((t) => !t)} aria-pressed={table} className={`min-h-[44px] rounded-lg px-2 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{table ? "Show chart" : "Show as table"}</button>
+        <button type="button" onClick={() => setTable((v) => !v)} aria-pressed={table} className={`min-h-[44px] rounded-lg px-2 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{table ? t("hubfam.pgShowChart") : t("hubfam.pgShowTable")}</button>
       </div>
 
       {subjects.length > 1 && (
-        <div role="group" aria-label="Filter by subject" className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5" data-testid="hub-trend-subjects">
+        <div role="group" aria-label={t("hubfam.pgFilterSubject")} className="mb-2 flex gap-1.5 overflow-x-auto pb-0.5" data-testid="hub-trend-subjects">
           {[null, ...subjects].map((s) => {
             const on = subj === s;
             return <button key={s ?? "all"} type="button" aria-pressed={on} onClick={() => { setSubj(s); setHover(null); setFocus(null); }} className={`min-h-[44px] flex-none rounded-full border px-3.5 text-[12.5px] font-bold transition-colors ${FOCUS} ${s ? (on ? "font-extrabold" : "bg-[var(--surface)]") : on ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]"}`}
-              style={s ? (on ? { background: tint(subjectColor(s), 16), borderColor: subjectColor(s), color: subjectInk(s) } : { borderColor: subjectSwatch(s).ring, color: subjectInk(s) }) : undefined}>{s ?? "All subjects"}</button>;
+              style={s ? (on ? { background: tint(subjectColor(s), 16), borderColor: subjectColor(s), color: subjectInk(s) } : { borderColor: subjectSwatch(s).ring, color: subjectInk(s) }) : undefined}>{s ?? t("hubfam.pgAllSubjects")}</button>;
           })}
         </div>
       )}
 
       {table ? (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-[12.5px]">
-            <caption className="sr-only">Quiz scores, newest first</caption>
-            <thead><tr className="text-[11px] uppercase tracking-[0.06em] text-[var(--ink-3)]"><th scope="col" className="py-1.5 pr-3 font-extrabold">Date</th><th scope="col" className="py-1.5 pr-3 font-extrabold">Quiz</th><th scope="col" className="py-1.5 pr-3 font-extrabold">Subject</th><th scope="col" className="py-1.5 text-right font-extrabold">Score</th></tr></thead>
+          <table className="w-full border-collapse text-start text-[12.5px]">
+            <caption className="sr-only">{t("hubfam.pgTableCap")}</caption>
+            <thead><tr className="text-[11px] uppercase tracking-[0.06em] text-[var(--ink-3)]"><th scope="col" className="py-1.5 pe-3 font-extrabold">{t("hubfam.pgColDate")}</th><th scope="col" className="py-1.5 pe-3 font-extrabold">{t("hubfam.pgColQuiz")}</th><th scope="col" className="py-1.5 pe-3 font-extrabold">{t("hubfam.pgColSubject")}</th><th scope="col" className="py-1.5 text-end font-extrabold">{t("hubfam.pgColScore")}</th></tr></thead>
             <tbody>{[...pts].reverse().map((p) => (
-              <tr key={p.i} className="border-t border-[var(--line)]"><td className="whitespace-nowrap py-1.5 pr-3 text-[var(--ink-2)]">{fmtDate(p.at)}</td><td className="py-1.5 pr-3 font-semibold text-[var(--ink)]">{p.title}</td><td className="py-1.5 pr-3 text-[var(--ink-2)]">{p.subject}</td><td className="py-1.5 text-right font-extrabold tabular-nums text-[var(--ink)]">{Math.round(p.pct)}%</td></tr>
+              <tr key={p.i} className="border-t border-[var(--line)]"><td className="whitespace-nowrap py-1.5 pe-3 text-[var(--ink-2)]">{fmtDate(p.at)}</td><td className="py-1.5 pe-3 font-semibold text-[var(--ink)]">{p.title}</td><td className="py-1.5 pe-3 text-[var(--ink-2)]">{p.subject}</td><td className="py-1.5 text-end font-extrabold tabular-nums text-[var(--ink)]">{Math.round(p.pct)}%</td></tr>
             ))}</tbody>
           </table>
         </div>
       ) : (
         <div ref={ref} className="relative w-full" style={{ height: H }}>
           {w > 0 && (
-            <svg width={w} height={H} role="group" aria-label={`Line chart of your last ${pts.length} quiz ${pts.length === 1 ? "score" : "scores"}, oldest to newest. Latest ${Math.round(last?.pct ?? 0)} percent. Use the arrow keys to move between scores.`}
+            <svg width={w} height={H} role="group" aria-label={tp("hubfam.pgChartAria", pts.length, { pct: Math.round(last?.pct ?? 0) })}
               onPointerMove={onMove} onPointerLeave={() => setHover(null)} onKeyDown={onKey} className="block touch-pan-y select-none">
               <defs>
                 <linearGradient id={`${uid}-fill`} x1="0" x2="0" y1="0" y2="1">
@@ -168,8 +170,8 @@ export function TrendChart({ points, bands, passMark }: { points: TrendPoint[]; 
                 <g data-testid="hub-trend-pass">
                   <line x1={pad.l} x2={pad.l + iw} y1={y(passMark)} y2={y(passMark)} stroke="var(--ink-2)" strokeWidth="1.25" strokeDasharray="5 4" opacity="0.75" />
                   {wide
-                    ? <text x={pad.l + iw + 10} y={y(passMark) - 5} fontSize="10" fontWeight="800" fill="var(--ink-2)">Pass {Math.round(passMark)}%</text>
-                    : <text x={pad.l + iw - 4} y={y(passMark) - 4} textAnchor="end" fontSize="9.5" fontWeight="800" fill="var(--ink-2)">Pass {Math.round(passMark)}%</text>}
+                    ? <text x={pad.l + iw + 10} y={y(passMark) - 5} fontSize="10" fontWeight="800" fill="var(--ink-2)">{t("hubfam.pgPassPct", { pct: Math.round(passMark) })}</text>
+                    : <text x={pad.l + iw - 4} y={y(passMark) - 4} textAnchor="end" fontSize="9.5" fontWeight="800" fill="var(--ink-2)">{t("hubfam.pgPassPct", { pct: Math.round(passMark) })}</text>}
                 </g>
               )}
 
@@ -180,7 +182,7 @@ export function TrendChart({ points, bands, passMark }: { points: TrendPoint[]; 
 
               {pts.map((p) => {
                 const isLast = p.i === pts.length - 1, on = active === p.i;
-                const label = `${p.title}, ${p.subject}, ${fmtDate(p.at)}: ${Math.round(p.pct)} percent`;
+                const label = t("hubfam.pgPointAria", { title: p.title, subject: p.subject, date: fmtDate(p.at), pct: Math.round(p.pct) });
                 return (
                   <g key={p.i}>
                     {isLast && <circle cx={x(p.i)} cy={y(p.pct)} r="11" fill="var(--brand)" opacity="0.16" />}
@@ -214,7 +216,7 @@ export function TrendChart({ points, bands, passMark }: { points: TrendPoint[]; 
           )}
         </div>
       )}
-      <p className="m-0 mt-1 text-[11px] text-[var(--ink-3)]">Shaded bands are your levels{passMark != null ? "; the dashed line is the pass mark" : ""}. Tap or hover a dot for the quiz.</p>
+      <p className="m-0 mt-1 text-[11px] text-[var(--ink-3)]">{passMark != null ? t("hubfam.pgLegendPass") : t("hubfam.pgLegend")}</p>
     </div>
   );
 }

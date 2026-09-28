@@ -2,12 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { SkeletonRows } from "./kit";
+import { hubT } from "./family/hubT";
 import type { PanelMeta, PanelProps } from "./panelTypes";
 
 // The tutor workspace (builder, bank, marking, results) and the family runner are big and only one of them is ever used:
 // load whichever this account needs when the tab opens, not with the hub shell.
-const TutorAssess = dynamic(() => import("./quiz/TutorAssess").then((m) => m.TutorAssess), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
-const StudentAssess = dynamic(() => import("./shared-assess/StudentAssess").then((m) => m.StudentAssess), { loading: () => <SkeletonRows rows={3} label="Loading" /> });
+const TutorAssess = dynamic(() => import("./quiz/TutorAssess").then((m) => m.TutorAssess), { loading: () => <SkeletonRows rows={3} label={hubT("hubfam.loading")} /> });
+const StudentAssess = dynamic(() => import("./shared-assess/StudentAssess").then((m) => m.StudentAssess), { loading: () => <SkeletonRows rows={3} label={hubT("hubfam.loading")} /> });
 
 // Quizzes — tutors build them from a question bank, mark written answers and
 // review results; families take them and see an instant scored review. All

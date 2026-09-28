@@ -91,6 +91,79 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     const hit = demoLookup(path);
     return (hit === undefined ? null : hit) as T;
   }
+  const isRead = !init || (!init.method || init.method === "GET") && !init.body && !init.headers && !init.signal;
+  if (!isRead) {
+    // The realtime ticket is a POST but changes no data: it must not throw away the bootstrap's parked answers (it fires right after first
+    // paint, and used to make Home refetch 5 reads the bootstrap had already answered).
+    if (path === "/api/events/ticket") return send<T>(path, init);
+    // A write makes any read still in flight potentially stale: never let a later read join it.
+    inflightReads.clear();
+    primed.clear();
+    return send<T>(path, init);
+  }
+  // Single-flight reads: identical GETs issued while one is already on the wire (the sidebar, the header, the view gate and the page
+  // all ask for /api/my/providers, /api/me, /api/learning-hub/providers… on the same first paint) share ONE request. Each caller
+  // still gets its own copy of the JSON, so nobody can mutate another's data. Only concurrent calls are merged — a call made after
+  // the first has settled always goes to the network (realtime refetches are never answered from a stale cache).
+  const key = `${getActAs()?.uid ?? ""}|${path}`;
+  if (priming && (priming.any ? path.startsWith("/api/learning-hub/") && !path.startsWith("/api/learning-hub/bootstrap") : priming.paths.has(key))) await priming.done; // its answer is already on the wire inside the bootstrap: wait for it, don't ask twice
+  const hit = primed.get(key);
+  if (hit && hit.exp > Date.now()) return (hit.v !== null && typeof hit.v === "object" ? structuredClone(hit.v) : hit.v) as T;
+  let p = inflightReads.get(key) as Promise<T> | undefined;
+  if (!p) {
+    p = background(path, () => send<T>(path, init)).finally(() => { if (inflightReads.get(key) === p) inflightReads.delete(key); });
+    inflightReads.set(key, p);
+  }
+  return p.then((v) => (v !== null && typeof v === "object" ? structuredClone(v) : v));
+}
+
+const inflightReads = new Map<string, Promise<unknown>>();
+
+// ── Bootstrap priming ───────────────────────────────────────────────────────────────────────────────────────────────
+// A screen that knows the reads it is about to make (the Teaching Hub's first paint: ~15 GETs) can fetch them ALL in one
+// round trip — `GET /api/learning-hub/bootstrap` runs them in parallel server-side — and park the answers here. The normal
+// `get()` calls then resolve from the parked answer with no network. Short-lived (a few seconds: only the first paint reads
+// are served this way, realtime refetches always go to the network) and dropped by any write. A path the bootstrap could not
+// answer is simply absent, so that call goes to the network as usual and shows its own real error.
+const primed = new Map<string, { v: unknown; exp: number }>();
+const PRIME_TTL_MS = 8_000;
+let priming: { paths: Set<string>; any: boolean; sig: string; done: Promise<void> } | null = null;
+/** `paths` are full API paths ("/api/learning-hub/topics?tenantId=…") exactly as the callers will request them. */
+export function primeHubReads(paths: string[], opts: { placeholders?: boolean } = {}): Promise<void> {
+  const PFX = "/api/learning-hub";
+  const uniq = [...new Set(paths.filter((p) => p.startsWith(PFX + "/")))];
+  if (!uniq.length || demoFixtures) return Promise.resolve();
+  const who = getActAs()?.uid ?? "";
+  const q = uniq.map((p) => `p=${encodeURIComponent(p.slice(PFX.length))}`).join("&");
+  if (priming && priming.sig === q) return priming.done; // StrictMode / a remount asking for the very same thing while it is in flight
+  // With placeholders ({T}/{C}: the server fills in the provider / child) the answers' keys aren't known yet, so any hub read waits for them.
+  const mine: { paths: Set<string>; any: boolean; sig: string; done: Promise<void> } = { sig: q, paths: new Set(uniq.map((p) => `${who}|${p}`)), any: !!opts.placeholders, done: Promise.resolve() };
+  mine.done = send<{ responses?: Record<string, unknown> }>(`${PFX}/bootstrap?${q}`)
+    .then((r) => {
+      const exp = Date.now() + PRIME_TTL_MS;
+      for (const [k, v] of Object.entries(r?.responses ?? {})) primed.set(`${who}|${PFX}${k}`, { v, exp });
+    })
+    .catch(() => { /* old server / offline: every read just goes the normal way */ })
+    .finally(() => { if (priming === mine) priming = null; });
+  priming = mine;
+  return mine.done;
+}
+
+// Browsers open only ~6 sockets per origin to the API over HTTP/1.1, and every page's shell fires a dozen cosmetic reads at once (nav badges,
+// unread counts, coupons…). On the Teaching Hub those queued in front of the hub's OWN data — its first paint waited behind them. So while
+// the hub is open, everything that isn't the hub's own (or identity) goes through a 2-wide lane and leaves the rest of the sockets free.
+const HOT = /^\/api\/(learning-hub\/|me$|library$|events\/ticket|my\/providers|public\/library\/)/;
+const onHub = () => typeof location !== "undefined" && /\/learninghub(\/|$)/.test(location.pathname);
+let laneBusy = 0;
+const laneWaiting: (() => void)[] = [];
+async function background<T>(path: string, run: () => Promise<T>): Promise<T> {
+  if (HOT.test(path) || !onHub()) return run();
+  if (laneBusy >= 2) await new Promise<void>((r) => laneWaiting.push(r));
+  else laneBusy++;
+  try { return await run(); } finally { const next = laneWaiting.shift(); if (next) next(); else laneBusy--; }
+}
+
+async function send<T>(path: string, init?: RequestInit): Promise<T> {
   const user = await signedInUser();
   if (!user) throw new ApiError(401, "Not signed in");
   const token = await withTimeout(user.getIdToken(), "Getting your sign-in token");

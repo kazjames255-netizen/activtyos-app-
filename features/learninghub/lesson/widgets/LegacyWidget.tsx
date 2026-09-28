@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useBareTool } from "../../tools/bareContext";
 import { bindLegacy, type LegacyDef } from "./legacyRuntime";
 import type { WidgetProps } from "./types";
+import { useI18n } from "@/lib/i18n/provider";
+import { createTranslator, loadLegacyTable } from "./legacyI18n";
 
 // Generic adapter: mounts a plain-JS widget module (WIDGETS.id = {title, intro, html(), init()}) inside the React player.
 // html() is injected into a ref'd div and init() called once it is in the DOM — exactly the prototype's contract — so every
@@ -11,6 +14,13 @@ import type { WidgetProps } from "./types";
 
 const CSS = `
 .lw-root{--brand2:var(--brand-2);--ink2:var(--ink-2);--ink3:var(--ink-3);--ok:var(--green);--ok-soft:var(--green-soft);--bad:var(--red);--bad-soft:var(--red-soft);--warn:color-mix(in srgb,var(--gold) 40%,var(--ink));--warn-soft:var(--gold-soft);color:var(--ink);font-size:15px;line-height:1.5}
+/* "Just the tool": the widget keeps its stage and its own controls (they sit in a small translucent strip) but drops the card, hint text, tags and headings */
+.lw-bare,.lw-bare>div,.lw-bare .explore{pointer-events:none}.lw-bare .explore>*{pointer-events:auto}
+.lw-bare .explore{background:none!important;border:0!important;padding:0!important;border-radius:0!important}
+.lw-bare .explore .small,.lw-bare .explore .muted,.lw-bare .explore .tag,.lw-bare .explore h3,.lw-bare .explore h4{display:none!important}
+.lw-bare [id$="-fb"],.lw-bare [id$="-msg"]{display:none!important}
+.lw-bare [id$="-say"]{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.lw-bare .explore>.row{background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:14px;padding:4px 8px;width:fit-content;box-shadow:0 4px 12px rgba(0,0,0,.12)}
 .lw-root .explore{background:linear-gradient(180deg,var(--brand-soft),var(--surface));border:2px solid var(--brand-line);border-radius:16px;padding:16px}
 .lw-root .explore svg{width:100%;height:auto;display:block}
 .lw-root .btn{border:0;border-radius:12px;padding:10px 18px;min-height:44px;font:inherit;font-weight:800;font-size:15px;background:var(--brand);color:#fff;cursor:pointer;transition:filter .15s,transform .12s}
@@ -33,10 +43,13 @@ const CSS = `
 `;
 
 export function LegacyWidget({ def, onXP }: { def: LegacyDef; onXP: WidgetProps["onXP"] }) {
+  const bare = useBareTool();
   const ref = useRef<HTMLDivElement>(null);
   const xp = useRef(onXP);
   xp.current = onXP;
   const [failed, setFailed] = useState(false);
+  const { t, locale } = useI18n();
+  const tr = useRef<{ stop(): void } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -51,14 +64,21 @@ export function LegacyWidget({ def, onXP }: { def: LegacyDef; onXP: WidgetProps[
       el.innerHTML = "";
       setFailed(true);
     }
-    return () => { bindLegacy(null); el.innerHTML = ""; };
-  }, [def]);
+    // Marks the widget's game / answer-checking buttons (Challenge me, Check, Reveal, New puzzle, Next sentence...) as chrome, so "Just the tool" (the floating window) hides them: the tool itself stays, not the game wrapper.
+    el.querySelectorAll("button").forEach((b) => { if (/^\s*(challenge me|check( my \w+)?|reveal \w+|new (puzzle|round|sentence)|next sentence|surprise me|mix them up again)\s*$/i.test(b.textContent ?? "")) b.setAttribute("data-tool-chrome", "1"); });
+    // Stage SVGs whose drawn parts are the only real targets (balance scales) let taps on their empty area fall through to the lesson in "Just the tool".
+    el.querySelectorAll("#bs-svg").forEach((s) => s.setAttribute("data-bare-pass", "1"));
+    // Other languages: translate the rendered widget (see legacyI18n.ts). English needs nothing.
+    let live = true;
+    if (locale !== "en") loadLegacyTable(locale).then((table) => { if (!live || !ref.current) return; tr.current?.stop(); const x = createTranslator(el, table); x.run(); tr.current = x; });
+    return () => { live = false; tr.current?.stop(); tr.current = null; bindLegacy(null); el.innerHTML = ""; };
+  }, [def, locale]);
 
   return (
-    <div className="lw-root">
+    <div className={bare ? "lw-root lw-bare" : "lw-root"} data-bare-pass={bare ? "1" : undefined}>
       <style>{CSS}</style>
       <div ref={ref} />
-      {failed && <p role="alert" className="m-0 rounded-xl bg-[var(--red-soft)] px-3 py-2 text-[13px] font-semibold text-[var(--red)]">This activity couldn&apos;t start. You can carry on with the lesson.</p>}
+      {failed && <p role="alert" className="m-0 rounded-xl bg-[var(--red-soft)] px-3 py-2 text-[13px] font-semibold text-[var(--red)]">{t("hubtoolsb.lw_failed")}</p>}
     </div>
   );
 }

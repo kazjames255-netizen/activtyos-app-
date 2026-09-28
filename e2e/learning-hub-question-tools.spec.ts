@@ -19,6 +19,7 @@ const subject = `Maths Tools ${stamp}`; // "Maths" in the name is what selects t
 const childName = `Tia${stamp}`;
 const Q_MEASURE = `What is the measurement of the angle shown here? _____° (${stamp})`;
 const Q_KNOW = `The tool used to measure the size of an angle is known as: (${stamp})`;
+const Q_NL = `What is the difference between -10 and 5? _____ (${stamp})`;
 const HUB = "/api/learning-hub";
 
 let accounts: AccountManifest["accounts"];
@@ -80,6 +81,7 @@ test.beforeAll(async () => {
     extraWarmup: [
       { body: { kind: "short", prompt: Q_MEASURE, answer: "55", marks: 1, explanation: "Read the scale." }, meta: { kind: "short", prompt: Q_MEASURE, explanation: "Read the scale.", right: "55", wrong: "1" } },
       { body: { kind: "single", prompt: Q_KNOW, options: [{ id: "o0", text: "Ruler" }, { id: "o1", text: "Protractor" }], answer: "o1", marks: 1, explanation: "A protractor." }, meta: { kind: "single", prompt: Q_KNOW, explanation: "A protractor.", right: "Protractor", wrong: "Ruler" } },
+      { body: { kind: "short", prompt: Q_NL, answer: "15", marks: 1, explanation: "Count the gap." }, meta: { kind: "short", prompt: Q_NL, explanation: "Count the gap.", right: "15", wrong: "1" } },
     ],
   });
   await setHub(accounts.freelancer, true);
@@ -152,6 +154,67 @@ test.describe("per-question help tools in a live lesson", () => {
     await expect(page.locator('[data-testid^="instrument-overlay-"]')).toHaveCount(0);
     await expect(page.getByTestId("calculator")).toHaveCount(0);
     await expect(page.locator('[data-testid^="floating-panel-"]')).toHaveCount(0);
+    await ctx.close();
+  });
+
+  test("a number-line question opens ONE tidy row, and the line is fully visible without resizing", async ({ browser }) => {
+    test.setTimeout(240_000);
+    const ctx = await browser.newContext({ storageState: statePath("parent"), viewport: { width: 1400, height: 900 } });
+    const page = await ctx.newPage();
+    await joinAndStart(page);
+    // Answer the first two warm-up questions to reach the third.
+    await page.getByPlaceholder("Type your answer").fill("55");
+    await page.getByTestId("lesson-check").click();
+    await page.getByTestId("lesson-next").click();
+    await page.getByText("Protractor", { exact: true }).first().click();
+    await page.getByTestId("lesson-check").click();
+    await page.getByTestId("lesson-next").click();
+    await expect(page.getByText(Q_NL.slice(0, 40)).first()).toBeVisible({ timeout: 30_000 });
+    // One plain row — no "Suggested for this lesson" + subject group repeat.
+    const card = page.getByTestId("tools-card");
+    await expect(card).toBeVisible({ timeout: 20_000 });
+    await expect(card).toContainText("Tool for this question");
+    await expect(card).not.toContainText("Suggested for this lesson");
+    await expect(page.locator('[data-testid^="tools-group-"]')).toHaveCount(0);
+    await expect(page.getByTestId("remote-sync-open-numberline")).toHaveCount(1);
+    await page.getByTestId("remote-sync-open-numberline").click();
+    const dlg = page.getByRole("dialog", { name: /Number line/i });
+    await expect(dlg).toBeVisible();
+    const line = dlg.locator('svg[aria-label^="Number line from"]');
+    await expect(line).toBeVisible();
+    const d = (await dlg.boundingBox())!, l = (await line.boundingBox())!, vp = page.viewportSize()!;
+    // The whole window is on screen at its preset size, and the drawn line sits fully inside it (nothing cut off, nothing to drag or resize).
+    expect(d.x).toBeGreaterThanOrEqual(0); expect(d.y).toBeGreaterThanOrEqual(0);
+    expect(d.x + d.width).toBeLessThanOrEqual(vp.width); expect(d.y + d.height).toBeLessThanOrEqual(vp.height);
+    expect(l.y).toBeGreaterThanOrEqual(d.y); expect(l.y + l.height).toBeLessThanOrEqual(d.y + d.height + 1);
+    expect(l.x).toBeGreaterThanOrEqual(d.x); expect(l.x + l.width).toBeLessThanOrEqual(d.x + d.width + 1);
+    // The window can be MOVED: drag it by its title bar and it follows the mouse; and it can be brought back with the reset button.
+    const head = dlg.getByRole("button", { name: /Number line/i }).first();
+    const hb = (await head.boundingBox())!;
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb.x + hb.width / 2 - 260, hb.y + hb.height / 2 + 90, { steps: 8 });
+    await page.mouse.up();
+    const d2 = (await dlg.boundingBox())!;
+    expect(Math.abs(d2.x - (d.x - 260)), "window followed the drag (x)").toBeLessThan(6);
+    expect(Math.abs(d2.y - (d.y + 90)), "window followed the drag (y)").toBeLessThan(6);
+    // One tap makes the window see-through (the question shows behind it), a second tap makes it solid again.
+    const opacity = () => dlg.evaluate((el) => Number(getComputedStyle(el).opacity));
+    expect(await opacity()).toBe(1);
+    await dlg.getByTestId("floating-panel-ghost").click();
+    await expect.poll(opacity).toBeLessThan(0.7);
+    await dlg.getByTestId("floating-panel-ghost").click();
+    await expect.poll(opacity).toBe(1);
+    // "Just the tool": the window frame and the white background go, the tool itself stays; a small pill brings the window back.
+    const bg = () => dlg.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await bg()).not.toBe("rgba(0, 0, 0, 0)");
+    await dlg.getByTestId("floating-panel-bare").click();
+    await expect(dlg).toHaveAttribute("data-bare", "1");
+    expect(await bg()).toBe("rgba(0, 0, 0, 0)");
+    await expect(line).toBeVisible();
+    await dlg.getByTestId("floating-panel-bare").click();
+    await expect(dlg).toHaveAttribute("data-bare", "0");
+    expect(await bg()).not.toBe("rgba(0, 0, 0, 0)");
     await ctx.close();
   });
 

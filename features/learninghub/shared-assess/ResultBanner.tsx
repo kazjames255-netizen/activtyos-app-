@@ -2,7 +2,10 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "../kit";
-import { useFamily } from "../family/FamilyContext";
+import { useFamily, useSupport } from "../family/FamilyContext";
+import { Mascot, MascotSpeech, useMascotEnabled } from "../mascot";
+import { useT } from "@/lib/i18n/provider";
+import { useHubI18n } from "../family/hubT";
 import { NEUTRAL, OK, type Tone } from "./format";
 import { useReducedMotion } from "./motion";
 import { SpeakButton } from "../speak";
@@ -41,9 +44,14 @@ interface Props {
 }
 
 export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headline, sub, eyebrow, weakTopics = [], onReviewTopics, actions, partial, kindCopy }: Props) {
+  const { t: tr, tp } = useHubI18n();
   const fam = useFamily();
   const family = fam.active, kidView = fam.kid;
   const reduced = useReducedMotion();
+  const tHub = useT();
+  const mascotOn = useMascotEnabled() && (kidView || !!kindCopy) && (kind === "passed" || kind === "missed");
+  const calm = useSupport().calm;
+  const kidName = (fam.kids.find((k) => k.childId === fam.childId)?.childName ?? "").split(" ")[0];
   const [pop, setPop] = useState(reduced);
   useEffect(() => {
     if (reduced) { setPop(true); return; }
@@ -59,42 +67,48 @@ export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headli
   return (
     <section data-testid="hub-result-banner" data-kind={kind} className="relative overflow-hidden rounded-2xl border shadow-[var(--shadow-sm)]"
       style={{ borderColor: `color-mix(in srgb, ${wash} 30%, var(--line))`, background: `linear-gradient(135deg, color-mix(in srgb, ${wash} 14%, var(--surface)) 0%, var(--surface) 62%)` }}>
-      <span aria-hidden className="pointer-events-none absolute -left-16 -top-16 h-56 w-56 rounded-full" style={{ background: `radial-gradient(circle, color-mix(in srgb, ${wash} ${kind === "passed" ? 26 : 14}%, transparent) 0%, transparent 70%)`, opacity: pop ? 1 : 0, transition: reduced ? "none" : "opacity 900ms ease" }} />
-      <div className="relative flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:gap-8 sm:p-8 sm:text-left">
+      <span aria-hidden className="pointer-events-none absolute -start-16 -top-16 h-56 w-56 rounded-full" style={{ background: `radial-gradient(circle, color-mix(in srgb, ${wash} ${kind === "passed" ? 26 : 14}%, transparent) 0%, transparent 70%)`, opacity: pop ? 1 : 0, transition: reduced ? "none" : "opacity 900ms ease" }} />
+      <div className="relative flex flex-col items-center gap-5 p-5 text-center sm:flex-row sm:gap-8 sm:p-8 sm:text-start">
         <div className="relative flex-none">
           <ScoreRing pct={pct} size={172} stroke={14} tone={tone} passMark={!kindCopy && (kind === "passed" || kind === "missed") ? passMark : null} glow={kind === "passed"}
-            state={kind === "pending" ? "pending" : undefined} sub={kind === "pending" ? "Awaiting marking" : kind === "partial" ? "auto-marked" : undefined}
+            state={kind === "pending" ? "pending" : undefined} sub={kind === "pending" ? tr("hubfam.asAwaitingMarking") : kind === "partial" ? tr("hubfam.asAutoMarkedLc") : undefined}
             maybe={kind === "partial" ? partial?.maybe : undefined}
-            ariaLabel={kind === "partial" && partial ? `Auto-marked ${partial.autoMarks} out of ${partial.autoMax}, ${Math.round(pct)} percent. ${wp} written ${wp === 1 ? "answer is" : "answers are"} still being marked, so this may change.` : undefined} />
+            ariaLabel={kind === "partial" && partial ? tr("hubfam.asPartialAria", { a: partial.autoMarks, b: partial.autoMax, pct: Math.round(pct), wp }) : undefined} />
           {kind === "passed" && (
-            <span aria-hidden className="absolute -right-1 top-3 grid h-9 w-9 place-items-center rounded-full text-white shadow-[var(--shadow)]"
+            <span aria-hidden className="absolute -end-1 top-3 grid h-9 w-9 place-items-center rounded-full text-white shadow-[var(--shadow)]"
               style={{ background: "var(--green)", transform: pop ? "scale(1)" : "scale(0)", transition: reduced ? "none" : "transform 420ms cubic-bezier(.3,1.6,.5,1)" }}>
               <Icon name="check" size={20} strokeWidth={2.6} />
             </span>
           )}
         </div>
         <div className="min-w-0 flex-1" role="status" aria-live="polite">
+          {mascotOn && (
+            <div className="mb-2 flex items-center justify-center gap-2 sm:justify-start" data-testid="hub-result-mascot">
+              <Mascot pose={kind === "passed" ? (calm ? "wave" : "celebrate") : "encourage"} size={84} />
+              <MascotSpeech side="left" live={kind === "missed"}>{kind === "passed" ? tHub("hubmascot.done", { name: kidName }) : tHub("hubmascot.again")}</MascotSpeech>
+            </div>
+          )}
           {eyebrow && <div className="mb-1 text-[12px] font-bold text-[var(--ink-3)] [overflow-wrap:anywhere]">{eyebrow}</div>}
           <div className="flex items-start justify-center gap-2.5 sm:justify-start">
             <h3 className="m-0 text-[26px] font-extrabold leading-tight text-[var(--ink)] sm:text-[30px]" style={display} data-testid="hub-result-headline">{headline}</h3>
-            <SpeakButton text={`${headline}. ${sub}`} label="Read your result aloud" testId="hub-read-result" />
+            <SpeakButton text={`${headline}. ${sub}`} label={tr("hubfam.asReadResult")} testId="hub-read-result" />
           </div>
           <p className="m-0 mt-2 max-w-[520px] text-[14px] leading-relaxed text-[var(--ink-2)]">{sub}</p>
           <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             {kind === "partial" && partial
-              ? <Chip tone={NEUTRAL}><span className="tabular-nums">{maxMarks} marks in all</span></Chip>
-              : <Chip tone={NEUTRAL}><span className="tabular-nums">{scoreMarks} / {maxMarks} marks</span></Chip>}
-            {kind === "partial" && <Chip tone={GOLD} icon={<HourglassIcon size={12} />}>{wp} written {wp === 1 ? "answer" : "answers"} with your tutor</Chip>}
-            {kind === "pending" && <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kidView ? "Your tutor is marking it" : "Awaiting marking"}</Chip>}
-            {kind === "baseline" && <Chip tone={BRAND} icon={<Icon name="compass" size={12} />}>{family ? "Starting point set" : "Baseline set"}</Chip>}
-            {kind === "passed" && <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>Passed</Chip>}
-            {kind === "missed" && <Chip tone={GOLD}>{kindCopy ? "Have another go" : gap != null && gap > 0 ? `${gap} ${gap === 1 ? "point" : "points"} to go` : "Not passed yet"}</Chip>}
-            {passMark != null && kind !== "baseline" && !kindCopy && <Chip tone={NEUTRAL}>Pass mark {passMark}%</Chip>}
+              ? <Chip tone={NEUTRAL}><span className="tabular-nums">{tr("hubfam.asMarksInAll", { n: maxMarks })}</span></Chip>
+              : <Chip tone={NEUTRAL}><span className="tabular-nums">{tr("hubfam.asScoreMarks", { got: scoreMarks, max: maxMarks })}</span></Chip>}
+            {kind === "partial" && <Chip tone={GOLD} icon={<HourglassIcon size={12} />}>{tr("hubfam.asWrittenChip", { wp })}</Chip>}
+            {kind === "pending" && <Chip tone={BRAND} icon={<HourglassIcon size={12} />}>{kidView ? tr("hubfam.asKidMarking") : tr("hubfam.asAwaitingMarking")}</Chip>}
+            {kind === "baseline" && <Chip tone={BRAND} icon={<Icon name="compass" size={12} />}>{family ? tr("hubfam.asStartingPointSet") : tr("hubfam.asBaselineSet")}</Chip>}
+            {kind === "passed" && <Chip tone={OK} icon={<Icon name="check" size={12} strokeWidth={2.4} />}>{tr("hubfam.asPassed")}</Chip>}
+            {kind === "missed" && <Chip tone={GOLD}>{kindCopy ? tr("hubfam.asHaveAnotherGo") : gap != null && gap > 0 ? tp("hubfam.asPointsToGo", gap) : tr("hubfam.asNotPassedYet")}</Chip>}
+            {passMark != null && kind !== "baseline" && !kindCopy && <Chip tone={NEUTRAL}>{tr("hubfam.asPassMark", { n: passMark })}</Chip>}
           </div>
           {kind === "missed" && weakTopics.length > 0 && (
             <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start">
-              {weakTopics.slice(0, 3).map((t) => <span key={t} className="rounded-md bg-[var(--gold-soft)] px-2 py-0.5 text-[11.5px] font-bold" style={{ color: GOLD.ink }}>{t}</span>)}
-              {weakTopics.length > 3 && <span className="text-[11.5px] font-bold text-[var(--ink-3)]">+{weakTopics.length - 3} more</span>}
+              {weakTopics.slice(0, 3).map((w) => <span key={w} className="rounded-md bg-[var(--gold-soft)] px-2 py-0.5 text-[11.5px] font-bold" style={{ color: GOLD.ink }}>{w}</span>)}
+              {weakTopics.length > 3 && <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{tr("hubfam.asMoreN", { n: weakTopics.length - 3 })}</span>}
             </div>
           )}
           {(actions || (kind === "missed" && onReviewTopics && weakTopics.length > 0)) && (
@@ -103,7 +117,7 @@ export function ResultBanner({ kind, pct, scoreMarks, maxMarks, passMark, headli
                 <button type="button" onClick={onReviewTopics} data-testid="hub-review-topics"
                   className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-5 text-[13px] font-extrabold text-[var(--ink)] shadow-[var(--shadow-sm)] transition-[filter,transform] hover:brightness-95 active:scale-[.98] motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--brand)] focus-visible:outline"
                   style={{ background: "var(--gold)" }}>
-                  Review these {weakTopics.length} {weakTopics.length === 1 ? "topic" : "topics"}
+                  {tr("hubfam.asReviewTopics", { n: weakTopics.length })}
                   <Icon name="chevronDown" size={16} strokeWidth={2.4} />
                 </button>
               )}

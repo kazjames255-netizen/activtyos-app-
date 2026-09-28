@@ -105,6 +105,7 @@ children.get("/lookup", async (req, res) => {
   // so Find-a-child covers everyone on the operator's list. Matched customer
   // (email) → account (uid) → their children. (Skipped when scoped to a
   // franchise — an account-only child can't be attributed to one.)
+  const bookedIds = new Set(idx.keys());
   if (!franchiseId && !site) try {
     const custs = await db.collection("customers").where("tenantId", "==", auth.tenantId).get();
     // Only families who joined this provider THEMSELVES — a provider can add any
@@ -127,7 +128,7 @@ children.get("/lookup", async (req, res) => {
     const c = d.data() as { name?: string; dob?: string; parentUid?: string; photo?: string };
     const p = idx.get(d.id)!;
     const place = c.parentUid ? (placeOf.get(c.parentUid) ?? { postcode: "", town: "" }) : { postcode: "", town: "" };
-    return { childId: d.id, name: c.name ?? "", dob: c.dob ?? "", parentName: p.parentName, parentEmail: p.email, parentPhone: p.phone, ref: p.ref, postcode: place.postcode, town: place.town, photo: c.photo ?? "" };
+    return { childId: d.id, name: c.name ?? "", dob: c.dob ?? "", parentName: p.parentName, parentEmail: p.email, parentPhone: p.phone, ref: p.ref, postcode: place.postcode, town: place.town, photo: c.photo ?? "", booked: bookedIds.has(d.id) };
   }).sort((a, b) => (a.name < b.name ? -1 : 1));
   res.json(out);
 });

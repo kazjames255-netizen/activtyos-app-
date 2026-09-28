@@ -23,6 +23,11 @@ export const fetchLessonQuestions = (noteId: string, childQs: string, quizSet?: 
 export const checkWarmup = (noteId: string, childQs: string, questionId: string, response: unknown, quizSet?: boolean) =>
   post<WarmupCheck>(noteUrl(noteId, "warmup-check", withSet(childQs, quizSet)), { questionId, response });
 
+/** "This child actually went through this lesson" — fired once, from LessonPlayer reaching its "done" step (see markViewed
+ *  there). Fire-and-forget: never blocks or surfaces an error to the pupil if it fails. Powers the "studied" tick on lesson
+ *  cards (curriculum/api.ts `CellLesson.viewed`), independent of whether the exit quiz exists or was ever finished. */
+export const markLessonViewed = (noteId: string, childQs: string) => post<{ ok: boolean }>(noteUrl(noteId, "viewed", childQs), {});
+
 export const startQuizAttempt = (qs: string, quizId: string, childId: string, homeworkId?: string | null) =>
   post<StartedAttempt>(hubPath(qs, `/assessments/${quizId}/attempts`, { childId }), { childId, ...(homeworkId ? { homeworkId } : {}) });
 export const submitQuizAttempt = (qs: string, attemptId: string, childId: string, answers: { questionId: string; response: unknown }[]) =>

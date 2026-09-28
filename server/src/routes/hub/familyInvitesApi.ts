@@ -111,7 +111,7 @@ async function usable(token: string, uid: string, res: import("express").Respons
 }
 
 const parentOnly = (req: import("express").Request, res: import("express").Response) => {
-  if (req.auth?.role !== "parent" || !req.user?.uid) { res.status(403).json({ error: "Open this link while signed in to your ActivityOS parent account." }); return null; }
+  if (req.auth?.role !== "parent" || !req.user?.uid) { res.status(403).json({ error: "Open this link while signed in to your parent account." }); return null; }
   return req.user.uid;
 };
 

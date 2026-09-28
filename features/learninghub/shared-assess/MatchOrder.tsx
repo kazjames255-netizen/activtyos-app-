@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboa
 import { createPortal, flushSync } from "react-dom";
 import type { MatchAnswer, OrderAnswer, Piece } from "./api";
 import { FOCUS } from "./ui";
+import { useT } from "@/lib/i18n/provider";
 
 // The two "arrange it" answer inputs: MATCH (drag each definition onto its term, or tap one
 // then the other) and ORDER (drag items into sequence, or use the arrow buttons). Ported from
@@ -40,6 +41,7 @@ function orderFrom(items: string[], value: OrderAnswer | undefined): number[] {
 const moveTo = (order: number[], from: number, to: number) => { const a = [...order]; const [m] = a.splice(from, 1); a.splice(to, 0, m); return a; };
 
 export function OrderInput({ items, value, onChange, disabled }: { items: string[]; value: OrderAnswer | undefined; onChange: (v: OrderAnswer) => void; disabled?: boolean }) {
+  const t = useT();
   const [order, setOrder] = useState<number[]>(() => orderFrom(items, value));
   const [dragI, setDragI] = useState<number | null>(null);
   const [said, setSaid] = useState("");
@@ -55,7 +57,7 @@ export function OrderInput({ items, value, onChange, disabled }: { items: string
     const to = pos + d;
     if (to < 0 || to >= order.length) return;
     commit(moveTo(order, pos, to));
-    setSaid(`Moved ${items[order[pos]]} to position ${to + 1} of ${order.length}`);
+    setSaid(t("hubfam.asMovedTo", { item: items[order[pos]], pos: to + 1, total: order.length }));
   };
 
   const down = (e: ReactPointerEvent<HTMLLIElement>, i: number) => {
@@ -91,7 +93,7 @@ export function OrderInput({ items, value, onChange, disabled }: { items: string
 
   return (
     <div data-testid="hub-order">
-      <ol ref={listRef} className="m-0 grid list-none gap-2.5 p-0" aria-label="Items to put in order. Drag them, or use the arrow buttons.">
+      <ol ref={listRef} className="m-0 grid list-none gap-2.5 p-0" aria-label={t("hubfam.asOrderAria")}>
         {order.map((it, pos) => (
           <li key={it} data-testid="hub-order-item" data-pos={pos} onPointerDown={(e) => down(e, it)}
             className={`relative flex touch-none select-none items-center gap-3 rounded-[13px] border-2 bg-[var(--surface)] px-3.5 py-3 ${disabled ? "opacity-60" : "cursor-grab"} ${dragI === it ? "z-10 cursor-grabbing border-[var(--brand)] shadow-[var(--shadow)] transition-none" : "border-[var(--line)] transition-[box-shadow,border-color]"}`}>
@@ -99,17 +101,17 @@ export function OrderInput({ items, value, onChange, disabled }: { items: string
             <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-[var(--ink)] [overflow-wrap:anywhere]">{items[it]}</span>
             <span className="flex-none tracking-[-2px] text-[18px] text-[var(--ink-3)]" aria-hidden>⋮⋮</span>
             <span className="flex flex-none gap-1">
-              <button type="button" disabled={disabled || pos === 0} onClick={() => step(pos, -1)} aria-label={`Move ${items[it]} up`} data-testid="hub-order-up"
+              <button type="button" disabled={disabled || pos === 0} onClick={() => step(pos, -1)} aria-label={t("hubfam.asMoveUp", { item: items[it] })} data-testid="hub-order-up"
                 className={`grid h-10 w-10 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 ${FOCUS}`}>↑</button>
-              <button type="button" disabled={disabled || pos === order.length - 1} onClick={() => step(pos, 1)} aria-label={`Move ${items[it]} down`} data-testid="hub-order-down"
+              <button type="button" disabled={disabled || pos === order.length - 1} onClick={() => step(pos, 1)} aria-label={t("hubfam.asMoveDown", { item: items[it] })} data-testid="hub-order-down"
                 className={`grid h-10 w-10 place-items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-30 ${FOCUS}`}>↓</button>
             </span>
           </li>
         ))}
       </ol>
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="m-0 text-[12.5px] text-[var(--ink-3)]">Drag the cards, or use the arrows, until they are in the right order.</p>
-        {!answered && !disabled && <button type="button" onClick={() => commit(order)} data-testid="hub-order-keep" className={`min-h-[44px] rounded-lg px-2 text-[12.5px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>This order looks right</button>}
+        <p className="m-0 text-[12.5px] text-[var(--ink-3)]">{t("hubfam.asOrderHint")}</p>
+        {!answered && !disabled && <button type="button" onClick={() => commit(order)} data-testid="hub-order-keep" className={`min-h-[44px] rounded-lg px-2 text-[12.5px] font-extrabold text-[var(--brand)] hover:underline ${FOCUS}`}>{t("hubfam.asOrderKeep")}</button>}
       </div>
       <span className="sr-only" role="status" aria-live="polite">{said}</span>
     </div>
@@ -133,6 +135,7 @@ function placedFrom(terms: Piece[], defs: Piece[], value: MatchAnswer | undefine
 }
 
 export function MatchInput({ terms, definitions, value, onChange, disabled }: { terms: Piece[]; definitions: Piece[]; value: MatchAnswer | undefined; onChange: (v: MatchAnswer) => void; disabled?: boolean }) {
+  const t = useT();
   const [placed, setPlaced] = useState<(number | null)[]>(() => placedFrom(terms, definitions, value));
   const [picked, setPicked] = useState<number | null>(null);
   const [ghost, setGhost] = useState<{ tile: number; x: number; y: number } | null>(null);
@@ -154,9 +157,9 @@ export function MatchInput({ terms, definitions, value, onChange, disabled }: { 
   const put = (tile: number, slot: number) => {
     commit(placedRef.current.map((d, t) => (t === slot ? tile : d === tile ? null : d)));
     setPicked(null);
-    setSaid(`${definitions[tile].text} matched to ${terms[slot].text}`);
+    setSaid(t("hubfam.asMatched", { def: definitions[tile].text, term: terms[slot].text }));
   };
-  const unplace = (tile: number) => { commit(placedRef.current.map((d) => (d === tile ? null : d))); setPicked(null); setSaid(`${definitions[tile].text} put back`); };
+  const unplace = (tile: number) => { commit(placedRef.current.map((d) => (d === tile ? null : d))); setPicked(null); setSaid(t("hubfam.asPutBack", { def: definitions[tile].text })); };
   const slotOf = (tile: number) => placedRef.current.indexOf(tile);
 
   /** The slot under (x, y) — or, failing that, the nearest one within NEAR px, so a drop a touch off still lands. */
@@ -215,7 +218,7 @@ export function MatchInput({ terms, definitions, value, onChange, disabled }: { 
 
   const tile = (d: number, where: "pool" | "slot") => (
     <div key={d} role="button" tabIndex={disabled ? -1 : 0} aria-pressed={picked === d} data-testid="hub-match-tile" data-where={where}
-      aria-label={`${definitions[d].text}${where === "slot" ? `, matched to ${terms[slotOf(d)]?.text ?? ""}` : ""}${picked === d ? ", selected" : ""}`}
+      aria-label={`${where === "slot" ? t("hubfam.asTileMatched", { def: definitions[d].text, term: terms[slotOf(d)]?.text ?? "" }) : definitions[d].text}${picked === d ? t("hubfam.asSelectedSuffix") : ""}`}
       onPointerDown={(e) => down(e, d)} onKeyDown={(e) => key(e, () => activate(d))} onClick={(e) => e.stopPropagation()}
       className={`touch-none select-none rounded-[11px] border-2 bg-[var(--surface)] px-3.5 py-2.5 text-[15px] font-semibold leading-snug text-[var(--ink)] shadow-[0_2px_0_var(--line)] [overflow-wrap:anywhere] ${where === "slot" ? "w-full" : ""} ${disabled ? "opacity-60" : "cursor-grab"} ${picked === d ? "border-[var(--brand)] shadow-[0_0_0_3px_var(--brand-soft)]" : "border-[var(--line)]"} ${dragging === d ? "opacity-30" : ""} ${FOCUS}`}>
       {pieceImg(definitions[d])}{definitions[d].text}
@@ -225,27 +228,27 @@ export function MatchInput({ terms, definitions, value, onChange, disabled }: { 
   return (
     <div data-testid="hub-match">
       <div className="grid gap-2.5">
-        {terms.map((t, i) => (
+        {terms.map((tm, i) => (
           <div key={i} className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] sm:items-stretch">
             <div className="flex items-center rounded-xl bg-[var(--brand-soft)] px-3.5 py-3 text-[15px] font-extrabold text-[var(--brand-strong)] [overflow-wrap:anywhere]" data-testid="hub-match-term">
-              <span>{pieceImg(t)}{t.text}</span>
+              <span>{pieceImg(tm)}{tm.text}</span>
             </div>
             <div ref={(el) => { slots.current[i] = el; }} data-match-slot={i} data-testid="hub-match-slot"
               tabIndex={placed[i] === null && !disabled ? 0 : -1} role={placed[i] === null ? "button" : undefined}
-              aria-label={placed[i] === null ? `Empty box for ${t.text}${picked !== null ? ". Press Enter to place the selected answer here" : ""}` : undefined}
+              aria-label={placed[i] === null ? (picked !== null ? t("hubfam.asEmptyBoxSel", { term: tm.text }) : t("hubfam.asEmptyBox", { term: tm.text })) : undefined}
               onKeyDown={(e) => { if (placed[i] === null) key(e, () => { if (picked !== null) put(picked, i); }); }}
               onClick={() => { if (picked !== null && !disabled) put(picked, i); }}
               className={`flex min-h-[54px] items-center rounded-xl border-2 p-1 transition-colors ${placed[i] === null ? "border-dashed" : ""} ${over === i ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-[var(--brand-line)] bg-[var(--panel)]"} ${FOCUS}`}>
-              {placed[i] !== null ? tile(placed[i] as number, "slot") : <span className="px-2 text-[12.5px] text-[var(--ink-3)]" aria-hidden>Drop the answer here</span>}
+              {placed[i] !== null ? tile(placed[i] as number, "slot") : <span className="px-2 text-[12.5px] text-[var(--ink-3)]" aria-hidden>{t("hubfam.asDropHere")}</span>}
             </div>
           </div>
         ))}
       </div>
-      <p className="m-0 mt-3 text-[12.5px] text-[var(--ink-3)]">Drag each answer onto its partner, or tap an answer and then tap a box.</p>
+      <p className="m-0 mt-3 text-[12.5px] text-[var(--ink-3)]">{t("hubfam.asMatchHint")}</p>
       <div data-match-pool onClick={() => { if (picked !== null && slotOf(picked) >= 0) unplace(picked); }} data-testid="hub-match-pool"
         className="mt-1.5 flex min-h-[60px] flex-wrap gap-2 rounded-[14px] bg-[var(--panel)] p-3">
         {definitions.map((_, d) => (isPlaced.has(d) ? null : tile(d, "pool")))}
-        {isPlaced.size === definitions.length && <span className="self-center text-[12.5px] font-semibold text-[var(--ink-3)]">Every answer is placed. Drag one back here to take it out.</span>}
+        {isPlaced.size === definitions.length && <span className="self-center text-[12.5px] font-semibold text-[var(--ink-3)]">{t("hubfam.asAllPlaced")}</span>}
       </div>
       <span className="sr-only" role="status" aria-live="polite">{said}</span>
       {ghost && createPortal(

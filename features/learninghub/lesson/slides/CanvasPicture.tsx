@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui";
 import { ImageField } from "../../quiz/ImageField";
@@ -37,6 +38,7 @@ function fresh(block: CanvasBlock, aspect: number): Pick<CanvasImg, "x" | "y" | 
 }
 
 export function CanvasPicture({ block, target, onSave, onClose }: { block: CanvasBlock; target: PictureTarget; onSave: (els: CanvasEl[]) => Promise<void>; onClose: () => void }) {
+  const t = useT();
   const current = target.mode === "replace" ? block.els[target.index] : undefined;
   const cur = current && current.k === "img" ? current : undefined;
   const [mode, setMode] = useState<Mode>(target.mode === "add" ? "menu" : "menu");
@@ -52,7 +54,7 @@ export function CanvasPicture({ block, target, onSave, onClose }: { block: Canva
   useEffect(() => {
     if (mode !== "library" || lib) return;
     let live = true;
-    loadLib().then((l) => { if (live) setLib(l); }).catch(() => { if (live) setErr("The picture library couldn’t load."); });
+    loadLib().then((l) => { if (live) setLib(l); }).catch(() => { if (live) setErr(t("hublessons.pcCouldntLoadLib")); });
     return () => { live = false; };
   }, [mode, lib]);
   const results = useMemo(() => {
@@ -64,7 +66,7 @@ export function CanvasPicture({ block, target, onSave, onClose }: { block: Canva
 
   const save = async (els: CanvasEl[]) => {
     setBusy(true); setErr(null);
-    try { await onSave(els); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    try { await onSave(els); onClose(); } catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntSave")); setBusy(false); }
   };
   /** Put `src` in place: the replaced picture's box (position, size, rotation, reveal step) or a fresh one. */
   const place = async (src: Partial<CanvasImg> & { alt: string }, aspect: number): Promise<CanvasEl[]> => {
@@ -76,8 +78,8 @@ export function CanvasPicture({ block, target, onSave, onClose }: { block: Canva
     return [...block.els, { k: "img", ...fresh(block, aspect), ...src } as CanvasImg];
   };
   const useUpload = async () => {
-    if (!upload?.id) { setErr("Choose a picture first."); return; }
-    if (!alt.trim()) { setAltErr(true); setErr("Describe the picture so a child using a screen reader isn’t left with a blank."); return; }
+    if (!upload?.id) { setErr(t("hublessons.pcChooseFirst")); return; }
+    if (!alt.trim()) { setAltErr(true); setErr(t("hublessons.pcAltRequired")); return; }
     setBusy(true);
     const els = await place({ alt: alt.trim(), imageId: upload.id, ...(upload.url ? { url: upload.url } : {}) }, await aspectOf(upload.url));
     setBusy(false);
@@ -85,52 +87,52 @@ export function CanvasPicture({ block, target, onSave, onClose }: { block: Canva
   };
   const useLibrary = async () => {
     const p = pick ? lib?.byId[pick] : undefined;
-    if (!p) { setErr("Choose a picture first."); return; }
+    if (!p) { setErr(t("hublessons.pcChooseFirst")); return; }
     const vb = p.svg.match(/viewBox="[\d.\s-]*?([\d.]+)\s+([\d.]+)"/);
     void save(await place({ alt: p.alt, picId: p.id }, vb ? Number(vb[1]) / Number(vb[2]) : 4 / 3));
   };
 
   const tile = `${FOCUS} flex flex-col items-center gap-1 rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] p-2 text-center hover:border-[var(--brand-2)]`;
   const footer = mode === "upload"
-    ? <><Btn tone="ghost" onClick={() => setMode("menu")}>Back</Btn><Btn onClick={() => void useUpload()} disabled={busy || !upload} data-testid="canvas-picture-save-upload">{busy ? "Saving…" : "Use this picture"}</Btn></>
+    ? <><Btn tone="ghost" onClick={() => setMode("menu")}>{t("hublessons.back")}</Btn><Btn onClick={() => void useUpload()} disabled={busy || !upload} data-testid="canvas-picture-save-upload">{busy ? t("hublessons.saving") : t("hublessons.pcUsePicture")}</Btn></>
     : mode === "library"
-      ? <><Btn tone="ghost" onClick={() => setMode("menu")}>Back</Btn><Btn onClick={() => void useLibrary()} disabled={busy || !pick} data-testid="canvas-picture-save-library">{busy ? "Saving…" : "Use this picture"}</Btn></>
-      : <Btn tone="ghost" onClick={onClose}>Cancel</Btn>;
+      ? <><Btn tone="ghost" onClick={() => setMode("menu")}>{t("hublessons.back")}</Btn><Btn onClick={() => void useLibrary()} disabled={busy || !pick} data-testid="canvas-picture-save-library">{busy ? t("hublessons.saving") : t("hublessons.pcUsePicture")}</Btn></>
+      : <Btn tone="ghost" onClick={onClose}>{t("hublessons.cancel")}</Btn>;
 
   return (
-    <Modal title={target.mode === "add" ? "Add a picture" : "Change this picture"} onClose={onClose} wide footer={footer} id="canvas-picture">
+    <Modal title={target.mode === "add" ? t("hublessons.pcAddA") : t("hublessons.pcChangeThis")} onClose={onClose} wide footer={footer} id="canvas-picture">
       {mode === "menu" && (
         <div className="grid gap-3">
           <p className="m-0 text-[13px] text-[var(--ink-2)]">
-            {target.mode === "add" ? "The new picture goes in the middle of the slide. Everything else on the slide stays as it is." : cur?.alt ? `Now: “${cur.alt}”. The slide’s words and its other pictures stay exactly as they are.` : "The slide’s words and its other pictures stay exactly as they are."}
+            {target.mode === "add" ? t("hublessons.pcAddNote") : cur?.alt ? t("hublessons.pcNowNote", { alt: cur.alt }) : t("hublessons.pcStayNote")}
           </p>
           {cur && (cur.url || cur.picId) && (
             <div className="mx-auto flex max-h-[180px] w-full max-w-[280px] items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {cur.url ? <img src={cur.url} alt={cur.alt} className="max-h-[164px] w-auto object-contain" /> : <span className="text-[12px] text-[var(--ink-3)]">Library picture</span>}
+              {cur.url ? <img src={cur.url} alt={cur.alt} className="max-h-[164px] w-auto object-contain" /> : <span className="text-[12px] text-[var(--ink-3)]">{t("hublessons.pcLibraryPicture")}</span>}
             </div>
           )}
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Picture actions">
-            <Btn tone="ghost" onClick={() => setMode("upload")} data-testid="canvas-picture-upload">⬆️ {target.mode === "add" ? "Upload a picture" : "Replace with my own picture"}</Btn>
-            <Btn tone="ghost" onClick={() => setMode("library")} data-testid="canvas-picture-library">📚 {target.mode === "add" ? "Pick from the picture library" : "Replace from the picture library"}</Btn>
-            {target.mode === "replace" && <Btn tone="ghost" onClick={() => void save(block.els.filter((_, i) => i !== target.index))} disabled={busy} className="!text-[var(--red)]" data-testid="canvas-picture-remove">🗑 Remove picture</Btn>}
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("hublessons.pcPictureActions")}>
+            <Btn tone="ghost" onClick={() => setMode("upload")} data-testid="canvas-picture-upload">{target.mode === "add" ? t("hublessons.pcUpload") : t("hublessons.pcReplaceOwn")}</Btn>
+            <Btn tone="ghost" onClick={() => setMode("library")} data-testid="canvas-picture-library">{target.mode === "add" ? t("hublessons.pcPickLib") : t("hublessons.pcReplaceLib")}</Btn>
+            {target.mode === "replace" && <Btn tone="ghost" onClick={() => void save(block.els.filter((_, i) => i !== target.index))} disabled={busy} className="!text-[var(--red)]" data-testid="canvas-picture-remove">{t("hublessons.pcRemove")}</Btn>}
           </div>
         </div>
       )}
       {mode === "upload" && (
         <div className="grid gap-2">
-          <p className="m-0 text-[13px] text-[var(--ink-2)]">PNG, JPEG or WebP from your computer. Big photos are shrunk for you.</p>
+          <p className="m-0 text-[13px] text-[var(--ink-2)]">{t("hublessons.pcUploadHelp")}</p>
           <ImageField value={upload} alt={alt} onPic={(p) => { setUpload(p); setErr(null); }} onAlt={(a) => { setAlt(a); setAltErr(false); }} altError={altErr} />
         </div>
       )}
       {mode === "library" && (
         <div className="grid gap-3">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search pictures by name, e.g. triangle, plant cell, fraction" aria-label="Search the picture library" autoFocus className="min-h-[44px] w-full" data-testid="canvas-picture-search" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("hublessons.pcSearchPh")} aria-label={t("hublessons.pcSearchAria")} autoFocus className="min-h-[44px] w-full" data-testid="canvas-picture-search" />
           {lib && <style>{lib.css}</style>}
-          {!lib ? <p className="m-0 text-[13px] text-[var(--ink-3)]">Loading the picture library…</p>
-            : !results.length ? <p className="m-0 text-[13px] text-[var(--ink-3)]">No pictures match “{q}”.</p>
+          {!lib ? <p className="m-0 text-[13px] text-[var(--ink-3)]">{t("hublessons.pcLoadingLib")}</p>
+            : !results.length ? <p className="m-0 text-[13px] text-[var(--ink-3)]">{t("hublessons.pcNoMatch", { q })}</p>
               : (
-                <ul className="m-0 grid max-h-[50vh] list-none grid-cols-2 gap-2 overflow-auto p-0 sm:grid-cols-3 md:grid-cols-4" aria-label="Library pictures">
+                <ul className="m-0 grid max-h-[50vh] list-none grid-cols-2 gap-2 overflow-auto p-0 sm:grid-cols-3 md:grid-cols-4" aria-label={t("hublessons.pcLibPictures")}>
                   {results.map((p) => (
                     <li key={p.id}>
                       <button type="button" aria-pressed={pick === p.id} title={p.alt} data-testid="canvas-picture-lib-pic" data-pic={p.id} onClick={() => setPick(p.id)}

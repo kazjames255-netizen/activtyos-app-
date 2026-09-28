@@ -1,0 +1,1 @@
+import h from '../lib/i18n/messages/areas/hublive'; console.log(JSON.stringify(h));

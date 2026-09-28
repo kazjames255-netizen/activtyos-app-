@@ -1,0 +1,39 @@
+[home] No info
+[home] No records
+[home] The unfair advantage for camps, clubs & coaches
+[home] How it works
+[tab-live] No info
+[tab-live] No records
+[tab-live] The unfair advantage for camps, clubs & coaches
+[tab-live] How it works
+[tab-quizzes] No info
+[tab-quizzes] No records
+[tab-quizzes] The unfair advantage for camps, clubs & coaches
+[tab-quizzes] How it works
+[tab-homework] No info
+[tab-homework] No records
+[tab-homework] The unfair advantage for camps, clubs & coaches
+[tab-homework] How it works
+[tab-homework] No homework right now
+[tab-homework] When Previewkid muip4kb5 sets homework it will appear here with its due date — you can hand it in and read the
+[tab-notes] No info
+[tab-notes] No records
+[tab-notes] The unfair advantage for camps, clubs & coaches
+[tab-notes] How it works
+[tab-notes] Position and direction
+[tab-notes] Properties of shapes
+[tab-notes] Addition and subtraction
+[tab-notes] Multiplication and division
+[tab-notes] Number and place value
+[tab-flashcards] No info
+[tab-flashcards] No records
+[tab-flashcards] The unfair advantage for camps, clubs & coaches
+[tab-flashcards] How it works
+[tab-dashboard] No info
+[tab-dashboard] No records
+[tab-dashboard] The unfair advantage for camps, clubs & coaches
+[tab-dashboard] How it works
+[tab-questions] No info
+[tab-questions] No records
+[tab-questions] The unfair advantage for camps, clubs & coaches
+[tab-questions] How it works

@@ -12,7 +12,7 @@ export interface SentenceTable { id: string; lang: Lang; title: string; theme: s
 export type OrderVariant = "main" | "time-front" | "sub-end" | "sub-first";
 export interface ClauseSpec { subj: string; fin: string; mid?: string[]; time?: string; tail?: string; prefix?: string; en: string; enTime?: string }
 export interface OrderSpec { variant: OrderVariant; main: ClauseSpec; sub?: ClauseSpec; conj?: string }
-export interface SentenceItem { target: string; en: string; accepted: string[]; picks: number[]; hint?: string; order?: OrderSpec }
+export interface SentenceItem { target: string; en: string; accepted: string[]; picks: number[]; hint?: string; /** Same hint as a translatable key + vars (UI layer prefers this over `hint`). */ hk?: { k: string; v?: Record<string, string> }; order?: OrderSpec }
 
 const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 const lcFirst = (s: string) => (/^I( |')/.test(s) ? s : s ? s[0]!.toLowerCase() + s.slice(1) : s);
@@ -209,34 +209,53 @@ export function buildOrderSentence(o: OrderSpec): { target: string; en: string; 
 }
 
 const words = (s: string) => s.toLowerCase().replace(/[.,;!?]/g, " ").split(/\s+/).filter(Boolean);
-/** Explain word-order mistakes in a German answer for an OrderSpec. Empty list = the order is right. (Vocabulary/spelling is checked separately by checkSentence.) */
-export function diagnoseOrder(answer: string, o: OrderSpec): string[] {
-  const tk = words(answer), out: string[] = [];
-  const clause = (c: ClauseSpec, t: string[], timeFront: boolean, name: string) => {
+/** English templates for the word-order explanations; the UI translates by key (key prefix lang_ord_) with the same {vars}. */
+export const ORDER_EN: Record<string, string> = {
+  noVerb: "Main clause: I can't find the verb “{verb}”.",
+  second: "Main clause: the verb must be the SECOND idea — right after “{first}”.",
+  inversion: "Main clause: after a time phrase the verb comes next and the subject follows it (“{fin} {subj}”).",
+  endPrefix: "Main clause: the separable prefix “{end}” goes at the END of the clause.",
+  endVerb: "Main clause: the second verb “{end}” goes at the END of the clause.",
+  noConj: "I can't find “{conj}”.",
+  noSubVerb: "In a “{conj}” clause the verb goes to the end — I can't find “{verb}”.",
+  subLast: "After “{conj}” the verb “{verb}” must be the LAST word of its clause.",
+  subTail: "In the “{conj}” clause the second verb “{tail}” comes just before the finite verb.",
+  afterSub: "After a “{conj}” clause the main verb comes first, then the subject (“{fin} {subj}”).",
+  mainEnd: "Main clause: “{end}” goes at the end.",
+};
+export interface OrderMsg { k: string; v: Record<string, string> }
+export const fillTpl = (tpl: string, v: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_, k) => v[k] ?? "");
+/** Explain word-order mistakes in a German answer for an OrderSpec — as keys + vars so the UI can translate. Empty list = the order is right. (Vocabulary/spelling is checked separately by checkSentence.) */
+export function diagnoseOrderMsgs(answer: string, o: OrderSpec): OrderMsg[] {
+  const tk = words(answer), out: OrderMsg[] = [];
+  const clause = (c: ClauseSpec, t: string[], timeFront: boolean) => {
     const first = words(timeFront ? c.time ?? "" : c.subj), fin = c.fin.toLowerCase(), fi = t.indexOf(fin);
-    if (fi < 0) { out.push(`${name}: I can't find the verb “${c.fin}”.`); return; }
-    if (fi !== first.length) out.push(`${name}: the verb must be the SECOND idea — right after “${first.join(" ")}”.`);
-    if (timeFront && t.slice(fi + 1, fi + 1 + words(c.subj).length).join(" ") !== words(c.subj).join(" ")) out.push(`${name}: after a time phrase the verb comes next and the subject follows it (“${c.fin} ${c.subj}”).`);
+    if (fi < 0) { out.push({ k: "noVerb", v: { verb: c.fin } }); return; }
+    if (fi !== first.length) out.push({ k: "second", v: { first: first.join(" ") } });
+    if (timeFront && t.slice(fi + 1, fi + 1 + words(c.subj).length).join(" ") !== words(c.subj).join(" ")) out.push({ k: "inversion", v: { fin: c.fin, subj: c.subj } });
     const end = c.prefix ?? c.tail;
-    if (end && t[t.length - 1] !== end.toLowerCase()) out.push(`${name}: the ${c.prefix ? "separable prefix" : "second verb"} “${end}” goes at the END of the clause.`);
+    if (end && t[t.length - 1] !== end.toLowerCase()) out.push({ k: c.prefix ? "endPrefix" : "endVerb", v: { end } });
   };
-  if (o.variant === "main" || o.variant === "time-front") { clause(o.main, tk, o.variant === "time-front", "Main clause"); return out; }
+  if (o.variant === "main" || o.variant === "time-front") { clause(o.main, tk, o.variant === "time-front"); return out; }
   const sub = o.sub!, conj = o.conj!.toLowerCase(), subFin = ((sub.prefix ?? "") + sub.fin).toLowerCase();
   const ci = tk.indexOf(conj);
-  if (ci < 0) { out.push(`I can't find “${o.conj}”.`); return out; }
+  if (ci < 0) { out.push({ k: "noConj", v: { conj: o.conj! } }); return out; }
   const si = tk.indexOf(subFin, ci);
-  if (si < 0) { out.push(`In a “${o.conj}” clause the verb goes to the end — I can't find “${sub.prefix ? sub.prefix + sub.fin : sub.fin}”.`); return out; }
+  const subVerb = sub.prefix ? sub.prefix + sub.fin : sub.fin;
+  if (si < 0) { out.push({ k: "noSubVerb", v: { conj: o.conj!, verb: subVerb } }); return out; }
   const subEnd = o.variant === "sub-end" ? tk.length - 1 : si;
-  if (si !== subEnd) out.push(`After “${o.conj}” the verb “${sub.prefix ? sub.prefix + sub.fin : sub.fin}” must be the LAST word of its clause.`);
-  if (sub.tail && tk[si - 1] !== sub.tail.toLowerCase()) out.push(`In the “${o.conj}” clause the second verb “${sub.tail}” comes just before the finite verb.`);
-  if (o.variant === "sub-end") clause(o.main, tk.slice(0, ci), false, "Main clause");
+  if (si !== subEnd) out.push({ k: "subLast", v: { conj: o.conj!, verb: subVerb } });
+  if (sub.tail && tk[si - 1] !== sub.tail.toLowerCase()) out.push({ k: "subTail", v: { conj: o.conj!, tail: sub.tail } });
+  if (o.variant === "sub-end") clause(o.main, tk.slice(0, ci), false);
   else {
     const rest = tk.slice(si + 1), m = o.main;
-    if (rest[0] !== m.fin.toLowerCase() || rest.slice(1, 1 + words(m.subj).length).join(" ") !== words(m.subj).join(" ")) out.push(`After a “${o.conj}” clause the main verb comes first, then the subject (“${m.fin} ${m.subj}”).`);
-    else { const e = m.prefix ?? m.tail; if (e && rest[rest.length - 1] !== e.toLowerCase()) out.push(`Main clause: “${e}” goes at the end.`); }
+    if (rest[0] !== m.fin.toLowerCase() || rest.slice(1, 1 + words(m.subj).length).join(" ") !== words(m.subj).join(" ")) out.push({ k: "afterSub", v: { conj: o.conj!, fin: m.fin, subj: m.subj } });
+    else { const e = m.prefix ?? m.tail; if (e && rest[rest.length - 1] !== e.toLowerCase()) out.push({ k: "mainEnd", v: { end: e } }); }
   }
   return out;
 }
+/** English messages (kept for the self-test and non-UI callers). */
+export const diagnoseOrder = (answer: string, o: OrderSpec): string[] => diagnoseOrderMsgs(answer, o).map((m) => fillTpl(ORDER_EN[m.k]!, m.v));
 
 // ── generation, jumble, checking ─────────────────────────────────────────────
 /** n distinct sentences from a table, reproducible from the seed. Order tables mix main / time-first / weil-dass-wenn-obwohl sentences. */
@@ -249,11 +268,11 @@ export function generateSentences(table: SentenceTable, seed: number, n: number)
       if (rng.next() < 0.5) {
         const m = rng.pick(DE_MAINS), variant: OrderVariant = rng.next() < 0.5 ? "main" : "time-front", o: OrderSpec = { variant, main: m };
         const b = buildOrderSentence(o);
-        item = { target: b.target, en: b.en, accepted: [b.target, b.other!], picks: [DE_MAINS.indexOf(m)], order: o, hint: variant === "main" ? "Start with the subject." : "Start with the time phrase — the verb must still be second." };
+        item = { target: b.target, en: b.en, accepted: [b.target, b.other!], picks: [DE_MAINS.indexOf(m)], order: o, hint: variant === "main" ? "Start with the subject." : "Start with the time phrase — the verb must still be second.", hk: { k: variant === "main" ? "subject" : "timeFirst" } };
       } else {
         const p = rng.pick(DE_PAIRS), variant: OrderVariant = !p.noFirst && rng.next() < 0.5 ? "sub-first" : "sub-end", o: OrderSpec = { variant, main: p.main, sub: p.sub, conj: p.conj };
         const b = buildOrderSentence(o);
-        item = { target: b.target, en: b.en, accepted: [b.target, ...(b.other ? [b.other] : [])], picks: [DE_PAIRS.indexOf(p)], order: o, hint: variant === "sub-first" ? `Start with the “${p.conj}” clause (verb to the end), then the main clause.` : `Main clause first, then the “${p.conj}” clause (verb to the end).` };
+        item = { target: b.target, en: b.en, accepted: [b.target, ...(b.other ? [b.other] : [])], picks: [DE_PAIRS.indexOf(p)], order: o, hint: variant === "sub-first" ? `Start with the “${p.conj}” clause (verb to the end), then the main clause.` : `Main clause first, then the “${p.conj}” clause (verb to the end).`, hk: { k: variant === "sub-first" ? "subFirst" : "mainFirst", v: { conj: p.conj } } };
       }
     } else {
       const picks = table.columns.map((c) => rng.int(0, c.options.length - 1));

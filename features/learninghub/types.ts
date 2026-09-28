@@ -117,8 +117,11 @@ export const groupColour = (id: string | undefined | null) => (GROUP_COLOURS.fin
 export const groupMemberIds = (g: HubGroup): string[] => (g.childIds?.length ? g.childIds : (g.members ?? []).map((m) => m.childId));
 
 /** What every panel filters by: one subject, optionally narrowed to one topic
- *  (a topic id also covers its subtopics). Both null = everything. */
-export interface HubFilter { subject: string | null; topicId: string | null }
+ *  (a topic id also covers its subtopics). Both null = everything.
+ *  `q`: free-text search over a card's own title/topics — set by the family's
+ *  "chips" TopicFilter search box (replaces the old separate "Browse topics"
+ *  sheet: one search bar now covers both browsing and typing a topic name). */
+export interface HubFilter { subject: string | null; topicId: string | null; q?: string }
 
 export interface SubjectNode { subject: string; topics: { topic: Topic; subs: Topic[] }[] }
 

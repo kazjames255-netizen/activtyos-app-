@@ -1,0 +1,56 @@
+{
+ "win": {
+  "x": 8,
+  "w": 374,
+  "h": 720,
+  "vw": 390
+ },
+ "pillLabels": [
+  "⠿\nMove",
+  "◐\nSee-through",
+  "▣\nBack to window",
+  "−",
+  "+",
+  ""
+ ],
+ "pillBox": {
+  "x": 8,
+  "y": 62,
+  "width": 374,
+  "height": 94
+ },
+ "touchDragMovedPill": {
+  "dx": 24,
+  "dy": 96
+ },
+ "ghostOn": "1",
+ "hitEmpty": [
+  "page:BUTTON",
+  "page:SPAN",
+  "page:DIV"
+ ],
+ "scroll_w.chartBuilder_window": {
+  "ch": 674,
+  "sh": 819,
+  "scrolled": 0,
+  "moved": 62
+ },
+ "scroll_w.chartBuilder_bare": {
+  "ch": 622,
+  "sh": 660,
+  "scrolled": 38,
+  "moved": 62
+ },
+ "scroll_S-13_window": {
+  "ch": 674,
+  "sh": 743,
+  "scrolled": 69,
+  "moved": 62
+ },
+ "scroll_S-13_bare": {
+  "ch": 622,
+  "sh": 622,
+  "scrolled": 0,
+  "moved": 62
+ }
+}

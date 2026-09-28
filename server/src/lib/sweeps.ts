@@ -795,4 +795,6 @@ export function startSweeps(): void {
   sweep("review-requests", 6 * 60 * 60_000, reviewRequests);
   sweep("day-of-alerts", 10 * 60_000, dayOfAlerts);
   sweep("scheduled-emails", 60_000, scheduledEmailSends);
+  // Learning Hub parent digest + homework nudges — inert unless HUB_DIGEST_ENABLED=1 (lib/hubDigestStore.ts).
+  void import("./hubDigestStore").then((m) => m.startDigestSweeps());
 }

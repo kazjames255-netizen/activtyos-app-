@@ -41,6 +41,20 @@ export interface HubSettings {
   /** The colour a tutor chose for a subject, everywhere in the hub: `subjectColourKey(name)` -> one of SUBJECT_PALETTE_KEYS.
    *  A subject with no entry wears its default colour (features/learninghub/subjectColour.ts). */
   subjectColours: Record<string, string>;
+  /** Which lessons a family can open in the hub: "all" = every published lesson in the provider's library (the default),
+   *  "year" = lessons for the child's own year group (plus anything the tutor set), "assigned" = only lessons the tutor has set. */
+  lessonAccess: "all" | "year" | "assigned";
+  /** Questions (normalised ids) where this provider has switched the help tool OFF for children. Everything else follows the per-question default. */
+  questionToolsOff: string[];
+  /** Tools this provider has ADDED to a question (normalised question id -> tool ids), on top of the per-question default. */
+  questionToolsAdd: Record<string, string[]>;
+  /** Parent emails (server/src/lib/hubDigest.ts). BOTH default OFF — a provider switches them on. Each parent can still opt out from the email itself. */
+  /** Weekly "This week in <child>'s learning" summary to each enrolled child's parent (Sundays, 17:00 UK). */
+  parentDigest: boolean;
+  /** Friendly homework reminders: one before the due date (`nudgeLeadHours`) and one gentle "not handed in yet" follow-up; max 2 per homework, only if not handed in. */
+  homeworkNudges: boolean;
+  /** How long before the due date the reminder goes out (1-72 hours; default 24). */
+  nudgeLeadHours: number;
 }
 
 /** The colour choices a subject can wear (ids only — the actual colours live in features/learninghub/subjectColour.ts). */
@@ -55,6 +69,23 @@ export function cleanSubjectColours(raw: unknown): Record<string, string> {
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
     const key = subjectColourKey(k);
     if (key && typeof v === "string" && (SUBJECT_PALETTE_KEYS as readonly string[]).includes(v) && Object.keys(out).length < SUBJECT_COLOURS_MAX) out[key] = v;
+  }
+  return out;
+}
+
+export const QUESTION_TOOLS_OFF_MAX = 3000;
+/** Every help tool a provider can add to a question (must match features/learninghub/remotesync/HelpTools.tsx ALL_HELP_TOOL_IDS). */
+export const HELP_TOOL_IDS = ["calculator", "numberline", "timestable", "fractions", "grid", "plot", "ruler", "protractor", "periodic", "bohr", "apparatus", "lens", "map", "timeline", "symbol", "clock", "timer", "dice", "spinner", "tally"] as const;
+export const TOOL_ID_RE = /^[A-Za-z0-9._-]{1,60}$/;
+export const MAX_TOOLS_PER_QUESTION = 12;
+export function cleanQuestionToolsAdd(raw: unknown): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!k || k.length > 200 || !Array.isArray(v) || Object.keys(out).length >= QUESTION_TOOLS_OFF_MAX) continue;
+    // A help-drawer tool id, or a Tools-page registry id (M-01, w.coordGrid …): checked against the registry where it is used.
+    const ids = [...new Set(v.filter((x): x is string => typeof x === "string" && TOOL_ID_RE.test(x)))].slice(0, MAX_TOOLS_PER_QUESTION);
+    if (ids.length) out[k] = ids;
   }
   return out;
 }
@@ -82,6 +113,12 @@ export const HUB_DEFAULTS: HubSettings = {
   retakeBreakMinutes: 30,
   yearGroups: ["Reception", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5", "Year 6", "Year 7", "Year 8", "Year 9", "Year 10", "Year 11", "Year 12", "Year 13"],
   subjectColours: {},
+  lessonAccess: "assigned", // families only see lessons a tutor has set / sent them (owner decision); "year" and "all" are opt-in
+  questionToolsOff: [],
+  questionToolsAdd: {},
+  parentDigest: false,
+  homeworkNudges: false,
+  nudgeLeadHours: 24,
 };
 
 const LEGACY_KIND_IDS = ["single", "multi", "short", "number", "written"];
@@ -111,5 +148,11 @@ export function mergeHub(stored: Partial<HubSettings> | null | undefined): HubSe
     masteryBands: s.masteryBands?.length ? [...s.masteryBands].sort((a, b) => a.min - b.min) : HUB_DEFAULTS.masteryBands,
     yearGroups: s.yearGroups?.length ? s.yearGroups : HUB_DEFAULTS.yearGroups,
     subjectColours: cleanSubjectColours(s.subjectColours),
+    questionToolsOff: Array.isArray(s.questionToolsOff) ? [...new Set(s.questionToolsOff.filter((x): x is string => typeof x === "string" && x.length > 0 && x.length <= 200))].slice(0, QUESTION_TOOLS_OFF_MAX) : [],
+    questionToolsAdd: cleanQuestionToolsAdd(s.questionToolsAdd),
+    parentDigest: s.parentDigest === true,
+    homeworkNudges: s.homeworkNudges === true,
+    nudgeLeadHours: typeof s.nudgeLeadHours === "number" && Number.isInteger(s.nudgeLeadHours) && s.nudgeLeadHours >= 1 && s.nudgeLeadHours <= 72 ? s.nudgeLeadHours : 24,
+    lessonAccess: s.lessonAccess === "year" || s.lessonAccess === "all" ? s.lessonAccess : "assigned",
   };
 }

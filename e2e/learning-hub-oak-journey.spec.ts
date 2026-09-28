@@ -130,7 +130,7 @@ test.beforeAll(async () => {
 test.beforeEach(async () => { await setHub(accounts.freelancer, true); });
 
 async function gotoHub(page: Page, url: string) {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url);
@@ -382,8 +382,8 @@ test.describe("1b. tutor: set for children (homework) and add to a live lesson",
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
     await expect(dlg.getByLabel("Title")).toHaveValue(L.title);
-    await expect(dlg.getByTestId("hub-hw-attached-lessons")).toContainText("interactive");
-    await expect(dlg.locator("#hub-hw-quiz")).toHaveValue(L.quizId, { timeout: 20_000 });
+    await expect(dlg.getByTestId("hub-hw-attached-lessons")).toContainText(L.title);
+    await expect(dlg.getByTestId("hub-hw-linked-rows")).toContainText(L.quizTitle, { timeout: 20_000 });
     await dlg.getByRole("button", { name: childName, exact: true }).click();
     await expect(dlg.getByRole("button", { name: childName, exact: true })).toHaveAttribute("aria-pressed", "true");
     const due = new Date(Date.now() + 3 * 86_400_000);
@@ -420,9 +420,9 @@ test.describe("1b. tutor: set for children (homework) and add to a live lesson",
     const pick = page.locator("#ws-attach-dialog");
     await expect(pick).toBeVisible({ timeout: 20_000 });
     await pick.getByLabel("Search lessons").fill(L.title);
-    const box = pick.getByRole("checkbox").first();
-    await expect(pick.locator("label").filter({ hasText: L.title })).toBeVisible({ timeout: 20_000 });
-    await box.check();
+    const card = pick.locator("[data-ui=card]").filter({ hasText: L.title });
+    await expect(card).toBeVisible({ timeout: 20_000 });
+    await card.locator("[data-pick]").click();
     const saved = page.waitForResponse((r) => r.url().includes(`/lessons/${liveId}`) && r.request().method() === "PUT");
     await pick.getByRole("button", { name: /Save · 1 attached/ }).click();
     expect((await saved).status()).toBe(200);

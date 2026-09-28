@@ -7,6 +7,7 @@ import { checkDataUrl } from "../../lib/hubUpload";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { ageInYears, audienceFit, cleanVideos, normAudience, videosOut, type StoredVideo } from "../../lib/hubRules";
 import { noteIndex } from "../../lib/hubIndex";
+import { autoMark, combinedMark, finishedFor, requiredQuizIds } from "../../lib/hubHwSync";
 import {
   assessmentsCol, attemptsCol, dropSubmissionFiles, eligibleStudents, filesOut, homeworkCol, imagesCol, isParent, notesCol, nowIso,
   submissionsCol, tenantEnrolments, toIso, topicsCol, type StoredFile,
@@ -27,7 +28,7 @@ export const hubHomeworkApi = Router();
 interface Mark { score: number; max: number; feedback: string; markedBy: string; markedByName: string; markedAt: string }
 interface HomeworkDoc {
   tenantId: string; franchiseId: string | null;
-  title: string; instructions: string; assessmentId: string | null; noteIds: string[]; flashcardTopicId: string | null;
+  title: string; instructions: string; assessmentId: string | null; noteIds: string[]; worksheetNoteIds?: string[]; flashcardTopicId: string | null;
   dueAt: string; assignedChildIds: string[];
   /** Groups it was sent to (for display; the members were expanded into assignedChildIds). */
   groupIds?: string[];
@@ -38,7 +39,7 @@ interface SubmissionDoc {
   tenantId: string; franchiseId: string | null;
   homeworkId: string; childId: string; parentUid: string;
   status: "assigned" | "submitted" | "marked";
-  text: string; attachments: StoredFile[]; attemptId: string | null; submittedAt: string | null; mark: Mark | null;
+  text: string; attachments: StoredFile[]; attemptId: string | null; attemptIds?: string[]; submittedAt: string | null; mark: Mark | null;
   createdBy: string; createdAt: string; updatedAt: string;
 }
 
@@ -52,6 +53,8 @@ const homeworkBody = z.object({
   instructions: z.string().max(5000).default(""),
   assessmentId: z.string().max(100).nullable().optional(),
   noteIds: z.array(z.string().min(1).max(100)).max(20).default([]),
+  // Worksheets to attach (notes that have a `worksheetFile`); omitted on an edit = keep the current ones.
+  worksheetNoteIds: z.array(z.string().min(1).max(100)).max(10).optional(),
   flashcardTopicId: z.string().max(100).nullable().optional(),
   dueAt: z.string().max(40).optional(),
   // Students and/or groups: the group members are added to the students (the union), at least one student overall.
@@ -63,7 +66,7 @@ const homeworkBody = z.object({
 const homeworkPatch = homeworkBody.partial();
 
 /** Refs a homework points at must be this tenant's and visible to the caller. Returns an error message or null. */
-async function checkRefs(ctx: HubCtx, b: { assessmentId?: string | null; noteIds?: string[]; flashcardTopicId?: string | null }): Promise<{ status: number; error: string } | null> {
+async function checkRefs(ctx: HubCtx, b: { assessmentId?: string | null; noteIds?: string[]; worksheetNoteIds?: string[]; flashcardTopicId?: string | null }, keepWorksheets: string[] = []): Promise<{ status: number; error: string } | null> {
   if (b.assessmentId) {
     if (!okId(b.assessmentId)) return { status: 404, error: "Assessment not found" };
     const a = await assessmentsCol.doc(b.assessmentId).get();
@@ -74,6 +77,13 @@ async function checkRefs(ctx: HubCtx, b: { assessmentId?: string | null; noteIds
     if (b.noteIds.some((id) => !okId(id))) return { status: 404, error: "Lesson not found" };
     const snaps = await db.getAll(...b.noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "franchiseId"] });
     if (snaps.some((s) => !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId")))) return { status: 404, error: "Lesson not found" };
+  }
+  if (b.worksheetNoteIds?.length) {
+    if (b.worksheetNoteIds.some((id) => !okId(id))) return { status: 404, error: "Worksheet not found" };
+    const snaps = await db.getAll(...b.worksheetNoteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "franchiseId", "worksheetFile", "published"] });
+    if (snaps.some((s) => !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId")) || !s.get("worksheetFile"))) return { status: 404, error: "Worksheet not found" };
+    // A draft worksheet is invisible to families, so it can't be newly attached (one already on the homework may stay until removed).
+    if (snaps.some((s) => s.get("published") === false && !keepWorksheets.includes(s.id))) return { status: 400, error: "Publish that worksheet's lesson before setting it as homework", code: "worksheet_draft" } as { status: number; error: string };
   }
   if (b.flashcardTopicId) {
     if (!okId(b.flashcardTopicId)) return { status: 404, error: "Topic not found" };
@@ -147,8 +157,20 @@ const newSub = (ctx: HubCtx, hwId: string, e: { childId: string; parentUid: stri
 });
 
 interface Counts { assigned: number; submitted: number; marked: number }
-const tutorHomeworkOut = (id: string, h: HomeworkDoc, counts: Counts) => ({
-  id, title: h.title, instructions: h.instructions, assessmentId: h.assessmentId ?? null, noteIds: h.noteIds ?? [],
+interface WsInfo { noteId: string; title: string; size: number; quizId?: string }
+/** Title / size / auto-marked quiz of the worksheets a homework lists (notes of this tenant that still carry a worksheetFile). */
+async function worksheetsOut(tenantId: string, ids: string[] | undefined, publishedOnly: boolean): Promise<WsInfo[]> {
+  const want = [...new Set(ids ?? [])].filter(okId);
+  if (!want.length) return [];
+  const snaps = await db.getAll(...want.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published", "worksheetFile", "worksheetQuizId"] });
+  const by = new Map(snaps.filter((s) => s.exists && canReadContent({ tenantId }, s.get("tenantId")) && s.get("worksheetFile") && (!publishedOnly || s.get("published") !== false)).map((s) => {
+    const q = s.get("worksheetQuizId");
+    return [s.id, { noteId: s.id, title: s.get("title") as string, size: Number(s.get("worksheetFile.size")) || 0, ...(typeof q === "string" && q ? { quizId: q } : {}) } as WsInfo] as const;
+  }));
+  return want.map((id) => by.get(id)).filter((x): x is WsInfo => !!x);
+}
+const tutorHomeworkOut = (id: string, h: HomeworkDoc, counts: Counts, worksheets: WsInfo[] = []) => ({
+  id, title: h.title, instructions: h.instructions, assessmentId: h.assessmentId ?? null, noteIds: h.noteIds ?? [], worksheetNoteIds: h.worksheetNoteIds ?? [], worksheets,
   flashcardTopicId: h.flashcardTopicId ?? null, dueAt: h.dueAt, assignedChildIds: h.assignedChildIds ?? [], groupIds: h.groupIds ?? [], videos: videosOut(h.videos),
   franchiseId: h.franchiseId ?? null, createdByName: h.createdByName || "Your tutor", createdAt: h.createdAt, updatedAt: h.updatedAt, counts,
 });
@@ -168,17 +190,23 @@ hubHomeworkApi.get("/homework/inbox", async (req, res) => {
   const hwIds = [...new Set(subs.map((s) => s.homeworkId))];
   const hws = new Map<string, HomeworkDoc>();
   if (hwIds.length) for (const s of await db.getAll(...hwIds.map((id) => homeworkCol.doc(id)))) if (s.exists && s.get("tenantId") === ctx.tenantId) hws.set(s.id, s.data() as HomeworkDoc);
-  const attemptIds = [...new Set(subs.map((s) => s.attemptId).filter((x): x is string => !!x && okId(x)))];
+  const attemptIds = [...new Set(subs.flatMap((s) => s.attemptIds ?? (s.attemptId ? [s.attemptId] : [])).filter((x): x is string => !!x && okId(x)))];
   const pending = new Set<string>();
-  if (attemptIds.length) for (const a of await db.getAll(...attemptIds.map((id) => attemptsCol.doc(id)), { fieldMask: ["tenantId", "status"] })) if (a.exists && a.get("tenantId") === ctx.tenantId && a.get("status") === "pending_marking") pending.add(a.id);
+  const passOf = new Map<string, number>();
+  if (attemptIds.length) for (const a of await db.getAll(...attemptIds.map((id) => attemptsCol.doc(id)), { fieldMask: ["tenantId", "status", "passMarkPct"] })) if (a.exists && a.get("tenantId") === ctx.tenantId) {
+    if (a.get("status") === "pending_marking") pending.add(a.id);
+    if (typeof a.get("passMarkPct") === "number") passOf.set(a.id, a.get("passMarkPct") as number);
+  }
   const rank = { submitted: 0, assigned: 1, marked: 2 } as const;
   const rows = subs.filter((s) => hws.has(s.homeworkId) && students.has(s.childId)).map((s) => {
     const h = hws.get(s.homeworkId)!;
     return {
       submissionId: s.id, homeworkId: s.homeworkId, title: h.title, childId: s.childId, childName: students.get(s.childId)!.childName,
-      status: s.status, submittedAt: s.submittedAt, dueAt: h.dueAt, attemptPending: !!s.attemptId && pending.has(s.attemptId),
+      status: s.status, submittedAt: s.submittedAt, dueAt: h.dueAt, attemptPending: (s.attemptIds ?? (s.attemptId ? [s.attemptId] : [])).some((x) => pending.has(x)),
       // Beyond the contract's row, so a marking screen needs no second call:
-      text: s.text ?? "", attachments: filesOut(req, s.attachments), attemptId: s.attemptId ?? null, mark: markOut(s.mark, false),
+      text: s.text ?? "", attachments: filesOut(req, s.attachments), attemptId: s.attemptId ?? null, attemptIds: s.attemptIds ?? (s.attemptId ? [s.attemptId] : []), mark: markOut(s.mark, false),
+      // The quiz's own pass mark (the attempt snapshot), so the markbook's traffic light needn't guess 60%.
+      passMarkPct: (s.attemptIds ?? (s.attemptId ? [s.attemptId] : [])).map((x) => passOf.get(x)).find((x) => x !== undefined) ?? null,
       late: !!s.submittedAt && s.submittedAt > h.dueAt, franchiseId: s.franchiseId ?? null,
     };
   });
@@ -217,8 +245,9 @@ hubHomeworkApi.get("/homework", async (req, res) => {
     }
     const list = hwSnap.docs.map((d) => ({ id: d.id, ...(d.data() as HomeworkDoc) })).filter((h) => canSeeStudent(ctx, h.franchiseId))
       .sort((a, b) => b.dueAt.localeCompare(a.dueAt))
-      .map((h) => tutorHomeworkOut(h.id, h, counts.get(h.id) ?? { assigned: 0, submitted: 0, marked: 0 }));
-    res.json(list);
+      ;
+    const ws = new Map((await worksheetsOut(ctx.tenantId, list.flatMap((h) => h.worksheetNoteIds ?? []), false)).map((w) => [w.noteId, w] as const));
+    res.json(list.map((h) => tutorHomeworkOut(h.id, h, counts.get(h.id) ?? { assigned: 0, submitted: 0, marked: 0 }, (h.worksheetNoteIds ?? []).map((i) => ws.get(i)).filter((x): x is WsInfo => !!x))));
     return;
   }
 
@@ -236,6 +265,7 @@ hubHomeworkApi.get("/homework", async (req, res) => {
   const lessonIds = new Set<string>();
   if (noteIds.length) { const idx = await noteIndex(ctx.tenantId); for (const id of noteIds) if (idx.get(id)?.isLesson) lessonIds.add(id); }
   if (noteIds.length) for (const s of await db.getAll(...noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published"] })) if (s.exists && canReadContent(ctx, s.get("tenantId")) && s.get("published") !== false) notes.set(s.id, s.get("title") as string);
+  const wsAll = new Map((await worksheetsOut(ctx.tenantId, [...hws.values()].flatMap((h) => h.worksheetNoteIds ?? []), true)).map((w) => [w.noteId, w] as const));
   const rows = mine.filter((s) => hws.has(s.homeworkId)).map((s) => {
     const h = hws.get(s.homeworkId)!;
     const kid = kids.find((k) => k.childId === s.childId)!;
@@ -244,8 +274,9 @@ hubHomeworkApi.get("/homework", async (req, res) => {
       title: h.title, instructions: h.instructions, dueAt: h.dueAt, assessmentId: h.assessmentId ?? null, flashcardTopicId: h.flashcardTopicId ?? null,
       notes: (h.noteIds ?? []).filter((n) => notes.has(n)).map((n) => ({ id: n, title: notes.get(n)!, interactive: lessonIds.has(n) })),
       videos: videosOut(h.videos),
+      worksheets: (h.worksheetNoteIds ?? []).map((i) => wsAll.get(i)).filter((x): x is WsInfo => !!x),
       submission: {
-        id: s.id, status: s.status, text: s.text ?? "", attachments: filesOut(req, s.attachments), attemptId: s.attemptId ?? null,
+        id: s.id, status: s.status, text: s.text ?? "", attachments: filesOut(req, s.attachments), attemptId: s.attemptId ?? null, attemptIds: s.attemptIds ?? (s.attemptId ? [s.attemptId] : []),
         submittedAt: s.submittedAt, mark: markOut(s.mark, true), late: !!s.submittedAt && s.submittedAt > h.dueAt,
       },
     };
@@ -281,7 +312,7 @@ hubHomeworkApi.post("/homework", async (req, res) => {
   const now = nowIso();
   const doc: HomeworkDoc = {
     tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, title: b.title, instructions: b.instructions,
-    assessmentId: b.assessmentId ?? null, noteIds: b.noteIds, flashcardTopicId: b.flashcardTopicId ?? null,
+    assessmentId: b.assessmentId ?? null, noteIds: b.noteIds, worksheetNoteIds: [...new Set(b.worksheetNoteIds ?? [])], flashcardTopicId: b.flashcardTopicId ?? null,
     dueAt: due, assignedChildIds: students.map((s) => s.childId), groupIds: groups.map((g) => g.id), videos: vids,
     createdBy: ctx.uid, createdByName: ctx.name, createdAt: now, updatedAt: now,
   };
@@ -291,7 +322,7 @@ hubHomeworkApi.post("/homework", async (req, res) => {
   for (const s of students) batch.set(submissionsCol.doc(subId(ref.id, s.childId)), newSub(ctx, ref.id, s, now));
   await batch.commit();
   notifyAssigned(ctx.tenantId, ref.id, doc.title, doc.dueAt, doc.assignedChildIds);
-  res.status(201).json(tutorHomeworkOut(ref.id, doc, { assigned: students.length, submitted: 0, marked: 0 }));
+  res.status(201).json(tutorHomeworkOut(ref.id, doc, { assigned: students.length, submitted: 0, marked: 0 }, await worksheetsOut(ctx.tenantId, doc.worksheetNoteIds, false)));
 });
 
 /** A visible-and-writable homework, or a refusal already sent. */
@@ -315,7 +346,7 @@ hubHomeworkApi.put("/homework/:id", async (req, res) => {
   if (!snap) return;
   const b = parsed.data;
   const before = snap.data() as HomeworkDoc;
-  const bad = await checkRefs(ctx, b);
+  const bad = await checkRefs(ctx, b, before.worksheetNoteIds ?? []);
   if (bad) { res.status(bad.status).json({ error: bad.error }); return; }
   let dueAt = before.dueAt;
   if (b.dueAt !== undefined) {
@@ -328,6 +359,7 @@ hubHomeworkApi.put("/homework/:id", async (req, res) => {
   if (b.instructions !== undefined) patch.instructions = b.instructions;
   if (b.assessmentId !== undefined) patch.assessmentId = b.assessmentId ?? null;
   if (b.noteIds !== undefined) patch.noteIds = b.noteIds;
+  if (b.worksheetNoteIds !== undefined) patch.worksheetNoteIds = [...new Set(b.worksheetNoteIds)];
   if (b.flashcardTopicId !== undefined) patch.flashcardTopicId = b.flashcardTopicId ?? null;
   if (b.videos !== undefined) {
     const vids = cleanVideos(b.videos);
@@ -375,7 +407,7 @@ hubHomeworkApi.put("/homework/:id", async (req, res) => {
   const [subs] = await Promise.all([submissionsCol.where("tenantId", "==", ctx.tenantId).where("homeworkId", "==", snap.id).get()]);
   const counts: Counts = { assigned: 0, submitted: 0, marked: 0 };
   for (const d of subs.docs) counts[d.get("status") as keyof Counts]++;
-  res.json(tutorHomeworkOut(snap.id, { ...before, ...patch } as HomeworkDoc, counts));
+  { const merged = { ...before, ...patch } as HomeworkDoc; res.json(tutorHomeworkOut(snap.id, merged, counts, await worksheetsOut(ctx.tenantId, merged.worksheetNoteIds, false))); }
 });
 
 // DELETE /homework/:id — the homework and every child's submission of it (and their uploaded files).
@@ -492,7 +524,7 @@ hubHomeworkApi.post("/submissions/:id/submit", async (req, res) => {
   const snap = await ownSubmission(ctx, req.params.id, res);
   if (!snap) return;
   const cur = snap.data() as SubmissionDoc;
-  if (cur.status === "marked") { res.status(409).json({ error: "This homework has already been marked", code: "already_marked" }); return; }
+  if (cur.status === "marked" && cur.mark?.markedBy !== "auto") { res.status(409).json({ error: "This homework has already been marked", code: "already_marked" }); return; }
   const b = parsed.data;
   const text = (b.text ?? "").trim();
 
@@ -506,6 +538,9 @@ hubHomeworkApi.post("/submissions/:id/submit", async (req, res) => {
   const hwSnap = await homeworkCol.doc(cur.homeworkId).get();
   if (!hwSnap.exists || hwSnap.get("tenantId") !== ctx.tenantId) { res.status(404).json({ error: "Homework not found" }); return; }
   let attemptId: string | null = b.attemptId === undefined ? (cur.attemptId ?? null) : (b.attemptId ?? null);
+  const hwAssessment = (hwSnap.get("assessmentId") as string | null | undefined) || null;
+  const req0 = await requiredQuizIds(ctx.tenantId, hwSnap.data() as HomeworkDoc);
+  const required = [...(hwAssessment ? [hwAssessment] : []), ...req0.worksheet];
   if (b.attemptId) {
     if (!okId(b.attemptId)) { res.status(404).json({ error: "Attempt not found" }); return; }
     const a = await attemptsCol.doc(b.attemptId).get();
@@ -513,24 +548,33 @@ hubHomeworkApi.post("/submissions/:id/submit", async (req, res) => {
     const forHw = a.get("homeworkId") as string | null | undefined;
     if (forHw && forHw !== cur.homeworkId) { res.status(400).json({ error: "That quiz attempt was made for different homework" }); return; }
     if (a.get("status") === "in_progress") { res.status(409).json({ error: "Finish that quiz before handing it in" }); return; }
-    // The attempt must be a quiz on THIS homework's assessment — not an older, easier
+    // The attempt must be a quiz this homework lists (its quiz or one of its worksheets') — not an older, easier
     // paper or a placement test handed in as the result.
-    const hwAssessment = hwSnap.get("assessmentId") as string | null | undefined;
-    if (hwAssessment && (a.get("assessmentId") !== hwAssessment || a.get("assessmentType") !== "quiz")) { res.status(400).json({ error: "That isn't a finished attempt at this homework's quiz" }); return; }
-  } else if (!attemptId && hwSnap.get("assessmentId")) {
-    const mine = await attemptsCol.where("tenantId", "==", ctx.tenantId).where("childId", "==", cur.childId).get();
-    const latest = mine.docs.filter((d) => d.get("homeworkId") === cur.homeworkId && d.get("status") !== "in_progress").sort((x, y) => String(y.get("submittedAt") ?? "").localeCompare(String(x.get("submittedAt") ?? "")))[0];
-    if (latest) attemptId = latest.id;
+    if (required.length && (!required.includes(a.get("assessmentId")) || a.get("assessmentType") !== "quiz" || (req0.worksheet.length && forHw !== cur.homeworkId))) { res.status(400).json({ error: "That isn't a finished attempt at this homework's quiz or worksheets" }); return; }
+  }
+  // Every finished attempt made for this homework (one per quiz, newest) is linked, not just one.
+  let attemptIds: string[] = cur.attemptIds ?? (cur.attemptId ? [cur.attemptId] : []);
+  let mark: ReturnType<typeof autoMark> | null = null;
+  if (required.length) {
+    const done = await finishedFor(ctx.tenantId, cur.homeworkId, cur.childId);
+    const missing = req0.worksheet.filter((q) => !done.has(q));
+    if (missing.length) { res.status(409).json({ error: `Do every worksheet before handing in (${req0.worksheet.length - missing.length} of ${req0.worksheet.length} done)`, code: "worksheets_unfinished", done: req0.worksheet.length - missing.length, total: req0.worksheet.length }); return; }
+    attemptIds = required.map((q) => done.get(q)?.id).filter((x): x is string => !!x);
+    if (b.attemptId && !attemptIds.includes(b.attemptId) && hwAssessment && !req0.worksheet.length) attemptIds = [b.attemptId];
+    attemptId = attemptIds[0] ?? attemptId;
+    const total = combinedMark(required, done);
+    if (total && attemptIds.length === required.length) mark = autoMark(total);
   }
 
   if (!text && !files.length && !attemptId) { res.status(400).json({ error: "Add some writing, a photo, or a quiz result to hand in" }); return; }
 
   const now = nowIso();
-  const patch = { status: "submitted" as const, text, attachments: files, attemptId, submittedAt: now, updatedAt: now };
+  const patch = { status: (mark ? "marked" : "submitted") as "marked" | "submitted", text, attachments: files, attemptId, attemptIds, submittedAt: now, updatedAt: now, ...(mark ? { mark } : {}) };
   // Transactional: a hand-in that lands just after the tutor marked must not flip `marked` back to `submitted`.
   const landed = await db.runTransaction(async (tx) => {
     const fresh = await tx.get(snap.ref);
-    if (!fresh.exists || fresh.get("status") === "marked") return false;
+    // A tutor's own mark is final; an automatic one is refreshed by a re-hand-in.
+    if (!fresh.exists || (fresh.get("status") === "marked" && fresh.get("mark.markedBy") !== "auto")) return false;
     tx.update(snap.ref, patch);
     return true;
   });
@@ -538,7 +582,7 @@ hubHomeworkApi.post("/submissions/:id/submit", async (req, res) => {
   void dropSubmissionFiles(ctx.tenantId, snap.id, files.map((f) => f.id)); // replaced / never-attached uploads don't linger
   const h = hwSnap.data() as HomeworkDoc;
   res.json({
-    id: snap.id, homeworkId: cur.homeworkId, childId: cur.childId, status: "submitted", text, attachments: filesOut(req, files), attemptId,
-    submittedAt: now, mark: null, late: now > h.dueAt,
+    id: snap.id, homeworkId: cur.homeworkId, childId: cur.childId, status: patch.status, text, attachments: filesOut(req, files), attemptId, attemptIds,
+    submittedAt: now, mark: markOut(mark, true), late: now > h.dueAt,
   });
 });

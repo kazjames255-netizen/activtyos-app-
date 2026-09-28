@@ -1,0 +1,1253 @@
+{
+ "home": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "Previewkid muip4kb5",
+   "Previewkid muir9n18"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "101",
+    "157"
+   ]
+  }
+ },
+ "lessons": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس",
+   "Geometry and measures",
+   "Ratio and proportion",
+   "Ratio, proportion and rates of change",
+   "Working mathematically (fluency, reasoni"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "students": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "قائمة الطلاب والمجموعات",
+   "تاريخ التسجيل: 27 Sept 2026",
+   "تاريخ التسجيل: 26 Sept 2026"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "👥الطلابقائمة ",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "ضعهم في مجموعة — مثل «رياضيات الصف الخامس» — ثم كل @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "homework": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "الأعمال المسلَّمة والإجابات الكتابية",
+   "OFFSCREEN:Maths",
+   "OFFSCREEN:Preview Lab muiojg71",
+   "OFFSCREEN:",
+   "OFFSCREEN:Preview Lab muip4kb5",
+   "OFFSCREEN:Preview Lab muir9n18",
+   "OFFSCREEN:RTL Lab muiwg4xu",
+   "OFFSCREEN:Science",
+   "OFFSCREEN:Spanish",
+   "OFFSCREEN:إدارة المواضيع"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "✅بانتظار التصح",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "progress": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "quizzes": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "أنشئ وصحّح وشاهد النتائج",
+   "OFFSCREEN:Maths",
+   "OFFSCREEN:Preview Lab muiojg71",
+   "OFFSCREEN:",
+   "OFFSCREEN:Preview Lab muip4kb5",
+   "OFFSCREEN:Preview Lab muir9n18",
+   "OFFSCREEN:RTL Lab muiwg4xu",
+   "OFFSCREEN:Science",
+   "OFFSCREEN:Spanish",
+   "OFFSCREEN:إدارة المواضيع",
+   "OFFSCREEN:تُبنى الاختبارات من بنك أسئلتك وتُصحَّح ",
+   "OFFSCREEN:+ اختبار جديد",
+   "OFFSCREEN:Preview Lab muir9n181",
+   "OFFSCREEN:RTL Lab muiwg4xu1",
+   "OFFSCREEN:1"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📝الاختباراتأن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "19th-Century Novel › Year 10 @none",
+   "19th-Century Novel › Year 11 @none",
+   "English Language — Change & Variation › Year 12 @none",
+   "English Language — Change & Variation › Year 13 @none",
+   "English Literature — Critical Theory & Unseen › Ye @none",
+   "English Literature — Drama › Year 12 @none",
+   "English Literature — Drama › Year 13 @none",
+   "English Language — Frameworks & Methods › Year 12 @none",
+   "English Language — Frameworks & Methods › Year 13 @none",
+   "Grammar & punctuation › Year 1 @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "messages": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "عندما يضغط طالب على «اطرح سؤالًا» داخل درس، يظهر ه @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "reader": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس",
+   "الخطوة 1:",
+   "الخطوة 2:",
+   "الخطوة 3:",
+   "الخطوة 4:",
+   "الخطوة 5:",
+   "الخطوة 6:",
+   "الخطوة 7:"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "RTL Lab muiwg4xu › Neurones @none",
+   "› @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-start": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "ابدأ الدرس ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-learn": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "الفكرة الرئيسة 1"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-words": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "متابعة ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-warm": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "إجابتك"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "تخطَّ ← @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-quiz": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "player-done": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "الخطوة 1:",
+   "الخطوة 2:",
+   "الخطوة 3:",
+   "الخطوة 4:",
+   "الخطوة 5:",
+   "الخطوة 6:",
+   "الخطوة 7:"
+  ],
+  "tabXs": [],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tools-catalogue": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "«إضافة أداة» @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-M-02": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "«إضافة أداة» @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-M-21": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "«إضافة أداة» @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ },
+ "tool-H-H02": {
+  "dir": "rtl",
+  "overflowX": false,
+  "scrollW": 1280,
+  "clientW": 1280,
+  "bodyFont": "\"Hanken Grotesk\", \"Hanken Grotesk Fallback\", \"Noto Naskh Arabic\", \"Noto Naskh Arabic Fallback\", \"Geeza Pro\", \"Segoe UI\", Tahoma, sans-serif",
+  "overflow": [
+   "ملاحظات وأوراق عمل ودروس",
+   "الخطوة 1:",
+   "الخطوة 2:",
+   "الخطوة 3:",
+   "الخطوة 4:",
+   "الخطوة 5:"
+  ],
+  "tabXs": [
+   [
+    "🏠الرئيسية",
+    930
+   ],
+   [
+    "📚الدروس",
+    844
+   ],
+   [
+    "🧑‍🎓الطلاب",
+    761
+   ],
+   [
+    "📈التقدّم",
+    687
+   ],
+   [
+    "📝الاختبارات",
+    589
+   ],
+   [
+    "📓الواجبات الم",
+    465
+   ],
+   [
+    "💬الرسائل",
+    381
+   ],
+   [
+    "📖الدروس والمن",
+    812
+   ]
+  ],
+  "arrowGlyphs": [
+   "« @none",
+   "▶ @none",
+   "«إضافة أداة» @none"
+  ],
+  "textAlignLeft": [
+   "SPAN:Run the day",
+   "SPAN:Marketing",
+   "SPAN:Money",
+   "SPAN:Settings",
+   "SPAN:Sign out"
+  ],
+  "progress": [],
+  "tofu": {
+   "ar": [
+    "106",
+    "218"
+   ],
+   "ur": [
+    "113",
+    "218"
+   ],
+   "pa": [
+    "100",
+    "182"
+   ],
+   "bn": [
+    "108",
+    "194"
+   ],
+   "cy": [
+    "102",
+    "157"
+   ]
+  }
+ }
+}

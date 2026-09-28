@@ -926,7 +926,7 @@ const pa: Keys = {
   topicPageBroke: "ਕੋਈ ਪੰਨਾ ਜਾਂ ਬਟਨ ਖਰਾਬ ਹੋ ਗਿਆ",
   topicLogin: "ਲੌਗਇਨ / ਖਾਤੇ ਦੀ ਸਮੱਸਿਆ",
   topicOther: "ਐਪ ਦੀ ਕੋਈ ਹੋਰ ਸਮੱਸਿਆ",
-  subjectPh: "ਵਿਸ਼ਾ (ਵਿਕਲਪਿਕ)",
+  subjectPh: "ਟਾਪਿਕ (ਵਿਕਲਪਿਕ)",
   describePh: "ਸਮੱਸਿਆ ਦਾ ਵੇਰਵਾ ਦਿਓ…",
   writeOpPh: "ActivityOS ਲਈ ਆਪਣਾ ਸੁਨੇਹਾ ਲਿਖੋ…",
   send: "ਭੇਜੋ",
@@ -1112,7 +1112,7 @@ const bn: Keys = {
   topicPageBroke: "কোনো পেজ বা বোতাম কাজ করছে না",
   topicLogin: "লগইন / অ্যাকাউন্টের সমস্যা",
   topicOther: "অ্যাপের অন্য সমস্যা",
-  subjectPh: "বিষয় (ঐচ্ছিক)",
+  subjectPh: "টপিক (ঐচ্ছিক)",
   describePh: "সমস্যাটি বর্ণনা করুন…",
   writeOpPh: "ActivityOS-কে আপনার বার্তা লিখুন…",
   send: "পাঠান",
@@ -1867,7 +1867,7 @@ const fr: Keys = {
 };
 
 const cy: Keys = {
-  loading: "Wrthi'n llwytho…",
+  loading: "Wrthi’n llwytho…",
   failedLoad: "Methu llwytho",
   optional: "— dewisol",
   save: "Cadw",
@@ -2042,7 +2042,7 @@ const cy: Keys = {
   topicPageBroke: "Mae tudalen neu fotwm wedi torri",
   topicLogin: "Problem mewngofnodi / cyfrif",
   topicOther: "Problem arall gyda'r ap",
-  subjectPh: "Pwnc (dewisol)",
+  subjectPh: "Testun (dewisol)",
   describePh: "Disgrifiwch y broblem…",
   writeOpPh: "Ysgrifennwch eich neges at ActivityOS…",
   send: "Anfon",

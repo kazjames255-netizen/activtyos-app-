@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Modal } from "../../shared-assess/ui";
 import { Btn, StepCard } from "../lessonUi";
@@ -86,6 +87,7 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
   // Nothing about the stored deck changes; this purely hides slide 0 from the forward step-through (tutor preview
   // included, matching the pupil view) so decks WITHOUT this exact adjacency (no Outcome slide, or one further into
   // the deck) render slide 0 completely normally.
+  const t = useT();
   const coverSkippable = coverSlideSkipped(slides);
   const visible = coverSkippable ? slides.map((_, k) => k).filter((k) => k !== 0) : slides.map((_, k) => k);
   const [i, setI] = useState(() => (followIndex != null && followIndex >= 0 && followIndex < slides.length ? followIndex : (coverSkippable ? 1 : 0)));
@@ -171,14 +173,14 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
   }
   return (
     <StepCard key={i} className="!p-0 !overflow-visible">
-      <div ref={box} tabIndex={-1} className="outline-none" aria-label={`Slide ${Math.max(0, pos) + 1} of ${visible.length}`} data-testid="slide" data-slide={i} data-canvas={cv ? "" : undefined}>
+      <div ref={box} tabIndex={-1} className="outline-none" aria-label={t("hublessons.sdSlideXofY", { n: Math.max(0, pos) + 1, total: visible.length })} data-testid="slide" data-slide={i} data-canvas={cv ? "" : undefined}>
         {/* The canvas branch below shows `toolbar` itself (its own slide-tools row). Every other slide kind (Key words'
             dark card, plain block slides) never had that row, so a `toolbar` passed for one of those — e.g. the
             "Lesson slides" button that reverts out of "Summary slides instead" — would otherwise be silently dropped:
             summary slides are plain block slides, not canvas, so the toggle-back button never rendered anywhere. */}
         {!cv && toolbar && (
           <div className="flex flex-wrap items-center justify-end gap-2 border-b border-[var(--line)] px-4 py-2 sm:px-5" data-testid="slide-toolbar-top">
-            <span className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Slide tools">{toolbar}</span>
+            <span className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("hublessons.sdSlideTools")}>{toolbar}</span>
           </div>
         )}
         {cv ? (
@@ -186,36 +188,36 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
             <style>{CUE_CSS}</style>
             {(toolbar || editor) && (
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-4 py-2 sm:px-5">
-                <span className="min-w-0 truncate text-[12px] font-extrabold text-[var(--ink-3)]">{editor ? (editing0 ? "Click text to edit it · click a picture to select, move and resize it" : "Stepping through like a pupil — switch to the finished slide to edit") : ""}</span>
-                <span className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Slide tools">
+                <span className="min-w-0 truncate text-[12px] font-extrabold text-[var(--ink-3)]">{editor ? (editing0 ? t("hublessons.sdEditHint") : t("hublessons.sdSteppingHint")) : ""}</span>
+                <span className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("hublessons.sdSlideTools")}>
                   {toolbar}
                   {editor && steps > 0 && (
-                    <span role="group" aria-label="Preview mode" className="inline-flex overflow-hidden rounded-xl border-2 border-[var(--line)]" data-testid="canvas-view-toggle">
+                    <span role="group" aria-label={t("hublessons.sdPreviewMode")} className="inline-flex overflow-hidden rounded-xl border-2 border-[var(--line)]" data-testid="canvas-view-toggle">
                       {(["final", "steps"] as const).map((m) => (
                         <button key={m} type="button" aria-pressed={view === m} data-testid={`canvas-view-${m}`} onClick={() => { setView(m); if (m === "steps") setRev({ i, n: 0 }); }}
-                          className={`min-h-[32px] px-2.5 text-[12px] font-extrabold ${view === m ? "bg-[var(--brand)] text-white" : "bg-[var(--surface)] text-[var(--ink-2)] hover:text-[var(--brand)]"}`}>{m === "final" ? "Finished slide" : "Step through"}</button>
+                          className={`min-h-[32px] px-2.5 text-[12px] font-extrabold ${view === m ? "bg-[var(--brand)] text-white" : "bg-[var(--surface)] text-[var(--ink-2)] hover:text-[var(--brand)]"}`}>{m === "final" ? t("hublessons.sdFinished") : t("hublessons.sdStepThrough")}</button>
                       ))}
                     </span>
                   )}
-                  {editor && !isOutcome && !isOutline && <Btn tone="ghost" onClick={() => setTarget({ mode: "add" })} data-testid="canvas-add-picture" className="!min-h-[36px] !px-3 !text-[12.5px]">🖼 Add picture</Btn>}
-                  {editor && <Btn tone="ghost" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="!min-h-[36px] !px-3 !text-[12.5px]">🗑 Delete slide</Btn>}
+                  {editor && !isOutcome && !isOutline && <Btn tone="ghost" onClick={() => setTarget({ mode: "add" })} data-testid="canvas-add-picture" className="!min-h-[36px] !px-3 !text-[12.5px]">{t("hublessons.sdAddPicture")}</Btn>}
+                  {editor && <Btn tone="ghost" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="!min-h-[36px] !px-3 !text-[12.5px]">{t("hublessons.sdDeleteSlideBtn")}</Btn>}
                 </span>
               </div>
             )}
             {editor && Object.keys(drafts).length > 0 && (
               <div role="status" className="flex flex-wrap items-center justify-between gap-2 bg-[var(--gold-soft)] px-4 py-2 text-[13px] font-bold text-[var(--ink)] sm:px-5" data-testid="canvas-unsaved">
-                <span>Unsaved changes on {Object.keys(drafts).length} {Object.keys(drafts).length === 1 ? "slide" : "slides"}.</span>
+                <span>{t("hublessons.sdUnsavedN", { n: Object.keys(drafts).length })}</span>
                 <span className="flex gap-2">
-                  <Btn tone="ghost" onClick={() => setDrafts({})} className="!min-h-[34px] !px-3 !text-[12.5px]">Discard</Btn>
+                  <Btn tone="ghost" onClick={() => setDrafts({})} className="!min-h-[34px] !px-3 !text-[12.5px]">{t("hublessons.sdDiscard")}</Btn>
                   <Btn disabled={busy} data-testid="canvas-save" className="!min-h-[34px] !px-3 !text-[12.5px]" onClick={async () => {
                     setBusy(true); setErr(null);
-                    try { await editor.save(merged()); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); } finally { setBusy(false); }
-                  }}>{busy ? "Saving…" : "Save changes"}</Btn>
+                    try { await editor.save(merged()); } catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntSave")); } finally { setBusy(false); }
+                  }}>{busy ? t("hublessons.saving") : t("hublessons.sdSaveChanges")}</Btn>
                 </span>
               </div>
             )}
             {err && !deleting && <p role="alert" className="m-0 px-4 py-2 text-[13px] font-bold text-[var(--red)] sm:px-5">{err}</p>}
-            <CanvasSlide block={cv} reveal={reveal} edit={editing0} label={s.title || `Slide ${i + 1}`} subject={subject}
+            <CanvasSlide block={cv} reveal={reveal} edit={editing0} label={s.title || t("hublessons.sdSlideN", { n: i + 1 })} subject={subject}
               lessonTitle={lessonTitle} lessonUnit={lessonUnit} lessonAgeGroup={lessonAgeGroup} lessonTopic={lessonTopic} lessonKeyConcepts={lessonKeyConcepts} outlinePart={outlinePart}
               onChange={setEls} onPick={(idx) => setTarget({ mode: "replace", index: idx })} selectRequest={selReq}
               onAdvance={stepping && reveal < steps ? advance : undefined}
@@ -225,30 +227,30 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
                     <>
                       <button type="button" data-testid="reveal-cue" onClick={advance} className="sd-pulse sd-cue"
                         style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 800, color: "#fff", background: "linear-gradient(100deg, var(--sb-a-dk), var(--sb-a))", border: "2px solid rgba(255,255,255,.85)", cursor: "pointer" }}>
-                        <span aria-hidden="true">👆</span>Tap to reveal · {reveal + 1} of {steps}
+                        <span aria-hidden="true">👆</span>{t("hublessons.sdTapReveal", { n: reveal + 1, total: steps })}
                       </button>
-                      <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>Click the slide, press Space or → for the next part · ← goes back</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>{t("hublessons.sdRevealHelp")}</span>
                     </>
                   ) : (
                     <>
                       <button type="button" data-testid="reveal-done" onClick={replay}
                         style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 800, color: "var(--sb-a)", background: "#fff", border: "2px solid var(--sb-a)", cursor: "pointer" }}>
-                        <span aria-hidden="true">✓</span>All {steps} revealed · <span aria-hidden="true">↺</span> Replay
+                        <span aria-hidden="true">✓</span>{t("hublessons.sdAllRevealed", { n: steps })} · <span aria-hidden="true">↺</span> {t("hublessons.replay")}
                       </button>
-                      <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>Next moves on to the next slide</span>
+                      <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>{t("hublessons.sdNextMovesOn")}</span>
                     </>
                   )
                 ) : (
                   <>
                     <button type="button" data-testid="interactive-cue" onClick={() => { setView("steps"); setRev({ i, n: 0 }); }} className="sd-pulse"
                       style={{ display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 800, color: "#fff", background: "linear-gradient(100deg, var(--sb-a-dk), var(--sb-a))", border: "2px solid rgba(255,255,255,.85)", cursor: "pointer" }}>
-                      <span aria-hidden="true">⚡</span>Interactive · {steps} {steps === 1 ? "reveal" : "reveals"} — ▶ Step through
+                      <span aria-hidden="true">⚡</span>{t("hublessons.sdInteractive", { n: steps })}
                     </button>
-                    <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>This slide reveals in {steps} {steps === 1 ? "click" : "clicks"} for pupils; you are seeing the finished slide.</span>
+                    <span className="text-[12px] font-semibold" style={{ color: "var(--sb-ink2)" }}>{t("hublessons.sdInteractiveHint", { n: steps })}</span>
                   </>
                 )
               ) : undefined} />
-            <span className="sr-only" role="status" aria-live="polite">{stepping ? `Revealed ${reveal} of ${steps}` : ""}</span>
+            <span className="sr-only" role="status" aria-live="polite">{stepping ? t("hublessons.sdRevealedXofY", { n: reveal, total: steps }) : ""}</span>
             {editor && !isOutcome && !isOutline && (() => {
               // Elements the "lesson outline" pill/dot re-skin (slideTheme.ts's themeBlock) has claimed as its own
               // template art — a re-skinned pill/dot/rail/step-overlay picture is exactly as un-changeable as the
@@ -261,14 +263,14 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
               const changeable = (e: CanvasEl, idx: number): e is CanvasImg => e.k === "img" && !isDecorativePic(e, cv) && !isOutlineArt(idx);
               return (
                 <details open className="border-t border-[var(--line)] px-4 py-2 sm:px-5" data-testid="canvas-pictures">
-                  <summary className="cursor-pointer text-[12.5px] font-extrabold text-[var(--ink-2)]">Pictures on this slide ({cv.els.filter(changeable).length})</summary>
+                  <summary className="cursor-pointer text-[12.5px] font-extrabold text-[var(--ink-2)]">{t("hublessons.sdPicturesOnSlide", { n: cv.els.filter(changeable).length })}</summary>
                   <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
                     {cv.els.map((e, idx, all) => changeable(e, idx) ? (
                       <li key={idx} className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <span className="grid h-10 w-10 flex-none place-items-center overflow-hidden rounded-lg bg-white">{e.url ? <img src={e.url} alt="" className="max-h-10 max-w-10 object-contain" /> : <span aria-hidden="true">🖼</span>}</span>
-                        <span className="max-w-[140px] truncate text-[12px] text-[var(--ink-2)]">{e.alt || `Picture ${all.slice(0, idx + 1).filter(changeable).length}`}</span>
-                        <Btn tone="ghost" onClick={() => setTarget({ mode: "replace", index: idx })} data-testid="canvas-picture-change" data-i={idx} className="!min-h-[34px] !px-2.5 !text-[12px]">Change</Btn>
+                        <span className="max-w-[140px] truncate text-[12px] text-[var(--ink-2)]">{e.alt || t("hublessons.sdPictureN", { n: all.slice(0, idx + 1).filter(changeable).length })}</span>
+                        <Btn tone="ghost" onClick={() => setTarget({ mode: "replace", index: idx })} data-testid="canvas-picture-change" data-i={idx} className="!min-h-[34px] !px-2.5 !text-[12px]">{t("hublessons.sdChange")}</Btn>
                       </li>
                     ) : null)}
                   </ul>
@@ -280,13 +282,13 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
           <>
             {editor && drafts[i] && (
               <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--gold-soft)] px-4 py-2 text-[13px] font-bold text-[var(--ink)] sm:px-5" data-testid="kw-unsaved">
-                <span>Unsaved changes to this slide’s words.</span>
+                <span>{t("hublessons.sdKwUnsaved")}</span>
                 <span className="flex gap-2">
-                  <Btn tone="ghost" onClick={() => setDrafts((d) => { const n = { ...d }; delete n[i]; return n; })} className="!min-h-[34px] !px-3 !text-[12.5px]">Discard</Btn>
+                  <Btn tone="ghost" onClick={() => setDrafts((d) => { const n = { ...d }; delete n[i]; return n; })} className="!min-h-[34px] !px-3 !text-[12.5px]">{t("hublessons.sdDiscard")}</Btn>
                   <Btn disabled={busy} data-testid="kw-save" className="!min-h-[34px] !px-3 !text-[12.5px]" onClick={async () => {
                     setBusy(true); setErr(null);
-                    try { await editor!.save(merged()); setDrafts((d) => { const n = { ...d }; delete n[i]; return n; }); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); } finally { setBusy(false); }
-                  }}>{busy ? "Saving…" : "Save changes"}</Btn>
+                    try { await editor!.save(merged()); setDrafts((d) => { const n = { ...d }; delete n[i]; return n; }); } catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntSave")); } finally { setBusy(false); }
+                  }}>{busy ? t("hublessons.saving") : t("hublessons.sdSaveChanges")}</Btn>
                 </span>
               </div>
             )}
@@ -294,10 +296,10 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
           <KeyWordsCard title={s.title} intro={kwIntro} items={kwItems} art={s}
             editable={!!editor} onItemsChange={editor ? setKwItems : undefined}
             corner={editor && (
-              <span className="flex gap-1.5" role="group" aria-label="Edit this slide">
-                <button type="button" onClick={() => setEditing(true)} data-testid="slide-edit" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">✏️ Edit text</button>
-                <button type="button" onClick={() => setPicture(true)} data-testid="slide-picture" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">🖼 {hasArt(s) ? "Change picture" : "Add picture"}</button>
-                <button type="button" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">🗑 Delete slide</button>
+              <span className="flex gap-1.5" role="group" aria-label={t("hublessons.sdEditSlide")}>
+                <button type="button" onClick={() => setEditing(true)} data-testid="slide-edit" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{t("hublessons.sdEditText")}</button>
+                <button type="button" onClick={() => setPicture(true)} data-testid="slide-picture" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{hasArt(s) ? t("hublessons.sdChangePicture") : t("hublessons.sdAddPicture")}</button>
+                <button type="button" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{t("hublessons.sdDeleteSlideBtn")}</button>
               </span>
             )} />
           </>
@@ -305,12 +307,12 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
           <>
         <div className="rounded-t-2xl px-5 pb-4 pt-3 text-white sm:px-6" style={{ background: `linear-gradient(120deg, ${a}, ${b})`, borderRadius: "16px 16px 28px 28px / 16px 16px 16px 16px" }}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-[2px] text-[11px] font-black uppercase tracking-[0.06em]"><span aria-hidden="true">{ICON[s.kind]}</span>{KIND_LABEL[s.kind]}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-[2px] text-[11px] font-black uppercase tracking-[0.06em]"><span aria-hidden="true">{ICON[s.kind]}</span>{t(KIND_LABEL[s.kind])}</span>
             {editor && (
-              <span className="flex gap-1.5" role="group" aria-label="Edit this slide">
-                <button type="button" onClick={() => setEditing(true)} data-testid="slide-edit" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">✏️ Edit text</button>
-                <button type="button" onClick={() => setPicture(true)} data-testid="slide-picture" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">🖼 {hasArt(s) ? "Change picture" : "Add picture"}</button>
-                <button type="button" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">🗑 Delete slide</button>
+              <span className="flex gap-1.5" role="group" aria-label={t("hublessons.sdEditSlide")}>
+                <button type="button" onClick={() => setEditing(true)} data-testid="slide-edit" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{t("hublessons.sdEditText")}</button>
+                <button type="button" onClick={() => setPicture(true)} data-testid="slide-picture" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{hasArt(s) ? t("hublessons.sdChangePicture") : t("hublessons.sdAddPicture")}</button>
+                <button type="button" onClick={() => { setErr(null); setDeleting(true); }} data-testid="slide-delete" className="rounded-full bg-white/25 px-3 py-1 text-[12px] font-extrabold text-white hover:bg-white/35">{t("hublessons.sdDeleteSlideBtn")}</button>
               </span>
             )}
           </div>
@@ -327,16 +329,16 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
       </div>
 
       <div className="sticky bottom-0 z-10 rounded-b-2xl border-t border-[var(--line)] bg-[var(--surface)]/95 px-5 pb-3 pt-2.5 backdrop-blur sm:px-6">
-        <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-[var(--line)]" role="progressbar" aria-valuemin={1} aria-valuemax={visible.length} aria-valuenow={Math.max(0, pos) + 1} aria-label="Slides">
+        <div className="mb-2 h-1.5 overflow-hidden rounded-full bg-[var(--line)]" role="progressbar" aria-valuemin={1} aria-valuemax={visible.length} aria-valuenow={Math.max(0, pos) + 1} aria-label={t("hublessons.sdSlides")}>
           <span className="block h-full rounded-full bg-[var(--brand)] transition-[width] duration-300" style={{ width: `${((Math.max(0, pos) + 1) / visible.length) * 100}%` }} />
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2">
-            <Btn tone="ghost" onClick={retreat} className="!min-h-[40px] !px-4 !text-[14px]">Back</Btn>
-            {stepping && reveal > 0 && <Btn tone="ghost" onClick={replay} data-testid="reveal-replay" title="Hide the reveals and start this slide again" className="!min-h-[40px] !px-3 !text-[14px]"><span aria-hidden="true">↺</span> Replay</Btn>}
+            <Btn tone="ghost" onClick={retreat} className="!min-h-[40px] !px-4 !text-[14px]">{t("hublessons.back")}</Btn>
+            {stepping && reveal > 0 && <Btn tone="ghost" onClick={replay} data-testid="reveal-replay" title={t("hublessons.sdReplayTitle")} className="!min-h-[40px] !px-3 !text-[14px]"><span aria-hidden="true">↺</span> {t("hublessons.replay")}</Btn>}
           </span>
           <span className="text-[12px] font-extrabold text-[var(--ink-3)]" aria-hidden="true">{stepping ? `${reveal}/${steps} · ` : ""}{Math.max(0, pos) + 1} / {visible.length}</span>
-          <Btn onClick={advance} data-testid="lesson-next" className={`!min-h-[40px] !px-5 !text-[14px] ${stepping && reveal < steps ? "sd-pulse" : ""}`}>{stepping && reveal < steps ? "Reveal ▸" : last ? "Continue →" : "Next"}</Btn>
+          <Btn onClick={advance} data-testid="lesson-next" className={`!min-h-[40px] !px-5 !text-[14px] ${stepping && reveal < steps ? "sd-pulse" : ""}`}>{stepping && reveal < steps ? t("hublessons.sdReveal") : last ? t("hublessons.continue") : t("hublessons.next")}</Btn>
         </div>
       </div>
       {editing && editor && (
@@ -353,15 +355,15 @@ export function SlideDeck({ slides, addXP, onDone, onBack, editor, onIndex, foll
         <SlidePicture slide={s} tint={[a, b]} onClose={() => setPicture(false)} onSave={(ns) => editor.save(slides.map((x, k) => (k === i ? ns : x)))} />
       )}
       {deleting && editor && (
-        <Modal title="Delete this slide?" onClose={() => setDeleting(false)}
-          footer={<><Btn tone="ghost" onClick={() => setDeleting(false)}>Keep it</Btn>
+        <Modal title={t("hublessons.sdDeleteQ")} onClose={() => setDeleting(false)}
+          footer={<><Btn tone="ghost" onClick={() => setDeleting(false)}>{t("hublessons.sdKeepIt")}</Btn>
             <Btn disabled={busy} data-testid="slide-delete-confirm" onClick={async () => {
               setBusy(true); setErr(null);
               try { await editor.save(slides.filter((_, k) => k !== i)); setI((n) => Math.max(0, Math.min(n, slides.length - 2))); setDeleting(false); }
-              catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t delete"); }
+              catch (e) { setErr(e instanceof Error ? e.message : t("hublessons.sdCouldntDelete")); }
               finally { setBusy(false); }
-            }}>{busy ? "Deleting…" : "Delete slide"}</Btn></>}>
-          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">“{s.title || "This slide"}” ({slides[i] ? i + 1 : ""} of {slides.length}) will be removed from this lesson for everyone.</p>
+            }}>{busy ? t("hublessons.sdDeleting") : t("hublessons.sdDeleteSlide")}</Btn></>}>
+          <p className="m-0 text-[14px] leading-relaxed text-[var(--ink-2)]">{t("hublessons.sdDeleteBody", { title: s.title || t("hublessons.sdThisSlide"), n: i + 1, total: slides.length })}</p>
           {err && <p role="alert" className="m-0 mt-2 text-[13px] font-bold text-[var(--red)]">{err}</p>}
         </Modal>
       )}

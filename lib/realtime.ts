@@ -24,6 +24,7 @@ const listeners = new Set<Listener>();
 let es: EventSource | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;
 let connecting = false;
+let widen: ReturnType<typeof setTimeout> | null = null;
 // Collections the current EventSource was opened watching. The server only
 // attaches Firestore listeners for these (each attach costs a full-collection
 // read), so we pass the union of what mounted views need. The set only ever
@@ -102,9 +103,13 @@ export function subscribeRealtime(collections: string[], onChange: () => void): 
   // If this view needs a collection the open socket isn't watching, reopen it
   // once with the widened set. (Only reopens on growth, so this happens at most
   // a few times per session, not on every mount.)
-  if (es && collections.some((c) => !attachedCols.has(c))) {
-    es.close();
-    es = null;
+  // Debounced: a page mounts its subscribers over a second or two (shell, then the view, then its panels), and every reopen costs a fresh
+  // ticket + a new server-side listener set — so gather the additions and reopen ONCE, not once per component.
+  if (es && collections.some((c) => !attachedCols.has(c)) && !widen) {
+    widen = setTimeout(() => {
+      widen = null;
+      if (es && [...neededCols()].some((c) => !attachedCols.has(c))) { es.close(); es = null; void connect(); }
+    }, 500);
   }
   void connect();
   return () => {

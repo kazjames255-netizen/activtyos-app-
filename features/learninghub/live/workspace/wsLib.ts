@@ -2,6 +2,7 @@ import type { Topic } from "../../types";
 import type { Lesson } from "../lessonTypes";
 import type { Attendee } from "./wsKit";
 import type { Student } from "../../types";
+import { tr } from "../tr";
 
 /** The subject this lesson is about (from its topic), or null when it isn't tied to one. */
 export function lessonSubject(topics: Topic[], lesson: Pick<Lesson, "topicId">): string | null {
@@ -22,7 +23,7 @@ export function attendeesOf(lesson: Lesson, roster: Student[]): Attendee[] {
   const names = new Map((lesson.students ?? []).map((s) => [s.childId, s.childName]));
   return (lesson.childIds ?? []).map((id) => ({
     childId: id,
-    name: names.get(id) ?? byId.get(id)?.childName ?? "Student",
+    name: names.get(id) ?? byId.get(id)?.childName ?? tr("aPanel_student"),
     yearGroup: byId.get(id)?.yearGroup ?? null,
     joinedAt: lesson.attendance?.[id] ?? null,
   }));

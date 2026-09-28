@@ -1,0 +1,56 @@
+[home] Hub de învățare
+[home] No info
+[home] No records
+[home] The unfair advantage for camps, clubs & coaches
+[home] Atinge oriunde pentru a continua
+[home] How it works
+[home] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-live] Hub de învățare
+[tab-live] No info
+[tab-live] No records
+[tab-live] The unfair advantage for camps, clubs & coaches
+[tab-live] How it works
+[tab-live] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-quizzes] Hub de învățare
+[tab-quizzes] No info
+[tab-quizzes] No records
+[tab-quizzes] The unfair advantage for camps, clubs & coaches
+[tab-quizzes] How it works
+[tab-quizzes] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-homework] Hub de învățare
+[tab-homework] No info
+[tab-homework] No records
+[tab-homework] The unfair advantage for camps, clubs & coaches
+[tab-homework] How it works
+[tab-homework] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-homework] No homework right now
+[tab-homework] When Previewkid muip4kb5 sets homework it will appear here with its due date — you can hand it in and read the
+[tab-notes] Hub de învățare
+[tab-notes] No info
+[tab-notes] No records
+[tab-notes] The unfair advantage for camps, clubs & coaches
+[tab-notes] How it works
+[tab-notes] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-notes] Position and direction
+[tab-notes] Properties of shapes
+[tab-notes] Addition and subtraction
+[tab-notes] Multiplication and division
+[tab-notes] Number and place value
+[tab-flashcards] Hub de învățare
+[tab-flashcards] No info
+[tab-flashcards] No records
+[tab-flashcards] The unfair advantage for camps, clubs & coaches
+[tab-flashcards] How it works
+[tab-flashcards] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-dashboard] Hub de învățare
+[tab-dashboard] No info
+[tab-dashboard] No records
+[tab-dashboard] The unfair advantage for camps, clubs & coaches
+[tab-dashboard] How it works
+[tab-dashboard] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.
+[tab-questions] Hub de învățare
+[tab-questions] No info
+[tab-questions] No records
+[tab-questions] The unfair advantage for camps, clubs & coaches
+[tab-questions] How it works
+[tab-questions] Vrei să lucreze singur? Dă-i dispozitivul: fără meniuri, iar pentru a ieși e nevoie de un adult.

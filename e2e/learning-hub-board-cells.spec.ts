@@ -87,7 +87,7 @@ test.beforeEach(async () => { await setHub(accounts.freelancer, true); }); // ot
 const appears = (l: Locator, timeout: number) => l.waitFor({ state: "visible", timeout }).then(() => true, () => false);
 
 async function gotoHub(page: Page, url: string, who: "tutor" | "family") {
-  const heading = page.getByRole("heading", { name: /Teaching Hub|My Classroom/ });
+  const heading = page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ });
   for (let attempt = 0; attempt < 3; attempt++) {
     await setHub(accounts.freelancer, true);
     await page.goto(url);

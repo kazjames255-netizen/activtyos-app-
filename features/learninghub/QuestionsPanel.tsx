@@ -9,6 +9,7 @@ import { LessonPeek } from "./lesson/doubts/LessonPeek";
 import { askDoubt, listDoubts, replyDoubt, seenDoubt, sendDoubtMessage, type Doubt, type DoubtMsg } from "./lesson/doubts/api";
 import type { PanelMeta, PanelProps } from "./panelTypes";
 import { errMsg } from "./types";
+import { hubT, useHubI18n } from "./family/hubT";
 
 // "Ask my teacher" threads, both sides of the same collection (hub/doubtsApi.ts):
 //  - Tutor: "Student message centre" — one folder per student, sub-folders per lesson/topic, unread first. A
@@ -21,22 +22,23 @@ import { errMsg } from "./types";
 export const meta: PanelMeta = { key: "questions", label: "Messages", icon: "help", status: "live", blurb: "Messages between you and students — reply here." };
 
 const POLL_MS = 15_000;
-const STEP_LABEL: Record<string, string> = { start: "Start", learn: "Learn", slides: "Slide", words: "Key words", warm: "Warm-up", quiz: "Quiz", done: "Done" };
+const STEP_KEY: Record<string, string> = { start: "hubfam.qzQpStepStart", learn: "hubfam.qzQpStepLearn", slides: "hubfam.qzQpStepSlides", words: "hubfam.qzQpStepWords", warm: "hubfam.qzQpStepWarm", quiz: "hubfam.qzQpStepQuiz", done: "hubfam.qzQpStepDone" };
+type TFn = (k: string, v?: Record<string, string | number>) => string;
+const stepName = (t: TFn, step: string) => (STEP_KEY[step] ? t(STEP_KEY[step]!) : step);
 const GENERAL = "general";
 
 /** Where a question came from, in words either side can act on without opening the lesson: the real slide title or
  *  question text, never a bare step name. Empty for a plain message with no lesson context. */
-function whereLabel(d: Pick<Doubt, "noteId" | "step" | "slide" | "questionPrompt">): string {
+function whereLabel(d: Pick<Doubt, "noteId" | "step" | "slide" | "questionPrompt">, t: TFn): string {
   if (!d.noteId) return "";
-  const step = STEP_LABEL[d.step] ?? d.step;
-  if (d.step === "slides") return d.questionPrompt ? `${step} ${d.slide + 1} — "${d.questionPrompt}"` : `${step} ${d.slide + 1}`;
-  return d.questionPrompt ? `${step} — "${d.questionPrompt}"` : step;
+  const step = d.step === "slides" ? t("hubfam.qzQpSlideN", { n: d.slide + 1 }) : stepName(t, d.step);
+  return d.questionPrompt ? t("hubfam.qzQpWhereQ", { step, q: d.questionPrompt }) : step;
 }
 /** The thread list / header subtitle: lesson + where, or just "General message" when there's no lesson. */
-function subtitleFor(d: Pick<Doubt, "noteId" | "lessonTitle" | "step" | "slide" | "questionPrompt">): string {
-  if (!d.noteId) return "General message";
-  const where = whereLabel(d);
-  return where ? `${d.lessonTitle} · ${where}` : d.lessonTitle ?? "Lesson";
+function subtitleFor(d: Pick<Doubt, "noteId" | "lessonTitle" | "step" | "slide" | "questionPrompt">, t: TFn): string {
+  if (!d.noteId) return t("hubfam.qzQpGeneral");
+  const where = whereLabel(d, t);
+  return where ? `${d.lessonTitle} · ${where}` : d.lessonTitle ?? t("hubfam.qzQpLesson");
 }
 type BadgeTone = { bg: string; fg: string };
 const STEP_TONE: Record<string, BadgeTone> = {
@@ -53,13 +55,13 @@ const STEP_TONE: Record<string, BadgeTone> = {
  *  pill for which step it's from, and the actual question as a lively highlighted quote —
  *  instead of one flat grey line — so the thread reads as "about something", fast. */
 function ThreadSubtitle(d: Pick<Doubt, "noteId" | "lessonTitle" | "step" | "slide" | "questionPrompt">) {
-  if (!d.noteId) return <span className="italic text-[var(--ink-3)]">General message</span>;
+  if (!d.noteId) return <span className="italic text-[var(--ink-3)]">{hubT("hubfam.qzQpGeneral")}</span>;
   const tone = STEP_TONE[d.step] ?? STEP_TONE.start!;
-  const stepLabel = STEP_LABEL[d.step] ?? d.step;
-  const pillLabel = d.step === "slides" ? `${stepLabel} ${d.slide + 1}` : stepLabel;
+  const stepLabel = stepName(hubT, d.step);
+  const pillLabel = d.step === "slides" ? hubT("hubfam.qzQpSlideN", { n: d.slide + 1 }) : stepLabel;
   return (
     <span className="flex flex-wrap items-center gap-1.5">
-      <span className="font-bold text-[var(--brand-2,#2f6bd8)]">✨ {d.lessonTitle ?? "Lesson"}</span>
+      <span className="font-bold text-[var(--brand-2,#2f6bd8)]">✨ {d.lessonTitle ?? hubT("hubfam.qzQpLesson")}</span>
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.03em]" style={{ background: tone.bg, color: tone.fg }}>
         {pillLabel}
       </span>
@@ -70,14 +72,17 @@ function ThreadSubtitle(d: Pick<Doubt, "noteId" | "lessonTitle" | "step" | "slid
   );
 }
 
-const relTime = (iso: string) => {
+/** "now" / "5 min. ago" / "3 hr. ago" / "2 days ago" in the active language (Intl handles the plural + word order). */
+const relTime = (iso: string, locale: string) => {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.round(ms / 60_000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
+  let rtf: Intl.RelativeTimeFormat;
+  try { rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" }); } catch { rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "short" }); }
+  if (m < 1) return rtf.format(0, "second");
+  if (m < 60) return rtf.format(-m, "minute");
   const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
+  if (h < 24) return rtf.format(-h, "hour");
+  return rtf.format(-Math.round(h / 24), "day");
 };
 
 export function Panel(props: PanelProps) {
@@ -91,7 +96,7 @@ export function Panel(props: PanelProps) {
 interface Group { key: string; label: string; sub: SubGroup[]; unread: number }
 interface SubGroup { key: string; label: string; rows: Doubt[]; unread: number }
 
-function groupBy(rows: Doubt[], topLevel: "child" | "lesson", unreadOf: (d: Doubt) => boolean): Group[] {
+function groupBy(rows: Doubt[], topLevel: "child" | "lesson", unreadOf: (d: Doubt) => boolean, t: TFn): Group[] {
   const byTop = new Map<string, Doubt[]>();
   for (const d of rows) {
     const k = topLevel === "child" ? d.childId : (d.noteId ?? GENERAL);
@@ -105,10 +110,10 @@ function groupBy(rows: Doubt[], topLevel: "child" | "lesson", unreadOf: (d: Doub
     }
     const sub: SubGroup[] = [...bySub.entries()].map(([skey, srows]) => {
       srows.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
-      return { key: skey, label: topLevel === "child" ? (srows[0]!.lessonTitle ?? "General") : subtitleFor(srows[0]!), rows: srows, unread: srows.filter(unreadOf).length };
+      return { key: skey, label: topLevel === "child" ? (srows[0]!.lessonTitle ?? t("hubfam.qzQpGeneralFolder")) : subtitleFor(srows[0]!, t), rows: srows, unread: srows.filter(unreadOf).length };
     });
     sub.sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0) || b.rows[0]!.lastAt.localeCompare(a.rows[0]!.lastAt));
-    return { key, label: topLevel === "child" ? top[0]!.childName : (top[0]!.lessonTitle ?? "General"), sub, unread: sub.reduce((n, s) => n + s.unread, 0) };
+    return { key, label: topLevel === "child" ? top[0]!.childName : (top[0]!.lessonTitle ?? t("hubfam.qzQpGeneralFolder")), sub, unread: sub.reduce((n, s) => n + s.unread, 0) };
   });
   groups.sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0) || b.sub[0]!.rows[0]!.lastAt.localeCompare(a.sub[0]!.rows[0]!.lastAt));
   return groups;
@@ -117,6 +122,7 @@ function groupBy(rows: Doubt[], topLevel: "child" | "lesson", unreadOf: (d: Doub
 // ── Tutor: every thread across the roster, folder per student ───────────────
 
 function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps["config"]; students: PanelProps["students"] }) {
+  const { t, locale } = useHubI18n();
   const [rows, setRows] = useState<Doubt[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [openChild, setOpenChild] = useState<string | null>(null);
@@ -130,7 +136,7 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
   useRealtime(["hubDoubts"], load);
   useNewMessageRequest(useCallback((childId: string) => setComposing(childId), []));
 
-  const groups = useMemo(() => (rows ? groupBy(rows, "child", (d) => d.unreadByTutor) : []), [rows]);
+  const groups = useMemo(() => (rows ? groupBy(rows, "child", (d) => d.unreadByTutor, t) : []), [rows, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A bell notification (?open=doubt:<id>) selects that thread and expands the folders it's in.
   useEffect(() => {
@@ -149,20 +155,20 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
   const update = (next: Doubt) => setRows((rs) => rs?.map((r) => (r.id === next.id ? next : r)) ?? null);
   const onCreated = (d: Doubt) => { setComposing(null); setRows((rs) => [...(rs ?? []), d]); setOpenId(d.id); setOpenChild(d.childId); setOpenLesson(d.noteId ?? GENERAL); };
 
-  if (!rows) return <SkeletonRows rows={4} label="Loading messages" variant="card" />;
+  if (!rows) return <SkeletonRows rows={4} label={t("hubfam.qzQpLoading")} variant="card" />;
 
   return (
     <div id="hub-questions" className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start" data-testid="questions-panel">
       <div className="space-y-2 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto">
         <button type="button" onClick={() => setComposing(students[0]?.childId ?? "")} data-testid="question-new-message"
           className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-[var(--brand-line)] px-3 py-2.5 text-[13px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>
-          <Icon name="plus" size={15} />New message
+          <Icon name="plus" size={15} />{t("hubfam.qzQpNew")}
         </button>
-        {!rows.length && <EmptyState id="hub-questions-empty" icon="help" title="No messages yet" body="When a student taps “Ask a question” inside a lesson, it shows up here." />}
+        {!rows.length && <EmptyState id="hub-questions-empty" icon="help" title={t("hubfam.qzQpNoneT")} body={t("hubfam.qzQpNoneTB")} />}
         {groups.map((g) => (
           <div key={g.key} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
             <button type="button" onClick={() => setOpenChild(openChild === g.key ? null : g.key)} data-testid="question-folder-child"
-              className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left ${FOCUS}`}>
+              className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-start ${FOCUS}`}>
               <Icon name="chevronRight" size={14} className={`flex-none transition-transform ${openChild === g.key ? "rotate-90" : ""}`} />
               <Icon name="folder" size={16} className="flex-none text-[var(--ink-3)]" />
               <span className="min-w-0 flex-1 truncate text-[13.5px] font-extrabold text-[var(--ink)]">{g.label}</span>
@@ -173,7 +179,7 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
                 {g.sub.map((s) => (
                   <li key={s.key} className="rounded-xl border border-[var(--line)]">
                     <button type="button" onClick={() => setOpenLesson(openLesson === s.key ? null : s.key)} data-testid="question-folder-lesson"
-                      className={`flex w-full items-center gap-1.5 px-2.5 py-2 text-left ${FOCUS}`}>
+                      className={`flex w-full items-center gap-1.5 px-2.5 py-2 text-start ${FOCUS}`}>
                       <Icon name="chevronRight" size={12} className={`flex-none transition-transform ${openLesson === s.key ? "rotate-90" : ""}`} />
                       <span className="min-w-0 flex-1 truncate text-[12px] font-bold text-[var(--ink-2)]">{s.label}</span>
                       {s.unread > 0 && <span className="flex-none rounded-full bg-[var(--brand)] px-1.5 text-[10.5px] font-extrabold text-white">{s.unread}</span>}
@@ -186,12 +192,12 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
                           return (
                             <li key={d.id}>
                               <button type="button" onClick={() => setOpenId(d.id)} data-testid="question-thread-open"
-                                className={`w-full rounded-lg border p-2 text-left transition ${active ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-transparent hover:bg-[var(--panel)]"} ${FOCUS}`}>
+                                className={`w-full rounded-lg border p-2 text-start transition ${active ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-transparent hover:bg-[var(--panel)]"} ${FOCUS}`}>
                                 <div className="flex items-center gap-1.5">
-                                  {d.unreadByTutor && <span aria-label="Unread" className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />}
+                                  {d.unreadByTutor && <span aria-label={t("hubfam.qzQpUnread")} className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />}
                                   <span className="line-clamp-1 text-[12.5px] leading-snug text-[var(--ink)]">{last?.text}</span>
                                 </div>
-                                <div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{relTime(d.lastAt)}</div>
+                                <div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{relTime(d.lastAt, locale)}</div>
                               </button>
                             </li>
                           );
@@ -209,7 +215,7 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
         ? <NewMessageComposer qs={qs} students={students} childId={composing} onChildId={setComposing} onCancel={() => setComposing(null)} onSent={onCreated} />
         : open && (
           <>
-            <ThreadPane key={open.id} title={open.childName} subtitle={subtitleFor(open)} messages={open.messages} mine="tutor" childName={open.childName}
+            <ThreadPane key={open.id} title={open.childName} subtitle={subtitleFor(open, t)} messages={open.messages} mine="tutor" childName={open.childName}
               unread={open.unreadByTutor} onSeen={() => update({ ...open, unreadByTutor: false })}
               onSend={async (text) => update(await replyDoubt(qs, open.id, text))} sendTestId="question-thread"
               onView={open.noteId ? () => setPeek(true) : undefined} />
@@ -223,6 +229,7 @@ function TutorCentre({ qs, config, students }: { qs: string; config: PanelProps[
 // ── Family: this child's own threads, grouped by lesson/topic ───────────────
 
 function FamilyMessages({ qs, childId, config }: { qs: string; childId: string | null; config: PanelProps["config"] }) {
+  const { t, locale } = useHubI18n();
   const [rows, setRows] = useState<Doubt[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [openLesson, setOpenLesson] = useState<string | null>(null);
@@ -234,7 +241,7 @@ function FamilyMessages({ qs, childId, config }: { qs: string; childId: string |
   useEffect(() => { load(); const t = setInterval(load, POLL_MS); return () => clearInterval(t); }, [load]);
   useRealtime(["hubDoubts"], load);
 
-  const groups = useMemo(() => (rows ? groupBy(rows, "lesson", (d) => d.unreadByFamily) : []), [rows]);
+  const groups = useMemo(() => (rows ? groupBy(rows, "lesson", (d) => d.unreadByFamily, t) : []), [rows, locale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!linkId || !rows) return;
@@ -247,8 +254,8 @@ function FamilyMessages({ qs, childId, config }: { qs: string; childId: string |
     setOpenLesson(groups[0]!.key);
   }, [groups, openLesson]);
 
-  if (!childId) return <EmptyState id="hub-questions-nochild" icon="help" title="No child selected" body="Choose a child to see their messages." />;
-  if (!rows) return <SkeletonRows rows={4} label="Loading messages" variant="card" />;
+  if (!childId) return <EmptyState id="hub-questions-nochild" icon="help" title={t("hubfam.qzQpNoChild")} body={t("hubfam.qzQpNoChildB")} />;
+  if (!rows) return <SkeletonRows rows={4} label={t("hubfam.qzQpLoading")} variant="card" />;
 
   const flatRows = groups.flatMap((g) => g.sub.flatMap((s) => s.rows));
   const open = flatRows.find((d) => d.id === openId) ?? flatRows[0] ?? null;
@@ -260,13 +267,13 @@ function FamilyMessages({ qs, childId, config }: { qs: string; childId: string |
       <div className="space-y-2 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto">
         <button type="button" onClick={() => setComposing(true)} data-testid="question-new-message"
           className={`flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-dashed border-[var(--brand-line)] px-3 py-2.5 text-[13px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>
-          <Icon name="plus" size={15} />New message
+          <Icon name="plus" size={15} />{t("hubfam.qzQpNew")}
         </button>
-        {!rows.length && <EmptyState id="hub-questions-empty" icon="help" title="No messages yet" body="Tap “Ask a question” inside any lesson, or start one here — you and your tutor's replies both show up here, any time." />}
+        {!rows.length && <EmptyState id="hub-questions-empty" icon="help" title={t("hubfam.qzQpNoneT")} body={t("hubfam.qzQpNoneFB")} />}
         {groups.map((g) => (
           <div key={g.key} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
             <button type="button" onClick={() => setOpenLesson(openLesson === g.key ? null : g.key)} data-testid="question-folder-lesson"
-              className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left ${FOCUS}`}>
+              className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-start ${FOCUS}`}>
               <Icon name="chevronRight" size={14} className={`flex-none transition-transform ${openLesson === g.key ? "rotate-90" : ""}`} />
               <Icon name="folder" size={16} className="flex-none text-[var(--ink-3)]" />
               <span className="min-w-0 flex-1 truncate text-[13.5px] font-extrabold text-[var(--ink)]">{g.label}</span>
@@ -277,17 +284,17 @@ function FamilyMessages({ qs, childId, config }: { qs: string; childId: string |
                 {g.sub.flatMap((s) => s.rows).map((d) => {
                   const last = d.messages[d.messages.length - 1];
                   const active = d.id === open?.id;
-                  const where = whereLabel(d);
+                  const where = whereLabel(d, t);
                   return (
                     <li key={d.id}>
                       <button type="button" onClick={() => setOpenId(d.id)} data-testid="question-thread-open"
-                        className={`w-full rounded-lg border p-2 text-left transition ${active ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-transparent hover:bg-[var(--panel)]"} ${FOCUS}`}>
+                        className={`w-full rounded-lg border p-2 text-start transition ${active ? "border-[var(--brand)] bg-[var(--brand-soft)]" : "border-transparent hover:bg-[var(--panel)]"} ${FOCUS}`}>
                         {where && <div className="flex items-center gap-1.5"><span className="text-[11.5px] font-bold text-[var(--ink-2)]">{where}</span></div>}
                         <div className="flex items-center gap-1.5">
-                          {d.unreadByFamily && <span aria-label="Unread" className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />}
+                          {d.unreadByFamily && <span aria-label={t("hubfam.qzQpUnread")} className="h-2 w-2 flex-none rounded-full bg-[var(--brand)]" />}
                           <span className="line-clamp-1 text-[12.5px] leading-snug text-[var(--ink)]">{last?.text}</span>
                         </div>
-                        <div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{relTime(d.lastAt)}</div>
+                        <div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{relTime(d.lastAt, locale)}</div>
                       </button>
                     </li>
                   );
@@ -301,7 +308,7 @@ function FamilyMessages({ qs, childId, config }: { qs: string; childId: string |
         ? <NewMessageComposer qs={qs} onCancel={() => setComposing(false)} onSent={onCreated} />
         : open && (
           <>
-            <ThreadPane key={open.id} title={open.lessonTitle ?? "General message"} subtitle={whereLabel(open) || "A message to your tutor"} messages={open.messages} mine="child" childName={open.childName}
+            <ThreadPane key={open.id} title={open.lessonTitle ?? t("hubfam.qzQpGeneral")} subtitle={whereLabel(open, t) || t("hubfam.qzQpToTutor")} messages={open.messages} mine="child" childName={open.childName}
               unread={open.unreadByFamily} onSeen={() => update({ ...open, unreadByFamily: false })}
               onSend={async (text) => update(await sendDoubtMessage(qs, open.id, text))} sendTestId="question-thread"
               onView={open.noteId ? () => setPeek(true) : undefined} />
@@ -320,6 +327,7 @@ function NewMessageComposer({ qs, students, childId, onChildId, onCancel, onSent
   students?: PanelProps["students"]; childId?: string | null; onChildId?: (id: string) => void;
   onCancel: () => void; onSent: (d: Doubt) => void;
 }) {
+  const { t } = useHubI18n();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -329,14 +337,14 @@ function NewMessageComposer({ qs, students, childId, onChildId, onCancel, onSent
     if (!text.trim() || (isTutor && !childId)) return;
     setBusy(true); setErr(null);
     try { const d = await askDoubt(qs, { text: text.trim(), ...(isTutor ? { childId: childId! } : {}) }); onSent(d); }
-    catch (e) { setErr(errMsg(e, "Couldn't send that — try again")); }
+    catch (e) { setErr(errMsg(e, t("hubfam.qzQpSendFail"))); }
     finally { setBusy(false); }
   };
 
   return (
     <div className="flex min-h-[420px] flex-col rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4" data-testid="question-new-composer">
       <div className="border-b border-[var(--line)] pb-3">
-        <div className="text-[15px] font-extrabold text-[var(--ink)]">New message</div>
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("hubfam.qzQpNew")}</div>
         {isTutor && (
           <select value={childId ?? ""} onChange={(e) => onChildId?.(e.target.value)} data-testid="question-new-child"
             className={`mt-2 min-h-[40px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[13.5px] text-[var(--ink)] ${FOCUS}`}>
@@ -345,15 +353,15 @@ function NewMessageComposer({ qs, students, childId, onChildId, onCancel, onSent
         )}
       </div>
       <div className="min-h-0 flex-1 py-3">
-        <p className="m-0 text-[13px] text-[var(--ink-2)]">Not about a particular lesson — just a message.</p>
+        <p className="m-0 text-[13px] text-[var(--ink-2)]">{t("hubfam.qzQpNotLesson")}</p>
       </div>
       {err && <p role="alert" className="mb-2 text-[13px] font-semibold text-[var(--red)]">{err}</p>}
       <div className="flex items-end gap-2 border-t border-[var(--line)] pt-3">
-        <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={2} placeholder="Write your message…" autoFocus data-testid="question-new-text"
+        <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={2} placeholder={t("hubfam.qzQpWritePh")} autoFocus data-testid="question-new-text"
           className={`min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[14px] text-[var(--ink)] ${FOCUS}`} />
-        <button type="button" onClick={onCancel} className={`inline-flex min-h-[44px] items-center rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>Cancel</button>
+        <button type="button" onClick={onCancel} className={`inline-flex min-h-[44px] items-center rounded-xl px-3 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>{t("hubfam.qzCancel")}</button>
         <button type="button" onClick={send} disabled={busy || !text.trim() || (isTutor && !childId)} data-testid="question-new-send"
-          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}><Icon name="check" size={15} />{busy ? "Sending…" : "Send"}</button>
+          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}><Icon name="check" size={15} />{busy ? t("hubfam.qzQpSending") : t("hubfam.qzQpSend")}</button>
       </div>
     </div>
   );
@@ -367,6 +375,7 @@ function ThreadPane({ title, subtitle, messages, mine, childName, unread, onSeen
   /** A quick, read-only popup of the exact slide/question this thread is about — omitted for a plain message. */
   onView?: () => void;
 }) {
+  const { t } = useHubI18n();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -379,7 +388,7 @@ function ThreadPane({ title, subtitle, messages, mine, childName, unread, onSeen
     if (!text.trim()) return;
     setBusy(true); setErr(null);
     try { await onSend(text.trim()); setText(""); }
-    catch (e) { setErr(errMsg(e, "Couldn't send that — try again")); }
+    catch (e) { setErr(errMsg(e, t("hubfam.qzQpSendFail"))); }
     finally { setBusy(false); }
   };
 
@@ -392,8 +401,8 @@ function ThreadPane({ title, subtitle, messages, mine, childName, unread, onSeen
         </div>
         {onView && (
           <button type="button" onClick={onView} data-testid="question-thread-view"
-            className={`inline-flex min-h-[36px] flex-none items-center gap-1.5 rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>
-            <Icon name="external" size={14} />View slide
+            className={`inline-flex min-h-[44px] lg:min-h-[36px] flex-none items-center gap-1.5 rounded-full border border-[var(--brand)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>
+            <Icon name="external" size={14} />{t("hubfam.qzQpViewSlide")}
           </button>
         )}
       </div>
@@ -409,10 +418,10 @@ function ThreadPane({ title, subtitle, messages, mine, childName, unread, onSeen
       </div>
       {err && <p role="alert" className="mb-2 text-[13px] font-semibold text-[var(--red)]">{err}</p>}
       <div className="flex items-end gap-2 border-t border-[var(--line)] pt-3">
-        <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} rows={2} placeholder="Reply…" data-testid="question-thread-reply"
+        <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} rows={2} placeholder={t("hubfam.qzQpReplyPh")} data-testid="question-thread-reply"
           className={`min-h-[44px] flex-1 resize-none rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[14px] text-[var(--ink)] ${FOCUS}`} />
         <button type="button" onClick={send} disabled={busy || !text.trim()} data-testid="question-thread-send"
-          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}><Icon name="check" size={15} />{busy ? "Sending…" : "Send"}</button>
+          className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-[14px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}><Icon name="check" size={15} />{busy ? t("hubfam.qzQpSending") : t("hubfam.qzQpSend")}</button>
       </div>
     </div>
   );

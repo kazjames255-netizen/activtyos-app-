@@ -19,6 +19,7 @@
 //  · Writes are batched (≤400 ops, ≤~6MB), retried, ordered topics → questions → assessments → notes → flashcards per
 //    unit, so an interrupted run never leaves an assessment pointing at a missing question. Re-running resumes.
 //  · Pure content: no LLM, no network. Every doc: imported:true + source:{provider:"oak",url,licence:"OGL-3.0"}.
+import { sanitiseForImport } from "./noOak";
 import "dotenv/config";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -455,7 +456,7 @@ class Writer {
         for (;;) {
           const i = next++; if (i >= batches.length) return;
           const chunk = batches[i];
-          if (this.live) await withRetry("write batch", async () => { const b = db.batch(); for (const w of chunk) b.set(db.collection(w.col).doc(w.id), w.data); await b.commit(); });
+          if (this.live) await withRetry("write batch", async () => { const b = db.batch(); for (const w of chunk) b.set(db.collection(w.col).doc(w.id), sanitiseForImport(w.data, `${w.col}/${w.id}`)); await b.commit(); });
           bump(this.written, col, chunk.length);
         }
       };

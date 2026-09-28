@@ -53,7 +53,7 @@ export function SubjectCover({ subject, height = 72, width, rounded = "rounded-x
   return (
     <div data-subject-cover={subject} className={`relative flex-none overflow-hidden ${rounded} ${className}`} style={{ height, width: width ?? "100%", background: `linear-gradient(135deg, ${tint(c, 30)} 0%, ${tint(c, 12)} 100%)`, color: c }}>
       <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden
-        className={`pointer-events-none absolute -bottom-3 opacity-25 ${artRight == null ? "-right-2" : ""}`} style={{ height: Math.max(height * 1.25, 72), width: Math.max(height * 1.25, 72), ...(artRight != null ? { right: artRight } : null) }}>
+        className={`pointer-events-none absolute -bottom-3 opacity-25 ${artRight == null ? "-end-2" : ""}`} style={{ height: Math.max(height * 1.25, 72), width: Math.max(height * 1.25, 72), ...(artRight != null ? { right: artRight } : null) }}>
         {P[glyphFor(subject)]}
       </svg>
       {children ? <div className="relative">{children}</div> : null}

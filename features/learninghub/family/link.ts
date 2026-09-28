@@ -87,6 +87,17 @@ export function setLinkParams(patch: { tab?: string | null; sub?: string | null;
   commit(u, "replace", dropOpen ? false : null);
 }
 
+/** Seed `open=` (and optionally `tab=`) on the CURRENT url without pushing a history entry — used when a deep-link
+ *  route (e.g. /custdash/learninghub/[childId]/homework/[id]) mounts the hub already pointed at one item, so the
+ *  panel's own `useLinkOpen` picks it up on its very next render, same as a query-string deep link would. */
+export function seedOpen(ref: OpenRef, opts?: { tab?: string }) {
+  if (typeof window === "undefined") return;
+  const u = new URL(window.location.href);
+  if (opts?.tab) u.searchParams.set("tab", opts.tab);
+  u.searchParams.set("open", `${ref.kind}:${ref.id}`);
+  commit(u, "replace", null);
+}
+
 /** A ready-to-use path for a lesson / quiz / homework (notifications, emails, "send Ava straight to this"). */
 export function hubLinkPath(base: string, o: { tab: string; child?: string | null; open?: OpenRef | null; hw?: string | null }): string {
   const p = new URLSearchParams({ tab: o.tab });

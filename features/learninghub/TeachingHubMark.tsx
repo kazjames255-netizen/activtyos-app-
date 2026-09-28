@@ -12,7 +12,7 @@ import type { CSSProperties, ReactNode } from "react";
  *  no outlines — same drawing language as server/src/oak/ownArt/kit.ts, but in the app's CSS variables. */
 export function TeachingHubGlyph({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
-    <svg viewBox="0 0 64 64" width="100%" height="100%" role="img" aria-label="Teaching and Learning Hub" className={className} style={style}>
+    <svg viewBox="0 0 64 64" width="100%" height="100%" role="img" aria-label="Teaching Hub" className={className} style={style}>
       <defs>
         <linearGradient id="thm-badge" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="var(--brand-2)" />
@@ -31,14 +31,14 @@ export function TeachingHubGlyph({ className = "", style }: { className?: string
   );
 }
 
-/** The glyph plus real text ("Teaching and Learning Hub"), in the app's own display font — a wordmark/icon
+/** The glyph plus real text ("Teaching Hub"), in the app's own display font — a wordmark/icon
  *  combo for a full-bleed empty state, not for small inline use (use `TeachingHubGlyph` alone for that). */
 export function TeachingHubMark({ size = 56, gap = 10, direction = "column", className = "" }: { size?: number; gap?: number; direction?: "row" | "column"; className?: string }): ReactNode {
   return (
     <span className={`inline-flex items-center ${direction === "column" ? "flex-col" : "flex-row"} ${className}`} style={{ gap }}>
       <span style={{ width: size, height: size, flex: "none" }}><TeachingHubGlyph /></span>
       <span className="text-center text-[13px] font-extrabold leading-tight text-[var(--ink-2)]" style={{ fontFamily: "var(--ff-display), var(--ff), sans-serif" }}>
-        Teaching and<br />Learning Hub
+        Teaching<br />Hub
       </span>
     </span>
   );

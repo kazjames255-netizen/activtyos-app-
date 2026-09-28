@@ -170,7 +170,7 @@ Nineteenth-century writers often used their stories to **comment on society** as
 | Genre: science fiction | Stories about science, technology or other worlds |
 | Foreshadowing | A hint of later events |
 
-**Context:** Victorian Britain was industrial and unequal. Many writers, such as **Dickens**, wrote about poverty. Rapid scientific discoveries also inspired writers such as **H. G. Wells** and **Mary Shelley** to imagine the consequences of new ideas.
+**Context:** Victorian Britain was industrial and unequal. Many writers, such as **Dickens**, wrote about poverty. Rapid scientific discoveries also inspired writers such as **H. G. Wells** to imagine the consequences of new ideas; **Mary Shelley** did the same earlier, in *Frankenstein* (1818), which belongs to the Romantic period rather than the Victorian one.
 
 **Character** can be revealed by description, dialogue, actions and what other characters say.
 

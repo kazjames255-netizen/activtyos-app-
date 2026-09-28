@@ -1,24 +1,30 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, FieldLabel, Input, Select } from "@/components/ui";
+import { Button, FieldLabel, Input } from "@/components/ui";
 import { get, post, put } from "@/lib/api";
 import type { HubSettings } from "@/lib/hubConfig";
 import { errMsg, groupMemberIds, topicLabel, type HubGroup, type Note, type Student, type Topic } from "../types";
 import { GroupQuickPick, RecipientSummary, pruneGroups } from "../groupKit";
 import { VideoEditor, videoPayload, videosToInputs } from "../videoKit";
 import { Dialog, FOCUS, Notice, StudentPicker, goToTab, toLocalDateInput, withQs } from "../teachKit";
-import type { TutorHomework } from "./hwTypes";
-import { NoteChecklist, QuizSelect, publishNote, publishQuiz, type QuizPick } from "./hwPickers";
-import { LessonPackPicker, fetchHomeworkPack, type HomeworkPack } from "./hwPack";
+import type { TutorHomework, WorksheetRef } from "./hwTypes";
+import { useHw } from "./hwI18n";
+import { LessonPreviewDialog, LinkedRows, QuizPreviewDialog, WorksheetPreviewDialog } from "./hwPreview";
+import { WorksheetPicker, publishNote, publishQuiz, type QuizPick } from "./hwPickers";
+import { fetchHomeworkPack, type HomeworkPack } from "./hwPack";
 
 // Tutor: create or edit a homework. Assigning creates one submission per student
 // (server-side); editing can add students (removing one only drops a hand-in
 // they haven't started).
+//
+// Creation is BARE: title, instructions, due date, who it is for, and optionally a worksheet. The `initial*` linking props
+// (quiz / lessons from a lesson or group entry point) are accepted for compatibility but no longer link anything on a NEW
+// homework; a legacy homework that already links a quiz / lessons / flashcards still shows and round-trips them when edited.
 
 const endOfDay = (dateStr: string) => new Date(`${dateStr}T23:59:00`).toISOString();
 
-export function HomeworkForm({ homework, students, topics, qs, config, groups = [], initialGroupId = null, initialChildIds, initialGroupIds, initialAssessmentId, initialNoteIds, initialTitle, initialInstructions, packNoteId, focusQuiz = false, onClose, onSaved }: {
+export function HomeworkForm({ homework, students, topics, qs, config, groups = [], initialGroupId = null, initialChildIds, initialGroupIds, initialTitle, initialInstructions, packNoteId, focusQuiz = false, onClose, onSaved }: {
   homework: TutorHomework | null;
   students: Student[];
   topics: Topic[];
@@ -31,7 +37,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   initialChildIds?: string[];
   initialGroupIds?: string[];
   initialAssessmentId?: string;
-  /** Notes attached up front (a lesson's worksheet PDF) and a starting title. */
+  /** Kept for callers that still pass them; ignored on a new homework (creation is bare). */
   initialNoteIds?: string[];
   initialTitle?: string;
   initialInstructions?: string;
@@ -42,19 +48,21 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { h, hp } = useHw();
   const roster = useMemo(() => students.filter((s) => s.active !== false), [students]);
   const defaultDue = () => toLocalDateInput(new Date(Date.now() + (config.homeworkDueDays || 7) * 86_400_000));
   const [title, setTitle] = useState(homework?.title ?? initialTitle ?? "");
   const [instructions, setInstructions] = useState(homework?.instructions ?? initialInstructions ?? "");
   const [due, setDue] = useState(() => (homework ? toLocalDateInput(new Date(homework.dueAt)) : defaultDue()));
-  const [assessmentId, setAssessmentId] = useState(homework?.assessmentId ?? initialAssessmentId ?? "");
-  const [noteIds, setNoteIds] = useState<string[]>(homework?.noteIds ?? initialNoteIds ?? []);
+  const [assessmentId, setAssessmentId] = useState(homework?.assessmentId ?? "");
+  const [preview, setPreview] = useState<{ kind: "note" | "quiz" | "worksheet"; id: string; title?: string; quizId?: string } | null>(null);
+  const [worksheetIds, setWorksheetIds] = useState<string[]>(homework?.worksheetNoteIds ?? homework?.worksheets?.map((w) => w.noteId) ?? []);
+  const [wsRows, setWsRows] = useState<Map<string, WorksheetRef>>(() => new Map((homework?.worksheets ?? []).map((w) => [w.noteId, w] as const)));
+  const [noteIds, setNoteIds] = useState<string[]>(homework?.noteIds ?? []);
   const [flashTopic, setFlashTopic] = useState(homework?.flashcardTopicId ?? "");
   const preGroup = useMemo(() => (initialGroupId ? groups.find((g) => g.id === initialGroupId) ?? null : null), [initialGroupId, groups]);
   const [childIds, setChildIds] = useState<string[]>(() => homework?.assignedChildIds ?? initialChildIds ?? (preGroup ? groupMemberIds(preGroup) : roster.length === 1 ? [roster[0]!.childId] : []));
   const [groupIds, setGroupIds] = useState<string[]>(() => homework?.groupIds ?? initialGroupIds ?? (preGroup ? [preGroup.id] : []));
-  // Year filter default: ONLY when exactly one student is ticked, and only if their year is in the tenant's list.
-  const singleYear = (() => { if (childIds.length !== 1) return ""; const y = (roster.find((s) => s.childId === childIds[0])?.yearGroup ?? "").trim().toLowerCase(); return (config.yearGroups ?? []).find((g) => g.trim().toLowerCase() === y) ?? ""; })();
   const [videos, setVideos] = useState(() => videosToInputs(homework?.videos));
   // The chosen quiz (any state — a lesson's exit quiz may still be a draft), the lessons attached (id → row, so drafts are spotted),
   // and which enrolled students that quiz can't reach. The pickers themselves search server-side (hwPickers.tsx).
@@ -65,18 +73,18 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   // Ready-made homework: the pack fills every field (all still editable). `edited` = the tutor has typed in the title/instructions, so a
   // late-arriving pack (opened from a lesson) never overwrites their words.
   const [pack, setPack] = useState<HomeworkPack | null>(null);
-  const [packBusy, setPackBusy] = useState(false);
+  const [, setPackBusy] = useState(false);
   const edited = useRef(false);
   const applyPack = (p: HomeworkPack) => {
-    setPack(p); setTitle(p.title); setInstructions(p.instructions);
-    setDue(toLocalDateInput(new Date(Date.now() + p.dueInDays * 86_400_000)));
-    setAssessmentId(p.assessmentId ?? ""); setNoteIds(p.noteIds); setFlashTopic(p.flashcardTopicId ?? "");
+    // Bare on creation: only the title (and the year, for "set for all my Year N") comes from the lesson. The quiz, lessons and
+    // flashcards of the pack are NOT linked; the tutor attaches the lesson's worksheet below if they want one.
+    setPack(p); setTitle(p.title);
   };
   const usePackOf = (noteId: string, auto: boolean) => {
     setPackBusy(true);
     fetchHomeworkPack(qs, noteId)
       .then((p) => { if (!auto || !edited.current) applyPack(p); else setPack(p); })
-      .catch((e) => { if (!auto) setErr(errMsg(e, "Couldn't build homework from that lesson")); })
+      .catch((e) => { if (!auto) setErr(errMsg(e, h("errPack"))); })
       .finally(() => setPackBusy(false));
   };
   useEffect(() => { if (packNoteId && !homework) usePackOf(packNoteId, true); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [packNoteId]);
@@ -93,9 +101,9 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   }, [qs, assessmentId]);
 
   // Attached lessons (up front from a lesson's "Set for children", or an edit): fetch their rows by id so a draft is recognised.
-  const attachedKey = noteIds.join(",");
+  const attachedKey = [...noteIds, ...worksheetIds].join(",");
   useEffect(() => {
-    const need = noteIds.filter((id) => !noteRows.has(id));
+    const need = [...new Set([...noteIds, ...worksheetIds])].filter((id) => !noteRows.has(id));
     if (!need.length) return;
     let live = true;
     get<Note[] | { items: Note[] }>(`/api/learning-hub/notes${withQs(qs, { ids: need.join(","), limit: "200" })}`)
@@ -107,9 +115,9 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   // "Set a quiz" quick action: put the cursor (and the view) on the picker once it has rendered.
   useEffect(() => { if (focusQuiz) setTimeout(() => document.getElementById("hub-hw-quiz")?.focus(), 400); }, [focusQuiz]);
 
-  const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
-  const sortedTopics = useMemo(() => [...topics].sort((a, b) => topicLabel(a).localeCompare(topicLabel(b))), [topics]);
   const attachedDrafts = noteIds.map((id) => noteRows.get(id)).filter((n): n is Note => !!n && n.published === false);
+  // A worksheet whose lesson is still a draft is invisible to families, so the server refuses to attach it: flag it here first.
+  const wsDrafts = worksheetIds.map((id) => ({ id, row: noteRows.get(id) })).filter((x) => x.row?.published === false && !(homework?.worksheetNoteIds ?? []).includes(x.id));
   const draftQuiz = !!quiz && quiz.published === false;
   // When editing, students who already have this homework are shown but never block a save (the server only checks NEW ones).
   const already = new Set(homework?.assignedChildIds ?? []);
@@ -118,111 +126,101 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   // One click for the whole year the lesson is for (the year comes from the lesson itself; a student's year is on the roster). Students who can't open the attached quiz are left out.
   const yearMates = pack?.year ? roster.filter((s) => (s.yearGroup ?? "").trim().toLowerCase() === `year ${pack.year}`.toLowerCase() && !unreachable[s.childId]) : [];
 
-  const problem = !title.trim() ? "Give the homework a title." : !due ? "Choose a due date." : childIds.length === 0 ? "Choose at least one student." : draftQuiz ? "Publish the quiz first — students can't open a draft." : blocked.length ? `${blocked.length === 1 ? "One student" : `${blocked.length} students`} can't open this quiz — remove them, or pick another quiz.` : null;
+  const problem = !title.trim() ? h("pbTitle") : !due ? h("pbDue") : childIds.length === 0 ? h("pbStudents") : draftQuiz ? h("pbDraftQuiz") : wsDrafts.length ? h("pbDraftWs") : blocked.length ? hp("pbBlocked", blocked.length) : null;
 
   const doPublish = async (kind: "quiz" | "note", id: string) => {
     setPublishing(id); setErr(null);
     try {
       if (kind === "quiz") { await publishQuiz(qs, id); setQuiz((q) => (q ? { ...q, published: true } : q)); }
       else { await publishNote(qs, id); setNoteRows((m) => { const n = m.get(id); return n ? new Map(m).set(id, { ...n, published: true }) : m; }); }
-    } catch (e) { setErr(errMsg(e, kind === "quiz" ? "Couldn't publish the quiz" : "Couldn't publish the lesson")); }
+    } catch (e) { setErr(errMsg(e, kind === "quiz" ? h("errPubQuiz") : h("errPubLesson"))); }
     finally { setPublishing(null); }
   };
 
   const save = async () => {
     if (problem) { setErr(problem); return; }
     setBusy(true); setErr(null);
-    const body = { title: title.trim(), instructions: instructions.trim(), dueAt: endOfDay(due), assessmentId: assessmentId || null, noteIds, flashcardTopicId: flashTopic || null, assignedChildIds: childIds, assignedGroupIds: groupIds, videos: videoPayload(videos) };
+    const body = { title: title.trim(), instructions: instructions.trim(), dueAt: endOfDay(due), assessmentId: assessmentId || null, noteIds, flashcardTopicId: flashTopic || null, worksheetNoteIds: worksheetIds, assignedChildIds: childIds, assignedGroupIds: groupIds, videos: videoPayload(videos) };
     try {
       if (homework) await put(`/api/learning-hub/homework/${homework.id}${qs}`, body);
       else await post(`/api/learning-hub/homework${qs}`, body);
       onSaved();
-    } catch (e) { setErr(errMsg(e, "Couldn't save the homework")); setBusy(false); }
+    } catch (e) { setErr(errMsg(e, h("errSave"))); setBusy(false); }
   };
 
   return (
-    <Dialog id="hub-homework-form" size="lg" title={homework ? "Edit homework" : "Set homework"}
-      subtitle={homework ? "Changes apply to everyone it's assigned to." : "Each student gets their own copy to hand in — they're notified straight away."}
+    <>
+    <Dialog id="hub-homework-form" plain size="2xl" title={homework ? h("formEdit") : h("formNew")}
+      subtitle={homework ? h("formEditSub") : h("formNewSub")}
       onClose={onClose}
       footer={<>
-        <Button variant="ghost" className={`min-h-[44px] ${FOCUS}`} onClick={onClose}>Cancel</Button>
-        <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} onClick={() => void save()} disabled={busy || !!problem}>{busy ? "Saving…" : homework ? "Save changes" : "Assign homework"}</Button>
+        {problem && !busy && <span role="status" data-testid="hub-hw-problem" className="me-auto min-w-0 flex-1 text-[12px] leading-snug text-[var(--ink-2)]">{problem}</span>}
+        <Button variant="ghost" className={`min-h-[44px] ${FOCUS}`} onClick={onClose}>{h("cancel")}</Button>
+        <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} onClick={() => void save()} disabled={busy || !!problem}>{busy ? h("saving") : homework ? h("saveChanges") : h("assign")}</Button>
       </>}>
       <div className="grid gap-4">
         {err && <Notice onClose={() => setErr(null)}>{err}</Notice>}
-        {!homework && <LessonPackPicker qs={qs} busy={packBusy} activeTitle={pack ? noteRows.get(pack.noteId)?.title ?? pack.title.replace(/^Homework: /, "") : null} onPick={(n) => { setNoteRows((m) => new Map(m).set(n.id, n)); usePackOf(n.id, false); }} />}
         <div>
-          <FieldLabel htmlFor="hub-hw-title">Title</FieldLabel>
-          <Input id="hub-hw-title" data-autofocus={focusQuiz ? undefined : true} className="min-h-[44px] w-full" value={title} onChange={(e) => { edited.current = true; setTitle(e.target.value); }} maxLength={200} placeholder="e.g. Factorising practice — set A" />
+          <FieldLabel htmlFor="hub-hw-title">{h("fTitle")}</FieldLabel>
+          <Input id="hub-hw-title" data-autofocus={focusQuiz ? undefined : true} className="min-h-[44px] w-full" value={title} onChange={(e) => { edited.current = true; setTitle(e.target.value); }} maxLength={200} placeholder={h("fTitlePh")} />
         </div>
         <div>
-          <FieldLabel htmlFor="hub-hw-instructions">Instructions</FieldLabel>
-          <textarea id="hub-hw-instructions" rows={5} maxLength={5000} value={instructions} onChange={(e) => { edited.current = true; setInstructions(e.target.value); }} placeholder="What should they do? Which questions? What should they hand in?"
+          <FieldLabel>{h("fWorksheet")}</FieldLabel>
+          <p className="mb-1.5 text-[11.5px] text-[var(--ink-3)]">{h("fWorksheetHint")}</p>
+          <WorksheetPicker qs={qs} topics={topics} yearGroups={config.yearGroups ?? []} chosen={worksheetIds} rows={wsRows}
+            onToggle={(w) => { setWsRows((m) => new Map(m).set(w.noteId, w)); setWorksheetIds((cur) => (cur.includes(w.noteId) ? cur.filter((x) => x !== w.noteId) : [...cur, w.noteId].slice(0, 10))); }}
+            onPreview={(w) => setPreview({ kind: "worksheet", id: w.noteId, title: w.title, quizId: w.quizId })} />
+          {worksheetIds.length >= 10 && <p role="note" className="mt-1 text-[11.5px] font-semibold text-[var(--ink-2)]">{h("wsLimit")}</p>}
+        </div>
+
+        <div>
+          <FieldLabel htmlFor="hub-hw-instructions">{h("fInstr")}</FieldLabel>
+          <textarea id="hub-hw-instructions" rows={5} maxLength={5000} value={instructions} onChange={(e) => { edited.current = true; setInstructions(e.target.value); }} placeholder={h("fInstrPh")}
             className="w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] leading-relaxed text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
         </div>
         <div>
-          <FieldLabel htmlFor="hub-hw-video-link">Videos (optional)</FieldLabel>
-          <VideoEditor idPrefix="hub-hw-video" value={videos} onChange={setVideos} hint="Paste a YouTube link — it plays above the instructions." />
+          <FieldLabel htmlFor="hub-hw-video-link">{h("fVideos")}</FieldLabel>
+          <VideoEditor idPrefix="hub-hw-video" value={videos} onChange={setVideos} hint={h("fVideosHint")} />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor="hub-hw-due">Due date</FieldLabel>
-            <Input id="hub-hw-due" type="date" className="min-h-[44px] w-full" value={due} onChange={(e) => setDue(e.target.value)} />
-            <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">Due end of day. Default is {config.homeworkDueDays} days out.</p>
+        <div>
+          <FieldLabel htmlFor="hub-hw-due">{h("fDue")}</FieldLabel>
+          <Input id="hub-hw-due" type="date" className="min-h-[44px] w-full" value={due} onChange={(e) => setDue(e.target.value)} />
+          <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{hp("fDueHint", config.homeworkDueDays || 7)}</p>
+        </div>
+
+        {!!homework && (!!assessmentId || noteIds.length > 0 || !!flashTopic) && (
+          <LinkedRows label={h("legacyLinked")} quizId={assessmentId || null} quizTitle={quiz?.title} notes={noteIds.map((id) => ({ id, title: noteRows.get(id)?.title }))} hasFlash={!!flashTopic}
+            onPreview={(p) => setPreview(p)}
+            onRemoveQuiz={() => setAssessmentId("")} onRemoveNote={(id) => setNoteIds(noteIds.filter((x) => x !== id))} onRemoveFlash={() => setFlashTopic("")} />
+        )}
+        {draftQuiz && (
+          <div role="note" data-testid="hub-hw-draft-quiz" className="rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
+            {h("draftQuizA", { title: quiz!.title })}{" "}
+            <button type="button" disabled={publishing === quiz!.id} onClick={() => void doPublish("quiz", quiz!.id)} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing === quiz!.id ? h("publishing") : h("publishQuiz")}</button>
           </div>
-          <div>
-            <FieldLabel htmlFor="hub-hw-quiz">Attach a quiz (optional)</FieldLabel>
-            <QuizSelect qs={qs} value={assessmentId} selected={quiz} onChange={setAssessmentId} focus={focusQuiz} />
-            {draftQuiz && (
-              <div role="note" data-testid="hub-hw-draft-quiz" className="mt-2 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
-                “{quiz!.title}” is still a draft, so no student can open it yet.{" "}
-                <button type="button" disabled={publishing === quiz!.id} onClick={() => void doPublish("quiz", quiz!.id)} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing === quiz!.id ? "Publishing…" : "Publish the quiz"}</button>
-              </div>
-            )}
+        )}
+        {attachedDrafts.length > 0 && (
+          <div role="note" data-testid="hub-hw-draft-lesson" className="rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
+            {hp("draftLessons", attachedDrafts.length, { titles: attachedDrafts.map((n) => `“${n.title}”`).join(", ") })}{" "}
+            <button type="button" disabled={!!publishing} onClick={() => void Promise.all(attachedDrafts.map((n) => doPublish("note", n.id)))} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing ? h("publishing") : hp("publishThem", attachedDrafts.length)}</button>
           </div>
-        </div>
+        )}
 
-        <div>
-          <FieldLabel>Link lessons (optional)</FieldLabel>
-          {noteIds.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5" data-testid="hub-hw-attached-lessons" aria-label="Attached lessons">
-              {noteIds.map((id) => {
-                const n = noteRows.get(id);
-                return (
-                  <span key={id} className="inline-flex min-h-[32px] max-w-full items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-0.5 pl-3 pr-1 text-[12px] font-extrabold text-[var(--brand-strong)]">
-                    <span className="truncate">{n?.title ?? "A lesson"}{(n as { isLesson?: boolean } | undefined)?.isLesson || n?.lesson ? " · interactive" : ""}</span>
-                    <button type="button" aria-label={`Remove ${n?.title ?? "lesson"}`} onClick={() => setNoteIds(noteIds.filter((x) => x !== id))} className={`grid h-7 w-7 place-items-center rounded-full hover:bg-[var(--surface)] ${FOCUS}`}>×</button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          {attachedDrafts.length > 0 && (
-            <div role="note" data-testid="hub-hw-draft-lesson" className="mb-2 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
-              {attachedDrafts.map((n) => `“${n.title}”`).join(", ")} {attachedDrafts.length === 1 ? "is" : "are"} still a draft, so students won&apos;t see {attachedDrafts.length === 1 ? "it" : "them"} until {attachedDrafts.length === 1 ? "it's" : "they're"} published.{" "}
-              <button type="button" disabled={!!publishing} onClick={() => void Promise.all(attachedDrafts.map((n) => doPublish("note", n.id)))} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing ? "Publishing…" : attachedDrafts.length === 1 ? "Publish it" : "Publish them"}</button>
-            </div>
-          )}
-          <NoteChecklist qs={qs} topics={topics} noteIds={noteIds} yearGroups={config.yearGroups ?? []} defaultYear={singleYear}
-            onSeen={(rows) => setNoteRows((m) => new Map([...m, ...rows.map((n) => [n.id, n] as const)]))}
-            onToggle={(n) => { setNoteRows((m) => new Map(m).set(n.id, n)); setNoteIds((cur) => (cur.includes(n.id) ? cur.filter((x) => x !== n.id) : [...cur, n.id].slice(0, 20))); }} />
-        </div>
+        {wsDrafts.length > 0 && (
+          <div role="note" data-testid="hub-hw-draft-worksheet" className="rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
+            {hp("draftWs", wsDrafts.length, { titles: wsDrafts.map((x) => `“${x.row?.title ?? ""}”`).join(", ") })}{" "}
+            <button type="button" disabled={!!publishing} onClick={() => void Promise.all(wsDrafts.map((x) => doPublish("note", x.id)))} className={`font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{publishing ? h("publishing") : hp("publishThem", wsDrafts.length)}</button>
+          </div>
+        )}
 
-        <div>
-          <FieldLabel htmlFor="hub-hw-flash">Flashcards to revise (optional)</FieldLabel>
-          <Select id="hub-hw-flash" className="min-h-[44px] w-full" value={flashTopic} onChange={(e) => setFlashTopic(e.target.value)}>
-            <option value="">None</option>
-            {sortedTopics.map((t) => <option key={t.id} value={t.id}>{topicLabel(t)}</option>)}
-          </Select>
-        </div>
-
-        <div>
-          <FieldLabel>Assign to</FieldLabel>
+        {/* M4 (product review): who it is for comes FIRST (order-first), so the disabled Assign button is never a mystery below the fold. */}
+        <div className="order-first">
+          <FieldLabel>{h("fAssign")}</FieldLabel>
           {roster.length === 0 && (
             <div className="mb-3" data-testid="hub-hw-no-students">
               <Notice tone="gold">
-                You haven&apos;t added any students yet, so there&apos;s no one to set this for. Add a student in the Students tab (or invite a parent), then come back and set it.{" "}
-                <button type="button" className={`font-extrabold underline ${FOCUS}`} onClick={() => { onClose(); goToTab("students", /students/i); }}>Go to Students</button>
+                {h("noStudents")}{" "}
+                <button type="button" className={`font-extrabold underline ${FOCUS}`} onClick={() => { onClose(); goToTab("students", /students/i); }}>{h("goStudents")}</button>
               </Notice>
             </div>
           )}
@@ -231,21 +229,25 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
             <StudentPicker students={roster} value={childIds} onChange={(ids) => { setChildIds(ids); setGroupIds((g) => pruneGroups(groups, roster, ids, g)); }} idPrefix="hub-hw-student" flags={unreachable} />
           </div>
           {blocked.length > 0 && (
-            <div role="alert" data-testid="hub-hw-unreachable" className="mt-2 rounded-xl border border-[var(--line)] border-l-4 border-l-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
-              <b className="font-extrabold">{blocked.length === 1 ? "1 student" : `${blocked.length} students`} won&apos;t be able to open this quiz.</b>
-              <ul className="mt-1 list-disc pl-5">{blocked.slice(0, 4).map((id) => <li key={id}>{unreachable[id] ?? nameById.get(id)}</li>)}{blocked.length > 4 && <li>and {blocked.length - 4} more</li>}</ul>
-              <button type="button" onClick={() => { const ids = childIds.filter((id) => !unreachable[id]); setChildIds(ids); setGroupIds((g) => pruneGroups(groups, roster, ids, g)); }} className={`mt-1 min-h-[44px] lg:min-h-[36px] font-extrabold text-[var(--brand)] underline ${FOCUS}`}>Remove {blocked.length === 1 ? "them" : "them all"} from this homework</button>
+            <div role="alert" data-testid="hub-hw-unreachable" className="mt-2 rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
+              <b className="font-extrabold">{hp("blockedHead", blocked.length)}</b>
+              <ul className="mt-1 list-disc ps-5">{blocked.slice(0, 4).map((id) => <li key={id}>{unreachable[id] ?? nameById.get(id)}</li>)}{blocked.length > 4 && <li>{h("andMore", { n: blocked.length - 4 })}</li>}</ul>
+              <button type="button" onClick={() => { const ids = childIds.filter((id) => !unreachable[id]); setChildIds(ids); setGroupIds((g) => pruneGroups(groups, roster, ids, g)); }} className={`mt-1 min-h-[44px] lg:min-h-[36px] font-extrabold text-[var(--brand)] underline ${FOCUS}`}>{hp("removeThem", blocked.length)}</button>
             </div>
           )}
           {yearMates.length > 0 && !yearMates.every((s) => childIds.includes(s.childId)) && (
             <button type="button" data-testid="hub-hw-year-all" onClick={() => { const ids = [...new Set([...childIds, ...yearMates.map((s) => s.childId)])]; setChildIds(ids); }}
               className={`mt-2 min-h-[44px] rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] px-4 text-[12.5px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>
-              Set for all my Year {pack!.year} students ({yearMates.length})
+              {h("yearAll", { year: pack!.year ?? "", n: yearMates.length })}
             </button>
           )}
           <RecipientSummary count={childIds.length} />
         </div>
       </div>
     </Dialog>
+    {preview?.kind === "note" && <LessonPreviewDialog noteId={preview.id} title={preview.title} qs={qs} config={config} topics={topics} onClose={() => setPreview(null)} />}
+    {preview?.kind === "worksheet" && <WorksheetPreviewDialog noteId={preview.id} title={preview.title} quizId={preview.quizId} qs={qs} onClose={() => setPreview(null)} />}
+    {preview?.kind === "quiz" && <QuizPreviewDialog assessmentId={preview.id} title={quiz?.title} qs={qs} onClose={() => setPreview(null)} />}
+    </>
   );
 }

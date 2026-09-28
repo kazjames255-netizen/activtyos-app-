@@ -2,7 +2,9 @@
 
 import { useRef, useState, type ButtonHTMLAttributes, type PointerEvent, type ReactNode } from "react";
 import { FOCUS } from "../../kit";
-import { SUBJECT_LABEL, type ToolSubject } from "../types";
+import { useT } from "@/lib/i18n/provider";
+import { type ToolSubject } from "../types";
+import { subjectLabel } from "../toolText";
 
 /** 44px pill button using tokens only. */
 export function Btn({ primary, className = "", ...p }: ButtonHTMLAttributes<HTMLButtonElement> & { primary?: boolean }) {
@@ -12,18 +14,19 @@ export function Btn({ primary, className = "", ...p }: ButtonHTMLAttributes<HTML
 interface HasMeta { id: string; title: string; subject: ToolSubject }
 /** Subject + set pickers with a "random" button. */
 export function SetPicker<T extends HasMeta>({ sets, subject, setSubject, id, setId, onRandom, locked }: { sets: T[]; subject: string; setSubject: (s: string) => void; id: string; setId: (s: string) => void; onRandom: () => void; locked?: boolean }) {
+  const t = useT();
   const subjects = Array.from(new Set(sets.map((s) => s.subject)));
   const shown = sets.filter((s) => subject === "all" || s.subject === subject);
   const cls = `min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2 text-[13px] font-semibold text-[var(--ink)] ${FOCUS}`;
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">Subject
+    <div data-tool-chrome className="flex flex-wrap items-end gap-2">
+      <label className="grid gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.c_subject")}
         <select value={subject} disabled={locked} onChange={(e) => { setSubject(e.target.value); const f = sets.find((s) => e.target.value === "all" || s.subject === e.target.value); if (f) setId(f.id); }} className={cls}>
-          <option value="all">All subjects</option>{subjects.map((s) => <option key={s} value={s}>{SUBJECT_LABEL[s]}</option>)}
+          <option value="all">{t("hubtoolsa.c_allSubjects")}</option>{subjects.map((s) => <option key={s} value={s}>{subjectLabel(t, s)}</option>)}
         </select></label>
-      <label className="grid min-w-0 gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">Activity
+      <label className="grid min-w-0 gap-1 text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubtoolsa.c_activity")}
         <select value={id} disabled={locked} onChange={(e) => setId(e.target.value)} className={`${cls} max-w-full`}>{shown.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}</select></label>
-      <Btn onClick={onRandom} disabled={locked}>Random</Btn>
+      <Btn onClick={onRandom} disabled={locked}>{t("hubtoolsa.c_random")}</Btn>
     </div>
   );
 }
@@ -53,5 +56,5 @@ export function useDragDrop(onDrop: (id: string, target: string) => void) {
 }
 
 export const cardCls = (sel: boolean, mark?: "ok" | "bad" | null) =>
-  `min-h-[44px] w-full rounded-xl border-2 px-3 py-2 text-left text-[13.5px] font-bold text-[var(--ink)] ${sel ? "border-[var(--brand)] bg-[var(--brand-soft)]" : mark === "bad" ? "border-dashed border-[var(--ink)] bg-[var(--surface)]" : "border-[var(--line)] bg-[var(--surface)]"} ${FOCUS}`;
+  `min-h-[44px] w-full rounded-xl border-2 px-3 py-2 text-start text-[13.5px] font-bold text-[var(--ink)] ${sel ? "border-[var(--brand)] bg-[var(--brand-soft)]" : mark === "bad" ? "border-dashed border-[var(--ink)] bg-[var(--surface)]" : "border-[var(--line)] bg-[var(--surface)]"} ${FOCUS}`;
 export const markSym = (m?: "ok" | "bad" | null) => (m === "ok" ? "✓ " : m === "bad" ? "✗ " : "");

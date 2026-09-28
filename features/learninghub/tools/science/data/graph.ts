@@ -1,5 +1,6 @@
 // Pure maths for the results-table-and-graph tool (S-02; also maths chart building M-60/M-61). No React, no DOM.
 import { combine, type CheckResult } from "../../engine/marking";
+import { say, type Tr } from "../tr";
 
 export type Pt = [number, number];
 export type ChartType = "scatter" | "line" | "bar";
@@ -132,7 +133,7 @@ export const linePath = (px: Pt[]) => [...px].sort((a, b) => a[0] - b[0]).map((p
 // ---------- pupil-graph checkers ----------
 export interface Tol { x: number; y: number }
 /** 1 mark per expected point: a pupil point must lie within tolerance (data units) of it. Feedback names the row, never the coordinates. */
-export function checkPlotted(points: Pt[], expected: Pt[], tol: Tol): CheckResult {
+export function checkPlotted(points: Pt[], expected: Pt[], tol: Tol, tr?: Tr): CheckResult {
   const used = new Set<number>(), ok: boolean[] = [], note: (string | undefined)[] = [];
   const near = (a: Pt, b: Pt, k: number) => Math.abs(a[0] - b[0]) <= tol.x * k + EPS && Math.abs(a[1] - b[1]) <= tol.y * k + EPS;
   const dist = (a: Pt, b: Pt) => Math.hypot((a[0] - b[0]) / tol.x, (a[1] - b[1]) / tol.y);
@@ -141,28 +142,28 @@ export function checkPlotted(points: Pt[], expected: Pt[], tol: Tol): CheckResul
     points.forEach((p, j) => { if (used.has(j) || !near(p, e, 1)) return; const d = dist(p, e); if (d < bd) { bd = d; best = j; } });
     if (best >= 0) { used.add(best); ok[i] = true; return; }
     ok[i] = false;
-    note[i] = points.some((p, j) => !used.has(j) && near(p, e, 3)) ? "there is a point close by, but not on the right square" : "not plotted yet";
+    note[i] = points.some((p, j) => !used.has(j) && near(p, e, 3)) ? say(tr, "sc_gr_close", "there is a point close by, but not on the right square") : say(tr, "sc_gr_notYet", "not plotted yet");
   });
   // a second pass frees points that were greedily taken by a neighbour but are still needed: rare with sensible tolerances, so keep it simple
-  const res = combine(expected.map((_, i) => ({ label: `Point ${i + 1} of your table`, ok: ok[i]!, marks: 1, note: note[i] })));
+  const res = combine(expected.map((_, i) => ({ label: say(tr, "sc_gr_point", "Point {i} of your table", { i: i + 1 }), ok: ok[i]!, marks: 1, note: note[i] })));
   const extra = points.length - used.size;
-  if (extra > 0) res.feedback.push(`You have ${extra} point${extra === 1 ? "" : "s"} that ${extra === 1 ? "does" : "do"} not match any reading. Check or rub ${extra === 1 ? "it" : "them"} out.`);
+  if (extra > 0) res.feedback.push(tr ? say(tr, "sc_gr_extra", "", { n: extra }) : `You have ${extra} point${extra === 1 ? "" : "s"} that ${extra === 1 ? "does" : "do"} not match any reading. Check or rub ${extra === 1 ? "it" : "them"} out.`);
   res.log = { ...res.log, plotted: points.length, expected: expected.length, matched: used.size, extra, missing: ok.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0) };
   return res;
 }
 
 /** 2 marks: gradient and intercept of the pupil's line each within tolerancePct of the regression line.
  *  Gradient is compared relatively; the intercept against max(|c|, 10% of the y range) so a near-zero intercept is fair. */
-export function checkBestFit(line: { gradient: number; intercept: number } | null, data: Pt[], tolerancePct: number, throughOrigin = false): CheckResult {
+export function checkBestFit(line: { gradient: number; intercept: number } | null, data: Pt[], tolerancePct: number, throughOrigin = false, tr?: Tr): CheckResult {
   const f = regression(data, throughOrigin), t = tolerancePct / 100;
-  if (!f) return { score: 0, max: 2, feedback: ["✗ Not enough data to fit a line"], log: { reason: "no-fit" } };
-  if (!line) return combine([{ label: "Gradient of your line", ok: false, marks: 1, note: "no line drawn" }, { label: "Where your line crosses the y-axis", ok: false, marks: 1, note: "no line drawn" }]);
+  if (!f) return { score: 0, max: 2, feedback: [say(tr, "sc_gr_noFit", "✗ Not enough data to fit a line")], log: { reason: "no-fit" } };
+  if (!line) return combine([{ label: say(tr, "sc_gr_gradient", "Gradient of your line"), ok: false, marks: 1, note: say(tr, "sc_gr_noLine", "no line drawn") }, { label: say(tr, "sc_gr_intercept", "Where your line crosses the y-axis"), ok: false, marks: 1, note: say(tr, "sc_gr_noLine", "no line drawn") }]);
   const yr = range(data.map((p) => p[1])), gTol = t * Math.max(Math.abs(f.gradient), EPS), cTol = t * Math.max(Math.abs(f.intercept), 0.1 * yr);
   const gOk = Math.abs(line.gradient - f.gradient) <= gTol, cOk = Math.abs(line.intercept - f.intercept) <= cTol;
-  const dir = (a: number, b: number) => (a > b ? "too steep" : "not steep enough");
+  const dir = (a: number, b: number) => (a > b ? say(tr, "sc_gr_steep", "too steep") : say(tr, "sc_gr_flat", "not steep enough"));
   const r = combine([
-    { label: "Gradient of your line", ok: gOk, marks: 1, note: gOk ? undefined : Math.sign(line.gradient) !== Math.sign(f.gradient) ? "your line slopes the wrong way" : dir(line.gradient, f.gradient) },
-    { label: "Where your line crosses the y-axis", ok: cOk, marks: 1, note: cOk ? undefined : line.intercept > f.intercept ? "too high up" : "too low down" },
+    { label: say(tr, "sc_gr_gradient", "Gradient of your line"), ok: gOk, marks: 1, note: gOk ? undefined : Math.sign(line.gradient) !== Math.sign(f.gradient) ? say(tr, "sc_gr_wrongWay", "your line slopes the wrong way") : dir(line.gradient, f.gradient) },
+    { label: say(tr, "sc_gr_intercept", "Where your line crosses the y-axis"), ok: cOk, marks: 1, note: cOk ? undefined : line.intercept > f.intercept ? say(tr, "sc_gr_high", "too high up") : say(tr, "sc_gr_low", "too low down") },
   ]);
   r.log = { ...r.log, gradient: line.gradient, intercept: line.intercept, expected: f };
   return r;
@@ -180,13 +181,13 @@ const usesGrid = (t: number[], d: [number, number]) => {
   return hi > lo && d[0] >= lo - EPS && d[1] <= hi + EPS && (d[1] - d[0]) / (hi - lo) >= 0.5 - EPS;
 };
 /** 4 marks: both axes labelled; units given; scale uses at least half the grid (and fits the data); even intervals. */
-export function checkAxes(a: AxesSpec): CheckResult {
+export function checkAxes(a: AxesSpec, tr?: Tr): CheckResult {
   const has = (s: string) => s.trim().length > 0, needU = a.needUnits !== false;
   const gx = usesGrid(a.xTicks, a.xData), gy = usesGrid(a.yTicks, a.yData);
   return combine([
-    { label: "Both axes have a label", ok: has(a.xLabel) && has(a.yLabel), marks: 1, note: !has(a.xLabel) && !has(a.yLabel) ? "neither axis is labelled" : !has(a.xLabel) ? "the x-axis has no label" : !has(a.yLabel) ? "the y-axis has no label" : undefined },
-    { label: "Units are shown", ok: !needU || (has(a.xUnit) && has(a.yUnit)), marks: 1, note: needU && !(has(a.xUnit) && has(a.yUnit)) ? "add the unit to each axis label" : undefined },
-    { label: "The scale makes good use of the grid", ok: gx && gy, marks: 1, note: gx && gy ? undefined : `${!gx ? "x-axis" : ""}${!gx && !gy ? " and " : ""}${!gy ? "y-axis" : ""}: the data should fill at least half the axis and fit on it` },
-    { label: "Scale goes up in even steps", ok: evenTicks(a.xTicks) && evenTicks(a.yTicks), marks: 1, note: evenTicks(a.xTicks) && evenTicks(a.yTicks) ? undefined : "each axis needs equal-sized steps" },
+    { label: say(tr, "sc_gr_bothLabel", "Both axes have a label"), ok: has(a.xLabel) && has(a.yLabel), marks: 1, note: !has(a.xLabel) && !has(a.yLabel) ? say(tr, "sc_gr_neither", "neither axis is labelled") : !has(a.xLabel) ? say(tr, "sc_gr_noX", "the x-axis has no label") : !has(a.yLabel) ? say(tr, "sc_gr_noY", "the y-axis has no label") : undefined },
+    { label: say(tr, "sc_gr_units", "Units are shown"), ok: !needU || (has(a.xUnit) && has(a.yUnit)), marks: 1, note: needU && !(has(a.xUnit) && has(a.yUnit)) ? say(tr, "sc_gr_addUnit", "add the unit to each axis label") : undefined },
+    { label: say(tr, "sc_gr_scale", "The scale makes good use of the grid"), ok: gx && gy, marks: 1, note: gx && gy ? undefined : !gx && !gy ? say(tr, "sc_gr_gridBoth", "x-axis and y-axis: the data should fill at least half the axis and fit on it") : !gx ? say(tr, "sc_gr_gridX", "x-axis: the data should fill at least half the axis and fit on it") : say(tr, "sc_gr_gridY", "y-axis: the data should fill at least half the axis and fit on it") },
+    { label: say(tr, "sc_gr_even", "Scale goes up in even steps"), ok: evenTicks(a.xTicks) && evenTicks(a.yTicks), marks: 1, note: evenTicks(a.xTicks) && evenTicks(a.yTicks) ? undefined : say(tr, "sc_gr_evenNote", "each axis needs equal-sized steps") },
   ]);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type KeyboardEvent } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { CalcError, evaluate, formatResult, toFraction } from "../tools/calc/evaluate";
 
 // The child's scientific calculator: brackets, powers, roots, π, trigonometry (degrees or radians), %, standard form (×10ˣ), ANS, and an S⇔D
@@ -25,6 +26,7 @@ const MAX = 120;
 const OPS = new Set(["+", "−", "×", "÷", "^", "²", "³", "%"]);
 
 export function ScientificCalculator({ value, onChange }: { value: CalcState; onChange: (v: CalcState) => void }) {
+  const t = useT();
   const v = { ...CALC_DEFAULT, ...value };
   const box = useRef<HTMLDivElement>(null);
   const set = (p: Partial<CalcState>) => onChange({ ...v, ...p });
@@ -53,7 +55,7 @@ export function ScientificCalculator({ value, onChange }: { value: CalcState; on
   const toggleFraction = () => { if (v.ans !== null && v.shown !== null && v.shown !== "Error") set({ asFraction: !v.asFraction }); };
 
   const frac = v.asFraction && v.ans !== null ? toFraction(v.ans) : null;
-  const result = v.shown === null ? "" : frac ? `${frac.n}${frac.d !== 1 ? `/${frac.d}` : ""}` : v.asFraction ? `${v.shown} (no simple fraction)` : v.shown;
+  const result = v.shown === null ? "" : frac ? `${frac.n}${frac.d !== 1 ? `/${frac.d}` : ""}` : v.asFraction ? t("hublive.dNoSimpleFrac", { v: v.shown === "Error" ? t("hublive.dError") : v.shown }) : v.shown === "Error" ? t("hublive.dError") : v.shown;
 
   const onKey = (e: KeyboardEvent) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -82,27 +84,27 @@ export function ScientificCalculator({ value, onChange }: { value: CalcState; on
   );
 
   return (
-    <div ref={box} tabIndex={0} onKeyDown={onKey} aria-label="Scientific calculator. Click here, then type with your keyboard." data-testid="calculator" className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] rounded-lg">
-      <div className="mb-2 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-right" aria-live="polite">
+    <div ref={box} tabIndex={0} onKeyDown={onKey} aria-label={t("hublive.dCalcAria")} data-testid="calculator" className="outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand)] rounded-lg">
+      <div className="mb-2 rounded-lg bg-[var(--panel)] px-2.5 py-2 text-end" aria-live="polite">
         <div className="min-h-[22px] break-all text-[15px] font-bold text-[var(--ink-2)]" data-testid="calc-display">{v.expr || "0"}</div>
         <div className="min-h-[28px] break-all text-[22px] font-extrabold text-[var(--ink)]" data-testid="calc-result">{result || " "}</div>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
         {K("sin", "sin(")}{K("cos", "cos(")}{K("tan", "tan(")}{K("(", "(", op)}{K(")", ")", op)}
-        {K("sin⁻¹", "sin⁻¹(", fn, "inverse sine")}{K("cos⁻¹", "cos⁻¹(", fn, "inverse cosine")}{K("tan⁻¹", "tan⁻¹(", fn, "inverse tangent")}{K("π", "π")}
+        {K("sin⁻¹", "sin⁻¹(", fn, t("hublive.dInvSine"))}{K("cos⁻¹", "cos⁻¹(", fn, t("hublive.dInvCos"))}{K("tan⁻¹", "tan⁻¹(", fn, t("hublive.dInvTan"))}{K("π", "π")}
         <button type="button" onClick={() => set({ deg: !v.deg })} aria-pressed={v.deg} className={`${btn} ${v.deg ? "bg-[var(--brand)] text-white" : "bg-[var(--gold-soft,#fff4d6)] text-[var(--ink)]"} text-[12.5px]`} data-testid="calc-angle">{v.deg ? "DEG" : "RAD"}</button>
-        {K("x²", "²")}{K("x³", "³")}{K("xʸ", "^", fn, "to the power")}{K("√", "√(", fn, "square root")}
-        <button type="button" onClick={back} className={fn} aria-label="Delete" data-testid="calc-back">⌫</button>
+        {K("x²", "²")}{K("x³", "³")}{K("xʸ", "^", fn, t("hublive.dToPower"))}{K("√", "√(", fn, t("hublive.dSqrt"))}
+        <button type="button" onClick={back} className={fn} aria-label={t("hublive.dDelete")} data-testid="calc-back">⌫</button>
         {K("7", "7", num)}{K("8", "8", num)}{K("9", "9", num)}{K("÷", "÷", op)}
         <button type="button" onClick={clear} className={`${btn} bg-[var(--red-soft,#fde3e3)] text-[var(--red,#b3261e)]`} data-testid="calc-clear">AC</button>
-        {K("4", "4", num)}{K("5", "5", num)}{K("6", "6", num)}{K("×", "×", op)}{K("%", "%", op, "percent")}
-        {K("1", "1", num)}{K("2", "2", num)}{K("3", "3", num)}{K("−", "−", op)}{K("ANS", "ANS", fn, "previous answer")}
-        {K("0", "0", num)}{K(".", ".", num)}{K("×10ˣ", "×10^", fn, "times ten to the power")}{K("+", "+", op)}
+        {K("4", "4", num)}{K("5", "5", num)}{K("6", "6", num)}{K("×", "×", op)}{K("%", "%", op, t("hublive.dPercent"))}
+        {K("1", "1", num)}{K("2", "2", num)}{K("3", "3", num)}{K("−", "−", op)}{K("ANS", "ANS", fn, t("hublive.dPrevAns"))}
+        {K("0", "0", num)}{K(".", ".", num)}{K("×10ˣ", "×10^", fn, t("hublive.dTimesTenPower"))}{K("+", "+", op)}
         <button type="button" onClick={equals} className={`${btn} bg-[var(--brand)] text-white`} data-testid="calc-equals">=</button>
       </div>
       <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-        <button type="button" onClick={negate} className={fn} data-testid="calc-negate" aria-label="Change sign">± change sign</button>
-        <button type="button" onClick={toggleFraction} className={fn} data-testid="calc-fraction" aria-label="Switch between decimal and fraction">S⇔D  fraction / decimal</button>
+        <button type="button" onClick={negate} className={fn} data-testid="calc-negate" aria-label={t("hublive.dChangeSign")}>{t("hublive.dChangeSignBtn")}</button>
+        <button type="button" onClick={toggleFraction} className={fn} data-testid="calc-fraction" aria-label={t("hublive.dSwitchDecFrac")}>{t("hublive.dFracDecBtn")}</button>
       </div>
     </div>
   );

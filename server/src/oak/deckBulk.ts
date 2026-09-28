@@ -8,6 +8,7 @@
 // Resumable: scratch/oak-decks/bulk-state.json remembers what is done / failed / unavailable; log = scratch/oak-decks/bulk.log.
 // --watch <file>: keep polling for notes another process (import.ts) is still creating; exit once <file> exists and nothing is left.
 // SAFETY: the two real tenants need --real. A lesson whose deck cannot be fetched/converted/saved keeps its generated deck (nothing is removed).
+import { sanitiseForImport } from "./noOak";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -129,7 +130,7 @@ async function main() {
       const pptx = await downloadDeck(j.deck);
       const { slides, stats } = await convertPptx(pptx, { putImage });
       if (!slides.length) throw new Error("converted to 0 slides");
-      const body = JSON.stringify({ lesson: { deckSlides: slides } });
+      const body = JSON.stringify({ lesson: { deckSlides: sanitiseForImport(slides, `deck ${j.deck}`) } });
       for (const n of j.notes) {
         const send = async (force: boolean) => fetch(`${API}/api/learning-hub/notes/${n.note}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token(n.tenant, force)}` }, body });
         // The dev API restarts whenever a source file is saved: retry network errors / 502-504 with a back-off instead of failing the lesson.

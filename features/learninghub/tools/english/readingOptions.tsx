@@ -2,12 +2,14 @@
 
 import { useState, type CSSProperties } from "react";
 import { FOCUS } from "../../kit";
+import { useT } from "@/lib/i18n/provider";
 
 // Dyslexia-friendly display options shared by the writing tools: text size and line spacing. Local to the component; nothing stored.
 
 export interface ReadingOpts { size: 0 | 1 | 2; spacing: 0 | 1 | 2 }
 export const SIZES = [16, 19, 23] as const;
 export const SPACINGS = [1.5, 1.85, 2.25] as const;
+// English fallbacks only; the UI resolves translated labels at render (hubtoolsb.eng_size0..2 / eng_sp0..2).
 export const SIZE_LABEL = ["Normal", "Large", "Extra large"] as const;
 export const SPACING_LABEL = ["Normal", "Roomy", "Extra roomy"] as const;
 
@@ -26,10 +28,13 @@ function Seg({ label, value, options, onChange }: { label: string; value: number
   );
 }
 export function ReadingControls({ opts, onChange }: { opts: ReadingOpts; onChange: (o: ReadingOpts) => void }) {
+  const t = useT();
+  const sizes = [0, 1, 2].map((i) => t(`hubtoolsb.eng_size${i}`));
+  const spacings = [0, 1, 2].map((i) => t(`hubtoolsb.eng_sp${i}`));
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-      <Seg label="Text size" value={opts.size} options={SIZE_LABEL} onChange={(i) => onChange({ ...opts, size: i as 0 | 1 | 2 })} />
-      <Seg label="Line spacing" value={opts.spacing} options={SPACING_LABEL} onChange={(i) => onChange({ ...opts, spacing: i as 0 | 1 | 2 })} />
+    <div data-tool-chrome data-tool-strip className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <Seg label={t("hubtoolsb.eng_textSize")} value={opts.size} options={sizes} onChange={(i) => onChange({ ...opts, size: i as 0 | 1 | 2 })} />
+      <Seg label={t("hubtoolsb.eng_lineSpacing")} value={opts.spacing} options={spacings} onChange={(i) => onChange({ ...opts, spacing: i as 0 | 1 | 2 })} />
     </div>
   );
 }

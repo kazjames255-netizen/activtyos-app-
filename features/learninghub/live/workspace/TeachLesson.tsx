@@ -2,10 +2,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { get } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
+import { tr } from "../tr";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../../panelTypes";
 import { errMsg, topicLabel, type Note, type NoteLite } from "../../types";
-import { FOCUS, Pill, Skeleton, withQs } from "../../teachKit";
+import { Dialog, FOCUS, Pill, Skeleton, withQs } from "../../teachKit";
+import { LessonPicker } from "../../lesson/picker/LessonPicker";
 import { Ico } from "../../teachIcons";
 import { LessonPlayer } from "../../lesson/LessonPlayer";
 import { getCall, useCallObject, type CallLike } from "../board/callObject";
@@ -46,6 +49,7 @@ export function LessonShareProvider({ p, isTutor, children }: { p: PanelProps; i
   const sessionRef = useRef<Session | null>(null);
   sessionRef.current = session;
   const noteQs = isTutor ? p.qs : (p.childQs ?? p.qs);
+  const tx = useT();
 
   const load = useCallback(async (noteId: string, title: string, drive: boolean, following: boolean) => {
     const first: Session = { noteId, title, note: null, error: null, drive, following };
@@ -53,10 +57,10 @@ export function LessonShareProvider({ p, isTutor, children }: { p: PanelProps; i
     setSession(first);
     try {
       const n = await get<Note>(`/api/learning-hub/notes/${noteId}${withQs(noteQs, {})}`);
-      if (!n.lesson) throw new Error("This lesson has no interactive part.");
+      if (!n.lesson) throw new Error(tr("aTeach_noInteractive"));
       setSession((s) => (s && s.noteId === noteId ? { ...s, note: n, title: n.title || title } : s));
     } catch (e) {
-      setSession((s) => (s && s.noteId === noteId ? { ...s, error: errMsg(e, "Couldn't open this lesson") } : s));
+      setSession((s) => (s && s.noteId === noteId ? { ...s, error: errMsg(e, tr("aTeach_openFail")) } : s));
     }
   }, [noteQs]);
 
@@ -87,7 +91,7 @@ export function LessonShareProvider({ p, isTutor, children }: { p: PanelProps; i
       if (!isOwnerId(call, ev.fromId)) return; // a classmate's device can't make anyone's screen jump
       if (d.on === false) { sharing.current = null; setOffer(null); setSession((s) => (s && s.following ? { ...s, following: false } : s)); setFollow(null); return; }
       if (d.on && d.noteId) {
-        const shared: Shared = { noteId: d.noteId, title: d.title ?? "Lesson", step: d.step ?? "start", slide: d.slide ?? 0 };
+        const shared: Shared = { noteId: d.noteId, title: d.title ?? tr("aTeach_lessonDefault"), step: d.step ?? "start", slide: d.slide ?? 0 };
         sharing.current = shared;
         const s = sessionRef.current;
         if (!s || s.noteId === shared.noteId) {
@@ -130,21 +134,21 @@ export function LessonShareProvider({ p, isTutor, children }: { p: PanelProps; i
       {offer && !isTutor && (
         <PaneOverlay>
           <div role="status" data-testid="ls-offer" className="absolute inset-x-3 top-3 z-30 flex items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-2 text-[12.5px] font-bold text-[var(--brand-strong)] shadow-[var(--shadow-sm)]">
-            <span className="min-w-0 flex-1 truncate">Your tutor is teaching “{offer.title}”</span>
-            <WsButton variant="solid" onClick={() => { const o = offer; setOffer(null); setFollow({ step: o.step, slide: o.slide }); void load(o.noteId, o.title, false, true); }}>Join</WsButton>
+            <span className="min-w-0 flex-1 truncate">{tx("hublive.aTeach_offer", { title: offer.title })}</span>
+            <WsButton variant="solid" onClick={() => { const o = offer; setOffer(null); setFollow({ step: o.step, slide: o.slide }); void load(o.noteId, o.title, false, true); }}>{tx("hublive.aTeach_join")}</WsButton>
           </div>
         </PaneOverlay>
       )}
       {s && (
         <PaneOverlay>
-          <div role="dialog" aria-label={`${s.drive ? "Teaching" : "Lesson"}: ${s.title}`} data-testid="ws-lesson-player" data-drive={s.drive ? "1" : "0"} data-following={s.following ? "1" : "0"}
+          <div role="dialog" aria-label={tx(s.drive ? "hublive.aTeach_teachingAria" : "hublive.aTeach_lessonAria", { title: s.title })} data-testid="ws-lesson-player" data-drive={s.drive ? "1" : "0"} data-following={s.following ? "1" : "0"}
             className="absolute inset-0 z-20 flex flex-col overflow-y-auto overscroll-contain px-3 pb-6 pt-3" style={{ background: "var(--hub-warm)" }}>
-            {s.drive && <div role="status" className="mx-auto mb-2 flex w-full max-w-[820px] flex-none items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]"><Ico name="monitor" size={14} />Teaching — your students&apos; screens follow this lesson as you move through it.</div>}
-            {s.following && <div role="status" data-testid="ls-following" className="mx-auto mb-2 flex w-full max-w-[820px] flex-none items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]"><Ico name="monitor" size={14} /><span className="min-w-0 flex-1">Following your tutor</span><button type="button" onClick={() => { setFollow(null); setSession((x) => (x ? { ...x, following: false, followPaused: true } : x)); }} className={`min-h-[36px] rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--surface)] ${FOCUS}`}>Go at my own pace</button></div>}
+            {s.drive && <div role="status" className="mx-auto mb-2 flex w-full max-w-[820px] flex-none items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]"><Ico name="monitor" size={14} />{tx("hublive.aTeach_teachingBanner")}</div>}
+            {s.following && <div role="status" data-testid="ls-following" className="mx-auto mb-2 flex w-full max-w-[820px] flex-none items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-bold text-[var(--brand-strong)]"><Ico name="monitor" size={14} /><span className="min-w-0 flex-1">{tx("hublive.aTeach_following")}</span><button type="button" onClick={() => { setFollow(null); setSession((x) => (x ? { ...x, following: false, followPaused: true } : x)); }} className={`min-h-[36px] rounded-lg px-2.5 text-[12px] font-extrabold text-[var(--brand)] hover:bg-[var(--surface)] ${FOCUS}`}>{tx("hublive.aTeach_ownPace")}</button></div>}
             {s.error ? (
-              <div role="alert" className="mx-auto grid max-w-[420px] gap-3 py-10 text-center"><div className="text-[14px] font-bold text-[var(--red)]">{s.error}</div><div><WsButton variant="ghost" onClick={close}>Close</WsButton></div></div>
+              <div role="alert" className="mx-auto grid max-w-[420px] gap-3 py-10 text-center"><div className="text-[14px] font-bold text-[var(--red)]">{s.error}</div><div><WsButton variant="ghost" onClick={close}>{tx("hublive.aTeach_close")}</WsButton></div></div>
             ) : !s.note ? (
-              <div className="mx-auto grid w-full max-w-[820px] gap-3" role="status" aria-label="Opening the lesson"><Skeleton className="h-16" /><Skeleton className="h-48" /></div>
+              <div className="mx-auto grid w-full max-w-[820px] gap-3" role="status" aria-label={tx("hublive.aTeach_opening")}><Skeleton className="h-16" /><Skeleton className="h-48" /></div>
             ) : (
               <LessonPlayer key={s.note.id} note={{ id: s.note.id, title: s.note.title, lesson: s.note.lesson }} qs={noteQs} childQs={noteQs} childId={isTutor ? null : p.childId} config={p.config}
                 readOnly={isTutor} onExit={close} onProgress={s.drive ? onProgress : undefined} follow={s.following ? follow : null} />
@@ -158,8 +162,10 @@ export function LessonShareProvider({ p, isTutor, children }: { p: PanelProps; i
 
 /** "Interactive lessons" — the lessons attached to this live lesson (and its topic's) that have slides / warm-up / a quiz. */
 export function TeachableLessons({ p, lesson }: { p: PanelProps; lesson: Lesson }) {
+  const tx = useT();
   const { teach, open, activeId, isTutor } = useLessonShare();
   const [rows, setRows] = useState<NoteLite[] | null>(null);
+  const [browse, setBrowse] = useState(false);
   const qs = isTutor ? p.qs : (p.childQs ?? p.qs);
   const idsKey = (lesson.noteIds ?? []).join(",");
   const covered = lessonCovered(p.topics, lesson);
@@ -184,24 +190,30 @@ export function TeachableLessons({ p, lesson }: { p: PanelProps; lesson: Lesson 
   }, [rows, attachedIds, covered]);
 
   if (rows === null) return isTutor || idsKey ? <div className="grid gap-2"><Skeleton className="h-11" /></div> : null;
-  if (!shown.length) return null;
+  if (!shown.length && !isTutor) return null;
   return (
-    <WsSection title={isTutor ? "Teach an interactive lesson" : "Interactive lessons"} icon="notes" aside={topic ? <Pill tone="brand">{topicLabel(topic)}</Pill> : null}>
+    <WsSection title={isTutor ? tx("hublive.aTeach_teachTitle") : tx("hublive.aTeach_interactive")} icon="notes" aside={topic ? <Pill tone="brand">{topicLabel(topic)}</Pill> : null}>
       <div className="grid gap-2" data-testid="ws-interactive-lessons">
-        {isTutor && <p className="m-0 text-[12px] leading-relaxed text-[var(--ink-3)]">Opens beside the video. Students&apos; screens follow you slide by slide.</p>}
+        {isTutor && <p className="m-0 text-[12px] leading-relaxed text-[var(--ink-3)]">{tx("hublive.aTeach_tutorHint")}</p>}
         {shown.map((n) => (
           <div key={n.id} data-note={n.id} className="flex items-center gap-2 rounded-xl border border-[var(--hub-warm-line)] bg-[var(--surface)] px-3 py-1.5">
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{n.title}</span>
-              {attachedIds.has(n.id) && <span className="block text-[11px] text-[var(--ink-3)]">{isTutor ? "Attached to this live lesson" : "Attached by your tutor"}</span>}
+              {attachedIds.has(n.id) && <span className="block text-[11px] text-[var(--ink-3)]">{isTutor ? tx("hublive.aTeach_attachedLive") : tx("hublive.aNotes_attachedByTutor")}</span>}
             </span>
-            {!n.published && <Pill tone="gold">Draft</Pill>}
+            {!n.published && <Pill tone="gold">{tx("hublive.aNotes_draft")}</Pill>}
             {isTutor
-              ? <WsButton variant="solid" icon="monitor" onClick={() => teach(n.id, n.title)} ariaLabel={`Teach ${n.title}`} disabled={activeId === n.id}>Teach</WsButton>
-              : <WsButton variant="soft" icon="monitor" onClick={() => open(n.id, n.title)} ariaLabel={`Open ${n.title}`} disabled={activeId === n.id || !p.childId}>Open</WsButton>}
+              ? <WsButton variant="solid" icon="monitor" onClick={() => teach(n.id, n.title)} ariaLabel={tx("hublive.aTeach_teachX", { title: n.title })} disabled={activeId === n.id}>{tx("hublive.aTeach_teach")}</WsButton>
+              : <WsButton variant="soft" icon="monitor" onClick={() => open(n.id, n.title)} ariaLabel={tx("hublive.aTeach_openX", { title: n.title })} disabled={activeId === n.id || !p.childId}>{tx("hublive.aTeach_open")}</WsButton>}
           </div>
         ))}
+        {isTutor && <WsButton variant="ghost" icon="notes" onClick={() => setBrowse(true)} id="ws-browse-library">{tx("hubpicker.browseLibrary")}</WsButton>}
       </div>
+      {browse && (
+        <Dialog id="ws-teach-picker" title={tx("hubpicker.teachPickTitle")} size="xl" onClose={() => setBrowse(false)}>
+          <LessonPicker qs={qs} mode="single" value={[]} idPrefix="ws-teach" testId="ws-teach-picker-body" onChange={(ids, items) => { if (ids[0]) { setBrowse(false); teach(ids[0], items[0]?.title ?? ""); } }} />
+        </Dialog>
+      )}
     </WsSection>
   );
 }

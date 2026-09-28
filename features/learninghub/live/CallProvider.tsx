@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ApiError, get, post } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../panelTypes";
 import { errMsg } from "../types";
@@ -58,6 +59,7 @@ export const useCall = () => useContext(Ctx);
 
 export function CallProvider({ p, children }: { p: PanelProps; children: ReactNode }) {
   const { qs, canEdit, childId, students } = p;
+  const t = useT();
   const [session, setSession] = useState<Session | null>(null);
   const [prefs, setPrefsState] = useState<JoinPrefs>({ camOn: true, micOn: true });
   const [placement, setPlacement] = useState<"inline" | "full">("inline");
@@ -84,11 +86,11 @@ export function CallProvider({ p, children }: { p: PanelProps; children: ReactNo
       setSession((s) => (s && s.lessonId === lesson.id ? { ...s, stage: { kind: "in-call", join: info } } : s));
     } catch (e) {
       if (!mounted.current) return;
-      const msg = errMsg(e, "Couldn't join the lesson");
+      const msg = errMsg(e, t("hublive.aCall_joinFail"));
       const body = e instanceof ApiError ? (e.body as { code?: string; children?: { childId: string; childName: string }[] } | undefined) : undefined;
       setSession((s) => (s && s.lessonId === lesson.id ? { ...s, stage: { kind: "failed", reason: classifyJoinError(e instanceof ApiError ? e.status : undefined, msg, body?.code), message: msg, ...(Array.isArray(body?.children) ? { children: body.children } : {}) } } : s));
     }
-  }, [qs, canEdit, childId]);
+  }, [qs, canEdit, childId, t]);
 
   const start = useCallback((lesson: Lesson, next?: JoinPrefs, asChildId?: string) => {
     if (next) { setPrefsState(next); try { localStorage.setItem(PREFS_KEY, JSON.stringify(next)); } catch { /* not remembered — fine */ } }
@@ -135,7 +137,7 @@ export function CallProvider({ p, children }: { p: PanelProps; children: ReactNo
       await post(`/api/learning-hub/lessons/${session.lessonId}/end${withQs(qs, {})}`, {});
       setSession((s) => (s ? { ...s, stage: { kind: "left", join: null } } : s));
       load();
-    } catch (e) { p.onError(errMsg(e, "Couldn't end the lesson")); }
+    } catch (e) { p.onError(errMsg(e, t("hublive.aCall_endFail"))); }
     finally { setEnding(false); }
   };
   const extend = useCallback(async () => {
@@ -165,7 +167,7 @@ export function CallProvider({ p, children }: { p: PanelProps; children: ReactNo
     mode, minimized, inline: !!session && !minimized && placement === "inline", prefs, start, restore, attachHost, slotRef,
   }), [active, lesson?.title, session?.stage.kind, mode, minimized, placement, session, prefs, start, restore, attachHost, slotRef]);
 
-  const tutorLabel = canEdit ? "You" : lesson?.tutorName || students.find((s) => s.tutorName)?.tutorName || "Your tutor";
+  const tutorLabel = canEdit ? t("hublive.aPanel_you") : lesson?.tutorName || students.find((s) => s.tutorName)?.tutorName || t("hublive.aPanel_yourTutor");
 
   return (
     <Ctx.Provider value={api}>
@@ -207,6 +209,6 @@ function CallLayer({ mode, slot, hidden, children }: { mode: CallPlacement; slot
     tick();
     return () => cancelAnimationFrame(raf);
   }, [mode, slot]);
-  const cls = mode === "full" ? "inset-0 z-[350]" : mode === "mini" ? "bottom-4 right-4 z-[60] h-[204px] w-[min(360px,calc(100vw-24px))]" : "z-[20]";
+  const cls = mode === "full" ? "inset-0 z-[350]" : mode === "mini" ? "bottom-4 end-4 z-[60] h-[204px] w-[min(360px,calc(100vw-24px))]" : "z-[20]";
   return <div ref={ref} data-call-layer={mode} className={`fixed ${cls} ${hidden ? "invisible" : ""}`}>{children}</div>;
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { FOCUS } from "../../../kit";
+import { useBareTool } from "../../bareContext";
 import { CATEGORY_LABEL, ELEMENTS, findElements, type Category, type Element } from "./elements";
 
 // The full periodic table (118 elements) as a data sheet: tap an element for its atomic number, relative atomic mass, group, period, type and electron
@@ -13,6 +15,9 @@ const COLOUR: Record<Category, string> = {
 const SIZES = [26, 32, 40, 50];
 
 export default function PeriodicTable() {
+  const bare = useBareTool();
+  const t = useT();
+  const catName = (c: Category) => t(`hubtoolsb.sc_cat_${c.replace("-", "_")}`);
   const [sel, setSel] = useState<Element>(ELEMENTS[10]!); // Na: a sensible first card
   const [q, setQ] = useState("");
   const [size, setSize] = useState(1);
@@ -33,10 +38,10 @@ export default function PeriodicTable() {
   const lan = ELEMENTS.filter((e) => e.z >= 57 && e.z <= 71), act = ELEMENTS.filter((e) => e.z >= 89 && e.z <= 103);
 
   const cell = (e: Element) => (
-    <button key={e.z} type="button" onClick={() => setSel(e)} aria-label={`${e.name}, atomic number ${e.z}`} aria-pressed={sel.z === e.z} data-testid={`pt-el-${e.sym}`}
+    <button key={e.z} type="button" onClick={() => setSel(e)} aria-label={t("hubtoolsb.sc_pt_cellAria", { name: e.name, z: e.z })} aria-pressed={sel.z === e.z} data-testid={`pt-el-${e.sym}`}
       className={`relative flex flex-col items-center justify-center rounded-[4px] border text-[var(--ink)] ${FOCUS} ${sel.z === e.z ? "border-[var(--brand)] ring-2 ring-[var(--brand)]" : hits.has(e.z) ? "border-[var(--gold,#f5b81f)] ring-2 ring-[var(--gold,#f5b81f)]" : "border-[color-mix(in_srgb,var(--ink)_18%,transparent)]"}`}
       style={{ width: w, height: w, background: COLOUR[e.category], fontSize: Math.max(10, w * 0.36), lineHeight: 1 }}>
-      <span style={{ position: "absolute", top: 1, left: 2, fontSize: Math.max(7, w * 0.22), fontWeight: 600 }}>{e.z}</span>
+      <span style={{ position: "absolute", top: 1, insetInlineStart: 2, fontSize: Math.max(7, w * 0.22), fontWeight: 600 }}>{e.z}</span>
       <b>{e.sym}</b>
     </button>
   );
@@ -45,14 +50,14 @@ export default function PeriodicTable() {
 
   return (
     <div data-testid="periodic-table">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); const f = findElements(e.target.value)[0]; if (f) setSel(f); }} placeholder="Find an element (name, symbol or number)" aria-label="Find an element"
+      <div data-tool-strip className="mb-2 flex flex-wrap items-center gap-2">
+        <input type="search" value={q} onChange={(e) => { setQ(e.target.value); const f = findElements(e.target.value)[0]; if (f) setSel(f); }} placeholder={t("hubtoolsb.sc_pt_findPh")} aria-label={t("hubtoolsb.sc_pt_findAria")}
           className={`min-h-[44px] flex-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[13.5px] font-semibold text-[var(--ink)] ${FOCUS}`} style={{ minWidth: 200 }} data-testid="pt-search" />
-        <button type="button" className={btn} onClick={() => setSize((s) => Math.max(0, s - 1))} aria-label="Smaller cells" data-testid="pt-zoom-out">−</button>
-        <button type="button" className={btn} onClick={() => setSize((s) => Math.min(SIZES.length - 1, s + 1))} aria-label="Bigger cells" data-testid="pt-zoom-in">＋ Zoom</button>
+        <button type="button" data-tool-chrome className={btn} onClick={() => setSize((s) => Math.max(0, s - 1))} aria-label={t("hubtoolsb.sc_pt_smaller")} data-testid="pt-zoom-out">−</button>
+        <button type="button" data-tool-chrome className={btn} onClick={() => setSize((s) => Math.min(SIZES.length - 1, s + 1))} aria-label={t("hubtoolsb.sc_pt_bigger")} data-testid="pt-zoom-in">{t("hubtoolsb.sc_pt_zoom")}</button>
       </div>
-      <div className="overflow-auto rounded-lg border border-[var(--line)] p-2" style={{ maxHeight: "48vh" }}>
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(18, ${w}px)`, gap: 2, width: "max-content" }}>
+      <div className={bare ? "overflow-auto" : "overflow-auto rounded-lg border border-[var(--line)] p-2"} style={{ maxHeight: bare ? undefined : "48vh" }}>
+        <div dir="ltr" style={{ display: "grid", gridTemplateColumns: `repeat(18, ${w}px)`, gap: 2, width: "max-content" }}>
           {grid.flatMap((row, r) => row.map((c, g) => (c === "lan" ? blank(`l${r}`, "57–71") : c === "act" ? blank(`a${r}`, "89–103") : c ? cell(c) : blank(`e${r}-${g}`))))}
           {Array.from({ length: 18 }, (_, i) => <div key={`gap${i}`} style={{ height: 6 }} />)}
           {Array.from({ length: 2 }, () => null).flatMap((_, r) => [
@@ -62,15 +67,15 @@ export default function PeriodicTable() {
           ])}
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] font-semibold text-[var(--ink-2)]" aria-label="Key">
-        {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => <span key={c} className="inline-flex items-center gap-1"><i style={{ width: 12, height: 12, background: COLOUR[c], borderRadius: 3, display: "inline-block" }} />{CATEGORY_LABEL[c]}</span>)}
+      <div data-tool-chrome className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px] font-semibold text-[var(--ink-2)]" aria-label={t("hubtoolsb.sc_pt_key")}>
+        {(Object.keys(CATEGORY_LABEL) as Category[]).map((c) => <span key={c} className="inline-flex items-center gap-1"><i style={{ width: 12, height: 12, background: COLOUR[c], borderRadius: 3, display: "inline-block" }} />{catName(c)}</span>)}
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[13px] sm:grid-cols-3" data-testid="pt-detail" aria-live="polite">
-        <div className="col-span-2 flex items-baseline gap-2 sm:col-span-3"><b className="text-[26px] leading-none text-[var(--ink)]">{sel.sym}</b><span className="text-[15px] font-extrabold text-[var(--ink)]">{sel.name}</span><span className="text-[12px] font-semibold text-[var(--ink-3)]">{CATEGORY_LABEL[sel.category]}</span></div>
-        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">Atomic number</dt><dd className="m-0 font-extrabold text-[var(--ink)]" data-testid="pt-z">{sel.z}</dd></div>
-        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">Relative atomic mass</dt><dd className="m-0 font-extrabold text-[var(--ink)]" data-testid="pt-ar">{sel.ar}</dd></div>
-        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">Group · Period</dt><dd className="m-0 font-extrabold text-[var(--ink)]">{sel.group ?? "—"} · {sel.period}</dd></div>
-        <div className="col-span-2 sm:col-span-3"><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">Electron arrangement</dt><dd className="m-0 font-extrabold text-[var(--ink)]">{sel.shells ?? "not needed at school level"}</dd></div>
+        <div className="col-span-2 flex items-baseline gap-2 sm:col-span-3"><b className="text-[26px] leading-none text-[var(--ink)]">{sel.sym}</b><span className="text-[15px] font-extrabold text-[var(--ink)]">{sel.name}</span><span className="text-[12px] font-semibold text-[var(--ink-3)]">{catName(sel.category)}</span></div>
+        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">{t("hubtoolsb.sc_pt_z")}</dt><dd className="m-0 font-extrabold text-[var(--ink)]" data-testid="pt-z">{sel.z}</dd></div>
+        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">{t("hubtoolsb.sc_pt_ar")}</dt><dd className="m-0 font-extrabold text-[var(--ink)]" data-testid="pt-ar">{sel.ar}</dd></div>
+        <div><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">{t("hubtoolsb.sc_pt_gp")}</dt><dd className="m-0 font-extrabold text-[var(--ink)]">{sel.group ?? "—"} · {sel.period}</dd></div>
+        <div className="col-span-2 sm:col-span-3"><dt className="text-[11px] font-bold uppercase text-[var(--ink-3)]">{t("hubtoolsb.sc_pt_shells")}</dt><dd className="m-0 font-extrabold text-[var(--ink)]">{sel.shells ?? t("hubtoolsb.sc_pt_noShells")}</dd></div>
       </dl>
     </div>
   );

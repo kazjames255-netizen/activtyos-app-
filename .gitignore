@@ -55,3 +55,8 @@ server/serviceAccountKey.json
 !.env.local.example
 !server/.env.example
 /e2e/review/.auth-suite
+/e2e/review/.auth-pj
+/e2e/review/.auth-hiw
+/scratch/pw-hiw
+/e2e/review/.auth-fr
+/e2e/review/.ks1-fixture.json

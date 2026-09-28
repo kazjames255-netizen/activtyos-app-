@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import { get, post } from "@/lib/api";
 import { Icon } from "../kit";
@@ -16,6 +17,7 @@ import { errMsg, type Student } from "../types";
 interface CardLite { id: string; front: string }
 
 export function FlashcardsForLesson({ qs, topicId }: { qs: string; topicId: string }) {
+  const t = useT();
   const [total, setTotal] = useState<number | null>(null);
   const [students, setStudents] = useState<Student[] | null>(null);
   const [assignedIds, setAssignedIds] = useState<string[]>([]);
@@ -61,7 +63,7 @@ export function FlashcardsForLesson({ qs, topicId }: { qs: string; topicId: stri
       await post(`/api/learning-hub/flashcards/assign${qs}`, { topicId, childIds: value, ...(cardIds ? { cardIds } : {}) });
       setAssignedIds(value); setPicking(false); setPickingCards(false); setDone(true);
       setTimeout(() => setDone(false), 4000);
-    } catch (e) { setErr(errMsg(e, "Couldn't assign those flashcards")); }
+    } catch (e) { setErr(errMsg(e, t("hublessons.fcaCouldntAssign"))); }
     finally { setBusy(false); }
   };
 
@@ -70,33 +72,33 @@ export function FlashcardsForLesson({ qs, topicId }: { qs: string; topicId: stri
       <div className="flex items-center gap-2.5">
         <span className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-[var(--violet-soft)] text-[var(--violet)]"><Icon name="cards" size={19} /></span>
         <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-extrabold text-[var(--ink)]">Flashcards</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">{assignedIds.length > 0 ? `Given to ${assignedIds.length}` : "Not yet assigned"}</div>
+          <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{t("hublessons.fcaTitle")}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]">{assignedIds.length > 0 ? t("hublessons.fcaGivenTo", { n: assignedIds.length }) : t("hublessons.fcaNotAssigned")}</div>
         </div>
         <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--violet-soft)] text-[11px] font-extrabold text-[var(--violet)]">{total}</span>
       </div>
-      {done && <p className="m-0 mt-2 text-[12.5px] font-bold text-[var(--hub-green-ink)]">Done — they&apos;ll see it next time they open flashcards.</p>}
+      {done && <p className="m-0 mt-2 text-[12.5px] font-bold text-[var(--hub-green-ink)]">{t("hublessons.fcaDone")}</p>}
       {!picking && !done && (
         <button type="button" onClick={() => setPicking(true)} data-testid="lesson-flashcards-assign-open"
-          className={`mt-2.5 min-h-[36px] w-full rounded-lg border border-[var(--violet)] text-[12.5px] font-extrabold text-[var(--violet)] hover:bg-[var(--violet-soft)] ${FOCUS}`}>Send flashcards</button>
+          className={`mt-2.5 min-h-[36px] w-full rounded-lg border border-[var(--violet)] text-[12.5px] font-extrabold text-[var(--violet)] hover:bg-[var(--violet-soft)] ${FOCUS}`}>{t("hublessons.fcaSend")}</button>
       )}
       {picking && (
-        <div className="mt-2.5 text-left">
-          <div className="mb-2 text-[12.5px] font-extrabold text-[var(--ink)]">{total} flashcard{total === 1 ? "" : "s"} for this topic — who gets it?</div>
+        <div className="mt-2.5 text-start">
+          <div className="mb-2 text-[12.5px] font-extrabold text-[var(--ink)]">{t("hublessons.fcaWhoGets", { n: total })}</div>
           {students === null ? <div className="h-14 animate-pulse rounded-xl bg-[var(--panel)]" /> : (
             <StudentPicker students={students.map((s) => ({ childId: s.childId, childName: s.childName, yearGroup: null }))} value={value} onChange={setValue} idPrefix="fc-assign" />
           )}
           {!pickingCards ? (
             <button type="button" onClick={openCardPicker} data-testid="lesson-flashcards-choose-cards" className={`mt-2.5 text-[12px] font-extrabold text-[var(--violet)] hover:underline ${FOCUS}`}>
-              Choose specific cards, not the whole topic
+              {t("hublessons.fcaChooseSpecific")}
             </button>
           ) : (
             <div className="mt-2.5 rounded-lg border border-[var(--line)] p-2">
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-[11.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Cards ({selectedCards.length}/{cards?.length ?? 0})</span>
+                <span className="text-[11.5px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("hublessons.fcaCardsCount", { a: selectedCards.length, b: cards?.length ?? 0 })}</span>
                 <button type="button" onClick={() => setSelectedCards(selectedCards.length === (cards?.length ?? 0) ? [] : (cards ?? []).map((c) => c.id))}
                   className={`text-[11.5px] font-extrabold text-[var(--violet)] hover:underline ${FOCUS}`}>
-                  {selectedCards.length === (cards?.length ?? 0) ? "Clear all" : "Select all"}
+                  {selectedCards.length === (cards?.length ?? 0) ? t("hublessons.clearAll") : t("hublessons.selectAll")}
                 </button>
               </div>
               {cards === null ? <div className="h-14 animate-pulse rounded-lg bg-[var(--panel)]" /> : (
@@ -109,14 +111,14 @@ export function FlashcardsForLesson({ qs, topicId }: { qs: string; topicId: stri
                   ))}
                 </div>
               )}
-              <button type="button" onClick={() => setPickingCards(false)} className={`mt-1.5 text-[11.5px] font-extrabold text-[var(--ink-3)] hover:underline ${FOCUS}`}>Use the whole topic instead</button>
+              <button type="button" onClick={() => setPickingCards(false)} className={`mt-1.5 text-[11.5px] font-extrabold text-[var(--ink-3)] hover:underline ${FOCUS}`}>{t("hublessons.fcaUseWhole")}</button>
             </div>
           )}
           {err && <p role="alert" className="m-0 mt-2 text-[12.5px] font-semibold text-[var(--red)]">{err}</p>}
           <div className="mt-2.5 flex gap-2">
             <button type="button" onClick={() => void assign()} disabled={busy || !value.length || (pickingCards && !selectedCards.length)} data-testid="lesson-flashcards-assign-confirm"
-              className={`min-h-[36px] rounded-full bg-[var(--violet)] px-3.5 text-[12.5px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}>{busy ? "Assigning…" : "Assign"}</button>
-            <button type="button" onClick={() => setPicking(false)} className={`min-h-[36px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>Cancel</button>
+              className={`min-h-[36px] rounded-full bg-[var(--violet)] px-3.5 text-[12.5px] font-extrabold text-white disabled:opacity-50 ${FOCUS}`}>{busy ? t("hublessons.fcaAssigning") : t("hublessons.assign")}</button>
+            <button type="button" onClick={() => setPicking(false)} className={`min-h-[36px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[12.5px] font-extrabold text-[var(--ink-2)] ${FOCUS}`}>{t("hublessons.cancel")}</button>
           </div>
         </div>
       )}

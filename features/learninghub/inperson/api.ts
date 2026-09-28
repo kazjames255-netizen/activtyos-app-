@@ -33,6 +33,9 @@ export interface Cell { response?: string | string[]; verdict?: "right" | "wrong
 
 const base = "/in-person/sessions";
 export const listLiveSessions = (qs: string) => get<IpSession[]>(hubPath(qs, base, { status: "live" }));
+/** The merged Lessons area's Past tab: every session the tutor has run recently (live and ended, newest first, ≤20 —
+ *  the server's own cap), so a real in-person history sits alongside video lessons without a second screen. */
+export const listSessions = (qs: string) => get<IpSession[]>(hubPath(qs, base));
 export const createSession = (qs: string, body: { childIds: string[]; groupIds?: string[]; noteId?: string | null; assessmentId?: string | null; title?: string; key: string }) =>
   post<IpSession>(hubPath(qs, base), body);
 export const getSession = (qs: string, id: string) => get<IpSession & { results: IpStored[] }>(hubPath(qs, `${base}/${id}`));

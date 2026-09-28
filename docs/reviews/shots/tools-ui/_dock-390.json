@@ -1,0 +1,26 @@
+{
+ "dockPresent": 1,
+ "collapsedButton": 1,
+ "collapsedBtnBox": {
+  "x": 206.328125,
+  "y": 964,
+  "width": 171.671875,
+  "height": 44
+ },
+ "closeBtnBox": {
+  "x": 318,
+  "y": 416.875,
+  "width": 44,
+  "height": 44
+ },
+ "addVisible": true,
+ "menuOpen": 1,
+ "focusInMenu": true,
+ "focusReturnedAfterMenuEsc": true,
+ "cardOpen": 1,
+ "railPresent": 1,
+ "backgroundInert": true,
+ "tabStaysInCard": true,
+ "focusReturnedAfterCardEsc": true,
+ "focusReturnedAfterCardClose": true
+}

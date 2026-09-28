@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
+import { forgetHub } from "./lib/hubCache";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { parse as parseYaml } from "yaml";
@@ -56,6 +57,7 @@ import { franchises } from "./routes/franchises";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
 import { emails, emailsInbound, emailsOpen, emailsResendInbound, emailsUnsub } from "./routes/emails";
+import { hubDigestPublic } from "./routes/hub/digestApi";
 import { mealOptions, mealOrders } from "./routes/mealsShop";
 import { mealMenus } from "./routes/mealMenus";
 import { documents } from "./routes/documents";
@@ -92,6 +94,7 @@ import { stripeWebhook } from "./routes/stripeWebhook";
 import { enforceSubscription } from "./middleware/subscription";
 import { enforceAccess } from "./middleware/access";
 import { learningHub } from "./routes/learningHub";
+import { noOakResponse } from "./oak/noOakResponse";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 
@@ -132,6 +135,24 @@ app.use(gzipResponses);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// Internal only, no user auth: an offline import/migration script (server/src/oak/*.ts) writes hub content
+// (hubTopics/hubNotes/hubQuestions/hubAssessments/hubFlashcards) directly to Firestore, in a SEPARATE process
+// from the running API — it has no way to call this process's own in-memory hub cache (lib/hubCache.ts:
+// forgetHub/patchHub). Without this, the API keeps serving its last cached copy of that tenant's assessments/
+// notes/topics (up to TTL_INDEX/TTL_TOPICS, 20 min) even though the new content already exists in Firestore —
+// e.g. a lesson's freshly-linked exit quiz silently missing from GET /notes/:id/lesson-questions (`quiz: null`,
+// no error) until the cache happens to refresh. A script calls this once per tenant right after it finishes
+// writing. Gated on HUB_CACHE_ADMIN_KEY (unset in prod by default = always refused): set it in the same shell
+// a script runs from, matching the API it's pointed at.
+app.post("/internal/hub-cache/forget", (req, res) => {
+  const key = process.env.HUB_CACHE_ADMIN_KEY;
+  if (!key || req.headers["x-admin-key"] !== key) { res.status(404).end(); return; }
+  const tenantId = typeof req.body?.tenantId === "string" ? req.body.tenantId : "";
+  if (!tenantId) { res.status(400).json({ error: "tenantId required" }); return; }
+  forgetHub(tenantId);
+  res.json({ ok: true });
+});
+
 // Interactive API docs (no auth) — spec lives in server/openapi.yaml.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const openapi = parseYaml(fs.readFileSync(path.resolve(here, "../openapi.yaml"), "utf8"));
@@ -159,6 +180,8 @@ app.use("/api/images", rateLimit("images", 600), images);
 // Very generous: Gmail/Apple proxies fetch for many recipients from few IPs.
 app.use("/api/emails/open", rateLimit("email-open", 1000), emailsOpen);
 app.use("/api/emails/unsubscribe", rateLimit("unsubscribe", 30), emailsUnsub);
+// Learning Hub parent digest / homework-reminder opt-out (public: signed link in the email).
+app.use("/api/hub-digest", rateLimit("hub-digest-optout", 30), hubDigestPublic);
 // Inbound email webhook — called by a mail platform with a shared secret.
 app.use("/api/emails/inbound", rateLimit("email-inbound", 300), emailsInbound);
 
@@ -249,7 +272,7 @@ app.use("/api/credentials", credentials);
 app.use("/api/staff-announcements", staffAnnouncements);
 app.use("/api/leave", leave);
 app.use("/api/learning", learning);
-app.use("/api/learning-hub", learningHub);
+app.use("/api/learning-hub", noOakResponse, learningHub);
 app.use("/api/reviews", reviews);
 app.use("/api/availability", availability);
 app.use("/api/dashboard", dashboard);

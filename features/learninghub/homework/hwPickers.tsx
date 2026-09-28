@@ -1,132 +1,45 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Select } from "@/components/ui";
 import { get, put } from "@/lib/api";
 import type { Note, Topic } from "../types";
-import { topicLabel } from "../types";
-import { FOCUS, Skeleton, withQs } from "../teachKit";
-import type { QuizLite } from "./hwTypes";
+import { FOCUS } from "../teachKit";
+import type { QuizLite, WorksheetRef } from "./hwTypes";
+import { PreviewButton } from "./hwPreview";
+import { LessonPicker } from "../lesson/picker/LessonPicker";
+import type { PickItem } from "../lesson/picker/types";
+import { useT } from "@/lib/i18n/provider";
 
 // The homework form's pickers. A seeded provider has ~450 quizzes and ~450 lessons, so neither is a flat list any
 // more: each is a search box over a SERVER-side search (`q`, `limit`), with the current choice always kept in the
 // list so it never silently disappears while you type.
 
-const useDebounced = <T,>(v: T, ms = 250) => {
-  const [d, setD] = useState(v);
-  useEffect(() => { const t = setTimeout(() => setD(v), ms); return () => clearTimeout(t); }, [v, ms]);
-  return d;
-};
-
-const QUIZ_LIMIT = 40;
 export type QuizPick = QuizLite & { published?: boolean };
 
-/** Quiz picker: a search box over a `<select>` grouped by subject. `selected` = the chosen quiz row (any state, incl. a draft). */
-export function QuizSelect({ qs, value, selected, onChange, focus }: { qs: string; value: string; selected: QuizPick | null; onChange: (id: string) => void; focus?: boolean }) {
-  const [q, setQ] = useState("");
-  const dq = useDebounced(q.trim());
-  const [res, setRes] = useState<{ items: QuizPick[]; total: number } | null>(null);
-  useEffect(() => {
-    let live = true;
-    get<{ items: QuizPick[]; total: number } | QuizPick[]>(`/api/learning-hub/assessments${withQs(qs, { type: "quiz", light: "1", published: "1", limit: String(QUIZ_LIMIT), q: dq || undefined })}`)
-      .then((r) => { if (live) setRes(Array.isArray(r) ? { items: r, total: r.length } : { items: r.items ?? [], total: r.total ?? 0 }); })
-      .catch(() => { if (live) setRes({ items: [], total: 0 }); });
-    return () => { live = false; };
-  }, [qs, dq]);
-  const groups = useMemo(() => {
-    const items = [...(res?.items ?? [])];
-    if (selected && !items.some((x) => x.id === selected.id)) items.unshift(selected);
-    const by = new Map<string, QuizPick[]>();
-    for (const x of items) by.set(x.subject || "Other", [...(by.get(x.subject || "Other") ?? []), x]);
-    return [...by].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [res, selected]);
-  if (res === null) return <Skeleton className="h-[44px]" />;
-  const more = res.total > res.items.length;
+/** Worksheet picker: a browsable card grid of every lesson that carries a worksheet (server `worksheet=1`, shown at once, paged, sorted subject › unit),
+ *  with year / subject chips and search as an addition. Tick to attach (several), Preview before choosing. Chosen ones show as chips. */
+export function WorksheetPicker({ qs, chosen, rows, onToggle, onPreview }: { qs: string; topics?: Topic[]; chosen: string[]; rows: Map<string, WorksheetRef>; onToggle: (w: WorksheetRef) => void; onPreview: (w: WorksheetRef) => void; yearGroups?: string[] }) {
+  const t = useT();
+  const ref = (it: PickItem): WorksheetRef => ({ noteId: it.id, title: it.title, ...(it.worksheetQuizId ? { quizId: it.worksheetQuizId } : {}) });
   return (
-    <div className="grid gap-1.5">
-      {(
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search quizzes…" aria-label="Search quizzes" id="hub-hw-quiz-search"
-          className={`min-h-[40px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${FOCUS}`} />
-      )}
-      <Select id="hub-hw-quiz" data-autofocus={focus ? true : undefined} className="min-h-[44px] w-full" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">No quiz</option>
-        {groups.map(([subject, xs]) => (
-          <optgroup key={subject} label={subject}>
-            {xs.map((x) => <option key={x.id} value={x.id}>{x.title} · {x.questionCount} Qs{x.published === false ? " (draft)" : ""}</option>)}
-          </optgroup>
-        ))}
-      </Select>
-      {more && <p className="text-[11.5px] text-[var(--ink-3)]">Showing {res.items.length} of {res.total} — type to narrow it down.</p>}
-      {!more && res.items.length === 0 && <p className="text-[11.5px] text-[var(--ink-3)]">{dq ? `No published quiz matches “${dq}”.` : "No published quizzes yet — build one in the Quizzes tab."}</p>}
-    </div>
-  );
-}
-
-const NOTE_LIMIT = 40;
-/** Lesson picker: search + a short checklist (server search, sorted shelf by shelf). Attached lessons are shown by the form itself. */
-export function NoteChecklist({ qs, topics, noteIds, onToggle, onSeen, yearGroups = [], defaultYear = "" }: { qs: string; topics: Topic[]; noteIds: string[]; onToggle: (n: Note) => void; onSeen: (rows: Note[]) => void; /** The tenant's free-text year list ("Year 5"). Empty hides the Year filter. */ yearGroups?: string[]; /** Pre-picked year: the form passes it ONLY while exactly one student is selected. */ defaultYear?: string }) {
-  const [q, setQ] = useState("");
-  const [yearPick, setYearPick] = useState<string | null>(null); // null = follow defaultYear until the tutor chooses
-  const [subject, setSubject] = useState("");
-  const year = yearPick ?? defaultYear;
-  const yearN = /(\d{1,2})/.exec(year)?.[1]; // the API filters by school-year number
-  const subjects = useMemo(() => [...new Set(topics.map((t) => t.subject).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [topics]);
-  const dq = useDebounced(q.trim());
-  const [res, setRes] = useState<{ items: Note[]; total: number } | null>(null);
-  const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
-  const seenRef = useRef(onSeen);
-  useEffect(() => { seenRef.current = onSeen; });
-  useEffect(() => {
-    let live = true;
-    get<{ items: Note[]; total: number }>(`/api/learning-hub/notes${withQs(qs, { limit: String(NOTE_LIMIT), sort: "topic", q: dq || undefined, year: yearN, subject: subject || undefined })}`)
-      .then((r) => { if (!live) return; const items = Array.isArray(r) ? (r as Note[]) : r.items ?? []; setRes({ items, total: Array.isArray(r) ? items.length : r.total ?? items.length }); seenRef.current(items); })
-      .catch(() => { if (live) setRes({ items: [], total: 0 }); });
-    return () => { live = false; };
-  }, [qs, dq, yearN, subject]);
-  if (res === null) return <Skeleton className="h-[80px]" />;
-  return (
-    <div className="grid gap-1.5">
-      {(
-        <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search lessons…" aria-label="Search lessons" id="hub-hw-note-search"
-          className={`min-h-[40px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)] ${FOCUS}`} />
-      )}
-      {(yearGroups.length > 0 || subjects.length > 1) && (
-        <div className="grid grid-cols-2 gap-1.5">
-          {yearGroups.length > 0 && (
-            <Select id="hub-hw-note-year" aria-label="Filter lessons by year" className="min-h-[44px] w-full" value={year} onChange={(e) => setYearPick(e.target.value)}>
-              <option value="">All years</option>
-              {yearGroups.map((y) => <option key={y} value={y}>{y}</option>)}
-            </Select>
-          )}
-          {subjects.length > 1 && (
-            <Select id="hub-hw-note-subject" aria-label="Filter lessons by subject" className={`min-h-[44px] w-full ${yearGroups.length ? "" : "col-span-2"}`} value={subject} onChange={(e) => setSubject(e.target.value)}>
-              <option value="">All subjects</option>
-              {subjects.map((x) => <option key={x} value={x}>{x}</option>)}
-            </Select>
-          )}
+    <div className="grid gap-2" data-testid="hub-hw-worksheets">
+      {chosen.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" data-testid="hub-hw-attached-worksheets" aria-label="Attached worksheets">
+          {chosen.map((id) => { const w = rows.get(id); return (
+            <span key={id} className="inline-flex min-h-[44px] max-w-full items-center gap-1 rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] py-0.5 ps-3 pe-1 text-[12px] font-extrabold text-[var(--brand-strong)]">
+              <span className="truncate">{w?.title ?? "A worksheet"}</span>
+              {w && <PreviewButton label={`Preview worksheet ${w.title}`} testId="hub-hw-ws-chip-preview" onClick={() => onPreview(w)} />}
+              <button type="button" aria-label={`Remove ${w?.title ?? "worksheet"}`} onClick={() => w && onToggle(w)} className={`grid h-11 w-11 place-items-center rounded-full hover:bg-[var(--surface)] ${FOCUS}`}>×</button>
+            </span>); })}
         </div>
       )}
-      {res.items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-[12.5px] text-[var(--ink-3)]">{yearN || subject ? "No lesson matches these filters. Try All years or All subjects." : dq ? `No lesson matches “${dq}”.` : "No lessons yet — add some in the Lessons tab."}</p>
-      ) : (
-        <div className="max-h-[190px] overflow-y-auto rounded-xl border border-[var(--line)]">
-          {res.items.map((n) => {
-            const on = noteIds.includes(n.id);
-            const t = topicById.get(n.topicId);
-            return (
-              <label key={n.id} className={`flex min-h-[44px] cursor-pointer items-center gap-2.5 border-b border-[var(--line)] px-3 py-1.5 last:border-b-0 hover:bg-[var(--panel)] ${on ? "bg-[var(--brand-soft)]" : ""}`}>
-                <input type="checkbox" checked={on} onChange={() => onToggle(n)} className="h-4 w-4 accent-[var(--brand)]" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-bold text-[var(--ink)]">{n.title}</span>
-                  {t && <span className="block truncate text-[11px] text-[var(--ink-3)]">{topicLabel(t)}</span>}
-                </span>
-                {!n.published && <span className="rounded-full bg-[var(--gold-soft)] px-2 py-px text-[11px] font-bold text-[var(--brand-ink)]">Draft</span>}
-              </label>
-            );
-          })}
-        </div>
-      )}
-      {res.total > res.items.length && <p className="text-[11.5px] text-[var(--ink-3)]">Showing {res.items.length} of {res.total} — search to find the rest.</p>}
+      <LessonPicker qs={qs} mode="multi" worksheetOnly lessonsOnly={false} published={false} value={chosen} idPrefix="hub-hw-ws" testId="hub-hw-ws-picker" kind="worksheet"
+        searchLabel={t("hubpicker.searchWsPh")} emptyLibrary={t("hubpicker.worksheetsSoon")}
+        onChange={(ids, items) => {
+          const now = new Set(ids), had = new Set(chosen);
+          for (const id of ids) if (!had.has(id)) { const it = items.find((x) => x.id === id); if (it) onToggle(ref(it)); }
+          for (const id of chosen) if (!now.has(id)) { const w = rows.get(id); if (w) onToggle(w); }
+        }}
+        actions={(it) => <PreviewButton label={`Preview worksheet ${it.title}`} testId="hub-hw-ws-preview-btn" onClick={() => onPreview(ref(it))}>{t("hubpicker.openPreview")}</PreviewButton>} />
     </div>
   );
 }

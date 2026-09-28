@@ -1,11 +1,15 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
+import { roomBelow } from "./roomBelow";
+import { normalizeEls } from "./normalize";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent, type ReactNode } from "react";
 import { loadLib, type Lib } from "./SlideArt";
 import { TeachingHubGlyph } from "../../TeachingHubMark";
 import { useSlideBrand } from "./brand";
 import { applyDrag, nudge, reorderEl, type Guides, type Handle, type Order, type Rect } from "./canvasEdit";
 import { LessonIntroCard, OBJECTIVE_CLASS } from "./LessonIntroCard";
+import { rich } from "../tRich";
 import { ITEM_TITLE_CLASS, LessonOutlineCard } from "./LessonOutlineCard";
 import { brandVars, fontStack, lessonOutlineSlide, mapTextColor, outcomeSlide, themeBlock, type ElTheme, type TextTheme } from "./slideTheme";
 import { isDecorativePic, type CanvasBlock, type CanvasEl, type CanvasImg, type CanvasPara, type CanvasRun, type CanvasShape, type CanvasText } from "./types";
@@ -114,6 +118,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
    *  see LessonOutlineCard.tsx). Undefined renders every item plain, with no done/here status. */
   outlinePart?: number;
 }) {
+  const t = useT();
   const [lib, setLib] = useState<Lib | null>(null);
   const wantsLib = useMemo(() => block.els.some((e) => e.k === "img" && e.picId), [block.els]);
   useEffect(() => {
@@ -210,6 +215,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
   };
 
   const r = edit ? maxStep(block) : reveal;
+  const norm = useMemo(() => normalizeEls(block.els), [block.els]);
   const bg = plan ? plan.bg : (block.bg ?? "#ffffff");
   const g = (i: number, el: CanvasEl): Rect => (live && live.i === i ? live.r : boxOf(el));
   const frameEl = selEl && sel !== null ? (edit ? g(sel, selEl) : null) : null;
@@ -218,12 +224,14 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
   return (
     <div data-testid="canvas-frame" style={{ ...vars, ...LIGHT_VARS, borderRadius: "15px 15px 0 0", overflow: "hidden", background: "var(--sb-paper)" }}>
       <div aria-hidden="true" style={{ height: 4, background: "linear-gradient(90deg, var(--sb-a-dk), var(--sb-a) 40%, var(--sb-b) 75%, var(--sb-c))" }} />
-      <div ref={paper} data-testid="canvas-slide" data-canvas-edit={edit ? "" : undefined} data-themed={themed ? "" : "original"} data-advance={advance ? "" : undefined} role="group" aria-label={label ?? "Slide"}
+      <div ref={paper} data-testid="canvas-slide" data-canvas-edit={edit ? "" : undefined} data-themed={themed ? "" : "original"} data-advance={advance ? "" : undefined} role="group" aria-label={label ?? t("hublessons.csSlide")}
         onKeyDown={onKey}
         onPointerDown={edit ? (e) => { if (!(e.target as HTMLElement).closest("[data-canvas-img],[data-el-wrap],[data-frame],[data-sel-toolbar]")) setSel(null); } : undefined}
         onClick={advance ? (e) => { if ((e.target as HTMLElement).closest("a,button")) return; if (window.getSelection()?.toString()) return; onAdvance?.(); } : undefined}
         style={{ position: "relative", width: "100%", aspectRatio: `${block.w} / ${block.h}`, containerType: "inline-size", overflow: "hidden", background: bg, color: themed ? "var(--sb-ink)" : "#000", fontFamily: fontStack(undefined, false), cursor: advance ? "pointer" : undefined, userSelect: edit ? undefined : "none" }}>
         <style>{`${lib?.css ?? ""}
+/* Text is measured synchronously by the fit routine: a font-size transition (the hub's reduced-motion rule gives EVERY element a 0.01ms one) would leave getComputedStyle / scrollHeight on the OLD size for a frame and the fit would flip-flop. */
+[data-canvas-text],[data-canvas-text] *{transition:none!important}
 [data-canvas-edit] [data-canvas-text]{cursor:text;border-radius:2px}
 [data-canvas-edit] [data-canvas-text]:hover{outline:2px dashed rgba(47,107,216,.7);outline-offset:1px}
 [data-canvas-edit] [data-canvas-text]:focus{outline:2px solid #2f6bd8;outline-offset:1px;background:rgba(47,107,216,.06)}
@@ -247,7 +255,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
               topic: lessonTopic, objective: outcome.statement, keyConcepts: lessonKeyConcepts,
             }} objectiveEditable={edit && outcomeEl ? (
               <div data-testid="lesson-intro-objective" data-canvas-text="" contentEditable suppressContentEditableWarning spellCheck
-                role="textbox" aria-multiline="true" aria-label="The objective — click to edit"
+                role="textbox" aria-multiline="true" aria-label={t("hublessons.csObjectiveEdit")}
                 className={OBJECTIVE_CLASS} style={{ outline: "none", cursor: "text", whiteSpace: "pre-wrap" }}
                 onPaste={(e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); }}
                 onBlur={(e) => {
@@ -273,7 +281,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
                 title,
                 editable: edit && textEl ? (
                   <div data-testid="lesson-outline-item" data-canvas-text="" contentEditable suppressContentEditableWarning spellCheck
-                    role="textbox" aria-multiline="true" aria-label="This step's title — click to edit"
+                    role="textbox" aria-multiline="true" aria-label={t("hublessons.csStepTitleEdit")}
                     className={ITEM_TITLE_CLASS} style={{ outline: "none", cursor: "text", whiteSpace: "pre-wrap", color: "var(--sb-ink, #171534)" }}
                     onPaste={(e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); }}
                     onBlur={(e) => {
@@ -294,9 +302,10 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
           </div>
         ) : block.els.map((el, i) => {
           const th = plan?.els[i];
-          if (th?.hide || isTrademarkBoilerplate(el)) return null;
+          if (th?.hide || isTrademarkBoilerplate(el) || norm.hide.has(i)) return null;
           const gi = g(i, el);
-          const hidden = (!!el.step && el.step > r) || (!!el.until && r >= el.until);
+          const until = el.until ?? norm.until.get(i);
+          const hidden = (!!el.step && el.step > r) || (!!until && r >= until);
           const auto = !el.step && !!el.delay && !edit;
           const fresh = !edit && !hidden && !!el.step && el.step === reveal && reveal > 0;
           const pos: CSSProperties & Record<string, string | number | undefined> = {
@@ -304,10 +313,10 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
             ...(el.delay && !hidden ? { "--dl": `${el.delay}s` } : {}),
           };
           const sr = { "data-sr": hidden ? "off" : fresh ? "fresh" : "on", ...(auto ? { "data-sr-auto": "" } : {}) } as Record<string, string>;
-          if (el.k === "img") return <ImgEl key={i} el={el} pos={pos} sr={sr} th={th} lib={lib} edit={edit} onDown={(e) => beginDrag(e, i, "move")} />;
+          if (el.k === "img") return <ImgEl key={i} el={el} ar={block.w / block.h} pos={pos} sr={sr} th={th} lib={lib} edit={edit} onDown={(e) => beginDrag(e, i, "move")} />;
           if (el.k === "shape") return <ShapeEl key={i} el={el} pos={pos} sr={sr} th={th} block={block} u={u} id={`${uid}-${i}`} />;
           return (
-            <TextEl key={`${i}-${ver[i] ?? 0}`} el={el} pos={pos} sr={sr} th={th} themed={themed} u={u} edit={edit} r={r}
+            <TextEl key={`${i}-${ver[i] ?? 0}`} el={el} pos={pos} sr={sr} th={th} themed={themed} u={u} edit={edit} r={r} capH={roomBelow(block.els, i)}
               onGrip={(e) => beginDrag(e, i, "move")} onFocusText={() => setSel(i)}
               onCommit={(paras) => { setVer((v) => ({ ...v, [i]: (v[i] ?? 0) + 1 })); commit(block.els.map((o, k) => (k === i && o.k === "text" ? { ...o, paras } : o))); }} />
           );
@@ -317,7 +326,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
           <>
             {live && live.guides.v.map((x) => <span key={`v${x}`} aria-hidden="true" style={{ position: "absolute", left: `${x * 100}%`, top: 0, bottom: 0, width: 1, background: "#e22295", pointerEvents: "none", zIndex: 50 }} />)}
             {live && live.guides.h.map((y) => <span key={`h${y}`} aria-hidden="true" style={{ position: "absolute", top: `${y * 100}%`, left: 0, right: 0, height: 1, background: "#e22295", pointerEvents: "none", zIndex: 50 }} />)}
-            <div ref={frameRef} data-frame="" data-testid="canvas-frame-sel" data-sel-focus="" tabIndex={0} role="group" aria-label={selEl.k === "img" ? "Selected picture: arrow keys move it, [ and ] change its order, Delete removes it" : "Selected text box"}
+            <div ref={frameRef} data-frame="" data-testid="canvas-frame-sel" data-sel-focus="" tabIndex={0} role="group" aria-label={selEl.k === "img" ? t("hublessons.csSelPicture") : t("hublessons.csSelTextBox")}
               onPointerDown={selEl.k === "img" ? (e) => beginDrag(e, sel!, "move") : undefined}
               style={{ position: "absolute", left: `${frameEl.x * 100}%`, top: `${frameEl.y * 100}%`, width: `${frameEl.w * 100}%`, height: `${frameEl.h * 100}%`, boxSizing: "border-box", border: "2px solid #2f6bd8", boxShadow: "0 0 0 1px #fff", outline: "none",
                 cursor: selEl.k === "img" ? "move" : "default", pointerEvents: selEl.k === "img" ? "auto" : "none", touchAction: "none", zIndex: 40, ...(selEl.rot ? { transform: `rotate(${selEl.rot}deg)` } : {}) }}>
@@ -331,18 +340,18 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
       </div>
       {cue && <div data-testid="canvas-cue" className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5" style={{ background: "var(--sb-paper)", borderTop: "1px solid var(--sb-a-line)" }}>{cue}</div>}
       {edit && !outcome && !outline && (
-        <div role="toolbar" aria-label="Placement" data-sel-toolbar="" data-testid="canvas-sel-toolbar" className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)]" style={{ borderRadius: 0 }}>
+        <div role="toolbar" aria-label={t("hublessons.csPlacement")} data-sel-toolbar="" data-testid="canvas-sel-toolbar" className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--ink-2)]" style={{ borderRadius: 0 }}>
           {selEl && sel !== null ? (
             <>
-              <strong className="mr-1 text-[var(--ink)]">{selEl.k === "img" ? "Picture" : selEl.k === "text" ? "Text box" : "Shape"}</strong>
-              {selEl.k === "img" && onPick && !isDecorativePic(selEl, block) && !(plan?.els[sel] && (plan.els[sel]!.hide || !!plan.els[sel]!.outlineImg)) && <TB onClick={() => onPick(sel)} testid="canvas-sel-change">Change…</TB>}
-              <TB onClick={() => setOrder("forward")} testid="canvas-sel-forward" title="Bring forward ( ] )">Forward</TB>
-              <TB onClick={() => setOrder("back")} testid="canvas-sel-back" title="Send back ( [ )">Back</TB>
-              <TB onClick={remove} testid="canvas-sel-delete" title="Delete ( Delete key )" danger>Delete</TB>
-              <label className="ml-1 inline-flex cursor-pointer items-center gap-1 font-semibold"><input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} data-testid="canvas-sel-lock" /> Keep proportions <span className="text-[var(--ink-3)]">(Shift = free)</span></label>
-              <span className="ml-auto hidden text-[var(--ink-3)] md:inline">Drag to move · handles resize · arrow keys nudge · Alt = no snapping</span>
+              <strong className="me-1 text-[var(--ink)]">{selEl.k === "img" ? t("hublessons.csPicture") : selEl.k === "text" ? t("hublessons.csTextBox") : t("hublessons.csShape")}</strong>
+              {selEl.k === "img" && onPick && !isDecorativePic(selEl, block) && !(plan?.els[sel] && (plan.els[sel]!.hide || !!plan.els[sel]!.outlineImg)) && <TB onClick={() => onPick(sel)} testid="canvas-sel-change">{t("hublessons.csChangeEllipsis")}</TB>}
+              <TB onClick={() => setOrder("forward")} testid="canvas-sel-forward" title={t("hublessons.csBringForward")}>{t("hublessons.csForward")}</TB>
+              <TB onClick={() => setOrder("back")} testid="canvas-sel-back" title={t("hublessons.csSendBack")}>{t("hublessons.back")}</TB>
+              <TB onClick={remove} testid="canvas-sel-delete" title={t("hublessons.csDeleteKey")} danger>{t("hublessons.csDelete")}</TB>
+              <label className="ms-1 inline-flex cursor-pointer items-center gap-1 font-semibold"><input type="checkbox" checked={lock} onChange={(e) => setLock(e.target.checked)} data-testid="canvas-sel-lock" /> {t("hublessons.csKeepProportions")} <span className="text-[var(--ink-3)]">{t("hublessons.csShiftFree")}</span></label>
+              <span className="ms-auto hidden text-[var(--ink-3)] md:inline">{t("hublessons.csDragHelp")}</span>
             </>
-          ) : <span className="text-[var(--ink-3)]">Click a picture to move or resize it · grab a text box by its <b aria-hidden="true">✥</b> handle · click any text to edit it</span>}
+          ) : <span className="text-[var(--ink-3)]">{rich(t("hublessons.csClickHelp"), { grip: <b aria-hidden="true">✥</b> })}</span>}
         </div>
       )}
       {(brand.name || brand.logo) && (
@@ -384,11 +393,20 @@ const GENERIC_STOCK_SIDS = new Set([
   // because this occurrence went through our own storage re-encode (resize/webp) before it could be hashed the same way.
 ]);
 
-function ImgEl({ el, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; lib: Lib | null; edit: boolean; onDown: (e: RPointerEvent) => void }) {
+function ImgEl({ el, ar, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; ar: number; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; lib: Lib | null; edit: boolean; onDown: (e: RPointerEvent) => void }) {
   if (th?.panel) return <div aria-hidden="true" {...sr} style={{ ...pos, background: "var(--sb-card)", borderRadius: "2.4cqw", boxShadow: "0 .3cqw 1.6cqw var(--sb-glow), inset 0 0 0 .18cqw var(--sb-a-line)" }} />;
   if (th?.outlineImg) return <div aria-hidden="true" {...sr} style={{ ...pos, background: th.fill, borderRadius: th.outlineImg === "dot" ? "50%" : "999px", boxShadow: "0 .25cqw 1cqw var(--sb-glow), inset 0 0 0 .1cqw var(--sb-a-line)" }} />;
   const pic = el.picId ? lib?.byId[el.picId] : undefined;
   const c = el.crop;
+  // Aspect lock for CROPPED pictures: the crop window (in the picture's own pixels) is drawn to fill the box, so a box whose shape differs from the window's
+  // squeezes / stretches it. Once the picture's natural size is known, a window that drifts > 6% from the box shape is fitted inside the box (contain), centred.
+  const [nat, setNat] = useState<[number, number] | null>(null);
+  let fw = 1, fh = 1;
+  if (c && nat) {
+    const ra = (nat[0] * Math.max(0.05, 1 - c[0] - c[2])) / (nat[1] * Math.max(0.05, 1 - c[1] - c[3]));
+    const ba = (el.w * ar) / Math.max(1e-6, el.h);
+    if (ra > 0 && ba > 0 && Math.abs(ra / ba - 1) > 0.06) { if (ra > ba) fh = ba / ra; else fw = ra / ba; }
+  }
   const sx = c ? 1 / Math.max(0.05, 1 - c[0] - c[2]) : 1, sy = c ? 1 / Math.max(0.05, 1 - c[1] - c[3]) : 1;
   const genericStock = !!el.sid && GENERIC_STOCK_SIDS.has(el.sid);
   const inner = pic
@@ -396,6 +414,8 @@ function ImgEl({ el, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; pos: CSS
     : el.url && !genericStock
       // eslint-disable-next-line @next/next/no-img-element
       ? <img src={el.url} alt={el.alt} draggable={false} loading="lazy"
+          ref={c ? (im) => { if (im && im.complete && im.naturalWidth && im.naturalHeight) setNat((o) => (o && o[0] === im.naturalWidth && o[1] === im.naturalHeight ? o : [im.naturalWidth, im.naturalHeight])); } : undefined}
+          onLoad={c ? (e) => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight) setNat([im.naturalWidth, im.naturalHeight]); } : undefined}
           style={c ? { position: "absolute", maxWidth: "none", width: `${sx * 100}%`, height: `${sy * 100}%`, left: `${-c[0] * sx * 100}%`, top: `${-c[1] * sy * 100}%` } : { width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
       // no real picture stored (or one Oak's own generic/stock art was dropped from): our own mark, never Oak's placeholder art
       : <div aria-hidden="true" style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "var(--sb-card, rgba(0,0,0,.05))", borderRadius: "8%" }}>
@@ -403,8 +423,8 @@ function ImgEl({ el, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; pos: CSS
         </div>;
   const interactive = edit ? { onPointerDown: onDown } : {};
   return (
-    <div data-testid="canvas-img" data-canvas-img="" data-src={el.sid ?? el.imageId ?? el.picId} {...sr} style={{ ...pos, overflow: c ? "hidden" : "visible", ...rotOf(el) }} {...interactive}>
-      {inner}
+    <div data-testid="canvas-img" data-canvas-img="" data-crop-fit={c ? (nat ? (fw < 1 || fh < 1 ? "fitted" : "ok") : "pending") : undefined} data-src={el.sid ?? el.imageId ?? el.picId} {...sr} style={{ ...pos, overflow: c ? "hidden" : "visible", ...rotOf(el) }} {...interactive}>
+      {c && (fw < 1 || fh < 1) ? <div style={{ position: "absolute", left: `${(1 - fw) * 50}%`, top: `${(1 - fh) * 50}%`, width: `${fw * 100}%`, height: `${fh * 100}%`, overflow: "hidden" }}>{inner}</div> : inner}
     </div>
   );
 }
@@ -458,43 +478,65 @@ function ShapeEl({ el, pos, sr, th, block, u, id }: { el: CanvasShape; pos: CSSP
 // If even MIN_FIT still overflows by a lot, clipping is left OFF for that element: legitimate content that genuinely
 // doesn't fit is left to spill (today's behaviour), never silently cut away.
 const MIN_FIT = 0.55;
+const MIN_CQW = 1.25;
 const SPILL_TOLERANCE = 1.6;
 
-function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocusText }: {
-  el: CanvasText; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; themed: boolean; u: (pt: number) => string; edit: boolean; r: number;
+/** The height the text actually needs (paddings + paragraphs + their margins), independent of how tall the box is. */
+function contentHeight(node: HTMLElement): number {
+  const cs = getComputedStyle(node);
+  let h = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  for (const c of Array.from(node.children) as HTMLElement[]) { const m = getComputedStyle(c); h += c.offsetHeight + (parseFloat(m.marginTop) || 0) + (parseFloat(m.marginBottom) || 0); }
+  return h;
+}
+
+function TextEl({ el, pos, sr, th, themed, u, edit, r, capH = 1, onCommit, onGrip, onFocusText }: {
+  el: CanvasText; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; themed: boolean; u: (pt: number) => string; edit: boolean; r: number; capH?: number;
   onCommit: (paras: CanvasPara[]) => void; onGrip: (e: RPointerEvent) => void; onFocusText: () => void;
 }) {
+  const t = useT();
   const pad = el.pad ?? [0, 0, 0, 0];
   const j = el.anchor === "m" ? "center" : el.anchor === "b" ? "flex-end" : "flex-start";
   const tt: TextTheme | undefined = themed ? th?.text : undefined;
   const scale = (size: number, f?: string) => (themed && f === "kalam" ? size * HAND_SCALE : size);
-  const uf = (pt: number) => `calc(${u(pt)} * var(--fit, 1))`;
+  // Never smaller than MIN_PT (9pt on a 720pt slide = 1.25cqw): source decks contain 5-8pt worksheet text that is unreadable at any screen size.
+  const uf = (pt: number) => `max(calc(${u(pt)} * var(--fit, 1)), ${MIN_CQW}cqw)`;
 
   const textRef = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(1);
   const [clip, setClip] = useState(false);
+  // Box growth: text that still does not fit at MIN_FIT grows its box downward (when nothing sits below and the slide has room) instead of being cut off / spilling.
+  const [grow, setGrow] = useState(false);
+  // A tutor editing sees the same fitted text a pupil does — except in the box they are typing in (true size while typing).
+  const [typing, setTyping] = useState(false);
   useLayoutEffect(() => {
-    if (edit) { setFit(1); setClip(false); return; }
+    if (edit && typing) { textRef.current?.style.setProperty("--fit", "1"); setFit(1); setClip(false); return; }
     const node = textRef.current;
     if (!node) return;
     let stopped = false;
     let raf = 0;
     const run = () => {
       if (stopped || !node) return;
-      const box = node.clientHeight;
-      if (!box) return;
+      node.style.height = "100%"; node.style.minHeight = "";
+      const wrap = node.parentElement as HTMLElement | null;
+      const box = node.clientHeight * capH;
+      // With a neighbour below, only the CONTENT height counts (a short text in a tall box sits well inside its cap); scrollHeight would read the whole box.
+      const used = () => (capH < 1 ? contentHeight(node) : node.scrollHeight);
+      if (!node.clientHeight) return;
       node.style.setProperty("--fit", "1");
-      const natural = node.scrollHeight;
-      if (natural <= box + 1) { setFit(1); setClip(false); return; }
+      const natural = used();
+      if (natural <= box + 1) { setFit(1); setClip(false); setGrow(false); return; }
       let lo = MIN_FIT, hi = 1;
       for (let i = 0; i < 6; i++) {
         const mid = (lo + hi) / 2;
         node.style.setProperty("--fit", String(mid));
-        if (node.scrollHeight <= box + 1) lo = mid; else hi = mid;
+        if (used() <= box + 1) lo = mid; else hi = mid;
       }
       node.style.setProperty("--fit", String(lo));
-      const finalH = node.scrollHeight;
+      const finalH = used();
       setFit(lo);
+      const room = wrap?.offsetParent ? (wrap.offsetParent as HTMLElement).clientHeight - wrap.offsetTop : 0;
+      if (finalH > box + 1 && capH === 1 && finalH <= room + 1 && finalH <= box * 3) { node.style.height = "auto"; node.style.minHeight = "100%"; setGrow(true); setClip(false); return; }
+      setGrow(false);
       setClip(finalH <= box * SPILL_TOLERANCE);
     };
     run();
@@ -502,23 +544,29 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
     ro.observe(node);
     let fontsCancelled = false;
     document.fonts?.ready?.then(() => { if (!fontsCancelled) run(); }).catch(() => { /* font-loading status unavailable: keep the initial-measure fit */ });
-    return () => { stopped = true; fontsCancelled = true; ro.disconnect(); cancelAnimationFrame(raf); };
+    // `fonts.ready` can resolve BEFORE the app font (first used by this very text) has downloaded; the wider real font then wraps to more lines and the
+    // measured fit is stale. Re-fit whenever a font finishes loading, and once more shortly after mount.
+    const onFont = () => { if (!fontsCancelled) run(); };
+    document.fonts?.addEventListener?.("loadingdone", onFont);
+    const late = window.setTimeout(onFont, 700);
+    return () => { stopped = true; fontsCancelled = true; ro.disconnect(); cancelAnimationFrame(raf); document.fonts?.removeEventListener?.("loadingdone", onFont); window.clearTimeout(late); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [edit, el]);
+  }, [edit, typing, el, capH]);
 
   return (
     <div data-el-wrap="" {...sr} style={{ ...pos, ...rotOf(el), isolation: "isolate", ...(tt?.on === "band" ? { zIndex: 2 } : {}) }}>
       {tt?.card && <span aria-hidden="true" style={CARD} />}
       <div ref={textRef} data-testid="canvas-text" data-canvas-text="" contentEditable={edit || undefined} suppressContentEditableWarning spellCheck={edit}
-        role={edit ? "textbox" : undefined} aria-multiline={edit || undefined} aria-label={edit ? "Slide text — click to edit" : undefined}
-        onFocus={edit ? () => { onFocusText(); try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* not supported: Enter makes a div, still read back */ } } : undefined}
+        role={edit ? "textbox" : undefined} aria-multiline={edit || undefined} aria-label={edit ? t("hublessons.csTextEdit") : undefined}
+        onFocus={edit ? () => { setTyping(true); onFocusText(); try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* not supported: Enter makes a div, still read back */ } } : undefined}
         onBlur={edit ? (e) => {
+          setTyping(false);
           const paras = readParas(e.currentTarget, el);
           if (JSON.stringify(paras) !== JSON.stringify(el.paras)) onCommit(paras);
         } : undefined}
         onPaste={edit ? (e) => { e.preventDefault(); document.execCommand("insertText", false, e.clipboardData.getData("text/plain")); } : undefined}
         onKeyDown={edit ? (e) => { if ((e.metaKey || e.ctrlKey) && /^[biu]$/i.test(e.key)) e.preventDefault(); } : undefined}
-        style={{ display: "flex", flexDirection: "column", justifyContent: j, width: "100%", height: "100%",
+        style={{ display: "flex", flexDirection: "column", justifyContent: j, width: "100%", height: grow ? "auto" : "100%", minHeight: grow ? "100%" : undefined,
           boxSizing: "border-box", padding: `${u(pad[1])} ${u(pad[2])} ${u(pad[3])} ${u(pad[0])}`, overflowWrap: "break-word", whiteSpace: "pre-wrap", outline: "none",
           // Edit mode never shrinks text (a tutor needs true-size WYSIWYG feedback while typing — the earlier
           // shrink-to-fit fix deliberately left this alone), but it must still stay CONTAINED to its own box:
@@ -528,7 +576,7 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
           // neighbouring box's — indistinguishable from a genuine layout bug. `overflow-y: auto` keeps a
           // tutor able to scroll to and edit every word without any of it bleeding onto a sibling element.
           overflowY: edit ? "auto" : undefined, overflow: edit ? undefined : clip ? "hidden" : "visible",
-          ...(edit ? {} : { "--fit": fit }) } as CSSProperties & Record<string, string | number | undefined>}>
+          ...(edit && typing ? {} : { "--fit": fit }) } as CSSProperties & Record<string, string | number | undefined>}>
         {el.paras.map((p, pi) => {
           const first = p.runs[0];
           const ml = p.ind?.[0] ?? 0, id = p.ind?.[1] ?? 0;
@@ -547,7 +595,7 @@ function TextEl({ el, pos, sr, th, themed, u, edit, r, onCommit, onGrip, onFocus
           );
         })}
       </div>
-      {edit && <button type="button" data-grip="" data-sel-focus="" aria-label="Move this text box" title="Drag to move this text box" onPointerDown={onGrip}
+      {edit && <button type="button" data-grip="" data-sel-focus="" aria-label={t("hublessons.csMoveTextBox")} title={t("hublessons.csDragTextBox")} onPointerDown={onGrip}
         style={{ position: "absolute", left: 0, top: 0, transform: "translate(-30%,-105%)", width: "clamp(18px, 2.6cqw, 26px)", height: "clamp(18px, 2.6cqw, 26px)", display: "grid", placeItems: "center", borderRadius: 6, border: "1.5px solid #2f6bd8", background: "#fff", color: "#2f6bd8", fontSize: 12, lineHeight: 1, cursor: "grab", touchAction: "none", padding: 0, zIndex: 45 }}>✥</button>}
     </div>
   );

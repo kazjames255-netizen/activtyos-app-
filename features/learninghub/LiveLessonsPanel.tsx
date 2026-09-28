@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import { get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelMeta, PanelProps } from "./panelTypes";
@@ -19,7 +20,10 @@ import { stageInfo } from "./live/liveKit";
 import { lessonStage, lessonTiming, type Lesson } from "./live/lessonTypes";
 import { topicLabel } from "./types";
 import { takeHubIntent } from "./hubIntent";
-import { TeachInPersonButton } from "./inperson/TeachInPersonButton";
+import { InPersonApp } from "./inperson/InPersonApp";
+import { listSessions, type IpSession } from "./inperson/api";
+import { InPersonRow } from "./live/InPersonRow";
+import { NewSessionChooser, type SessionHow, type SessionWhen } from "./live/NewSessionChooser";
 import { wantBoardFirst } from "./live/board/callObject";
 import { GroupViewChip, useGroupView } from "./groupKit";
 import { membersOf, relevantTo } from "./groupStatus";
@@ -37,12 +41,14 @@ const asList = (r: unknown): Lesson[] => (Array.isArray(r) ? (r as Lesson[]) : A
 
 export function Panel(props: PanelProps) {
   const call = useCall();
-  if (!call) return <EmptyState icon={<Ico name="video" size={26} />} title="Live lessons aren't available here" body="Open the Teaching Hub from your portal to join a lesson." />;
+  const t = useT();
+  if (!call) return <EmptyState icon={<Ico name="video" size={26} />} title={t("hublive.aPanel_unavailTitle")} body={t("hublive.aPanel_unavailBody")} />;
   return <LivePanel {...props} call={call} />;
 }
 
 function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof useCall>> }) {
   const { qs, canEdit, topics, students, childId, filter, onError, setFocus, groups = [], call, readOnly, me } = props;
+  const t = useT();
   const [allLessons, setLessons] = useState<Lesson[] | null>(null);
   // A group card's Lesson tile lands here filtered to that group: lessons set for it, or for students who are ALL in it.
   const { group: viewGroup, clear: clearView } = useGroupView("lesson", groups);
@@ -61,6 +67,15 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
   const [busyId, setBusyId] = useState<string | null>(null);
   // A group quick action ("Schedule video lesson") from the Students tab opens the form with that group invited.
   const [presetGroup, setPresetGroup] = useState<string | null>(null);
+  // The merged "New session" chooser (When: now/later, How: video/in person) and where its answer routes to.
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [startNow, setStartNow] = useState(false);
+  // "new" = the in-person setup screen (a fresh session); an IpSession = resuming one still left open.
+  const [ipOverlay, setIpOverlay] = useState<"new" | IpSession | null>(null);
+  // In-person sessions are ordinary hubLessons rows under the hood (mode: "in_person" — server/src/routes/hub/inPersonApi.ts)
+  // but GET /lessons hides them (no room to join); fetched separately so Past/"still open" can show real in-person history
+  // alongside video lessons in the one list, honestly (tutor-only: the endpoint refuses a view-only role).
+  const [ipSessions, setIpSessions] = useState<IpSession[] | null>(null);
   const tookIntent = useRef(false);
   useEffect(() => {
     if (tookIntent.current || !canEdit || readOnly) return;
@@ -86,19 +101,22 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
   useEffect(() => attachHost(), [attachHost]);
 
   const listPath = `/api/learning-hub/lessons${withQs(qs, canEdit ? {} : { childId })}`;
+  const canSeeIp = canEdit && !readOnly;
   const load = useCallback(() => {
     get<unknown>(listPath)
       .then((r) => { if (mounted.current) setLessons(asList(r)); })
-      .catch((e) => { if (mounted.current) { setLessons((cur) => cur ?? []); onError(errMsg(e, "Couldn't load your lessons")); } });
-  }, [listPath, onError]);
+      .catch((e) => { if (mounted.current) { setLessons((cur) => cur ?? []); onError(errMsg(e, t("hublive.aPanel_loadFail"))); } });
+    if (canSeeIp) listSessions(qs).then((r) => { if (mounted.current) setIpSessions(Array.isArray(r) ? r : []); }).catch(() => { if (mounted.current) setIpSessions((cur) => cur ?? []); });
+    else setIpSessions([]);
+  }, [listPath, onError, t, canSeeIp, qs]);
   useEffect(() => { setLessons(null); load(); }, [load]);
   useRealtime(["hubLessons"], load);
 
   // Minute-level clock is enough for phase flips, but the hero countdown ticks each second (useNow above).
   const nameOf = useMemo(() => new Map(students.map((s) => [s.childId, s.childName])), [students]);
   const topicById = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics]);
-  const attendeesOf = (l: Lesson) => l.students?.length ? l.students.map((s) => s.childName) : (l.childIds ?? []).map((id) => nameOf.get(id) ?? "Student");
-  const tutorOf = (l: Lesson) => l.tutorName || students.find((s) => s.tutorName)?.tutorName || "Your tutor";
+  const attendeesOf = (l: Lesson) => l.students?.length ? l.students.map((s) => s.childName) : (l.childIds ?? []).map((id) => nameOf.get(id) ?? t("hublive.aPanel_student"));
+  const tutorOf = (l: Lesson) => l.tutorName || students.find((s) => s.tutorName)?.tutorName || t("hublive.aPanel_yourTutor");
 
   const { upcoming, past } = useMemo(() => {
     const up: Lesson[] = [], pa: Lesson[] = [];
@@ -110,6 +128,22 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
     return { upcoming: up, past: pa };
   }, [lessons, now]);
 
+  // In-person sessions folded into the same picture: "live" ones are exactly as "happening now" as a video lesson
+  // mid-call (a tutor should never lose track of one left open); "ended" ones are real history, so they interleave
+  // by date into the one Past list rather than sitting on a second screen. There is no "upcoming in person" — the
+  // server has no concept of scheduling one ahead (see server/src/routes/hub/inPersonApi.ts), so that column stays
+  // honestly video-only.
+  const ipLive = useMemo(() => (ipSessions ?? []).filter((s) => s.status === "live"), [ipSessions]);
+  const ipPast = useMemo(() => (ipSessions ?? []).filter((s) => s.status !== "live").sort((a, b) => b.startsAt.localeCompare(a.startsAt)), [ipSessions]);
+  type PastItem = { at: string; kind: "video"; lesson: Lesson } | { at: string; kind: "in_person"; session: IpSession };
+  const pastItems = useMemo<PastItem[]>(() => {
+    const items: PastItem[] = [
+      ...past.map((lesson): PastItem => ({ at: lesson.startsAt, kind: "video", lesson })),
+      ...ipPast.map((session): PastItem => ({ at: session.startsAt, kind: "in_person", session })),
+    ];
+    return items.sort((a, b) => b.at.localeCompare(a.at));
+  }, [past, ipPast]);
+
   // Zero-click way back in: the last camera/mic choices, no lobby.
   const quickJoin = (l: Lesson) => call.start(l);
 
@@ -120,7 +154,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
       const fresh = await post<Lesson>(`/api/learning-hub/lessons/${l.id}/reopen${withQs(qs, {})}`, {});
       load();
       call.start({ ...l, ...fresh });
-    } catch (e) { onError(errMsg(e, "Couldn't reopen the lesson")); }
+    } catch (e) { onError(errMsg(e, t("hublive.aPanel_reopenFail"))); }
     finally { setBusyId(null); }
   };
 
@@ -128,7 +162,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
     if (readOnly) return;
     setBusyId(l.id);
     try { await put(`/api/learning-hub/lessons/${l.id}${withQs(qs, {})}`, { status: "cancelled", ...(following ? { applyTo: "following" } : {}) }); load(); }
-    catch (e) { onError(errMsg(e, "Couldn't cancel the lesson")); }
+    catch (e) { onError(errMsg(e, t("hublive.aPanel_cancelFail"))); }
     finally { setBusyId(null); }
   };
 
@@ -144,7 +178,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
     const tp = lobbyLesson.topicId ? topicById.get(lobbyLesson.topicId) : undefined;
     return (
       <FullscreenPortal>
-      <Lobby lesson={lobbyLesson} isTutor={canEdit} tutorLabel={canEdit ? "You" : tutorOf(lobbyLesson)} attendees={attendeesOf(lobbyLesson)}
+      <Lobby lesson={lobbyLesson} isTutor={canEdit} tutorLabel={canEdit ? t("hublive.aPanel_you") : tutorOf(lobbyLesson)} attendees={attendeesOf(lobbyLesson)}
         topicLabel={tp ? topicLabel(tp) : undefined} joining={call.joiningId === lobbyLesson.id}
         qs={qs} onJoin={(p, asChild) => { setLobbyId(null); call.start(lobbyLesson, p, asChild); }} onClose={() => setLobbyId(null)} />
       </FullscreenPortal>
@@ -175,18 +209,32 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
       defaultTopicId={filter.topicId}
       groups={groups}
       initialGroupId={editor === "new" ? presetGroup : null}
-      onClose={() => { setEditor(null); setPresetGroup(null); }}
-      onSaved={(l) => { setEditor(null); setPresetGroup(null); setTab(l.held ? "past" : "upcoming"); load(); }}
+      startNow={editor === "new" && startNow}
+      onClose={() => { setEditor(null); setPresetGroup(null); setStartNow(false); }}
+      onSaved={(l) => { setEditor(null); setPresetGroup(null); setStartNow(false); setTab(l.held ? "past" : "upcoming"); load(); if (startNow) setLobbyId(l.id); }}
     />
   );
 
-  if (lessons === null) return <div className="grid gap-3" aria-busy="true" aria-label="Loading lessons"><StageSkeleton /></div>;
+  if (lessons === null) return <div className="grid gap-3" aria-busy="true" aria-label={t("hublive.aPanel_loading")}><StageSkeleton /></div>;
 
+  // The New session chooser's answer routes to whichever existing flow already does the real work: LessonForm
+  // (video, either starting now or scheduled for later) or InPersonApp (in person — always now; see NewSessionChooser).
+  const chooseSession = (when: SessionWhen, how: SessionHow) => {
+    setChooserOpen(false);
+    if (viewGroup) setPresetGroup(viewGroup.id);
+    if (how === "video") { setStartNow(when === "now"); setEditor("new"); }
+    else setIpOverlay("new");
+  };
+  const hasAnything = lessons.length > 0 || (ipSessions?.length ?? 0) > 0;
+
+  // Kaz: "we dont needs 2 places where it says schedule video lesson just the one in the muddle" — a first-time
+  // tutor (no lessons yet, not viewing a group) saw this exact button twice: once here in the header, once as the
+  // empty state's own centred action. The header copy now says "your first" until there's a lesson to prove it,
+  // "video lesson" after — and the header button itself is skipped whenever the empty state is about to show its
+  // own copy of it, so there is only ever one.
+  const firstTime = !hasAnything && !viewGroup;
   const scheduleBtn = canEdit && !readOnly && (
-    <span className="inline-flex flex-wrap items-center gap-2">
-      <TeachInPersonButton qs={qs} config={props.config} goTo={props.goTo} preset={viewGroup ? { groupIds: [viewGroup.id], childIds: [...membersOf(viewGroup)] } : undefined} variant="outline" testId="live-teach-in-person" />
-      <Button variant="solid" id="hub-schedule-lesson" className={`min-h-[44px] gap-2 ${FOCUS}`} onClick={() => { if (viewGroup) setPresetGroup(viewGroup.id); setEditor("new"); }}><Ico name="plus" size={16} strokeWidth={2.4} />Schedule video lesson</Button>
-    </span>
+    <Button variant="solid" id="hub-schedule-lesson" className={`min-h-[44px] gap-2 ${FOCUS}`} onClick={() => setChooserOpen(true)}><Ico name="plus" size={16} strokeWidth={2.4} />{firstTime ? t("hublive.aNew_buttonFirst") : t("hublive.aNew_button")}</Button>
   );
 
   return (
@@ -194,22 +242,23 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
       <div className="flex flex-wrap items-center gap-3">
         <GradientTile icon="video" size={44} />
         <div className="min-w-0 flex-1 basis-[200px]">
-          <h2 className="m-0 text-[19px] font-extrabold text-[var(--ink)]" style={DISPLAY}>Live lessons</h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">{canEdit ? "Schedule video lessons with your students and run them right here." : "Join your lesson on video — your lessons stay right beside the call."} Times shown in your timezone ({tzLabel()}).</p>
+          <h2 className="m-0 text-[19px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{canEdit ? t("hublive.aPanel_titleTutor") : t("hublive.aPanel_title")}</h2>
+          <p className="text-[12.5px] text-[var(--ink-3)]">{canEdit ? t("hublive.aPanel_subTutor") : t("hublive.aPanel_subStudent")} {t("hublive.aPanel_tz", { tz: tzLabel() })}</p>
         </div>
-        {multiTutor && <ScopeToggle scope={scope} onChange={setScope} mine={mineCount} all={allLessons?.length ?? 0} what="lessons" />}
-        {scheduleBtn}
+        {multiTutor && <ScopeToggle scope={scope} onChange={setScope} mine={mineCount} all={allLessons?.length ?? 0} what={t("hublive.aPanel_whatLessons")} />}
+        {/* The empty state below shows this same button as its own centred action — never render it twice. */}
+        {!(firstTime && canEdit && students.length && !readOnly) && scheduleBtn}
       </div>
 
-      {viewGroup && <GroupViewChip group={viewGroup} what="live lessons" onClear={clearView} />}
+      {viewGroup && <GroupViewChip group={viewGroup} what={t("hublive.aPanel_whatLive")} onClear={clearView} />}
 
-      {lessons.length === 0 ? (
+      {!hasAnything ? (
         canEdit ? (
-          <EmptyState icon={<Ico name="video" size={26} />} title={viewGroup ? `No live lessons for ${viewGroup.name} yet` : "Schedule your first live lesson"}
-            body={students.length ? "Pick a time, choose who's invited and they'll get a private video room — no links to paste, nothing to install." : "Enrol a student first, then schedule a private video lesson with them right here."}
+          <EmptyState icon={<Ico name="video" size={26} />} title={viewGroup ? t("hublive.aPanel_emptyGroupTitle", { name: viewGroup.name }) : t("hublive.aPanel_emptyFirstTitle")}
+            body={students.length ? t("hublive.aPanel_emptyBodyStudents") : t("hublive.aPanel_emptyBodyNone")}
             action={students.length && !readOnly ? scheduleBtn : undefined} />
         ) : (
-          <EmptyState icon={<Ico name="video" size={26} />} title="No lessons scheduled yet" body="When your tutor schedules a live lesson it will appear here with a countdown and a Join button that opens 10 minutes before the start." />
+          <EmptyState icon={<Ico name="video" size={26} />} title={t("hublive.aPanel_emptyStuTitle")} body={t("hublive.aPanel_emptyStuBody")} />
         )
       ) : (
         <>
@@ -217,7 +266,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
             <NextLessonHero
               lesson={next} now={now} isTutor={canEdit} readOnly={readOnly}
               topic={next.topicId ? topicById.get(next.topicId) ?? null : null}
-              tutorLabel={canEdit ? "You" : tutorOf(next)}
+              tutorLabel={canEdit ? t("hublive.aPanel_you") : tutorOf(next)}
               attendees={attendeesOf(next)}
               joining={busyId === next.id}
               onJoin={() => setLobbyId(next.id)}
@@ -230,15 +279,22 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
           ) : (
             <div className="rounded-3xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-6 py-7 text-center">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--surface)] text-[var(--brand)]" aria-hidden><Ico name="check" size={24} strokeWidth={2.4} /></div>
-              <div className="mt-1 text-[16px] font-extrabold text-[var(--brand-strong)]" style={DISPLAY}>Nothing coming up</div>
-              <p className="mt-1 text-[13px] text-[var(--ink-2)]">{canEdit ? "Your calendar is clear — schedule the next lesson." : "No upcoming lessons right now. Your tutor will schedule the next one."}</p>
+              <div className="mt-1 text-[16px] font-extrabold text-[var(--brand-strong)]" style={DISPLAY}>{t("hublive.aPanel_nothingTitle")}</div>
+              <p className="mt-1 text-[13px] text-[var(--ink-2)]">{canEdit ? t("hublive.aPanel_nothingTutor") : t("hublive.aPanel_nothingStudent")}</p>
             </div>
           )}
 
           <TodayStrip lessons={lessons} now={now} isTutor={canEdit} topicById={topicById} attendeesOf={attendeesOf} tutorOf={tutorOf} onOpen={openStrip} />
 
+          {ipLive.length > 0 && (
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-ip-still-open">
+              <Overline>{t("hublive.aIp_stillOpenTitle")}</Overline>
+              {ipLive.map((s) => <InPersonRow key={s.id} session={s} now={now} onResume={() => setIpOverlay(s)} />)}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Segmented label="Live lessons" value={tab} onChange={setTab} options={[{ v: "upcoming", label: "Upcoming", count: rest.length }, { v: "past", label: "Past", count: past.length }]} />
+            <Segmented label={t("hublive.aPanel_title")} value={tab} onChange={setTab} options={[{ v: "upcoming", label: t("hublive.aPanel_upcoming"), count: rest.length }, { v: "past", label: t("hublive.aPanel_past"), count: pastItems.length }]} />
           </div>
 
           {tab === "upcoming" ? (
@@ -246,37 +302,46 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
               <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-lessons-upcoming">
                 {liveRows.length > 0 && (
                   <>
-                    <Overline right={<span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[var(--hub-green-ink)]"><span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{liveRows.length} running</span>}>Live now</Overline>
+                    <Overline right={<span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[var(--hub-green-ink)]"><span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{t("hublive.aPanel_running", { n: liveRows.length })}</span>}>{t("hublive.aPanel_liveNow")}</Overline>
                     {liveRows.map(rowFor)}
                   </>
                 )}
                 {laterRows.length > 0 && (
                   <>
-                    <Overline>{next ? "Coming up" : "Upcoming"}</Overline>
+                    <Overline>{next ? t("hublive.aPanel_comingUp") : t("hublive.aPanel_upcoming")}</Overline>
                     {laterRows.map(rowFor)}
                   </>
                 )}
               </div>
             ) : (
-              <p className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-[13px] text-[var(--ink-3)]">{next ? "That's the only lesson booked so far." : "No upcoming lessons."}</p>
+              <p className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-[13px] text-[var(--ink-3)]">{next ? t("hublive.aPanel_onlyOne") : t("hublive.aPanel_noUpcoming")}</p>
             )
-          ) : past.length ? (
+          ) : pastItems.length ? (
             <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-lessons-past">
-              {past.slice(0, pastN).map((l) => (
-                <LessonRow key={l.id} lesson={l} now={now} isTutor={canEdit} readOnly={readOnly} topic={l.topicId ? topicById.get(l.topicId) ?? null : null}
-                  tutorLabel={tutorOf(l)} attendees={attendeesOf(l)} busy={busyId === l.id}
-                  onJoin={() => undefined} onEdit={() => undefined} onCancel={() => undefined} onReopen={canEdit && !readOnly ? () => void reopenAndJoin(l) : undefined} onEditNotes={() => setNotesFor(l.id)} />
+              {pastItems.slice(0, pastN).map((item) => item.kind === "video" ? (
+                <LessonRow key={item.lesson.id} lesson={item.lesson} now={now} isTutor={canEdit} readOnly={readOnly} topic={item.lesson.topicId ? topicById.get(item.lesson.topicId) ?? null : null}
+                  tutorLabel={tutorOf(item.lesson)} attendees={attendeesOf(item.lesson)} busy={busyId === item.lesson.id}
+                  onJoin={() => undefined} onEdit={() => undefined} onCancel={() => undefined} onReopen={canEdit && !readOnly ? () => void reopenAndJoin(item.lesson) : undefined} onEditNotes={() => setNotesFor(item.lesson.id)} />
+              ) : (
+                <InPersonRow key={item.session.id} session={item.session} now={now} />
               ))}
-              {past.length > pastN && <button type="button" data-action="show-more-past" onClick={() => setPastN((n) => n + 40)} className={`min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--brand)] hover:border-[var(--brand)] ${FOCUS}`}>Show {Math.min(40, past.length - pastN)} more of {past.length - pastN} older</button>}
+              {pastItems.length > pastN && <button type="button" data-action="show-more-past" onClick={() => setPastN((n) => n + 40)} className={`min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--brand)] hover:border-[var(--brand)] ${FOCUS}`}>{t("hublive.aPanel_showMore", { n: Math.min(40, pastItems.length - pastN), m: pastItems.length - pastN })}</button>}
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-[13px] text-[var(--ink-3)]">Finished lessons will show up here.</p>
+            <p className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-[13px] text-[var(--ink-3)]">{t("hublive.aPanel_finished")}</p>
           )}
         </>
       )}
+      {chooserOpen && <NewSessionChooser onChoose={chooseSession} onClose={() => setChooserOpen(false)} />}
+      {ipOverlay && (
+        <InPersonApp qs={qs} config={props.config} goTo={props.goTo}
+          preset={ipOverlay === "new" && viewGroup ? { groupIds: [viewGroup.id], childIds: [...membersOf(viewGroup)] } : undefined}
+          initialSession={ipOverlay !== "new" ? ipOverlay : undefined}
+          onClose={() => { setIpOverlay(null); setPresetGroup(null); load(); }} />
+      )}
       {form}
       {notesFor && (() => { const nl = (allLessons ?? []).find((x) => x.id === notesFor); return nl ? <LessonNotesDialog p={props} lesson={nl} onClose={() => setNotesFor(null)} /> : null; })()}
-      <span className="sr-only" aria-live="polite">{busyId ? "Working…" : ""}</span>
+      <span className="sr-only" aria-live="polite">{busyId ? t("hublive.aPanel_working") : ""}</span>
     </div>
   );
 }

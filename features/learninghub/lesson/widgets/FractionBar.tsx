@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FOCUS } from "../../kit";
+import { useBareTool } from "../../tools/bareContext";
 import type { WidgetProps } from "./types";
 
 // Explore widget "fractionBar" — change a fraction, then group the parts into equal chunks to see how it simplifies.
@@ -22,6 +23,7 @@ const step = `inline-flex h-11 w-11 items-center justify-center rounded-xl borde
 const chip = (on: boolean) => `min-h-[44px] rounded-xl border-2 px-3.5 text-[13px] font-extrabold ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--brand)] hover:border-[var(--brand-2)]"} ${FOCUS}`;
 
 export function FractionBar({ onXP }: WidgetProps) {
+  const bare = useBareTool();
   const [n0, setN] = useState(6);
   const [d, setD] = useState(8);
   const [f, setF] = useState(1);
@@ -33,7 +35,7 @@ export function FractionBar({ onXP }: WidgetProps) {
     : f === g ? "The top and bottom now share no factor other than 1." : `You can go further: ${n / f} and ${d / f} still share a factor.`;
 
   return (
-    <div className="rounded-2xl border-2 border-[var(--brand-line)] p-4" style={{ background: "linear-gradient(180deg, var(--brand-soft), var(--surface))" }} data-widget="fractionBar">
+    <div className={bare ? "" : "rounded-2xl border-2 border-[var(--brand-line)] p-4"} style={bare ? undefined : { background: "linear-gradient(180deg, var(--brand-soft), var(--surface))" }} data-widget="fractionBar">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2"><span className="text-[13px] font-semibold text-[var(--ink-2)]">Shaded</span>
           <button type="button" className={step} aria-label="Shade one fewer part" disabled={n <= 1} onClick={() => { setF(1); setN(n - 1); }}>−</button>
@@ -53,17 +55,17 @@ export function FractionBar({ onXP }: WidgetProps) {
       <div className="my-3.5 text-center text-[26px]" aria-live="polite">
         {f === 1 ? <Frac n={n} d={d} /> : <><Frac n={n} d={d} /> = <Frac n={n / f} d={d / f} />{f === g && <span className="ml-2 rounded-full bg-[var(--green-soft)] px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-[var(--hub-green-ink)]">simplest form ✓</span>}</>}
       </div>
-      <p className="m-0 mb-2 text-center text-[13px] text-[var(--ink-3)]">Group the parts — divide top and bottom by the same number:</p>
+      <p data-tool-chrome className="m-0 mb-2 text-center text-[13px] text-[var(--ink-3)]">Group the parts — divide top and bottom by the same number:</p>
       <div className="flex flex-wrap justify-center gap-2">
         {common.length ? <>
           {common.map((k) => <button key={k} type="button" className={chip(k === f)} aria-pressed={k === f} onClick={() => { setF(k); if (k > 1) onXP(2); }}>÷ {k}</button>)}
           {f > 1 && <button type="button" className={chip(false)} onClick={() => setF(1)}>Reset</button>}
         </> : <span className="rounded-full bg-[var(--green-soft)] px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[var(--hub-green-ink)]">Already in its simplest form</span>}
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-2"><span className="text-[13px] text-[var(--ink-3)]">Try:</span>
+      <div data-tool-chrome className="mt-3 flex flex-wrap items-center justify-center gap-2"><span className="text-[13px] text-[var(--ink-3)]">Try:</span>
         {TRY.map(([a, b]) => <button key={`${a}/${b}`} type="button" className={chip(false)} onClick={() => { setN(a); setD(b); setF(1); }}>{a}/{b}</button>)}
       </div>
-      <p className="m-0 mt-2.5 text-center text-[13px] text-[var(--ink-3)]" role="status">{say}</p>
+      <p data-tool-chrome className="m-0 mt-2.5 text-center text-[13px] text-[var(--ink-3)]" role="status">{say}</p>
     </div>
   );
 }
