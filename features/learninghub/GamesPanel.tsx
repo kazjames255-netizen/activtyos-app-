@@ -146,6 +146,13 @@ const GAMES: GameDef[] = [
 // invented difficulty scale. Only affects a stage-LESS run (Free play / Quick / Daily / Pit): a journey stage
 // still always uses its own tables and its own mastery-gated unlock, untouched. "Auto" (Pip's own weakest-first
 // pick) stays the default experience when nobody chooses a level.
+/** Big topic tiles the child picks from instead of an 18-card wall. Every game appears in exactly one. */
+const GAME_CATS: { id: string; emoji: string; nameKey: string; tone: string; ids: GameId[] }[] = [
+  { id: "numbers", emoji: "🔢", nameKey: "hubshell.gamesCatNumbers", tone: "var(--cat-4)", ids: ["penguin", "turbo", "market", "bakeoff", "reef", "primereef", "shapeworkshop"] },
+  { id: "words", emoji: "🔤", nameKey: "hubshell.gamesCatWords", tone: "var(--cat-1)", ids: ["wordpop", "vault", "detective", "debate"] },
+  { id: "world", emoji: "🌍", nameKey: "hubshell.gamesCatWorld", tone: "var(--cat-3)", ids: ["museum", "colourlab", "compass"] },
+  { id: "puzzles", emoji: "🧩", nameKey: "hubshell.gamesCatPuzzles", tone: "var(--cat-6)", ids: ["botfoundry", "sortyard", "training", "datacarnival"] },
+];
 interface LevelDef { n: number; tables: number[]; nameKey: string }
 const LEVELS: LevelDef[] = BIOMES.map((b) => ({ n: b.n, tables: b.tables, nameKey: `hubshell.gamesLevel${b.n}` }));
 /** A sensible starting level from the child's own year group (Reception/Y1/Y2 -> 1 ... Y6+ -> 5); free-text /
@@ -250,23 +257,64 @@ function GamesHome({ tenantId, childQs, childId, childName, support, yearGroup }
     );
   }
 
+  const launch = (g: GameDef) => (resumable[g.id] ? setPlaying({ id: g.id, resume: true }) : QUIZ_GAMES.has(g.id) || MINI_GAMES.has(g.id) || QUIZ_ARCADE_GAMES.has(g.id) ? setPlaying({ id: g.id }) : setPicking(g.id));
+  // Kids: ONE obvious "play next" card first (a run left half-way, else Penguin Slide), then four big topic tiles; a tile opens at most five
+  // games at a time (Show all for the rest). Reception–Y2 (KS1) see names only, no paragraphs.
+  const ks1 = /reception|foundation|\b(?:year|y)\s*[12]\b/i.test(yearGroup ?? "");
+  const byId = new Map(GAMES.map((g) => [g.id, g]));
+  const next = GAMES.find((g) => resumable[g.id]) ?? byId.get("penguin")!;
+  const [openCat, setOpenCat] = useState<string>("numbers");
+  const [all, setAll] = useState<Record<string, boolean>>({});
+  const cat = GAME_CATS.find((c) => c.id === openCat) ?? GAME_CATS[0]!;
+  const catGames = cat.ids.map((id) => byId.get(id)).filter((g): g is GameDef => !!g);
+  const shown = all[cat.id] ? catGames : catGames.slice(0, 5);
   return (
-    <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]" data-testid="hub-games-list">
-      {GAMES.map((g) => (
-        <Card key={g.id} className="flex flex-col items-start gap-2.5 overflow-hidden p-0">
-          <div className="h-24 w-full overflow-hidden" aria-hidden="true">
-            <GameCardArt id={g.id} emoji={g.emoji} />
-          </div>
-          <div className="flex flex-1 flex-col gap-2 px-4 pb-4">
-            <h4 className="m-0 text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t(g.nameKey)}</h4>
-            <p className="m-0 flex-1 text-[12.5px] font-semibold leading-relaxed text-[var(--ink-2)]">{t(g.blurbKey)}</p>
-            <Button variant="solid" className="mt-1 w-full !min-h-[44px]" data-testid={`hub-games-play-${g.id}`}
-              onClick={() => (resumable[g.id] ? setPlaying({ id: g.id, resume: true }) : QUIZ_GAMES.has(g.id) || MINI_GAMES.has(g.id) || QUIZ_ARCADE_GAMES.has(g.id) ? setPlaying({ id: g.id }) : setPicking(g.id))}>
+    <div className="grid gap-5" data-testid="hub-games-home">
+      <div className="flex flex-col gap-3 overflow-hidden rounded-3xl border-2 p-3 sm:flex-row sm:items-center sm:gap-5 sm:p-4" data-testid="hub-games-next"
+        style={{ borderColor: "color-mix(in srgb, var(--brand) 35%, var(--line))", background: "linear-gradient(135deg, var(--brand-soft), var(--surface))" }}>
+        <div className="h-24 w-full overflow-hidden rounded-2xl sm:h-28 sm:w-56 sm:flex-none" aria-hidden="true"><GameCardArt id={next.id} emoji={next.emoji} /></div>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[var(--brand-strong)]">{t("hubshell.gamesPlayNext")}</span>
+          <h3 className="m-0 text-[22px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{next.emoji} {t(next.nameKey)}</h3>
+          <Button variant="solid" className="w-full !min-h-[56px] !text-[17px] sm:w-auto sm:!px-10" data-testid="hub-games-play-next" onClick={() => launch(next)}>
+            {resumable[next.id] ? t("hubshell.gamesContinue") : t("hubshell.gamesPlay")}
+          </Button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" role="tablist" aria-label={t("hubshell.lbl_games")}>
+        {GAME_CATS.map((c) => {
+          const on = c.id === cat.id;
+          return (
+            <button key={c.id} type="button" role="tab" aria-selected={on} data-testid={`hub-games-cat-${c.id}`} onClick={() => setOpenCat(c.id)}
+              className={`flex min-h-[92px] flex-col items-center justify-center gap-1 rounded-3xl border-2 px-2 py-3 text-center transition motion-reduce:transition-none ${FOCUS} ${on ? "-translate-y-0.5 shadow-[var(--shadow-md,0_10px_24px_-12px_rgba(0,0,0,.35))]" : ""}`}
+              style={{ borderColor: on ? c.tone : `color-mix(in srgb, ${c.tone} 30%, var(--line))`, background: `color-mix(in srgb, ${c.tone} ${on ? 22 : 10}%, var(--surface))` }}>
+              <span aria-hidden className="text-[30px] leading-none">{c.emoji}</span>
+              <span className="text-[15px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t(c.nameKey)}</span>
+              {!ks1 && <span className="text-[11.5px] font-bold text-[var(--ink-2)]">{t("hubshell.gamesNGames", { n: c.ids.length })}</span>}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid gap-2.5" data-testid="hub-games-list" role="tabpanel">
+        {shown.map((g) => (
+          <div key={g.id} className="flex items-center gap-3 rounded-2xl border-2 bg-[var(--surface)] p-2.5 sm:gap-4 sm:p-3" style={{ borderColor: `color-mix(in srgb, ${cat.tone} 35%, var(--line))` }}>
+            <span aria-hidden className="grid h-14 w-14 flex-none place-items-center rounded-2xl text-[30px]" style={{ background: `color-mix(in srgb, ${cat.tone} 18%, var(--surface))` }}>{g.emoji}</span>
+            <div className="min-w-0 flex-1">
+              <h4 className="m-0 text-[17px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t(g.nameKey)}</h4>
+              {!ks1 && <p className="m-0 mt-0.5 line-clamp-1 text-[12.5px] font-semibold text-[var(--ink-2)]">{t(g.blurbKey)}</p>}
+            </div>
+            <Button variant="solid" className="!min-h-[52px] !px-6 !text-[15px]" data-testid={`hub-games-play-${g.id}`} onClick={() => launch(g)}>
               {resumable[g.id] ? t("hubshell.gamesContinue") : t("hubshell.gamesPlay")}
             </Button>
           </div>
-        </Card>
-      ))}
+        ))}
+        {catGames.length > 5 && (
+          <button type="button" data-testid="hub-games-showall" onClick={() => setAll((a) => ({ ...a, [cat.id]: !a[cat.id] }))}
+            className={`mx-auto inline-flex min-h-[48px] items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-5 text-[14px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>
+            {all[cat.id] ? t("hubshell.gamesShowFewer") : t("hubshell.gamesShowAll", { n: catGames.length })} <span aria-hidden>{all[cat.id] ? "▲" : "▼"}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
