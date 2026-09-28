@@ -399,8 +399,11 @@ test.describe("tenant isolation", () => {
 
   test("a topic with notes can't be deleted", async () => {
     const own = await token(accounts.freelancer);
-    const topics = await apiFetch<{ id: string; subject: string; subtopic: string | null }[]>("/api/learning-hub/topics", own);
-    const sub = topics.find((t) => t.subject === subject && t.subtopic === "Quadratics")!;
+    // The lesson made in "a lesson creates its own subject/topic inline" lives in whatever topic the editor created for it.
+    const notes = await apiFetch<{ id: string; title: string; topicId: string }[]>("/api/learning-hub/notes", own);
+    const note = notes.find((n) => n.title === noteTitle)!;
+    expect(note?.topicId).toBeTruthy();
+    const sub = { id: note.topicId };
     const r = await raw(`/api/learning-hub/topics/${sub.id}`, own, { method: "DELETE" });
     expect(r.status).toBe(409);
   });

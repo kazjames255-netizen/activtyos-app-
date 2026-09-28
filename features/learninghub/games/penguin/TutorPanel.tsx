@@ -40,10 +40,14 @@ export function PenguinTutorPanel({ childId, childName, tenantQuery = "" }: { ch
   const nums = Array.from({ length: 11 }, (_, i) => i + 2);
   const heat = (a: number, b: number) => o.heat[`${Math.min(a, b)}x${Math.max(a, b)}`]?.thaw ?? 0;
   const sec = (ms: number) => (ms / 1000).toFixed(1);
+  // Nothing played yet: say so in one line instead of an empty grid and a page of zeros. Pinning tables still works (it sets what they will be given first).
+  const played = o.practice.sessions > 0 || o.runs.length > 0 || o.totals.facts > 0;
   return (
-    <section data-testid="ps-tutor" style={{ display: "grid", gap: 14, fontFamily: "var(--ff, system-ui)" }}>
+    <section data-testid="ps-tutor" data-played={played ? "1" : "0"} style={{ display: "grid", gap: 14, fontFamily: "var(--ff, system-ui)" }}>
       <h3 style={{ margin: 0 }}>{T("tutor_title", { name: childName ?? "" })}</h3>
-      <p style={{ margin: 0 }}>{T("tutor_summary", { fluent: o.totals.fluent, facts: o.totals.facts, days: o.weekDays, goal: o.weekGoal })}</p>
+      {played
+        ? <p style={{ margin: 0 }}>{T("tutor_summary", { fluent: o.totals.fluent, facts: o.totals.facts, days: o.weekDays, goal: o.weekGoal })}</p>
+        : <p style={{ margin: 0 }} data-testid="ps-empty">{T("tutor_empty", { name: (childName ?? "").split(" ")[0] || "", game: GAME_TITLE })}</p>}
       <div>
         <b>{T("tutor_pin")}</b>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }} role="group" aria-label={T("tutor_pin")}>
@@ -52,8 +56,10 @@ export function PenguinTutorPanel({ childId, childName, tenantQuery = "" }: { ch
         </div>
         <small>{pins.length ? T("tutor_pinned", { tables: pins.join(", ") }) : T("tutor_pinned_none", { mascot: HOST_NAME })}{saved ? ` · ${T("saved_server")}` : ""}</small>
       </div>
+      {played && <>
       <div>
         <b>{T("tutor_heat")}</b>
+        <div style={{ fontSize: 12.5, opacity: 0.8, marginTop: 2 }}>{T("tutor_heat_key")}</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 2, maxWidth: 440, marginTop: 6 }} role="table" aria-label={T("tutor_heat")}>
           <span />{nums.map((n) => <span key={n} style={{ textAlign: "center", fontSize: 11, fontWeight: 800 }}>{n}</span>)}
           {nums.map((a) => (<div key={a} style={{ display: "contents" }}><span style={{ fontSize: 11, fontWeight: 800, textAlign: "center" }}>{a}</span>{nums.map((b) => { const s = heat(a, b); return <span key={b} title={`${a}×${b}: ${T(`state_${s}`)}`} aria-label={`${a}×${b}: ${T(`state_${s}`)}`} style={{ aspectRatio: "1", borderRadius: 4, background: CLS[s] }} />; })}</div>))}
@@ -61,10 +67,13 @@ export function PenguinTutorPanel({ childId, childName, tenantQuery = "" }: { ch
       </div>
       {o.slowButCorrect.length > 0 && <div><b>{T("tutor_slow")}</b><ul style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>{o.slowButCorrect.map((f) => <li key={f.key}>{fmt(f.key)} · {sec(f.medianMs)} s</li>)}</ul></div>}
       {o.wrong.length > 0 && <div><b>{T("tutor_wrong")}</b><ul style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>{o.wrong.map((f) => <li key={f.key}>{fmt(f.key)}{f.oftenAnswers ? ` · ${T("tutor_often", { n: f.oftenAnswers })}` : ""}{f.errType ? ` (${f.errType.replace(/_/g, " ")})` : ""}</li>)}</ul></div>}
+      <details><summary style={{ cursor: "pointer", fontWeight: 800, minHeight: 44 }}>{T("tutor_more")}</summary><div style={{ display: "grid", gap: 10, marginTop: 6 }}>
       <div><b>{T("tutor_rt")}</b><div>{T("tutor_rt_line", { rt0: sec(o.rtProfile.rt0Ms), r: o.rtProfile.retrieval, c: o.rtProfile.reconstructed, k: o.rtProfile.calculated })}</div></div>
       <div><b>{T("tutor_practice")}</b><div>{T("tutor_practice_line", { days: o.practice.spacedDaysLast14, runs: o.practice.sessions, trials: o.practice.trials, acc: o.practice.accuracy === null ? "-" : Math.round(o.practice.accuracy * 100), prod: Math.round(o.practice.productiveSeconds / 60), total: Math.round(o.practice.totalSeconds / 60) })}</div><small>{T("tutor_effort", { g: o.effort.rapidGuessRuns, t: o.effort.timeouts })}</small></div>
+      </div></details>
       {o.mtc.length > 0 && <div><b>{T("mtc_title")}</b><ul style={{ margin: "4px 0 0", paddingInlineStart: 18 }}>{o.mtc.map((m) => <li key={m.at}>{m.at.slice(0, 10)} · {T("mtc_score", { score: m.score, total: m.total })} · {T("tutor_timedout", { n: m.timedOut })}</li>)}</ul></div>}
       <small>{T("tutor_note")}</small>
+      </>}
     </section>
   );
 }
