@@ -1,6 +1,6 @@
 # Firestore cost — what costs money, how to see it, how it's kept low
 
-Google Cloud project **activityos-bef89** · billing account **"Firebase Payment" 01209D-B03EB9-1F56F4** (no organisation) ·
+Google Cloud project **activityos-bef89** · billing account **"Firebase Payment"** (ID in Google Cloud Billing; not recorded here) (no organisation) ·
 budget alert **"Monthly cost guard"**: £30/month, emails at 50% (£15), 90% (£27), 100% (£30) to billing admins and users (alerts only — it never switches anything off).
 
 ## What the September 2026 bill was (1–27 Sept: £82.56)
