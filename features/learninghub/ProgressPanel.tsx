@@ -14,6 +14,7 @@ import { useFamily } from "./family/FamilyContext";
 import { GamesSummaryCard } from "./games/GamesSummaryCard";
 import { GamesPlayedPanel } from "./games/GamesPlayedPanel";
 import { KidProgressCards } from "./progress/ProgressCards";
+import { SubjectOrbs } from "./progress/SubjectOrbs";
 import { PARENT_COPY } from "./family/parentCopy";
 import { useT } from "@/lib/i18n/provider";
 import { hubT } from "./family/hubT";
@@ -42,7 +43,7 @@ export function Panel(p: PanelProps) {
   const [report, setReport] = useState(false);
 
   if (!p.canEdit) {
-    if (kid && p.childId) return <div className="grid gap-4"><KidStars p={p} childId={p.childId} /><KidProgressCards p={p} childId={p.childId} /></div>; // a child sees their stars and (owner: "child needs to see this info too") the same at-a-glance cards
+    if (kid && p.childId) return <div className="grid gap-4"><KidStars p={p} childId={p.childId} /><SubjectOrbs p={p} childId={p.childId} kid /><KidProgressCards p={p} childId={p.childId} /></div>; // a child sees their stars and (owner: "child needs to see this info too") the same at-a-glance cards
     if (!p.childId) return <EmptyState icon="users" title={t("hubfam.pgChooseChild")} body={t("hubfam.pgChooseChildBody")} />;
     return (
       <>
@@ -52,6 +53,7 @@ export function Panel(p: PanelProps) {
             {PARENT_COPY.reportButton}
           </button>
         </div>
+        <div className="mb-3"><SubjectOrbs p={p} childId={p.childId} kid={false} /></div>
         <div className="mb-3"><GamesSummaryCard p={p} /></div>
         <CurriculumRings qs={p.childQs ?? p.qs} canEdit={false} onOpenMap={() => p.goTo?.("notes")} /><ProgressView p={p} childId={p.childId} />
         {report && <ProgressReport p={p} childId={p.childId} onClose={() => setReport(false)} />}

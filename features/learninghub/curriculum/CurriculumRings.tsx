@@ -5,6 +5,8 @@ import { FOCUS, Icon } from "../kit";
 import { getMap, type CurriculumMap } from "./api";
 import { Ring } from "./CurriculumCard";
 import { useT } from "@/lib/i18n/provider";
+import { GlassOrb } from "../shared-ui/GlassOrb";
+import { subjectSwatch } from "../subjectColour";
 import { GROUP_ORDER, childSummary, groupLabel, summarise } from "./cells";
 
 // The curriculum at a glance, on the Progress tab: one ring per subject.
@@ -54,8 +56,14 @@ export function CurriculumRings({ qs, canEdit, onOpenMap }: { qs: string; canEdi
       ) : (
         <ul className="m-0 grid list-none grid-cols-2 gap-3 p-0 sm:grid-cols-4">
           {rings.map((r) => (
-            <li key={r.g} className="grid justify-items-center gap-1 rounded-2xl bg-[var(--panel)] p-3 text-center">
+            <li key={r.g} data-testid={canEdit ? undefined : `hub-journey-orb-${r.g}`} className="grid justify-items-center gap-1 rounded-2xl p-3 text-center"
+              style={canEdit ? { background: "var(--panel)" } : { background: subjectSwatch(groupLabel(r.g, t)).bg, border: `1.5px solid ${subjectSwatch(groupLabel(r.g, t)).ring}` }}>
+              {canEdit ? (
               <Ring pct={r.pct} count={r.count} label={r.count !== undefined ? t("hublessons.rgAriaCount", { n: r.count, group: groupLabel(r.g, t) }) : canEdit ? t("hublessons.rgAriaCovered", { pct: r.pct, group: groupLabel(r.g, t) }) : t("hublessons.rgAriaStarted", { pct: r.pct, group: groupLabel(r.g, t) })} size={78} />
+              ) : (
+                <GlassOrb pct={r.pct > 0 ? r.pct : null} color={subjectSwatch(groupLabel(r.g, t)).base} size={96} index={rings.indexOf(r)} aria={`${groupLabel(r.g, t)}: ${Math.round(r.pct)}%`}
+                  center={r.pct > 0 ? <span className="text-[26px] leading-none">🗺️</span> : undefined} />
+              )}
               <b className="text-[13.5px] text-[var(--ink)]">{groupLabel(r.g, t)}</b>
               <span className="text-[11.5px] font-semibold text-[var(--ink-2)]" aria-hidden={!canEdit || undefined}>{r.line}</span>
             </li>

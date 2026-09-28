@@ -12,6 +12,8 @@ import { tint } from "../kit";
 import type { StudentHomework } from "../homework/hwTypes";
 import { useGamesPlayed, verdictOf, TONE } from "../games/GamesPlayedPanel";
 import { useNow } from "../teachKit";
+import { bandOfYear } from "../family/kidCopy";
+import { useSupport } from "../family/FamilyContext";
 
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
@@ -31,8 +33,12 @@ function Card({ color, icon, label, value, sub, testId }: { color: string; icon:
 /** A face for a score, shown beside the percentage: 80+ great, 60-79 good, 40-59 unsure, under 40 struggling. */
 const face = (pct: number) => (pct >= 80 ? "😄" : pct >= 60 ? "🙂" : pct >= 40 ? "😕" : "😟");
 const tone = (pct: number) => (pct >= 80 ? "var(--green)" : pct >= 60 ? "var(--gold)" : "var(--red)");
+/** A child's own view (kid mode) never shows a red dot or a sad face: a low score is a warm gold seedling. Levels are 🌱 Learning · 🌿 Developing · 🌳 Secure. */
+const faceOf = (pct: number, kid: boolean) => (kid ? (pct >= 80 ? "🌳" : pct >= 50 ? "🌿" : "🌱") : face(pct));
+const toneOf = (pct: number, kid: boolean) => (kid ? (pct >= 80 ? "var(--green)" : "var(--gold)") : tone(pct));
+const pctText = (pct: number, show: boolean) => (show ? `${Math.round(pct)}% ` : "");
 /** The quiz card: the last five marked quizzes, newest first, one tight line each (title and score). */
-function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[] }) {
+function QuizzesCard({ label, empty, total, sub, rows, kid = false, nums = true }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-4)";
   return (
     <div data-testid="pc-quiz" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
@@ -45,9 +51,9 @@ function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty:
         <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-quiz-list">
           {rows.slice(0, 5).map((r, i) => (
             <li key={i} className="flex items-center gap-2 text-[12.5px]">
-              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
+              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: toneOf(r.pct, kid) }} />
               <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.title}</span>
-              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(r.pct)}</span></span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pctText(r.pct, nums)}<span aria-hidden className="text-[20px] leading-none align-middle">{faceOf(r.pct, kid)}</span></span>
             </li>
           ))}
         </ul>
@@ -57,7 +63,7 @@ function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty:
 }
 
 /** Topics practised: the total, then the names of the five most recent (newest first), each with its mastery score. */
-function TopicsCard({ label, total, sub, rows }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[] }) {
+function TopicsCard({ label, total, sub, rows, kid = false, nums = true }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-2)";
   return (
     <div data-testid="pc-topics" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
@@ -70,9 +76,9 @@ function TopicsCard({ label, total, sub, rows }: { label: string; total: number;
         <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-topics-list">
           {rows.slice(0, 5).map((r, i) => (
             <li key={i} className="flex items-center gap-2 text-[12.5px]" title={r.subject}>
-              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
+              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: toneOf(r.pct, kid) }} />
               <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.name}</span>
-              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(r.pct)}</span></span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pctText(r.pct, nums)}<span aria-hidden className="text-[20px] leading-none align-middle">{faceOf(r.pct, kid)}</span></span>
             </li>
           ))}
         </ul>
@@ -84,7 +90,7 @@ function TopicsCard({ label, total, sub, rows }: { label: string; total: number;
 const RECENT = 5;   // the games card lists only the most recent five areas practised
 
 /** The Games card: same size as the others, colourful; the most recent five areas practised as one tight line each (newest first). */
-function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: string, v?: Record<string, string | number>) => string; areas: ReturnType<typeof useGamesPlayed>["areas"]; scored: { a: { area: string }; pct: number }[]; unfinished: number; ready: boolean; name: string }) {
+function GamesCard({ T, areas, scored, unfinished, ready, name, kid = false, nums = true }: { kid?: boolean; nums?: boolean; T: (k: string, v?: Record<string, string | number>) => string; areas: ReturnType<typeof useGamesPlayed>["areas"]; scored: { a: { area: string }; pct: number }[]; unfinished: number; ready: boolean; name: string }) {
   const color = "var(--cat-10)";
   const recent = areas.slice(0, RECENT);   // useGamesPlayed already sorts by last played, newest first
   const days = areas.find((a) => a.weekDays !== undefined);
@@ -102,12 +108,13 @@ function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: strin
             {recent.map((a) => {
               const pct = a.correct === null || !a.attempts ? null : Math.round((a.correct / a.attempts) * 100);
               const v = pct === null ? null : verdictOf(a.attempts, pct);
+              const vt = v ? (kid && v === "needs_help" ? "var(--gold)" : TONE[v]) : "var(--ink-3)";
               return (
                 <li key={a.area} data-testid={`games-area-${a.area}`} data-verdict={v ?? ""} title={pct !== null ? T("pl_right", { pct, n: a.attempts }) : undefined} className="flex items-center gap-2 text-[12.5px]">
-                  <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: v ? TONE[v] : "var(--ink-3)" }} />
+                  <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: vt }} />
                   <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{T(`pl_a_${a.area}`)}</span>
-                  <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pct !== null ? <>{pct}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(pct)}</span></> : T("pl_solved", { n: a.solved ?? 0 })}</span>
-                  {v && <span className="hidden w-[78px] flex-none text-end text-[11px] font-extrabold sm:inline" style={{ color: TONE[v] }}>{T(`pl_${v}`)}</span>}
+                  <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pct !== null ? <>{nums ? `${pct}% ` : ""}<span aria-hidden className="text-[20px] leading-none align-middle">{faceOf(pct, kid)}</span></> : T("pl_solved", { n: a.solved ?? 0 })}</span>
+                  {v && <span className="hidden w-[78px] flex-none text-end text-[11px] font-extrabold sm:inline" style={{ color: vt }}>{T(`pl_${kid && v === "needs_help" ? "getting_there" : v}`)}</span>}
                 </li>
               );
             })}
@@ -118,7 +125,7 @@ function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: strin
   );
 }
 
-export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: string; /** null = no quiz results yet: only the games / homework / flashcards cards. */ quiz: null | { latest: { pct: number; title: string } | null; /** the five most recent marked quizzes, newest first */ recent: { title: string; pct: number }[]; /** the five topics practised most recently, newest first (name, subject, mastery %) */ topicsRecent: { name: string; subject: string; pct: number }[]; topics: number; subjects: number; taken: number; who: string; labels: { latest: string; noQuiz: string; topics: string; across: string; taken: string; recent: string } } }) {
+export function ProgressCards({ p, childId, quiz, kid = false, nums = true }: { p: PanelProps; childId: string; /** A child's own view: warm level emoji, no red, and `nums` hides the percentages (Reception–Year 2 / calm). */ kid?: boolean; nums?: boolean; /** null = no quiz results yet: only the games / homework / flashcards cards. */ quiz: null | { latest: { pct: number; title: string } | null; /** the five most recent marked quizzes, newest first */ recent: { title: string; pct: number }[]; /** the five topics practised most recently, newest first (name, subject, mastery %) */ topicsRecent: { name: string; subject: string; pct: number }[]; topics: number; subjects: number; taken: number; who: string; labels: { latest: string; noQuiz: string; topics: string; across: string; taken: string; recent: string } } }) {
   const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
   const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
   const now = useNow(60_000);
@@ -147,10 +154,10 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   return (
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
-      <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} />
-      <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
+      <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} kid={kid} nums={nums} />
+      <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} kid={kid} nums={nums} />
       </>}
-      <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
+      <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} kid={kid} nums={nums} />
       {p.canEdit ? (
         <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")} value={hers && hers.length ? `${herMarked + herWaiting}/${hers.length}` : "–"}
           sub={!hers ? (inbox.error ? "" : "") : !hers.length ? T("pc_hw_none") : (
@@ -179,13 +186,15 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
 
 /** The same cards for a CHILD's own Progress (kid mode): loads the child's mastery itself, builds the quiz / topic lines, then shows the cards. */
 export function KidProgressCards({ p, childId }: { p: PanelProps; childId: string }) {
+  const calm = useSupport().calm;
+  const band = bandOfYear(p.students.find((x) => x.childId === childId)?.yearGroup);
   const { data } = useHubData<Mastery>(hubPath(p.qs, "/mastery", { childId }), ["hubMastery", "hubAttempts"]);
   const { t, tp } = useHubI18n();
   if (!data) return null;
   const started = data.subjects.filter((sb) => sb.masteryPct != null || sb.topics.some((tp2) => tp2.attempts > 0)).length;
   const sorted = [...data.trend].sort((a, b) => b.at.localeCompare(a.at));
   return (
-    <ProgressCards p={p} childId={childId} quiz={{
+    <ProgressCards p={p} childId={childId} kid nums={!(calm || band === "ks1")} quiz={{
       latest: sorted[0] ? { pct: sorted[0].pct, title: sorted[0].title } : null,
       recent: sorted.slice(0, 5).map((x) => ({ title: x.title, pct: x.pct })),
       topicsRecent: data.subjects.flatMap((sb) => sb.topics.filter((x) => x.attempts > 0).map((x) => ({ name: x.subtopic ? `${x.topic} › ${x.subtopic}` : x.topic, subject: sb.subject, pct: x.masteryPct, at: x.lastAttemptAt ?? "" })))
