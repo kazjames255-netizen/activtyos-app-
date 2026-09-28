@@ -315,6 +315,18 @@ hubFlashcardsApi.get("/flashcards", async (req, res) => {
   const subjectQ = typeof req.query.subject === "string" && req.query.subject ? req.query.subject.toLowerCase() : null;
   const topicRows = await cachedTopics(ctx.tenantId);
   if (!family && subjectQ) family = new Set(topicRows.filter((t) => t.subject.toLowerCase() === subjectQ && canSee(ctx, t.franchiseId)).map((t) => t.id));
+  // `year=3,4` (school years, 0 = Reception): only the cards of topics filed under those years. A topic's year is the "Year N" in its subtopic (or name),
+  // the way the curriculum library files every unit; it narrows whatever subject / topic was already chosen.
+  const yearsQ = typeof req.query.year === "string" && req.query.year ? new Set(req.query.year.split(",").map((y) => Number(y)).filter((n) => Number.isInteger(n) && n >= 0 && n <= 13)) : null;
+  if (yearsQ && yearsQ.size) {
+    const yearOf = (t: { topic: string; subtopic?: string | null }): number | null => {
+      const m = /\bYear\s*(\d{1,2})\b/i.exec(`${t.subtopic ?? ""} ${t.topic}`); if (m) return Number(m[1]);
+      return /\breception\b/i.test(`${t.subtopic ?? ""} ${t.topic}`) ? 0 : null;
+    };
+    const ids = topicRows.filter((t) => canSee(ctx, t.franchiseId) && (!subjectQ || t.subject.toLowerCase() === subjectQ) && (yearOf(t) !== null && yearsQ.has(yearOf(t) as number))).map((t) => t.id);
+    const prev = family;
+    family = new Set(prev ? ids.filter((id) => prev.has(id)) : ids);
+  }
   // Topic order is an integer rank per topic and the tie-breaks are plain string compares (ISO dates, ids): a deck can hold
   // ~50k cards, and ICU compares per pair made this sort the slowest part of the request.
   const rank = req.query.sort === "topic" ? topicRank(topicRows) : null;

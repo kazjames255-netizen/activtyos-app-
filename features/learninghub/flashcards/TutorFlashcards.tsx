@@ -11,6 +11,7 @@ import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { GradientTile, Ico } from "../teachIcons";
 import { subjectColor } from "../kit";
+import { YearGroupPicker } from "../YearGroupPicker";
 import { BulkDialog, CardDialog } from "./CardDialogs";
 import type { Card, FlashStats } from "./fcTypes";
 
@@ -27,6 +28,9 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
   const [busy, setBusy] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
   const [allStudents, setAllStudents] = useState(false);
+  // The library holds tens of thousands of cards, so it is narrowed here by subject and school year (sent to the server, not filtered on screen).
+  const [subjectSel, setSubjectSel] = useState<string | null>(null);
+  const [yearsSel, setYearsSel] = useState<number[]>([]);
   // A save that forked a head-office (shared-library) card into the tutor's own copy — the dialog
   // closes right away, so the confirmation lives here.
   const [flash, setFlash] = useState<string | null>(null);
@@ -44,8 +48,9 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
   const seq = useRef(0);
   const kept = useRef(PAGE);
   useEffect(() => { const timer = setTimeout(() => setDq(q.trim()), 250); return () => clearTimeout(timer); }, [q]);
+  const subjectQ = subjectSel ?? filter.subject ?? null;
   const listPath = useCallback((cursor: string | null, limit: number) =>
-    `/api/learning-hub/flashcards${withQs(qs, { limit: String(limit), sort: "topic", cursor, ...(filter.topicId ? { topicId: filter.topicId } : filter.subject ? { subject: filter.subject } : {}), q: dq || null })}`, [qs, filter.topicId, filter.subject, dq]);
+    `/api/learning-hub/flashcards${withQs(qs, { limit: String(limit), sort: "topic", cursor, ...(filter.topicId ? { topicId: filter.topicId } : subjectQ ? { subject: subjectQ } : {}), ...(yearsSel.length ? { year: yearsSel.join(",") } : {}), q: dq || null })}`, [qs, filter.topicId, subjectQ, yearsSel, dq]);
   const loadCards = useCallback((append: boolean, cursor: string | null = null, keep = false) => {
     const mine = ++seq.current;
     if (append) setMore(true);
@@ -160,9 +165,23 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
             </section>
           )}
 
+          <div className="flex flex-wrap items-center gap-2" data-testid="fc-filters">
+            <div role="group" aria-label={tr("hubshell.k_subject")} className="flex flex-wrap gap-1.5">
+              {[null, ...[...new Set(topics.map((t) => t.subject))].sort((a, b) => a.localeCompare(b))].map((sb) => {
+                const on = (subjectSel ?? null) === sb;
+                return (
+                  <button key={sb ?? "all"} type="button" aria-pressed={on} onClick={() => setSubjectSel(sb)} data-testid={`fc-subject-${sb ?? "all"}`}
+                    className={`min-h-[44px] lg:min-h-[36px] rounded-full border px-3.5 text-[13px] font-bold transition ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}>
+                    {sb ?? tr("hubshell.k_allSubjects")}
+                  </button>
+                );
+              })}
+            </div>
+            <YearGroupPicker years={yearsSel} onChange={setYearsSel} />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Input aria-label={tr("hublessons.tfSearchAria")} className="min-h-[44px] min-w-[200px] flex-1" placeholder={tr("hublessons.tfSearchPh")} value={q} onChange={(e) => setQ(e.target.value)} />
-            <span className="text-[12px] text-[var(--ink-3)]">{pickPlural(tr, locale, filter.subject || filter.topicId ? "hublessons.tfCardsInTopic" : "hublessons.tfCardsTotal", listTotal || shown)}</span>
+            <span className="text-[12px] text-[var(--ink-3)]">{pickPlural(tr, locale, filter.subject || filter.topicId || subjectSel || yearsSel.length ? "hublessons.tfCardsInTopic" : "hublessons.tfCardsTotal", listTotal || shown)}</span>
           </div>
 
           {shown === 0 ? (

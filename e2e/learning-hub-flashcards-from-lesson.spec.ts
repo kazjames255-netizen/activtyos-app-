@@ -47,3 +47,20 @@ test("assigning the lesson to one child gives THAT child its topic's flashcards,
   await expect.poll(async () => (await due(withId)).due.map((c) => c.id), { timeout: 30_000 }).toContain(cardId);
   expect((await due(withoutId)).due.map((c) => c.id)).not.toContain(cardId);
 });
+
+test("the tutor's card library can be narrowed by school year (and subject) on the server", async () => {
+  const t = await token(accounts.freelancer);
+  await apiPost(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}`, subtopic: "Year 5" });
+  await apiPost(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}`, subtopic: "Year 6" });
+  const topics = await apiFetch<{ id: string; subject: string; topic: string; subtopic: string | null }[]>(`${HUB}/topics`, t);
+  const y5 = topics.find((x) => x.topic === `Poems ${stamp}` && x.subtopic === "Year 5")!.id;
+  const y6 = topics.find((x) => x.topic === `Poems ${stamp}` && x.subtopic === "Year 6")!.id;
+  const c5 = (await apiPost<{ id: string }>(`${HUB}/flashcards`, t, { topicId: y5, front: `Y5 ${stamp}`, back: "b", published: true })).id;
+  const c6 = (await apiPost<{ id: string }>(`${HUB}/flashcards`, t, { topicId: y6, front: `Y6 ${stamp}`, back: "b", published: true })).id;
+  const ids = async (q: string) => (await apiFetch<{ items: { id: string }[] }>(`${HUB}/flashcards?limit=200&subject=${encodeURIComponent(subject)}${q}`, t)).items.map((c) => c.id);
+  const only5 = await ids("&year=5");
+  expect(only5).toContain(c5); expect(only5).not.toContain(c6);
+  const both = await ids("&year=5,6");
+  expect(both).toContain(c5); expect(both).toContain(c6);
+  expect(await ids("&year=9")).toEqual([]);
+});
