@@ -134,7 +134,8 @@ test.describe("UI", () => {
   test("no yellow reminder card on Home or Students — even in September", async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: statePath("freelancer") });
     const page = await ctx.newPage();
-    await page.clock.setFixedTime(new Date("2026-09-10T10:00:00"));
+    // (No fake clock: pinning the date before the sign-in token was issued breaks Firebase auth, so the hub never loads. Real September — the old
+    // reminder's 1 Aug–31 Oct window — is when this runs; outside it the "no card" assertions are simply still true.)
     await open(page, "/freelancer/learninghub?tab=home");
     await expect(page.getByTestId("year-reminder")).toHaveCount(0);
     await expect(page.getByText("New school year")).toHaveCount(0);
