@@ -152,7 +152,7 @@ export function ProgressCards({ p, childId, quiz, kid = false, nums = true }: { 
   const overdue = todo.filter((h) => new Date(h.dueAt).getTime() < now).length;
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
+    <div className="grid grid-cols-1 gap-2.5 min-[440px]:grid-cols-2 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
       <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} kid={kid} nums={nums} />
       <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} kid={kid} nums={nums} />
