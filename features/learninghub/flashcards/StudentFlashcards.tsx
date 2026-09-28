@@ -15,6 +15,7 @@ import { pickPlural } from "@/lib/i18n/plural";
 import { StackedCards } from "./StackedCards";
 import { ChildChip, useChildGate, useFamily, WhoIsLearning } from "../family/FamilyContext";
 import { ReviewSession } from "./ReviewSession";
+import { bandOrDefault } from "../family/kidCopy";
 import type { DueResponse, QueueCard } from "./fcTypes";
 
 // Student flashcards: today's review queue (due first, then new), a start
@@ -23,6 +24,7 @@ import type { DueResponse, QueueCard } from "./fcTypes";
 export function StudentFlashcards({ qs, childId, filter, covered, students, topics, onError, setFocus }: PanelProps) {
   const { t: tr, locale } = useI18n();
   const fam = useFamily();
+  const ks1Kid = fam.kid && bandOrDefault(students.find((x) => x.childId === childId)?.yearGroup) === "ks1";
   const [data, setData] = useState<DueResponse | null>(null);
   const [session, setSession] = useState<QueueCard[] | null>(null);
   const inSession = useRef(false);
@@ -106,7 +108,7 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
         <GradientTile icon="cards" size={44} />
         <div>
           <h2 className="m-0 text-[19px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{tr("hublessons.fcaTitle")}</h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">{tr("hublessons.fcTagline")}</p>
+          {!ks1Kid && <p className="text-[12.5px] text-[var(--ink-3)]">{tr("hublessons.fcTagline")}</p>}
         </div>
       </div>
       <section className="relative overflow-hidden rounded-3xl p-6 text-white shadow-[var(--shadow)] sm:p-8" style={HERO_BG} data-testid="hub-fc-start">
@@ -115,12 +117,12 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
             <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/70">{tr("hublessons.fcTodaysReview")}</div>
             <div className="mt-2 flex flex-wrap items-end gap-x-5 gap-y-2">
               <div><span className="text-[58px] font-extrabold leading-none tabular-nums" style={DISPLAY}><span className="sr-only">{queue.length}</span><span aria-hidden>{shownCount}</span></span> <span className="text-[15px] font-bold text-white/80">{pickPlural(tr, locale, "hublessons.fcCardsToReview", queue.length)}</span></div>
-              <div className="flex flex-wrap gap-2 pb-1.5 text-[12.5px] font-bold">
+              {!ks1Kid && <div className="flex flex-wrap gap-2 pb-1.5 text-[12.5px] font-bold">
                 {dueNow > 0 && fresh > 0 && <span className={pill}><Ico name="refresh" size={13} />{tr("hublessons.fcDueBack", { n: dueNow })}</span>}
                 {dueNow > 0 && fresh > 0 && <span className={pill}><Ico name="sparkle" size={13} />{tr("hublessons.fcFreshN", { n: fresh })}</span>}
                 {onlyNew && <span className={pill}><Ico name="sparkle" size={13} />{tr("hublessons.fcFirstTime")}</span>}
                 <span className={pill}><Ico name="clock" size={13} />{tr("hublessons.aboutMin", { m: mins })}</span>
-              </div>
+              </div>}
             </div>
             {breakdown.length > 0 && (
               <div className="mt-4" aria-label={tr("hublessons.fcTopicsAria")}>
