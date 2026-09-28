@@ -353,6 +353,7 @@ const hubgames: Record<string, Record<string, string>> = {
     pl_doing_well: "Doing well", pl_getting_there: "Getting there", pl_needs_help: "Needs help", pl_just_started: "Just started",
     pl_partial: "Includes {n} answers from a run left part-way.",
     pl_your_child: "Your child",
+    pc_topics_from: "Topics from quizzes, with the score for each. Not lessons.",
     pc_games: "Games", pc_games_sub: "areas practised", pc_games_none: "Not played yet", pc_games_strong: "Strongest: {area}",
     pc_hw: "Homework", pc_hw_sub: "handed in", pc_hw_overdue: "{n} overdue", pc_hw_todo: "{n} still to do", pc_hw_clear: "All caught up", pc_hw_none: "No homework yet",
     pc_cards: "Flashcards", pc_cards_sub: "due today", pc_cards_new: "{n} new to learn", pc_cards_none: "No cards yet",

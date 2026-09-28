@@ -27,6 +27,20 @@ const MAP: Entry[] = [
   { top: "messages", sub: null, labels: ["Messages", "Student message centre"] },
 ];
 
+// A parent's / child's strip (features/learninghub/familyGroups.ts) is grouped too: Today · Homework · Learn (Lessons, Live lessons, Quizzes,
+// Starting quizzes, Flashcards) · Progress · Games.
+const FAMILY_MAP: Entry[] = [
+  { top: "today", sub: null, labels: ["Home", "Today"] },
+  { top: "homework", sub: null, labels: ["Homework"] },
+  { top: "learn", sub: "lessons", labels: ["Lessons"] },
+  { top: "learn", sub: "live", labels: ["Live lessons"] },
+  { top: "learn", sub: "starting", labels: ["Starting quizzes"] },
+  { top: "learn", sub: "quizzes", labels: ["Quizzes"] },
+  { top: "learn", sub: "flashcards", labels: ["Flashcards"] },
+  { top: "progress", sub: null, labels: ["Progress"] },
+  { top: "games", sub: null, labels: ["Games"] },
+];
+
 const matches = (name: RegExp | string, label: string) => (typeof name === "string" ? label.toLowerCase().includes(name.toLowerCase()) : new RegExp(name.source, name.flags.replace(/[gy]/g, "")).test(label));
 /** The tab an old name means: the sub-tab when both a top tab and a sub-tab carry it (e.g. Quizzes). */
 export const tabOf = (page: Page, name: RegExp | string): Locator => page.getByRole("tab", { name }).last();
@@ -35,13 +49,9 @@ export const tabOf = (page: Page, name: RegExp | string): Locator => page.getByR
 export async function openTab(page: Page, name: RegExp | string): Promise<void> {
   await page.getByRole("tab").first().waitFor({ state: "visible", timeout: 30_000 });
   const grouped = (await page.locator('[role="tab"][data-top]').count()) > 0;
-  const e = grouped ? MAP.find((m) => m.labels.some((l) => matches(name, l))) : undefined;
-  if (!e) {
-    const direct = tabOf(page, name);
-    // A parent's / child's flat strip calls the tutor's "Lessons" tab "Learn".
-    if ((await direct.count()) === 0 && /Lessons/i.test(String(name))) { await page.getByRole("tab", { name: /^Learn/ }).click(); return; }
-    await direct.click(); return;
-  }
+  const family = grouped && (await page.locator('[role="tab"][data-top="today"]').count()) > 0;
+  const e = grouped ? (family ? FAMILY_MAP : MAP).find((m) => m.labels.some((l) => matches(name, l))) : undefined;
+  if (!e) { await tabOf(page, name).click(); return; }
   if (!e.sub) { await page.locator(`[role="tab"][data-top="${e.top}"]`).click(); return; }
   const sub = page.locator(`[role="tab"][data-sub="${e.sub}"]`);
   if (!(await sub.isVisible().catch(() => false))) {
