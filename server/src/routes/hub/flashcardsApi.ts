@@ -227,8 +227,7 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
     // Only the five fields the stats use, cached for a few seconds (a tenant's review rows grow with students × cards studied).
     hubCached("reviews", ctx.tenantId, "", 20_000, async () =>
       (await reviewsCol.where("tenantId", "==", ctx.tenantId).select("childId", "cardId", "nextDueAt", "intervalDays", "lastReviewedAt").get()).docs.map((d) => d.data() as RevLite)),
-    // Two whole-tenant scans (assignments + homework): cached like the reviews above so a tutor reloading the stats table does not re-read them each time.
-    hubCached("scopes", ctx.tenantId, "byChild", 20_000, () => assignedScopeByChild(ctx.tenantId)),
+    assignedScopeByChild(ctx.tenantId), // already cached 20 s inside (kind "assignedNotes", extra "fc-byChild")
   ]);
   const cards = [...index.values()].filter((c) => canSee(ctx, c.franchiseId));
   const byTopic = new Map<string, number>();

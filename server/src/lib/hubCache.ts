@@ -26,8 +26,13 @@ import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync } from "node
 import { open, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { overReadBudget, withReadLabel } from "./readMeter";
 
-interface Entry { at: number; v: unknown }
+interface Entry { at: number; v: unknown; seeded?: boolean }
+// A snapshot read back from disk is served as-is only while it is younger than this (default 30 min, HUB_SNAPSHOT_TRUST_MIN): a restart minutes after
+// the last build re-reads nothing, but writes made behind the API's back (Admin-SDK scripts, another instance) while it was down become visible within
+// this window instead of waiting out the (long) TTL. Older snapshots are served immediately and revalidated in the background once (stale-while-revalidate).
+const SEED_TRUST_MS = Number(process.env.HUB_SNAPSHOT_TRUST_MIN || 30) * 60_000;
 const store = new Map<string, Entry>();
 const inflight = new Map<string, Promise<unknown>>();
 const MAX_ENTRIES = 600;
@@ -151,7 +156,7 @@ export async function warmHubCacheFromDisk(): Promise<number> {
       const parsed = JSON.parse(await readFile(full, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
       if (parsed.version !== SNAPSHOT_VERSION || parsed.kind !== kind || parsed.tenantId !== tenantId) continue;
       if (store.has(keyOf(kind, tenantId))) continue; // a request got there first
-      store.set(keyOf(kind, tenantId), { at: st.mtimeMs, v: parsed.__map ? new Map(parsed.entries) : parsed.v });
+      store.set(keyOf(kind, tenantId), { at: st.mtimeMs, v: parsed.__map ? new Map(parsed.entries) : parsed.v, seeded: true });
       loaded++;
     } catch { /* unreadable / foreign file: ignore */ }
     await new Promise((r) => setImmediate(r));
@@ -174,9 +179,11 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
   // normal SWR path — serve this now, rebuild in the background (through the limiter below).
   if (!hit && opts.disk && !extra) {
     const disk = diskRead<T>(kind, tenantId);
-    if (disk !== null) { hit = { at: disk.mtimeMs, v: disk.v }; store.set(key, hit); }
+    if (disk !== null) { hit = { at: disk.mtimeMs, v: disk.v, seeded: true }; store.set(key, hit); }
   }
-  if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
+  if (hit && Date.now() - hit.at < (hit.seeded ? Math.min(ttlMs, SEED_TRUST_MS) : ttlMs)) return hit.v as T;
+  // A stale copy we can serve, and a budget already spent: keep serving it rather than re-read the whole index (lib/readMeter.ts).
+  if (hit && opts.swr && !inflight.get(key) && overReadBudget(`hub-cache:${kind}|${tenantId}`)) return hit.v as T;
   const running = inflight.get(key);
 
   const start = (): Promise<T> => {
@@ -196,7 +203,7 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
       try {
         await Promise.resolve(); // let `self` be assigned before anything below can run its `finally`
         const t0 = Date.now();
-        const v = await (opts.disk ? withBigSlot(load, background) : load());
+        const v = await withReadLabel(`cache:${kind}|${tenantId}${extra ? `|${extra}` : ""}`, () => (opts.disk ? withBigSlot(load, background) : load()));
         const took = Date.now() - t0;
         if (took > 1_000) { // a slow index build is the main cold-start cost of the hub: say so (with its size) in the API log
           const n = v instanceof Map ? v.size : Array.isArray(v) ? v.length : null;

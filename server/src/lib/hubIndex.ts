@@ -46,11 +46,12 @@ const enrolCol = db.collection("hubEnrolments");
 // rows total) rebuild was kicked off in the background on close to every minute of active use — real Firestore
 // read cost plus repeated JSON (de)serialization work on the event loop for no freshness benefit. Matching
 // TTL_INDEX cuts that background churn ~20x.
-const TTL_TOPICS = 20 * 60_000;
+const HUB_TTL = Number(process.env.HUB_INDEX_TTL_MIN || 360) * 60_000; // Sept-2026 bill: 20-min rebuilds of ~500k docs cost ~£60/mo. 6h default; out-of-band writes use POST /notes/index-refresh.
+const TTL_TOPICS = HUB_TTL;
 // Questions / notes / assessments / cards: patched on every API write, so this only bounds seed-script staleness. It was 3 min,
 // which at scale (a tenant with ~89k questions + ~49k cards + 8.5k assessments) meant a background re-read of ~150k documents
 // every few minutes — parsing that blocked the event loop for seconds and made every "warm" request slow (see docs/hub-review/perf-round4.md).
-const TTL_INDEX = 20 * 60_000;
+const TTL_INDEX = HUB_TTL;
 const TTL_ROSTER = 30_000;
 
 // ── sorting helpers ──────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { db } from "../firebase";
 import { emailWebsiteAddonAck, emailDemoBooked } from "../lib/emails";
+import { LOW_COST, overReadBudget } from "../lib/readMeter";
 
 // Marketing-site "Book a demo" lead capture.
 // - POST is PUBLIC: the /demo form on the site posts here with no login.
@@ -151,7 +152,9 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   // staff/key-staff page (enrich_schools.mjs) — best-effort name/email pairs, not a substitute for the main
   // email/phone fields above.
   "roleContacts"];
-const FRESH_MS = 3 * 60_000;
+// Was 3 min: while the Leads page was open, every request past 3 min re-read all ~72k leads (~£0.03 each, ~£0.6/h). Edits patch the cache in place
+// (rev), so a stale list is fine; ?fresh=1 still forces a read. Sept-2026 bill: see docs/firestore-cost.md.
+const FRESH_MS = Number(process.env.LEADS_FRESH_MIN || 60) * 60_000;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
 let inflight: Promise<Row[]> | null = null;
@@ -188,12 +191,12 @@ export function warmLeads() {
   // Only re-read Firestore if the saved copy is stale — the API restarts on every
   // code change in dev, and 26k reads per restart kept the page from loading.
   readFile(DISK, "utf8").then((t) => { if (!cache) cache = JSON.parse(t); }).catch(() => {})
-    .finally(() => { if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {}); });
+    .finally(() => { if ((!cache || Date.now() - cache.at > FRESH_MS) && !LOW_COST) refresh().catch(() => {}); });
 }
 
 leads.get("/", async (req, res) => {
   if (cache) {
-    if (req.query.fresh === "1" || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
+    if (req.query.fresh === "1" || (Date.now() - cache.at > FRESH_MS && !overReadBudget("leads"))) refresh().catch(() => {});
     const body = () => JSON.stringify({ leads: cache!.items, asOf: new Date(cache!.at).toISOString(), refreshing: !!inflight });
     if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""))) { res.type("json").send(body()); return; }
     const key = `${cache.at}|${!!inflight}|${rev}`;
