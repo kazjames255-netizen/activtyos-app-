@@ -33,15 +33,16 @@ export const warmFace = (pct: number): "🌟" | "🙂" | "🌱" => (pct >= 80 ? 
 
 // ── the three tiles ──────────────────────────────────────────────────────────
 
-export function HwStatStrip({ todo, waiting, marked, overdue, kid, calm }: { todo: number; waiting: number; marked: number; overdue: number; kid: boolean; calm: boolean }) {
+export function HwStatStrip({ todo, waiting, marked, overdue, kid, calm, onTodo, onWaiting, onMarked }: { todo: number; waiting: number; marked: number; overdue: number; kid: boolean; calm: boolean; onTodo?: () => void; onWaiting?: () => void; onMarked?: () => void }) {
   const { h } = useHw();
   const tiles: StatTile[] = [
     {
       key: "todo", label: h("toDo"), value: todo, tone: todo ? "brand" : "green", icon: todo ? "homework" : "check",
       hint: todo ? (overdue && !calm ? (kid ? h("waitingForYou") : h("nOverdue", { n: overdue })) : h("kidHintTodo")) : h("kidHintTodoZero"),
+      onClick: todo ? onTodo : undefined,
     },
-    { key: "waiting", label: kid ? h("stHandedIn") : h("awaitingMarking"), value: waiting, tone: "violet", icon: "send", hint: waiting ? h("kidHintWaiting") : h("handedInLower") },
-    { key: "marked", label: h("stMarked"), value: marked, tone: "green", icon: "check", hint: h("withFeedback") },
+    { key: "waiting", label: kid ? h("stHandedIn") : h("awaitingMarking"), value: waiting, tone: "violet", icon: "upload", hint: waiting ? h("kidHintWaiting") : h("handedInLower"), onClick: waiting ? onWaiting : undefined },
+    { key: "marked", label: h("stMarked"), value: marked, tone: "green", icon: "check", hint: h("withFeedback"), onClick: marked ? onMarked : undefined },
   ];
   return <StatTiles tiles={tiles} cols={3} label={h("kidTilesAria")} />;
 }
@@ -112,7 +113,7 @@ export function HwGroup({ id, title, items }: { id: string; title: string; items
   const [all, setAll] = useState(false);
   const shown = all ? items : items.slice(0, MAX_ROWS);
   return (
-    <section className="grid gap-2" data-testid={`hub-hw-group-${id}`} aria-label={title}>
+    <section id={`hub-hw-section-${id}`} className="grid gap-2 scroll-mt-20" data-testid={`hub-hw-group-${id}`} aria-label={title}>
       <div className="flex items-center justify-between gap-3">
         <Overline>{title}</Overline>
         <button type="button" data-testid={`hub-hw-group-toggle-${id}`} aria-expanded={open} aria-controls={`hub-hw-list-${id}`} onClick={() => setOpen((o) => !o)}

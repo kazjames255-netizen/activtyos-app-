@@ -20,6 +20,12 @@ import { hubUrl } from "../home/homeLib";
 import { getShared } from "./homeworkFeed";
 import { RetryFace } from "./RetryFace";
 import { useHw } from "./hwI18n";
+
+/** A stat-tile click jumps to its list below (the group is open by default). */
+function jumpToHwSection(id: "todo" | "waiting" | "marked") {
+  const reduced = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById(`hub-hw-section-${id}`)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+}
 import { dueState, pctOf, type AttemptLite, type HubFile, type QuizLite, type StudentHomework as HW } from "./hwTypes";
 
 // Student (parent's child) homework: what's due, hand it in, see the mark.
@@ -85,7 +91,8 @@ export function StudentHomework({ qs, childId, students, topics, onError }: Pane
         </div>
       </div>
 
-      <HwStatStrip todo={groups.todo.length} waiting={groups.waiting.length} marked={groups.marked.length} overdue={overdue} kid={kid} calm={calm} />
+      <HwStatStrip todo={groups.todo.length} waiting={groups.waiting.length} marked={groups.marked.length} overdue={overdue} kid={kid} calm={calm}
+        onTodo={() => jumpToHwSection("todo")} onWaiting={() => jumpToHwSection("waiting")} onMarked={() => jumpToHwSection("marked")} />
 
       {groups.todo.length > 0 && <HwGroup id="todo" title={tr("toDo")} items={groups.todo.map(card)} />}
       {groups.waiting.length > 0 && <HwGroup id="waiting" title={tr("handedAwaiting")} items={groups.waiting.map(card)} />}
