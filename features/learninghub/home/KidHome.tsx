@@ -7,18 +7,23 @@ import { DISPLAY, FOCUS, Icon, type IconName } from "./homeKit";
 import { useH } from "./homeI18n";
 import { Mascot, useMascotEnabled } from "../mascot";
 import HowItWorksButton from "../howitworks/HowItWorksButton";
+import { RhythmChart } from "./RhythmChart";
+import { KidTiles, KidTodoList } from "./KidWeek";
 
-// A child's Home (P-03): ONE big next-step card, at most six words, one "Go" button. No streak, level, stats or
-// animation. KS1 (Reception to Year 2) sees nothing under the card; KS2 a few short rows; older children a plain
-// "due this week" list. Wording comes from the caller so it can stay kind (P-13) or plain for Year 10+.
+// A child's Home (P-03): ONE big next-step card, at most six words, one "Go" button. KS1 (Reception to Year 2) sees
+// nothing under the card (no numbers, no chart); KS2 (Year 3-6) also gets four coloured stat tiles, "My to-do list" as
+// coloured rows and a "My week" capsule chart (streak hidden when the tutor set Calm; late work is warm amber, never red);
+// older children a plain "due this week" list. Wording comes from the caller so it can stay kind (P-13) or plain for Year 10+.
 
 export type KidStep = { icon: IconName; text: string; to: "live" | "homework" | "flashcards" | "quizzes" | "diagnostic" | "home" };
-export interface KidRow { key: string; icon: IconName; title: string; note?: string; to: KidStep["to"] }
+export interface KidRow { key: string; icon: IconName; title: string; note?: string; to: KidStep["to"]; /** late work: shown in warm amber, never red */ warm?: boolean }
+/** KS2 extras: the numbers for the stat tiles and the 14 day counts behind "My week". */
+export interface KidStats { todo: number; cards: number; doneWeek: number; streak: number; calm: boolean; week: { day: number; count: number }[]; now: number }
 
 export interface WeakTopic { topic: string; subject: string; pct: number }
 
-export function KidHome({ name, band, step, rows, failedHomework, onRetry, go, weak = [] }: {
-  name: string; band: KidBand; step: KidStep | null; rows: KidRow[]; failedHomework: boolean; onRetry: () => void; go: (k: KidStep["to"]) => void; weak?: WeakTopic[];
+export function KidHome({ name, band, step, rows, failedHomework, onRetry, go, weak = [], stats }: {
+  name: string; band: KidBand; step: KidStep | null; rows: KidRow[]; failedHomework: boolean; onRetry: () => void; go: (k: KidStep["to"]) => void; weak?: WeakTopic[]; stats?: KidStats;
 }) {
   const { t } = useH();
   const mascotOn = useMascotEnabled();
@@ -44,7 +49,14 @@ export function KidHome({ name, band, step, rows, failedHomework, onRetry, go, w
         </section>
       )}
       <HowItWorksButton role="kid" variant="kid" band={band === "ks1" ? "ks1" : "std"} />
-      {list.length > 0 && !failedHomework && (
+      {band === "ks2" && stats && !failedHomework && (
+        <>
+          <KidTiles todo={stats.todo} cards={stats.cards} doneWeek={stats.doneWeek} streak={stats.streak} calm={stats.calm} go={go} />
+          <KidTodoList rows={rows} go={go} />
+          <RhythmChart days={stats.week} now={stats.now} title={t("hubshell.hm_kidWeekTitle")} unit={t("hubshell.hm_kidWeekUnit")} emptyText={t("hubshell.hm_kidWeekEmpty")} />
+        </>
+      )}
+      {list.length > 0 && !failedHomework && !(band === "ks2" && stats) && (
         <section aria-label={band === "ks2" ? t("hubshell.hm_moreToDoKid") : t("hubshell.hm_dueThisWeek")} className="grid gap-2">
           {band !== "ks2" && <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.hm_dueThisWeek")}</h3>}
           {list.map((r) => (
@@ -77,7 +89,7 @@ function TeenHome({ name, band, rows, failedHomework, onRetry, go, weak }: { nam
           {list.length === 0 && <p data-testid="hub-teen-nothing" className="m-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-[14.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.hm_nothingDue")}{weak.length > 0 ? ` ${t("hubshell.hm_reviseWeakestQ")}` : ""}</p>}
           {list.map((r) => (
             <div key={r.key} data-testid="hub-teen-row" className="flex min-h-[56px] items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2">
-              <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[var(--brand)]"><Icon name={r.icon} size={20} /></span>
+              <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl" style={{ background: r.to === "flashcards" ? "color-mix(in srgb, var(--red-soft) 60%, var(--violet-soft))" : r.to === "quizzes" || r.to === "diagnostic" ? "var(--violet-soft)" : r.to === "live" ? "var(--green-soft)" : "var(--brand-soft)", color: r.to === "quizzes" || r.to === "diagnostic" ? "var(--violet)" : r.to === "live" ? "var(--hub-green-ink)" : r.to === "flashcards" ? "color-mix(in srgb, var(--red) 55%, var(--violet))" : "var(--brand-strong)" }}><Icon name={r.icon} size={20} /></span>
               <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-extrabold text-[var(--ink)]">{r.title}</span>{r.note && <span className="block truncate text-[12.5px] font-semibold text-[var(--ink-2)]">{r.note}</span>}</span>
               <button type="button" onClick={() => go(r.to)} aria-label={t("hubshell.hm_startAria", { title: r.title })} className={`inline-flex min-h-[44px] flex-none items-center rounded-full bg-[var(--brand)] px-5 text-[14px] font-extrabold text-white ${FOCUS}`}>{t("hubshell.hm_start")}</button>
             </div>

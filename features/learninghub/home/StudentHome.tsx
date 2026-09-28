@@ -24,6 +24,7 @@ import { PARENT_COPY, overdueVerdict } from "../family/parentCopy";
 import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
 import { Mascot, useMascotEnabled } from "../mascot";
 import { KidHome, type KidRow, type KidStep } from "./KidHome";
+import { dayCounts } from "./KidWeek";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
 import { BadgeShelf } from "../badges/BadgeShelf";
 
@@ -106,7 +107,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
     const weekInClass = attempts.filter((a) => a.inPerson === true && a.assessmentType !== "diagnostic" && a.status !== "in_progress" && !!a.submittedAt && new Date(a.submittedAt).getTime() >= weekAgo).length;
     const waitingMark = attempts.filter((a) => a.status === "pending_marking").length + homework.filter((h) => h.childId === childId && h.submission.status === "submitted").length;
     const focusTopic = topics.length > 1 ? topics[topics.length - 1] : null;
-    return { upcoming, todo, urgent, overdueN, soonN, streak, days14, week, results, subjects, topics, step, due, weekQuizzes, weekInClass, weekHomework, waitingMark, focusTopic, allDone: av.some((a) => a.type === "quiz" && !a.lessonNoteId) && !step };
+    return { upcoming, todo, urgent, overdueN, soonN, streak, activity, days14, week, results, subjects, topics, step, due, weekQuizzes, weekInClass, weekHomework, waitingMark, focusTopic, allDone: av.some((a) => a.type === "quiz" && !a.lessonNoteId) && !step };
   }, [parts, now, childId, kidMode, kind, locale]); // eslint-disable-line react-hooks/exhaustive-deps -- t is rebuilt each render; it only changes with `locale`
 
   // Rules of Hooks: every hook this component can call must run on every render, including the "still loading"
@@ -146,7 +147,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
       : null;
     const dayName = (iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: "long" });
     const weekEnd = now + 7 * 86_400_000;
-    const hwRows: KidRow[] = d.todo.map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : t("hubshell.hm_dueDay", { day: dayName(h.dueAt) }), to: "homework" }));
+    const hwRows: KidRow[] = d.todo.map((h) => ({ key: h.id, icon: "homework", title: h.title, note: h.st.overdue ? h.st.label : t("hubshell.hm_dueDay", { day: dayName(h.dueAt) }), to: "homework", warm: h.st.overdue }));
     const rows: KidRow[] = band === "ks2"
       ? [...hwRows.slice(0, 2),
          ...(cardsReady ? [{ key: "cards", icon: "cards", title: t("hubshell.hm_yourCards"), note: pl("hm_cardsReady", dueCards + newCards), to: "flashcards" } as KidRow] : []),
@@ -158,7 +159,8 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
          ...(d.step && d.todo.length === 0 ? [{ key: "step", icon: "quiz", title: d.step.a.title, note: d.step.go === "diagnostic" ? t("hubshell.hm_startingQuiz") : t("hubshell.hm_quiz"), to: d.step.go } as KidRow] : [])];
     // Weakest three topics, from this child's own mastery results only (hidden when there are none).
     const weak = [...d.topics].sort((a, b) => (a.masteryPct ?? 0) - (b.masteryPct ?? 0)).slice(0, 3).map((t) => ({ topic: t.topic, subject: t.subject, pct: t.masteryPct ?? 0 }));
-    kidExtra = <KidHome name={firstName(name)} band={band} step={step} rows={rows} failedHomework={!!failed.homework} onRetry={reload} go={(k) => go(k)} weak={band === "ks3" || band === "teen" ? weak : []} />;
+    const stats = band === "ks2" ? { todo: d.todo.length, cards: dueCards + newCards, doneWeek: d.weekQuizzes + d.weekHomework, streak: d.streak, calm, week: dayCounts(d.activity, now, 14), now } : undefined;
+    kidExtra = <KidHome name={firstName(name)} band={band} step={step} rows={rows} failedHomework={!!failed.homework} onRetry={reload} go={(k) => go(k)} weak={band === "ks3" || band === "teen" ? weak : []} stats={stats} />;
   }
 
   return (
