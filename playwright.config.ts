@@ -17,6 +17,12 @@ if (fs.existsSync(serverEnv)) {
   }
 }
 
+// E2E_STACK=test → the ISOLATED stack (web :3001 → API :4001, `npm run dev:test`): the suite's writes and cache churn then never touch
+// the API/web a person is using on :3000/:4000 (see docs/hub-slow-loads.md). scripts/e2e-locked.sh sets the env for it.
+const TEST_STACK = process.env.E2E_STACK === "test";
+const WEB = process.env.E2E_BASE_URL || (TEST_STACK ? "http://localhost:3001" : "http://localhost:3000");
+const API = process.env.NEXT_PUBLIC_API_URL || (TEST_STACK ? "http://localhost:4001" : "http://localhost:4000");
+
 // UI end-to-end suite. Runs against the real dev stack (web :3000, API :4000,
 // live Firebase project) with throwaway @activityos-test.com accounts created
 // in e2e/global.setup.ts and deleted by `npm run e2e:cleanup`.
@@ -32,7 +38,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.E2E_BASE_URL || "http://localhost:3000",
+    baseURL: WEB,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -42,15 +48,15 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run dev",
-      url: "http://localhost:3000",
+      command: TEST_STACK ? "npm run dev:test:web" : "npm run dev",
+      url: WEB,
       reuseExistingServer: true,
       timeout: 120_000,
     },
     {
       // Swagger UI is the only unauthenticated 200 the API serves.
-      command: "npm run dev:server",
-      url: "http://localhost:4000/docs/",
+      command: TEST_STACK ? "npm run dev:test:api" : "npm run dev:server",
+      url: `${API}/docs/`,
       reuseExistingServer: true,
       timeout: 120_000,
     },

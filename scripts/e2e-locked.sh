@@ -23,5 +23,11 @@ while true; do
 done
 [ $waited -gt 0 ] && echo "(waited ${waited}s for the e2e lock)"
 cd "$(dirname "$0")/.." || exit 1
+# E2E_STACK=test → run against the isolated stack (web :3001 → API :4001, start it with `npm run dev:test`) so the suite never touches
+# the API/web a person is using on :3000/:4000 (its writes + restarts used to wipe that API's caches: docs/hub-slow-loads.md).
+if [ "$E2E_STACK" = "test" ]; then
+  export E2E_BASE_URL="${E2E_BASE_URL:-http://localhost:3001}" NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://localhost:4001}" E2E_AUTH_DIR="${E2E_AUTH_DIR:-e2e/.auth-test}"
+  if ! curl -s -o /dev/null -m 5 "$NEXT_PUBLIC_API_URL/docs/"; then echo "E2E_STACK=test but the test API is not up on $NEXT_PUBLIC_API_URL — run: npm run dev:test  (then wait ~1 min)" >&2; exit 2; fi
+fi
 # E2E_CMD overrides the command (e.g. the tenant data wipe) while still holding the lock
 if [ -n "$E2E_CMD" ]; then bash -c "$E2E_CMD"; else npx playwright test "$@" --project=e2e --no-deps --workers=1; fi

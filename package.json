@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "dev:server": "npm --prefix server run dev",
+    "dev:test:api": "PORT=4001 npm --prefix server run start",
+    "dev:test:web": "NEXT_DIST_DIR=.next-test NEXT_PUBLIC_API_URL=http://localhost:4001 next dev -p 3001",
+    "dev:test": "concurrently -n tapi,tweb -c yellow,green \"npm run dev:test:api\" \"npm run dev:test:web\"",
     "dev:all": "concurrently -n web,api -c cyan,magenta \"npm run dev\" \"npm run dev:server\"",
     "seed": "npm --prefix server run seed",
     "hub:widgets": "node scripts/hub-widgets.mjs",
