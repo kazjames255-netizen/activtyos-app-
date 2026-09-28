@@ -23,7 +23,7 @@
 
 import { createHash, randomBytes } from "node:crypto";
 import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { open, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -68,7 +68,7 @@ async function diskWrite(kind: HubKind, tenantId: string, v: unknown): Promise<v
     renameSync(tmp, p);
   } catch { /* best effort — a rebuild still happens on the next restart */ }
 }
-function diskRead<T>(kind: HubKind, tenantId: string): T | null {
+function diskRead<T>(kind: HubKind, tenantId: string): { v: T; mtimeMs: number } | null {
   try {
     const p = diskPath(kind, tenantId);
     if (!p) return null;
@@ -76,8 +76,87 @@ function diskRead<T>(kind: HubKind, tenantId: string): T | null {
     if (!st.isFile() || (process.getuid !== undefined && st.uid !== process.getuid()) || (st.mode & 0o077) !== 0) return null;
     const parsed = JSON.parse(readFileSync(p, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
     if (parsed.version !== SNAPSHOT_VERSION || parsed.kind !== kind || parsed.tenantId !== tenantId) return null;
-    return (parsed.__map ? new Map(parsed.entries) : parsed.v) as T;
+    return { v: (parsed.__map ? new Map(parsed.entries) : parsed.v) as T, mtimeMs: st.mtimeMs };
   } catch { return null; }
+}
+
+// ── Big-index rebuild limiter ────────────────────────────────────────────────────────────────────────────────────
+// Every disk-flagged rebuild is a sharded scan (hubIndex.shardedTenantRead opens 8 parallel Firestore streams). After an API
+// restart every kind of every active tenant used to rebuild AT ONCE (2 tenants x 5 kinds + the shared library = 50-100 streams
+// on one gRPC channel), and a 1-document read (/api/me's auth lookup) queued behind them for 10-25 s — measured, see
+// docs/hub-slow-loads.md. Now at most BIG_LOADS run at a time (FIFO) and each yields to the event loop before it starts, so
+// small requests keep a free stream. A caller waiting on a queued load just waits a little longer; nobody starves.
+const BIG_LOADS = Number(process.env.HUB_CACHE_BIG_LOADS) || 2;
+// A request that has NOTHING to serve (cold miss, no snapshot) is "blocking" and jumps the queue; a background refresh of a copy
+// we are already serving (SWR) is "background" and may only ever hold ONE of the slots, so it can never crowd out a blocking load.
+let bigRunning = 0, bgRunning = 0;
+const blockingQueue: (() => void)[] = [];
+const bgQueue: (() => void)[] = [];
+const canRun = (background: boolean) => bigRunning < BIG_LOADS && (!background || bgRunning < 1);
+// A slot is RESERVED at the moment it is granted (counters bumped here, not when the waiter resumes a microtask later) — otherwise one
+// pump() would wake every waiter at once and the cap would not hold.
+function pump() {
+  while (blockingQueue.length && canRun(false)) { bigRunning++; blockingQueue.shift()!(); }
+  while (bgQueue.length && canRun(true)) { bigRunning++; bgRunning++; bgQueue.shift()!(); }
+}
+async function withBigSlot<T>(fn: () => Promise<T>, background: boolean): Promise<T> {
+  if (canRun(background) && !(background ? bgQueue.length : blockingQueue.length)) { bigRunning++; if (background) bgRunning++; }
+  else await new Promise<void>((r) => (background ? bgQueue : blockingQueue).push(r)); // pump() reserves the slot before calling r
+  try { await new Promise((r) => setImmediate(r)); return await fn(); }
+  finally { bigRunning--; if (background) bgRunning--; pump(); }
+}
+/** Test/ops hook: loads running / waiting for a slot. */
+export const hubCacheLoads = () => ({ running: bigRunning, background: bgRunning, queuedBlocking: blockingQueue.length, queuedBackground: bgQueue.length });
+
+// Snapshot writes: one at a time, deferred a moment (JSON.stringify of a 40 MB index blocks the event loop for ~1 s — never
+// stack several, and never right in the middle of a burst of requests), and skipped when a snapshot <5 min old exists.
+let diskChain: Promise<unknown> = Promise.resolve();
+const SNAP_MIN_GAP_MS = 5 * 60_000;
+function scheduleDiskWrite(kind: HubKind, tenantId: string, v: unknown) {
+  diskChain = diskChain.then(async () => {
+    try {
+      const p = diskPath(kind, tenantId);
+      if (!p) return;
+      try { if (Date.now() - lstatSync(p).mtimeMs < SNAP_MIN_GAP_MS) return; } catch { /* no snapshot yet */ }
+      await new Promise((r) => setTimeout(r, 1_500));
+      await diskWrite(kind, tenantId, v);
+    } catch { /* best effort */ }
+  });
+}
+
+/** Startup warm-up (no Firestore reads): load every valid disk snapshot into memory, one file at a time with a yield between
+ *  files, so the first request after a restart neither pays the synchronous 40 MB JSON.parse nor triggers a rebuild of a
+ *  snapshot that is still inside its TTL. Call once after the server is listening. Returns how many snapshots were loaded. */
+export async function warmHubCacheFromDisk(): Promise<number> {
+  const d = privateDir();
+  if (!d) return 0;
+  let loaded = 0;
+  let names: string[] = [];
+  try { names = (await readdir(d)).filter((n) => n.endsWith(".json") && !n.endsWith(".tmp")); } catch { return 0; }
+  for (const name of names) {
+    try {
+      const full = join(d, name);
+      const st = lstatSync(full);
+      if (!st.isFile() || (process.getuid !== undefined && st.uid !== process.getuid()) || (st.mode & 0o077) !== 0) continue;
+      // The header is `{"version":"v3","kind":"…","tenantId":"…",…` — read just enough to know what it is before parsing it all.
+      const fh = await open(full, "r");
+      const head = Buffer.alloc(512);
+      const { bytesRead } = await fh.read(head, 0, 512, 0);
+      await fh.close();
+      const m = head.toString("utf8", 0, bytesRead).match(/^\{"version":"([^"]+)","kind":"([a-zA-Z]+)","tenantId":"([^"]+)"/);
+      if (!m || m[1] !== SNAPSHOT_VERSION) continue;
+      const kind = m[2] as HubKind, tenantId = m[3]!;
+      if (diskPath(kind, tenantId) !== full) continue; // not the file this (kind, tenant) maps to — ignore
+      if (store.has(keyOf(kind, tenantId))) continue;
+      const parsed = JSON.parse(await readFile(full, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
+      if (parsed.version !== SNAPSHOT_VERSION || parsed.kind !== kind || parsed.tenantId !== tenantId) continue;
+      if (store.has(keyOf(kind, tenantId))) continue; // a request got there first
+      store.set(keyOf(kind, tenantId), { at: st.mtimeMs, v: parsed.__map ? new Map(parsed.entries) : parsed.v });
+      loaded++;
+    } catch { /* unreadable / foreign file: ignore */ }
+    await new Promise((r) => setImmediate(r));
+  }
+  return loaded;
 }
 
 export type HubKind =
@@ -90,16 +169,18 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
   const key = keyOf(kind, tenantId, extra);
   let hit = store.get(key);
   // Nothing in memory (a fresh process): a disk-flagged kind may have yesterday's build sitting in the tmp dir.
-  // Seed the memory entry from it (timestamped 0, i.e. already "expired") so the code below falls straight into
-  // the normal SWR path — serve this now, kick off a real rebuild in the background.
+  // Seed the memory entry from it, timestamped with the SNAPSHOT'S OWN AGE (not 0): a snapshot younger than the TTL is served
+  // as-is with no rebuild (a restart minutes after the last build used to re-scan everything); an older one falls into the
+  // normal SWR path — serve this now, rebuild in the background (through the limiter below).
   if (!hit && opts.disk && !extra) {
     const disk = diskRead<T>(kind, tenantId);
-    if (disk !== null) { hit = { at: 0, v: disk }; store.set(key, hit); }
+    if (disk !== null) { hit = { at: disk.mtimeMs, v: disk.v }; store.set(key, hit); }
   }
   if (hit && Date.now() - hit.at < ttlMs) return hit.v as T;
   const running = inflight.get(key);
 
   const start = (): Promise<T> => {
+    const background = !!(hit && opts.swr); // we already have a copy to serve while this runs
     // A write that lands while this load is in flight must not be papered over by the (older) result:
     // remember the generation and refuse to store if the kind was forgotten meanwhile.
     const gen = generation(kind, tenantId);
@@ -115,7 +196,7 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
       try {
         await Promise.resolve(); // let `self` be assigned before anything below can run its `finally`
         const t0 = Date.now();
-        const v = await load();
+        const v = await (opts.disk ? withBigSlot(load, background) : load());
         const took = Date.now() - t0;
         if (took > 1_000) { // a slow index build is the main cold-start cost of the hub: say so (with its size) in the API log
           const n = v instanceof Map ? v.size : Array.isArray(v) ? v.length : null;
@@ -125,7 +206,7 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
           for (const f of patches) f(v);
           if (store.size >= MAX_ENTRIES) { const oldest = [...store.entries()].sort((a, b) => a[1].at - b[1].at).slice(0, 100); for (const [k] of oldest) store.delete(k); }
           store.set(key, { at: Date.now(), v });
-          if (opts.disk && !extra) diskWrite(kind, tenantId, v);
+          if (opts.disk && !extra) scheduleDiskWrite(kind, tenantId, v);
         }
         return v;
       } finally {

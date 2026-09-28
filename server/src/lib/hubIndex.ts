@@ -219,6 +219,10 @@ export const assessmentRows = (tenantId: string): Promise<Map<string, AsmRow>> =
 export const patchAssessment = (tenantId: string, id: string, doc: AssessmentDoc | null) =>
   patchHub<Map<string, AsmRow>>("assessments", tenantId, (m) => { if (doc) m.set(id, { id, ...doc }); else m.delete(id); });
 
+/** Merge fields into ONE cached assessment row in place (no re-scan of the tenant's assessments). No cached copy / no such row = nothing to do. */
+export const patchAssessmentFields = (tenantId: string, id: string, fields: Partial<AssessmentDoc>) =>
+  patchHub<Map<string, AsmRow>>("assessments", tenantId, (m) => { const cur = m.get(id); if (cur) m.set(id, { ...cur, ...fields }); });
+
 /** questionId → { published titles, how many assessments use it } — derived from the cached assessment rows. */
 export async function assessmentUseCached(tenantId: string) {
   const rows = await assessmentRows(tenantId);

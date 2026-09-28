@@ -356,6 +356,13 @@ const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
   console.log(`ActivityOS API listening on http://localhost:${port}`);
   warmLeads();
+  // Load the hub's on-disk index snapshots into memory in the background (no Firestore reads), one file at a time, so the first
+  // page after a restart is instant and a snapshot still inside its TTL never triggers a rebuild. See lib/hubCache.ts.
+  // Pre-warm the two things the FIRST authenticated request otherwise pays for (measured ~4-5 s): the Google signing-cert fetch inside
+  // verifyIdToken and the first Firestore round trip (gRPC channel + credentials). Both are best-effort and read nothing of substance.
+  void import("./firebase").then(({ auth, db }) => { void auth.verifyIdToken("warm-up").catch(() => undefined); void db.collection("users").doc("__warmup__").get().catch(() => undefined); });
+  const t0 = Date.now();
+  import("./lib/hubCache").then(({ warmHubCacheFromDisk }) => warmHubCacheFromDisk()).then((n) => console.log(`[hub-cache] warmed ${n} snapshot(s) from disk in ${((Date.now() - t0) / 1000).toFixed(1)}s`)).catch(() => undefined);
 });
 
 // Time-based work (calendar reminders, medication due-times, the

@@ -4,8 +4,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../../firebase";
 import { canSee, canWriteRow, hubConfig, okId, requireEdit, resolveCtx, same, type HubCtx } from "../../lib/hubCore";
-import { assessmentUseCached, collate, patchQuestion, questionIndex, topicRank } from "../../lib/hubIndex";
-import { forgetHub } from "../../lib/hubCache";
+import { assessmentUseCached, collate, patchAssessmentFields, patchQuestion, questionIndex, topicRank } from "../../lib/hubIndex";
 import { pingHub } from "../../lib/hubPing";
 import type { HubSettings } from "../../../../lib/hubConfig";
 import { GENERATOR_LABEL, isGenerator } from "../../../../features/learninghub/tools/problems";
@@ -327,14 +326,17 @@ hubQuestionsApi.delete("/questions/:id", async (req, res) => {
   const drafts = await assessmentsCol.where("tenantId", "==", ctx.tenantId).select("questionIds").get();
   const batch = db.batch();
   let touched = 0;
+  const changed: { id: string; questionIds: string[]; updatedAt: string }[] = [];
   for (const d of drafts.docs) {
     const ids = (d.get("questionIds") as string[] | undefined) ?? [];
-    if (ids.includes(snap.id)) { batch.update(d.ref, { questionIds: ids.filter((x) => x !== snap.id), updatedAt: nowIso() }); touched++; }
+    if (ids.includes(snap.id)) { const upd = { questionIds: ids.filter((x) => x !== snap.id), updatedAt: nowIso() }; batch.update(d.ref, upd); changed.push({ id: d.id, ...upd }); touched++; }
   }
   batch.delete(snap.ref);
   await batch.commit();
   patchQuestion(ctx.tenantId, snap.id, null); pingHub(ctx.tenantId, "hubQuestions");
-  if (touched) { forgetHub(ctx.tenantId, "assessments"); pingHub(ctx.tenantId, "hubAssessments"); }
+  // Patch just the drafts that lost the question, in place — forgetHub("assessments") dropped the whole tenant index (+ its disk snapshot) and
+  // forced a multi-second-to-minute re-scan of every assessment for one deleted question.
+  if (touched) { for (const c of changed) patchAssessmentFields(ctx.tenantId, c.id, { questionIds: c.questionIds, updatedAt: c.updatedAt }); pingHub(ctx.tenantId, "hubAssessments"); }
   void dropQuestionImages(ctx.tenantId, questionImageIds(snap.data() as QuestionDoc));
   res.json({ ok: true, draftsUpdated: touched });
 });
