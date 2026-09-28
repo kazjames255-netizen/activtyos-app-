@@ -71,7 +71,7 @@ export function useGamesPlayed(childId: string, tenantQuery = ""): { parts: Part
   const [unfinished, setUnfinished] = useState(0);   // runs begun but not finished: they are not scored until finished
   const q = `?childId=${encodeURIComponent(childId)}${tenantQuery ? `&${tenantQuery}` : ""}`;
   useEffect(() => {
-    let alive = true; // eslint-disable-line react-hooks/set-state-in-effect
+    let alive = true;
     Promise.all(SOURCES.map((s) => get<unknown>(`${s.path}${q}`).then((r) => s.read(s.area)(r)).catch(() => null)))
       .then((rows) => { if (!alive) return; setUnfinished(rows.reduce((n, r) => n + (r?.unfinished ?? 0), 0)); setParts(rows.filter((r): r is Part => !!r && r.lastAt !== null)); });
     return () => { alive = false; };

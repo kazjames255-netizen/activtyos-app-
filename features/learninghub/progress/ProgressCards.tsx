@@ -10,6 +10,7 @@ import { display } from "../shared-assess/ui";
 import { tint } from "../kit";
 import type { StudentHomework } from "../homework/hwTypes";
 import { useGamesPlayed } from "../games/GamesPlayedPanel";
+import { useNow } from "../teachKit";
 
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
@@ -30,6 +31,7 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
   const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
   const q = quiz.labels;
+  const now = useNow(60_000);
   const games = useGamesPlayed(childId, p.qs.replace(/^\?/, ""));
   const hw = useHubData<StudentHomework[]>(hubPath(p.qs, "/homework", { childId }), ["hubHomework", "hubSubmissions"]);
   const cards = useHubData<{ dueCount?: number; newCount?: number }>(hubPath(p.qs, "/flashcards/due", { childId }), ["hubCards"]);
@@ -39,7 +41,7 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   const rows = Array.isArray(hw.data) ? hw.data.filter((h) => h.childId === childId) : null;
   const handed = rows ? rows.filter((h) => h.submission.status !== "assigned").length : 0;
   const todo = rows ? rows.filter((h) => h.submission.status === "assigned") : [];
-  const overdue = todo.filter((h) => new Date(h.dueAt).getTime() < Date.now()).length;
+  const overdue = todo.filter((h) => new Date(h.dueAt).getTime() < now).length;
 
   return (
     <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
