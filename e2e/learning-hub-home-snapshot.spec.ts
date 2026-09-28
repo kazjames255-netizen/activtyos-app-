@@ -102,56 +102,74 @@ async function gotoHub(page: Page) {
   await expect(heading.first()).toBeVisible({ timeout: 30_000 });
 }
 
-test("tutor Home: one grid — a low child's row is outlined red with its weakest subject ringed; a child with no results is a calm 'Not started yet' line", async ({ browser }) => {
+test("tutor Home: one grid — a low child's row is red-outlined with a ringed weakest subject and a 'why' line; a child with no results is a calm 'Not started yet' line", async ({ browser }) => {
   test.setTimeout(180_000);
   const ctx = await tutorCtx(browser);
   const page = await ctx.newPage();
   await gotoHub(page);
   await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 45_000 });
-  // There is no separate 'Needs help first' list any more — the grid is the one component.
-  await expect(page.getByTestId("snapshot-needs-help")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Needs help first" })).toHaveCount(0);
+  await expect(page.getByTestId("snapshot-needs-help")).toHaveCount(0); // one component: no separate list
+  await expect(page.getByTestId("snapshot-help-count")).toContainText(/Need help: \d+/, { timeout: 45_000 });
 
   const low = page.locator(`[data-testid="snapshot-row"][data-child="${lowId}"]`);
   await expect(low).toBeVisible({ timeout: 45_000 });
   await expect(low).toContainText(lowName);
-  await expect(low).toHaveAttribute("data-help", "red"); // 0% is under 40 → red-tinted outline
-  // The weakest subject cell (this run's subject) is ringed, and the row's Open button says who and why.
-  await expect(low.locator('[data-weakest="true"]')).toHaveAccessibleName(new RegExp(`${lowName}, ${subject}: 0 percent`));
+  await expect(low).toHaveAttribute("data-help", "red"); // 0% is under 40 → red
+  await expect(low.getByTestId("snapshot-why")).toHaveText(`${subject} 0% needs help`);
+  // The weakest subject cell carries the ring + ▼ in the row's own tone (red here), and the row's Open button says who and why.
+  await expect(low.locator('[data-weakest="red"]')).toHaveAccessibleName(new RegExp(`${lowName}, ${subject}: 0 percent`));
   await expect(low.getByTestId("snapshot-open")).toHaveAccessibleName(new RegExp(`Open progress for ${lowName}: ${subject} 0%`));
 
-  // The 100% child has a row with an Open button but no help outline.
+  // The 100% child has a row with an Open button, no highlight, no why line.
   const ok = page.locator(`[data-testid="snapshot-row"][data-child="${okId}"]`);
   await expect(ok).toBeVisible();
   await expect(ok).not.toHaveAttribute("data-help", /.+/);
+  await expect(ok.getByTestId("snapshot-why")).toHaveCount(0);
   await expect(ok.getByTestId("snapshot-open")).toBeVisible();
 
-  // The blank child is NOT a row: it is one clickable first name in the dashed 'Not started yet' line under the grid.
+  // The blank child is NOT a row: it is one clickable first name in the dashed line, with the comma OUTSIDE the button (no stray space).
   await expect(page.locator(`[data-testid="snapshot-row"][data-child="${blankId}"]`)).toHaveCount(0);
   const line = page.getByTestId("snapshot-not-started");
   await expect(line).toContainText("Not started yet:");
-  await expect(line.locator(`[data-child="${blankId}"]`)).toHaveText(blankName); // the child's stamped name has no space, so its first name is the whole name
+  await expect(line.locator(`[data-child="${blankId}"]`)).toHaveText(blankName); // the stamped name has no space, so its first name is the whole name
+  expect(await line.innerText()).not.toMatch(/\s,/);
   await ctx.close();
 });
 
-test("tutor Home: rows are sorted lowest first, and one tap on Open (or a not-started name) opens that child's progress", async ({ browser }) => {
+test("tutor Home: ONE need score orders and highlights (never a highlighted row below an unhighlighted one); bands stay inside the card; avatars line up", async ({ browser }) => {
   test.setTimeout(180_000);
   const ctx = await tutorCtx(browser);
   const page = await ctx.newPage();
   await gotoHub(page);
   await expect(page.locator(`[data-testid="snapshot-row"][data-child="${lowId}"]`)).toBeVisible({ timeout: 45_000 });
 
-  // Rows of THIS run's children keep the order low -> ok (other specs' children may interleave).
-  const ids = await page.locator('[data-testid="snapshot-row"]').evaluateAll((rows) => rows.map((r) => (r as HTMLElement).dataset.child));
+  const rows = await page.locator('[data-testid="snapshot-row"]').evaluateAll((els) => els.map((r) => ({ id: (r as HTMLElement).dataset.child, help: (r as HTMLElement).dataset.help ?? "", right: r.getBoundingClientRect().right, avatarX: r.querySelector('[data-testid="snapshot-accent"]')!.getBoundingClientRect().x })));
+  // Once an unhighlighted row appears, no highlighted row may follow.
+  const firstPlain = rows.findIndex((r) => !r.help);
+  if (firstPlain >= 0) expect(rows.slice(firstPlain).every((r) => !r.help)).toBe(true);
+  // This run's children keep the order low -> ok (other specs' children may interleave).
+  const ids = rows.map((r) => r.id);
   expect(ids.indexOf(lowId)).toBeGreaterThanOrEqual(0);
   if (ids.indexOf(okId) >= 0) expect(ids.indexOf(lowId)).toBeLessThan(ids.indexOf(okId));
+  // The accent bar (and so the avatar after it) sits at the same x in EVERY row, highlighted or not.
+  expect(new Set(rows.map((r) => Math.round(r.avatarX))).size).toBe(1);
+  // No row band overflows the card: every row's right edge is inside the snapshot card.
+  const cardRight = await page.locator("#hub-home-tutor").getByTestId("snapshot-row").first().evaluate((el) => (el.closest('[data-ui="card"]') ?? el.parentElement!.parentElement!).getBoundingClientRect().right);
+  for (const r of rows) expect(r.right).toBeLessThanOrEqual(cardRight + 1);
+  await ctx.close();
+});
 
-  // Open on the low child's row opens Progress for that child.
+test("tutor Home: one tap on Open (or a not-started name) opens that child's progress", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const ctx = await tutorCtx(browser);
+  const page = await ctx.newPage();
+  await gotoHub(page);
+  await expect(page.locator(`[data-testid="snapshot-row"][data-child="${lowId}"]`)).toBeVisible({ timeout: 45_000 });
+
   await page.locator(`[data-testid="snapshot-open"][data-child="${lowId}"]`).click();
   await expect(tabOf(page, /^Progress/)).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
   await expect(page.getByText(lowName).first()).toBeVisible({ timeout: 30_000 });
 
-  // A not-started child's name in the dashed line does the same.
   await page.getByRole("tab", { name: "Home", exact: true }).click();
   await page.locator(`[data-testid="snapshot-not-started-open"][data-child="${blankId}"]`).click();
   await expect(tabOf(page, /^Progress/)).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
