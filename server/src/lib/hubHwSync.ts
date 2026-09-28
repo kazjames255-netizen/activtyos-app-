@@ -62,7 +62,13 @@ export async function syncHomeworkMark(tenantId: string, homeworkId: string | nu
     const st = sub.get("status");
     const autoMarked = sub.get("mark.markedBy") === "auto";
     if (st === "assigned" || (st === "marked" && !autoMarked)) return;
-    const req = await requiredQuizIds(tenantId, hw.data() as { assessmentId?: string | null; worksheetNoteIds?: string[] });
+    // This child's own version of the items after a swap (override) wins over the homework's.
+    const ov = sub.get("override") as { assessmentId?: string | null; worksheetNoteIds?: string[] } | null | undefined;
+    const base = hw.data() as { assessmentId?: string | null; worksheetNoteIds?: string[] };
+    const req = await requiredQuizIds(tenantId, {
+      assessmentId: ov && "assessmentId" in ov ? (ov.assessmentId ?? null) : base.assessmentId,
+      worksheetNoteIds: ov?.worksheetNoteIds ?? base.worksheetNoteIds,
+    });
     const required = [...(req.legacy ? [req.legacy] : []), ...req.worksheet];
     const done = await finishedFor(tenantId, homeworkId, childId);
     const total = combinedMark(required, done);

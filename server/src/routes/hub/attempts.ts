@@ -230,13 +230,16 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   if (parsed.data.homeworkId) {
     const h = await homeworkCol.doc(parsed.data.homeworkId).get();
     const assigned = h.get("assignedChildIds") as string[] | undefined;
+    // This child's own version of the homework's items after a swap (submission.override) wins over the homework's.
+    const ov = h.exists ? (await db.collection("hubSubmissions").doc(`${h.id}__${child.childId}`).get()).get("override") as { assessmentId?: string | null; worksheetNoteIds?: string[] } | null | undefined : undefined;
+    const hwQuiz = ov && "assessmentId" in ov ? (ov.assessmentId ?? null) : (h.get("assessmentId") as string | null | undefined) ?? null;
     // …or the auto-marked quiz built from one of the worksheets the homework lists (`worksheetNoteIds` → note.worksheetQuizId).
     let viaWorksheet = false;
-    const wsIds = ((h.get("worksheetNoteIds") as string[] | undefined) ?? []).filter(okId);
-    if (h.exists && wsIds.length && h.get("assessmentId") !== aSnap.id) {
+    const wsIds = ((ov?.worksheetNoteIds ?? (h.get("worksheetNoteIds") as string[] | undefined)) ?? []).filter(okId);
+    if (h.exists && wsIds.length && hwQuiz !== aSnap.id) {
       viaWorksheet = (await db.getAll(...wsIds.map((id) => db.collection("hubNotes").doc(id)), { fieldMask: ["tenantId", "worksheetQuizId"] })).some((n) => n.exists && canReadContent(ctx, n.get("tenantId")) && n.get("worksheetQuizId") === aSnap.id);
     }
-    if (!h.exists || h.get("tenantId") !== ctx.tenantId || (Array.isArray(assigned) && !assigned.includes(child.childId)) || ((h.get("assessmentId") || wsIds.length) && h.get("assessmentId") !== aSnap.id && !viaWorksheet)) {
+    if (!h.exists || h.get("tenantId") !== ctx.tenantId || (Array.isArray(assigned) && !assigned.includes(child.childId)) || ((hwQuiz || wsIds.length) && hwQuiz !== aSnap.id && !viaWorksheet)) {
       res.status(404).json({ error: "Homework not found" });
       return;
     }

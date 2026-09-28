@@ -10,6 +10,8 @@ import { hubFamilyInvitesApi } from "./familyInvitesApi";
 import { hubDoubtsApi } from "./doubtsApi";
 import { hubCurriculumApi } from "./curriculumApi";
 import { hubToolsApi } from "./toolsApi";
+import { hubBadgesApi } from "./badgesApi";
+import { hubFeedbackBankApi } from "./feedbackBankApi";
 
 // Learning Hub — homework & submissions (milestone 6), flashcards & spaced
 // repetition (milestone 7), live lessons (Daily video). Mounted by
@@ -28,3 +30,5 @@ hubTeachingApi.use(hubFamilyInvitesApi); // a tutor's invite link for a family w
 hubTeachingApi.use(hubDoubtsApi); // "Ask my teacher": a per-slide/question doubt from inside a lesson, and the tutor's replies
 hubTeachingApi.use(hubCurriculumApi); // "where do these lessons fit the national curriculum / GCSE?" — the map, a cell's lessons, a provider's own corrections
 hubTeachingApi.use(hubToolsApi); // the Tools tab: autosaved tool state + anonymous usage counters
+hubTeachingApi.use(hubBadgesApi); // a child's badges (derived, read-only) — the child home / progress shelf, also shown to parents
+hubTeachingApi.use(hubFeedbackBankApi); // a tutor's saved marking comments, one-tap chips in the marking dialog

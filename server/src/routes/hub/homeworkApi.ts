@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "../../firebase";
 import { canReadContent, canSee, canSeeStudent, canWriteRow, childDobs, effectiveYearGroup, hubConfig, okId, requireEdit, resolveCtx, scopedChildren, type EnrolmentDoc, type HubCtx } from "../../lib/hubCore";
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
+import { scheduleMasteryRecompute } from "./mastery";
+import { pingHub } from "../../lib/hubPing";
 import { checkDataUrl } from "../../lib/hubUpload";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { ageInYears, audienceFit, cleanVideos, normAudience, videosOut, type StoredVideo } from "../../lib/hubRules";
@@ -33,12 +35,26 @@ interface HomeworkDoc {
   /** Groups it was sent to (for display; the members were expanded into assignedChildIds). */
   groupIds?: string[];
   videos?: StoredVideo[];
+  /** Swaps a tutor made (newest last, capped) — the hand-in history stays with the children who handed in before it. */
+  swaps?: SwapLog[];
   createdBy: string; createdByName: string; createdAt: string; updatedAt: string;
 }
+/** One child's own version of the homework's items, used INSTEAD of the homework's when present (a per-child swap, or the
+ *  frozen old items of a child who had already handed in when everyone else was swapped). */
+export interface HwOverride { assessmentId?: string | null; noteIds?: string[]; worksheetNoteIds?: string[] }
+export type SwapKind = "quiz" | "lesson" | "worksheet";
+interface SwapLog { at: string; by: string; byName: string; kind: SwapKind; from: string; to: string; scope: "all" | "some"; /** How many children a partial swap touched (no ids: the log must hold no child data). */ n?: number }
+/** The items this child actually has: the homework's, unless their own override says otherwise. */
+export const effectiveItems = (h: { assessmentId?: string | null; noteIds?: string[]; worksheetNoteIds?: string[] }, o?: HwOverride | null) => ({
+  assessmentId: o && "assessmentId" in o ? (o.assessmentId ?? null) : (h.assessmentId ?? null),
+  noteIds: o?.noteIds ?? h.noteIds ?? [],
+  worksheetNoteIds: o?.worksheetNoteIds ?? h.worksheetNoteIds ?? [],
+});
 interface SubmissionDoc {
   tenantId: string; franchiseId: string | null;
   homeworkId: string; childId: string; parentUid: string;
   status: "assigned" | "submitted" | "marked";
+  override?: HwOverride | null;
   text: string; attachments: StoredFile[]; attemptId: string | null; attemptIds?: string[]; submittedAt: string | null; mark: Mark | null;
   createdBy: string; createdAt: string; updatedAt: string;
 }
@@ -268,22 +284,23 @@ hubHomeworkApi.get("/homework", async (req, res) => {
   const hws = new Map<string, HomeworkDoc>();
   if (hwIds.length) for (const s of await db.getAll(...hwIds.map((id) => homeworkCol.doc(id)))) if (s.exists && s.get("tenantId") === ctx.tenantId) hws.set(s.id, s.data() as HomeworkDoc);
   // Notes the homework points at — only PUBLISHED ones of this provider.
-  const noteIds = [...new Set([...hws.values()].flatMap((h) => h.noteIds ?? []).filter(okId))];
+  const noteIds = [...new Set([...hws.values()].flatMap((h) => h.noteIds ?? []).concat(mine.flatMap((s) => s.override?.noteIds ?? [])).filter(okId))];
   const notes = new Map<string, string>();
   // Which of those are interactive lessons (the pupil opens them in the lesson player, not as a static note).
   const lessonIds = new Set<string>();
   if (noteIds.length) { const idx = await noteIndex(ctx.tenantId); for (const id of noteIds) if (idx.get(id)?.isLesson) lessonIds.add(id); }
   if (noteIds.length) for (const s of await db.getAll(...noteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published"] })) if (s.exists && canReadContent(ctx, s.get("tenantId")) && s.get("published") !== false) notes.set(s.id, s.get("title") as string);
-  const wsAll = new Map((await worksheetsOut(ctx.tenantId, [...hws.values()].flatMap((h) => h.worksheetNoteIds ?? []), true)).map((w) => [w.noteId, w] as const));
+  const wsAll = new Map((await worksheetsOut(ctx.tenantId, [...hws.values()].flatMap((h) => h.worksheetNoteIds ?? []).concat(mine.flatMap((s) => s.override?.worksheetNoteIds ?? [])), true)).map((w) => [w.noteId, w] as const));
   const rows = mine.filter((s) => hws.has(s.homeworkId)).map((s) => {
     const h = hws.get(s.homeworkId)!;
     const kid = kids.find((k) => k.childId === s.childId)!;
+    const it = effectiveItems(h, s.override); // this child's own version after a swap, else the homework's
     return {
       id: s.homeworkId, childId: s.childId, childName: kid.childName,
-      title: h.title, instructions: h.instructions, dueAt: h.dueAt, assessmentId: h.assessmentId ?? null, flashcardTopicId: h.flashcardTopicId ?? null,
-      notes: (h.noteIds ?? []).filter((n) => notes.has(n)).map((n) => ({ id: n, title: notes.get(n)!, interactive: lessonIds.has(n) })),
+      title: h.title, instructions: h.instructions, dueAt: h.dueAt, assessmentId: it.assessmentId, flashcardTopicId: h.flashcardTopicId ?? null,
+      notes: it.noteIds.filter((n) => notes.has(n)).map((n) => ({ id: n, title: notes.get(n)!, interactive: lessonIds.has(n) })),
       videos: videosOut(h.videos),
-      worksheets: (h.worksheetNoteIds ?? []).map((i) => wsAll.get(i)).filter((x): x is WsInfo => !!x),
+      worksheets: it.worksheetNoteIds.map((i) => wsAll.get(i)).filter((x): x is WsInfo => !!x),
       submission: {
         id: s.id, status: s.status, text: s.text ?? "", attachments: filesOut(req, s.attachments), attemptId: s.attemptId ?? null, attemptIds: s.attemptIds ?? (s.attemptId ? [s.attemptId] : []),
         submittedAt: s.submittedAt, mark: markOut(s.mark, true), late: !!s.submittedAt && s.submittedAt > h.dueAt,
@@ -419,6 +436,101 @@ hubHomeworkApi.put("/homework/:id", async (req, res) => {
   { const merged = { ...before, ...patch } as HomeworkDoc; res.json(tutorHomeworkOut(snap.id, merged, counts, await worksheetsOut(ctx.tenantId, merged.worksheetNoteIds, false))); }
 });
 
+// ── Swap one item on a homework (tutors) ─────────────────────────────────────
+// POST /homework/:id/swap {kind: quiz|lesson|worksheet, fromId, toId, childIds?}
+//  · no childIds → the homework itself changes; children who had ALREADY handed in keep the old items (a frozen override), so their
+//    hand-in, attempts and mark are untouched; everyone still to do gets the new item.
+//  · childIds → only those children (who must not have handed in) get their own version; the homework and everyone else stay as they are.
+// The homework is never deleted and no submission is dropped. Families still to do it are told once.
+const swapBody = z.object({
+  kind: z.enum(["quiz", "lesson", "worksheet"]),
+  fromId: z.string().min(1).max(100),
+  toId: z.string().min(1).max(100),
+  childIds: z.array(z.string().min(1).max(100)).max(MAX_CHILDREN).optional(),
+});
+async function itemTitle(kind: SwapKind, id: string): Promise<string> {
+  const snap = await (kind === "quiz" ? assessmentsCol : notesCol).doc(id).get();
+  return (snap.exists ? (snap.get("title") as string | undefined) : undefined) ?? "an item";
+}
+hubHomeworkApi.post("/homework/:id/swap", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const parsed = swapBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const { kind, fromId, toId } = parsed.data;
+  if (!okId(fromId) || !okId(toId)) { res.status(404).json({ error: "Item not found" }); return; }
+  if (fromId === toId) { res.status(400).json({ error: "That is already the item on this homework" }); return; }
+  const snap = await editableHomework(ctx, req.params.id, res);
+  if (!snap) return;
+  const hw = snap.data() as HomeworkDoc;
+  const bad = await checkRefs(ctx, kind === "quiz" ? { assessmentId: toId } : kind === "lesson" ? { noteIds: [toId] } : { worksheetNoteIds: [toId] });
+  if (bad) { res.status(bad.status).json({ error: bad.error, ...((bad as { code?: string }).code ? { code: (bad as { code?: string }).code } : {}) }); return; }
+
+  const has = (it: ReturnType<typeof effectiveItems>) => kind === "quiz" ? it.assessmentId === fromId : kind === "lesson" ? it.noteIds.includes(fromId) : it.worksheetNoteIds.includes(fromId);
+  const swapIn = (it: ReturnType<typeof effectiveItems>): ReturnType<typeof effectiveItems> => {
+    const rewrite = (xs: string[]) => [...new Set(xs.map((x) => (x === fromId ? toId : x)))];
+    return kind === "quiz" ? { ...it, assessmentId: toId } : kind === "lesson" ? { ...it, noteIds: rewrite(it.noteIds) } : { ...it, worksheetNoteIds: rewrite(it.worksheetNoteIds) };
+  };
+  const subs = (await submissionsCol.where("tenantId", "==", ctx.tenantId).where("homeworkId", "==", snap.id).get()).docs
+    .map((d) => ({ ref: d.ref, ...(d.data() as SubmissionDoc) }));
+  const roster = await tenantEnrolments(ctx);
+  const nameOf = (c: string) => roster.get(c)?.childName ?? "That student";
+  const now = nowIso();
+  const batch = db.batch();
+  let told: string[] = [];
+  let changed = 0, frozen = 0;
+  const patch: Partial<HomeworkDoc> = { updatedAt: now };
+  const entry = (scope: "all" | "some", n?: number): SwapLog => ({ at: now, by: ctx.uid, byName: ctx.name, kind, from: fromId, to: toId, scope, ...(n !== undefined ? { n } : {}) });
+
+  if (!parsed.data.childIds) {
+    if (!has(effectiveItems(hw))) { res.status(400).json({ error: "That item isn't on this homework" }); return; }
+    const old = effectiveItems(hw);
+    const next = swapIn(old);
+    const todo = subs.filter((s) => s.status === "assigned" && !s.override);
+    if (kind === "quiz") {
+      const dead = await unreachableRefusal(ctx, toId, todo.map((s) => roster.get(s.childId)).filter((e): e is EnrolmentDoc => !!e));
+      if (dead) { res.status(400).json(dead); return; }
+    }
+    patch.assessmentId = next.assessmentId; patch.noteIds = next.noteIds; patch.worksheetNoteIds = next.worksheetNoteIds;
+    patch.swaps = [...(hw.swaps ?? []), entry("all")].slice(-20);
+    for (const s of subs) if (s.status !== "assigned" && !s.override) { batch.update(s.ref, { override: { assessmentId: old.assessmentId, noteIds: old.noteIds, worksheetNoteIds: old.worksheetNoteIds }, updatedAt: now }); frozen++; }
+    told = todo.map((s) => s.childId);
+    changed = todo.length;
+  } else {
+    const want = [...new Set(parsed.data.childIds)];
+    const picked: typeof subs = [];
+    for (const c of want) {
+      const s = subs.find((x) => x.childId === c);
+      if (!s) { res.status(404).json({ error: `${nameOf(c)} isn't on this homework` }); return; }
+      if (s.status !== "assigned") { res.status(400).json({ error: `${nameOf(c)} has already handed this in, so their work stays as it was` }); return; }
+      if (!has(effectiveItems(hw, s.override))) { res.status(400).json({ error: `That item isn't on ${nameOf(c)}'s homework` }); return; }
+      picked.push(s);
+    }
+    if (kind === "quiz") {
+      const dead = await unreachableRefusal(ctx, toId, picked.map((s) => roster.get(s.childId)).filter((e): e is EnrolmentDoc => !!e));
+      if (dead) { res.status(400).json(dead); return; }
+    }
+    for (const s of picked) batch.update(s.ref, { override: swapIn(effectiveItems(hw, s.override)), updatedAt: now });
+    patch.swaps = [...(hw.swaps ?? []), entry("some", want.length)].slice(-20);
+    told = want;
+    changed = picked.length;
+  }
+  batch.update(snap.ref, patch);
+  await batch.commit();
+  pingHub(ctx.tenantId, "hubSubmissions");
+  if (told.length) {
+    const [fromT, toT] = await Promise.all([itemTitle(kind, fromId), itemTitle(kind, toId)]);
+    void notifyFamilies({
+      tenantId: ctx.tenantId, childIds: told, ref: `${snap.id}:swap:${now}`, tab: "homework", open: { kind: "hw", id: snap.id },
+      compose: (names) => ({ title: "Homework updated", body: `${nameList(names)}'s homework "${hw.title}" has changed: "${fromT}" was swapped for "${toT}".` }),
+    });
+  }
+  const counts: Counts = { assigned: 0, submitted: 0, marked: 0 };
+  for (const s of subs) counts[s.status]++;
+  const merged = { ...hw, ...patch } as HomeworkDoc;
+  res.json({ ok: true, changed, kept: frozen, homework: tutorHomeworkOut(snap.id, merged, counts, await worksheetsOut(ctx.tenantId, merged.worksheetNoteIds, false)) });
+});
+
 // DELETE /homework/:id — the homework and every child's submission of it (and their uploaded files).
 hubHomeworkApi.delete("/homework/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
@@ -465,6 +577,7 @@ hubHomeworkApi.put("/submissions/:id/mark", async (req, res) => {
       compose: (names) => ({ title: "Homework marked", body: `${nameList(names)}'s "${title}" has been marked: ${mark.score}/${mark.max}.` }),
     });
   }
+  scheduleMasteryRecompute(ctx.tenantId, sub.childId, (snap.get("franchiseId") as string | null | undefined) ?? null); // a marked typed homework now feeds mastery
   res.json({ id: snap.id, homeworkId: sub.homeworkId, childId: sub.childId, status: "marked", mark: markOut(mark, false) });
 });
 
@@ -547,8 +660,9 @@ hubHomeworkApi.post("/submissions/:id/submit", async (req, res) => {
   const hwSnap = await homeworkCol.doc(cur.homeworkId).get();
   if (!hwSnap.exists || hwSnap.get("tenantId") !== ctx.tenantId) { res.status(404).json({ error: "Homework not found" }); return; }
   let attemptId: string | null = b.attemptId === undefined ? (cur.attemptId ?? null) : (b.attemptId ?? null);
-  const hwAssessment = (hwSnap.get("assessmentId") as string | null | undefined) || null;
-  const req0 = await requiredQuizIds(ctx.tenantId, hwSnap.data() as HomeworkDoc);
+  const myItems = effectiveItems(hwSnap.data() as HomeworkDoc, cur.override); // this child's own version after a swap
+  const hwAssessment = myItems.assessmentId || null;
+  const req0 = await requiredQuizIds(ctx.tenantId, { assessmentId: myItems.assessmentId, worksheetNoteIds: myItems.worksheetNoteIds });
   const required = [...(hwAssessment ? [hwAssessment] : []), ...req0.worksheet];
   if (b.attemptId) {
     if (!okId(b.attemptId)) { res.status(404).json({ error: "Attempt not found" }); return; }

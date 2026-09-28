@@ -42,6 +42,7 @@ export const HUB_COLLECTION_PRIVACY: Record<string, { how: "delete" | "scrub" | 
   hubAssessments: { how: "none", note: "tutor content" },
   hubBoardTemplates: { how: "none", note: "never carries a student's work" },
   hubFlashcards: { how: "none", note: "tutor content" },
+  hubFeedbackBank: { how: "none", note: "a tutor's own saved marking comments (generic wording, keyed by tutor uid, no child ids)" },
   hubNcTags: { how: "none", note: "curriculum tags" },
   hubNotes: { how: "none", note: "tutor content" },
   hubPings: { how: "none", note: "realtime cache pings" },
