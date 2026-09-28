@@ -28,7 +28,7 @@ const MAP: Entry[] = [
 ];
 
 // A parent's / child's strip (features/learninghub/familyGroups.ts) is grouped too: Today · Homework · Learn (Lessons, Live lessons, Quizzes,
-// Starting quizzes, Flashcards) · Progress · Games.
+// Starting quizzes) · Progress · Flashcards · Games.
 const FAMILY_MAP: Entry[] = [
   { top: "today", sub: null, labels: ["Home", "Today"] },
   { top: "homework", sub: null, labels: ["Homework"] },
@@ -36,8 +36,8 @@ const FAMILY_MAP: Entry[] = [
   { top: "learn", sub: "live", labels: ["Live lessons"] },
   { top: "learn", sub: "starting", labels: ["Starting quizzes"] },
   { top: "learn", sub: "quizzes", labels: ["Quizzes"] },
-  { top: "learn", sub: "flashcards", labels: ["Flashcards"] },
   { top: "progress", sub: null, labels: ["Progress"] },
+  { top: "flashcards", sub: null, labels: ["Flashcards"] },
   { top: "games", sub: null, labels: ["Games"] },
 ];
 

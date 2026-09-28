@@ -1,6 +1,6 @@
 import type { PanelMeta } from "./panelTypes";
 
-// The FAMILY (parent) hub's grouped navigation: max 4 top-level sections (owner correction on top of the
+// The FAMILY (parent) hub's grouped navigation: (was max 4 top-level sections; Flashcards and Games are now top-level too) (owner correction on top of the
 // original 5-max brief: no standalone Tools destination — "no need for a tools tab, it can just be that they use
 // the tools in the appropriate lesson"; Tools is DROPPED here, not folded in as a sub-section, since the
 // per-question help tools already live inside the lesson/question itself). Most tops carry a row of sub-sections.
@@ -23,8 +23,9 @@ export const FAMILY_TOPS: FamTopDef[] = [
     fs("live", "Live lessons", "🎥", "live"),
     fs("quizzes", "Quizzes", "🎯", "quizzes"),
     fs("starting", "Starting quizzes", "🧭", "diagnostic"),
-    fs("flashcards", "Flashcards", "🃏", "flashcards"),
   ] },
+  // Flashcards is its own top-level tab (owner: "flashcard tab should be here too"), not buried under Learn.
+  { id: "flashcards", label: "Flashcards", emoji: "🃏", subs: [fs("flashcards", "Flashcards", "🃏", "flashcards")] },
   { id: "progress", label: "Progress", emoji: "📈", subs: [fs("progress", "Progress", "📈", "dashboard")] },
   // Additive: a new top-level Games section (not folded into Learn) so a game is exactly as easy to find, and
   // exactly as tied to "which child" via the same Level-1 (family overview, pick a child) -> Level-2 flow as every

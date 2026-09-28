@@ -287,7 +287,7 @@ export async function factsOverview(tenantId: string, childId: string, nowIso = 
     const topErr = Object.entries(f.errTypes).sort((p, q) => q[1] - p[1])[0];
     return { key: f.key, op: f.op, a: f.a, b: f.b, thaw: f.thaw, attempts: f.attempts, correct: f.correct, medianMs: f.medianLatencyMs, band: f.medianLatencyMs ? speedBand(f.medianLatencyMs, rt0) : null, oftenAnswers: wrong ? Number(wrong[0]) : null, errType: topErr ? topErr[0] : null, recall: Math.round(retrievability(f, nowIso) * 100) / 100, nextDueAt: f.nextDueAt, pNow: Math.round(pCorrect(profile?.theta ?? THETA0, f.elo) * 100) / 100 };
   }).sort((p, q) => p.thaw - q.thaw || q.attempts - p.attempts);
-  const docs = sess.docs.filter((d) => d.get("kind") !== "mtc");
+  const docs = sess.docs.filter((d) => d.get("kind") !== "mtc" && d.get("cfg")); // a finished run without a cfg (another game's session) is not a slide run
   const runs = docs.map((d) => ({ at: d.get("finishedAt") as string, mode: (d.get("cfg") as Cfg).mode, answered: d.get("summary.answered") as number, correct: d.get("summary.correct") as number, fish: d.get("summary.fish") as number, productiveSeconds: Math.round(((d.get("summary.activeTicks") as number) ?? 0) / TICK_HZ), totalSeconds: Math.round(((d.get("summary.ticks") as number) ?? 0) / TICK_HZ) })).sort((p, q) => q.at.localeCompare(p.at));
   const mtcRuns = sess.docs.filter((d) => d.get("kind") === "mtc").map((d) => ({ at: d.get("finishedAt") as string, score: d.get("result.score") as number, total: d.get("result.total") as number, timedOut: (d.get("trials") as { timeout?: number }[]).filter((t) => t.timeout).length })).sort((p, q) => q.at.localeCompare(p.at)).slice(0, 6);
   // heat map: first factor x second factor, 2..12 (symmetric; one state per unordered fact)
