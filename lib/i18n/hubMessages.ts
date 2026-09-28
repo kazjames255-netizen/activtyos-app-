@@ -20,10 +20,24 @@ export const subscribeHub = (f: () => void) => { subs.add(f); return () => { sub
 /** True once English and `locale` are both here (or the load failed for good — then keys fall back to English / the key). */
 export const hubReady = (locale: LocaleCode) => (!!loaded.en || failed.has("en")) && (!!loaded[locale] || failed.has(locale));
 
+// A page that was opened before a message was added holds an older catalogue in memory, so the new word would paint as its raw key ("hubgames.pc_hw_handed")
+// until a manual reload. When a key is missing from an already-loaded catalogue, fetch that catalogue again (at most once per 30 s per language) and repaint.
+const refreshedAt: Partial<Record<LocaleCode, number>> = {};
+function refreshOnMiss(locale: LocaleCode): void {
+  if (typeof window === "undefined") return;
+  for (const l of new Set<LocaleCode>([DEFAULT_LOCALE, locale])) {
+    if (!loaded[l] || Date.now() - (refreshedAt[l] ?? 0) < 30_000) continue;
+    refreshedAt[l] = Date.now();
+    void fetchOne(l).finally(notify);
+  }
+}
+
 export function lookupHub(locale: LocaleCode, key: string): string | undefined {
   const dot = key.indexOf(".");
   const ns = key.slice(0, dot), k = key.slice(dot + 1);
-  return loaded[locale]?.[ns]?.[k] ?? loaded.en?.[ns]?.[k];
+  const v = loaded[locale]?.[ns]?.[k] ?? loaded.en?.[ns]?.[k];
+  if (v === undefined && loaded.en) refreshOnMiss(locale);
+  return v;
 }
 
 async function fetchOne(l: LocaleCode): Promise<void> {
