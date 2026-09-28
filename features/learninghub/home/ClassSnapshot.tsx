@@ -8,6 +8,7 @@ import { useH } from "./homeI18n";
 import { bandName } from "../family/KidMode";
 import { bandTone, firstName, type Bands, type OverviewStudent } from "./homeLib";
 import { isRtlDoc, scrollEdges } from "../rtl";
+import { requestOpenStudent } from "../hubIntent";
 
 // Class snapshot: students × subjects, each cell tinted by the tenant's own
 // mastery band (colour by band position; the band NAME and the % are always
@@ -15,22 +16,25 @@ import { isRtlDoc, scrollEdges } from "../rtl";
 // the student column pinned.
 
 const MAX_ROWS = 8, MAX_COLS = 6;
+// A row that "needs help" (its overall or its weakest subject is under 50) wears a gold outline, red-tinted under 40, and its weakest subject cell is ringed.
+const HELP_BELOW = 50, VERY_LOW = 40;
 
 const overall = (p: OverviewStudent): number | null => { const v = p.subjects.filter((x) => x.masteryPct != null).map((x) => x.masteryPct as number); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; };
 
-function Cell({ who, subject, pct, band, bands, strong = false }: { who: string; subject: string; pct: number | null; band: string | null; bands: Bands; strong?: boolean }) {
+function Cell({ who, subject, pct, band, bands, strong = false, tint, ring }: { who: string; subject: string; pct: number | null; band: string | null; bands: Bands; strong?: boolean; tint?: string; ring?: string }) {
   const { t } = useH();
   const tone = bandTone(pct, bands);
   const has = pct != null && !!tone;
   const label = has ? t("hubshell.hm_cellAria", { who, subject, pct: Math.round(pct), band: bandName(band ?? tone!.label) }) : t("hubshell.hm_cellNone", { who, subject });
   return (
-    <td className="px-[3px]">
-      <div role="img" aria-label={label} title={label} className="grid h-11 min-w-[62px] place-content-center rounded-xl text-center"
-        style={has ? { background: tone!.soft, boxShadow: `inset 0 -3px 0 ${tone!.fill}`, outline: strong ? "1.5px solid var(--line)" : undefined } : { background: "var(--panel)", border: "1px dashed var(--line)" }}>
+    <td className="px-[3px]" style={tint ? { background: tint } : undefined}>
+      <div role="img" aria-label={label} title={label} data-weakest={ring && has ? "true" : undefined} className="relative grid h-11 min-w-[62px] place-content-center rounded-xl text-center"
+        style={has ? { background: tone!.soft, boxShadow: `inset 0 -3px 0 ${tone!.fill}`, outline: ring ? `2.5px solid ${ring}` : strong ? "1.5px solid var(--line)" : undefined, outlineOffset: ring ? 1 : undefined } : { background: "var(--panel)", border: "1px dashed var(--line)" }}>
         {has ? (
           <>
             <span className={`${strong ? "text-[14px]" : "text-[13px]"} font-extrabold leading-none tabular-nums text-[var(--ink)]`}>{Math.round(pct)}%</span>
             <span className="mt-0.5 hidden max-w-[70px] truncate text-[11px] font-bold leading-none text-[var(--ink-2)] sm:block">{bandName(band ?? tone!.label)}</span>
+            {ring && <span aria-hidden className="absolute -end-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-full text-[8px] font-extrabold leading-none text-white" style={{ background: ring }}>▼</span>}
           </>
         ) : <span className="text-[12px] font-bold text-[var(--ink-3)]">–</span>}
       </div>
@@ -38,11 +42,22 @@ function Cell({ who, subject, pct, band, bands, strong = false }: { who: string;
   );
 }
 
+/** Does this child need help? Overall or weakest subject under 50. Returns the tone and the weakest subject, or null. */
+function helpOf(p: OverviewStudent) {
+  const graded = p.subjects.filter((x) => x.masteryPct != null) as { subject: string; masteryPct: number; band: string | null }[];
+  if (!graded.length) return null;
+  const ov = overall(p) as number;
+  const weakest = graded.reduce((a, x) => (x.masteryPct < a.masteryPct ? x : a));
+  const lowest = Math.min(ov, weakest.masteryPct);
+  if (lowest >= HELP_BELOW) return null;
+  return { tone: lowest < VERY_LOW ? TONES.red : TONES.gold, weakest, detailPct: weakest.masteryPct < HELP_BELOW ? { subject: weakest.subject, pct: Math.round(weakest.masteryPct) } : null, ov };
+}
+
 export function ClassSnapshot({ overview, roster, bands, failed, onGo, delay = 0 }: {
   overview: OverviewStudent[]; roster: Student[]; bands: Bands; failed?: string; onGo: (k: "students" | "dashboard" | "quizzes") => void; delay?: number;
 }) {
   const { t, pl } = useH();
-  const { rows, subjects, hiddenCols, hiddenRows } = useMemo(() => {
+  const { rows, subjects, hiddenCols, hiddenRows, unstarted } = useMemo(() => {
     const byId = new Map(overview.map((o) => [o.childId, o]));
     // Everyone on the roster appears — a student with no results yet still deserves a row.
     const people: OverviewStudent[] = roster.filter((s) => s.active !== false).map((s) => byId.get(s.childId) ?? { childId: s.childId, childName: s.childName, subjects: [], lastActive: null });
@@ -53,8 +68,14 @@ export function ClassSnapshot({ overview, roster, bands, failed, onGo, delay = 0
     for (const p of people) for (const s of p.subjects) if (s.masteryPct != null) { count.set(s.subject, (count.get(s.subject) ?? 0) + 1); fresh.set(s.subject, Math.max(fresh.get(s.subject) ?? 0, at(p))); }
     const subs = [...count.entries()].sort((a, b) => b[1] - a[1] || (fresh.get(b[0]) ?? 0) - (fresh.get(a[0]) ?? 0) || a[0].localeCompare(b[0])).map(([s]) => s);
     const avg = (p: OverviewStudent) => { const v = p.subjects.filter((s) => s.masteryPct != null).map((s) => s.masteryPct as number); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : -1; };
-    const ranked = [...people].sort((a, b) => avg(b) - avg(a) || at(b) - at(a) || a.childName.localeCompare(b.childName));
-    return { rows: ranked.slice(0, MAX_ROWS), subjects: subs.slice(0, MAX_COLS), hiddenCols: Math.max(0, subs.length - MAX_COLS), hiddenRows: Math.max(0, ranked.length - MAX_ROWS) };
+    // Lowest overall first, so the children who need you lead; children with no results yet come last.
+    const need = (p: OverviewStudent) => { const a = avg(p); return a < 0 ? Number.POSITIVE_INFINITY : a; };
+    const ranked = [...people].sort((a, b) => need(a) - need(b) || at(b) - at(a) || a.childName.localeCompare(b.childName));
+    const started = ranked.filter((p) => avg(p) >= 0);
+    // Children with no results yet leave the grid and sit in ONE calm line under it (unless nobody has results at all).
+    const inGrid = started.length ? started : ranked;
+    const unstarted = started.length ? ranked.filter((p) => avg(p) < 0) : [];
+    return { rows: inGrid.slice(0, MAX_ROWS), subjects: subs.slice(0, MAX_COLS), hiddenCols: Math.max(0, subs.length - MAX_COLS), hiddenRows: Math.max(0, inGrid.length - MAX_ROWS), unstarted };
   }, [overview, roster]);
 
   const graded = subjects.length > 0;
@@ -94,27 +115,51 @@ export function ClassSnapshot({ overview, roster, bands, failed, onGo, delay = 0
                     <th scope="col" className="sticky start-0 z-[1] bg-[var(--surface)] pe-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("hubshell.hm_colStudent")}</th>
                     <th scope="col" className="px-1 pb-1 text-center text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink)]">{t("hubshell.hm_colOverall")}</th>
                     {subjects.map((s) => <th key={s} scope="col" className="px-1 pb-1 text-center text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span className="block max-w-[92px] truncate" title={s}>{s}</span></th>)}
+                    <th scope="col" className="px-1"><span className="sr-only">{t("hubshell.hm_helpOpen")}</span></th>
                   </tr>
                 </thead>
               )}
               <tbody>
-                {rows.map((p) => (
-                  <tr key={p.childId}>
-                    <th scope="row" className="sticky start-0 z-[1] bg-[var(--surface)] pe-2 text-start font-normal">
-                      <span className="flex min-w-[112px] items-center gap-2"><Person name={p.childName} size={28} /><span className="max-w-[110px] truncate text-[13px] font-bold text-[var(--ink)]">{p.childName}</span></span>
-                    </th>
-                    {graded && <Cell key="overall" who={p.childName} subject={t("hubshell.hm_overall")} pct={overall(p)} band={null} bands={bands} strong />}
-                    {graded ? subjects.map((s) => {
-                      const m = p.subjects.find((x) => x.subject === s);
-                      return <Cell key={s} who={p.childName} subject={s} pct={m?.masteryPct ?? null} band={m?.band ?? null} bands={bands} />;
-                    }) : <td className="px-1 text-[12.5px] font-semibold text-[var(--ink-3)]">{t("hubshell.hm_noQuizResults")}</td>}
-                  </tr>
-                ))}
+                {rows.map((p) => {
+                  const h = helpOf(p);
+                  const openIt = () => { requestOpenStudent(p.childId, p.childName); onGo("dashboard"); };
+                  const detail = h?.detailPct ? `${h.detailPct.subject} ${h.detailPct.pct}%` : t("hubshell.hm_helpOverall", { pct: overall(p) ?? 0 });
+                  return (
+                    <tr key={p.childId} data-testid="snapshot-row" data-child={p.childId} data-help={h ? (h.tone === TONES.red ? "red" : "gold") : undefined}>
+                      <th scope="row" className="sticky start-0 z-[1] bg-[var(--surface)] pe-2 text-start font-normal" style={h ? { background: h.tone.bg, borderRadius: "14px 0 0 14px", boxShadow: `inset 4px 0 0 ${h.tone.fg}`, paddingInlineStart: 8 } : undefined}>
+                        <span className="flex min-w-[112px] items-center gap-2"><Person name={p.childName} size={28} /><span className="max-w-[110px] truncate text-[13px] font-bold text-[var(--ink)]">{p.childName}</span></span>
+                      </th>
+                      {graded && <Cell key="overall" who={p.childName} subject={t("hubshell.hm_overall")} pct={overall(p)} band={null} bands={bands} strong tint={h?.tone.bg} />}
+                      {graded ? subjects.map((sub) => {
+                        const m = p.subjects.find((x) => x.subject === sub);
+                        return <Cell key={sub} who={p.childName} subject={sub} pct={m?.masteryPct ?? null} band={m?.band ?? null} bands={bands} tint={h?.tone.bg} ring={h?.detailPct && h.weakest.subject === sub ? h.tone.fg : undefined} />;
+                      }) : <td className="px-1 text-[12.5px] font-semibold text-[var(--ink-3)]">{t("hubshell.hm_noQuizResults")}</td>}
+                      <td className="ps-1 pe-1" style={h ? { background: h.tone.bg, borderRadius: "0 14px 14px 0" } : undefined}>
+                        <button type="button" data-testid="snapshot-open" data-child={p.childId} onClick={openIt} aria-label={t("hubshell.hm_helpOpenAria", { name: p.childName, detail })}
+                          className={`inline-flex h-11 min-w-[44px] items-center justify-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[12px] font-extrabold text-[var(--brand)] transition hover:brightness-[0.97] motion-reduce:transition-none ${FOCUS}`}>
+                          <span className="hidden sm:inline">{t("hubshell.hm_helpOpen")}</span><Icon name="chevronRight" size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           <div aria-hidden className={`pointer-events-none absolute inset-y-0 end-0 w-12 transition-opacity duration-200 motion-reduce:transition-none bg-[linear-gradient(to_left,var(--surface),transparent)] rtl:bg-[linear-gradient(to_right,var(--surface),transparent)] ${more ? "opacity-100" : "opacity-0"}`} />
           </div>
+          {graded && unstarted.length > 0 && (
+            <p data-testid="snapshot-not-started" className="m-0 mt-2 flex flex-wrap items-center gap-x-1 gap-y-0.5 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-3)]">
+              <span>{t("hubshell.hm_notStartedYet")}:</span>
+              {unstarted.map((u, i) => (
+                <span key={u.childId}>
+                  <button type="button" data-testid="snapshot-not-started-open" data-child={u.childId} onClick={() => { requestOpenStudent(u.childId, u.childName); onGo("dashboard"); }}
+                    aria-label={t("hubshell.hm_helpOpenAria", { name: u.childName, detail: t("hubshell.hm_notStartedYet") })}
+                    className={`min-h-[32px] rounded-full px-1.5 text-[var(--ink-2)] underline-offset-2 hover:underline ${FOCUS}`}>{firstName(u.childName)}</button>{i < unstarted.length - 1 ? "," : ""}
+                </span>
+              ))}
+            </p>
+          )}
           {more && <div className="mt-1 flex items-center justify-end gap-1 text-[11px] font-bold text-[var(--ink-3)] sm:hidden"><span>{t("hubshell.hm_swipe")}</span><Icon name="chevronRight" size={12} /></div>}
           {graded && (
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5" aria-label={t("hubshell.hm_legend")}>
