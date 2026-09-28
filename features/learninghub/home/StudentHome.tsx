@@ -25,6 +25,7 @@ import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
 import { Mascot, useMascotEnabled } from "../mascot";
 import { KidHome, type KidRow, type KidStep } from "./KidHome";
 import { JoinRemoteSyncBanner } from "../remotesync/JoinRemoteSyncBanner";
+import { BadgeShelf } from "../badges/BadgeShelf";
 
 // Student / parent Home — a warm "today" for the chosen child: what's next, what
 // is due, how the last quizzes went, where they're strong, and one clear next step.
@@ -164,6 +165,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
     <div id="hub-home-student" className="space-y-4">
       <JoinRemoteSyncBanner qs={childQs ?? qs} childId={childId} config={config} />
       {kidExtra}
+      <BadgeShelf qs={qs} childId={childId} name={firstName(name)} yearGroup={yearGroup} kid={kidMode} />
       {!kidMode && (
         <section aria-label={t("hubshell.hm_thisWeek", { name: firstName(name) })} data-testid="hub-parent-summary" data-ui="card" className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
           <div className="min-w-0 flex-1 basis-[240px]">

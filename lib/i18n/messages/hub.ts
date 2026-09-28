@@ -14,13 +14,14 @@ import hubplan from "./areas/hubplan";
 import hubmascot from "./areas/hubmascot";
 import hubpicker from "./areas/hubpicker";
 import hubgames from "./areas/hubgames";
+import hubextras from "./areas/hubextras";
 import hubtoolsui from "./areas/hubtoolsui";
 import hubplurals from "./areas/hubplurals";
 import hubwidgetnames from "./areas/hubwidgetnames";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
-export const HUB_AREAS: Record<string, ByLocale> = { hubshell, hublessons, hublive, hubtoolsa, hubtoolsb, hubfam, hubhomework, hubhow, hubplan, hubmascot, hubpicker, hubgames, hubtoolsui };
+export const HUB_AREAS: Record<string, ByLocale> = { hubshell, hublessons, hublive, hubtoolsa, hubtoolsb, hubfam, hubhomework, hubhow, hubplan, hubmascot, hubpicker, hubgames, hubtoolsui, hubextras };
 // Plural forms an area does not carry (ar zero/two/many...): fill gaps only, never override an area's own key.
 for (const [area, byLoc] of [...Object.entries(hubplurals), ...Object.entries(hubwidgetnames)]) for (const [loc, extra] of Object.entries(byLoc)) { const a = HUB_AREAS[area] as Record<string, Dict>; a[loc] = { ...extra, ...(a[loc] ?? {}) }; }
 

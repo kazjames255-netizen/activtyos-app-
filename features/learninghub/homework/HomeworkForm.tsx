@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, FieldLabel, Input } from "@/components/ui";
 import { get, post, put } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import type { HubSettings } from "@/lib/hubConfig";
 import { errMsg, groupMemberIds, topicLabel, type HubGroup, type Note, type Student, type Topic } from "../types";
 import { GroupQuickPick, RecipientSummary, pruneGroups } from "../groupKit";
@@ -13,6 +14,7 @@ import { useHw } from "./hwI18n";
 import { LessonPreviewDialog, LinkedRows, QuizPreviewDialog, WorksheetPreviewDialog } from "./hwPreview";
 import { WorksheetPicker, publishNote, publishQuiz, type QuizPick } from "./hwPickers";
 import { fetchHomeworkPack, type HomeworkPack } from "./hwPack";
+import { SwapDialog } from "./SwapDialog";
 
 // Tutor: create or edit a homework. Assigning creates one submission per student
 // (server-side); editing can add students (removing one only drops a hand-in
@@ -49,6 +51,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   onSaved: () => void;
 }) {
   const { h, hp } = useHw();
+  const tx = useT();
   const roster = useMemo(() => students.filter((s) => s.active !== false), [students]);
   const defaultDue = () => toLocalDateInput(new Date(Date.now() + (config.homeworkDueDays || 7) * 86_400_000));
   const [title, setTitle] = useState(homework?.title ?? initialTitle ?? "");
@@ -56,6 +59,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   const [due, setDue] = useState(() => (homework ? toLocalDateInput(new Date(homework.dueAt)) : defaultDue()));
   const [assessmentId, setAssessmentId] = useState(homework?.assessmentId ?? "");
   const [preview, setPreview] = useState<{ kind: "note" | "quiz" | "worksheet"; id: string; title?: string; quizId?: string } | null>(null);
+  const [swapping, setSwapping] = useState(false);
   const [worksheetIds, setWorksheetIds] = useState<string[]>(homework?.worksheetNoteIds ?? homework?.worksheets?.map((w) => w.noteId) ?? []);
   const [wsRows, setWsRows] = useState<Map<string, WorksheetRef>>(() => new Map((homework?.worksheets ?? []).map((w) => [w.noteId, w] as const)));
   const [noteIds, setNoteIds] = useState<string[]>(homework?.noteIds ?? []);
@@ -193,6 +197,11 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
             onPreview={(p) => setPreview(p)}
             onRemoveQuiz={() => setAssessmentId("")} onRemoveNote={(id) => setNoteIds(noteIds.filter((x) => x !== id))} onRemoveFlash={() => setFlashTopic("")} />
         )}
+        {!!homework && (!!homework.assessmentId || (homework.noteIds?.length ?? 0) > 0 || (homework.worksheetNoteIds?.length ?? 0) > 0 || (homework.worksheets?.length ?? 0) > 0) && (
+          <div>
+            <Button variant="ghost" className={`min-h-[44px] ${FOCUS}`} onClick={() => setSwapping(true)} data-testid="hub-hw-swap-open">🔄 {tx("hubextras.sw_btn")}</Button>
+          </div>
+        )}
         {draftQuiz && (
           <div role="note" data-testid="hub-hw-draft-quiz" className="rounded-xl border border-[var(--line)] border-s-4 border-s-[var(--gold)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
             {h("draftQuizA", { title: quiz!.title })}{" "}
@@ -248,6 +257,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
     {preview?.kind === "note" && <LessonPreviewDialog noteId={preview.id} title={preview.title} qs={qs} config={config} topics={topics} onClose={() => setPreview(null)} />}
     {preview?.kind === "worksheet" && <WorksheetPreviewDialog noteId={preview.id} title={preview.title} quizId={preview.quizId} qs={qs} onClose={() => setPreview(null)} />}
     {preview?.kind === "quiz" && <QuizPreviewDialog assessmentId={preview.id} title={quiz?.title} qs={qs} onClose={() => setPreview(null)} />}
+    {swapping && homework && <SwapDialog homework={homework} students={students} qs={qs} onClose={() => setSwapping(false)} onDone={() => { setSwapping(false); onSaved(); }} />}
     </>
   );
 }

@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, FieldLabel, Input } from "@/components/ui";
 import { put } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import type { Result, ResultAnswer } from "../shared-assess/api";
 import { errMsg, fmtSize } from "../types";
 import { Avatar, Dialog, FOCUS, Notice, Pill, ProgressBar, Skeleton, withQs } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { showAnswer, useAttemptResult, useRoving } from "./hwBreakdown";
+import { FeedbackManager, useFeedbackBank } from "./FeedbackBank";
 import { useHw } from "./hwI18n";
 import { pctOf, type HubFile, type InboxRow } from "./hwTypes";
 
@@ -114,6 +116,7 @@ export function MarkDialog({ row, hasNext, qs, onClose, onMarked, readOnly = fal
 }) {
   const x = useHw();
   const { h } = x;
+  const tx = useT();
   const attemptIds = useMemo(() => (row.attemptIds?.length ? row.attemptIds : row.attemptId ? [row.attemptId] : []), [row.attemptIds, row.attemptId]);
   const [results, setResults] = useState<Record<string, Result | null>>({});
   const [awards, setAwards] = useState<Awards>({});
@@ -121,6 +124,8 @@ export function MarkDialog({ row, hasNext, qs, onClose, onMarked, readOnly = fal
   const [score, setScore] = useState<string>(row.mark ? String(row.mark.score) : "");
   const [max, setMax] = useState<string>(row.mark ? String(row.mark.max) : attemptIds.length ? "" : "10");
   const [feedback, setFeedback] = useState(row.mark?.feedback ?? "");
+  const bank = useFeedbackBank(qs, !readOnly);          // the tutor's own saved comments (one-tap chips after the built-in ones)
+  const [managing, setManaging] = useState(false);
   const [busy, setBusy] = useState<"save" | "next" | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -238,11 +243,17 @@ export function MarkDialog({ row, hasNext, qs, onClose, onMarked, readOnly = fal
               {QUICK.map((k) => { const q = h(k); return (
                 <button key={k} type="button" onClick={() => setFeedback((f) => (f.trim() ? `${f.trim()} ${q}` : q))} className={`min-h-[44px] lg:min-h-[34px] rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[11.5px] font-semibold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}>+ {q.length > 28 ? `${q.slice(0, 26)}…` : q}</button>
               ); })}
+              {bank.snippets.map((sn) => (
+                <button key={sn} type="button" disabled={readOnly} data-testid="hub-fb-chip" title={sn} onClick={() => setFeedback((f) => (f.trim() ? `${f.trim()} ${sn}` : sn))}
+                  className={`min-h-[44px] lg:min-h-[34px] rounded-full border border-[var(--brand-line)] bg-[var(--brand-soft)] px-2.5 text-[11.5px] font-semibold text-[var(--brand-strong)] hover:border-[var(--brand)] ${FOCUS}`}>+ {sn.length > 40 ? `${sn.slice(0, 38)}…` : sn}</button>
+              ))}
+              {!readOnly && <button type="button" data-testid="hub-fb-manage" onClick={() => setManaging(true)} className={`min-h-[44px] lg:min-h-[34px] rounded-full border border-dashed border-[var(--line)] px-2.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)] ${FOCUS}`}>✎ {tx("hubextras.fb_manage")}</button>}
             </div>
           </div>
           <p className="text-[11.5px] leading-snug text-[var(--ink-3)]">{h("notifyNote")}</p>
         </div>
       </div>
+      {managing && <FeedbackManager snippets={bank.snippets} max={bank.max} maxLen={bank.maxLen} onSave={bank.save} onClose={() => setManaging(false)} />}
     </Dialog>
   );
 }
