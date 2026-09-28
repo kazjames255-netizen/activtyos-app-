@@ -309,7 +309,9 @@ test.describe("a family reads it (the student side)", () => {
     // A parent with several children lands on "Everyone's progress": open this child's card to enter their hub.
     if (!(await page.getByRole("tab").first().isVisible({ timeout: 5_000 }).catch(() => false))) await page.getByText(childName).first().click();
 
-    await openNotes(page);
+    // The child's strip is Today / Homework / Learn / Progress / Games (the tutor's "Lessons" is the child's "Learn").
+    await expect(page.getByRole("tab", { name: /^Learn/ })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("tab", { name: /^Learn/ }).click();
     // Families only see lessons assigned to their child (homework / a shared session), never the provider's whole library:
     // this published-but-unassigned note must not appear, drafts never do, and there are no edit controls.
     const search = page.getByPlaceholder(/Search (areas or )?lessons/);

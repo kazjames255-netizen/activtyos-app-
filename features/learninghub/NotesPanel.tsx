@@ -335,7 +335,7 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
           <div className="grid gap-4">
             <div>
               <FieldLabel htmlFor="hub-note-topic">{tr("hublessons.edTopic")}</FieldLabel>
-              <TopicPicker id="hub-note-topic" topics={topics} value={draft.topicId} onChange={(topicId) => setDraft({ ...draft, topicId })}
+              <TopicPicker id="hub-note-topic" fresh={!draft.id} topics={topics} value={draft.topicId} onChange={(topicId) => setDraft({ ...draft, topicId })}
                 deleteSubject={mayAuthor ? { qs, done: (subject) => {
                   forgetSubject(subject);
                   setDraft((d) => (d && topics.find((t) => t.id === d.topicId)?.subject.toLowerCase() === subject.toLowerCase() ? { ...d, topicId: topics.find((t) => t.subject.toLowerCase() !== subject.toLowerCase())?.id ?? "" } : d));

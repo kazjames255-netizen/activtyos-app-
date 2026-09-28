@@ -13,8 +13,10 @@ import type { Topic } from "./types";
 
 const topicName = (t: Topic) => [t.topic, t.subtopic].filter(Boolean).join(" › ");
 
-export function TopicPicker({ id, topics, value, onChange, disabled = false, deleteSubject }: {
+export function TopicPicker({ id, topics, value, onChange, disabled = false, deleteSubject, fresh = false }: {
   id: string; topics: Topic[]; value: string; onChange: (topicId: string) => void; disabled?: boolean;
+  /** Making something NEW: do not pre-list every existing topic (they are curriculum unit / lesson names, so the list reads as a wall of existing titles). Only the chosen topic shows until the tutor types to search or adds a new one. */
+  fresh?: boolean;
   /** Tutors with write access can delete an empty subject; omit to hide the button. `done` runs once the server has removed it. */
   deleteSubject?: { qs: string; done: (subject: string) => void };
 }) {
@@ -32,10 +34,11 @@ export function TopicPicker({ id, topics, value, onChange, disabled = false, del
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    if (fresh && !needle) return topics.filter((t) => t.id === value && t.subject === subject);
     return topics
       .filter((t) => t.subject === subject && (!needle || topicName(t).toLowerCase().includes(needle)))
       .sort((a, b) => topicName(a).localeCompare(topicName(b)));
-  }, [topics, subject, q]);
+  }, [topics, subject, q, fresh, value]);
   const inSubject = useMemo(() => topics.filter((t) => t.subject === subject).length, [topics, subject]);
 
   const removeSubject = async () => {
@@ -80,7 +83,7 @@ export function TopicPicker({ id, topics, value, onChange, disabled = false, del
       <div id={id} role="listbox" aria-label={tr("hubshell.k_subjectTopics", { subject })} data-testid={`${id}-list`}
         className="max-h-[248px] overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1">
         {rows.length === 0 ? (
-          <p className="m-0 px-3 py-3 text-[13px] text-[var(--ink-3)]">{inSubject ? tr("hubshell.k_noTopicMatches", { subject, q: q.trim() }) : tr("hubshell.k_noTopicsYet")}</p>
+          <p className="m-0 px-3 py-3 text-[13px] text-[var(--ink-3)]">{fresh && !q.trim() ? tr("hubshell.k_typeToFindTopic") : inSubject ? tr("hubshell.k_noTopicMatches", { subject, q: q.trim() }) : tr("hubshell.k_noTopicsYet")}</p>
         ) : rows.map((t) => {
           const on = t.id === value;
           return (

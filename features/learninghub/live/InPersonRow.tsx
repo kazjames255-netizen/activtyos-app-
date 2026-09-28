@@ -3,7 +3,7 @@
 import { useT } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { Ico } from "../teachIcons";
-import { FOCUS, fmtDay, relDay } from "../teachKit";
+import { FOCUS, fmtClock, fmtDay, relDay } from "../teachKit";
 import type { IpSession } from "../inperson/api";
 
 // A row for an in-person session inside the merged Lessons area's list — the same list video LessonRow entries sit
@@ -11,7 +11,7 @@ import type { IpSession } from "../inperson/api";
 // there and (for one still open) a way back in. Read-only for everyone but the tutor who ran it (the server already
 // enforces that; this row is never shown to a view-only role — see LiveLessonsPanel).
 
-export function InPersonRow({ session, now, onResume }: { session: IpSession; now: number; onResume?: () => void }) {
+export function InPersonRow({ session, now, onResume, onEdit }: { session: IpSession; now: number; onResume?: () => void; /** Change the title / date / time (only when the lesson is still editable). */ onEdit?: () => void }) {
   const t = useT();
   const live = session.status === "live";
   const here = session.students.filter((s) => s.present);
@@ -32,14 +32,20 @@ export function InPersonRow({ session, now, onResume }: { session: IpSession; no
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-extrabold text-[var(--ink-2)]"><Ico name="users" size={12} />{t("hublive.aIp_inPerson")}</span>
             </div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-[var(--ink-2)]">
-              <span className="inline-flex items-center gap-1"><Ico name="calendar" size={13} className="text-[var(--ink-3)]" />{live ? relDay(session.startsAt, now) : fmtDay(session.startsAt)}</span>
+              <span className="inline-flex items-center gap-1"><Ico name="calendar" size={13} className="text-[var(--ink-3)]" />{live ? relDay(session.startsAt, now) : fmtDay(session.startsAt)} · {fmtClock(session.startsAt)}</span>
               <span>{t("hublive.aIp_attendedCount", { a: here.length, b: session.students.length })}</span>
             </div>
           </div>
         </div>
-        {live && onResume && (
-          <Button variant="solid" className={`min-h-[44px] flex-none ${FOCUS}`} data-testid={`ip-resume-row-${session.id}`} onClick={onResume}>{t("hublive.aIp_resume")}</Button>
-        )}
+        <div className="flex flex-none flex-wrap items-center gap-1.5 sm:justify-end">
+          {onEdit && (
+            <button type="button" onClick={onEdit} data-testid={`ip-edit-row-${session.id}`} aria-label={t("hublive.aCards_editTitle", { title: session.title })} title={t("hublive.aCards_editLesson")}
+              className={`grid h-11 w-11 flex-none place-items-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] ${FOCUS}`}><Ico name="edit" size={16} /></button>
+          )}
+          {live && onResume && (
+            <Button variant="solid" className={`min-h-[44px] flex-none ${FOCUS}`} data-testid={`ip-resume-row-${session.id}`} onClick={onResume}>{t("hublive.aIp_resume")}</Button>
+          )}
+        </div>
       </div>
     </div>
   );

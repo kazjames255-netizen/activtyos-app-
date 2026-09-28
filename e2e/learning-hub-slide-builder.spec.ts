@@ -62,6 +62,9 @@ test.describe("new lesson editor", () => {
     await openNewLesson(page);
     const list = page.getByTestId("hub-note-topic-list");
     await page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subj }).click();
+    // a NEW lesson does not pre-list every existing topic: nothing until you type
+    await expect(list.getByRole("option")).toHaveCount(0);
+    await page.getByTestId("hub-note-topic-search").fill(stamp);
     await expect(list.getByRole("option", { name: topicA })).toBeVisible();
     await expect(list.getByRole("option", { name: topicB })).toBeVisible();
     // the other subject's topics are not listed under this subject
@@ -78,6 +81,7 @@ test.describe("new lesson editor", () => {
     test.setTimeout(300_000);
     await openNewLesson(page);
     await page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subj }).click();
+    await page.getByTestId("hub-note-topic-search").fill(topicA);
     await page.getByTestId("hub-note-topic-list").getByRole("option", { name: topicA }).click();
     await page.locator("#hub-note-title").fill(lessonTitle);
     // slide 1: title + paragraph
@@ -116,6 +120,7 @@ test.describe("new lesson editor", () => {
     test.setTimeout(240_000);
     await openNewLesson(page);
     await page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subj }).click();
+    await page.getByTestId("hub-note-topic-search").fill(topicA);
     await page.getByTestId("hub-note-topic-list").getByRole("option", { name: topicA }).click();
     await page.locator("#hub-note-title").fill(`${lessonTitle} bad`);
     await page.getByTestId("sb-title").fill("Broken");

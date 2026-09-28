@@ -309,7 +309,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
           {ipLive.length > 0 && (
             <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-ip-still-open">
               <Overline>{t("hublive.aIp_stillOpenTitle")}</Overline>
-              {ipLive.map((s) => <InPersonRow key={s.id} session={s} now={now} onResume={() => setIpOverlay(s)} />)}
+              {ipLive.map((s) => { const ed = (lessons ?? []).find((l) => l.id === s.id); return <InPersonRow key={s.id} session={s} now={now} onResume={() => setIpOverlay(s)} onEdit={ed && canEdit && !readOnly ? () => setEditor(ed) : undefined} />; })}
             </div>
           )}
 
