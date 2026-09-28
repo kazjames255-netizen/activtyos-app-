@@ -22,7 +22,7 @@
 // never worse than "serves yesterday's counts for a few seconds," not "blocks the tab for a minute."
 
 import { createHash, randomBytes } from "node:crypto";
-import { lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync } from "node:fs";
+import { lstatSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
 import { open, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -73,13 +73,19 @@ async function diskWrite(kind: HubKind, tenantId: string, v: unknown): Promise<v
     renameSync(tmp, p);
   } catch { /* best effort — a rebuild still happens on the next restart */ }
 }
-function diskRead<T>(kind: HubKind, tenantId: string): { v: T; mtimeMs: number } | null {
+// Async on purpose: a per-request cold-miss (the store has nothing yet — right after a restart, before
+// warmHubCacheFromDisk finishes, or after an entry was evicted) used to call this with a blocking readFileSync,
+// and the biggest snapshot (questions, ~45MB) measured 143ms of readFileSync+JSON.parse — 59ms of that was disk
+// I/O alone, stalling every other in-flight request on this single-threaded process for no reason (JSON.parse
+// itself can't be made non-blocking without extra deps, but the read can). Moving the read to fs/promises keeps
+// that 59ms off the event loop; only the unavoidable JSON.parse still blocks.
+async function diskRead<T>(kind: HubKind, tenantId: string): Promise<{ v: T; mtimeMs: number } | null> {
   try {
     const p = diskPath(kind, tenantId);
     if (!p) return null;
     const st = lstatSync(p);
     if (!st.isFile() || (process.getuid !== undefined && st.uid !== process.getuid()) || (st.mode & 0o077) !== 0) return null;
-    const parsed = JSON.parse(readFileSync(p, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
+    const parsed = JSON.parse(await readFile(p, "utf8")) as { version?: string; kind?: string; tenantId?: string; __map: boolean; entries?: [string, unknown][]; v?: unknown };
     if (parsed.version !== SNAPSHOT_VERSION || parsed.kind !== kind || parsed.tenantId !== tenantId) return null;
     return { v: (parsed.__map ? new Map(parsed.entries) : parsed.v) as T, mtimeMs: st.mtimeMs };
   } catch { return null; }
@@ -178,7 +184,7 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
   // as-is with no rebuild (a restart minutes after the last build used to re-scan everything); an older one falls into the
   // normal SWR path — serve this now, rebuild in the background (through the limiter below).
   if (!hit && opts.disk && !extra) {
-    const disk = diskRead<T>(kind, tenantId);
+    const disk = await diskRead<T>(kind, tenantId);
     if (disk !== null) { hit = { at: disk.mtimeMs, v: disk.v, seeded: true }; store.set(key, hit); }
   }
   if (hit && Date.now() - hit.at < (hit.seeded ? Math.min(ttlMs, SEED_TRUST_MS) : ttlMs)) return hit.v as T;
