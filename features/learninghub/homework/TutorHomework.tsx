@@ -306,6 +306,7 @@ export function TutorHomework(p: PanelProps) {
       {editor && <HomeworkForm homework={editor === "new" ? null : editor} students={students} topics={topics} qs={qs} config={config} groups={groups}
         initialGroupId={editor === "new" ? preset?.groupId || null : null} initialChildIds={editor === "new" ? preset?.childIds : undefined}
         initialTitle={editor === "new" ? preset?.title : undefined} initialInstructions={editor === "new" ? preset?.instructions : undefined} packNoteId={editor === "new" ? preset?.packNoteId : undefined}
+        initialAssessmentId={editor === "new" ? preset?.assessmentId : undefined} initialNoteIds={editor === "new" ? preset?.noteIds : undefined}
         onClose={() => { setEditor(null); setPreset(null); }} onSaved={() => { setEditor(null); setPreset(null); load(); }} />}
       {view2?.kind === "note" && <LessonPreviewDialog noteId={view2.id} qs={qs} config={config} topics={topics} onClose={() => setView2(null)} />}
       {view2?.kind === "worksheet" && <WorksheetPreviewDialog noteId={view2.id} title={view2.title} quizId={view2.quizId} qs={qs} onClose={() => setView2(null)} />}

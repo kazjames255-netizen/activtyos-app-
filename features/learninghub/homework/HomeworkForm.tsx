@@ -26,7 +26,7 @@ import { SwapDialog } from "./SwapDialog";
 
 const endOfDay = (dateStr: string) => new Date(`${dateStr}T23:59:00`).toISOString();
 
-export function HomeworkForm({ homework, students, topics, qs, config, groups = [], initialGroupId = null, initialChildIds, initialGroupIds, initialTitle, initialInstructions, packNoteId, focusQuiz = false, onClose, onSaved }: {
+export function HomeworkForm({ homework, students, topics, qs, config, groups = [], initialGroupId = null, initialChildIds, initialGroupIds, initialAssessmentId, initialNoteIds, initialTitle, initialInstructions, packNoteId, focusQuiz = false, onClose, onSaved }: {
   homework: TutorHomework | null;
   students: Student[];
   topics: Topic[];
@@ -39,7 +39,7 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   initialChildIds?: string[];
   initialGroupIds?: string[];
   initialAssessmentId?: string;
-  /** Kept for callers that still pass them; ignored on a new homework (creation is bare). */
+  /** A lesson's / quiz's "Set for children" passes these: a new homework starts LINKED to them (families only see lessons assigned to their child). */
   initialNoteIds?: string[];
   initialTitle?: string;
   initialInstructions?: string;
@@ -57,12 +57,12 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   const [title, setTitle] = useState(homework?.title ?? initialTitle ?? "");
   const [instructions, setInstructions] = useState(homework?.instructions ?? initialInstructions ?? "");
   const [due, setDue] = useState(() => (homework ? toLocalDateInput(new Date(homework.dueAt)) : defaultDue()));
-  const [assessmentId, setAssessmentId] = useState(homework?.assessmentId ?? "");
+  const [assessmentId, setAssessmentId] = useState(homework?.assessmentId ?? initialAssessmentId ?? "");
   const [preview, setPreview] = useState<{ kind: "note" | "quiz" | "worksheet"; id: string; title?: string; quizId?: string } | null>(null);
   const [swapping, setSwapping] = useState(false);
   const [worksheetIds, setWorksheetIds] = useState<string[]>(homework?.worksheetNoteIds ?? homework?.worksheets?.map((w) => w.noteId) ?? []);
   const [wsRows, setWsRows] = useState<Map<string, WorksheetRef>>(() => new Map((homework?.worksheets ?? []).map((w) => [w.noteId, w] as const)));
-  const [noteIds, setNoteIds] = useState<string[]>(homework?.noteIds ?? []);
+  const [noteIds, setNoteIds] = useState<string[]>(homework?.noteIds ?? initialNoteIds ?? []);
   const [flashTopic, setFlashTopic] = useState(homework?.flashcardTopicId ?? "");
   const preGroup = useMemo(() => (initialGroupId ? groups.find((g) => g.id === initialGroupId) ?? null : null), [initialGroupId, groups]);
   const [childIds, setChildIds] = useState<string[]>(() => homework?.assignedChildIds ?? initialChildIds ?? (preGroup ? groupMemberIds(preGroup) : roster.length === 1 ? [roster[0]!.childId] : []));
@@ -80,9 +80,14 @@ export function HomeworkForm({ homework, students, topics, qs, config, groups = 
   const [, setPackBusy] = useState(false);
   const edited = useRef(false);
   const applyPack = (p: HomeworkPack) => {
-    // Bare on creation: only the title (and the year, for "set for all my Year N") comes from the lesson. The quiz, lessons and
-    // flashcards of the pack are NOT linked; the tutor attaches the lesson's worksheet below if they want one.
+    // Generic "Set homework" stays bare (title only). But when the tutor opened this from a LESSON ("Set for children"), the lesson
+    // and its exit quiz ARE linked: families only see lessons assigned to their child, so an unlinked lesson could not be opened.
+    // Flashcards follow the assigned lesson's topic on the server; the tutor still attaches the lesson's worksheet below if wanted.
     setPack(p); setTitle(p.title);
+    if (packNoteId) {
+      setNoteIds((cur) => (cur.length ? cur : (p.noteIds?.length ? p.noteIds : [p.noteId])));
+      if (p.assessmentId) setAssessmentId((cur) => cur || p.assessmentId!);
+    }
   };
   const usePackOf = (noteId: string, auto: boolean) => {
     setPackBusy(true);
