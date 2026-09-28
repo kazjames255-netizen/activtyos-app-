@@ -31,7 +31,7 @@ import { listDoubts } from "./lesson/doubts/api";
 import { useOnBrand } from "./onBrand";
 import { resolveTarget } from "./tabAlias";
 import { TUTOR_TOPS, recalledSub, rememberSub, subById, subFor, topOfKey, type SubDef } from "./tabGroups";
-import { FAMILY_TOPS, famRecalledSub, famRememberSub, famSubById, famSubFor, famTopOfKey, type FamSubDef, type FamTopDef } from "./familyGroups";
+import { FAMILY_TOPS, KID_TOPS, famRecalledSub, famRememberSub, famSubById, famSubFor, famTopOfKey, type FamSubDef, type FamTopDef } from "./familyGroups";
 import { SubMenuCard, type ItemInfo } from "./SubMenuCard";
 import { setHubIntent } from "./hubIntent";
 import { useMarkItems } from "./mark/useMarkItems";
@@ -159,8 +159,13 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   const activeTop = tutor ? topOfKey(active) : null;
   // Family hub (redesign brief §1 Level 2): the same idea, over the 5-max FAMILY_TOPS instead of the tutor's seven.
   // Kid mode keeps its own flat KID_TABS strip — neither this nor the tutor grouping applies there.
-  const famActiveSub: FamSubDef | null = !tutor && !kid ? famSubFor(active, sub) : null;
-  const famActiveTop: FamTopDef | null = !tutor && !kid ? famTopOfKey(active) : null;
+  // Kid mode from Year 3 up uses the SAME grouped nav as a parent's view of the child, in a five-tab kid version (KID_TOPS): big tabs that
+  // never scroll sideways. Reception to Year 2 keeps the three big icon tabs (KidIconTabs).
+  const kidStrip = kid && bandOrDefault(hub.child?.yearGroup) !== "ks1";
+  const famTops = kid ? KID_TOPS : FAMILY_TOPS;
+  const famNav = !tutor && (!kid || kidStrip);
+  const famActiveSub: FamSubDef | null = famNav ? famSubFor(active, sub, famTops) : null;
+  const famActiveTop: FamTopDef | null = famNav ? (famTopOfKey(active, famTops) ?? (kid ? KID_TOPS[0]! : null)) : null;
 
   const activeRef = useRef<TabKey>(active);
   useLayoutEffect(() => { activeRef.current = active; }, [active]);
@@ -228,12 +233,12 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
     setLinkParams({ tab: d.key, sub: d.id }, true);
   }, [setError]);
   const selectFamTop = useCallback((id: string, how?: "arrow") => {
-    const top = FAMILY_TOPS.find((x) => x.id === id);
+    const top = famTops.find((x) => x.id === id);
     if (!top) return;
     const back = famRecalledSub(top);
     const d = back ?? top.subs[0]!;
     selectFamSub(d, { focus: top.subs.length === 1 && how !== "arrow" });
-  }, [selectFamSub]);
+  }, [selectFamSub, famTops]);
   const selectTop = useCallback((id: string, how?: "arrow") => {
     const top = TUTOR_TOPS.find((t) => t.id === id);
     if (!top) return;
@@ -342,7 +347,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   // exactly the panels behind them are unchanged, only how they're grouped. Messages (questions) has no top here at
   // all (brief: "leaves the tab bar entirely") — it stays fully reachable by a direct ?tab=questions deep link
   // (notifications, "Ask your tutor") via tabAlias.ts, same as any panel key not currently shown as a tab.
-  const famTopTabs: HubTab[] = !tutor && !kid ? FAMILY_TOPS.map((top) => ({ id: top.id, emoji: top.emoji, meta: meta0(top.subs[0]!.key, top.label) })) : [];
+  const famTopTabs: HubTab[] = famNav ? famTops.map((top) => ({ id: top.id, emoji: top.emoji, meta: meta0(top.subs[0]!.key, top.label) })) : [];
   const famSubList: FamSubDef[] = famActiveTop ? famActiveTop.subs : [];
   const famSubTabs: HubTab[] = famSubList.map((d) => ({ id: d.id, emoji: d.emoji, meta: meta0(d.key, d.label) }));
   // Live numbers in the side card: only what the hub already holds (the Mark queue, the roster, a running lesson, an unsaved draft).
@@ -452,14 +457,13 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
             )}
           </>
         )}
-        {!focus && kid && bandOrDefault(hub.child?.yearGroup) !== "ks1" && <HubTabs tabs={tabs} active={active} onSelect={(k, how) => { go(k as TabKey); if (how === "arrow") moveFocus.current = false; }} liveNow={liveNow} />}
-        {!focus && !tutor && !kid && !forceOverview && famActiveTop && (
+        {!focus && famNav && !forceOverview && famActiveTop && (
           <>
             {/* Mobile (<640px): a fixed N-column grid — never scrolls sideways, however narrow (brief: "bottom nav
                 on mobile, tabs on desktop", and explicitly no horizontal scroll at 375px). Desktop: the usual strip. */}
-            <FamilyTabBar active={famActiveTop.id} onSelect={selectFamTop} />
+            <FamilyTabBar active={famActiveTop.id} onSelect={selectFamTop} tops={famTops} kid={kid} />
             <HubTabs variant="top" tabs={famTopTabs} active={famActiveTop.id} onSelect={selectFamTop} className="mb-2 hidden sm:block"
-              controls={(id) => (FAMILY_TOPS.find((x) => x.id === id)!.subs.length > 1 ? `hub-famsubtabs-${id}` : `hub-tabpanel-${active}`)} />
+              controls={(id) => (famTops.find((x) => x.id === id)!.subs.length > 1 ? `hub-famsubtabs-${id}` : `hub-tabpanel-${active}`)} />
             {famSubList.length > 1 && famActiveSub && (
               <HubTabs variant="sub" tabs={famSubTabs} active={famActiveSub.id} listId={`hub-famsubtabs-${famActiveTop.id}`} bleed={false} className="mb-3"
                 onSelect={(id, how) => { const d = famSubById(id); if (d) selectFamSub(d, { focus: how !== "arrow" }); }} />

@@ -77,9 +77,12 @@ export function KidBar({ name, onExit }: { name: string; onExit: () => void }) {
   // treatment (Kaz: "I don't want two different pages, this is getting confusing" — the content was already
   // identical; only this chrome differed).
   return (
-    <button type="button" onClick={onExit} data-testid="hub-kid-bar" aria-label={t("hubfam.gateTitle")}
-      className={`mb-3 inline-flex min-h-[44px] items-center gap-1 rounded-lg px-1 text-[12.5px] font-extrabold text-[var(--brand)] ${FOCUS}`}>
-      <Icon name="arrowLeft" size={15} strokeWidth={2.6} />{t("hubfam.gateTitle")}
-    </button>
+    // Tucked to the top-right (out of a child's way, so they don't tap it by accident) but a clear, bordered 48px button a grown-up can find.
+    <div className="mb-2 flex justify-end">
+      <button type="button" onClick={onExit} data-testid="hub-kid-bar" aria-label={t("hubfam.gateTitle")}
+        className={`inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--brand)] shadow-[var(--shadow-sm)] ${FOCUS}`}>
+        <Icon name="arrowLeft" size={16} strokeWidth={2.6} />{t("hubfam.gateTitle")}
+      </button>
+    </div>
   );
 }

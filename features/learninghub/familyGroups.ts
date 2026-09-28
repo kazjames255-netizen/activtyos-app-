@@ -33,16 +33,36 @@ export const FAMILY_TOPS: FamTopDef[] = [
   { id: "games", label: "Games", emoji: "🎮", subs: [fs("games", "Games", "🎮", "games")] },
 ];
 
-const ALL = FAMILY_TOPS.flatMap((top) => top.subs.map((sub) => ({ top, sub })));
-export const famSubById = (id: string | null | undefined) => ALL.find((x) => x.sub.id === id)?.sub ?? null;
-/** The top a panel key belongs to. */
-export const famTopOfKey = (key: TabKey): FamTopDef | null => ALL.find((x) => x.sub.key === key)?.top ?? null;
+/** A child's own navigation (kid mode, Year 3 up): FIVE big tabs, always visible, no sideways scroll. Flashcards, Live lessons and the
+ *  Starting quiz live inside "Learn"; Messages and Tools are not in the child's strip at all (they stay reachable by a direct ?tab= link —
+ *  a grown-up handles messages). The panels behind every key are unchanged. Reception to Year 2 keeps its own three-icon KidIconTabs. */
+export const KID_TOPS: FamTopDef[] = [
+  { id: "today", label: "Home", emoji: "🏠", subs: [fs("today", "Home", "🏠", "home")] },
+  { id: "learn", label: "Learn", emoji: "📚", subs: [
+    fs("lessons", "Lessons", "📖", "notes"),
+    fs("quizzes", "Quizzes", "🎯", "quizzes"),
+    fs("flashcards", "Flashcards", "🃏", "flashcards"),
+    fs("live", "Live lessons", "🎥", "live"),
+    fs("starting", "Starting quiz", "🧭", "diagnostic"),
+  ] },
+  { id: "homework", label: "Homework", emoji: "📝", subs: [fs("homework", "Homework", "📝", "homework")] },
+  { id: "games", label: "Games", emoji: "🎮", subs: [fs("games", "Games", "🎮", "games")] },
+  { id: "progress", label: "My progress", emoji: "⭐", subs: [fs("progress", "My progress", "⭐", "dashboard")] },
+];
+
+const flat = (tops: FamTopDef[]) => tops.flatMap((top) => top.subs.map((sub) => ({ top, sub })));
+const ALL = flat(FAMILY_TOPS);
+const ALL_KID = flat(KID_TOPS);
+const all = (tops?: FamTopDef[]) => (tops === KID_TOPS ? ALL_KID : ALL);
+export const famSubById = (id: string | null | undefined) => ALL.find((x) => x.sub.id === id)?.sub ?? ALL_KID.find((x) => x.sub.id === id)?.sub ?? null;
+/** The top a panel key belongs to (in `tops`, the family strip by default). */
+export const famTopOfKey = (key: TabKey, tops?: FamTopDef[]): FamTopDef | null => all(tops).find((x) => x.sub.key === key)?.top ?? null;
 
 /** The sub-section that shows for panel `key`: the one the URL / state names when it belongs to that panel, else the key's first sub. */
-export function famSubFor(key: TabKey, sub?: string | null): FamSubDef | null {
+export function famSubFor(key: TabKey, sub?: string | null, tops?: FamTopDef[]): FamSubDef | null {
   const named = famSubById(sub);
   if (named && named.key === key) return named;
-  return ALL.find((x) => x.sub.key === key)?.sub ?? null;
+  return all(tops).find((x) => x.sub.key === key)?.sub ?? null;
 }
 
 const LS = (top: string) => `hub.famsub.${top}`;

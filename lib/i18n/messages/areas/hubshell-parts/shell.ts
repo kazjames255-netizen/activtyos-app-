@@ -45,6 +45,7 @@ const T: Record<string, Row> = {
   lbl_flashcards: ["Flashcards", "Fiszki", "Cartonașe", "فلیش کارڈز", "ਫਲੈਸ਼ਕਾਰਡ", "ফ্ল্যাশকার্ড", "بطاقات تعليمية", "Cartões de memória", "Tarjetas de memoria", "Cartes mémoire", "Cardiau fflach"],
   lbl_students: ["Students", "Uczniowie", "Elevi", "طلبہ", "ਵਿਦਿਆਰਥੀ", "শিক্ষার্থী", "الطلاب", "Alunos", "Alumnos", "Élèves", "Disgyblion"],
   lbl_enrol_a_student: ["Enrol a student", "Zapisz ucznia", "Înscrie un elev", "طالب علم کا اندراج کریں", "ਵਿਦਿਆਰਥੀ ਦਾਖ਼ਲ ਕਰੋ", "শিক্ষার্থী ভর্তি করুন", "تسجيل طالب", "Inscrever um aluno", "Inscribir a un alumno", "Inscrire un élève", "Cofrestru disgybl"],
+  lbl_my_progress: ["My progress", "Moje postępy", "Progresul meu", "میری پیش رفت", "ਮੇਰੀ ਤਰੱਕੀ", "আমার অগ্রগতি", "تقدّمي", "Meu progresso", "Mi progreso", "Ma progression", "Fy nghynnydd"],
   lbl_progress: ["Progress", "Postępy", "Progres", "پیش رفت", "ਤਰੱਕੀ", "অগ্রগতি", "التقدّم", "Progresso", "Progreso", "Progrès", "Cynnydd"],
   lbl_quizzes: ["Quizzes", "Quizy", "Teste", "کوئز", "ਕੁਇਜ਼", "কুইজ", "الاختبارات", "Quizzes", "Quizzes", "Quiz", "Cwisiau"],
   lbl_starting_quizzes: ["Starting quizzes", "Quizy startowe", "Teste inițiale", "ابتدائی کوئز", "ਸ਼ੁਰੂਆਤੀ ਕੁਇਜ਼", "শুরুর কুইজ", "اختبارات تحديد المستوى", "Quizzes iniciais", "Pruebas iniciales", "Quiz de départ", "Cwisiau cychwynnol"],
