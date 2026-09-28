@@ -92,11 +92,12 @@ export function useGamesPlayed(childId: string, tenantQuery = ""): { parts: Part
   return { parts, areas, unfinished };
 }
 
-export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail }: { childId: string; childName?: string; tenantQuery?: string; /** e.g. the times-tables detail, offered under "Times tables detail" only when that area was played. */ detail?: ReactNode }) {
+export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail, detailOnly = false }: { childId: string; childName?: string; tenantQuery?: string; /** Only the times-tables detail (the summary itself lives in the Games card at the top of Progress). */ detailOnly?: boolean; /** e.g. the times-tables detail, offered under "Times tables detail" only when that area was played. */ detail?: ReactNode }) {
   const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
   const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
   const { parts, areas, unfinished } = useGamesPlayed(childId, tenantQuery);
   const name = (childName ?? "").split(" ")[0] || "";
+  if (detailOnly) return detail && areas.some((a) => a.area === "times") ? <details data-testid="games-times-detail"><summary style={{ cursor: "pointer", fontWeight: 800, minHeight: 44 }}>{T("pl_detail")}</summary><div style={{ marginTop: 8 }}>{detail}</div></details> : null;
   if (!parts) return <div aria-busy="true">&hellip;</div>;
   if (!areas.length) return unfinished > 0
     ? <p data-testid="games-started" style={{ margin: 0 }}>{T("pl_started", { name })}</p>

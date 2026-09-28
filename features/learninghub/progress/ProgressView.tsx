@@ -62,14 +62,18 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
 
   if (!anyAttempted && data.trend.length === 0) {
     return (
-      tutor ? (
+      <div className="grid gap-4">
+      {tutor ? (
         <EmptyState icon="sparkle" title={t("hubfam.pgTutorEmptyTitle", { name })}
           body={<Rich text={t(p.config.requireDiagnostic ? "hubfam.pgTutorEmptyBodyDiag" : "hubfam.pgTutorEmptyBody", { first })} />}
           action={p.readOnly ? undefined : <button type="button" onClick={() => p.goTo?.("quizzes")} className={`min-h-[44px] rounded-full px-4 text-[13px] font-extrabold text-[var(--brand)] hover:bg-[var(--brand-soft)] ${FOCUS}`}>{t("hubfam.pgGoQuizzes")}</button>} />
       ) : (
       <EmptyState icon="sparkle" title={PARENT_COPY.noQuizYetTitle}
         body={<Rich text={t(p.config.requireDiagnostic ? "hubfam.pgParentEmptyBodyDiag" : "hubfam.pgParentEmptyBody")} />} />
-      )
+      )}
+      {/* No quiz yet, but games / homework / flashcards may still have something to show. */}
+      <ProgressCards p={p} childId={childId} quiz={null} />
+      </div>
     );
   }
 
@@ -81,7 +85,7 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
         <Attainment bare overall={data.overall} bands={bands} subjects={data.subjects} onEmptyAction={p.canEdit ? undefined : () => p.goTo?.("quizzes")} />
         <div className="mt-3 border-t border-[var(--line)] pt-2"><LevelLegend bands={bands} onEdit={p.canEdit && !p.readOnly ? () => setEditing(true) : undefined} /></div>
       </section>
-      <ProgressCards p={p} childId={childId} quiz={{ latest: latest ? { pct: latest.pct, title: latest.title } : null, topics: topicsPractised, subjects: data.subjects.filter(isStarted).length, taken: data.trend.length,
+      <ProgressCards p={p} childId={childId} quiz={{ latest: latest ? { pct: latest.pct, title: latest.title } : null, topics: topicsPractised, subjects: data.subjects.filter(isStarted).length, taken: data.trend.length, who: first === t("hubfam.pgThey") ? "" : first,
         labels: { latest: t("hubfam.pgLatestQuiz"), noQuiz: t("hubfam.pgNoQuizzesYet"), topics: t("hubfam.pgTopicsPractised"), across: tp("hubfam.pgAcrossSubjects", data.subjects.filter(isStarted).length), taken: t("hubfam.pgQuizzesTaken"), recent: t("hubfam.pgRecentMarked") } }} />
       <div className="grid gap-4 2xl:grid-cols-2">{started.map((s) => <SubjectCard key={s.subject} s={s} p={p} who={tutor ? first : null} />)}</div>
       {notStarted.length > 0 && (

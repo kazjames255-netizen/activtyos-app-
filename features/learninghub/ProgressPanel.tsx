@@ -79,10 +79,8 @@ export function Panel(p: PanelProps) {
       <ProgressView p={p} childId={open.id} />
       {/* Penguin Slide play is family-only, but its fact-strength evidence is a tutor's business: this is the one
           place it was ever wired to render (games/penguin/TutorPanel.tsx was built but never mounted before). */}
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-        <GamesPlayedPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")}
-          detail={<PenguinTutorPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")} />} />
-      </div>
+      <GamesPlayedPanel detailOnly childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")}
+        detail={<div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><PenguinTutorPanel childId={open.id} childName={open.name} tenantQuery={p.qs.replace(/^\?/, "")} /></div>} />
     </div>
   );
 }
