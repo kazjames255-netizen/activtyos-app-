@@ -276,7 +276,7 @@ function GamesHome({ tenantId, childQs, childId, childName, support, yearGroup }
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <span className="text-[12px] font-extrabold uppercase tracking-[0.12em] text-[var(--brand-strong)]">{t("hubshell.gamesPlayNext")}</span>
           <h3 className="m-0 text-[22px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{next.emoji} {t(next.nameKey)}</h3>
-          <Button variant="solid" className="w-full !min-h-[56px] !text-[17px] sm:w-auto sm:!px-10" data-testid="hub-games-play-next" onClick={() => launch(next)}>
+          <Button variant="solid" className="w-full !min-h-[56px] !text-[17px] sm:w-auto sm:min-w-[220px] sm:self-start sm:!px-10" data-testid="hub-games-play-next" onClick={() => launch(next)}>
             {resumable[next.id] ? t("hubshell.gamesContinue") : t("hubshell.gamesPlay")}
           </Button>
         </div>
