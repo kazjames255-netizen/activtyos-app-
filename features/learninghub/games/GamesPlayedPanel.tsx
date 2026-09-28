@@ -10,7 +10,7 @@ import { useHubMessagesReady } from "@/lib/i18n/hubMessages";
 // Read-only. Every game's own progress endpoint already allows a tutor (server/src/routes/hub/gamesApi.ts, quizArcadeApi.ts); an endpoint that
 // fails or has nothing is skipped, so an area only appears once there is something real to say about it.
 interface Topic { name: string; attempts: number; acc: number }
-interface Part { area: string; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
+interface Part { area: string; unfinished?: number; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
 
 const pretty = (s: string) => { const t = s.replace(/[-_]+/g, " ").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
 const wk = (r: { weekDays?: number; weekGoal?: number }) => ({ weekDays: r.weekDays, weekGoal: r.weekGoal });
@@ -33,11 +33,11 @@ const fromMini = (area: string) => (r: unknown): Part => {
   const q = r as Mini; const n = q.puzzlesSolved ?? q.roundsSolved ?? Object.keys(q.bests ?? {}).length;
   return { area, lastAt: q.runs[0]?.at ?? null, attempts: 0, correct: null, topics: [], solved: n, ...wk(q) };
 };
-interface Facts { practice: { trials: number; accuracy: number | null }; wrong: { key: string }[]; runs: { at: string }[]; weekDays: number; weekGoal: number }
+interface Facts { practice: { trials: number; accuracy: number | null }; wrong: { key: string }[]; runs: { at: string }[]; weekDays: number; weekGoal: number; unfinished?: number }
 const fromFacts = (area: string) => (r: unknown): Part => {
   const q = r as Facts;
   const acc = q.practice.accuracy ?? 0;
-  return { area, lastAt: q.runs[0]?.at ?? null, attempts: q.practice.trials, correct: q.practice.accuracy === null ? null : Math.round(acc * q.practice.trials),
+  return { area, unfinished: q.unfinished ?? 0, lastAt: q.runs[0]?.at ?? null, attempts: q.practice.trials, correct: q.practice.accuracy === null ? null : Math.round(acc * q.practice.trials),
     topics: q.wrong.slice(0, 3).map((f) => ({ name: f.key.slice(2).replace("x", "×"), attempts: 1, acc: 0 })), ...wk(q) };
 };
 
@@ -67,11 +67,12 @@ export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail 
   const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
   const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
   const [parts, setParts] = useState<Part[] | null>(null);
+  const [unfinished, setUnfinished] = useState(0);   // runs begun but not finished: they are not scored until finished
   const q = `?childId=${encodeURIComponent(childId)}${tenantQuery ? `&${tenantQuery}` : ""}`;
   useEffect(() => {
     let alive = true; // eslint-disable-line react-hooks/set-state-in-effect
     Promise.all(SOURCES.map((s) => get<unknown>(`${s.path}${q}`).then((r) => s.read(s.area)(r)).catch(() => null)))
-      .then((rows) => { if (alive) setParts(rows.filter((r): r is Part => !!r && r.lastAt !== null)); });
+      .then((rows) => { if (!alive) return; setUnfinished(rows.reduce((n, r) => n + (r?.unfinished ?? 0), 0)); setParts(rows.filter((r): r is Part => !!r && r.lastAt !== null)); });
     return () => { alive = false; };
   }, [q]);
 
@@ -89,7 +90,9 @@ export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail 
 
   const name = (childName ?? "").split(" ")[0] || "";
   if (!parts) return <div aria-busy="true">&hellip;</div>;
-  if (!areas.length) return <p data-testid="games-none" style={{ margin: 0 }}>{T("pl_none", { name })}</p>;
+  if (!areas.length) return unfinished > 0
+    ? <p data-testid="games-started" style={{ margin: 0 }}>{T("pl_started", { name })}</p>
+    : <p data-testid="games-none" style={{ margin: 0 }}>{T("pl_none", { name })}</p>;
 
   const scored = areas.filter((a) => a.correct !== null && a.attempts >= 8).map((a) => ({ a, pct: ((a.correct ?? 0) / a.attempts) * 100 }));
   const best = scored.length > 1 ? [...scored].sort((x, y) => y.pct - x.pct)[0] : null;

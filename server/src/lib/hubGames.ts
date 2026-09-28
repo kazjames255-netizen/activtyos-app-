@@ -267,7 +267,8 @@ export async function resumeSession(o: { tenantId: string; childId: string; sess
 
 /** Tutor / family read of a child's fact strengths. Tutor extras (docs C 6.2): heat map, response-time profile, misconceptions, retention, practice quality, effort flags, productive vs total time. */
 export async function factsOverview(tenantId: string, childId: string, nowIso = new Date().toISOString()) {
-  const [facts, profile, sess] = await Promise.all([loadFacts(tenantId, childId), loadProfile(tenantId, childId), sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", "done").get()]);
+  const openRuns = (st: "started" | "paused") => sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", st).get();
+  const [facts, profile, sess, started, paused] = await Promise.all([loadFacts(tenantId, childId), loadProfile(tenantId, childId), sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", "done").get(), openRuns("started"), openRuns("paused")]);
   const rt0 = profile?.rt0Ms ?? DEFAULT_RT0_MS;
   const rows = [...facts.values()].map((f) => {
     const wrong = Object.entries(f.wrongAnswers).sort((p, q) => q[1] - p[1])[0];
@@ -298,7 +299,7 @@ export async function factsOverview(tenantId: string, childId: string, nowIso = 
   };
   const effort = { rapidGuessRuns: docs.filter((d) => (d.get("summary.guessed") as number) > 0).length, timeouts: docs.reduce((a, d) => a + ((d.get("summary.timeouts") as number) ?? 0), 0), note: "engagement notes, not judgements" };
   return {
-    childId, facts: rows, slowButCorrect: rows.filter((r) => r.correct > 0 && r.band === "slow" && r.thaw >= 1).slice(0, 12), wrong: rows.filter((r) => r.thaw === 1 && r.errType).slice(0, 12),
+    childId, /** runs begun but not finished (started / paused): a run only counts once it is finished, so a tutor can tell "started, not finished" from "never played". */ unfinished: started.size + paused.size, facts: rows, slowButCorrect: rows.filter((r) => r.correct > 0 && r.band === "slow" && r.thaw >= 1).slice(0, 12), wrong: rows.filter((r) => r.thaw === 1 && r.errType).slice(0, 12),
     pinned: profile?.pinned ?? [], bests: profile?.bests ? Object.fromEntries(Object.entries(profile.bests).map(([k, v]) => [k, { fish: v!.fish, correct: v!.correct, answered: v!.answered, at: v!.at }])) : {}, runs: runs.slice(0, 12), mtc: mtcRuns,
     totals: { facts: rows.length, secure: rows.filter((r) => r.thaw >= 3).length, gold: rows.filter((r) => r.thaw === 4).length, fluent: rows.filter((r) => r.thaw >= 3).length },
     heat, rtProfile, misconceptions, practice, effort, weekDays: weekDaysOf(days, nowIso), weekGoal: POLICY.weekGoalDays, ability: profile?.theta ?? THETA0, targetRate: [0.8, 0.9],

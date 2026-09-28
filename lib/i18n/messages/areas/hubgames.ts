@@ -348,6 +348,7 @@ const hubgames: Record<string, Record<string, string>> = {
     tutor_more: "More detail: speed and practice",
     pl_title: "What {name} has practised in games",
     pl_none: "{name} hasn't played any games yet.",
+    pl_started: "{name} has started a game but not finished a run yet, so there are no scores to show. A run counts once it is finished.",
     pl_week: "Played on {days} of {goal} days this week.",
     pl_doing_well: "Doing well", pl_getting_there: "Getting there", pl_needs_help: "Needs help", pl_just_started: "Just started",
     pl_right: "{pct}% right ({n} answers)", pl_solved: "{n} solved",
