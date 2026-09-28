@@ -27,6 +27,56 @@ function Card({ color, icon, label, value, sub, testId }: { color: string; icon:
   );
 }
 
+const tone = (pct: number) => (pct >= 80 ? "var(--green)" : pct >= 60 ? "var(--gold)" : "var(--red)");
+/** The quiz card: the last five marked quizzes, newest first, one tight line each (title and score). */
+function QuizzesCard({ label, empty, rows }: { label: string; empty: string; rows: { title: string; pct: number }[] }) {
+  const color = "var(--cat-4)";
+  return (
+    <div data-testid="pc-quiz" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>📝</span>
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
+      </div>
+      {rows.length === 0 ? <div className="mt-2 text-[13px] font-semibold text-[var(--ink)]">{empty}</div> : (
+        <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-quiz-list">
+          {rows.slice(0, 5).map((r, i) => (
+            <li key={i} className="flex items-center gap-2 text-[12.5px]">
+              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
+              <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.title}</span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}%</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Topics practised: the total, then the names of the five most recent (newest first), each with its mastery score. */
+function TopicsCard({ label, total, sub, rows }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[] }) {
+  const color = "var(--cat-2)";
+  return (
+    <div data-testid="pc-topics" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>🧩</span>
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
+        <div className="ms-auto flex items-baseline gap-1.5"><span className="text-[22px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{total}</span><span className="text-[11px] font-semibold text-[var(--ink-2)]">{sub}</span></div>
+      </div>
+      {rows.length > 0 && (
+        <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-topics-list">
+          {rows.slice(0, 5).map((r, i) => (
+            <li key={i} className="flex items-center gap-2 text-[12.5px]" title={r.subject}>
+              <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
+              <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.name}</span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}%</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const RECENT = 5;   // the games card lists only the most recent five areas practised
 
 /** The Games card: same size as the others, colourful; the most recent five areas practised as one tight line each (newest first). */
@@ -64,7 +114,7 @@ function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: strin
   );
 }
 
-export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: string; /** null = no quiz results yet: only the games / homework / flashcards cards. */ quiz: null | { latest: { pct: number; title: string } | null; topics: number; subjects: number; taken: number; who: string; labels: { latest: string; noQuiz: string; topics: string; across: string; taken: string; recent: string } } }) {
+export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: string; /** null = no quiz results yet: only the games / homework / flashcards cards. */ quiz: null | { latest: { pct: number; title: string } | null; /** the five most recent marked quizzes, newest first */ recent: { title: string; pct: number }[]; /** the five topics practised most recently, newest first (name, subject, mastery %) */ topicsRecent: { name: string; subject: string; pct: number }[]; topics: number; subjects: number; taken: number; who: string; labels: { latest: string; noQuiz: string; topics: string; across: string; taken: string; recent: string } } }) {
   const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
   const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
   const now = useNow(60_000);
@@ -83,8 +133,8 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   return (
     <div className="grid grid-cols-2 items-start gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
-      <Card testId="pc-quiz" color="var(--cat-4)" icon="📝" label={quiz.labels.latest} value={quiz.latest ? `${Math.round(quiz.latest.pct)}%` : "–"} sub={quiz.latest ? quiz.latest.title : quiz.labels.noQuiz} />
-      <Card testId="pc-topics" color="var(--cat-2)" icon="🧩" label={quiz.labels.topics} value={quiz.topics} sub={quiz.labels.across} />
+      <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} rows={quiz.recent} />
+      <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
       <Card testId="pc-taken" color="var(--cat-6)" icon="✅" label={quiz.labels.taken} value={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.recent} />
       </>}
       <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
