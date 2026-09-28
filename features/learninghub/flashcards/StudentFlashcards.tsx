@@ -8,7 +8,8 @@ import type { PanelProps } from "../panelTypes";
 import { errMsg } from "../types";
 import { DISPLAY, EmptyState, FOCUS, HERO_BG, Skeleton, useCountUp, withQs } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
-import { subjectColor } from "../kit";
+import { subjectSwatch } from "../subjectColour";
+import { subjectEmoji } from "../shared-ui/subjectEmoji";
 import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { StackedCards } from "./StackedCards";
@@ -61,12 +62,13 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
   // Which topics today's cards come from (largest first).
   const breakdown = useMemo(() => {
     const byId = new Map(topics.map((tp) => [tp.id, tp]));
-    const m = new Map<string, { label: string; subject: string; n: number }>();
+    const m = new Map<string, { label: string; subject: string; n: number; cards: QueueCard[] }>();
     for (const c of queue) {
       const tp = byId.get(c.topicId);
       const key = tp ? tp.id : "other";
-      const cur = m.get(key) ?? { label: tp ? (tp.subtopic ?? tp.topic) : tr("hublessons.fcOther"), subject: tp?.subject ?? "Other", n: 0 };
+      const cur = m.get(key) ?? { label: tp ? (tp.subtopic ?? tp.topic) : tr("hublessons.fcOther"), subject: tp?.subject ?? "Other", n: 0, cards: [] };
       cur.n++;
+      cur.cards.push(c);
       m.set(key, cur);
     }
     return [...m.values()].sort((a, b) => b.n - a.n);
@@ -76,7 +78,7 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
   if (data === null) return <div className="grid gap-3" aria-busy="true" aria-label={tr("hublessons.fcLoadingAria")}><Skeleton className="h-[260px] rounded-3xl" /><Skeleton className="h-[44px]" /></div>;
 
   if (session) {
-    return <ReviewSession cards={session} qs={qs} childId={childId} onError={onError} onFinished={(again) => { setSession(null); setData(null); load(); if (!again) { /* stay on the start screen */ } }} />;
+    return <ReviewSession cards={session} qs={qs} childId={childId} yearGroup={students.find((x) => x.childId === childId)?.yearGroup} subjectOf={(tid) => topics.find((x) => x.id === tid)?.subject ?? ""} onError={onError} onFinished={(again) => { setSession(null); setData(null); load(); if (!again) { /* stay on the start screen */ } }} />;
   }
 
   const nothingAtAll = data.dueCount + data.newCount + data.upcoming === 0;
@@ -121,16 +123,24 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
             </div>
             {breakdown.length > 0 && (
               <div className="mt-4" aria-label={tr("hublessons.fcTopicsAria")}>
-                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/65">{tr("hublessons.fcWhatsIn")}</div>
-                <ul className="flex flex-wrap gap-1.5">
-                  {breakdown.slice(0, 5).map((b) => (
-                    <li key={b.label + b.subject} className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 py-1 ps-2 pe-1 text-[12px] font-bold">
-                      <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: subjectColor(b.subject), boxShadow: "0 0 0 1.5px rgba(255,255,255,.7)" }} />
-                      <span className="truncate">{b.label}</span>
-                      <span className="rounded-full bg-white/20 px-2 py-px text-[11px] tabular-nums">{b.n}</span>
-                    </li>
-                  ))}
-                  {breakdown.length > 5 && <li className="inline-flex items-center px-1.5 text-[12px] font-bold text-white/75">{tr("hublessons.fcPlusMore", { n: breakdown.length - 5 })}</li>}
+                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/65">{tr("hublessons.fcDecksTitle")}</div>
+                <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3" data-testid="hub-fc-decks">
+                  {breakdown.slice(0, 6).map((b) => {
+                    const sw = subjectSwatch(b.subject);
+                    return (
+                      <li key={b.label + b.subject}>
+                        <button type="button" disabled={!gate.ok} aria-label={tr("hublessons.fcDeckAria", { name: b.label, n: b.n })} onClick={() => { if (gate.ok) setSession(b.cards); }}
+                          className={`group relative block w-full rounded-2xl border bg-[var(--surface)] p-3 text-start text-[var(--ink)] shadow-[0_6px_16px_-8px_rgba(0,0,0,.5)] transition hover:-translate-y-0.5 active:translate-y-px disabled:opacity-60 motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS}`}
+                          style={{ borderColor: sw.ring, background: `linear-gradient(160deg, ${sw.bg}, color-mix(in srgb, ${sw.base} 22%, var(--surface)))` }}>
+                          <span aria-hidden className="absolute inset-x-2 -bottom-1.5 -z-10 h-full rounded-2xl border" style={{ background: sw.bg, borderColor: sw.ring, transform: "rotate(-1.6deg)" }} />
+                          <span aria-hidden className="absolute -end-1 -top-1 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[11px] font-extrabold tabular-nums text-white" style={{ background: sw.base, boxShadow: "0 0 0 2px var(--surface)" }}>{b.n}</span>
+                          <span aria-hidden className="block text-[26px] leading-none">{subjectEmoji(b.subject)}</span>
+                          <span className="mt-1.5 block truncate text-[13px] font-extrabold" style={{ color: sw.fg }}>{b.label}</span>
+                          <span className="block text-[11px] font-semibold text-[var(--ink-2)]">{tr("hublessons.fcDeckToGo", { n: b.n })}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}

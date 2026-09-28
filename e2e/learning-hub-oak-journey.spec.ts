@@ -653,7 +653,7 @@ test.describe("5. flashcards from the lesson, spaced repetition", () => {
       await page.waitForTimeout(250);
     }
     await expect(page.getByTestId("hub-fc-summary")).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("hub-fc-summary")).toContainText("Session complete");
+    await expect(page.getByTestId("hub-fc-summary")).toContainText(/You reviewed \d+ cards/);
     await expect.poll(() => reviews.length, { timeout: 20_000 }).toBeGreaterThanOrEqual(cardIds.length + 1);
     const first = await reviews[0];
     expect(first.intervalDays).toBeGreaterThanOrEqual(1);
