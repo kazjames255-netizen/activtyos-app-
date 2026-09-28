@@ -13,6 +13,7 @@ import { errMsg } from "./types";
 import { useFamily } from "./family/FamilyContext";
 import { GamesSummaryCard } from "./games/GamesSummaryCard";
 import { GamesPlayedPanel } from "./games/GamesPlayedPanel";
+import { KidProgressCards } from "./progress/ProgressCards";
 import { PARENT_COPY } from "./family/parentCopy";
 import { useT } from "@/lib/i18n/provider";
 import { hubT } from "./family/hubT";
@@ -41,7 +42,7 @@ export function Panel(p: PanelProps) {
   const [report, setReport] = useState(false);
 
   if (!p.canEdit) {
-    if (kid && p.childId) return <KidStars p={p} childId={p.childId} />; // a child sees stars only (P-03)
+    if (kid && p.childId) return <div className="grid gap-4"><KidStars p={p} childId={p.childId} /><KidProgressCards p={p} childId={p.childId} /></div>; // a child sees their stars and (owner: "child needs to see this info too") the same at-a-glance cards
     if (!p.childId) return <EmptyState icon="users" title={t("hubfam.pgChooseChild")} body={t("hubfam.pgChooseChildBody")} />;
     return (
       <>

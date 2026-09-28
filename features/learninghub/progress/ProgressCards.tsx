@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import { useHubMessagesReady } from "@/lib/i18n/hubMessages";
 import type { PanelProps } from "../panelTypes";
-import { hubPath } from "../shared-assess/api";
+import { hubPath, type Mastery } from "../shared-assess/api";
+import { useHubI18n } from "../family/hubT";
 import { useHubData } from "../shared-assess/hooks";
 import { display } from "../shared-assess/ui";
 import { tint } from "../kit";
@@ -173,5 +174,24 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
         sub={cards.data ? ((cards.data.newCount ?? 0) > 0 ? T("pc_cards_new", { n: cards.data.newCount ?? 0 }) : (cards.data.dueCount ?? 0) > 0 ? T("pc_cards_sub") : T("pc_cards_none")) : cards.error ? "" : T("pc_cards_none")} />
       )}
     </div>
+  );
+}
+
+/** The same cards for a CHILD's own Progress (kid mode): loads the child's mastery itself, builds the quiz / topic lines, then shows the cards. */
+export function KidProgressCards({ p, childId }: { p: PanelProps; childId: string }) {
+  const { data } = useHubData<Mastery>(hubPath(p.qs, "/mastery", { childId }), ["hubMastery", "hubAttempts"]);
+  const { t, tp } = useHubI18n();
+  if (!data) return null;
+  const started = data.subjects.filter((sb) => sb.masteryPct != null || sb.topics.some((tp2) => tp2.attempts > 0)).length;
+  const sorted = [...data.trend].sort((a, b) => b.at.localeCompare(a.at));
+  return (
+    <ProgressCards p={p} childId={childId} quiz={{
+      latest: sorted[0] ? { pct: sorted[0].pct, title: sorted[0].title } : null,
+      recent: sorted.slice(0, 5).map((x) => ({ title: x.title, pct: x.pct })),
+      topicsRecent: data.subjects.flatMap((sb) => sb.topics.filter((x) => x.attempts > 0).map((x) => ({ name: x.subtopic ? `${x.topic} › ${x.subtopic}` : x.topic, subject: sb.subject, pct: x.masteryPct, at: x.lastAttemptAt ?? "" })))
+        .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 5),
+      topics: data.subjects.reduce((n, sb) => n + sb.topics.filter((x) => x.attempts > 0).length, 0), subjects: started, taken: data.trend.length, who: "",
+      labels: { latest: t("hubfam.pgLatestQuiz"), noQuiz: t("hubfam.pgNoQuizzesYet"), topics: t("hubfam.pgTopicsPractised"), across: tp("hubfam.pgAcrossSubjects", started), taken: t("hubfam.pgQuizzesTaken"), recent: t("hubfam.pgRecentMarked") },
+    }} />
   );
 }
