@@ -372,9 +372,12 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   // useHubData.ts before it ever reaches here.
   // Reception–Y2 (KS1): no subject chips or search on "Stars" (the drill-in is for readers), and no typing box anywhere.
   const ks1Kid = kid && bandOrDefault(hub.child?.yearGroup) === "ks1";
-  const chips = active === "notes" ? false : tutor || kid   // Lessons (any portal) has its own subject picker below (the curriculum card) — a second one up here read as a confusing duplicate.
-    ? active === "quizzes" || active === "diagnostic" || (active === "dashboard" && !ks1Kid && !kid)   // Progress drills into a subject's topics with these chips for the TUTOR only — a child's Progress already breaks it down by subject with the orbs below, so the row on top is a second, redundant picker there too (Kaz: "not relevant on this page").
-    : !!famActiveTop && ["learn", "progress"].includes(famActiveTop.id);
+  // Kaz asked repeatedly, across every portal/mode, for this row gone from Progress ("dashboard") — it is
+  // NEVER shown there now, tutor included. Only Quizzes/Starting quizzes (picking which topic to browse) and
+  // Lessons' OWN picker (rendered inside NotesPanel, not here) still use a subject filter.
+  const chips = active === "notes" || active === "dashboard" ? false : tutor || kid
+    ? active === "quizzes" || active === "diagnostic"
+    : !!famActiveTop && famActiveTop.id === "learn";
   // Notes (Lessons & curriculum) has its own primary browse now — the always-open curriculum card, whose tiles
   // lead straight to a lesson list — so it no longer needs the subject/topic sidebar. Tools has its own filters.
   // The left "Subjects & topics" card is gone everywhere (owner decision): the curriculum map and the per-panel chips replace it.
