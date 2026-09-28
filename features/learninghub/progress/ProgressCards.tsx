@@ -54,7 +54,7 @@ function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty:
 }
 
 /** Topics practised: the total, then the names of the five most recent (newest first), each with its mastery score. */
-function TopicsCard({ label, total, sub, caption, rows }: { label: string; total: number; sub: string; caption: string; rows: { name: string; subject: string; pct: number }[] }) {
+function TopicsCard({ label, total, sub, rows }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[] }) {
   const color = "var(--cat-2)";
   return (
     <div data-testid="pc-topics" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
@@ -74,7 +74,6 @@ function TopicsCard({ label, total, sub, caption, rows }: { label: string; total
           ))}
         </ul>
       )}
-      {rows.length > 0 && <div className="mt-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">{caption}</div>}
     </div>
   );
 }
@@ -136,7 +135,7 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
     <div className="grid grid-cols-2 items-start gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
       <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} />
-      <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} caption={T("pc_topics_from")} rows={quiz.topicsRecent} />
+      <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
       </>}
       <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
       <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")} value={rows && rows.length ? `${handed}/${rows.length}` : "–"}
