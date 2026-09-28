@@ -162,6 +162,11 @@ test("Set homework is bare; a worksheet is picked, previewed (interactive quiz) 
   const card = cardWith(page, mine, "Hand-ins");
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card).toContainText(`Worksheet: ${L.title}`);
+  // The blank Set homework form can pop back over the list (the "Set homework" tab opens it): cancel it until the list is clickable.
+  await expect(async () => {
+    if (await dlg.isVisible().catch(() => false)) await dlg.getByRole("button", { name: "Cancel" }).click();
+    await expect(dlg).toHaveCount(0, { timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
   await card.getByTestId("hub-hw-view-worksheet").click();
   await expect(page.locator("#hub-hw-quiz-preview")).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press("Escape");
