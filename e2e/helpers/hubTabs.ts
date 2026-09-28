@@ -22,7 +22,6 @@ const MAP: Entry[] = [
   { top: "quizzes", sub: "starting", labels: ["Starting quizzes", "Placement test"] },
   { top: "quizzes", sub: "newquiz", labels: ["New quiz"] },
   { top: "homework", sub: "mark", labels: ["Homework", "To mark"] },
-  { top: "homework", sub: "inbox", labels: ["Inbox"] },
   { top: "homework", sub: "set", labels: ["Set homework"] },
   { top: "messages", sub: null, labels: ["Messages", "Student message centre"] },
 ];
@@ -69,7 +68,8 @@ export async function pickChild(page: Page, childName: string): Promise<void> {
   const radio = page.getByRole("radio", { name: childName });
   if (await radio.isVisible().catch(() => false)) { await radio.click(); return; }
   if (!(await page.getByRole("tab").first().isVisible({ timeout: 8_000 }).catch(() => false))) {
-    await page.getByText(childName).first().click();
+    // The card in "Everyone's progress" (the header line also names the child, so match the card that carries the tutor line).
+    await page.locator('button, a, [role="button"], [data-ui="card"]').filter({ hasText: childName }).filter({ hasText: /Tutor:/ }).last().click();
   } else {
     // Tabs are already up (a single child, or one remembered): make sure it is THIS child (the child chips sit above the tabs).
     const chip = page.getByRole("button", { name: new RegExp(childName) }).first();

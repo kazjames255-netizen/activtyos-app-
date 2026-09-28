@@ -30,7 +30,7 @@ export function resolveTab(raw: string | null | undefined): TabKey | null {
 /** Old-vocabulary `?tab=` values that also name a sub-tab of the grouped tutor strip (a bare panel key needs none: it has a default). */
 export const SUB_ALIAS: Record<string, string> = {
   schedule: "schedule", "schedule-video-lesson": "schedule", "teach-in-person": "live", enrol: "enrol", "enrol-a-student": "enrol",
-  "new-quiz": "newquiz", "set-homework": "set", "to-mark": "mark", inbox: "inbox", results: "results", markbook: "results",
+  "new-quiz": "newquiz", "set-homework": "set", "to-mark": "mark", inbox: "results", results: "results", markbook: "results",
 };
 
 /** `?tab=` + optional `?sub=` -> the panel key and (validated) sub-tab id. `?tab=diagnostic` -> {diagnostic, null}; `?tab=set-homework` -> {homework, "set"}. */
