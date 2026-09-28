@@ -300,11 +300,14 @@ function GameRunner({ game, tenantId, childId, childName, support, startTables, 
   // state, so this just bumps a token and lets the child do the actual saving-then-exiting (see each component's
   // `exitToken` effect). A resumed run exits exactly the same way, so leaving it again is still safe.
   const [exitAt, setExitAt] = useState(0);
+  // Only the slide-style games (Penguin / Turbo / the applied trio) watch `exitToken` and leave once their checkpoint is saved. Every other game has no
+  // token to react to, so bumping it did NOTHING and this button was dead: those leave straight away (a short run has nothing to checkpoint).
+  const checkpointed = game === "penguin" || game === "turbo" || APPLIED_GAMES.has(game);
   return (
     <div data-testid="hub-games-runner">
       {/* A real way back to the card list — never a dead end, never relying on the browser's Back button. Penguin
           Slide's own map screen also has a "Done" button (ui/JourneyMap.tsx) wired to this same onExit. */}
-      <button type="button" onClick={() => setExitAt(Date.now())} data-testid="hub-games-back"
+      <button type="button" onClick={() => (checkpointed ? setExitAt(Date.now()) : onExit())} data-testid="hub-games-back"
         className={`mb-3 inline-flex min-h-[44px] items-center gap-1.5 rounded-lg pe-3 text-[13px] font-bold text-[var(--ink-2)] hover:text-[var(--brand)] ${FOCUS}`}>
         <Icon name="arrowLeft" size={16} className="rtl:rotate-180" />{t("hubshell.gamesBackToGames")}
       </button>

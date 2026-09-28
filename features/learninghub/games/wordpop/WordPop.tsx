@@ -136,7 +136,8 @@ export default function WordPop({ backend, support, onExit }: { backend: QuizBac
 
   if (phase.kind === "done") {
     const { result } = phase;
-    const pct = result.total ? Math.round((result.score / result.total) * 100) : 0;
+    // `score` here is the combo-weighted POINTS (210), not the number right: dividing it by the question count gave "1750% correct". Count the right answers.
+    const pct = result.rows.length ? Math.round((result.rows.filter((r) => r.correct).length / result.rows.length) * 100) : 0;
     return (
       <div className="flex h-full flex-col gap-4 overflow-y-auto p-5" data-testid="wordpop-results">
         <div className="flex flex-col items-center gap-1 text-center">

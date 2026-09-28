@@ -40,7 +40,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-import { tabOf, openTab } from "./helpers/hubTabs";
+import { tabOf, openTab, pickChild } from "./helpers/hubTabs";
 
 // If .env.local points the web app at a tunnel that isn't up, send its API calls to the local API instead.
 const envApi = (() => {
@@ -97,12 +97,7 @@ async function openParentLessons(page: Page) {
   await gotoHub(page, "/custdash/learninghub");
   const provider = page.getByLabel("Provider");
   if (await provider.isVisible().catch(() => false)) await provider.selectOption(tenantId);
-  const select = page.getByRole("combobox", { name: "Child" });
-  if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
-  else {
-    const radio = page.getByRole("radio", { name: childName });
-    if (await radio.isVisible().catch(() => false)) await radio.click();
-  }
+  await pickChild(page, childName);
   await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }

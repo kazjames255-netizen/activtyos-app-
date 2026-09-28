@@ -36,7 +36,12 @@ export async function openTab(page: Page, name: RegExp | string): Promise<void> 
   await page.getByRole("tab").first().waitFor({ state: "visible", timeout: 30_000 });
   const grouped = (await page.locator('[role="tab"][data-top]').count()) > 0;
   const e = grouped ? MAP.find((m) => m.labels.some((l) => matches(name, l))) : undefined;
-  if (!e) { await tabOf(page, name).click(); return; }
+  if (!e) {
+    const direct = tabOf(page, name);
+    // A parent's / child's flat strip calls the tutor's "Lessons" tab "Learn".
+    if ((await direct.count()) === 0 && /Lessons/i.test(String(name))) { await page.getByRole("tab", { name: /^Learn/ }).click(); return; }
+    await direct.click(); return;
+  }
   if (!e.sub) { await page.locator(`[role="tab"][data-top="${e.top}"]`).click(); return; }
   const sub = page.locator(`[role="tab"][data-sub="${e.sub}"]`);
   if (!(await sub.isVisible().catch(() => false))) {
@@ -44,4 +49,20 @@ export async function openTab(page: Page, name: RegExp | string): Promise<void> 
     await sub.waitFor({ state: "visible", timeout: 15_000 });
   }
   await sub.click();
+}
+
+/** A parent's hub: choose which child is learning. One child opens straight in; several land on "Everyone's progress" (no tabs yet), and the
+ *  child is chosen by opening their card (older builds used a Child <select> / radio, still honoured). */
+export async function pickChild(page: Page, childName: string): Promise<void> {
+  const select = page.getByRole("combobox", { name: "Child" });
+  if (await select.isVisible().catch(() => false)) { await select.selectOption({ label: childName }); return; }
+  const radio = page.getByRole("radio", { name: childName });
+  if (await radio.isVisible().catch(() => false)) { await radio.click(); return; }
+  if (!(await page.getByRole("tab").first().isVisible({ timeout: 8_000 }).catch(() => false))) {
+    await page.getByText(childName).first().click();
+  } else {
+    // Tabs are already up (a single child, or one remembered): make sure it is THIS child (the child chips sit above the tabs).
+    const chip = page.getByRole("button", { name: new RegExp(childName) }).first();
+    if (await chip.isVisible().catch(() => false)) await chip.click().catch(() => {});
+  }
 }
