@@ -13,7 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { auth, db } from "../firebase";
-import { convertPptx } from "./deckConvert";
+import { convertPptx, isCompleteZip } from "./deckConvert";
 import { DECK_DIR, DeckUnavailable, downloadDeck } from "./deckDownload";
 import { prepareSlideImage, putSlideImage } from "./slideImages";
 
@@ -127,7 +127,22 @@ async function main() {
   async function runJob(j: Job, w: number) {
     const t0 = Date.now();
     try {
-      const pptx = await downloadDeck(j.deck);
+      // downloadDeck's on-disk cache only checks the first two bytes ("PK") before trusting a cached .pptx, and its own
+      // fetch has no check that the body it got is the WHOLE file (a big deck — some of these run to 80+MB — can have
+      // its stream cut short without fetch() itself throwing). Either way the result is a truncated file that still
+      // starts "PK": validate the full zip structure (isCompleteZip, the real check convertPptx's reader does) ourselves
+      // before trusting it, and force a fresh download (deleting the bad cache first, so it's never reused) up to twice
+      // more with a short backoff — proven to recover real cases (a stale 18MB truncated cache from an old interrupted
+      // run re-fetched clean at its true 86MB). If it's still incomplete after 3 tries, this deck genuinely can't be
+      // fetched right now and the lesson is left failed rather than looping forever.
+      let pptx = await downloadDeck(j.deck);
+      for (let attempt = 1; attempt <= 3 && !isCompleteZip(pptx); attempt++) {
+        log(`warn w${w} ${j.label} · truncated/corrupt download (attempt ${attempt}), re-fetching`);
+        try { fs.unlinkSync(path.join(DECK_DIR, `${j.deck}.pptx`)); } catch { /* already gone */ }
+        if (attempt > 1) await sleep(3000 * attempt);
+        pptx = await downloadDeck(j.deck, { force: true });
+      }
+      if (!isCompleteZip(pptx)) throw new Error("not a zip file (truncated after 3 fresh downloads)");
       const { slides, stats } = await convertPptx(pptx, { putImage });
       if (!slides.length) throw new Error("converted to 0 slides");
       const body = JSON.stringify({ lesson: { deckSlides: sanitiseForImport(slides, `deck ${j.deck}`) } });
