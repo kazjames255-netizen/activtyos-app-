@@ -139,20 +139,28 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
       {partial && <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-[12px] leading-snug text-[var(--ink-2)] sm:px-5">{who ? tr("hubfam.pgPartialWho", { a: practised, b: topics.length, name: who }) : tr("hubfam.pgPartialYou", { a: practised, b: topics.length })}</div>}
 
       {topics.length > 0 && (
-        <ol className="m-0 grid list-none gap-0 border-t border-[var(--line)] p-0" aria-label={tr("hubfam.pgJourneyAria", { subject: s.subject })}>
+        <ol className="relative m-0 grid list-none gap-0 border-t border-[var(--line)] p-0 py-2"
+          style={{ backgroundImage: `radial-gradient(color-mix(in srgb, ${tone.fill} 14%, transparent) 1.3px, transparent 1.3px)`, backgroundSize: "14px 14px" }}
+          aria-label={tr("hubfam.pgJourneyAria", { subject: s.subject })}>
           {topics.map((t, i) => {
             const tt = bandTone(bands, t.band);
             const tried = t.attempts > 0;
             const last = i === topics.length - 1;
+            const side = i % 2 === 0 ? "start" : "end"; // a winding trail: stops alternate left/right, not a straight column
             return (
-              <li key={t.topicId} className="relative flex gap-3.5 px-4 py-3.5 sm:px-5" data-testid="hub-journey-stop">
-                {/* The trail: a dashed connector running down through every stop but the last, behind the ring. */}
-                {!last && <span aria-hidden className="absolute start-[35.5px] top-[58px] bottom-0 w-0 border-s-2 border-dashed sm:start-[43.5px] sm:top-[66px]" style={{ borderColor: `color-mix(in srgb, ${tt.fill} 35%, var(--line))` }} />}
+              <li key={t.topicId} className={`relative flex gap-3 px-3 py-3 sm:gap-4 sm:px-4 ${side === "end" ? "ms-8 sm:ms-16" : ""}`} data-testid="hub-journey-stop">
+                {/* The path: a dotted footstep-style connector winding down behind each stop. It's a child of the li, which is
+                    itself already shifted right on "end" stops (below), so the connector just tracks its own ring at a fixed offset. */}
+                {!last && <span aria-hidden className="absolute start-[27px] top-[68px] bottom-[-12px] w-0 border-s-[3px] border-dotted sm:top-[80px]" style={{ borderColor: `color-mix(in srgb, ${tt.fill} 55%, var(--line))` }} />}
                 <div className="relative z-[1] flex-none">
-                  <ScoreRing pct={tried ? t.masteryPct : 0} size={56} stroke={6} tone={tried ? tt : NEUTRAL} passMark={t.baselinePct} state={tried ? undefined : "empty"}
+                  <ScoreRing pct={tried ? t.masteryPct : 0} size={60} stroke={6} tone={tried ? tt : NEUTRAL} passMark={t.baselinePct} state={tried ? undefined : "empty"}
                     ariaLabel={tr(who === null && !p.canEdit ? "hubfam.pgTopicLevel" : "hubfam.pgTopicMastery", { topic: t.topic })} />
+                  {t.baselinePct != null && (
+                    <span aria-hidden className="absolute -end-1.5 -top-1.5 grid h-6 w-6 place-items-center rounded-full text-[12px]" style={{ background: "var(--surface)", boxShadow: "var(--shadow-sm)", border: "1.5px solid var(--line)" }} title={tr("hubfam.pgStartedAtSfx", { pct: Math.round(t.baselinePct) })}>🚩</span>
+                  )}
+                  {last && tried && <span aria-hidden className="absolute -bottom-1 -end-1 text-[16px]">🏁</span>}
                 </div>
-                <div className="min-w-0 flex-1 pt-1">
+                <div className="min-w-0 flex-1 rounded-2xl border px-3 py-2 sm:px-3.5" style={{ background: tried ? `color-mix(in srgb, ${tt.fill} 7%, var(--surface))` : "var(--surface)", borderColor: tried ? `color-mix(in srgb, ${tt.fill} 22%, var(--line))` : "var(--line)" }}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 text-[13px] font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{t.topic}{t.subtopic ? <span className="font-semibold text-[var(--ink-3)]"> › {t.subtopic}</span> : null}</div>
                     <BandChip bands={bands} band={tried ? t.band : null} pct={tried ? t.masteryPct : null} />
