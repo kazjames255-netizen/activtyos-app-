@@ -53,6 +53,7 @@ export function TutorHome(props: PanelProps) {
   const { qs, students, config, onError, goTo } = props;
   const { t, locale, pl } = useH();
   const go: Go = goTo ?? (() => undefined);
+  const [feedOpen, setFeedOpen] = useState(true); // Recent activity: at most 5 rows, Open/Close hides the list
   const [more, setMore] = useState(false); // phones: activity feed + chart behind one toggle, remembered per device
   // eslint-disable-next-line react-hooks/set-state-in-effect -- read the per-device preference after mount (SSR-safe)
   useEffect(() => { try { if (localStorage.getItem("hub.home.more") === "1") setMore(true); } catch { /* private mode */ } }, []);
@@ -119,7 +120,7 @@ export function TutorHome(props: PanelProps) {
       const avg = v.reduce((a, b) => a + b, 0) / v.length;
       if (avg < mid) nudges.push({ childId: o.childId, childName: o.childName, reason: low ? t("hubshell.hm_averagingBand", { avg: Math.round(avg), band: low.label }) : t("hubshell.hm_averaging", { avg: Math.round(avg) }) });
     }
-    return { upcoming, toMark, overdue, written, writtenQuiz, writtenPlacement: writtenPlacement.length, quiet, feed: feed.slice(0, 10), gains, nudges, days: perDay(attempts, now, 14), hasResults: attempts.some((a) => a.status === "marked") };
+    return { upcoming, toMark, overdue, written, writtenQuiz, writtenPlacement: writtenPlacement.length, quiet, feed: feed.slice(0, 5), gains, nudges, days: perDay(attempts, now, 14), hasResults: attempts.some((a) => a.status === "marked") };
   }, [parts, now, students, config.masteryBands, mineOnly, myUid, locale]); // eslint-disable-line react-hooks/exhaustive-deps -- t is rebuilt each render; it only changes with `locale`
 
   if (!ready || !parts || !d) return <HomeSkeleton label={t("hubshell.hm_loadingDay")} />;
@@ -184,12 +185,13 @@ export function TutorHome(props: PanelProps) {
       </button>}
 
       {!firstRun && <div id="hub-home-more" className={`${more ? "grid" : "hidden lg:grid"} gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]`}>
-        <Card title={t("hubshell.hm_recentActivity")} icon="sparkle" tone="brand" style={rise(5)}>
+        <Card title={t("hubshell.hm_recentActivity")} icon="sparkle" tone="brand" style={rise(5)}
+          aside={d.feed.length > 0 ? <button type="button" data-testid="hub-home-feed-toggle" aria-expanded={feedOpen} aria-controls="hub-home-feed" onClick={() => setFeedOpen((o) => !o)} className={`inline-flex min-h-[36px] items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-[12px] font-extrabold text-[var(--brand-strong)] ${FOCUS}`}>{feedOpen ? t("hubshell.hm_feedClose") : t("hubshell.hm_feedOpen")} <span aria-hidden>{feedOpen ? "▲" : "▼"}</span></button> : undefined}>
           {d.feed.length === 0 ? (
             <EmptyState mascot="sleep" icon="sparkle" title={t("hubshell.hm_quietTitle")} body={t("hubshell.hm_quietBody")} />
           ) : (
-            <ol className="relative space-y-0.5" aria-label={t("hubshell.hm_latestEvents")}>
-              {d.feed.map((f) => (
+            <ol id="hub-home-feed" hidden={!feedOpen} className="relative space-y-0.5" aria-label={t("hubshell.hm_latestEvents")}>
+              {d.feed.slice(0, 5).map((f) => (
                 <li key={f.id}>
                   <button type="button" onClick={() => go(f.go)} className={`flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-2 py-1.5 text-start transition hover:bg-[var(--panel)] ${FOCUS}`}>
                     <span className="relative flex-none"><Person name={f.who} size={34} /><span aria-hidden className="absolute -bottom-1 -end-1 grid h-[18px] w-[18px] place-items-center rounded-full border-2 border-[var(--surface)]" style={{ background: TONES[f.tone].bg, color: TONES[f.tone].fg }}><Icon name={f.icon} size={10} strokeWidth={2.6} /></span></span>

@@ -186,6 +186,8 @@ const ROWS: Row[] = [
   ["hm_uHrs", "hrs", "godz.", "ore", "گھنٹے", "ਘੰਟੇ", "ঘণ্টা", "ساعات", "h", "h", "h", "awr"],
   ["hm_uMin", "min", "min", "min", "منٹ", "ਮਿੰਟ", "মিনিট", "دقيقة", "min", "min", "min", "munud"],
   ["hm_uSec", "sec", "s", "sec", "سیکنڈ", "ਸਕਿੰਟ", "সেকেন্ড", "ثانية", "s", "s", "s", "eiliad"],
+  ["hm_feedClose", "Close", "Zamknij", "Închide", "بند کریں", "ਬੰਦ ਕਰੋ", "বন্ধ করুন", "إغلاق", "Fechar", "Cerrar", "Fermer", "Cau"],
+  ["hm_feedOpen", "Open", "Otwórz", "Deschide", "کھولیں", "ਖੋਲ੍ਹੋ", "খুলুন", "فتح", "Abrir", "Abrir", "Ouvrir", "Agor"],
   ["hm_startsIn", "Starts in {span}", "Start za {span}", "Începe în {span}", "{span} میں شروع ہوگا", "{span} ਵਿੱਚ ਸ਼ੁਰੂ ਹੋਵੇਗਾ", "{span} পরে শুরু", "يبدأ بعد {span}", "Começa daqui a {span}", "Empieza en {span}", "Commence dans {span}", "Yn dechrau ymhen {span}"],
   ["hm_nextLesson", "Next lesson", "Następna lekcja", "Următoarea lecție", "اگلا سبق", "ਅਗਲਾ ਪਾਠ", "পরের পাঠ", "الدرس القادم", "Próxima aula", "Próxima lección", "Prochaine leçon", "Y wers nesaf"],
   ["hm_nothingCal", "Nothing on the calendar yet", "Kalendarz jest jeszcze pusty", "Nimic în calendar încă", "کیلنڈر میں ابھی کچھ نہیں", "ਕੈਲੰਡਰ ਵਿੱਚ ਹਾਲੇ ਕੁਝ ਨਹੀਂ", "ক্যালেন্ডারে এখনও কিছু নেই", "لا شيء في التقويم بعد", "Ainda nada no calendário", "Aún no hay nada en el calendario", "Rien au calendrier pour l’instant", "Dim byd yn y calendr eto"],
