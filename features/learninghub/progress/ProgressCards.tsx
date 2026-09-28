@@ -126,7 +126,9 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
 
   const areas = games.areas;
   const scored = areas.filter((a) => a.correct !== null && a.attempts >= 8).map((a) => ({ a, pct: ((a.correct ?? 0) / a.attempts) * 100 })).sort((x, y) => y.pct - x.pct);
-  const rows = Array.isArray(hw.data) ? hw.data.filter((h) => h.childId === childId) : null;
+  // A parent gets this child's homework rows; a tutor gets the tenant's homework list (no per-child status), so count what was set for THIS child.
+  const setForChild = p.canEdit && Array.isArray(hw.data) ? (hw.data as unknown as { assignedChildIds?: string[] }[]).filter((h) => h.assignedChildIds?.includes(childId)).length : null;
+  const rows = !p.canEdit && Array.isArray(hw.data) ? hw.data.filter((h) => h.childId === childId) : null;
   const handed = rows ? rows.filter((h) => h.submission.status !== "assigned").length : 0;
   const todo = rows ? rows.filter((h) => h.submission.status === "assigned") : [];
   const overdue = todo.filter((h) => new Date(h.dueAt).getTime() < now).length;
@@ -138,10 +140,11 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
       <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
       </>}
       <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
-      <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")} value={rows && rows.length ? `${handed}/${rows.length}` : "–"}
-        sub={!rows || !rows.length ? T("pc_hw_none") : overdue ? T("pc_hw_overdue", { n: overdue }) : todo.length ? T("pc_hw_todo", { n: todo.length }) : T("pc_hw_clear")} />
+      <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")}
+        value={setForChild !== null ? (setForChild || "–") : rows && rows.length ? `${handed}/${rows.length}` : "–"}
+        sub={hw.error ? "" : setForChild !== null ? (setForChild ? T("pc_hw_set") : T("pc_hw_none")) : !rows || !rows.length ? T("pc_hw_none") : overdue ? T("pc_hw_overdue", { n: overdue }) : todo.length ? T("pc_hw_todo", { n: todo.length }) : T("pc_hw_clear")} />
       <Card testId="pc-cards" color="var(--cat-1)" icon="🃏" label={T("pc_cards")} value={cards.data ? cards.data.dueCount ?? 0 : "–"}
-        sub={cards.data ? ((cards.data.newCount ?? 0) > 0 ? T("pc_cards_new", { n: cards.data.newCount ?? 0 }) : (cards.data.dueCount ?? 0) > 0 ? T("pc_cards_sub") : T("pc_cards_none")) : T("pc_cards_none")} />
+        sub={cards.data ? ((cards.data.newCount ?? 0) > 0 ? T("pc_cards_new", { n: cards.data.newCount ?? 0 }) : (cards.data.dueCount ?? 0) > 0 ? T("pc_cards_sub") : T("pc_cards_none")) : cards.error ? "" : T("pc_cards_none")} />
     </div>
   );
 }
