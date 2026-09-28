@@ -30,6 +30,13 @@ const EMOJI: [RegExp, string][] = [
 // grammar/punctuation 🧱 brick — wrong subject, ugly on a sticker. Checked first, before the general table,
 // whenever the caller says this area belongs to the languages group.
 const LANGUAGE_EMOJI: [RegExp, string][] = [
+  // Grammar-concept topics (the bulk of a KS3+ languages checklist — "Modal verbs", "Negation"…) get their
+  // own varied pictures FIRST, so a whole sticker-book page doesn't repeat one 🗣️ over and over (Kaz: "too
+  // in face"). Ordered most-specific first so e.g. "Future/intentions" doesn't fall into the plain "tense" net.
+  [/adjective|agreement|compar/i, "🎨"], [/asking questions|question/i, "❓"], [/negat/i, "🚫"], [/imperativ|command|instruction/i, "👉"],
+  [/future|intention/i, "🔮"], [/past|preterite|imperfect|perfect tense/i, "⏪"], [/present continuous|-ing|gerund/i, "🏃"], [/conditional/i, "🎯"],
+  [/modal|auxiliary/i, "🔑"], [/reflexive|pronoun/i, "🪞"], [/preposition|connective|conjunction/i, "🔗"], [/tense|verb/i, "⏳"],
+  [/plural|singular|gender|article/i, "🔡"], [/possess/i, "🗝️"], [/comparative|superlative/i, "📏"],
   [/greet|introduc|family|myself/i, "👋"], [/food|drink|meal/i, "🍽️"], [/school|classroom/i, "🎒"], [/holiday|travel|country|place/i, "✈️"],
   [/weather/i, "☀️"], [/animal|pet/i, "🐾"], [/hobby|sport|free time|leisure/i, "⚽"], [/house|home|room/i, "🏠"], [/body|health/i, "🩺"], [/cloth/i, "👕"],
   [/number|count/i, "🔢"], [/time|date|calendar/i, "🕐"], [/opinion|prefer|like/i, "💭"], [/culture|festival/i, "🎉"],

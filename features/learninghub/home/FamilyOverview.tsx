@@ -10,8 +10,9 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { colorFor } from "@/features/money/finance-kit";
 import { Avatar } from "../kit";
-import { HomeSkeleton, Icon, FOCUS } from "./homeKit";
+import { HomeSkeleton, Icon, FOCUS, TONES, DISPLAY, type IconName } from "./homeKit";
 import { firstName } from "./homeLib";
 import { useStudentHome } from "./useHomeData";
 import { DAILY_CARD_CAP } from "./homeLib";
@@ -30,6 +31,10 @@ function titleCase(s: string | undefined | null): string {
 }
 
 interface ActionRow { key: string; label: string; href: string; live?: boolean }
+
+const ROW_LOOK: Record<string, { icon: IconName; tone: keyof typeof TONES }> = {
+  hw: { icon: "homework", tone: "brand" }, lesson: { icon: "video", tone: "violet" }, quiz: { icon: "quiz", tone: "gold" }, cards: { icon: "cards", tone: "violet" },
+};
 
 function ChildRow({ kid, qs, portal, providerName, yearGroup, onOpen }: {
   kid: FamilyKid; qs: string; portal: string; providerName?: string; yearGroup?: string | null; onOpen: () => void;
@@ -85,19 +90,24 @@ function ChildRow({ kid, qs, portal, providerName, yearGroup, onOpen }: {
     return { text: PARENT_COPY.verdict.onTrack, tone: "var(--green)", icon: "check" as const, chip: PARENT_COPY.verdict.onTrack, stats, rows };
   }, [ready, parts, kid.childId, now, first, t, pl, base]);
 
+  const tint = colorFor(kid.childName);
   return (
-    <div data-testid="hub-family-row" data-child-id={kid.childId} className="flex flex-col gap-2.5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-sm)]">
+    <div data-testid="hub-family-row" data-child-id={kid.childId}
+      className="flex flex-col gap-2.5 rounded-[20px] border p-3.5 shadow-[var(--shadow-sm)] transition motion-safe:hover:-translate-y-0.5"
+      style={{ borderColor: `color-mix(in srgb, ${tint} 30%, var(--line))`, background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 9%, var(--surface)), var(--surface) 65%)`, borderInlineStart: `4px solid ${tint}` }}>
       <Link href={base} onClick={onOpen} className={`flex min-h-[64px] items-center gap-3 rounded-xl text-start ${FOCUS}`}>
-        <Avatar name={kid.childName} size={44} />
+        <span className="relative flex-none rounded-full ring-2" style={{ boxShadow: `0 0 0 3px color-mix(in srgb, ${tint} 22%, transparent)` }}><Avatar name={kid.childName} size={46} /></span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-[15px] font-extrabold text-[var(--ink)]">{kid.childName}</span>
+            <span className="text-[15.5px] font-extrabold text-[var(--ink)]" style={DISPLAY}>{kid.childName}</span>
             {yearGroup && <span className="text-[12px] font-bold text-[var(--ink-3)]">{yearGroup}</span>}
           </div>
           {providerName && <div className="truncate text-[11.5px] font-semibold text-[var(--ink-3)]">{t("hubshell.st_tutorName", { name: titleCase(providerName) })}</div>}
         </div>
         {info ? (
-          <span className="flex-none rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ background: `color-mix(in srgb, ${info.tone} 14%, transparent)`, color: info.tone }}>{info.chip}</span>
+          <span className="inline-flex flex-none items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ background: `color-mix(in srgb, ${info.tone} 16%, var(--surface))`, color: info.tone, border: `1px solid color-mix(in srgb, ${info.tone} 35%, transparent)` }}>
+            <Icon name={info.icon} size={12} />{info.chip}
+          </span>
         ) : (
           <div className="h-[22px] w-[92px] flex-none animate-pulse rounded-full bg-[var(--panel)]" aria-hidden />
         )}
@@ -105,27 +115,36 @@ function ChildRow({ kid, qs, portal, providerName, yearGroup, onOpen }: {
       </Link>
 
       {!info ? (
-        <div className="space-y-1.5 ps-[56px]">
+        <div className="space-y-1.5 ps-[58px]">
           <div className="h-[14px] w-[70%] animate-pulse rounded bg-[var(--panel)]" aria-hidden />
           <div className="h-[14px] w-[50%] animate-pulse rounded bg-[var(--panel)]" aria-hidden />
         </div>
       ) : (
         <>
-          {info.stats && <div className="truncate ps-[56px] text-[12px] font-semibold text-[var(--ink-2)]">{info.stats}</div>}
+          {info.stats && <div className="truncate ps-[58px] text-[12px] font-semibold text-[var(--ink-2)]">{info.stats}</div>}
           {info.rows.length > 0 ? (
-            <ul className="m-0 flex list-none flex-col gap-1 p-0">
-              {info.rows.map((r) => (
-                <li key={r.key}>
-                  <Link href={r.href} data-testid="hub-family-action" className={`flex min-h-[40px] w-full items-center gap-2 rounded-xl px-2 text-start text-[12.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)] ${FOCUS}`}>
-                    {r.live && <span className="h-2 w-2 flex-none animate-pulse rounded-full bg-[var(--red)]" aria-hidden />}
-                    <span className="min-w-0 flex-1 truncate">{r.label}</span>
-                    <Icon name="chevronRight" size={14} className="flex-none text-[var(--ink-3)]" />
-                  </Link>
-                </li>
-              ))}
+            <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
+              {info.rows.map((r) => {
+                const look = ROW_LOOK[r.key] ?? ROW_LOOK.hw!;
+                const rt = TONES[look.tone];
+                return (
+                  <li key={r.key}>
+                    <Link href={r.href} data-testid="hub-family-action"
+                      className={`flex min-h-[44px] w-full items-center gap-2.5 rounded-xl border px-2.5 text-start text-[12.5px] font-bold text-[var(--ink)] transition motion-safe:hover:-translate-y-px ${FOCUS}`}
+                      style={{ background: rt.bg, borderColor: rt.line }}>
+                      <span className="relative grid h-8 w-8 flex-none place-items-center rounded-lg" style={{ background: "var(--surface)", color: rt.fg, boxShadow: "var(--shadow-sm)" }}>
+                        <Icon name={look.icon} size={15} />
+                        {r.live && <span aria-hidden className="absolute -end-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-[var(--red)] ring-2 ring-[var(--surface)]" />}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate" style={{ color: rt.fg }}>{r.label}</span>
+                      <span className="flex-none" style={{ color: rt.fg }}><Icon name="chevronRight" size={14} /></span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p className="m-0 ps-[56px] text-[12px] font-semibold text-[var(--ink-3)]">{t("hubshell.hm_familyNothingSet", { name: first, tutor: titleCase(providerName || "") })}</p>
+            <p className="m-0 ps-[58px] text-[12px] font-semibold text-[var(--ink-3)]">{t("hubshell.hm_familyNothingSet", { name: first, tutor: titleCase(providerName || "") })}</p>
           )}
         </>
       )}

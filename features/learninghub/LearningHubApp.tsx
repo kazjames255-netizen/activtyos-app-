@@ -373,7 +373,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   // Reception–Y2 (KS1): no subject chips or search on "Stars" (the drill-in is for readers), and no typing box anywhere.
   const ks1Kid = kid && bandOrDefault(hub.child?.yearGroup) === "ks1";
   const chips = active === "notes" ? false : tutor || kid   // Lessons (any portal) has its own subject picker below (the curriculum card) — a second one up here read as a confusing duplicate.
-    ? active === "quizzes" || active === "diagnostic" || (active === "dashboard" && !ks1Kid)   // Progress drills into a subject's topics with these chips; NOT homework: that page never uses the subject filter (owner: only show these when a card below uses them)
+    ? active === "quizzes" || active === "diagnostic" || (active === "dashboard" && !ks1Kid && !kid)   // Progress drills into a subject's topics with these chips for the TUTOR only — a child's Progress already breaks it down by subject with the orbs below, so the row on top is a second, redundant picker there too (Kaz: "not relevant on this page").
     : !!famActiveTop && ["learn", "progress"].includes(famActiveTop.id);
   // Notes (Lessons & curriculum) has its own primary browse now — the always-open curriculum card, whose tiles
   // lead straight to a lesson list — so it no longer needs the subject/topic sidebar. Tools has its own filters.

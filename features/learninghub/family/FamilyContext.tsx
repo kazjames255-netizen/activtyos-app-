@@ -5,7 +5,7 @@ import { syncHubLocale } from "./hubT";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { cleanSupport, type SupportProfile } from "../support";
-import { Avatar, FOCUS, Icon } from "../kit";
+import { Avatar, FOCUS } from "../kit";
 
 // The family (parent) side of the hub knows WHICH child a screen is for, and says so out loud. The same child id a runner
 // posts results with is the id it looks up its name chip from, so what is shown and what is recorded cannot drift apart.
@@ -152,9 +152,6 @@ export function ChildSwitcher({ portal }: { portal: string }) {
           </Link>
         );
       })}
-      <Link href={`/${portal}/learninghub`} data-testid="hub-child-switcher-all" className={`inline-flex min-h-[44px] flex-none snap-start items-center gap-1.5 rounded-full border border-dashed border-[var(--ink-3)] px-3.5 text-[13px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] ${FOCUS}`}>
-        <Icon name="layers" size={15} />{t("hubshell.hm_backToFamily")}
-      </Link>
     </nav>
   );
 }

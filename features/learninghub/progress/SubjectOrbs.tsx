@@ -62,11 +62,8 @@ export function SubjectOrbs({ p, childId, kid }: { p: PanelProps; childId: strin
                 style={{ background: sw.bg, border: `1.5px solid ${sw.ring}` }}>
                 <GlassOrb pct={has ? pct : null} color={sw.base} size={112} index={i} calm={calm}
                   aria={`${sb.subject}: ${level}${has && showNumbers ? `, ${Math.round(pct)}%` : ""}`}
-                  center={has ? (
-                    <span className="grid gap-0.5">
-                      <span className="text-[30px] leading-none">{emojiOf(pct)}</span>
-                      {showNumbers && <span className="text-[15px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{Math.round(pct)}%</span>}
-                    </span>
+                  center={has && showNumbers ? (
+                    <span className="text-[19px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{Math.round(pct)}%</span>
                   ) : undefined} />
                 <div className="min-w-0">
                   <div className="truncate text-[15px] font-extrabold leading-tight" style={{ color: sw.fg, fontFamily: "var(--ff-display)" }}>{sb.subject}</div>
