@@ -4,7 +4,7 @@ import { db } from "../../firebase";
 import { canReadContent, canSee, canWriteRow, hubConfig, needsFork, okId, registerTopicRef, requireEdit, resolveCtx, type EnrolledChild, type HubCtx } from "../../lib/hubCore";
 import { buildQueue, isQuality, sm2, type SrsState } from "../../lib/hubSrs";
 import { chunk, eligibleStudents, flashcardsCol, isParent, nowIso, parentChild, reviewsCol, tenantEnrolments, topicFamily, visibleTopic } from "./teachingCommon";
-import { cardIndex, patchCard, tenantTopics as cachedTopics, topicRank, type CardRow } from "../../lib/hubIndex";
+import { cardIndex, childAssignedNoteIds, noteIndex, patchCard, tenantTopics as cachedTopics, topicRank, type CardRow } from "../../lib/hubIndex";
 import { hubCached } from "../../lib/hubCache";
 import { pingHub } from "../../lib/hubPing";
 
@@ -55,10 +55,24 @@ function scopeFromDoc(d: FirebaseFirestore.QueryDocumentSnapshot): [string, Set<
   const cardIds = d.get("cardIds") as string[] | null | undefined;
   return [d.get("topicId") as string, cardIds && cardIds.length ? new Set(cardIds) : null];
 }
-/** Every topic this child has been explicitly assigned flashcards for, and which cards within it (null = all). */
+/** Topics of the LESSONS assigned to this child through homework. A lesson brings its topic's flashcards with it: no separate "assign flashcards" step
+ *  (owner: cards "need to auto appear when they are associated to a lesson she has been assigned"). */
+async function lessonTopicsFor(tenantId: string, childId: string): Promise<Set<string>> {
+  const [ids, notes] = await Promise.all([childAssignedNoteIds(tenantId, childId), noteIndex(tenantId)]);
+  const out = new Set<string>();
+  for (const id of ids) { const t = notes.get(id)?.topicId; if (t) out.add(t); }
+  return out;
+}
+/** Every topic this child has been given flashcards for, and which cards within it (null = all): an explicit topic / card assignment (a specific subset
+ *  stays a subset), plus the whole topic of every lesson assigned to them. */
 async function assignedScopeFor(tenantId: string, childId: string): Promise<AssignedScope> {
-  const snap = await assignmentsCol().where("tenantId", "==", tenantId).where("childId", "==", childId).select("topicId", "cardIds").get();
-  return new Map(snap.docs.map(scopeFromDoc));
+  const [snap, lessonTopics] = await Promise.all([
+    assignmentsCol().where("tenantId", "==", tenantId).where("childId", "==", childId).select("topicId", "cardIds").get(),
+    lessonTopicsFor(tenantId, childId),
+  ]);
+  const m: AssignedScope = new Map(snap.docs.map(scopeFromDoc));
+  for (const t of lessonTopics) if (!m.has(t)) m.set(t, null);
+  return m;
 }
 /** The whole tenant's assignments at once, grouped by child — one read instead of one per roster row (the tutor
  *  stats table computes "cards available" for every student). */
@@ -70,6 +84,17 @@ async function assignedScopeByChild(tenantId: string): Promise<Map<string, Assig
     const [topicId, scope] = scopeFromDoc(d);
     const existing = m.get(childId);
     if (existing) existing.set(topicId, scope); else m.set(childId, new Map([[topicId, scope]]));
+  }
+  // …plus the whole topic of every lesson assigned through homework (same rule as assignedScopeFor).
+  const [hw, notes] = await Promise.all([db.collection("hubHomework").where("tenantId", "==", tenantId).select("assignedChildIds", "noteIds").get(), noteIndex(tenantId)]);
+  for (const d of hw.docs) {
+    const topics = new Set(((d.get("noteIds") as string[] | undefined) ?? []).map((id) => notes.get(id)?.topicId).filter((t): t is string => !!t));
+    if (!topics.size) continue;
+    for (const childId of (d.get("assignedChildIds") as string[] | undefined) ?? []) {
+      const cur = m.get(childId) ?? new Map<string, Set<string> | null>();
+      for (const t of topics) if (!cur.has(t)) cur.set(t, null);
+      m.set(childId, cur);
+    }
   }
   return m;
 }
