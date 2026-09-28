@@ -403,7 +403,7 @@ const STATUS_COLOR: Record<TileKind, string> = {
 };
 /** ONE sticker tile, shared by the child's sticker book (no number) and the provider's map (lesson count inside). Status is the border style + a corner glyph + a word, never colour alone. */
 export function Tile({ area, kind, count, word, sub, badge, label, selected, onClick }: { area: MapArea; kind: TileKind; count?: number; word: string; sub?: string; badge?: string; label: string; selected?: boolean; onClick: () => void }) {
-  const emoji = emojiFor(area.area, area.strand);
+  const emoji = emojiFor(area.area, area.strand, area.group);
   if (count === undefined) { // child sticker: big picture, centred — the emoji stays full colour whether done or not
     // (a "next" tile is what a child sees before starting a topic; desaturating it read as broken/lifeless, not
     // inviting — so only the border style + this corner badge + the word below now carry the done/not-done cue).

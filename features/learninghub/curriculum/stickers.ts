@@ -25,4 +25,18 @@ const EMOJI: [RegExp, string][] = [
   [/plant/i, "🌱"], [/animal|habitat|living/i, "🦋"], [/human|body|nutrition|skeleton/i, "🫀"], [/material|matter|state|solid|liquid|gas/i, "🧪"], [/force|magnet/i, "🧲"],
   [/light|shadow/i, "💡"], [/sound/i, "🔊"], [/electric|circuit/i, "⚡"], [/earth|space|sun|moon/i, "🪐"], [/rock|soil|fossil/i, "🪨"], [/evolution|inherit/i, "🧬"],
 ];
-export const emojiFor = (area: string, strand = ""): string => EMOJI.find(([re]) => re.test(area))?.[1] ?? EMOJI.find(([re]) => re.test(strand))?.[1] ?? "⭐";
+// Languages (French/German/Spanish…) has no curriculum checklist of its own, so its topic names are
+// grammar-shaped ("Modal verbs", "Adjectives, agreement…") and used to fall through to the English
+// grammar/punctuation 🧱 brick — wrong subject, ugly on a sticker. Checked first, before the general table,
+// whenever the caller says this area belongs to the languages group.
+const LANGUAGE_EMOJI: [RegExp, string][] = [
+  [/greet|introduc|family|myself/i, "👋"], [/food|drink|meal/i, "🍽️"], [/school|classroom/i, "🎒"], [/holiday|travel|country|place/i, "✈️"],
+  [/weather/i, "☀️"], [/animal|pet/i, "🐾"], [/hobby|sport|free time|leisure/i, "⚽"], [/house|home|room/i, "🏠"], [/body|health/i, "🩺"], [/cloth/i, "👕"],
+  [/number|count/i, "🔢"], [/time|date|calendar/i, "🕐"], [/opinion|prefer|like/i, "💭"], [/culture|festival/i, "🎉"],
+];
+export const emojiFor = (area: string, strand = "", group = ""): string => {
+  // Never fall through to the English/Maths/Science table for languages: its strands are literally
+  // labelled "Grammar"/"Vocabulary" etc, which would otherwise keep matching the wrong-subject 🧱 brick.
+  if (group === "languages") return LANGUAGE_EMOJI.find(([re]) => re.test(area))?.[1] ?? LANGUAGE_EMOJI.find(([re]) => re.test(strand))?.[1] ?? "🗣️";
+  return EMOJI.find(([re]) => re.test(area))?.[1] ?? EMOJI.find(([re]) => re.test(strand))?.[1] ?? "⭐";
+};
