@@ -46,7 +46,7 @@ function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty:
             <li key={i} className="flex items-center gap-2 text-[12.5px]">
               <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
               <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.title}</span>
-              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden>{face(r.pct)}</span></span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(r.pct)}</span></span>
             </li>
           ))}
         </ul>
@@ -71,7 +71,7 @@ function TopicsCard({ label, total, sub, rows }: { label: string; total: number;
             <li key={i} className="flex items-center gap-2 text-[12.5px]" title={r.subject}>
               <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: tone(r.pct) }} />
               <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{r.name}</span>
-              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden>{face(r.pct)}</span></span>
+              <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{Math.round(r.pct)}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(r.pct)}</span></span>
             </li>
           ))}
         </ul>
@@ -105,7 +105,7 @@ function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: strin
                 <li key={a.area} data-testid={`games-area-${a.area}`} data-verdict={v ?? ""} title={pct !== null ? T("pl_right", { pct, n: a.attempts }) : undefined} className="flex items-center gap-2 text-[12.5px]">
                   <span aria-hidden className="h-2 w-2 flex-none rounded-full" style={{ background: v ? TONE[v] : "var(--ink-3)" }} />
                   <span className="min-w-0 flex-1 truncate font-bold text-[var(--ink)]">{T(`pl_a_${a.area}`)}</span>
-                  <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pct !== null ? <>{pct}% <span aria-hidden>{face(pct)}</span></> : T("pl_solved", { n: a.solved ?? 0 })}</span>
+                  <span className="flex-none tabular-nums font-extrabold text-[var(--ink)]">{pct !== null ? <>{pct}% <span aria-hidden className="text-[20px] leading-none align-middle">{face(pct)}</span></> : T("pl_solved", { n: a.solved ?? 0 })}</span>
                   {v && <span className="hidden w-[78px] flex-none text-end text-[11px] font-extrabold sm:inline" style={{ color: TONE[v] }}>{T(`pl_${v}`)}</span>}
                 </li>
               );
