@@ -7,6 +7,11 @@ import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing
 import { seedOakLesson, type SeededLesson } from "./helpers/lessonFixture";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
+// SKIPPED: a review-screenshot generator (18 shots across roles/viewports), not a regression suite. It seeds the same uploaded picture into several
+// notes (the server now refuses a picture used twice) and drives tabs/dialogs that have since been redesigned (grouped tabs, "Marking & results",
+// the New session chooser). Regenerate the screenshots with a fresh script rather than resurrecting this one.
+test.skip(true, "screenshot generator — stale against the redesigned hub");
+
 // Learning Hub UX audit, round 2 (dev tool, screenshots only): mobile 390×844 + tablet 820×1180 of every tutor / parent tab, kid
 // mode, quiz taking → results, flashcard review, roster detail, groups, live lobby, in-person capture grid and the lesson player
 // (learn / words / warm-up / quiz / done + a slide deck with a picture). Shots land in docs/hub-review/ux-round4-shots/r2/.
@@ -125,7 +130,10 @@ test.beforeAll(async () => {
   for (const c of [avaId, benId]) await apiPost(`${HUB}/students`, t, { childId: c, subjects: [subject] });
   topicId = (await apiFetch<{ id: string; subject: string }[]>(`${HUB}/topics`, t)).find((x) => x.subject === subject)!.id;
   // A real picture (a triangle) for the picture question + a slide.
-  const b64 = fs.readFileSync(path.join(process.env.UX_FIXTURES || "/private/tmp/claude-501/-Users-kazjames-Downloads-activtyos-app-/140c4a06-d595-4252-872f-8f0b25947538/scratchpad", "triangle.b64"), "utf8").trim();
+  // (A picture fixture in a session scratchpad no longer exists: fall back to a small built-in PNG so the spec is self-contained.)
+  const TINY_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  const fixture = path.join(process.env.UX_FIXTURES || "", "triangle.b64");
+  const b64 = process.env.UX_FIXTURES && fs.existsSync(fixture) ? fs.readFileSync(fixture, "utf8").trim() : TINY_PNG;
   const pic = await apiPost<{ id: string }>("/api/uploads", t, { dataUrl: `data:image/png;base64,${b64}`, purpose: "private", kind: "hub" });
   const opts = ["Square", "Triangle", "Circle", "Hexagon"].map((text, i) => ({ id: `o${i}`, text }));
   const qs: string[] = [];
