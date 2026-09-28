@@ -42,6 +42,14 @@ export interface ConvertOpts {
 }
 
 // ── Zip (read-only, central directory) ───────────────────────────────────
+/** Does `buf` parse as a complete zip (end-of-central-directory record present, every central-directory entry readable in
+ *  bounds)? Cheaper and stricter than checking the "PK" magic bytes alone (deckDownload.ts's on-disk cache check): a
+ *  response cut short mid-stream (truncated download) still starts "PK" but has no EOCD record at the end, or its
+ *  central-directory entries run past the buffer — openZip below throws in both cases, which this turns into a boolean
+ *  so a caller (deckBulk.ts) can decide to re-download instead of caching / converting a corrupt file. */
+export function isCompleteZip(buf: Buffer): boolean {
+  try { openZip(buf); return true; } catch { return false; }
+}
 function openZip(buf: Buffer): (name: string) => Buffer | null {
   let e = buf.length - 22;
   while (e >= 0 && buf.readUInt32LE(e) !== 0x06054b50) e--;
@@ -677,21 +685,51 @@ function tidyStacks(els: CEl[]): void {
   if (drop.size) for (let i = els.length - 1; i >= 0; i--) if (drop.has(els[i]!)) els.splice(i, 1);
 }
 
-/** Keep every value inside what canvasSchema.ts accepts (Oak decks contain off-slide shapes, 60-click builds…): clamp, never drop. */
-function clampToSchema(els: CEl[]): void {
+/** Keep every value inside what canvasSchema.ts accepts (Oak decks contain off-slide shapes, 60-click builds, huge tables…): clamp
+ *  every NUMBER / STRING to its schema range, never drop content for those. The schema also caps a few array LENGTHS (`els`≤
+ *  2000, `paras`/`runs`≤80 each) — those are true cardinality limits with no numeric range to clamp into, so once a build
+ *  is degenerate enough to exceed them (seen: a 60-click Oak build that never coalesced back down, tidyStacks above usually
+ *  prevents this) the only schema-legal move IS to truncate; z-order is preserved and the excess is chopped off the end
+ *  (last-added / most-recently-revealed), keeping every element that ends up visible earliest in the build. Every array-length
+ *  truncation is returned so the caller can log it to `stats.warnings` — visible, not silent. */
+function clampToSchema(els: CEl[]): string[] {
   tidyStacks(els);
   const cl = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
   const st = (v: number | undefined) => (v === undefined ? undefined : cl(Math.round(v), 1, 40));
+  const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n) : s);
+  const warn: string[] = [];
+  if (els.length > 2000) { warn.push(`${els.length} elements truncated to 2000`); els.length = 2000; }
   for (const e of els) {
     e.x = cl(e.x, -2, 3); e.y = cl(e.y, -2, 3); e.w = cl(e.w, 0, 3); e.h = cl(e.h, 0, 3);
+    if (e.rot !== undefined) e.rot = cl(e.rot, -360, 360);
+    if (e.delay !== undefined) e.delay = cl(e.delay, 0, 10);
     if (e.step !== undefined) e.step = st(e.step);
     if (e.until !== undefined) e.until = st(e.until);
-    if (e.k === "text") for (const p of e.paras) {
-      if (p.step !== undefined) p.step = st(p.step); if (p.until !== undefined) p.until = st(p.until);
-      if (p.lh !== undefined) p.lh = cl(p.lh, 0.5, 3); if (p.before !== undefined) p.before = cl(p.before, 0, 300); if (p.after !== undefined) p.after = cl(p.after, 0, 300);
-      if (p.ind) p.ind = [cl(p.ind[0], -400, 600), cl(p.ind[1], -400, 600)];
+    if (e.k === "img") {
+      e.alt = cut(e.alt, 300);
+      if (e.crop) e.crop = e.crop.map((v) => cl(v, 0, 0.95)) as CImg["crop"];
+    } else if (e.k === "shape") {
+      if (e.line) e.line.w = cl(e.line.w, 0, 60);
+      if (e.r !== undefined) e.r = cl(e.r, 0, 0.5);
+    } else if (e.k === "text") {
+      if (e.paras.length > 80) { warn.push(`${e.paras.length} paragraphs truncated to 80`); e.paras.length = 80; }
+      if (e.pad) e.pad = e.pad.map((v) => cl(v, 0, 200)) as CText["pad"];
+      for (const p of e.paras) {
+        if (p.runs.length > 80) { warn.push(`${p.runs.length} runs truncated to 80`); p.runs.length = 80; }
+        if (p.step !== undefined) p.step = st(p.step); if (p.until !== undefined) p.until = st(p.until);
+        if (p.lh !== undefined) p.lh = cl(p.lh, 0.5, 3); if (p.before !== undefined) p.before = cl(p.before, 0, 300); if (p.after !== undefined) p.after = cl(p.after, 0, 300);
+        if (p.ind) p.ind = [cl(p.ind[0], -400, 600), cl(p.ind[1], -400, 600)];
+        if (p.bu !== undefined) p.bu = cut(p.bu, 8);
+        for (const r of p.runs) {
+          r.t = cut(r.t, 3000);
+          r.size = cl(r.size, 1, 400);
+          // A truncated https:// link can land mid-URL and stop matching canvasSchema's own regex — drop rather than ship a broken link.
+          if (r.link !== undefined && r.link.length > 400) r.link = undefined;
+        }
+      }
     }
   }
+  return warn;
 }
 
 // ── Oak's own branding (dropped at conversion; the final "© Oak National Academy" attribution slide's WORDS stay) ──────────────────────
@@ -816,7 +854,8 @@ export async function convertPptx(buf: Buffer, opts: ConvertOpts): Promise<{ sli
     let title = "";
     for (const sp of spTreeOf(tree)?.c ?? []) { const ph = sp.tag === "p:sp" ? phOf(sp) : null; if (ph && family(ph.type) === "title") { title = textOf(sp).replace(/\s+/g, " ").trim(); if (title) break; } }
     if (!title) title = (own.find((e): e is CText => e.k === "text")?.paras[0]?.runs.map((r) => r.t).join("") ?? "").replace(/\s+/g, " ").trim();
-    clampToSchema(els);
+    const truncated = clampToSchema(els);
+    for (const w of truncated) stats.warnings.push(`slide ${si + 1}: ${w}`);
     stats.els += els.length;
     slides.push({ kind: "explain", title: title.slice(0, 120), blocks: [{ t: "canvas", w: 720, h: r1((720 * H) / W), ...(bg ? { bg } : {}), els }] });
     stats.slidesKept++;
