@@ -60,3 +60,11 @@ server/serviceAccountKey.json
 /scratch/pw-hiw
 /e2e/review/.auth-fr
 /e2e/review/.ks1-fixture.json
+
+# local working files — never commit
+/scratch/
+.dev-*.log
+/browser_state.json
+/e2e/review/.auth/
+/e2e/review/.auth-v2/
+/e2e/review/.auth-*/
