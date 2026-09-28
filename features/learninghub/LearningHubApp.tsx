@@ -366,7 +366,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   // language, not every language taught) because `topics` itself is narrowed to `child.subjects` in
   // useHubData.ts before it ever reaches here.
   const chips = tutor || kid
-    ? active === "quizzes" || active === "diagnostic"   // NOT homework: that page never uses the subject filter (owner: only show these when a card below uses them)
+    ? active === "quizzes" || active === "diagnostic" || active === "dashboard"   // Progress drills into a subject's topics with these chips; NOT homework: that page never uses the subject filter (owner: only show these when a card below uses them)
     : !!famActiveTop && ["learn", "progress"].includes(famActiveTop.id);
   // Notes (Lessons & curriculum) has its own primary browse now — the always-open curriculum card, whose tiles
   // lead straight to a lesson list — so it no longer needs the subject/topic sidebar. Tools has its own filters.
