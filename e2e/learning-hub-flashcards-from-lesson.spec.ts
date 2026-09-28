@@ -63,8 +63,10 @@ test("the tutor's student-progress stats count the cards ASSIGNED to each child 
 
 test("the tutor's card library can be narrowed by school year (and subject) on the server", async () => {
   const t = await token(accounts.freelancer);
-  await apiPost(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}`, subtopic: "Year 5" });
-  await apiPost(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}`, subtopic: "Year 6" });
+  // A subtopic hangs under a parent topic (parentTopicId): make the parent, then a "Year 5" and a "Year 6" subtopic under it.
+  const parent = await apiPost<{ id: string }>(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}` });
+  await apiPost(`${HUB}/topics`, t, { parentTopicId: parent.id, subtopic: "Year 5" });
+  await apiPost(`${HUB}/topics`, t, { parentTopicId: parent.id, subtopic: "Year 6" });
   const topics = await apiFetch<{ id: string; subject: string; topic: string; subtopic: string | null }[]>(`${HUB}/topics`, t);
   const y5 = topics.find((x) => x.topic === `Poems ${stamp}` && x.subtopic === "Year 5")!.id;
   const y6 = topics.find((x) => x.topic === `Poems ${stamp}` && x.subtopic === "Year 6")!.id;
