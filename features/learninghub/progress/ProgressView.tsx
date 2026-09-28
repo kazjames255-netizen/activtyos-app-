@@ -10,6 +10,8 @@ import { bandTone, NEUTRAL, OK, timeAgo, type Tone } from "../shared-assess/form
 import { useHubData } from "../shared-assess/hooks";
 import { LIFT } from "../shared-assess/motion";
 import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton } from "../shared-assess/ui";
+import { GlassOrb } from "../shared-ui/GlassOrb";
+import { useSupport } from "../family/FamilyContext";
 import { Attainment } from "./Attainment";
 import { ProgressCards } from "./ProgressCards";
 import { BandChip, GrowthChip, TrendChart } from "./charts";
@@ -113,18 +115,26 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
 
 function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: string | null }) {
   const { t: tr, tp } = useHubI18n();
+  const calm = useSupport().calm;
   const bands = p.config.masteryBands;
   const tone = bandTone(bands, s.band);
+  const sw = subjectSwatch(s.subject);
   const started = s.masteryPct != null;
   const topics = [...s.topics].sort((a, b) => (a.topic + (a.subtopic ?? "")).localeCompare(b.topic + (b.subtopic ?? "")));
   const practised = topics.filter((t) => t.attempts > 0).length;
   const cov = Math.round(asPct(s.coverage ?? 0));
   // Never let a full ring imply mastery of a whole subject that has been sampled once.
   const partial = started && topics.length > 0 && practised < topics.length;
+  const pctLabel = started ? `${Math.round(s.masteryPct ?? 0)}%` : undefined;
   return (
     <Card className={`overflow-hidden ${LIFT}`} id={`hub-progress-${s.subject}`}>
       <div className="flex items-center gap-4 p-4 sm:p-5" style={{ borderTop: `4px solid ${started ? tone.fill : "var(--line)"}` }}>
-        <ScoreRing pct={s.masteryPct ?? 0} size={96} stroke={9} tone={started ? tone : NEUTRAL} label={started ? undefined : "–"} sub={started && topics.length > 0 ? tp("hubfam.pgOfTopics", topics.length, { a: practised, b: topics.length }) : undefined} />
+        <div className="grid flex-none justify-items-center gap-1">
+          <GlassOrb pct={started ? s.masteryPct : null} color={sw.base} size={96} calm={calm}
+            aria={`${s.subject}: ${pctLabel ?? tr("hubfam.pgNotStarted")}`}
+            center={started ? <span className="text-[24px] font-extrabold leading-none" style={display}>{pctLabel}</span> : undefined} />
+          {started && topics.length > 0 && <div className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{tp("hubfam.pgOfTopics", topics.length, { a: practised, b: topics.length })}</div>}
+        </div>
         <div className="min-w-0 flex-1">
           <h3 className="m-0 flex items-center gap-2 text-[18px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" style={display}><SubjectTile subject={s.subject} size={26} />{s.subject}</h3>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
