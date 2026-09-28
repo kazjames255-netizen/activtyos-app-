@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useI18n } from "@/lib/i18n/provider";
 import { useHubMessagesReady } from "@/lib/i18n/hubMessages";
 import type { PanelProps } from "../panelTypes";
@@ -8,7 +8,6 @@ import { hubPath, type Mastery } from "../shared-assess/api";
 import { useHubI18n } from "../family/hubT";
 import { useHubData } from "../shared-assess/hooks";
 import { display } from "../shared-assess/ui";
-import { tint } from "../kit";
 import type { StudentHomework } from "../homework/hwTypes";
 import { useGamesPlayed, verdictOf, TONE } from "../games/GamesPlayedPanel";
 import { useNow } from "../teachKit";
@@ -17,12 +16,32 @@ import { useSupport } from "../family/FamilyContext";
 
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
+//
+// Comic-panel chrome (Kaz picked this over nine flatter options — a thick dark outline, a hard offset "sticker"
+// shadow, and a faint halftone-dot print texture tinted to the card's own colour, instead of a soft gradient wash).
+const COMIC_BORDER = "3px solid var(--ink)";
+const COMIC_SHADOW = "5px 5px 0 var(--ink)";
+function comicCard(color: string): CSSProperties {
+  return { background: "var(--surface)", backgroundImage: `radial-gradient(color-mix(in srgb, ${color} 55%, transparent) 1.6px, transparent 1.6px)`, backgroundSize: "11px 11px", border: COMIC_BORDER, boxShadow: COMIC_SHADOW };
+}
+function IconBadge({ icon, color }: { icon: string; color: string }) {
+  return <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: color, border: "2.5px solid var(--ink)" }}>{icon}</span>;
+}
+/** The starburst badge for a card's headline count — the comic-panel treatment's signature flourish. */
+function StarBurst({ value }: { value: ReactNode }) {
+  return (
+    <div aria-hidden className="absolute -end-1.5 -top-2.5 grid h-16 w-16 rotate-[8deg] place-items-center"
+      style={{ background: "var(--gold)", clipPath: "polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)" }}>
+      <span className="-rotate-[8deg] text-[16px] font-extrabold leading-none text-[var(--ink)]" style={display}>{value}</span>
+    </div>
+  );
+}
 function Card({ color, icon, label, value, sub, testId }: { color: string; icon: string; label: string; value: ReactNode; sub?: ReactNode; testId: string }) {
   return (
-    <div data-testid={testId} className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid={testId} className="min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
       <div className="flex items-center gap-2">
-        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>{icon}</span>
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
+        <IconBadge icon={icon} color={color} />
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{label}</div>
       </div>
       <div className="mt-2 text-[26px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{value}</div>
       {sub && <div className="mt-1 text-[12px] font-semibold text-[var(--ink-2)]">{sub}</div>}
@@ -41,12 +60,13 @@ const pctText = (pct: number, show: boolean) => (show ? `${Math.round(pct)}% ` :
 function QuizzesCard({ label, empty, total, sub, rows, kid = false, nums = true }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-4)";
   return (
-    <div data-testid="pc-quiz" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>📝</span>
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
-        <div className="ms-auto flex items-baseline gap-1.5"><span className="text-[22px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{total}</span><span className="text-[11px] font-semibold text-[var(--ink-2)]">{sub}</span></div>
+    <div data-testid="pc-quiz" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+      <StarBurst value={total} />
+      <div className="flex items-center gap-2 pe-11">
+        <IconBadge icon="📝" color={color} />
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{label}</div>
       </div>
+      <div className="mt-1 text-[11px] font-semibold text-[var(--ink-2)]">{sub}</div>
       {rows.length === 0 ? <div className="mt-2 text-[13px] font-semibold text-[var(--ink)]">{empty}</div> : (
         <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-quiz-list">
           {rows.slice(0, 5).map((r, i) => (
@@ -66,12 +86,13 @@ function QuizzesCard({ label, empty, total, sub, rows, kid = false, nums = true 
 function TopicsCard({ label, total, sub, rows, kid = false, nums = true }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-2)";
   return (
-    <div data-testid="pc-topics" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>🧩</span>
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
-        <div className="ms-auto flex items-baseline gap-1.5"><span className="text-[22px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{total}</span><span className="text-[11px] font-semibold text-[var(--ink-2)]">{sub}</span></div>
+    <div data-testid="pc-topics" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+      <StarBurst value={total} />
+      <div className="flex items-center gap-2 pe-11">
+        <IconBadge icon="🧩" color={color} />
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{label}</div>
       </div>
+      <div className="mt-1 text-[11px] font-semibold text-[var(--ink-2)]">{sub}</div>
       {rows.length > 0 && (
         <ul className="m-0 mt-2 grid list-none gap-1 p-0" data-testid="pc-topics-list">
           {rows.slice(0, 5).map((r, i) => (
@@ -95,10 +116,10 @@ function GamesCard({ T, areas, scored, unfinished, ready, name, kid = false, num
   const recent = areas.slice(0, RECENT);   // useGamesPlayed already sorts by last played, newest first
   const days = areas.find((a) => a.weekDays !== undefined);
   return (
-    <div data-testid="pc-games" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid="pc-games" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
       <div className="flex items-center gap-2">
-        <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>🎮</span>
-        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{T("pc_games")}</div>
+        <IconBadge icon="🎮" color={color} />
+        <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{T("pc_games")}</div>
         {days && <div className="ms-auto text-[11px] font-semibold text-[var(--ink-2)]">{T("pl_week", { days: days.weekDays ?? 0, goal: days.weekGoal ?? 5 })}</div>}
       </div>
       {!ready ? <div aria-busy="true" className="mt-2 text-[13px] text-[var(--ink-2)]">&hellip;</div>
