@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui";
 import type { PanelProps } from "../panelTypes";
 import { hubPath, type Mastery, type MasterySubject, type MasteryTopic } from "../shared-assess/api";
-import { bandTone, NEUTRAL, OK, timeAgo, type Tone } from "../shared-assess/format";
+import { NEUTRAL, OK, timeAgo, type Tone } from "../shared-assess/format";
 import { useHubData } from "../shared-assess/hooks";
 import { LIFT } from "../shared-assess/motion";
 import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton } from "../shared-assess/ui";
@@ -17,7 +17,7 @@ import { ProgressCards } from "./ProgressCards";
 import { BandChip, GrowthChip, TrendChart } from "./charts";
 import { LevelLegend, LevelsModal } from "./levels";
 import { PARENT_COPY } from "../family/parentCopy";
-import { friendlyError } from "../kit";
+import { friendlyError, tint } from "../kit";
 import { MY_CLASSROOM } from "../names";
 import { Rich } from "./Rich";
 import { useHubI18n } from "../family/hubT";
@@ -117,7 +117,6 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
   const { t: tr, tp } = useHubI18n();
   const calm = useSupport().calm;
   const bands = p.config.masteryBands;
-  const tone = bandTone(bands, s.band);
   const sw = subjectSwatch(s.subject);
   const started = s.masteryPct != null;
   const topics = [...s.topics].sort((a, b) => (a.topic + (a.subtopic ?? "")).localeCompare(b.topic + (b.subtopic ?? "")));
@@ -127,8 +126,9 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
   const partial = started && topics.length > 0 && practised < topics.length;
   const pctLabel = started ? `${Math.round(s.masteryPct ?? 0)}%` : undefined;
   return (
-    <Card className={`overflow-hidden ${LIFT}`} id={`hub-progress-${s.subject}`}>
-      <div className="flex items-center gap-4 p-4 sm:p-5" style={{ borderTop: `4px solid ${started ? tone.fill : "var(--line)"}` }}>
+    <Card className={`overflow-hidden ${LIFT}`} id={`hub-progress-${s.subject}`}
+      style={{ background: `linear-gradient(135deg, ${tint(sw.base, 22)}, ${tint(sw.base, 7)})`, borderColor: tint(sw.base, 38) }}>
+      <div className="flex items-center gap-4 p-4 sm:p-5">
         <div className="grid flex-none justify-items-center gap-1">
           <GlassOrb pct={started ? s.masteryPct : null} color={sw.base} size={96} calm={calm}
             aria={`${s.subject}: ${pctLabel ?? tr("hubfam.pgNotStarted")}`}
