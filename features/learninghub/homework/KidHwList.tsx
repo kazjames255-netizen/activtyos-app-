@@ -120,7 +120,7 @@ export function HwGroup({ id, title, items }: { id: string; title: string; items
           {open ? h("kidClose") : h("kidOpen")} <span aria-hidden>{open ? "▲" : "▼"}</span>
         </button>
       </div>
-      <div id={`hub-hw-list-${id}`} hidden={!open} className="grid gap-2.5">
+      <div id={`hub-hw-list-${id}`} hidden={!open} className={`${open ? "grid" : "hidden"} gap-2.5`}>
         {shown}
         {items.length > MAX_ROWS && (
           <button type="button" data-testid={`hub-hw-group-all-${id}`} onClick={() => setAll((a) => !a)}

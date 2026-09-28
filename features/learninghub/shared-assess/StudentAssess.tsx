@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { get } from "@/lib/api";
 import { Icon } from "../kit";
+import { StatTiles, type StatTile } from "../quiz/StatTiles";
 import type { PanelProps } from "../panelTypes";
 import { SubjectCover, SubjectGlyph } from "../subjectArt";
 import { errMsg, topicLabel } from "../types";
@@ -65,8 +66,11 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
   // search above (p.filter) — this used to have its OWN separate subject-chip-with-counts row too, which just
   // duplicated that control right next to it and read as a confused, half-merged strip (Kaz's report).
   const PAGE = 24;
-  const [shownTodo, setShownTodo] = useState(PAGE);
-  const [shownDone, setShownDone] = useState(PAGE);
+  const INIT = kidMode ? 5 : PAGE; // a child never sees more than five rows before "Show more"; each list also has Open / Close
+  const [shownTodo, setShownTodo] = useState(INIT);
+  const [shownDone, setShownDone] = useState(INIT);
+  const [openTodo, setOpenTodo] = useState(true);
+  const [openDone, setOpenDone] = useState(true);
 
   const topicById = useMemo(() => new Map(p.topics.map((t) => [t.id, t])), [p.topics]);
 
@@ -169,6 +173,16 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
       )}
 
 
+      {!diag && data && cards.length > 0 && (() => {
+        const waiting = cards.filter((c) => c.a.lastAttempt?.status === "pending_marking").length;
+        const tl: StatTile[] = [
+          { key: "todo", label: t("hubfam.asToDo"), value: todo.length, tone: todo.length ? "brand" : "green", icon: todo.length ? "quiz" : "check", hint: todo.length ? t("hubfam.asTileTodoHint") : t("hubfam.asTileTodoZero") },
+          { key: "waiting", label: kidMode ? t("hubfam.asKidMarking") : t("hubfam.asAwaitingMarking"), value: waiting, tone: "violet", icon: "upload", hint: t("hubfam.asTileWaitHint") },
+          { key: "done", label: t("hubfam.asDone"), value: done.length, tone: "green", icon: "check", hint: t("hubfam.asTileDoneHint") },
+        ];
+        return <StatTiles tiles={tl} cols={3} label={t("hubfam.asTilesAria")} />;
+      })()}
+
       {running.map((c) => <ResumeCard key={c.a.id} c={c} kid={kidMode} onResume={() => begin(c.a, true)} />)}
 
       {lessonOnly.length > 0 && (
@@ -191,28 +205,35 @@ export function StudentAssess({ p, type }: { p: PanelProps; type: AssessType }) 
 
       {todo.length > 0 && (
         <section aria-label={t("hubfam.asToDo")}>
-          <GroupHead label={t("hubfam.asToDo")} count={todo.length} />
-          <div className={GRID}>{todo.slice(0, shownTodo).map(cardFor)}</div>
-          {todo.length > shownTodo && <div className="mt-3 flex justify-center"><Button onClick={() => setShownTodo((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: todo.length - shownTodo })}</Button></div>}
+          <GroupHead label={t("hubfam.asToDo")} count={todo.length} open={openTodo} onToggle={() => setOpenTodo((o) => !o)} id="todo" />
+          <div id="hub-assess-list-todo" className={openTodo ? GRID : "hidden"}>{todo.slice(0, shownTodo).map(cardFor)}</div>
+          {openTodo && todo.length > shownTodo && <div className="mt-3 flex justify-center"><Button onClick={() => setShownTodo((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: todo.length - shownTodo })}</Button></div>}
         </section>
       )}
       {done.length > 0 && (
         <section aria-label={t("hubfam.asDone")}>
-          <GroupHead label={t("hubfam.asDone")} count={done.length} tone="done" />
-          <div className={GRID}>{done.slice(0, shownDone).map(cardFor)}</div>
-          {done.length > shownDone && <div className="mt-3 flex justify-center"><Button onClick={() => setShownDone((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: done.length - shownDone })}</Button></div>}
+          <GroupHead label={t("hubfam.asDone")} count={done.length} tone="done" open={openDone} onToggle={() => setOpenDone((o) => !o)} id="done" />
+          <div id="hub-assess-list-done" className={openDone ? GRID : "hidden"}>{done.slice(0, shownDone).map(cardFor)}</div>
+          {openDone && done.length > shownDone && <div className="mt-3 flex justify-center"><Button onClick={() => setShownDone((n) => n + PAGE)} className={`${TAP} !px-6`}>{t("hubfam.asShowMore", { n: done.length - shownDone })}</Button></div>}
         </section>
       )}
     </div>
   );
 }
 
-function GroupHead({ label, count, tone }: { label: string; count: number; tone?: "done" }) {
+function GroupHead({ label, count, tone, open, onToggle, id }: { label: string; count: number; tone?: "done"; open?: boolean; onToggle?: () => void; id?: string }) {
+  const { t } = useHubI18n();
   return (
     <div className="mb-2.5 flex items-center gap-2.5 px-0.5">
       <h3 className="m-0 text-[13px] font-extrabold uppercase tracking-[0.1em] text-[var(--ink-2)]">{label}</h3>
       <span className="grid h-5 min-w-[20px] place-items-center rounded-full px-1.5 text-[11px] font-extrabold tabular-nums" style={tone === "done" ? { background: OK.soft, color: OK.ink } : { background: "var(--brand-soft)", color: "var(--brand-strong)" }}>{count}</span>
       <span aria-hidden className="h-px flex-1 bg-[var(--line)]" />
+      {onToggle && (
+        <button type="button" data-testid={`hub-assess-toggle-${id}`} aria-expanded={open} aria-controls={`hub-assess-list-${id}`} onClick={onToggle}
+          className="inline-flex min-h-[36px] items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 text-[12px] font-extrabold text-[var(--brand-strong)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)]">
+          {open ? t("hubfam.asCloseList") : t("hubfam.asOpenList")} <span aria-hidden>{open ? "▲" : "▼"}</span>
+        </button>
+      )}
     </div>
   );
 }
