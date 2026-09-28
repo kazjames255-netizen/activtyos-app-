@@ -11,6 +11,7 @@
     "dev:all": "concurrently -n web,api -c cyan,magenta \"npm run dev\" \"npm run dev:server\"",
     "seed": "npm --prefix server run seed",
     "hub:widgets": "node scripts/hub-widgets.mjs",
+    "i18n:check": "server/node_modules/.bin/tsx scripts/i18n-missing.mjs && server/node_modules/.bin/tsx scripts/i18n-missing.mjs --selftest",
     "prebuild": "node scripts/hub-widgets.mjs",
     "build": "next build",
     "start": "next start",
