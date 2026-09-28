@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Select } from "@/components/ui";
-import { DISPLAY, FOCUS, Avatar, fmtDay } from "../teachKit";
+import { DISPLAY, FOCUS, Avatar } from "../teachKit";
 import type { HubGroup } from "../types";
 import { membersOf } from "../groupStatus";
 import { useHw, type Hw } from "./hwI18n";
@@ -48,7 +48,6 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
   const x = useHw();
   const { h, hp } = x;
   const [size, setSize] = useState<number>(8);
-  const [allMark, setAllMark] = useState(false);
   const [groupId, setGroupId] = useState("");
   const [subject, setSubject] = useState("");
   const [shown, setShown] = useState<"dots" | "score" | "pct">("dots");   // the flip: dots only, scores (5/10) or percent (50%) under each dot
@@ -106,32 +105,6 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
         </div>
         <span className="text-[12px] text-[var(--ink-3)]" data-testid="hub-results-count">{h("resShowing", { shown: cols.length, total: bySubject.length })}</span>
       </div>
-      {/* NEEDS MARKING: what the separate Inbox used to be for. Every hand-in still waiting for a mark, one click to open it. */}
-      {(() => {
-        const wait = inbox.filter((r) => r.status === "submitted" && (!members || members.has(r.childId)) && (!subject || homework.find((y) => y.id === r.homeworkId)?.subject === subject))
-          .sort((a, b) => (a.submittedAt ?? "").localeCompare(b.submittedAt ?? ""));
-        const list = allMark ? wait : wait.slice(0, 6);
-        return (
-          <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3" data-testid="hub-results-needs-marking">
-            <div className="mb-1.5 text-[12px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-2)]">{h("resNeedsMarking", { n: wait.length })}</div>
-            {wait.length === 0 ? <p className="m-0 text-[12.5px] text-[var(--ink-3)]">{h("resNothingToMark")}</p> : (
-              <ul className="m-0 grid list-none gap-1 p-0">
-                {list.map((r) => (
-                  <li key={r.submissionId}>
-                    <button type="button" onClick={() => onOpen(r.submissionId)} data-testid="hub-results-mark-row" className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-start text-[12.5px] hover:border-[var(--brand)] ${FOCUS}`}>
-                      <Avatar name={r.childName} size={20} />
-                      <span className="min-w-0 flex-1 truncate"><b className="text-[var(--ink)]">{r.childName}</b> <span className="text-[var(--ink-2)]">· {r.title}</span></span>
-                      <span className="flex-none text-[11.5px] text-[var(--ink-3)]">{r.submittedAt ? fmtDay(r.submittedAt) : ""}{r.late ? ` · ${h("resLateShort")}` : ""}</span>
-                      <span className="flex-none rounded-full bg-[var(--brand)] px-3 py-1 text-[11.5px] font-extrabold text-white">{h("resMarkBtn")}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {wait.length > 6 && <button type="button" onClick={() => setAllMark((v) => !v)} className={`mt-1 min-h-[44px] rounded-lg px-1 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{allMark ? h("resShowFewer") : h("resShowAllMark", { n: wait.length })}</button>}
-          </div>
-        );
-      })()}
       <ul className="m-0 mb-3 flex list-none flex-wrap gap-x-3.5 gap-y-1 p-0 text-[12px] text-[var(--ink-2)]" aria-label={h("resKey")}>
         {LEGEND.map((l) => <li key={l} className="inline-flex items-center gap-1.5"><span aria-hidden className="grid h-4 w-4 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: COLOR[l] }}>{GLYPH[l]}</span>{legendText(x, l)}</li>)}
         <li className="inline-flex items-center gap-1.5"><span aria-hidden className="font-extrabold text-[var(--red)]">▼</span>{h("resBelowKey")}</li>

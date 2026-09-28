@@ -21,7 +21,7 @@ const MAP: Entry[] = [
   { top: "quizzes", sub: "quizzes", labels: ["Quizzes"] },
   { top: "quizzes", sub: "starting", labels: ["Starting quizzes", "Placement test"] },
   { top: "quizzes", sub: "newquiz", labels: ["New quiz"] },
-  { top: "homework", sub: "mark", labels: ["Homework", "To mark"] },
+  { top: "homework", sub: "results", labels: ["Marking & results", "Results", "Inbox", "To mark"] },
   { top: "homework", sub: "set", labels: ["Set homework"] },
   { top: "messages", sub: null, labels: ["Messages", "Student message centre"] },
 ];

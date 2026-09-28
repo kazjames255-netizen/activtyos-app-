@@ -76,8 +76,7 @@ export const TUTOR_TOPS: TopDef[] = [
     s("newquiz", "New quiz", "➕", "quizzes", "Build a test", "intent", { kind: "newQuiz", groupId: "" }),
   ] },
   { id: "homework", label: "Homework", emoji: "📓", entry: "mark", accent: "--cat-12", subs: [
-    s("mark", "To mark", "✅", "homework", "Hand-ins and written answers"),
-    s("results", "Results", "📊", "homework", "Every child, every homework, and what needs marking"),
+    s("results", "Marking & results", "📊", "homework", "What needs marking, then every child"),
     s("set", "Set homework", "✏️", "homework", "Set the next task", "intent", { kind: "homework", groupId: "" }),
   ] },
   { id: "messages", label: "Messages", emoji: "💬", accent: "--cat-5", subs: [s("messages", "Messages", "💬", "questions")] },

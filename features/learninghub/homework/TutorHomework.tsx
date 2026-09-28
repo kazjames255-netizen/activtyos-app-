@@ -217,7 +217,8 @@ export function TutorHomework(p: PanelProps) {
             </div>
           )}
 
-          {view === "results" && <ResultsBoard inbox={inbox} homework={homework} now={now} groups={groups} onOpen={setMarking} />}
+          {/* One place for marking AND results: everything waiting for a mark (homework hand-ins, quiz written answers, entry tests) above the markbook. */}
+          {view === "results" && <div className="grid gap-4"><MarkQueue p={p} q={mq} /><ResultsBoard inbox={inbox} homework={homework} now={now} groups={groups} onOpen={setMarking} /></div>}
 
           {view === "assignments" && (
             <div className="grid gap-2.5" id="hub-assignments">

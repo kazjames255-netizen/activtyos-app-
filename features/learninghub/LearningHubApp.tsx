@@ -240,7 +240,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
     // Opens the card AND a page at once: Homework goes straight to To mark while anything waits (else where you were, else Inbox);
     // every other top reopens the sub-section last used (else its first).
     const back = recalledSub(top);
-    const d = top.entry === "mark" ? (toMark.count > 0 ? subById("mark") : back && back.id !== "mark" ? back : subById("inbox")) : back ?? top.subs.find((x) => !x.action)!;
+    const d = top.entry === "mark" ? (back ?? subById("results")) : back ?? top.subs.find((x) => !x.action)!;   // Homework opens on Marking & results (the To mark tab is part of it now)
     selectSub(d!, { focus: top.subs.length === 1 && how !== "arrow" });
   }, [selectSub, toMark.count]);
   // The Homework panel reports the view it is on (its own default, a Home deep link, or a sub-tab click): keep sub-tab + URL in step.
@@ -347,7 +347,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   const famSubTabs: HubTab[] = famSubList.map((d) => ({ id: d.id, emoji: d.emoji, meta: meta0(d.key, d.label) }));
   // Live numbers in the side card: only what the hub already holds (the Mark queue, the roster, a running lesson, an unsaved draft).
   const itemInfo: Record<string, ItemInfo | undefined> = {
-    mark: toMark.count > 0 ? { count: t("hubshell.toMarkCount", { n: toMark.count }) } : undefined,
+    results: toMark.count > 0 ? { count: t("hubshell.toMarkCount", { n: toMark.count }) } : undefined,
     live: liveNow ? { count: t("hubshell.liveNowCap"), live: true } : undefined,
     lessons: dirty ? { count: t("hubshell.unsavedDraft") } : undefined,
     students: activeStudents > 0 ? { count: tp("hubshell.studentsCount", activeStudents) } : undefined,
