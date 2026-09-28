@@ -250,7 +250,7 @@ test.describe("tutor: lessons list, preview", () => {
     await answer(page, q0, "right");
     await page.getByTestId("lesson-check").click();
     await expect(player(page).getByRole("status").filter({ hasText: /Yes!|Spot on!|Nice one!|Correct!/ })).toBeVisible();
-    await page.getByRole("button", { name: "Close preview" }).click();
+    await page.getByRole("button", { name: /^Back$|Close preview/ }).first().click(); // the tutor page's filled Back button leaves the preview
     await expect(page.getByTestId("lesson-tutor-panel")).toBeVisible(); // back in the tutor's reader
     expect((await apiFetch<unknown[]>(`/api/learning-hub/attempts`, t)).length).toBe(attemptsBefore); // nothing was started
     await ctx.close();

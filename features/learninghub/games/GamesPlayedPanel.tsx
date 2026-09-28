@@ -10,7 +10,7 @@ import { useHubMessagesReady } from "@/lib/i18n/hubMessages";
 // Read-only. Every game's own progress endpoint already allows a tutor (server/src/routes/hub/gamesApi.ts, quizArcadeApi.ts); an endpoint that
 // fails or has nothing is skipped, so an area only appears once there is something real to say about it.
 interface Topic { name: string; attempts: number; acc: number }
-interface Part { area: string; unfinished?: number; partialAnswers?: number; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
+export interface Part { area: string; unfinished?: number; partialAnswers?: number; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
 
 const pretty = (s: string) => { const t = s.replace(/[-_]+/g, " ").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
 const wk = (r: { weekDays?: number; weekGoal?: number }) => ({ weekDays: r.weekDays, weekGoal: r.weekGoal });
@@ -61,13 +61,12 @@ const SOURCES: { path: string; area: string; read: (area: string) => (r: unknown
   { path: `${G}/quiz/shape-workshop/facts`, area: "shapes", read: fromArcade },
 ];
 
-type Verdict = "doing_well" | "getting_there" | "needs_help" | "just_started";
-const verdictOf = (attempts: number, pct: number): Verdict => (attempts < 8 ? "just_started" : pct >= 80 ? "doing_well" : pct >= 60 ? "getting_there" : "needs_help");
-const TONE: Record<Verdict, string> = { doing_well: "var(--green)", getting_there: "var(--gold)", needs_help: "var(--red)", just_started: "var(--ink-3)" };
+export type Verdict = "doing_well" | "getting_there" | "needs_help" | "just_started";
+export const verdictOf = (attempts: number, pct: number): Verdict => (attempts < 8 ? "just_started" : pct >= 80 ? "doing_well" : pct >= 60 ? "getting_there" : "needs_help");
+export const TONE: Record<Verdict, string> = { doing_well: "var(--green)", getting_there: "var(--gold)", needs_help: "var(--red)", just_started: "var(--ink-3)" };
 
-export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail }: { childId: string; childName?: string; tenantQuery?: string; /** e.g. the times-tables detail, offered under "Times tables detail" only when that area was played. */ detail?: ReactNode }) {
-  const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
-  const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
+/** One child's game play, grouped by AREA of content (only areas with real evidence). Shared by the games summary and the Progress cards. */
+export function useGamesPlayed(childId: string, tenantQuery = ""): { parts: Part[] | null; areas: Part[]; unfinished: number } {
   const [parts, setParts] = useState<Part[] | null>(null);
   const [unfinished, setUnfinished] = useState(0);   // runs begun but not finished: they are not scored until finished
   const q = `?childId=${encodeURIComponent(childId)}${tenantQuery ? `&${tenantQuery}` : ""}`;
@@ -90,6 +89,13 @@ export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail 
     return [...by.values()].sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? ""));
   }, [parts]);
 
+  return { parts, areas, unfinished };
+}
+
+export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail }: { childId: string; childName?: string; tenantQuery?: string; /** e.g. the times-tables detail, offered under "Times tables detail" only when that area was played. */ detail?: ReactNode }) {
+  const { locale, t: tt } = useI18n(); useHubMessagesReady(locale);
+  const T = (k: string, v?: Record<string, string | number>) => tt(`hubgames.${k}`, v);
+  const { parts, areas, unfinished } = useGamesPlayed(childId, tenantQuery);
   const name = (childName ?? "").split(" ")[0] || "";
   if (!parts) return <div aria-busy="true">&hellip;</div>;
   if (!areas.length) return unfinished > 0

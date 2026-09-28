@@ -8,8 +8,9 @@ import { hubPath, type Mastery, type MasterySubject } from "../shared-assess/api
 import { bandTone, NEUTRAL, OK, timeAgo, type Tone } from "../shared-assess/format";
 import { useHubData } from "../shared-assess/hooks";
 import { LIFT } from "../shared-assess/motion";
-import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton, Stat } from "../shared-assess/ui";
+import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton } from "../shared-assess/ui";
 import { Attainment } from "./Attainment";
+import { ProgressCards } from "./ProgressCards";
 import { BandChip, GrowthChip, TrendChart } from "./charts";
 import { LevelLegend, LevelsModal } from "./levels";
 import { PARENT_COPY } from "../family/parentCopy";
@@ -80,11 +81,8 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
         <Attainment bare overall={data.overall} bands={bands} subjects={data.subjects} onEmptyAction={p.canEdit ? undefined : () => p.goTo?.("quizzes")} />
         <div className="mt-3 border-t border-[var(--line)] pt-2"><LevelLegend bands={bands} onEdit={p.canEdit && !p.readOnly ? () => setEditing(true) : undefined} /></div>
       </section>
-      <div className="grid grid-cols-3 gap-2.5">
-        <Stat label={t("hubfam.pgLatestQuiz")} value={latest ? `${Math.round(latest.pct)}%` : "–"} sub={latest ? latest.title : t("hubfam.pgNoQuizzesYet")} />
-        <Stat label={t("hubfam.pgTopicsPractised")} value={topicsPractised} sub={tp("hubfam.pgAcrossSubjects", data.subjects.filter(isStarted).length)} />
-        <Stat label={t("hubfam.pgQuizzesTaken")} value={data.trend.length >= 20 ? "20+" : data.trend.length} sub={t("hubfam.pgRecentMarked")} />
-      </div>
+      <ProgressCards p={p} childId={childId} quiz={{ latest: latest ? { pct: latest.pct, title: latest.title } : null, topics: topicsPractised, subjects: data.subjects.filter(isStarted).length, taken: data.trend.length,
+        labels: { latest: t("hubfam.pgLatestQuiz"), noQuiz: t("hubfam.pgNoQuizzesYet"), topics: t("hubfam.pgTopicsPractised"), across: tp("hubfam.pgAcrossSubjects", data.subjects.filter(isStarted).length), taken: t("hubfam.pgQuizzesTaken"), recent: t("hubfam.pgRecentMarked") } }} />
       <div className="grid gap-4 2xl:grid-cols-2">{started.map((s) => <SubjectCard key={s.subject} s={s} p={p} who={tutor ? first : null} />)}</div>
       {notStarted.length > 0 && (
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-3.5" data-testid="hub-not-started">

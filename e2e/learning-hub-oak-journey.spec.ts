@@ -346,7 +346,7 @@ test.describe("1. tutor: find, preview, edit a slide, change its picture", () =>
     expect(n.lesson?.slides?.[0].image?.id).not.toBe(uploadedId); // a fresh upload, not the removed one
     // The second slide (the check) was never touched by any of this.
     expect(n.lesson?.slides?.[1].title).toBe(`Quick check ${stamp}`);
-    await page.getByRole("button", { name: "Close preview" }).click();
+    await page.getByRole("button", { name: /^Back$|Close preview/ }).first().click(); // the tutor page's filled Back button leaves the preview
     await expect(page.getByTestId("lesson-tutor-panel")).toBeVisible();
     await ctx.close();
   });
