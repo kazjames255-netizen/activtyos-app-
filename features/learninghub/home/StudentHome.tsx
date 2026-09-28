@@ -84,7 +84,10 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
 
     // one clear next step
     const av = assessments.filter((a) => !a.locked);
-    const diag = av.find((a) => a.type === "diagnostic" && !a.done && !a.lastAttempt);
+    // A starting quiz is only pushed as "START HERE" when the tutor has switched on "require a starting quiz". The library carries a placement quiz for
+    // every subject and year (loaded by the curriculum import, not set by a tutor), so suggesting one unasked told a child to start e.g. a French test.
+    // The Starting quizzes tab still lists them for anyone who wants one.
+    const diag = config.requireDiagnostic ? av.find((a) => a.type === "diagnostic" && !a.done && !a.lastAttempt) : undefined;
     const resume = av.find((a) => a.type === "quiz" && a.lastAttempt?.status === "in_progress");
     // A lesson's exit quiz is not "up next": it comes at the end of its lesson (the Quizzes tab lists it under "Finish a lesson to unlock").
     const fresh = av.find((a) => a.type === "quiz" && !a.lastAttempt && !a.lessonNoteId);
