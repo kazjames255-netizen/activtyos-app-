@@ -44,6 +44,14 @@ export function academicStartYear(on: Date = new Date()): number {
   return m >= 9 ? y : y - 1;
 }
 
+/** The academic start year a stored row's year group was (last) set in — from `updatedAt` (falling back to `createdAt`), or `createdAt` alone with
+ *  basis "created". A row with no usable date falls back to the CURRENT academic year. Used to anchor legacy hand-set years (backfillYearAnchors.ts). */
+export function anchorFor(row: { createdAt?: unknown; updatedAt?: unknown }, now: Date = new Date(), basis: "created" | "updated" = "updated"): number {
+  const raw = basis === "created" ? row.createdAt : row.updatedAt ?? row.createdAt;
+  const t = typeof raw === "string" ? new Date(raw) : null;
+  return t && Number.isFinite(t.getTime()) ? academicStartYear(t) : academicStartYear(now);
+}
+
 /** England's school-year rule: the academic year starts 1 Sept; a child's year is set by
  *  their age ON 31 AUGUST before it starts — 4 = Reception, 5 = Year 1 … 17 = Year 13. */
 export function ukYearGroup(dob: unknown, on: Date = new Date()): string | null {
@@ -79,10 +87,13 @@ const idxIn = (list: string[], label: string) => { const l = label.trim().toLowe
 
 /** A hand-set year advanced along the tenant's own list by the academic years since it was set. `overflow` = it would have run
  *  past the last year in the list (it stays at the last one — "may have left"). */
-export function advanceYear(label: string, anchor: number, yearGroups: string[], on: Date = new Date()): { label: string; overflow: boolean } {
+export function advanceYear(label: string, anchor: number, yearGroups: string[], on: Date = new Date()): { label: string; overflow: boolean; unknown?: boolean } {
   const steps = Math.max(0, academicStartYear(on) - anchor);
   const i = idxIn(yearGroups, label);
-  if (steps === 0 || i < 0) return { label: label.trim(), overflow: false };
+  if (steps === 0) return { label: label.trim(), overflow: false };
+  // A stored label that is not in the tenant's own year list (renamed list, free text) cannot be moved along it: keep what was stored but SAY so
+  // (`unknown`) instead of silently pinning the child forever.
+  if (i < 0) return { label: label.trim(), overflow: false, unknown: true };
   const j = i + steps, last = yearGroups.length - 1;
   return { label: yearGroups[Math.min(j, last)], overflow: j > last };
 }
@@ -90,7 +101,7 @@ export function advanceYear(label: string, anchor: number, yearGroups: string[],
 /** The year group to treat a student as being in NOW, and whether they look to have left (past the last year of the list).
  *  auto → recomputed from the dob; tutor-set → as set, moved up each 1 Sept unless held back; explicit null → unknown;
  *  never set (an enrolment made before year groups existed) → derived from the dob. `advanceDefault` = the tenant setting. */
-export function yearStatus(e: YearGroupFields, dob: unknown, yearGroups: string[], on: Date = new Date(), advanceDefault = true): { yearGroup: string | null; mayHaveLeft: boolean } {
+export function yearStatus(e: YearGroupFields, dob: unknown, yearGroups: string[], on: Date = new Date(), advanceDefault = true): { yearGroup: string | null; mayHaveLeft: boolean; yearUnknown?: boolean } {
   const fromDob = () => {
     const y = yearGroupFromDob(dob, yearGroups, on);
     const b = parseDob(dob);
@@ -101,7 +112,7 @@ export function yearStatus(e: YearGroupFields, dob: unknown, yearGroups: string[
     const moves = (e.yearMoveUp ?? advanceDefault) && typeof e.yearAnchor === "number";
     if (!moves) return { yearGroup: e.yearGroup.trim(), mayHaveLeft: false };
     const a = advanceYear(e.yearGroup, e.yearAnchor!, yearGroups, on);
-    return { yearGroup: a.label, mayHaveLeft: a.overflow };
+    return { yearGroup: a.label, mayHaveLeft: a.overflow, ...(a.unknown ? { yearUnknown: true } : {}) };
   }
   if (e.yearGroup === null) return { yearGroup: null, mayHaveLeft: false };
   return fromDob();

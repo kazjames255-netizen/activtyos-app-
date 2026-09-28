@@ -4,7 +4,7 @@
 //   cd server && npx tsx src/hubSelfTest3.ts
 import assert from "node:assert/strict";
 import {
-  academicStartYear, advanceYear, ageInYears, audienceFit, audienceKey, cleanVideos, effectiveRetake, effectiveYearGroup, failStreak, normAudience, overallAttainment, parseYouTube, retakeDecision,
+  academicStartYear, advanceYear, anchorFor, ageInYears, audienceFit, audienceKey, cleanVideos, effectiveRetake, effectiveYearGroup, failStreak, normAudience, overallAttainment, parseYouTube, retakeDecision,
   ukYearGroup, validateHubPatch, videoOut, videosOut, yearGroupFromDob, yearStatus,
 } from "./lib/hubRules";
 import { autoSplit } from "./lib/hubScoring";
@@ -69,6 +69,21 @@ t("the academic year turns at UK midnight on 1 Sept, whatever the server's timez
   assert.equal(academicStartYear(new Date("2027-01-15T12:00:00Z")), 2026);
   assert.equal(academicStartYear(new Date("2027-08-31T22:59:59Z")), 2026);
   assert.equal(academicStartYear(new Date("2027-08-31T23:00:00Z")), 2027);
+});
+t("legacy hand-set years anchor from the row's own date, not from today (review finding)", () => {
+  const now = new Date("2026-09-28T10:00:00Z"); // academic year 2026
+  assert.equal(anchorFor({ createdAt: "2024-11-05T09:00:00Z", updatedAt: "2026-08-10T09:00:00Z" }, now), 2025); // set in Aug 2026 belongs to the 2025/26 year, so it moves up in Sept 2026
+  assert.equal(anchorFor({ createdAt: "2024-11-05T09:00:00Z", updatedAt: "2026-08-10T09:00:00Z" }, now, "created"), 2024);
+  assert.equal(anchorFor({ createdAt: "2026-09-02T09:00:00Z" }, now), 2026); // no updatedAt: falls back to createdAt
+  assert.equal(anchorFor({}, now), 2026); // no usable date: the current academic year
+  assert.equal(anchorFor({ updatedAt: "not a date" }, now), 2026);
+});
+t("a stored label that is not in the tenant's year list is flagged unknown, not silently pinned", () => {
+  const list = HUB_DEFAULTS.yearGroups, on = new Date("2027-01-15T12:00:00Z");
+  assert.deepEqual(advanceYear("Form 3B", 2025, list, on), { label: "Form 3B", overflow: false, unknown: true });
+  assert.equal(advanceYear("Form 3B", 2026, list, on).unknown, undefined); // nothing to advance yet: not "unknown"
+  const st = yearStatus({ yearGroup: "Form 3B", yearGroupAuto: false, yearAnchor: 2025 }, null, list, on, true);
+  assert.equal(st.yearGroup, "Form 3B"); assert.equal(st.yearUnknown, true);
 });
 t("a hand-set year moves up by itself each 1 Sept from its anchor", () => {
   const list = HUB_DEFAULTS.yearGroups, e = { yearGroup: "Year 4", yearGroupAuto: false, yearAnchor: 2025 };

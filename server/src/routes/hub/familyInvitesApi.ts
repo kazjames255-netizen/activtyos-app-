@@ -159,7 +159,10 @@ hubFamilyInvitesApi.post("/family-invites/:token/accept", async (req, res) => {
     // A child who is already in keeps what the tutor set for them; a new (or re-activated) one gets what the invite says.
     subjects: alreadyActive ? ((prev.get("subjects") as string[] | undefined) ?? []) : d.subjects,
     tutorUid: alreadyActive ? ((prev.get("tutorUid") as string | null) ?? null) : d.tutorUid, tutorName: alreadyActive ? ((prev.get("tutorName") as string | undefined) ?? "") : d.tutorName,
-    active: true, ...(alreadyActive && prev.get("yearGroup") !== undefined ? { yearGroup: (prev.get("yearGroup") as string | null) ?? null, yearGroupAuto: prev.get("yearGroupAuto") === true, ...(typeof prev.get("yearAnchor") === "number" ? { yearAnchor: prev.get("yearAnchor") as number } : {}), ...(typeof prev.get("yearMoveUp") === "boolean" ? { yearMoveUp: prev.get("yearMoveUp") as boolean } : {}) } : yg),
+    active: true, ...(alreadyActive && prev.get("yearGroup") !== undefined ? { yearGroup: (prev.get("yearGroup") as string | null) ?? null, yearGroupAuto: prev.get("yearGroupAuto") === true, ...(typeof prev.get("yearAnchor") === "number" ? { yearAnchor: prev.get("yearAnchor") as number }
+      // A hand-set year with no anchor yet (an older enrolment) would stay pinned forever: anchor it from when that row was last set, not from today
+      // (today would make a year set last August a year behind for good).
+      : prev.get("yearGroupAuto") !== true && typeof prev.get("yearGroup") === "string" && String(prev.get("yearGroup")).trim() ? { yearAnchor: academicStartYear(new Date(String(prev.get("updatedAt") ?? prev.get("createdAt") ?? now))) } : {}), ...(typeof prev.get("yearMoveUp") === "boolean" ? { yearMoveUp: prev.get("yearMoveUp") as boolean } : {}) } : yg),
     createdBy: prev.exists ? (prev.get("createdBy") as string) : d.createdBy, createdAt: prev.exists ? (prev.get("createdAt") as string) : now, updatedAt: now,
   };
   const carried: Partial<EnrolmentDoc> = {};

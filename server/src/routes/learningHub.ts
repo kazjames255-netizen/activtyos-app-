@@ -61,11 +61,11 @@ interface EnrolmentRow { childId: string; childName: string; parentEmail: string
 /** `dob` = the child's date of birth (never returned): it lets the row say which year group they are in NOW
  *  and whether year/age are both unknown (`audienceUnknown` — year-group-targeted quizzes will show for them, flagged). */
 const enrolmentOut = (e: EnrolmentDoc, cfg: { yearGroups: string[]; yearAutoAdvance: boolean }, dob: string | null): EnrolmentRow => {
-  const { yearGroup, mayHaveLeft } = yearStatus(e, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance);
+  const { yearGroup, mayHaveLeft, yearUnknown } = yearStatus(e, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance);
   return {
     childId: e.childId, childName: e.childName, parentEmail: e.parentEmail, franchiseId: e.franchiseId ?? null,
     subjects: e.subjects ?? [], tutorUid: e.tutorUid ?? null, tutorName: e.tutorName ?? "", active: e.active !== false, createdAt: e.createdAt,
-    yearGroup, yearGroupAuto: e.yearGroupAuto === true, yearMoveUp: typeof e.yearMoveUp === "boolean" ? e.yearMoveUp : null, mayHaveLeft, hasDob: ageInYears(dob) !== null, audienceUnknown: !yearGroup && ageInYears(dob) === null,
+    yearGroup, yearGroupAuto: e.yearGroupAuto === true, yearMoveUp: typeof e.yearMoveUp === "boolean" ? e.yearMoveUp : null, mayHaveLeft, ...(yearUnknown ? { yearUnknown: true } : {}), hasDob: ageInYears(dob) !== null, audienceUnknown: !yearGroup && ageInYears(dob) === null,
     ...(e.support ? { support: cleanSupport(e.support) } : {}),
   };
 };

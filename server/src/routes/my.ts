@@ -1805,7 +1805,7 @@ my.post("/bookings", async (req, res) => {
       tenantId: listing.tenantId,
       franchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null,
       parentUid: familyUid,
-      children: bookings.map((b) => ({ childId: b.childId, name: b.child })),
+      children: bookings.map((b) => ({ childId: b.childId, name: b.child, status: b.status })),
     }).catch((e) => console.error("[my] hub auto-enrol failed:", (e as Error).message));
     // The provider's staff can now read the SEND plans of the children they've
     // just been given. Granted here rather than by the client, so a parent

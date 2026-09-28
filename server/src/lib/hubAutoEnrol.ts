@@ -13,6 +13,7 @@ import { yearGroupFromDob } from "./hubRules";
 //  · the child must be on the booking parent's OWN account (children.parentUid) and not archived;
 //  · it enrols with no subject list (= every subject the provider teaches, as a manual Enrol with nothing ticked) and no tutor (an
 //    unassigned student is visible to every tutor of the business); what a family can open is still governed by lessonAccess / what is set;
+//  · only a CONFIRMED booking counts (an approval-needed / waitlisted / pending one enrols nobody);
 //  · nothing is emailed from here.
 // Best-effort and fire-and-forget: a booking never fails because of this.
 
@@ -21,7 +22,8 @@ export interface AutoEnrolInput {
   franchiseId?: string | null;
   parentUid: string | null | undefined;
   /** The children on the booking: by id when the booking carries one, else matched by name against the parent's own children. */
-  children: { childId?: string | null; name?: string | null }[];
+  /** `status` = the booking's own status: only a CONFIRMED booking enrols (not "Approval needed", "Waitlisted", pending or cancelled ones). */
+  children: { childId?: string | null; name?: string | null; status?: string | null }[];
 }
 
 export async function autoEnrolFromBooking(o: AutoEnrolInput): Promise<string[]> {
@@ -36,6 +38,7 @@ export async function autoEnrolFromBooking(o: AutoEnrolInput): Promise<string[]>
   const byName = new Map(mine.map((d) => [String(d.get("name") ?? "").trim().toLowerCase(), d]));
   const picked = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
   for (const c of o.children) {
+    if (String(c.status ?? "").trim().toLowerCase() !== "confirmed") continue; // an unconfirmed booking must not put a child on a tutor's roster
     const hit = (c.childId && okId(c.childId) ? byId.get(c.childId) : undefined) ?? byName.get((c.name ?? "").trim().toLowerCase());
     if (hit) picked.set(hit.id, hit);
   }
