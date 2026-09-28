@@ -136,7 +136,7 @@ test("tutor: Home is the first, default tab and reflects this run's work", async
   await expect(cardWith(page, "Recent activity", `scored 100% on ${quizTitle}`)).toBeVisible({ timeout: 45_000 });
 
   // The weekly rhythm chart has a text alternative and a table view.
-  await expect(page.getByRole("img", { name: /Weekly rhythm/ }).first()).toBeVisible();
+  await expect(page.getByRole("group", { name: /Weekly rhythm/ }).first()).toBeVisible();
   await page.getByRole("button", { name: "Show as table" }).click();
   await expect(page.getByRole("table").filter({ hasText: "Count" })).toBeVisible();
 

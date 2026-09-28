@@ -5,13 +5,26 @@ import { startOfDay } from "./homeLib";
 import { Card, FOCUS } from "./homeKit";
 import { useH } from "./homeI18n";
 
-// Weekly rhythm — quizzes and tests handed in per day, last 14 days. One series,
-// one hue, thin rounded bars on a quiet grid; the peak is labelled directly.
-// The chart is an <svg role="img"> with a spoken summary, and "Show as table"
-// swaps in the same numbers as a real table (keyboard + screen-reader friendly).
+// Weekly rhythm — quizzes and tests handed in per day, last 14 days, drawn as frosted-glass
+// capsules over a soft pastel wash (the "Glass capsules" design). Each capsule fills from the
+// bottom (height = count), lifts and glows on hover or keyboard focus, and carries a floating
+// tooltip ("Tue 15 Sep · 2 hand-ins"). Colours come from the hub tokens only (color-mix), so the
+// dark theme follows. A spoken summary stays available, and "Show as table" swaps in the same
+// numbers as a real table (keyboard + screen-reader friendly).
 
-const W = 340, H = 150, PL = 26, PR = 4, PT = 16, PB = 22;
 const TOPS = [4, 6, 10, 20, 30, 40, 60, 100, 200, 300, 400, 600, 1000, 2000, 5000];
+
+// Pastel wash behind the capsules: pink, violet and peach blobs mixed from tokens.
+const WASH = [
+  "radial-gradient(90px 90px at 12% 22%, color-mix(in srgb, var(--red) 24%, transparent), transparent)",
+  "radial-gradient(120px 120px at 68% 8%, color-mix(in srgb, var(--violet) 26%, transparent), transparent)",
+  "radial-gradient(130px 130px at 96% 82%, color-mix(in srgb, var(--amber) 30%, transparent), transparent)",
+  "radial-gradient(130px 130px at 34% 100%, color-mix(in srgb, color-mix(in srgb, var(--red) 50%, var(--violet)) 22%, transparent), transparent)",
+].join(",");
+const GLASS_BG = "linear-gradient(160deg, color-mix(in srgb, var(--surface) 72%, transparent), color-mix(in srgb, var(--surface) 14%, transparent))";
+const FILL = "linear-gradient(180deg, color-mix(in srgb, var(--violet) 58%, var(--surface)), color-mix(in srgb, var(--red) 52%, var(--surface)))";
+const FILL_TODAY = "linear-gradient(180deg, color-mix(in srgb, var(--amber) 62%, var(--surface)), color-mix(in srgb, var(--red) 55%, var(--surface)))";
+const FILL_ZERO = "color-mix(in srgb, var(--surface) 65%, transparent)";
 
 export function RhythmChart({ days, now, title: titleIn, unit: unitIn, emptyText, className = "", delay = 0 }: {
   days: { day: number; count: number }[]; now: number; title?: string; unit?: string; emptyText: string; className?: string; delay?: number;
@@ -28,30 +41,29 @@ export function RhythmChart({ days, now, title: titleIn, unit: unitIn, emptyText
   const [table, setTable] = useState(false);
   const total = days.reduce((s, d) => s + d.count, 0);
   const max = Math.max(0, ...days.map((d) => d.count));
-  const top = TOPS.find((t) => t >= max) ?? Math.ceil(max / 100) * 100;
+  const top = TOPS.find((n) => n >= max) ?? Math.ceil(max / 100) * 100;
   const peak = max > 0 ? days.reduce((b, d) => (d.count > b.count ? d : b), days[0]) : null;
   const activeCount = days.filter((d) => d.count > 0).length;
-  const iw = W - PL - PR, ih = H - PT - PB;
-  const slot = iw / days.length, bw = Math.min(14, slot * 0.62);
-  const y = (v: number) => PT + ih - (v / top) * ih;
   const today = startOfDay(now);
   const summary = total === 0
     ? t("hubshell.hm_rhythmNone", { title, unit, days: days.length })
     : t("hubshell.hm_rhythmSummary", { title, total, unit, days: days.length, active: activeCount, day: fmtLong(peak!.day), peak: peak!.count });
+  const label = (d: { day: number; count: number }) => `${wk(d.day)} ${fmtShort(d.day)} · ${pl("hm_handIns", d.count)}`;
+  const n = days.length || 1;
   const hp = hover != null ? days[hover] : null;
 
   return (
     <Card title={title} icon="chart" tone="violet" className={className} style={{ ["--d" as string]: `${delay}ms` }}
-      aside={total > 0 ? <button type="button" onClick={() => setTable((t) => !t)} aria-pressed={table} className={`min-h-[44px] rounded-full px-3 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{table ? t("hubshell.hm_showChart") : t("hubshell.hm_showTable")}</button> : undefined}>
+      aside={total > 0 ? <button type="button" data-testid="hub-home-rhythm-toggle" onClick={() => setTable((v) => !v)} aria-pressed={table} className={`min-h-[44px] rounded-full px-3 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{table ? t("hubshell.hm_showChart") : t("hubshell.hm_showTable")}</button> : undefined}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <span className="text-[30px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{total}</span>
+        <span className="text-[40px] font-extrabold leading-none tabular-nums text-[var(--brand-strong)]" style={{ fontFamily: "var(--ff-display)" }}>{total}</span>
         <span className="text-[12.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.hm_unitLastDays", { unit, days: days.length })}</span>
       </div>
 
       {total === 0 ? (
         <p className="mt-4 rounded-2xl border border-dashed border-[var(--line)] bg-[var(--panel)] px-4 py-6 text-center text-[13px] leading-relaxed text-[var(--ink-2)]">{emptyText}</p>
       ) : table ? (
-        <div className="mt-3 max-h-[220px] overflow-auto rounded-2xl border border-[var(--line)]">
+        <div className="mt-3 max-h-[220px] overflow-auto rounded-2xl border border-[var(--line)]" data-testid="hub-home-rhythm-table">
           <table className="w-full text-start text-[12.5px]">
             <caption className="sr-only">{summary}</caption>
             <thead className="sticky top-0 bg-[var(--panel)] text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><tr><th scope="col" className="px-3 py-2 font-extrabold">{t("hubshell.hm_colDay")}</th><th scope="col" className="px-3 py-2 text-end font-extrabold">{t("hubshell.hm_colCount")}</th></tr></thead>
@@ -61,49 +73,54 @@ export function RhythmChart({ days, now, title: titleIn, unit: unitIn, emptyText
           </table>
         </div>
       ) : (
-        <div className="relative mt-2">
-          <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${uid}-t ${uid}-d`} className="block h-auto w-full overflow-visible">
-            <title id={`${uid}-t`}>{title}</title>
-            <desc id={`${uid}-d`}>{summary}</desc>
-            {[0, top / 2, top].map((v) => (
-              <g key={v}>
-                <line x1={PL} x2={W - PR} y1={y(v)} y2={y(v)} stroke="var(--line)" strokeWidth={1} strokeDasharray={v === 0 ? undefined : "2 4"} />
-                <text x={PL - 6} y={y(v) + 3.5} textAnchor="end" fontSize={11} fontWeight={600} fill="var(--ink-3)">{v}</text>
-              </g>
-            ))}
-            {days.map((d, i) => {
-              const cx = PL + slot * i + slot / 2;
-              const isToday = d.day === today;
-              const h = Math.max(0, (d.count / top) * ih);
-              const r = Math.min(4, h / 2);
-              return (
-                <g key={d.day}>
-                  {d.count > 0 ? (
-                    <path className="home-grow" style={{ ["--d" as string]: `${i * 35}ms` }}
-                      d={`M${cx - bw / 2},${PT + ih} v${-(h - r)} a${r},${r} 0 0 1 ${r},${-r} h${bw - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} z`}
-                      fill="var(--brand)" opacity={hover == null || hover === i ? 1 : 0.45} />
-                  ) : (
-                    <rect x={cx - bw / 2} y={PT + ih - 2} width={bw} height={2} rx={1} fill="var(--line)" />
-                  )}
-                  {isToday && <rect x={cx - 6} y={H - 2} width={12} height={2} rx={1} fill="var(--brand)" />}
-                  {peak && d === peak && d.count > 0 && <text x={cx} y={y(d.count) - 5} textAnchor="middle" fontSize={12} fontWeight={800} fill="var(--ink)">{d.count}</text>}
-                  <text x={cx} y={H - 6} textAnchor="middle" fontSize={11} fontWeight={isToday ? 800 : 600} fill={isToday ? "var(--ink)" : "var(--ink-3)"}>{wkNarrow(d.day)}</text>
-                  <rect x={PL + slot * i} y={PT} width={slot} height={ih + PB - 6} fill="transparent" onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)} />
-                </g>
-              );
-            })}
-          </svg>
-          {hp && (
-            <div className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] shadow-[var(--shadow)]"
-              style={{ left: `${((PL + slot * hover! + slot / 2) / W) * 100}%`, top: -6 }}>
-              <div className="font-extrabold text-[var(--ink)]">{pl("hm_handIns", hp.count)}</div>
-              <div className="text-[var(--ink-3)]">{wk(hp.day)} {fmtShort(hp.day)}</div>
+        <div className="relative mt-3" data-testid="hub-home-rhythm">
+          <style>{`
+            .rc-cap { transition: transform .18s ease, box-shadow .18s ease; }
+            .rc-cap:hover, .rc-cap:focus-visible { transform: translateY(-8px); box-shadow: 0 14px 22px -10px color-mix(in srgb, var(--violet) 55%, transparent), 0 0 16px color-mix(in srgb, var(--red) 30%, transparent), inset 0 0 8px color-mix(in srgb, var(--surface) 55%, transparent); }
+            @media (prefers-reduced-motion: reduce) { .rc-cap { transition: none; } .rc-cap:hover, .rc-cap:focus-visible { transform: none; } }
+          `}</style>
+          <div role="group" aria-labelledby={`${uid}-t`} aria-describedby={`${uid}-d`} className="relative overflow-visible rounded-[22px] px-2.5 pb-2 pt-9" style={{ background: `${WASH}, var(--panel)` }}>
+            <span id={`${uid}-t`} className="sr-only">{title}</span>
+            <p id={`${uid}-d`} className="sr-only">{summary}</p>
+            <div className="grid items-end gap-1 sm:gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
+              {days.map((d, i) => {
+                const isToday = d.day === today;
+                const pct = d.count > 0 ? Math.max(14, Math.round((d.count / top) * 100)) : 6;
+                const showCount = d.count > 0 && (hover === i || (hover == null && peak != null && d === peak));
+                return (
+                  <div key={d.day} className="relative h-[150px] sm:h-[170px]">
+                    <div tabIndex={0} role="img" aria-label={label(d)} data-testid="hub-home-rhythm-capsule" data-count={d.count}
+                      onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover((h) => (h === i ? null : h))} onFocus={() => setHover(i)} onBlur={() => setHover((h) => (h === i ? null : h))}
+                      className={`rc-cap relative h-full overflow-hidden rounded-full outline-none ${FOCUS}`}
+                      style={{ background: GLASS_BG, border: "1px solid color-mix(in srgb, var(--surface) 80%, transparent)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", boxShadow: "0 10px 18px -10px color-mix(in srgb, var(--ink) 40%, transparent), inset 0 0 8px color-mix(in srgb, var(--surface) 50%, transparent)" }}>
+                      <i className="home-grow absolute inset-x-0 bottom-0 block rounded-full" style={{ ["--d" as string]: `${i * 45}ms`, height: `${pct}%`, background: d.count === 0 ? FILL_ZERO : isToday ? FILL_TODAY : FILL, boxShadow: d.count > 0 ? "inset 0 6px 8px color-mix(in srgb, var(--surface) 45%, transparent)" : undefined }} />
+                    </div>
+                    {showCount && <span aria-hidden className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-[13px] font-extrabold tabular-nums text-[var(--ink)]" style={{ bottom: `calc(${pct}% + 8px)` }}>{d.count}</span>}
+                  </div>
+                );
+              })}
             </div>
-          )}
-          <p className="sr-only">{summary}</p>
+            <div className="mt-1.5 grid gap-1 text-center sm:gap-1.5" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }} aria-hidden>
+              {days.map((d) => {
+                const isToday = d.day === today;
+                return (
+                  <span key={d.day} className="flex flex-col items-center text-[11px] leading-none" style={{ fontWeight: isToday ? 800 : 700, color: isToday ? "var(--ink)" : "var(--ink-2)" }}>
+                    {wkNarrow(d.day)}
+                    <span className="mt-1 block h-[3px] w-4 rounded-full" style={{ background: isToday ? "var(--gold)" : "transparent" }} />
+                  </span>
+                );
+              })}
+            </div>
+            {hp && (
+              <div role="tooltip" data-testid="hub-home-rhythm-tip" className="pointer-events-none absolute z-10 -translate-x-1/2 whitespace-nowrap rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] font-extrabold text-[var(--ink)] shadow-[var(--shadow)]"
+                style={{ left: `clamp(56px, ${(((hover ?? 0) + 0.5) / n) * 100}%, calc(100% - 56px))`, top: 2 }}>
+                {label(hp)}
+              </div>
+            )}
+          </div>
         </div>
       )}
-      {total > 0 && !table && <div className="mt-1 flex justify-between text-[11px] font-semibold text-[var(--ink-3)]"><span>{fmtShort(days[0].day)}</span><span>{fmtShort(days[days.length - 1].day)}</span></div>}
+      {total > 0 && !table && <div className="mt-2 flex justify-between text-[11px] font-semibold text-[var(--ink-3)]"><span>{fmtShort(days[0].day)}</span><span>{fmtShort(days[days.length - 1].day)}</span></div>}
     </Card>
   );
 }
