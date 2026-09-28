@@ -93,9 +93,9 @@ function Tile({ tile, index }: { tile: StatTile; index: number }) {
 }
 
 /** Four tiles: 4 across on desktop, 2x2 on tablet, stacked on a phone. */
-export function StatTiles({ tiles, label }: { tiles: StatTile[]; label?: string }) {
+export function StatTiles({ tiles, label, cols = 4 }: { tiles: StatTile[]; label?: string; /** 3 = three across from tablet up (a child's Homework); 4 = the default strip. */ cols?: 3 | 4 }) {
   return (
-    <div role="group" aria-label={label} data-testid="hub-stat-tiles" className="grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 lg:grid-cols-4">
+    <div role="group" aria-label={label} data-testid="hub-stat-tiles" className={`grid grid-cols-1 gap-3 ${cols === 3 ? "min-[520px]:grid-cols-3" : "min-[520px]:grid-cols-2 lg:grid-cols-4"}`}>
       {tiles.map((tile, i) => <Tile key={tile.key} tile={tile} index={i} />)}
     </div>
   );

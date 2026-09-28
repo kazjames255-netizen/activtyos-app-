@@ -7,14 +7,15 @@ import { renderMarkdown } from "@/lib/markdown";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../panelTypes";
 import { errMsg, fmtSize, type Note } from "../types";
-import { ACCEPT_FILES, DISPLAY, EmptyState, FOCUS, MAX_FILE, Notice, Overline, Pill, Skeleton, fmtDayTime, goToTab, readAsDataUrl, useCountUp, useNow, withQs, type Tone } from "../teachKit";
+import { ACCEPT_FILES, DISPLAY, EmptyState, FOCUS, MAX_FILE, Notice, Pill, Skeleton, fmtDayTime, goToTab, readAsDataUrl, useNow, withQs } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
-import { ChildChip } from "../family/FamilyContext";
+import { ChildChip, useFamily, useSupport } from "../family/FamilyContext";
 import { useKidCopy } from "../family/kidCopy";
 import { closeLink, openLink, useLinkOpen } from "../family/link";
 import { VideoEmbeds } from "../videoKit";
 import { QuizBreakdown } from "./hwBreakdown";
-import { HwTile, StatusStepper } from "./hwKit";
+import { StatusStepper } from "./hwKit";
+import { HwCard, HwGroup, HwStatStrip, MarkFace } from "./KidHwList";
 import { hubUrl } from "../home/homeLib";
 import { getShared } from "./homeworkFeed";
 import { RetryFace } from "./RetryFace";
@@ -23,21 +24,11 @@ import { dueState, pctOf, type AttemptLite, type HubFile, type QuizLite, type St
 
 // Student (parent's child) homework: what's due, hand it in, see the mark.
 
-const TONE_OF: Record<string, Tone> = { red: "red", gold: "gold", neutral: "neutral", green: "green", brand: "brand" };
 const MAX_ATTACH = 5;
-
-function StatusPill({ h: hw, now, kind }: { h: HW; now: number; kind: boolean }) {
-  const { h } = useHw();
-  const s = hw.submission.status;
-  if (s === "marked" && hw.submission.mark) return <Pill tone="green" icon={<Ico name="check" size={12} strokeWidth={3} />}>{hw.submission.mark.score}/{hw.submission.mark.max}</Pill>;
-  if (s === "submitted") return <Pill tone="brand" icon={<Ico name="hourglass" size={12} />}>{kind ? h("stHandedIn") : h("awaitingMarking")}</Pill>;
-  const ds = dueState(hw.dueAt, s, now, kind);
-  return <Pill tone={TONE_OF[ds.tone]!}>{ds.label}</Pill>;
-}
 
 export function StudentHomework({ qs, childId, students, topics, onError }: PanelProps) {
   const x = useHw();
-  const { h: tr, hp } = x;
+  const { h: tr } = x;
   const topicById = useMemo(() => new Map((topics ?? []).map((t) => [t.id, t])), [topics]);
   const [list, setList] = useState<HW[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -58,8 +49,9 @@ export function StudentHomework({ qs, childId, students, topics, onError }: Pane
   const retry = () => { setFailed(false); load(true); };
 
   const yg = students.find((s) => s.childId === childId)?.yearGroup;
-  const { kind } = useKidCopy(yg);
+  const { kind, band } = useKidCopy(yg);
   const kid = kind;
+  const calm = useSupport().calm; // Calm: no numbers or pressure on a child's screen
   const child = students.find((s) => s.childId === childId)?.childName ?? "";
   const groups = useMemo(() => {
     const g = { todo: [] as HW[], waiting: [] as HW[], marked: [] as HW[] };
@@ -71,40 +63,17 @@ export function StudentHomework({ qs, childId, students, topics, onError }: Pane
   if (list === null) return <div className="grid gap-3" aria-busy="true" aria-label={tr("loading")}><Skeleton className="h-[110px]" /><Skeleton className="h-[74px]" /><Skeleton className="h-[74px]" /></div>;
 
   const open = openId ? list.find((h) => h.id === openId) ?? null : null;
-  if (open) return <Detail kid={kid} hw={open} qs={qs} childId={childId} now={now} onBack={closeLink} onChanged={() => load(true)} onError={onError} />;
+  if (open) return <Detail kid={kid} band={band} hw={open} qs={qs} childId={childId} now={now} onBack={closeLink} onChanged={() => load(true)} onError={onError} />;
 
   if (list.length === 0) {
     return <EmptyState icon={<Ico name="homework" size={26} />} title={tr("noneTitle")} body={tr("noneBody", { who: child || tr("yourTutor") })} />;
   }
 
   const overdue = groups.todo.filter((h) => dueState(h.dueAt, "assigned", now).overdue).length;
-  const card = (h: HW) => {
-    const ds = dueState(h.dueAt, h.submission.status, now, kid);
-    const hot = ds.overdue && !kid; // a child never gets the red "warning" treatment
-    return (
-      <button key={h.id + h.childId} type="button" data-ui="card" data-hw={h.id} data-status={h.submission.status} onClick={() => openLink({ kind: "hw", id: h.id }, { tab: "homework" })}
-        className={`flex min-h-[68px] w-full items-center gap-3 rounded-2xl border bg-[var(--surface)] p-3.5 text-start shadow-[var(--shadow-sm)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:shadow-[var(--shadow)] motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${hot ? "border-[var(--red-line)]" : "border-[var(--line)]"}`}>
-        <HwTile topic={h.flashcardTopicId ? topicById.get(h.flashcardTopicId) ?? null : null} size={48}
-          tone={h.submission.status === "marked" ? "green" : h.submission.status === "submitted" ? "brand" : hot ? "red" : "gold"}
-          icon={h.submission.status === "marked" ? "check" : h.submission.status === "submitted" ? "send" : hot ? "warning" : "homework"} />
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate text-[14px] font-extrabold text-[var(--ink)]">{h.title}</span>
-            <StatusPill h={h} now={now} kind={kid} />
-            {h.assessmentId && <Pill tone="violet" icon={<Ico name="quiz" size={12} />}>{tr("quiz")}</Pill>}
-            {(h.videos?.length ?? 0) > 0 && <Pill tone="violet" icon={<Ico name="video" size={12} />}>{hp("nVideos", h.videos!.length)}</Pill>}
-          </span>
-          <span className="mt-0.5 block truncate text-[12px] text-[var(--ink-3)]">
-            {h.submission.status === "assigned" ? tr("dueAt", { when: x.dayTime(h.dueAt) }) : h.submission.submittedAt ? tr("handedInAtCap", { when: x.dayTime(h.submission.submittedAt) }) : ""}
-            {h.submission.status === "marked" && h.submission.mark && !kid && ` · ${pctOf(h.submission.mark)}%`}
-            {h.submission.late && !kid && ` · ${tr("lateLower")}`}
-          </span>
-        </span>
-        <StatusStepper status={h.submission.status} compact className="hidden w-[92px] flex-none sm:flex" />
-        <Ico name="chevronRight" size={18} className="flex-none text-[var(--ink-3)]" />
-      </button>
-    );
-  };
+  const card = (h: HW) => (
+    <HwCard key={h.id + h.childId} hw={h} topic={h.flashcardTopicId ? topicById.get(h.flashcardTopicId) ?? null : null} now={now} kid={kid}
+      onOpen={() => openLink({ kind: "hw", id: h.id }, { tab: "homework" })} />
+  );
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4" id="hub-homework">
@@ -116,27 +85,23 @@ export function StudentHomework({ qs, childId, students, topics, onError }: Pane
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2.5">
-        {[
-          { label: tr("toDo"), n: groups.todo.length, sub: kid ? (overdue ? tr("waitingForYou") : tr("allOnTrack")) : overdue ? tr("nOverdue", { n: overdue }) : tr("allOnTrack"), tone: overdue && !kid ? "var(--red)" : "var(--brand-2)" },
-          { label: kid ? tr("stHandedIn") : tr("awaitingMarking"), n: groups.waiting.length, sub: tr("handedInLower"), tone: "var(--brand)" },
-          { label: tr("stMarked"), n: groups.marked.length, sub: tr("withFeedback"), tone: "var(--green)" },
-        ].map((t) => <SummaryTile key={t.label} {...t} />)}
-      </div>
+      <HwStatStrip todo={groups.todo.length} waiting={groups.waiting.length} marked={groups.marked.length} overdue={overdue} kid={kid} calm={calm} />
 
-      {groups.todo.length > 0 && <div className="grid gap-2"><Overline>{tr("toDo")}</Overline>{groups.todo.map(card)}</div>}
-      {groups.waiting.length > 0 && <div className="grid gap-2"><Overline>{tr("handedAwaiting")}</Overline>{groups.waiting.map(card)}</div>}
-      {groups.marked.length > 0 && <div className="grid gap-2"><Overline>{tr("stMarked")}</Overline>{groups.marked.map(card)}</div>}
+      {groups.todo.length > 0 && <HwGroup id="todo" title={tr("toDo")} items={groups.todo.map(card)} />}
+      {groups.waiting.length > 0 && <HwGroup id="waiting" title={tr("handedAwaiting")} items={groups.waiting.map(card)} />}
+      {groups.marked.length > 0 && <HwGroup id="marked" title={tr("stMarked")} items={groups.marked.map(card)} />}
     </div>
   );
 }
 
 // ── one homework ─────────────────────────────────────────────────────────────
 
-function Detail({ kid, hw, qs, childId, now, onBack, onChanged, onError }: { kid: boolean; hw: HW; qs: string; childId: string | null; now: number; onBack: () => void; onChanged: () => void; onError: (m: string) => void }) {
+function Detail({ kid, band, hw, qs, childId, now, onBack, onChanged, onError }: { kid: boolean; band: "ks1" | "ks2" | "ks3" | "teen"; hw: HW; qs: string; childId: string | null; now: number; onBack: () => void; onChanged: () => void; onError: (m: string) => void }) {
   const x = useHw();
   const { h: tr, hp } = x;
   const sub = hw.submission;
+  const childMode = useFamily().kid;
+  const calm = useSupport().calm;
   // An automatic (worksheet) mark can still change with a re-hand-in; only a tutor's own mark locks the hand-in.
   const marked = sub.status === "marked" && sub.mark?.markedBy !== "auto";
   const shownMarked = sub.status === "marked";
@@ -234,15 +199,10 @@ function Detail({ kid, hw, qs, childId, now, onBack, onChanged, onError }: { kid
         <StatusStepper status={sub.status} className="mt-4 max-w-[380px]" />
 
         {shownMarked && sub.mark && (
-          <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4" data-testid="hub-mark">
-            <div className="flex flex-wrap items-end gap-x-4 gap-y-1">
-              <div className="text-[40px] font-extrabold leading-none tabular-nums" style={DISPLAY}>{sub.mark.score}<span className="text-[22px] text-[var(--ink-3)]">/{sub.mark.max}</span></div>
-              {!kid && <div className="pb-1 text-[15px] font-bold text-[var(--ink-2)]">{pctOf(sub.mark)}%</div>}
-            </div>
-            <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[var(--panel)] text-[var(--ink-2)]"><div className="h-full rounded-full bg-white" style={{ width: `${pctOf(sub.mark)}%` }} /></div>
+          <MarkFace score={sub.mark.score} max={sub.mark.max} pct={pctOf(sub.mark)} hideNumbers={childMode && (band === "ks1" || calm)} showPct={!kid}>
             {sub.mark.feedback.trim() && <p className="mt-3 whitespace-pre-wrap rounded-xl bg-[var(--surface)] px-3.5 py-2.5 text-[13.5px] leading-relaxed text-[var(--ink)]">&ldquo;{sub.mark.feedback}&rdquo;</p>}
             <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{sub.mark.markedBy === "auto" ? tr("markedByAuto", { when: x.dayTime(sub.mark.markedAt) }) : tr("markedBy", { name: sub.mark.markedByName, when: x.dayTime(sub.mark.markedAt) })}</div>
-          </div>
+          </MarkFace>
         )}
       </section>
 
@@ -273,7 +233,7 @@ function Detail({ kid, hw, qs, childId, now, onBack, onChanged, onError }: { kid
                       <div key={n.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-line)] bg-[var(--brand-soft)] p-2.5 ps-3" data-testid="hub-hw-lesson">
                         <Ico name="play" size={16} className="text-[var(--brand)]" />
                         <span className="min-w-0 flex-1 truncate text-[13.5px] font-extrabold text-[var(--brand-strong)]">{n.title}</span>
-                        <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} data-testid="hub-hw-start-lesson"
+                        <Button variant="solid" className={`min-h-[52px] rounded-full px-6 text-[15px] shadow-[var(--shadow)] ${FOCUS}`} data-testid="hub-hw-start-lesson"
                           onClick={() => openLink({ kind: "lesson", id: n.id }, { tab: "notes", hw: hw.id })}>
                           {tr("startLesson")}<Ico name="arrowRight" size={15} />
                         </Button>
@@ -312,7 +272,7 @@ function Detail({ kid, hw, qs, childId, now, onBack, onChanged, onError }: { kid
                     {attempts === null ? tr("checking") : finished ? (finished.status === "marked" && finished.pct !== null ? tr("doneScore", { got: finished.scoreMarks, max: finished.maxMarks, pct: finished.pct }) : tr("doneWaiting")) : running ? tr("startedQuiz") : quiz ? `${hp("nQuestions", quiz.questionCount)}${quiz.totalMarks ? ` · ${hp("nMarks", quiz.totalMarks)}` : ""}` : tr("quizPart")}
                   </div>
                 </div>
-                {finished ? <Pill tone="green" icon={<Ico name="check" size={12} strokeWidth={3} />}>{tr("quizDone")}</Pill> : !marked && <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} onClick={goQuiz}>{running ? tr("continueQuiz") : tr("takeQuiz")}<Ico name="arrowRight" size={15} /></Button>}
+                {finished ? <Pill tone="green" icon={<Ico name="check" size={12} strokeWidth={3} />}>{tr("quizDone")}</Pill> : !marked && <Button variant="solid" className={`min-h-[52px] rounded-full px-6 text-[15px] shadow-[var(--shadow)] ${FOCUS}`} data-testid="hub-hw-start-quiz" onClick={goQuiz}>{running ? tr("continueQuiz") : tr("takeQuiz")}<Ico name="arrowRight" size={15} /></Button>}
               </div>
               {finished?.status === "marked" && <QuizBreakdown attemptId={finished.id} qs={withQs(qs, { childId })} />}
               {!finished && !marked && <p className="mt-2 text-[11.5px] text-[var(--ink-2)]">{tr("quizOpens")}</p>}
@@ -397,7 +357,7 @@ function WorksheetCard({ w, qs, childId, hwId, attempts, locked }: { w: NonNulla
           <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{h("wsHead", { title: w.title })}</div>
           <div className="text-[12px] text-[var(--ink-2)]">{finished ? (finished.status === "marked" && finished.pct !== null ? h("doneScore", { got: finished.scoreMarks, max: finished.maxMarks, pct: finished.pct }) : h("doneWaiting")) : running ? h("wsStarted") : h("wsOnScreen")}</div>
         </div>
-        {w.quizId && !finished && !locked && <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} data-testid="hub-hw-start-worksheet" onClick={() => openLink({ kind: "quiz", id: w.quizId! }, { tab: "quizzes", hw: hwId })}>{running ? h("wsContinue") : h("wsDo")}<Ico name="arrowRight" size={15} /></Button>}
+        {w.quizId && !finished && !locked && <Button variant="solid" className={`min-h-[52px] rounded-full px-6 text-[15px] shadow-[var(--shadow)] ${FOCUS}`} data-testid="hub-hw-start-worksheet" onClick={() => openLink({ kind: "quiz", id: w.quizId! }, { tab: "quizzes", hw: hwId })}>{running ? h("wsContinue") : h("wsDo")}<Ico name="arrowRight" size={15} /></Button>}
         {finished && <Pill tone="green" icon={<Ico name="check" size={12} strokeWidth={3} />}>{h("wsDone")}</Pill>}
       </div>
       {w.quizId && (
@@ -410,17 +370,5 @@ function WorksheetCard({ w, qs, childId, hwId, attempts, locked }: { w: NonNulla
       )}
       {finished?.status === "marked" && <QuizBreakdown attemptId={finished.id} qs={withQs(qs, { childId })} />}
     </section>
-  );
-}
-
-function SummaryTile({ label, n, sub, tone }: { label: string; n: number; sub: string; tone: string }) {
-  const v = useCountUp(n, 600);
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 ps-4 shadow-[var(--shadow-sm)]">
-      <div className="absolute bottom-3 start-0 top-3 w-[3px] rounded-e" style={{ background: tone }} />
-      <div className="truncate text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{label}</div>
-      <div className="mt-1 text-[24px] font-extrabold leading-none tabular-nums" style={{ ...DISPLAY, color: tone }}>{v}</div>
-      <div className="mt-1 truncate text-[11px] font-semibold text-[var(--ink-3)]">{sub}</div>
-    </div>
   );
 }
