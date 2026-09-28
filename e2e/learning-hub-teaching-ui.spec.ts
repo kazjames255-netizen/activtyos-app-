@@ -284,7 +284,7 @@ test.describe("live lessons: schedule, list, and the join window", () => {
     await dlg.getByLabel("Topic (optional)").selectOption(topicId);
     await dlg.getByRole("button", { name: childName, exact: true }).click();
     const saved = page.waitForResponse((r) => r.url().endsWith(`/api/learning-hub/lessons?tenantId=${accounts.freelancer.tenantId}`) && r.request().method() === "POST");
-    await dlg.getByRole("button", { name: "Schedule video lesson" }).click();
+    await dlg.getByRole("button", { name: /Schedule (video lesson|or run a lesson)/ }).click();
     expect((await saved).status()).toBe(201);
     await expect(dlg).toHaveCount(0);
     const mine = page.locator('#hub-next-lesson, [data-ui="card"]').filter({ hasText: lessonTitle }).first();

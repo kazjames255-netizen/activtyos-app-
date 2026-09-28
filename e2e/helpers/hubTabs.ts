@@ -11,7 +11,7 @@ const MAP: Entry[] = [
   { top: "home", sub: null, labels: ["Home"] },
   { top: "lessons", sub: "lessons", labels: ["Lessons & curriculum", "Lessons"] },
   { top: "lessons", sub: "live", labels: ["Live lessons"] },
-  { top: "lessons", sub: "schedule", labels: ["Schedule video lesson"] },
+  { top: "lessons", sub: "schedule", labels: ["Schedule video lesson", "Schedule or run a lesson"] },
   { top: "lessons", sub: "teach", labels: ["Teach in person"] },
   { top: "lessons", sub: "tools", labels: ["Tools"] },
   { top: "lessons", sub: "flashcards", labels: ["Flashcards"] },

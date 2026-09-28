@@ -263,7 +263,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
                       <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{h.title}</span><span className="block text-[12px] font-bold" style={{ color: tone.fg }}>{h.st.label}</span></span>
                       <Icon name="chevronRight" size={16} className="text-[var(--ink-3)]" />
                     </button>
-                    {!kidMode && h.notes.find((n) => n.interactive) && <WatchAlongButton noteId={h.notes.find((n) => n.interactive)!.id} className="mt-0.5" />}
+                    {!kidMode && (h.notes.find((n) => n.interactive) ?? h.notes[0]) && <WatchAlongButton noteId={(h.notes.find((n) => n.interactive) ?? h.notes[0])!.id} className="mt-0.5" />}
                   </li>
                 );
               })}
