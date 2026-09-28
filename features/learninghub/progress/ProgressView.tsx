@@ -139,27 +139,33 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
       {partial && <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-[12px] leading-snug text-[var(--ink-2)] sm:px-5">{who ? tr("hubfam.pgPartialWho", { a: practised, b: topics.length, name: who }) : tr("hubfam.pgPartialYou", { a: practised, b: topics.length })}</div>}
 
       {topics.length > 0 && (
-        <ul className="m-0 grid list-none divide-y divide-[var(--line)] border-t border-[var(--line)] p-0">
+        <ol className="m-0 grid list-none gap-0 border-t border-[var(--line)] p-0" aria-label={tr("hubfam.pgJourneyAria", { subject: s.subject })}>
           {topics.map((t, i) => {
             const tt = bandTone(bands, t.band);
             const tried = t.attempts > 0;
+            const last = i === topics.length - 1;
             return (
-              <li key={t.topicId} className="px-4 py-3 sm:px-5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 text-[13px] font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{t.topic}{t.subtopic ? <span className="font-semibold text-[var(--ink-3)]"> › {t.subtopic}</span> : null}</div>
-                  <BandChip bands={bands} band={tried ? t.band : null} pct={tried ? t.masteryPct : null} />
+              <li key={t.topicId} className="relative flex gap-3.5 px-4 py-3.5 sm:px-5" data-testid="hub-journey-stop">
+                {/* The trail: a dashed connector running down through every stop but the last, behind the ring. */}
+                {!last && <span aria-hidden className="absolute start-[35.5px] top-[58px] bottom-0 w-0 border-s-2 border-dashed sm:start-[43.5px] sm:top-[66px]" style={{ borderColor: `color-mix(in srgb, ${tt.fill} 35%, var(--line))` }} />}
+                <div className="relative z-[1] flex-none">
+                  <ScoreRing pct={tried ? t.masteryPct : 0} size={56} stroke={6} tone={tried ? tt : NEUTRAL} passMark={t.baselinePct} state={tried ? undefined : "empty"}
+                    ariaLabel={tr(who === null && !p.canEdit ? "hubfam.pgTopicLevel" : "hubfam.pgTopicMastery", { topic: t.topic })} />
                 </div>
-                <div className="relative mt-2">
-                  <Meter pct={tried ? t.masteryPct : 0} tone={tt} height={8} delay={120 + i * 80} label={tr(who === null && !p.canEdit ? "hubfam.pgTopicLevel" : "hubfam.pgTopicMastery", { topic: t.topic })} mark={t.baselinePct} />
-                </div>
-                <div className="mt-1 flex justify-between text-[11px] font-semibold text-[var(--ink-3)]">
-                  <span>{tried ? tp("hubfam.pgQuizCount", t.attempts) : tr("hubfam.pgNotPractised")}{t.baselinePct != null ? ` · ${tr("hubfam.pgStartedAtSfx", { pct: Math.round(t.baselinePct) })}` : ""}</span>
-                  {t.lastAttemptAt && <span>{timeAgo(t.lastAttemptAt)}</span>}
+                <div className="min-w-0 flex-1 pt-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 text-[13px] font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{t.topic}{t.subtopic ? <span className="font-semibold text-[var(--ink-3)]"> › {t.subtopic}</span> : null}</div>
+                    <BandChip bands={bands} band={tried ? t.band : null} pct={tried ? t.masteryPct : null} />
+                  </div>
+                  <div className="mt-1 flex flex-wrap justify-between gap-x-2 text-[11px] font-semibold text-[var(--ink-3)]">
+                    <span>{tried ? tp("hubfam.pgQuizCount", t.attempts) : tr("hubfam.pgNotPractised")}{t.baselinePct != null ? ` · ${tr("hubfam.pgStartedAtSfx", { pct: Math.round(t.baselinePct) })}` : ""}</span>
+                    {t.lastAttemptAt && <span>{timeAgo(t.lastAttemptAt)}</span>}
+                  </div>
                 </div>
               </li>
             );
           })}
-        </ul>
+        </ol>
       )}
       {topics.some((t) => t.baselinePct != null) && (
         <div className="flex items-center gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-5 py-2 text-[11px] font-semibold text-[var(--ink-3)]">
