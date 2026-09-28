@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Select } from "@/components/ui";
 import { DISPLAY, FOCUS, Avatar } from "../teachKit";
+import { subjectColor, subjectInk, tint } from "../kit";
 import type { HubGroup } from "../types";
 import { membersOf } from "../groupStatus";
 import { useHw, type Hw } from "./hwI18n";
@@ -120,8 +121,8 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
                 const done = c.counts.submitted + c.counts.marked, total = c.counts.assigned + done;
                 const a = colAvg(c.id);
                 return (
-                  <th key={c.id} scope="col" className="min-w-[72px] px-1.5 py-2 align-bottom text-center">
-                    <span className="mx-auto line-clamp-2 max-w-[110px] text-[12px] font-extrabold leading-tight text-[var(--ink)]" title={c.title}>{c.title}</span>
+                  <th key={c.id} scope="col" className="min-w-[72px] rounded-t-lg px-1.5 py-2 align-bottom text-center" style={c.subject ? { background: tint(subjectColor(c.subject), 16), borderTop: `3px solid ${subjectColor(c.subject)}` } : undefined} data-subject={c.subject ?? undefined}>
+                    <span className="mx-auto line-clamp-2 max-w-[110px] text-[12px] font-extrabold leading-tight" style={{ color: c.subject ? subjectInk(c.subject) : "var(--ink)" }} title={c.title}>{c.title}</span>
                     <span className="block text-[11.5px] font-semibold text-[var(--ink-3)]">{h("resIn", { done, total })}{a !== null && <> · {h("resAvg", { n: a })}</>}</span>
                   </th>
                 );
