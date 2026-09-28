@@ -184,7 +184,7 @@ test("tutor: the hero button opens THEIR explainer only; it plays, pauses and cl
   await page.keyboard.press("Escape");
   await expect(modal).toBeHidden();
   // the Students area has its own link, straight to the students video
-  await page.getByTestId("hiw-tab-link").getByTestId("hiw-open-link").click();
+  await page.getByTestId("hiw-tab-link").getByTestId("hiw-showme").click();
   await expect(modal.getByTestId("hiw")).toHaveAttribute("data-role", "tutor", { timeout: 60_000 });
   await page.keyboard.press("Escape");
   await expect(modal).toBeHidden();
@@ -221,7 +221,7 @@ test("parent: the Learning Hub has a How it works button (parent video + 'what y
   await expect(page.getByTestId("hiw-open")).toBeVisible({ timeout: 60_000 });
   // the Homework tab has its own link, straight to the parent homework video
   await page.goto(`/custdash/learninghub?tab=homework&child=${kid.id}`); await splash(page);
-  await page.getByTestId("hiw-tab-link").getByTestId("hiw-open-link").click({ timeout: 60_000 });
+  await page.getByTestId("hiw-tab-link").getByTestId("hiw-showme").click({ timeout: 60_000 });
   await expect(modal.getByTestId("hiw")).toHaveAttribute("data-scene", "hw-list", { timeout: 60_000 });
   await page.keyboard.press("Escape");
   // invite-claim page: a short "How this works" pointer opening the parent video

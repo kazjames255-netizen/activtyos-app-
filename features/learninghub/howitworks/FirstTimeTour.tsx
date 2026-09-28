@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useT } from "@/lib/i18n/provider";
 import { openHowItWorks } from "./open";
-import HowItWorksButton from "./HowItWorksButton";
 import type { HowRole } from "./types";
 
 // First visit to the Hub Home for a role: ONE quiet card offering a short guided tour (the same scenes as the "How it works" films, one
@@ -27,9 +26,7 @@ export default function FirstTimeTour({ role }: { role: Exclude<HowRole, "kid"> 
     const calm = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     openHowItWorks({ role, tour: true, autoplay: !calm });
   };
-  if (seen) {
-    return <div className="mb-1 flex justify-end" data-testid="hiw-tour-replay"><HowItWorksButton role={role} variant="link" tour label={tr("hubhow.tourReplay")} /></div>;
-  }
+  if (seen) return null;   // afterwards the tour is one pill inside the "Show me" window (HowItWorksHost), not another control on the page
   return (
     <section className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--brand-line,#cdddf7)] bg-[var(--surface,#fff)] p-3.5" data-testid="hiw-tour-card" aria-label={tr("hubhow.tourTitle")}>
       <span className="grid h-11 w-11 flex-none place-items-center rounded-full bg-[#f5b81f] text-[18px] text-[#2a1d00]" aria-hidden>▶</span>

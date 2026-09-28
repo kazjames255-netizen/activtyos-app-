@@ -27,10 +27,12 @@ export default function TabHowTo({ tutor, tab }: { tutor: boolean; tab: string }
   if (!t) return null;
   const role = tutor ? "tutor" : "parent";
   const clip = TAB_CLIP[role][tab];
+  // ONE entry per area: "Show me" (a ~15 second clip). The full video and the tour are offered inside its window. An area with no clip keeps the plain link.
   return (
-    <div className="mb-2 flex flex-wrap items-center justify-end gap-x-3" data-testid="hiw-tab-link">
-      {clip && <HowItWorksButton role={role} variant="showme" clip={clip} autoplay />}
-      <HowItWorksButton role={role} variant="link" topic={t.topic} autoplay label={tr(`hubhow.${t.label}`)} />
+    <div className="mb-2 flex justify-end" data-testid="hiw-tab-link">
+      {clip
+        ? <HowItWorksButton role={role} variant="showme" clip={clip} autoplay />
+        : <HowItWorksButton role={role} variant="link" topic={t.topic} autoplay label={tr(`hubhow.${t.label}`)} />}
     </div>
   );
 }

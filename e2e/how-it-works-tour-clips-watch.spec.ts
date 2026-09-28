@@ -126,9 +126,10 @@ test("tutor: the tour is offered once on Home, never plays by itself, is remembe
   await expect(modal).toBeHidden();
   await expect(card).toHaveCount(0);                                      // remembered for this person + role
   await page.reload(); await splash(page);
-  await expect(page.getByTestId("hiw-tour-replay")).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByTestId("hiw-tour-card")).toHaveCount(0);
-  await page.getByTestId("hiw-tour-replay").getByTestId("hiw-open-link").click();
+  await expect(page.getByTestId("hiw-tour-card")).toHaveCount(0);       // one control on the page: no replay row, no second link
+  await expect(page.getByTestId("hiw-tab-link").getByRole("button")).toHaveCount(1);
+  await page.getByTestId("hiw-showme").click();                         // the tour is one pill inside the Show me window
+  await modal.getByRole("button", { name: /A quick tour/ }).click();
   await expect(modal.getByTestId("hiw")).toHaveAttribute("data-scene", TOURS.tutor![0], { timeout: 60_000 });
   await ctx.close();
 });

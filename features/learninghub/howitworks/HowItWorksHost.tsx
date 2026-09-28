@@ -91,7 +91,8 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
   const tryIt = script.tryIt && role === "tutor" && clip !== "tour" ? () => { const sub = script.tryIt!.sub; close(); window.setTimeout(() => hubGoto(sub), 80); } : undefined;
   const nextVideo = nextTopic ? { label: H.ui("nextVideo", { title: H.script(nextTopic).title }), onPick: () => { setTopic(nextTopic.topic ?? null); setScene(null); setAuto(true); } } : undefined;
   const fullVideo = clip && clip !== "tour" && clipIds ? [{ label: H.ui("clipFull"), onPick: () => { setClip(null); setTopic(topicHolding(role, clipIds[0]) ?? null); setScene(null); setAuto(true); } }] : [];
-  const topicOthers = clipScript ? [...fullVideo, ...(hasChooser(role) ? [{ label: H.ui("allVideosPlay"), onPick: () => { setClip(null); setTopic(null); setScene(null); } }] : [])] : topic ? [
+  const tourPill = clip && clip !== "tour" && TOURS[role] ? [{ label: `▶ ${H.ui("tourTitle")}`, onPick: () => { setClip("tour"); setTopic(null); setScene(null); setAuto(true); } }] : [];
+  const topicOthers = clipScript ? [...fullVideo, ...tourPill, ...(hasChooser(role) ? [{ label: H.ui("allVideosPlay"), onPick: () => { setClip(null); setTopic(null); setScene(null); } }] : [])] : topic ? [
     ...(hasChooser(role) ? [{ label: H.ui("allVideosPlay"), onPick: () => { setTopic(null); setScene(null); } }] : [{ label: H.ui("fullTour"), onPick: () => { setTopic(null); setScene(null); } }]),
   ] : hasChooser(role) ? [] : lib.map((x) => ({ label: `▶ ${H.script(x).title}`, onPick: () => { setTopic(x.topic ?? null); setScene(null); } }));
   const choices = ALLOWED[defaultRole];

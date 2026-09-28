@@ -306,6 +306,8 @@ test.describe("a family reads it (the student side)", () => {
     const select = page.getByRole("combobox", { name: "Child" });
     if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
     else if (await page.getByRole("radio", { name: childName }).isVisible().catch(() => false)) await page.getByRole("radio", { name: childName }).click();
+    // A parent with several children lands on "Everyone's progress": open this child's card to enter their hub.
+    if (!(await page.getByRole("tab").first().isVisible({ timeout: 5_000 }).catch(() => false))) await page.getByText(childName).first().click();
 
     await openNotes(page);
     // Families only see lessons assigned to their child (homework / a shared session), never the provider's whole library:
