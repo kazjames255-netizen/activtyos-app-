@@ -86,6 +86,7 @@ export async function setHub(op: TestAccount, on: boolean) {
 }
 
 // Other agents share the standing accounts and their setup wipes data mid-run: retry the whole build if a wipe hits.
+let lastFixtureTenant = "";
 export async function buildFixture(n: number, full: boolean, browser?: Browser, startYear = 3): Promise<Fx> {
   for (let a = 0; ; a++) {
     try { return await build(await provisionOwn(browser), n, full, startYear); } catch (e) { if (a >= 2 || !/not found|Unknown/i.test(String(e))) throw e; }
@@ -157,6 +158,7 @@ async function build(accounts: Fx["accounts"], n: number, full: boolean, startYe
     await apiPost(`${HUB}/lessons`, t, { title: `Live fractions ${stamp}`, childIds: ids.slice(0, 4), startsAt: new Date(Date.now() + 3 * 3_600_000).toISOString(), durationMins: 45, topicId, notes: "" });
   }
   await setHub(accounts.freelancer, true);
+  lastFixtureTenant = tenantId;
   return { accounts, tenantId, kids };
 }
 
@@ -231,11 +233,11 @@ export async function pickChild(page: Page, fx: Fx, idx = 0) {
   if (await select.isVisible().catch(() => false)) await select.selectOption({ label: name }); else await radio.click();
   await page.locator("[data-testid='hub-hand-over'],[data-testid='hub-hand-over-toggle']").first().waitFor({ timeout: 30_000 });
 }
-/** With many children the "Hand over to" pills sit behind a toggle. */
-export async function handOver(page: Page, childId: string) {
-  const mine = page.locator(`[data-testid="hub-hand-over"][data-child-id="${childId}"]`);
-  if (!(await mine.isVisible().catch(() => false))) await page.getByTestId("hub-hand-over-toggle").click();
-  await mine.click();
+/** Child mode. The "Hand over" strip was removed from the hub (owner: "remove the handover function completely"); child mode is now the
+ *  sessionStorage flag `aos.hub.kid` = {t: tenantId, c: childId}. Set it, reload, and wait for the kid layer. */
+export async function handOver(page: Page, childId: string, tenantId: string = lastFixtureTenant) {
+  await page.evaluate(([t, c]) => { try { sessionStorage.setItem("aos.hub.kid", JSON.stringify({ t, c })); } catch { /* ignore */ } }, [tenantId, childId]);
+  await page.reload();
   await page.locator("#learning-hub[data-kid='1']").waitFor({ timeout: 30_000 });
 }
 export const tabKey = (page: Page, label: string) => { try { return new URL(page.url()).searchParams.get("tab") || label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); } catch { return label; } };

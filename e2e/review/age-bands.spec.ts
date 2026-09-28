@@ -26,7 +26,7 @@ async function asChild(page: Page, i: number) {
   await settle(page);
   await expect(page.getByTestId("hub-home-kid")).toBeVisible({ timeout: 40_000 });
 }
-const ADULT = [/^Progress$/, /^Students$/, /^Tools$/, /^Live lessons$/];
+const ADULT = [/^Students$/, /^Tools$/, /^Messages$/]; // a child's own strip: Home / Learn / Homework / Games / My progress (Live lessons is a sub-tab of Learn)
 async function noAdultTabs(page: Page) {
   for (const n of ADULT) await expect(page.getByRole("tab", { name: n })).toHaveCount(0);
   await expect(page.getByTestId("hub-parent-summary")).toHaveCount(0);

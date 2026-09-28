@@ -203,12 +203,13 @@ test.describe("kid mode can take the placement test that unlocks a quiz", () => 
       await setHub(accounts.freelancer, true);
       await page.goto(`/custdash/learninghub?tab=quizzes&child=${avaId}`);
       await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 40_000 });
-      const toggle = page.getByTestId("hub-hand-over-toggle");
-      if (await toggle.isVisible({ timeout: 5_000 }).catch(() => false)) await toggle.click();
-      await page.locator(`[data-testid="hub-hand-over"][data-child-id="${avaId}"]`).click();
-      await expect(page.getByTestId("hub-kid-bar")).toBeVisible();
+      // The "Hand over" strip was removed (owner); child mode is the sessionStorage flag {t: tenantId, c: childId}.
+      await page.evaluate(([t, c]) => { try { sessionStorage.setItem("aos.hub.kid", JSON.stringify({ t, c })); } catch { /* ignore */ } }, [accounts.freelancer.tenantId!, avaId]);
+      await page.reload();
+      await expect(page.getByTestId("hub-kid-bar")).toBeVisible({ timeout: 40_000 });
+      // Kid nav (Year 3 up): five big tabs; Starting quiz sits inside Learn; Students / Messages / Tools are never in a child's strip.
       await expect(page.getByRole("tab", { name: /Starting quiz/ })).toBeVisible();
-      await expect(page.getByRole("tab", { name: /Progress|Live lessons|Students/ })).toHaveCount(0);
+      await expect(page.getByRole("tab", { name: /Students|Messages|Tools/ })).toHaveCount(0);
       await openTab(page, /^Quizzes/);
       const locked = page.locator(`#hub-assess-${lockedQuiz}`);
       await expect(locked).toContainText("starting quiz", { timeout: 30_000 });
