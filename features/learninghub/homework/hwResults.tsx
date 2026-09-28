@@ -101,8 +101,8 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
                 const done = c.counts.submitted + c.counts.marked, total = c.counts.assigned + done;
                 const a = colAvg(c.id);
                 return (
-                  <th key={c.id} scope="col" className="min-w-[112px] px-2 py-2 align-bottom">
-                    <span className="block max-w-[150px] truncate text-[12px] font-extrabold text-[var(--ink)]" title={c.title}>{c.title}</span>
+                  <th key={c.id} scope="col" className="min-w-[72px] px-1.5 py-2 align-bottom text-center">
+                    <span className="mx-auto line-clamp-2 max-w-[110px] text-[12px] font-extrabold leading-tight text-[var(--ink)]" title={c.title}>{c.title}</span>
                     <span className="block text-[11.5px] font-semibold text-[var(--ink-3)]">{h("resIn", { done, total })}{a !== null && <> · {h("resAvg", { n: a })}</>}</span>
                   </th>
                 );
@@ -120,15 +120,18 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
                   <th scope="row" className="sticky start-0 z-[1] border-t border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 font-bold text-[var(--ink)]"><span className="inline-flex items-center gap-1.5"><Avatar name={k.name} size={20} /><span className="truncate">{k.name}</span></span></th>
                   {cols.map((c) => {
                     const r = k.cells.get(c.id);
-                    if (!r) return <td key={c.id} className="border-t border-[var(--line)] px-2 py-1.5 text-[var(--ink-3)]">–</td>;
+                    if (!r) return <td key={c.id} className="border-t border-[var(--line)] px-2 py-1.5 text-center text-[var(--ink-3)]">–</td>;
                     const t = lightOf(x, r, now);
                     const showScore = t.score !== "–" && t.score !== h("scoreIn");
                     return (
-                      <td key={c.id} className="border-t border-[var(--line)] px-1 py-1">
+                      <td key={c.id} className="border-t border-[var(--line)] px-1 py-1 text-center">
                         <button type="button" onClick={() => onOpen(r.submissionId)} aria-label={h("resCellAria", { name: k.name, title: c.title, state: t.label, score: showScore ? `, ${t.score}${t.below ? `, ${h("resBelowPass")}` : ""}` : "" })} data-light={t.light} data-below={t.below ? "1" : undefined}
-                          className={`inline-flex min-h-[44px] w-full items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 text-start hover:border-[var(--brand)] ${FOCUS}`}>
-                          <span aria-hidden className="grid h-5 w-5 flex-none place-items-center rounded-full text-[11px] font-extrabold text-white" style={{ background: COLOR[t.light] }}>{GLYPH[t.light]}</span>
-                          <span className="min-w-0"><span className="block text-[12.5px] font-extrabold tabular-nums text-[var(--ink)]">{t.score}{t.below && <span aria-hidden className="ms-1 text-[var(--red)]" title={h("resBelowPass")}>▼</span>}</span><span className="block truncate text-[11.5px] text-[var(--ink-3)]">{t.label}</span></span>
+                          title={`${t.label}${showScore ? ` · ${t.score}` : ""}${t.below ? ` · ${h("resBelowPass")}` : ""}`}
+                          className={`relative inline-grid h-11 w-11 place-items-center rounded-full ${FOCUS}`}>
+                          {/* DOT GRID: one coloured dot per task; the words and score are in the tooltip, the label and the screen-reader text. */}
+                          <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: COLOR[t.light] }}>{GLYPH[t.light]}</span>
+                          {t.below && <span aria-hidden className="absolute -end-0.5 -top-0.5 text-[11px] font-extrabold leading-none text-[var(--red)]">▼</span>}
+                          <span className="sr-only">{t.score} {t.label}</span>
                         </button>
                       </td>
                     );
@@ -140,7 +143,7 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
             })}
             <tr>
               <th scope="row" className="sticky start-0 z-[1] border-t-2 border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-[12px] font-extrabold text-[var(--ink)]">{h("resClassAvg")}</th>
-              {cols.map((c) => { const a = colAvg(c.id); return <td key={c.id} className="border-t-2 border-[var(--line)] px-2 py-2 font-extrabold tabular-nums text-[var(--ink)]">{a !== null ? `${a}%` : "–"}</td>; })}
+              {cols.map((c) => { const a = colAvg(c.id); return <td key={c.id} className="border-t-2 border-[var(--line)] px-2 py-2 text-center font-extrabold tabular-nums text-[var(--ink)]">{a !== null ? `${a}%` : "–"}</td>; })}
               <td className="border-t-2 border-[var(--line)] px-2 py-2" />
               <td className="border-t-2 border-[var(--line)] px-2 py-2 font-extrabold tabular-nums text-[var(--ink)]">{classAvg !== null ? `${classAvg}%` : "–"}</td>
             </tr>
