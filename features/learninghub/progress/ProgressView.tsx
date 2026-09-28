@@ -1,6 +1,7 @@
 "use client";
 
 import { SubjectTile } from "../subjectArt";
+import { subjectSwatch } from "../subjectColour";
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui";
 import type { PanelProps } from "../panelTypes";
@@ -156,25 +157,29 @@ function JourneyPath({ topics, bands, tr, tp, who, canEdit, subject }: {
   const yOf = (i: number) => (i % 2 === 0 ? 0 : ZIGZAG);
   const w = Math.max(1, topics.length - 1) * STOP_W + RING + 40;
   const h = RING + ZIGZAG + 8;
+  // Every ring in this subject's trail shares ONE colour — the subject's own (the same red/blue/green/etc as
+  // its card up top) — rather than each topic's individual mastery band. Kaz: "the colours need to reflect
+  // these colours" (pointing at the subject cards). bandTone stays only for the tiny BandChip-free text, unused here.
+  const sw = subjectSwatch(subject);
+  const subjTone: Tone = { fill: sw.base, soft: sw.bg, ink: sw.fg };
   return (
     <div className="border-t border-[var(--line)] px-2 py-5 sm:px-4" data-testid="hub-journey-path">
       <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
         <ol className="relative m-0 list-none p-0" style={{ width: w, height: h + 66 }} aria-label={tr("hubfam.pgJourneyAria", { subject })}>
           {topics.length > 1 && (
             <svg aria-hidden className="absolute start-0 pointer-events-none" width={w} height={h} style={{ top: 33 }}>
-              <polyline fill="none" stroke="var(--line)" strokeWidth={3} strokeDasharray="1 9" strokeLinecap="round"
+              <polyline fill="none" stroke={`color-mix(in srgb, ${sw.base} 45%, var(--line))`} strokeWidth={3} strokeDasharray="1 9" strokeLinecap="round"
                 points={topics.map((_, i) => `${20 + i * STOP_W + RING / 2},${yOf(i) + RING / 2}`).join(" ")} />
             </svg>
           )}
           {topics.map((t, i) => {
-            const tt = bandTone(bands, t.band);
             const tried = t.attempts > 0;
             const last = i === topics.length - 1;
             return (
               <li key={t.topicId} data-testid="hub-journey-stop" className="absolute top-0 flex flex-col items-center text-center" style={{ insetInlineStart: 20 + i * STOP_W, width: RING + 24, transform: `translateY(${yOf(i)}px)` }}>
                 {t.baselinePct != null && <div className="mb-1 whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{tr("hubfam.pgStartedAtSfx", { pct: Math.round(t.baselinePct) })}</div>}
                 <div className="relative">
-                  <ScoreRing pct={tried ? t.masteryPct : 0} size={RING} stroke={5} tone={tried ? tt : NEUTRAL} state={tried ? undefined : "empty"}
+                  <ScoreRing pct={tried ? t.masteryPct : 0} size={RING} stroke={5} tone={tried ? subjTone : NEUTRAL} state={tried ? undefined : "empty"}
                     ariaLabel={tr(who === null && !canEdit ? "hubfam.pgTopicLevel" : "hubfam.pgTopicMastery", { topic: t.topic })} />
                   {last && <span aria-hidden className="absolute top-1/2 start-full ms-1.5 -translate-y-1/2 text-[22px]">🚩</span>}
                 </div>
