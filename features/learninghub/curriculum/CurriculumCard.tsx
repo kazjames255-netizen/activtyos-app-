@@ -201,11 +201,7 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, students: studentsProp,
         <span className="grid h-10 w-10 flex-none place-items-center rounded-2xl text-white" style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-2))" }}><Icon name="layers" size={19} /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-[17px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</span>
-          {mode === "child" ? (
-            <span className="flex items-center gap-0.5 text-[20px] leading-none" role="img" aria-label={data ? tr("hublessons.scStars", { n: starsOn }) : tr("hublessons.edLoading")} data-testid="curriculum-stars">
-              {[0, 1, 2, 3, 4].map((i) => <span key={i} aria-hidden style={{ color: i < starsOn ? "var(--sem-warn)" : "var(--ink-3)" }}>{i < starsOn ? "★" : "☆"}</span>)}
-            </span>
-          ) : (
+          {mode === "child" ? null /* the child's sticker book below shows its own star row — one row, not two */ : (
             <span className="line-clamp-2 block text-[12.5px] font-semibold text-[var(--ink-2)]">{data ? tr("hublessons.ccSummary", { covered: data.summary.covered, checked: data.summary.checked, thin: data.summary.thin, gaps: data.summary.gaps }) : tr("hublessons.ccGlance")}</span>
           )}
         </span>

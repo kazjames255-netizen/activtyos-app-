@@ -7,7 +7,6 @@ import type { PanelProps } from "../panelTypes";
 import { errMsg } from "../types";
 import { RetryFace } from "../homework/RetryFace";
 import { hubPath } from "../shared-assess/api";
-import { EmptyState } from "../shared-assess/ui";
 import { useT } from "@/lib/i18n/provider";
 
 // A child's Progress: stars only (P-03). Child-scoped (the one child kid mode is locked to), read-only, no chat and no
@@ -40,7 +39,13 @@ export function KidStars({ p, childId }: { p: PanelProps; childId: string }) {
   }, [p.qs, childId, tick]); // eslint-disable-line react-hooks/exhaustive-deps
   if (failed && !rows) return <RetryFace what={t("hubfam.pgYourStarsWhat")} kid onRetry={() => { setFailed(false); setTick((n) => n + 1); }} />;
   if (!rows) return <div role="status" aria-busy="true" aria-label={t("hubfam.pgLoadingStars")} className="h-[160px] rounded-3xl bg-[var(--panel)]" />;
-  if (rows.length === 0) return <EmptyState icon="chart" title={t("hubfam.pgStarsSoonTitle")} body={t("hubfam.pgStarsSoonBody")} />;
+  // One friendly, compact prompt (not a second big empty card: the subject orbs below already show each subject waiting to start).
+  if (rows.length === 0) return (
+    <div role="status" data-testid="hub-kid-stars-soon" className="flex items-center gap-3 rounded-3xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow-sm)]">
+      <span aria-hidden className="text-[34px] leading-none">⭐</span>
+      <span className="min-w-0"><span className="block text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t("hubfam.pgStarsSoonTitle")}</span><span className="block text-[13px] font-semibold text-[var(--ink-2)]">{t("hubfam.pgStarsSoonBody")}</span></span>
+    </div>
+  );
   return (
     <section id="hub-kid-stars" aria-label={t("hubfam.pgMyStars")} className="grid gap-3">
       <h2 className="m-0 text-[22px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t("hubfam.pgMyStars")}</h2>
