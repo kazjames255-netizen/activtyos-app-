@@ -17,13 +17,9 @@ import { useSupport } from "../family/FamilyContext";
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
 //
-// Comic-panel chrome (Kaz picked this over nine flatter options — a thick dark outline, a hard offset "sticker"
-// shadow, and a faint halftone-dot print texture tinted to the card's own colour, instead of a soft gradient wash).
-const COMIC_BORDER = "3px solid var(--ink)";
-const COMIC_SHADOW = "5px 5px 0 var(--ink)";
-function comicCard(color: string): CSSProperties {
-  return { background: "var(--surface)", backgroundImage: `radial-gradient(color-mix(in srgb, ${color} 55%, transparent) 1.6px, transparent 1.6px)`, backgroundSize: "11px 11px", border: COMIC_BORDER, boxShadow: COMIC_SHADOW };
-}
+// Comic-panel chrome (Kaz picked this over nine flatter options — a thick dark outline and a hard offset
+// "sticker" shadow, instead of a soft gradient wash). Kaz: "remove the dots" — dropped the halftone texture.
+const COMIC_CARD: CSSProperties = { background: "var(--surface)", border: "3px solid var(--ink)", boxShadow: "5px 5px 0 var(--ink)" };
 function IconBadge({ icon, color }: { icon: string; color: string }) {
   return <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: color, border: "2.5px solid var(--ink)" }}>{icon}</span>;
 }
@@ -38,7 +34,7 @@ function StarBurst({ value }: { value: ReactNode }) {
 }
 function Card({ color, icon, label, value, sub, testId }: { color: string; icon: string; label: string; value: ReactNode; sub?: ReactNode; testId: string }) {
   return (
-    <div data-testid={testId} className="min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+    <div data-testid={testId} className="min-h-[212px] rounded-2xl px-3.5 py-3" style={COMIC_CARD}>
       <div className="flex items-center gap-2">
         <IconBadge icon={icon} color={color} />
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{label}</div>
@@ -60,7 +56,7 @@ const pctText = (pct: number, show: boolean) => (show ? `${Math.round(pct)}% ` :
 function QuizzesCard({ label, empty, total, sub, rows, kid = false, nums = true }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-4)";
   return (
-    <div data-testid="pc-quiz" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+    <div data-testid="pc-quiz" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={COMIC_CARD}>
       <StarBurst value={total} />
       <div className="flex items-center gap-2 pe-11">
         <IconBadge icon="📝" color={color} />
@@ -86,7 +82,7 @@ function QuizzesCard({ label, empty, total, sub, rows, kid = false, nums = true 
 function TopicsCard({ label, total, sub, rows, kid = false, nums = true }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[]; kid?: boolean; nums?: boolean }) {
   const color = "var(--cat-2)";
   return (
-    <div data-testid="pc-topics" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+    <div data-testid="pc-topics" className="relative min-h-[212px] rounded-2xl px-3.5 py-3" style={COMIC_CARD}>
       <StarBurst value={total} />
       <div className="flex items-center gap-2 pe-11">
         <IconBadge icon="🧩" color={color} />
@@ -116,7 +112,7 @@ function GamesCard({ T, areas, scored, unfinished, ready, name, kid = false, num
   const recent = areas.slice(0, RECENT);   // useGamesPlayed already sorts by last played, newest first
   const days = areas.find((a) => a.weekDays !== undefined);
   return (
-    <div data-testid="pc-games" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={comicCard(color)}>
+    <div data-testid="pc-games" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={COMIC_CARD}>
       <div className="flex items-center gap-2">
         <IconBadge icon="🎮" color={color} />
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink)]">{T("pc_games")}</div>
