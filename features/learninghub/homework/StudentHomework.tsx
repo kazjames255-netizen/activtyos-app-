@@ -382,22 +382,10 @@ function Detail({ kid, hw, qs, childId, now, onBack, onChanged, onError }: { kid
 }
 
 
-/** A lesson worksheet on a homework. Interactive (has a quiz): done on screen in the quiz player, auto-marked ("Mark it" = the button at the
- *  end of the worksheet), PDF as the print copy; the marked worksheet shows a question rail with the running total. Then the child hands in
- *  below. PDF only: the PDF is embedded here (view / download / print) and the hand-in box below is how the child answers it. */
+/** A lesson worksheet on a homework: done on screen in the quiz player and auto-marked ("Mark it" = the button at the end of the worksheet);
+ *  the marked worksheet shows a question rail with the running total. Then the child hands in below. */
 function WorksheetCard({ w, qs, childId, hwId, attempts, locked }: { w: NonNullable<HW["worksheets"]>[number]; qs: string; childId: string | null; hwId: string; attempts: AttemptLite[]; locked: boolean }) {
   const { h } = useHw();
-  const [url, setUrl] = useState<string | null | undefined>(w.quizId ? null : undefined);
-  const [err, setErr] = useState<string | null>(null);
-  const fetchUrl = useCallback(() => get<{ url: string }>(`/api/learning-hub/notes/${encodeURIComponent(w.noteId)}/worksheet${withQs(qs, { childId })}`).then((r) => r.url), [w.noteId, qs, childId]);
-  useEffect(() => {
-    if (w.quizId) return;
-    let live = true;
-    fetchUrl().then((u) => live && setUrl(u)).catch((e) => { if (live) { setUrl(null); setErr(errMsg(e, h("errWorksheet"))); } });
-    return () => { live = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [w.quizId, fetchUrl]);
-  const openPdf = async () => { try { const u = url ?? (await fetchUrl()); window.open(u, "_blank", "noopener,noreferrer"); } catch (e) { setErr(errMsg(e, h("errPdf"))); } };
   const finished = attempts.find((a) => a.status !== "in_progress");
   const running = attempts.find((a) => a.status === "in_progress");
   const step = !w.quizId ? 0 : finished ? 3 : running ? 2 : 1;
@@ -407,11 +395,10 @@ function WorksheetCard({ w, qs, childId, hwId, attempts, locked }: { w: NonNulla
         <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--brand-soft)] text-[var(--brand)]"><Ico name="file" size={20} /></span>
         <div className="min-w-0 flex-1">
           <div className="text-[13.5px] font-extrabold text-[var(--ink)]">{h("wsHead", { title: w.title })}</div>
-          <div className="text-[12px] text-[var(--ink-2)]">{w.quizId ? (finished ? (finished.status === "marked" && finished.pct !== null ? h("doneScore", { got: finished.scoreMarks, max: finished.maxMarks, pct: finished.pct }) : h("doneWaiting")) : running ? h("wsStarted") : h("wsOnScreen")) : h("wsPdfHint")}</div>
+          <div className="text-[12px] text-[var(--ink-2)]">{finished ? (finished.status === "marked" && finished.pct !== null ? h("doneScore", { got: finished.scoreMarks, max: finished.maxMarks, pct: finished.pct }) : h("doneWaiting")) : running ? h("wsStarted") : h("wsOnScreen")}</div>
         </div>
         {w.quizId && !finished && !locked && <Button variant="solid" className={`min-h-[44px] ${FOCUS}`} data-testid="hub-hw-start-worksheet" onClick={() => openLink({ kind: "quiz", id: w.quizId! }, { tab: "quizzes", hw: hwId })}>{running ? h("wsContinue") : h("wsDo")}<Ico name="arrowRight" size={15} /></Button>}
         {finished && <Pill tone="green" icon={<Ico name="check" size={12} strokeWidth={3} />}>{h("wsDone")}</Pill>}
-        <Button variant="ghost" className={`min-h-[44px] ${FOCUS}`} data-testid="hub-hw-worksheet-pdf" onClick={() => void openPdf()}>{w.quizId ? h("wsViewPdf") : h("wsOpenPdf")}</Button>
       </div>
       {w.quizId && (
         <ol data-testid="hub-hw-ws-steps" className="m-0 mt-3 grid list-none gap-1.5 p-0 text-[12px] sm:grid-cols-3" aria-label={h("wsStepsAria")}>
@@ -421,17 +408,7 @@ function WorksheetCard({ w, qs, childId, hwId, attempts, locked }: { w: NonNulla
           })}
         </ol>
       )}
-      {err && <p role="alert" className="mt-2 text-[12px] text-[var(--red)]">{err}</p>}
       {finished?.status === "marked" && <QuizBreakdown attemptId={finished.id} qs={withQs(qs, { childId })} />}
-      {!w.quizId && url && (
-        <>
-          {/* Phones (iOS Safari especially) show a blank frame for an embedded PDF: offer open / download instead, embed from md up. */}
-          <p className="m-0 mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-[13px] text-[var(--ink-2)] md:hidden">{h("pdfPhone")}</p>
-          <object data={url} type="application/pdf" aria-label={h("wsPdfAria", { title: w.title })} className="mt-3 hidden h-[70dvh] w-full rounded-xl border border-[var(--line)] md:block">
-            <p className="p-4 text-[13px] text-[var(--ink-2)]">{h("pdfNoEmbed")}</p>
-          </object>
-        </>
-      )}
     </section>
   );
 }

@@ -15,7 +15,7 @@ import { pingHub } from "../lib/hubPing";
 import { gzipJson } from "../lib/gzipJson";
 import { familyNoteRule } from "../lib/hubAccess";
 import { assessmentRows, childAssignedNoteIds, collate, noteIndex, patchNote, questionIndex, patchTopic, tenantRoster, tenantTopics, topicRank, type NoteRow } from "../lib/hubIndex";
-import { ageInYears, cleanVideos, inList, videosOut, yearGroupFromDob, type StoredVideo } from "../lib/hubRules";
+import { academicStartYear, ageInYears, cleanVideos, inList, videosOut, yearGroupFromDob, yearStatus, type StoredVideo } from "../lib/hubRules";
 import { removeFromGroups } from "../lib/hubGroups";
 import { buildHomeworkPack } from "../lib/hubHomeworkPack";
 import { hubGroupsApi } from "./hub/groupsApi";
@@ -24,7 +24,6 @@ import { planForFamily } from "../../../features/learninghub/lesson/plan";
 import { PIC_BY_ID } from "../oak/factory/art/library";
 import { cleanCanvasBlock, signCanvasSlides } from "../oak/canvasSchema";
 import { withSlideUrls } from "../lib/slideStorage";
-import { copyWorksheetObject, hasWorksheetObject, signWorksheet, type WorksheetFile } from "../lib/worksheetStorage";
 import { hubAssessmentsApi } from "./hub/assessmentsApi";
 import { hubTeachingApi } from "./hub/teachingApi";
 import { hubDigestApi } from "./hub/digestApi";
@@ -58,15 +57,15 @@ const commitChunked = async (ops: ((b: FirebaseFirestore.WriteBatch) => void)[])
 // A "student" is a parent's child ENROLLED by a tutor. The enrolment is what
 // lets that family into the hub (lib/hubCore.ts) — never the customer record.
 
-interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; hasDob: boolean; audienceUnknown: boolean; support?: SupportProfile }
+interface EnrolmentRow { childId: string; childName: string; parentEmail: string; franchiseId: string | null; subjects: string[]; tutorUid: string | null; tutorName: string; active: boolean; createdAt: string; yearGroup: string | null; yearGroupAuto: boolean; yearMoveUp: boolean | null; mayHaveLeft: boolean; hasDob: boolean; audienceUnknown: boolean; support?: SupportProfile }
 /** `dob` = the child's date of birth (never returned): it lets the row say which year group they are in NOW
  *  and whether year/age are both unknown (`audienceUnknown` — year-group-targeted quizzes will show for them, flagged). */
-const enrolmentOut = (e: EnrolmentDoc, yearGroups: string[], dob: string | null): EnrolmentRow => {
-  const yearGroup = effectiveYearGroup(e, dob, yearGroups);
+const enrolmentOut = (e: EnrolmentDoc, cfg: { yearGroups: string[]; yearAutoAdvance: boolean }, dob: string | null): EnrolmentRow => {
+  const { yearGroup, mayHaveLeft } = yearStatus(e, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance);
   return {
     childId: e.childId, childName: e.childName, parentEmail: e.parentEmail, franchiseId: e.franchiseId ?? null,
     subjects: e.subjects ?? [], tutorUid: e.tutorUid ?? null, tutorName: e.tutorName ?? "", active: e.active !== false, createdAt: e.createdAt,
-    yearGroup, yearGroupAuto: e.yearGroupAuto === true, hasDob: ageInYears(dob) !== null, audienceUnknown: !yearGroup && ageInYears(dob) === null,
+    yearGroup, yearGroupAuto: e.yearGroupAuto === true, yearMoveUp: typeof e.yearMoveUp === "boolean" ? e.yearMoveUp : null, mayHaveLeft, hasDob: ageInYears(dob) !== null, audienceUnknown: !yearGroup && ageInYears(dob) === null,
     ...(e.support ? { support: cleanSupport(e.support) } : {}),
   };
 };
@@ -123,13 +122,13 @@ learningHub.get("/students", async (req, res) => {
     // R-6: a family also gets its OWN child's year group (display only: picks the age band); never anyone else's.
     const kids = scopedChildren(ctx);
     const [dobs, cfg, docs] = await Promise.all([childDobs(kids.map((c) => c.childId)), hubConfig(ctx.tenantId, ctx.franchiseId), enrolmentsForParent(ctx.uid)]);
-    const yg = (id: string) => { const e = docs.find((d) => d.tenantId === ctx.tenantId && d.childId === id); return e ? effectiveYearGroup(e, dobs.get(id) ?? null, cfg.yearGroups) : null; };
+    const yg = (id: string) => { const e = docs.find((d) => d.tenantId === ctx.tenantId && d.childId === id); return e ? effectiveYearGroup(e, dobs.get(id) ?? null, cfg.yearGroups, new Date(), cfg.yearAutoAdvance) : null; };
     res.json(kids.map((c) => ({ childId: c.childId, childName: c.childName, subjects: c.subjects, franchiseId: c.franchiseId, yearGroup: yg(c.childId), ...(c.support ? { support: c.support } : {}) }))); // support is read-only for a family: only PUT/POST /students (tutors, requireEdit) can change it
     return;
   }
   const mine = (await tenantRoster(ctx.tenantId)).filter((e) => canSeeStudent(ctx, e.franchiseId));
   const [dobs, cfg] = await Promise.all([childDobs(mine.map((e) => e.childId)), hubConfig(ctx.tenantId, ctx.franchiseId)]);
-  const rows = mine.map((e) => enrolmentOut(e, cfg.yearGroups, dobs.get(e.childId) ?? null));
+  const rows = mine.map((e) => enrolmentOut(e, cfg, dobs.get(e.childId) ?? null));
   rows.sort((a, b) => a.childName.localeCompare(b.childName));
   res.json(rows);
 });
@@ -179,12 +178,13 @@ learningHub.post("/students", async (req, res) => {
   const dob = typeof child.get("dob") === "string" && child.get("dob") ? (child.get("dob") as string) : null;
   const cfg = await hubConfig(ctx.tenantId, prev.exists ? ((prev.get("franchiseId") as string | null) ?? null) : ctx.franchiseId);
   // Year group: as given (tutor-tagged), else auto from the dob; re-enrolling keeps what was set before unless told otherwise.
-  const yg: { yearGroup: string | null; yearGroupAuto: boolean } =
+  // A hand-set year carries the academic year it was true in (`yearAnchor`), so it moves up each 1 Sept by itself.
+  const yg: { yearGroup: string | null; yearGroupAuto: boolean; yearAnchor?: number } =
     b.yearGroupAuto === true || (b.yearGroup === undefined && !(prev.exists && prev.get("yearGroupAuto") === false))
       ? { yearGroup: yearGroupFromDob(dob, cfg.yearGroups), yearGroupAuto: true }
       : b.yearGroup === undefined
-        ? { yearGroup: (prev.get("yearGroup") as string | null | undefined) ?? null, yearGroupAuto: false }
-        : { yearGroup: b.yearGroup === null ? null : inList(cfg.yearGroups, b.yearGroup) ?? b.yearGroup, yearGroupAuto: false };
+        ? { yearGroup: (prev.get("yearGroup") as string | null | undefined) ?? null, yearGroupAuto: false, ...(typeof prev.get("yearAnchor") === "number" ? { yearAnchor: prev.get("yearAnchor") as number } : {}) }
+        : { yearGroup: b.yearGroup === null ? null : inList(cfg.yearGroups, b.yearGroup) ?? b.yearGroup, yearGroupAuto: false, yearAnchor: academicStartYear() };
   // Who teaches them (F11): as named (a tutor of this business); else what it was before; else a staff tutor enrolling
   // takes their own student, and an owner leaves it unassigned (every tutor sees an unassigned student).
   let tutor: { uid: string | null; name: string };
@@ -207,10 +207,11 @@ learningHub.post("/students", async (req, res) => {
   if (prev.exists && Array.isArray(prev.get("diagnosticWaived"))) carried.diagnosticWaived = prev.get("diagnosticWaived");
   if (prev.exists && Array.isArray(prev.get("retakeGrants"))) carried.retakeGrants = prev.get("retakeGrants");
   if (prev.exists && prev.get("support")) carried.support = prev.get("support");
+  if (prev.exists && typeof prev.get("yearMoveUp") === "boolean") carried.yearMoveUp = prev.get("yearMoveUp");
   if (b.support) { const sp = cleanSupport({ ...(carried.support ?? {}), ...b.support }); if (isDefaultSupport(sp)) delete carried.support; else carried.support = sp; }
   await ref.set({ ...doc, ...carried });
   forgetHub(ctx.tenantId, "roster"); forgetEnrolments();
-  res.status(prev.exists ? 200 : 201).json(enrolmentOut({ ...doc, ...carried }, cfg.yearGroups, dob));
+  res.status(prev.exists ? 200 : 201).json(enrolmentOut({ ...doc, ...carried }, cfg, dob));
 });
 
 const enrolPatch = z.object({
@@ -220,6 +221,8 @@ const enrolPatch = z.object({
   tutorName: z.string().trim().max(120).optional(),
   yearGroup: z.string().trim().min(1).max(40).nullable().optional(),
   yearGroupAuto: z.boolean().optional(),
+  /** "Move up each September" for this child: false = hold them back in their current year; true = move up (overrides a tenant default of off). */
+  yearMoveUp: z.boolean().optional(),
   support: supportBody.optional(),
 });
 
@@ -234,7 +237,7 @@ learningHub.put("/students/:childId", async (req, res) => {
   const snap = await ref.get();
   if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Student not found" }); return; }
   if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That student belongs to head office" }); return; }
-  const { yearGroup, yearGroupAuto, tutorUid, tutorName, support, ...rest } = parsed.data;
+  const { yearGroup, yearGroupAuto, yearMoveUp, tutorUid, tutorName, support, ...rest } = parsed.data;
   const cfg = await hubConfig(ctx.tenantId, (snap.get("franchiseId") as string | null) ?? null);
   const dob = (await childDobs([req.params.childId])).get(req.params.childId) ?? null;
   const next: EnrolmentDoc = { ...(snap.data() as EnrolmentDoc), ...rest, updatedAt: new Date().toISOString() };
@@ -245,14 +248,24 @@ learningHub.put("/students/:childId", async (req, res) => {
       next.tutorUid = t.uid; next.tutorName = t.name;
     } else { next.tutorUid = null; next.tutorName = tutorName ?? ""; }
   } else if (tutorName !== undefined) next.tutorName = tutorName;
-  if (yearGroupAuto === true) { next.yearGroupAuto = true; next.yearGroup = yearGroupFromDob(dob, cfg.yearGroups); }
-  else if (yearGroup !== undefined) { next.yearGroupAuto = false; next.yearGroup = yearGroup === null ? null : inList(cfg.yearGroups, yearGroup) ?? yearGroup; }
-  else if (yearGroupAuto === false) next.yearGroupAuto = false;
+  if (yearGroupAuto === true) { next.yearGroupAuto = true; next.yearGroup = yearGroupFromDob(dob, cfg.yearGroups); delete next.yearAnchor; delete next.yearMoveUp; }
+  else if (yearGroup !== undefined) { next.yearGroupAuto = false; next.yearGroup = yearGroup === null ? null : inList(cfg.yearGroups, yearGroup) ?? yearGroup; next.yearAnchor = academicStartYear(); }
+  else if (yearGroupAuto === false) {
+    // Switching automatic off pins the year they are in NOW (from the dob or as anchored) and starts moving from today.
+    next.yearGroup = yearStatus(snap.data() as EnrolmentDoc, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance).yearGroup;
+    next.yearGroupAuto = false; next.yearAnchor = academicStartYear();
+  }
+  if (yearMoveUp !== undefined) {
+    // Hold back / release a child (wins over "automatic" in the same save). First freeze the year they are in now — an automatic
+    // child becomes hand-set — so releasing later resumes from here instead of jumping.
+    if (yearMoveUp && next.yearGroupAuto === true) delete next.yearMoveUp; // automatic children always move up
+    else { const cur = yearStatus(next, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance).yearGroup; next.yearGroupAuto = false; next.yearGroup = cur; next.yearAnchor = academicStartYear(); next.yearMoveUp = yearMoveUp; }
+  }
   if (support) { const sp = cleanSupport({ ...(next.support ?? {}), ...support }); if (isDefaultSupport(sp)) delete next.support; else next.support = sp; }
   await ref.set(next);
   forgetHub(ctx.tenantId, "roster"); forgetEnrolments();
   if (parsed.data.active === false) await removeFromGroups(ctx.tenantId, req.params.childId); // groups hold active students only (awaited so a refetch right after the pause never sees them still in a group; never throws)
-  res.json(enrolmentOut(next, cfg.yearGroups, dob));
+  res.json(enrolmentOut(next, cfg, dob));
 });
 
 // DELETE /students/:childId — un-enrol. Soft: the row stays (active:false) so a
@@ -475,8 +488,6 @@ interface NoteDoc {
   kind?: "board";
   /** Structured interactive lesson (Oak import / lesson player) — see docs/learning-hub.md "Lessons". Absent = a plain markdown note. */
   lesson?: Record<string, unknown> | null;
-  /** Pointer to the lesson's Oak worksheet PDF in Firebase Storage (oak/worksheetBulk.ts; lib/worksheetStorage.ts). Distinct from `lesson.worksheet` (the interactive quiz). */
-  worksheetFile?: WorksheetFile | null;
   /** The auto-marked quiz built from the worksheet (oak/worksheetQuiz.ts). */
   worksheetQuizId?: string | null;
   createdBy: string;
@@ -557,7 +568,6 @@ function noteOut(req: Request, id: string, n: NoteDoc, canEdit = true) {
     attachments: (n.attachments ?? []).map((a) => ({ ...a, url: signImageUrl(`${base}/${a.id}`) as string })),
     videos: videosOut(n.videos),
     ...(n.lesson && typeof n.lesson === "object" ? { lesson: lessonOut(n.lesson, canEdit, base) } : {}),
-    ...(n.worksheetFile ? { worksheetFile: { name: n.worksheetFile.name, size: n.worksheetFile.size, ...(n.worksheetFile.pages ? { pages: n.worksheetFile.pages } : {}) } } : {}),
     ...(n.worksheetQuizId ? { worksheetQuizId: n.worksheetQuizId } : {}),
     createdByName: n.createdByName || "Your tutor", createdAt: n.createdAt, updatedAt: n.updatedAt,
   };
@@ -662,8 +672,8 @@ learningHub.get("/notes", async (req, res) => {
   res.json({ items: out, total: rows.length, nextCursor: next < rows.length ? String(next) : null });
 });
 
-// POST /notes/index-refresh — tell THIS API process that notes were written behind its back (oak/worksheetBulk.ts, the worksheet-quiz
-// converter: they use the Admin SDK, so the cached notes index never sees `worksheetFile` / `worksheetQuizId`). Tutors of the tenant.
+// POST /notes/index-refresh — tell THIS API process that notes were written behind its back (the worksheet-quiz
+// converter: it uses the Admin SDK, so the cached notes index never sees `worksheetQuizId`). Tutors of the tenant.
 // {ids:[…≤500]} → those notes are re-read and patched into the index in place (no rebuild). No ids → the tenant's notes index AND its
 // disk snapshot are dropped (one full rebuild on the next read). Body {} is safe to call any time.
 learningHub.post("/notes/index-refresh", async (req, res) => {
@@ -752,35 +762,6 @@ learningHub.get("/notes/:id", async (req, res) => {
   const topic = (await visibleTopics(ctx)).find((t) => t.id === n.topicId);
   if (!topic) { res.status(404).json({ error: "Lesson not found" }); return; }
   res.json(await noteOutA(req, snap.id, n, ctx.canEdit));
-});
-
-// GET /notes/:id/worksheet — the lesson's Oak worksheet PDF as a short-lived (15 min) signed URL: {url, name, size, pages?, quizId?}.
-// Tutors: any note they can read (canReadContent/canSee, drafts included). A family: ONLY when the note is named in a homework
-// assigned to THEIR child (`worksheetNoteIds` or `noteIds`) and published — the tutor's other worksheets stay 404. The storage
-// path comes from the note's own tenantId + id, never from the client.
-learningHub.get("/notes/:id/worksheet", async (req, res) => {
-  const ctx = await resolveCtx(req, res);
-  if (!ctx) return;
-  const id = req.params.id;
-  if (!okId(id)) { res.status(404).json({ error: "Worksheet not found" }); return; }
-  const snap = await notesCol.doc(id).get();
-  const n = snap.exists ? (snap.data() as NoteDoc) : null;
-  const wf = n?.worksheetFile;
-  if (!n || !wf || !canReadContent(ctx, n.tenantId) || !canSee(ctx, n.franchiseId) || (!ctx.canEdit && n.published === false)) { res.status(404).json({ error: "Worksheet not found" }); return; }
-  if (!ctx.canEdit) {
-    const kids = scopedChildren(ctx).map((c) => c.childId);
-    let ok = false;
-    if (kids.length) {
-      const hw = await Promise.all(kids.map((k) => db.collection("hubHomework").where("assignedChildIds", "array-contains", k).select("tenantId", "noteIds", "worksheetNoteIds").get()));
-      ok = hw.some((q) => q.docs.some((d) => d.get("tenantId") === ctx.tenantId && (((d.get("worksheetNoteIds") as string[] | undefined) ?? []).includes(id) || ((d.get("noteIds") as string[] | undefined) ?? []).includes(id))));
-    }
-    if (!ok) { res.status(404).json({ error: "Worksheet not found" }); return; }
-  }
-  if (!(await hasWorksheetObject(n.tenantId, id).catch(() => false))) { res.status(404).json({ error: "Worksheet not found" }); return; }
-  const url = await signWorksheet(n.tenantId, id, wf.name).catch(() => null);
-  if (!url) { res.status(404).json({ error: "Worksheet not found" }); return; }
-  res.set("Cache-Control", "private, no-store");
-  res.json({ url, name: wf.name, size: wf.size, ...(wf.pages ? { pages: wf.pages } : {}), ...(n.worksheetQuizId ? { quizId: n.worksheetQuizId } : {}) });
 });
 
 // GET /notes/:id/homework-pack — READY-MADE homework for a lesson (tutors). A pure function of the lesson's own data
@@ -1002,12 +983,6 @@ learningHub.put("/notes/:id", async (req, res) => {
   const now = new Date().toISOString();
   const forked: NoteDoc = { ...before, ...patch, tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, createdBy: ctx.uid, createdByName: ctx.name, createdAt: now };
   const ref = notesCol.doc();
-  // The worksheet PDF lives at a path derived from the note's OWN tenant + id, so the fork must bring its own copy —
-  // otherwise it would point at an object that doesn't exist (and quiz link to another tenant's assessment).
-  if (before.worksheetFile) {
-    if (await copyWorksheetObject(before.tenantId, snap.id, ctx.tenantId, ref.id)) { /* pointer stays valid */ }
-    else { delete forked.worksheetFile; delete forked.worksheetQuizId; }
-  }
   await ref.set(forked);
   patchNote(ctx.tenantId, ref.id, forked); pingHub(ctx.tenantId, "hubNotes");
   res.json({ ...(await noteOutA(req, ref.id, forked)), forked: true });

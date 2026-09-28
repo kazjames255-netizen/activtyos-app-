@@ -21,6 +21,7 @@ import { StartRemoteSyncButton } from "./remotesync/StartRemoteSyncButton";
 import { RemoteSyncApp } from "./remotesync/RemoteSyncApp";
 import { TutorLiveBanner } from "./remotesync/TutorLiveBanner";
 import { closeLink, openLink, useLinkOpen } from "./family/link";
+import { WatchAlongBanner } from "./family/WatchAlong";
 import { CurriculumCard } from "./curriculum/CurriculumCard";
 import { LessonTutorPanel } from "./lesson/LessonTutorPanel";
 import { FlashcardsForLesson } from "./lesson/FlashcardsForLesson";
@@ -206,6 +207,9 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
   // A family's open lesson lives in the URL (?open=lesson:<id>[&hw=<homework>]): a refresh resumes it, Back closes it (instead of leaving the hub),
   // and a link (a homework's "Start the lesson", a notification) lands on it.
   const urlLesson = useLinkOpen("lesson");
+  // `&watch=1` (the parent digest's "Watch along" link, or the button on Home): the parent sees the child's own lesson exactly as the child does,
+  // but view-only (LessonPlayer readOnly: nothing is started, answered or saved on the child's behalf). Only ever for a family, never a tutor.
+  const watchAlong = !canEdit && urlLesson.watch && !!urlLesson.id;
   useEffect(() => { if (!canEdit) setReading(urlLesson.id); }, [urlLesson.id, canEdit]);
   const openReading = (id: string) => { setReading(id); if (!canEdit) openLink({ kind: "lesson", id }, { tab: "notes" }); };
   const closeReading = () => { setReading(null); if (!canEdit) closeLink(); };
@@ -520,9 +524,12 @@ export function NotesPanel({ topics: topicsProp, version, listQs, covered, filte
               </div>
             </div>
           ) : (
-            <LessonPlayer note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} qs={qs} childQs={listQs} childId={childId} config={config}
-              readOnly={false} setFocus={setFocus} goTo={goTo} onLessonSaved={canChange(openNote) ? (n) => setOpened(n as Note) : undefined}
-              onExit={() => { closeReading(); if (returnTo.current) { returnTo.current = null; goTo?.("homework"); } }} homeworkId={urlLesson.hw} />
+            <>
+              {watchAlong && <WatchAlongBanner />}
+              <LessonPlayer note={{ id: openNote.id, title: openNote.title, lesson: openNote.lesson }} qs={qs} childQs={listQs} childId={childId} config={config}
+                readOnly={watchAlong} setFocus={setFocus} goTo={goTo} onLessonSaved={canChange(openNote) ? (n) => setOpened(n as Note) : undefined}
+                onExit={() => { closeReading(); if (returnTo.current) { returnTo.current = null; goTo?.("homework"); } }} homeworkId={watchAlong ? undefined : urlLesson.hw} />
+            </>
           )
         )}
         {!ipSession && !goingLive && ((openNote.videos?.length ?? 0) > 0 || openNote.attachments.length > 0) && (

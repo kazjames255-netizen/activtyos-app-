@@ -293,7 +293,7 @@ test.describe("live lessons: schedule, list, and the join window", () => {
     await ctx.close();
   });
 
-  test("the family sees it, but Join is disabled outside the window", async ({ browser }) => {
+  test("the family sees it with Join enabled (early join); until the tutor is in, the API says wait", async ({ browser }) => {
     test.setTimeout(180_000);
     const ctx = await ctxFor(browser, "parent");
     const page = await ctx.newPage();
@@ -302,17 +302,18 @@ test.describe("live lessons: schedule, list, and the join window", () => {
     await expect(hero).toContainText(lessonTitle, { timeout: 30_000 });
     await expect(hero).toHaveAttribute("data-phase", "upcoming");
     const join = page.locator("#hub-join-btn");
-    await expect(join).toBeDisabled();
-    await expect(join).toContainText("Opens in");
-    // The API agrees: joining now is refused (409) with the window in the message.
+    await expect(join).toBeEnabled();
+    await expect(join).toContainText(/Join/i);
+    // Early join: nothing is locked by the clock, but a child never enters an empty room — before the tutor has started it the API says wait.
     const lessons = await apiFetch<{ id: string; title: string }[]>(`/api/learning-hub/lessons?tenantId=${accounts.freelancer.tenantId}&childId=${childId}`, await token(accounts.parent));
     const lesson = lessons.find((l) => l.title === lessonTitle)!;
     const res = await fetch(`${API_URL}/api/learning-hub/lessons/${lesson.id}/join?tenantId=${accounts.freelancer.tenantId}&childId=${childId}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${await token(accounts.parent)}` }, body: "{}" });
     expect(res.status).toBe(409);
-    // …but the equipment check is open to everyone: the lobby previews, and Join stays locked until the window opens.
+    expect(((await res.json()) as { code?: string }).code).toBe("waiting_for_tutor");
+    // …and the equipment check is open to everyone: the lobby previews, with Join available.
     await hero.getByRole("button", { name: /Test camera/ }).click();
     await expect(page.locator("#hub-lobby")).toBeVisible();
-    await expect(page.locator("#hub-lobby-join")).toBeDisabled();
+    await expect(page.locator("#hub-lobby-join")).toBeEnabled();
     await page.keyboard.press("Escape");
     await expect(page.locator("#hub-lobby")).toHaveCount(0);
     await ctx.close();

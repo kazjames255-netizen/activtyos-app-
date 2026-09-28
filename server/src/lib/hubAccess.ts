@@ -1,5 +1,5 @@
 import type { HubCtx } from "./hubCore";
-import { hubConfig, scopedChildren } from "./hubCore";
+import { childDobs, effectiveYearGroup, hubConfig, scopedChildren } from "./hubCore";
 import { childAssignedNoteIds, tenantRoster, type NoteRow } from "./hubIndex";
 
 // Which lessons a FAMILY may open, decided by the provider's `lessonAccess` setting (Setup → Teaching Hub):
@@ -24,6 +24,9 @@ export async function familyNoteRule(ctx: HubCtx): Promise<((n: NoteRow) => bool
   if (modes.includes("all")) return null;
   const sets = await Promise.all(kids.map((c) => childAssignedNoteIds(ctx.tenantId, c.childId)));
   const roster = modes.includes("year") ? await tenantRoster(ctx.tenantId) : [];
-  const years = kids.map((c) => yearNo(roster.find((e) => e.childId === c.childId)?.yearGroup));
+  // The year they are in NOW: an automatic year follows the dob and a hand-set one moves up each September, so the stored value alone goes stale.
+  const dobs = modes.includes("year") ? await childDobs(kids.map((c) => c.childId)) : new Map<string, string | null>();
+  const cfgs = modes.includes("year") ? await Promise.all(kids.map((c) => hubConfig(ctx.tenantId, c.franchiseId))) : [];
+  const years = kids.map((c, i) => { const e = roster.find((r) => r.childId === c.childId); return yearNo(e ? effectiveYearGroup(e, dobs.get(c.childId) ?? null, cfgs[i]!.yearGroups, new Date(), cfgs[i]!.yearAutoAdvance) : null); });
   return (n) => kids.some((_, i) => childMayOpen(modes[i]!, n, sets[i]!, years[i]!));
 }

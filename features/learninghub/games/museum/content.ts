@@ -5,10 +5,11 @@
 // no contested interpretation). Every date/fact below is standard textbook content. Server and client share this
 // exact file (BACKEND-PATTERN.md): the bank that renders the game is the bank that marks it.
 import type { QuizItem } from "../quiz/core";
+import { MUSEUM_EXTRA } from "./content.extra";
 
 const opt = (...pairs: [string, string][]) => pairs.map(([id, text]) => ({ id, text }));
 
-export const MUSEUM_ITEMS: QuizItem[] = [
+const MUSEUM_BASE: QuizItem[] = [
   // ── chronology / ordering (each item asks "which came first/last" between two well-separated periods) ────────
   { key: "mv-chron-1", topics: ["chronology"], difficulty: 1, prompt: "Which period came FIRST?", options: opt(["stone", "The Stone Age"], ["romans", "The Roman period"]), correctId: "stone", explanation: "The Stone Age (ending around 2,500 BC in Britain) came long before the Romans arrived in AD 43." },
   { key: "mv-chron-2", topics: ["chronology"], difficulty: 1, prompt: "Which period came FIRST?", options: opt(["romans", "The Roman period"], ["victorians", "The Victorian era"]), correctId: "romans", explanation: "The Romans were in Britain from AD 43 to AD 410, over a thousand years before Queen Victoria (1837-1901)." },
@@ -50,3 +51,6 @@ export const MUSEUM_ITEMS: QuizItem[] = [
   { key: "mv-cause-7", topics: ["cause-effect"], difficulty: 2, prompt: "What was one EFFECT of Vikings settling in parts of England (like the area called the Danelaw)?", options: opt(["mixed-culture", "Norse words, place names and customs blended into English life"], ["no-effect", "It left no lasting mark on England at all"], ["end-farming", "All farming in England stopped"], ["new-continent", "England became part of a new continent"]), correctId: "mixed-culture", explanation: "Viking settlement left a lasting mark, including many English place names ending in -by or -thorpe and Norse-derived words." },
   { key: "mv-cause-8", topics: ["cause-effect"], difficulty: 2, prompt: "Why is Ancient Egypt often studied alongside the River Nile?", options: opt(["river-life", "The Nile's yearly flooding made farming possible in an otherwise dry desert"], ["unrelated", "The Nile has nothing to do with how Egyptians lived"], ["transport-only", "The river was only ever used for transport, never farming"], ["modern", "The Nile only became important in modern times"]), correctId: "river-life", explanation: "The Nile's predictable flooding deposited fertile silt each year, allowing farming that supported Ancient Egyptian civilisation in the desert." },
 ];
+
+/** The original bank plus the extra items (content.extra.ts): 100+ items. */
+export const MUSEUM_ITEMS: QuizItem[] = [...MUSEUM_BASE, ...MUSEUM_EXTRA];

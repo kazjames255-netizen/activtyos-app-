@@ -117,41 +117,9 @@ export function QuizPreviewDialog({ assessmentId, title, qs, onClose }: { assess
   );
 }
 
-/** The worksheet PDF (short-lived signed URL, embedded) + a download link; when it has an interactive quiz, that can be previewed on top. */
-export function WorksheetPreviewDialog({ noteId, title, quizId, qs, onClose }: { noteId: string; title?: string; quizId?: string; qs: string; onClose: () => void }) {
-  const { h } = useHw();
-  const [ws, setWs] = useState<{ url: string; name: string; quizId?: string } | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [quiz, setQuiz] = useState(false);
-  useEffect(() => {
-    let live = true;
-    get<{ url: string; name: string; quizId?: string }>(`/api/learning-hub/notes/${encodeURIComponent(noteId)}/worksheet${qs}`).then((r) => { if (live) setWs(r); }).catch((e) => { if (live) setErr(errMsg(e, h("errWorksheet"))); });
-    return () => { live = false; };
-  }, [noteId, qs]);
-  const qid = ws?.quizId ?? quizId;
-  return (
-    <>
-      <Dialog id="hub-hw-worksheet-preview" plain size="xl" title={h("wsTitle", { title: title ?? "" })}
-        subtitle={qid ? h("wsSubInteractive") : h("wsSubPdf")} onClose={onClose}>
-        <div data-testid="hub-hw-worksheet-preview" className="grid gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {qid && <PreviewButton label={h("prevInteractive")} testId="hub-hw-ws-quiz-btn" onClick={() => setQuiz(true)}>{h("prevInteractive")}</PreviewButton>}
-            {ws && <a href={ws.url} target="_blank" rel="noopener noreferrer" download={ws.name} className={`inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] font-extrabold text-[var(--brand)] hover:border-[var(--brand)] ${FOCUS}`}><Ico name="file" size={14} />{h("openPdf")}</a>}
-          </div>
-          {err ? <p role="alert" className="text-[13px] text-[var(--red)]">{err}</p> : !ws ? <Skeleton className="h-[320px]" /> : (
-            <>
-              {/* Phones (iOS Safari especially) show a blank frame for an embedded PDF: offer open / download instead, embed from md up. */}
-              <p className="m-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-4 text-[13px] text-[var(--ink-2)] md:hidden">{h("pdfPhone")}</p>
-              <object data={ws.url} type="application/pdf" aria-label={h("wsPdfAria", { title: ws.name })} className="hidden h-[65dvh] w-full rounded-xl border border-[var(--line)] md:block">
-                <p className="p-4 text-[13px] text-[var(--ink-2)]">{h("pdfNoEmbed")} <a className="font-extrabold text-[var(--brand)] underline" href={ws.url} target="_blank" rel="noopener noreferrer">{h("openNewTab")}</a>.</p>
-              </object>
-            </>
-          )}
-        </div>
-      </Dialog>
-      {quiz && qid && <QuizPreviewDialog assessmentId={qid} title={title} qs={qs} onClose={() => setQuiz(false)} />}
-    </>
-  );
+/** Previews a lesson worksheet: its interactive auto-marked quiz (there are no worksheet PDFs). */
+export function WorksheetPreviewDialog({ title, quizId, qs, onClose }: { noteId?: string; title?: string; quizId?: string; qs: string; onClose: () => void }) {
+  return quizId ? <QuizPreviewDialog assessmentId={quizId} title={title} qs={qs} onClose={onClose} /> : null;
 }
 
 /** Read-only "what is linked" rows for a homework: legacy lesson / quiz / flashcards (view + optionally remove) and lesson worksheets. */
@@ -172,7 +140,7 @@ export function LinkedRows({ label, quizId, quizTitle, notes, hasFlash, workshee
       {label && <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{label}</div>}
       {quizId && row("quiz", "quiz", quizTitle ? h("rowQuizTitled", { title: quizTitle }) : h("quiz"), <><PreviewButton label={h("viewQuiz")} testId="hub-hw-view-quiz" onClick={() => onPreview({ kind: "quiz", id: quizId, title: quizTitle })}>{h("viewQuiz")}</PreviewButton>{rm(h("quiz"), onRemoveQuiz)}</>)}
       {(notes ?? []).map((n, i) => row(`n${n.id}`, "notes", h("rowLesson", { title: n.title ?? h("lessonN", { n: i + 1 }) }), <><PreviewButton label={h("viewLessonAria", { title: n.title ?? String(i + 1) })} testId="hub-hw-view-lesson" onClick={() => onPreview({ kind: "note", id: n.id, title: n.title })}>{h("viewLesson")}</PreviewButton>{rm(h("rowLesson", { title: n.title ?? "" }), onRemoveNote && (() => onRemoveNote(n.id)))}</>))}
-      {(worksheets ?? []).map((w) => row(`w${w.noteId}`, "file", `${h("rowWorksheet", { title: w.title })} · ${w.quizId ? h("interactive") : h("pdf")}`, <PreviewButton label={h("viewWsAria", { title: w.title })} testId="hub-hw-view-worksheet" onClick={() => onPreview({ kind: "worksheet", id: w.noteId, title: w.title, quizId: w.quizId })}>{h("viewWorksheet")}</PreviewButton>))}
+      {(worksheets ?? []).map((w) => row(`w${w.noteId}`, "file", `${h("rowWorksheet", { title: w.title })} · ${h("interactive")}`, <PreviewButton label={h("viewWsAria", { title: w.title })} testId="hub-hw-view-worksheet" onClick={() => onPreview({ kind: "worksheet", id: w.noteId, title: w.title, quizId: w.quizId })}>{h("viewWorksheet")}</PreviewButton>))}
       {hasFlash && row("flash", "cards", h("flashRevise"), rm(h("flashcards"), onRemoveFlash))}
     </div>
   );

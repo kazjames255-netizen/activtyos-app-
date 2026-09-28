@@ -14,5 +14,6 @@ export const EN_UI: Record<string, string> = {
   captionsOn: "Captions on", captionsOff: "Captions off", soundT: "Sound (M)", soundOn: "Sound on", soundOff: "Sound off", musicT: "Background music",
   musicOn: "Music on", musicOff: "Music off", speed: "Speed", voice: "Voice", autoVoice: "Auto voice", scenes: "Scenes", readScript: "Read the whole script",
   tryNow: "Try it now →", nextVideo: "Next video: {title}",
+  tourTitle: "A quick tour", tourTag: "The main places, one after another. About {s} seconds.", clipHeading: "A quick look", clipTag: "A quick look. About {s} seconds.", clipFull: "▶ Watch the full video",
   noVoice: "No voice for this language on this device: captions only.",
 };

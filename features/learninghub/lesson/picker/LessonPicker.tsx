@@ -12,7 +12,7 @@ import type { CurriculumMap } from "../../curriculum/api";
 import { groupLabel, GROUP_ORDER, rowsByArea, yearsWithContent, type MapArea } from "../../curriculum/cells";
 import { emojiFor } from "../../curriculum/stickers";
 import { Tile, TILE_GRID, YearPills, shortArea } from "../../curriculum/CurriculumCard";
-import { CAP, fetchCell, fetchPage, fetchYears, loadMap, loadTopics, pushRecent, readRecent, type NotesQuery } from "./data";
+import { CAP, RECENT_MAX, fetchCell, fetchPage, fetchYears, loadMap, loadTopics, pushRecent, readRecent, type NotesQuery } from "./data";
 import { CARD_GRID, PickCard } from "./PickCard";
 import type { PickItem } from "./types";
 
@@ -58,7 +58,7 @@ export interface LessonPickerProps {
 }
 
 const chipCls = (on: boolean) => `min-h-[44px] flex-none rounded-full border-2 px-3.5 text-[13.5px] font-extrabold ${FOCUS} ${on ? "border-[var(--brand)] bg-[var(--brand)] text-[var(--on-brand,#fff)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)]"}`;
-const asRecent = (kind: string): PickItem[] => readRecent(kind).map((r) => ({ id: r.id, title: r.title, year: r.year ?? null, isLesson: true }));
+const asRecent = (kind: string): PickItem[] => readRecent(kind).slice(0, RECENT_MAX).map((r) => ({ id: r.id, title: r.title, year: r.year ?? null, isLesson: true }));
 
 export function LessonPicker({ qs, mode = "single", value, onChange, years, yearDefault, lessonsOnly = true, worksheetOnly, published = true, flat, max, searchLabel, actions, emptyLibrary, kind = "lesson", idPrefix = "lp", testId = "lesson-picker" }: LessonPickerProps) {
   const t = useT();

@@ -82,6 +82,10 @@ export interface Student {
   yearGroup?: string | null;
   /** True when the year was filled in from the child's date of birth (kept current each September). */
   yearGroupAuto?: boolean;
+  /** Per-child "move up each September": false = held back, true = moves up, null/absent = follows the tenant setting (on by default). */
+  yearMoveUp?: boolean | null;
+  /** The year moved past the last one in the tutor's list (or past Year 13 by age) — they have probably left. Tutor roster only. */
+  mayHaveLeft?: boolean;
   /** A date of birth is on file (tutor roster only) — so the year can be switched to automatic. */
   hasDob?: boolean;
   /** R-5: the tutor-set support profile. Absent = defaults. Read-only for a family (only tutors can change it). */

@@ -5,10 +5,11 @@
 // vs secondary colours, additive vs subtractive mixing, why objects look coloured, basic wavelength ordering).
 // Server and client share this exact file (BACKEND-PATTERN.md).
 import type { QuizItem } from "../quiz/core";
+import { COLOUR_EXTRA } from "./content.extra";
 
 const opt = (...pairs: [string, string][]) => pairs.map(([id, text]) => ({ id, text }));
 
-export const COLOUR_ITEMS: QuizItem[] = [
+const COLOUR_BASE: QuizItem[] = [
   // ── light basics ─────────────────────────────────────────────────────────────────────────────────────────────
   { key: "cl-light-1", topics: ["light"], difficulty: 1, prompt: "What do we call something that gives out its own light, like the Sun or a lamp?", options: opt(["source", "A light source"], ["reflector", "A reflector"], ["shadow", "A shadow"], ["lens", "A lens"]), correctId: "source", explanation: "A light source produces its own light, unlike the Moon, which only reflects sunlight." },
   { key: "cl-light-2", topics: ["light"], difficulty: 1, prompt: "Why can we see most everyday objects, like a book or a chair?", options: opt(["reflect", "Light bounces (reflects) off them into our eyes"], ["glow", "They glow with their own light"], ["invisible", "We can't actually see them without a torch"], ["sound", "Sound waves let us see them"]), correctId: "reflect", explanation: "Most objects are not light sources - we see them because light reflects off their surface and enters our eyes." },
@@ -54,3 +55,6 @@ export const COLOUR_ITEMS: QuizItem[] = [
   { key: "cl-eye-3", topics: ["light-mixing"], difficulty: 2, prompt: "If you look at a white shirt through a RED plastic filter, what colour does it appear?", options: opt(["red3", "Red"], ["green3", "Green"], ["blue3", "Blue"], ["black3", "Black"]), correctId: "red3", explanation: "A red filter only lets red light through, so a white (all-colour) surface seen through it looks red." },
   { key: "cl-eye-4", topics: ["light-mixing"], difficulty: 3, prompt: "If you look at a pure RED object through a BLUE filter (which only lets blue light through), what would you most likely see?", options: opt(["very-dark", "The object looking very dark or black"], ["bright-red", "The object looking brighter red"], ["purple4", "The object looking bright purple"], ["unchanged", "No change at all"]), correctId: "very-dark", explanation: "A blue filter blocks red light; since the red object has almost no blue light to reflect through the filter, it appears very dark." },
 ];
+
+/** The original bank plus the extra items (content.extra.ts): 100+ items. */
+export const COLOUR_ITEMS: QuizItem[] = [...COLOUR_BASE, ...COLOUR_EXTRA];

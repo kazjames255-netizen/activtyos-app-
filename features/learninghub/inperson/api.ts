@@ -38,6 +38,8 @@ export const listLiveSessions = (qs: string) => get<IpSession[]>(hubPath(qs, bas
 export const listSessions = (qs: string) => get<IpSession[]>(hubPath(qs, base));
 export const createSession = (qs: string, body: { childIds: string[]; groupIds?: string[]; noteId?: string | null; assessmentId?: string | null; title?: string; key: string }) =>
   post<IpSession>(hubPath(qs, base), body);
+/** Run a lesson the tutor scheduled ahead (POST /lessons {mode:"in_person"}): scheduled → live, then it is an ordinary in-person session. */
+export const startScheduledSession = (qs: string, id: string) => post<IpSession & { results: IpStored[] }>(hubPath(qs, `${base}/${id}/start`), {});
 export const getSession = (qs: string, id: string) => get<IpSession & { results: IpStored[] }>(hubPath(qs, `${base}/${id}`));
 export const setAttendance = (qs: string, id: string, present: Record<string, boolean>, add?: string[]) =>
   put<IpSession>(hubPath(qs, `${base}/${id}/attendance`), { present, ...(add?.length ? { add } : {}) });

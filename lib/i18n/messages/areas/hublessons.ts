@@ -677,7 +677,7 @@ const hublessons: Record<string, Record<string, string>> = {
     "ccMapAria": "Curriculum map",
     "ccSummary": "{covered} of {checked} curriculum areas covered · thin: {thin} · gaps: {gaps}",
     "ccGlance": "National curriculum & GCSE, at a glance",
-    "ccCreateLesson": "Create new lesson",
+    "ccCreateLesson": "Create new lesson content",
     "ccCurriculum": "Curriculum",
     "ccLoadingMap": "Loading the map",
     "ccNothingChild": "Nothing to show yet — once your tutor gives you a lesson, it will appear here on the curriculum.",

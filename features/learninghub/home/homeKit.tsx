@@ -110,13 +110,13 @@ export function ScoreRing({ pct, size = 76, color, sub, sr }: { pct: number | nu
 }
 
 /** Primary pill button (brand gradient), ≥44px. */
-export function BigButton({ children, onClick, icon, variant = "brand", className = "", ariaLabel }: { children: ReactNode; onClick?: () => void; icon?: IconName; variant?: "brand" | "white" | "ghost"; className?: string; ariaLabel?: string }) {
+export function BigButton({ children, onClick, icon, variant = "brand", className = "", ariaLabel, disabled = false }: { children: ReactNode; onClick?: () => void; disabled?: boolean; icon?: IconName; variant?: "brand" | "white" | "ghost"; className?: string; ariaLabel?: string }) {
   const style: CSSProperties =
     variant === "brand" ? { background: "linear-gradient(180deg, var(--brand-2), var(--brand))", color: "#fff", boxShadow: "0 8px 20px -8px color-mix(in srgb, var(--brand) 80%, transparent)" }
     : variant === "white" ? { background: "#fff", color: "var(--brand-strong)", boxShadow: "0 10px 24px -10px rgba(0,0,0,.45)" }
     : { background: "rgba(255,255,255,.14)", color: "#fff", border: "1px solid rgba(255,255,255,.35)" };
   return (
-    <button type="button" onClick={onClick} aria-label={ariaLabel}
+    <button type="button" onClick={disabled ? undefined : onClick} aria-label={ariaLabel} aria-disabled={disabled || undefined} title={undefined}
       className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full px-6 text-[14px] font-extrabold transition hover:-translate-y-px active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${className}`} style={style}>
       {icon && <Icon name={icon} size={17} />}{children}
     </button>

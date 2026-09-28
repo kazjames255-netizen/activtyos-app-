@@ -84,8 +84,10 @@ export function RecipientSummary({ count, verb }: { count: number; verb?: string
   const t = useT();
   const text = verb === "Recording" ? t("hubshell.st_recordingFor", { n: count }) : verb === "Inviting" ? t("hubshell.st_inviting", { n: count }) : verb ? `${verb} ${count}` : t("hubshell.st_sendingTo", { n: count });
   return (
-    <p data-recipient-summary role="status" aria-live="polite" className="mt-2 flex items-center gap-1.5 text-[12.5px] font-extrabold" style={{ color: count ? "var(--brand-strong)" : "var(--ink-3)" }}>
-      <Ico name="users" size={14} />{count ? text : t("hubshell.st_noStudentsChosen")}
+    <p data-recipient-summary role="status" aria-live="polite"
+      className={`mt-3 inline-flex items-center gap-2 rounded-full border-2 px-3.5 py-1.5 text-[13.5px] font-extrabold ${count ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-strong)]" : "border-dashed border-[var(--amber-line)] bg-[var(--amber-soft)] text-[var(--ink)]"}`}>
+      {count ? <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[var(--brand)] px-1.5 text-[12px] font-extrabold text-white">{count}</span> : <span aria-hidden className="text-[16px]">👆</span>}
+      {count ? text : t("hubshell.st_noStudentsChosen")}
     </p>
   );
 }

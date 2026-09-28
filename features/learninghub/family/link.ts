@@ -5,6 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 // URL-addressable Learning Hub state for a family:
 //   ?tab=quizzes&child=<childId>&open=quiz:<assessmentId>[&hw=<homeworkId>]
 //   ?tab=notes&child=<childId>&open=lesson:<noteId>[&hw=<homeworkId>]
+//   ?tab=notes&child=<childId>&open=lesson:<noteId>&watch=1   — a parent WATCHING ALONG: the child's own lesson, view-only (nothing is saved)
 //   ?tab=homework&child=<childId>&open=hw:<homeworkId>
 // A refresh restores it, a shared/notification link lands on it, and Back closes an opened lesson / quiz / homework
 // instead of leaving the hub. Opening PUSHES a history entry (tagged in history.state); closing goes Back when the current
@@ -36,15 +37,15 @@ export function parseOpen(raw: string | null | undefined): OpenRef | null {
   return m ? { kind: m[1] as OpenKind, id: m[2] } : null;
 }
 
-export function readLink(search: string = currentSearch()): { tab: string | null; child: string | null; open: OpenRef | null; hw: string | null } {
+export function readLink(search: string = currentSearch()): { tab: string | null; child: string | null; open: OpenRef | null; hw: string | null; watch: boolean } {
   const p = new URLSearchParams(search);
-  return { tab: p.get("tab"), child: p.get("child"), open: parseOpen(p.get("open")), hw: p.get("hw") };
+  return { tab: p.get("tab"), child: p.get("child"), open: parseOpen(p.get("open")), hw: p.get("hw"), watch: p.get("watch") === "1" };
 }
 
 /** The `open=` target when it is of `kind` (else null), and the homework it was opened from. */
-export function useLinkOpen(kind: OpenKind): { id: string | null; hw: string | null } {
+export function useLinkOpen(kind: OpenKind): { id: string | null; hw: string | null; /** `watch=1`: a parent watching along (view-only). */ watch: boolean } {
   const s = useLinkSearch();
-  return useMemo(() => { const l = readLink(s); return { id: l.open?.kind === kind ? l.open.id : null, hw: l.hw }; }, [s, kind]);
+  return useMemo(() => { const l = readLink(s); return { id: l.open?.kind === kind ? l.open.id : null, hw: l.hw, watch: l.watch }; }, [s, kind]);
 }
 
 const stateWith = (extra: Record<string, unknown>) => ({ ...(window.history.state ?? {}), ...extra });
@@ -57,12 +58,13 @@ function commit(u: URL, how: "push" | "replace", mark: boolean | null) {
 }
 
 /** Open a lesson / quiz / homework: a new history entry, with the tab (and the homework it came from) in the URL. */
-export function openLink(ref: OpenRef, opts?: { tab?: string; hw?: string | null }) {
+export function openLink(ref: OpenRef, opts?: { tab?: string; hw?: string | null; watch?: boolean }) {
   if (typeof window === "undefined") return;
   const u = new URL(window.location.href);
   if (opts?.tab) u.searchParams.set("tab", opts.tab);
   u.searchParams.set("open", `${ref.kind}:${ref.id}`);
   if (opts?.hw) u.searchParams.set("hw", opts.hw); else u.searchParams.delete("hw");
+  if (opts?.watch) u.searchParams.set("watch", "1"); else u.searchParams.delete("watch");
   if (u.search === window.location.search) return;
   commit(u, "push", true);
 }
@@ -73,7 +75,7 @@ export function closeLink() {
   const u = new URL(window.location.href);
   if (!u.searchParams.has("open")) return;
   if ((window.history.state as Record<string, unknown> | null)?.[MARK] === true) { window.history.back(); return; }
-  u.searchParams.delete("open"); u.searchParams.delete("hw");
+  u.searchParams.delete("open"); u.searchParams.delete("hw"); u.searchParams.delete("watch");
   commit(u, "replace", null);
 }
 
@@ -82,7 +84,7 @@ export function setLinkParams(patch: { tab?: string | null; sub?: string | null;
   if (typeof window === "undefined") return;
   const u = new URL(window.location.href);
   for (const [k, v] of Object.entries(patch)) { if (v) u.searchParams.set(k, v); else if (v === null) u.searchParams.delete(k); }
-  if (dropOpen) { u.searchParams.delete("open"); u.searchParams.delete("hw"); }
+  if (dropOpen) { u.searchParams.delete("open"); u.searchParams.delete("hw"); u.searchParams.delete("watch"); }
   if (u.search === window.location.search) return;
   commit(u, "replace", dropOpen ? false : null);
 }
@@ -99,10 +101,11 @@ export function seedOpen(ref: OpenRef, opts?: { tab?: string }) {
 }
 
 /** A ready-to-use path for a lesson / quiz / homework (notifications, emails, "send Ava straight to this"). */
-export function hubLinkPath(base: string, o: { tab: string; child?: string | null; open?: OpenRef | null; hw?: string | null }): string {
+export function hubLinkPath(base: string, o: { tab: string; child?: string | null; open?: OpenRef | null; hw?: string | null; watch?: boolean }): string {
   const p = new URLSearchParams({ tab: o.tab });
   if (o.child) p.set("child", o.child);
   if (o.open) p.set("open", `${o.open.kind}:${o.open.id}`);
   if (o.hw) p.set("hw", o.hw);
+  if (o.watch) p.set("watch", "1");
   return `${base}?${p.toString()}`;
 }

@@ -47,7 +47,10 @@ export function roomExpiry(endsAt: Date, roomUntil?: string | null, reopenedAt?:
 export type WindowState = "early" | "open" | "closed";
 export function windowState(now: Date, w: JoinWindow): WindowState {
   const t = now.getTime();
-  return t < w.opensAt.getTime() ? "early" : t > w.closesAt.getTime() ? "closed" : "open";
+  // Early join: a scheduled lesson can be entered at ANY time before it closes (so a tutor and family can go in "just in case"
+  // the date/time changes, without editing anything). `opensAt` (10 min before the start) is now only the point from which a
+  // FAMILY may enter before the tutor has started it — see the join route. "early" is kept in the type for older callers.
+  return t > w.closesAt.getTime() ? "closed" : "open";
 }
 
 export class VideoError extends Error {

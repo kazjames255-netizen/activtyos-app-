@@ -35,12 +35,21 @@ export function ageInYears(dob: unknown, on: Date = new Date()): number | null {
   return a >= 0 && a <= 120 ? a : null;
 }
 
+/** The calendar year of the 1 Sept that began the academic year `on` falls in (2026 for 1 Sept 2026 – 31 Aug 2027).
+ *  Read in UK time, so the year turns at UK midnight on 1 Sept whatever timezone the server runs in. */
+export function academicStartYear(on: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", year: "numeric", month: "numeric" }).formatToParts(on);
+  const y = Number(parts.find((p) => p.type === "year")?.value);
+  const m = Number(parts.find((p) => p.type === "month")?.value);
+  return m >= 9 ? y : y - 1;
+}
+
 /** England's school-year rule: the academic year starts 1 Sept; a child's year is set by
  *  their age ON 31 AUGUST before it starts — 4 = Reception, 5 = Year 1 … 17 = Year 13. */
 export function ukYearGroup(dob: unknown, on: Date = new Date()): string | null {
   const b = parseDob(dob);
   if (!b) return null;
-  const startYear = on.getMonth() >= 8 ? on.getFullYear() : on.getFullYear() - 1; // year of the 1 Sept that began this academic year
+  const startYear = academicStartYear(on); // year of the 1 Sept that began this academic year
   let age = startYear - b.y;
   if (b.m > 7) age--; // birthday falls after 31 Aug, so they hadn't had it yet
   const idx = age - 4;
@@ -61,17 +70,45 @@ export const yearGroupFromDob = (dob: unknown, yearGroups: string[], on: Date = 
 
 /** What is stored about a student's year group on their enrolment. `yearGroupAuto`
  *  means "filled in from the dob at enrolment" — it then keeps moving up each
- *  September instead of going stale. */
-export interface YearGroupFields { yearGroup?: string | null; yearGroupAuto?: boolean }
+ *  September instead of going stale. A year group typed by hand moves up too, from its
+ *  `yearAnchor` (the academic start year it was true in), unless `yearMoveUp` is false
+ *  (held back) — `yearMoveUp` undefined follows the tenant default (`yearAutoAdvance`, on). */
+export interface YearGroupFields { yearGroup?: string | null; yearGroupAuto?: boolean; yearAnchor?: number; yearMoveUp?: boolean }
 
-/** The year group to treat a student as being in NOW.
- *  auto → recomputed from the dob; tutor-tagged → as tagged; explicit null → unknown;
- *  never set (an enrolment made before year groups existed) → derived from the dob. */
-export function effectiveYearGroup(e: YearGroupFields, dob: unknown, yearGroups: string[], on: Date = new Date()): string | null {
-  if (e.yearGroupAuto === true) return yearGroupFromDob(dob, yearGroups, on);
-  if (typeof e.yearGroup === "string" && e.yearGroup.trim()) return e.yearGroup.trim();
-  if (e.yearGroup === null) return null;
-  return yearGroupFromDob(dob, yearGroups, on);
+const idxIn = (list: string[], label: string) => { const l = label.trim().toLowerCase(); return list.findIndex((x) => x.trim().toLowerCase() === l); };
+
+/** A hand-set year advanced along the tenant's own list by the academic years since it was set. `overflow` = it would have run
+ *  past the last year in the list (it stays at the last one — "may have left"). */
+export function advanceYear(label: string, anchor: number, yearGroups: string[], on: Date = new Date()): { label: string; overflow: boolean } {
+  const steps = Math.max(0, academicStartYear(on) - anchor);
+  const i = idxIn(yearGroups, label);
+  if (steps === 0 || i < 0) return { label: label.trim(), overflow: false };
+  const j = i + steps, last = yearGroups.length - 1;
+  return { label: yearGroups[Math.min(j, last)], overflow: j > last };
+}
+
+/** The year group to treat a student as being in NOW, and whether they look to have left (past the last year of the list).
+ *  auto → recomputed from the dob; tutor-set → as set, moved up each 1 Sept unless held back; explicit null → unknown;
+ *  never set (an enrolment made before year groups existed) → derived from the dob. `advanceDefault` = the tenant setting. */
+export function yearStatus(e: YearGroupFields, dob: unknown, yearGroups: string[], on: Date = new Date(), advanceDefault = true): { yearGroup: string | null; mayHaveLeft: boolean } {
+  const fromDob = () => {
+    const y = yearGroupFromDob(dob, yearGroups, on);
+    const b = parseDob(dob);
+    return { yearGroup: y, mayHaveLeft: !y && !!b && ukYearGroup(dob, on) === null && ((academicStartYear(on) - b.y - (b.m > 7 ? 1 : 0)) - 4) > 13 };
+  };
+  if (e.yearGroupAuto === true) return fromDob();
+  if (typeof e.yearGroup === "string" && e.yearGroup.trim()) {
+    const moves = (e.yearMoveUp ?? advanceDefault) && typeof e.yearAnchor === "number";
+    if (!moves) return { yearGroup: e.yearGroup.trim(), mayHaveLeft: false };
+    const a = advanceYear(e.yearGroup, e.yearAnchor!, yearGroups, on);
+    return { yearGroup: a.label, mayHaveLeft: a.overflow };
+  }
+  if (e.yearGroup === null) return { yearGroup: null, mayHaveLeft: false };
+  return fromDob();
+}
+
+export function effectiveYearGroup(e: YearGroupFields, dob: unknown, yearGroups: string[], on: Date = new Date(), advanceDefault = true): string | null {
+  return yearStatus(e, dob, yearGroups, on, advanceDefault).yearGroup;
 }
 
 // ── Audience ─────────────────────────────────────────────────────────────────
@@ -324,6 +361,8 @@ export function validateHubPatch(raw: unknown): { ok: true; patch: Partial<HubSe
       }
       case "parentDigest":
       case "homeworkNudges":
+      case "autoEnrolOnBooking":
+      case "yearAutoAdvance":
         if (typeof v !== "boolean") return { ok: false, error: `${k} must be true or false` };
         patch[k] = v;
         break;

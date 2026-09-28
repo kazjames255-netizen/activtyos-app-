@@ -16,7 +16,6 @@ import { cleanSupport, isDefaultSupport, type SupportProfile } from "./support";
 import { PlanNextWeek } from "./plan/PlanNextWeek";
 import HowItWorksButton from "./howitworks/HowItWorksButton";
 import { useI18n, useT } from "@/lib/i18n/provider";
-import { YearReminder } from "./students/YearReminderCard";
 
 // Students — the tutor's roster. A family only ever sees the Learning Hub for a
 // child that has been enrolled here, so this is where access is granted, paused
@@ -169,7 +168,7 @@ function FamilyInvite({ qs, tutorUid }: { qs: string; tutorUid: string }) {
   );
 }
 
-function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, qs, tutors, defaultTutor, onDone, onError }: { open: boolean; onClose: () => void; tenantId: string; students: Student[]; subjects: string[]; yearGroups: string[]; qs: string; tutors: Tutor[]; defaultTutor: string; onDone: (name: string) => void; onError: (m: string) => void }) {
+function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, autoEnrol, onAuto, qs, tutors, defaultTutor, onDone, onError }: { open: boolean; onClose: () => void; tenantId: string; students: Student[]; subjects: string[]; yearGroups: string[]; autoEnrol: boolean; onAuto: (v: boolean) => void; qs: string; tutors: Tutor[]; defaultTutor: string; onDone: (name: string) => void; onError: (m: string) => void }) {
   const t = useT();
   const [list, setList] = useState<Candidate[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -180,9 +179,12 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
   const [tutor, setTutor] = useState(defaultTutor);
   const [support, setSupport] = useState<SupportProfile>(cleanSupport(null));
   const [busy, setBusy] = useState(false);
+  const [auto, setAuto] = useState(autoEnrol);
+  const [autoBusy, setAutoBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setAuto(autoEnrol);
     setQ(""); setPick(null); setChosen([]); setYear(""); setTutor(defaultTutor); setSupport(cleanSupport(null)); setList(null); setFailed(false);
     get<Candidate[]>("/api/children/lookup").then(setList).catch(() => { setFailed(true); setList([]); });
   }, [open]);
@@ -192,6 +194,16 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
     const n = norm(q.trim());
     return (list ?? []).filter((c) => !n || [c.name, c.parentName, c.parentEmail, c.postcode, c.town, c.ref].some((f) => norm(f ?? "").includes(n)));
   }, [list, q]);
+
+  // Auto-enrol on booking (settings.hub.autoEnrolOnBooking, server/src/lib/hubAutoEnrol.ts): saved straight from here, no need to open Setup.
+  const toggleAuto = async () => {
+    if (autoBusy) return;
+    const next = !auto;
+    setAutoBusy(true); setAuto(next);
+    try { await put(`/api/learning-hub/config${qs}`, { hub: { autoEnrolOnBooking: next } }); onAuto(next); }
+    catch (e) { setAuto(!next); onError(errMsg(e, t("hubshell.st_autoEnrolFail"))); }
+    finally { setAutoBusy(false); }
+  };
 
   const enrol = async () => {
     if (!pick) return;
@@ -265,6 +277,16 @@ function EnrolModal({ open, onClose, tenantId, students, subjects, yearGroups, q
               </ul>
             )}
           </div>
+          <div className="mt-3 rounded-xl border border-[var(--line)] px-3.5 py-2.5" data-testid="hub-enrol-auto">
+            <p className="text-[12.5px] leading-snug text-[var(--ink-2)]">{t("hubshell.st_autoEnrolNote")}</p>
+            <label className="mt-2 flex items-center justify-between gap-3 text-[13px] font-extrabold text-[var(--ink)]" htmlFor="hub-enrol-auto-switch">
+              {t("hubshell.st_autoEnrolLabel")}
+              <button type="button" role="switch" id="hub-enrol-auto-switch" aria-checked={auto} disabled={autoBusy} onClick={() => void toggleAuto()}
+                className={`relative h-7 w-12 flex-none rounded-full border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--brand)] disabled:opacity-60 ${auto ? "border-[var(--brand)] bg-[var(--brand)]" : "border-[var(--line)] bg-[var(--panel)]"}`}>
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all motion-reduce:transition-none ${auto ? "start-[26px]" : "start-0.5"}`} />
+              </button>
+            </label>
+          </div>
           <div className="mt-2 text-center"><HowItWorksButton variant="link" role="tutor" topic="families" scene="fam-ways" autoplay label={t("hubshell.st_howEnrolling")} /></div>
           <FamilyInvite qs={qs} tutorUid={defaultTutor} />
         </div>
@@ -337,9 +359,12 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
   const t = useT();
   const { locale } = useI18n();
   const [enrolOpen, setEnrolOpen] = useState(false);
+  const [autoEnrol, setAutoEnrol] = useState(config.autoEnrolOnBooking === true);
+  useEffect(() => { setAutoEnrol(config.autoEnrolOnBooking === true); }, [config.autoEnrolOnBooking]);
   const [editing, setEditing] = useState<Student | null>(null);
   const [chosen, setChosen] = useState<string[]>([]);
   const [editYear, setEditYear] = useState("");
+  const [editMoveUp, setEditMoveUp] = useState(true);
   const [editGroups, setEditGroups] = useState<string[]>([]);
   const [editTutor, setEditTutor] = useState("");
   const [editSupport, setEditSupport] = useState<SupportProfile>(cleanSupport(null));
@@ -400,7 +425,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
   const openProgress = (s: Student) => { requestOpenStudent(s.childId, s.childName); goTo?.("dashboard"); };
   const openMessage = (s: Student) => { requestNewMessage(s.childId); goTo?.("questions"); };
   const setHomework = (s: Student) => { setHubIntent({ kind: "homework", groupId: "", childIds: [s.childId] }); goTo?.("homework"); };
-  const beginEdit = (s: Student) => { setEditing(s); setEditTutor(s.tutorUid ?? ""); setChosen(s.subjects ?? []); setEditYear(s.yearGroupAuto ? "" : s.yearGroup ?? ""); setEditSupport(cleanSupport(s.support)); setEditGroups((groupsOf.get(s.childId) ?? []).map((g) => g.id)); };
+  const beginEdit = (s: Student) => { setEditing(s); setEditTutor(s.tutorUid ?? ""); setChosen(s.subjects ?? []); setEditYear(s.yearGroupAuto ? "" : s.yearGroup ?? ""); setEditMoveUp(s.yearMoveUp ?? config.yearAutoAdvance !== false); setEditSupport(cleanSupport(s.support)); setEditGroups((groupsOf.get(s.childId) ?? []).map((g) => g.id)); };
   const saveDetails = async () => {
     if (!editing) return;
     setBusy(editing.childId);
@@ -410,8 +435,9 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
     try {
       const prevYear = editing.yearGroupAuto ? { yearGroupAuto: true } : { yearGroup: editing.yearGroup ?? null };
       const tutorChanged = tutors.length > 1 && editTutor !== (editing.tutorUid ?? "");
-      await put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: chosen, ...(editYear ? { yearGroup: editYear } : { yearGroupAuto: true }), ...(tutorChanged ? { tutorUid: editTutor || null } : {}), support: editSupport });
-      undo.push(() => put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: editing.subjects ?? [], ...prevYear, support: cleanSupport(editing.support), ...(tutorChanged ? { tutorUid: editing.tutorUid ?? null } : {}) }));
+      const wasMoveUp = editing.yearMoveUp ?? config.yearAutoAdvance !== false, moveChanged = editMoveUp !== wasMoveUp;
+      await put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: chosen, ...(editYear ? { yearGroup: editYear } : { yearGroupAuto: true }), ...(moveChanged ? { yearMoveUp: editMoveUp } : {}), ...(tutorChanged ? { tutorUid: editTutor || null } : {}), support: editSupport });
+      undo.push(() => put(`/api/learning-hub/students/${editing.childId}${qs}`, { subjects: editing.subjects ?? [], ...prevYear, ...(moveChanged ? { yearMoveUp: wasMoveUp } : {}), support: cleanSupport(editing.support), ...(tutorChanged ? { tutorUid: editing.tutorUid ?? null } : {}) }));
       // Group membership lives on the group: write only the groups whose membership for this student changed.
       const was = new Set((groupsOf.get(editing.childId) ?? []).map((g) => g.id));
       const now = new Set(editGroups);
@@ -437,11 +463,6 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
 
   return (
     <div id="hub-students">
-      {tutorMode && (
-        <div className="mb-4">
-          <YearReminder tenantId={tenantId} qs={qs} canEdit={tutorMode} readOnly={readOnly} franchiseId={franchiseId ?? null} students={students} yearGroups={config.yearGroups} refreshStudents={refreshStudents} />
-        </div>
-      )}
       <div className="mb-4 flex flex-wrap items-center gap-2.5">
         <div role="group" aria-label={t("hubshell.st_filterStudents")} className="inline-flex max-w-full overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tabs.map(([k, label]) => (
@@ -503,6 +524,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
                     {((groupsOf.get(s.childId)?.length ?? 0) > 0 || s.yearGroup) && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {s.yearGroup && <span data-year-chip className="inline-flex items-center gap-1 rounded-full border px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: "var(--gold-soft)", borderColor: "var(--gold-line)", color: "var(--brand-ink)" }}><Icon name="compass" size={11} strokeWidth={2.2} />{s.yearGroup}</span>}
+                        {s.mayHaveLeft && <span data-testid="hub-student-left" className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-[3px] text-[11px] font-extrabold text-[var(--ink-2)]">{t("hubshell.st_mayHaveLeft")}</span>}
                         {(groupsOf.get(s.childId) ?? []).map((g) => <GroupChip key={g.id} group={g} />)}
                       </div>
                     )}
@@ -550,7 +572,7 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
         </ul>
       )}
 
-      <EnrolModal open={enrolOpen} onClose={() => setEnrolOpen(false)} tenantId={tenantId} students={students} subjects={subjects} yearGroups={config.yearGroups} qs={qs} tutors={tutors} defaultTutor={defaultTutor} onError={onError}
+      <EnrolModal open={enrolOpen} onClose={() => setEnrolOpen(false)} tenantId={tenantId} students={students} subjects={subjects} yearGroups={config.yearGroups} autoEnrol={autoEnrol} onAuto={setAutoEnrol} qs={qs} tutors={tutors} defaultTutor={defaultTutor} onError={onError}
         onDone={(name) => { setFlash(t("hubshell.st_enrolledFlash", { name })); refresh(); }} />
 
       <Modal open={!!editing} onClose={() => setEditing(null)} id="hub-subjects-modal" title={editing ? t("hubshell.st_detailsFor", { name: editing.childName }) : ""}
@@ -561,6 +583,13 @@ export function Panel({ students, topics, qs, onError, refreshStudents, canEdit:
             <SubjectPicker subjects={subjects} value={chosen} onChange={setChosen} />
           </div>
           <YearGroupSelect id="hub-edit-year" value={editYear} onChange={setEditYear} options={config.yearGroups} autoNote={editing?.yearGroupAuto && editing.yearGroup ? t("hubshell.st_yearNow", { year: editing.yearGroup }) : undefined} />
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3" htmlFor="hub-edit-moveup">
+            <input id="hub-edit-moveup" data-testid="hub-edit-moveup" type="checkbox" checked={editMoveUp} onChange={(e) => setEditMoveUp(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--brand)]" />
+            <span>
+              <span className="block text-[13.5px] font-extrabold text-[var(--ink)]">{t("hubshell.st_moveUpLabel")}</span>
+              <span className="mt-0.5 block text-[11.5px] text-[var(--ink-3)]">{editing?.mayHaveLeft ? t("hubshell.st_mayHaveLeftHint") : t("hubshell.st_moveUpHint")}</span>
+            </span>
+          </label>
           <TutorSelect id="hub-edit-tutor" tutors={tutors} value={editTutor} onChange={setEditTutor} />
           <SupportSection id="hub-edit-support" value={editSupport} onChange={setEditSupport} />
           {groups.length > 0 && (

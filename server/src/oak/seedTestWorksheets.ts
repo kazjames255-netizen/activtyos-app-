@@ -6,7 +6,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { auth, db } from "../firebase";
-import { putWorksheetObject } from "../lib/worksheetStorage";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const [TID, OWNER] = process.argv.slice(2);
@@ -52,7 +51,6 @@ const W: W[] = [
   { y: 7, s: "Science", t: "Cells and microscopes", q: ["Which part of a cell controls its activities?", ["nucleus", "cell wall", "vacuole"], "What is the smallest unit of life called?", "cell"] },
   { y: 9, s: "Science", t: "Chemical reactions and equations" },
 ];
-const pdfFor = (text: string) => { const t = text.replace(/[()\\]/g, ""); return Buffer.from(`%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 400 300]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${t.length + 60}>>stream\nBT /F1 16 Tf 20 200 Td (${t}) Tj 0 -30 Td (Sample worksheet - test data) Tj ET\nendstream\nendobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R/Size 6>>\n%%EOF\n`); };
 
 (async () => {
   const { token: T } = await signIn(OWNER);
@@ -74,6 +72,7 @@ const pdfFor = (text: string) => { const t = text.replace(/[()\\]/g, ""); return
   const ids: string[] = [];
   for (const w of W) {
     if (existing.has(w.t)) { console.log("skip", w.t); continue; }
+    if (!w.q) { console.log("skip (no quiz; PDF worksheets are gone)", w.t); continue; }
     const topicId = await topicFor(w.s, w.y);
     let quizId: string | undefined;
     if (w.q) {
@@ -84,9 +83,8 @@ const pdfFor = (text: string) => { const t = text.replace(/[()\\]/g, ""); return
       quizId = (await call(`${H}/assessments`, T, "POST", { type: "quiz", title: `${w.t} (worksheet)`, subject: w.s, topicIds: [topicId], questionIds: [q1.id, q2.id], timeLimitMins: null, passMarkPct: 50, published: true })).id;
     }
     const note = await call(`${H}/notes`, T, "POST", { topicId, title: w.t, body: `Year ${w.y} ${w.s} practice worksheet.`, published: true });
-    await putWorksheetObject(TID, note.id, pdfFor(`Year ${w.y} ${w.s}: ${w.t}`));
-    await db.collection("hubNotes").doc(note.id).update({ worksheetFile: { name: `${w.t.replace(/[^\w ]/g, "")}.pdf`, size: 700, pages: 1 }, ...(quizId ? { worksheetQuizId: quizId } : {}) });
-    ids.push(note.id); console.log("seeded", w.y, w.s, w.t, quizId ? "interactive" : "pdf");
+    await db.collection("hubNotes").doc(note.id).update({ worksheetQuizId: quizId });
+    ids.push(note.id); console.log("seeded", w.y, w.s, w.t, "interactive");
   }
   // students: one throwaway parent + 3 children
   const pEmail = `sample-family-${TID.slice(0, 6).toLowerCase()}@activityos-test.com`;
@@ -114,7 +112,7 @@ const pdfFor = (text: string) => { const t = text.replace(/[()\\]/g, ""); return
   await db.collection("customers").doc(`${TID}__${puid}`).set({ tenantId: TID, name: "Sample Family", email: pEmail, phone: "", uid: puid,
     children: kids.map(([name, , dob], i) => ({ name, childId: childIds[i], age: ageOf(dob) })) }, { merge: true });
   // refresh the API's notes index for this tenant, then show counts
-  const wsIds = (await db.collection("hubNotes").where("tenantId", "==", TID).select("worksheetFile").get()).docs.filter((d) => d.get("worksheetFile")).map((d) => d.id);
+  const wsIds = (await db.collection("hubNotes").where("tenantId", "==", TID).select("worksheetQuizId").get()).docs.filter((d) => d.get("worksheetQuizId")).map((d) => d.id);
   await call(`${H}/notes/index-refresh`, T, "POST", { ids: wsIds }); // patch in place (a bare {} refresh alone left the counts stale)
   { const c = await call(`${H}/notes/counts`, T); console.log(JSON.stringify({ worksheets: c.worksheets, byYear: c.worksheetsByYear, bySubject: c.worksheetsBySubject })); }
   console.log("parent", pEmail, "children", childIds.join(","));

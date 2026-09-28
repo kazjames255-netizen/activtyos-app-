@@ -64,10 +64,11 @@ type Support = { calm: boolean; noTimer: boolean; readAloudDefault: boolean; tex
 export async function startSession(o: { tenantId: string; franchiseId: string | null; childId: string; parentUid: string; support: Support; age: number | null; body: StartInput; nowIso: string }) {
   const [facts, profile0] = await Promise.all([loadFacts(o.tenantId, o.childId), loadProfile(o.tenantId, o.childId)]);
   const profile = profile0 ?? defProfile(o.tenantId, o.franchiseId, o.childId, o.nowIso);
-  const seed = (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
-  const built = buildRun({ body: o.body, facts, profile, support: o.support, age: o.age, nowIso: o.nowIso, seed, firstEver: facts.size === 0 && !profile0 });
+  const randomSeed = (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
+  const built = buildRun({ body: o.body, facts, profile, support: o.support, age: o.age, nowIso: o.nowIso, seed: randomSeed, firstEver: facts.size === 0 && !profile0 });
   if (!built.ok) throw new GameError(built.status, built.error);
   const { cfg, plan, key } = built;
+  const seed = built.seed ?? randomSeed; // the Arcade daily challenge fixes the seed for the day; every other run is random
   const skin = skinOf(o.body.skin);
   const rolling = profile.roll.length >= 10 ? profile.roll.reduce((a, b) => a + b, 0) / profile.roll.length : null;
   const ref = sessionsCol.doc();
@@ -91,7 +92,7 @@ export async function startSession(o: { tenantId: string; franchiseId: string | 
 /** The journey as the map screen needs it: stars per stage, what is unlocked, today's Challenge of the Day. */
 export function journeyInfo(profile: ProfileLite, facts: ReadonlyMap<string, FactState>, nowIso: string) {
   const v = journeyView(profile.journey, profile.unlockAll);
-  return { journey: { stars: profile.journey, unlockAll: profile.unlockAll, totalStars: v.totalStars, maxStars: v.maxStars, bosses: v.bossesCleared }, unlocks: unlocksFor(profile.journey, facts.values(), profile.unlockAll), daily: { modifier: modifierOfDay(nowIso.slice(0, 10)) }, fishTotal: profile.fishTotal ?? 0 };
+  return { journey: { stars: profile.journey, unlockAll: profile.unlockAll, totalStars: v.totalStars, maxStars: v.maxStars, bosses: v.bossesCleared }, unlocks: unlocksFor(profile.journey, facts.values(), profile.unlockAll), daily: { modifier: modifierOfDay(nowIso.slice(0, 10)) }, arcade: profile.arcade ?? {}, fishTotal: profile.fishTotal ?? 0 };
 }
 export async function journeyOverview(tenantId: string, childId: string, nowIso: string) {
   const [facts, profile0] = await Promise.all([loadFacts(tenantId, childId), loadProfile(tenantId, childId)]);

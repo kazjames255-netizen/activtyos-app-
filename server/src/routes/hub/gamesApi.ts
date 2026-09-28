@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { ageInYears, childDobs, okId, resolveCtx, requireEdit } from "../../lib/hubCore";
+import { ageInYears, childDobs, hubConfig, okId, resolveCtx, requireEdit } from "../../lib/hubCore";
 import { rateLimit } from "../../lib/rateLimit";
 import { checkpointSession, factsOverview, finishSession, GameError, journeyOverview, resumableSession, resumeSession, sessionsCol, setPinned, setUnlockAll, startMtc, startSession } from "../../lib/hubGames";
-import { childFor, nowIso, requestedChild } from "./shared";
+import { childFacts, childFor, nowIso, requestedChild } from "./shared";
 import { pingHub } from "../../lib/hubPing";
 import { finishQuiz, isQuizGameId, quizProgress, startQuiz } from "../../lib/hubQuizGames";
 import { botFoundryProgress, finishBotFoundry, startBotFoundry } from "../../lib/games/botFoundry";
@@ -63,7 +63,7 @@ hubGamesApi.post("/games/sessions", rateLimit("hub-games-start", 40), async (req
     return;
   }
   if (isMiniGameId(body.gameId)) {
-    const years = yearsAround(child.yg.yearGroup);
+    const years = yearsAround((await childFacts(child, await hubConfig(ctx.tenantId, child.franchiseId))).yearGroup); // the year they are in NOW (rolled forward each September)
     try {
       if (body.gameId === "bot-foundry") { res.status(201).json(await startBotFoundry({ tenantId: ctx.tenantId, franchiseId: child.franchiseId, childId: child.childId, parentUid: ctx.uid, years, nowIso: nowIso() })); return; }
       if (body.gameId === "sort-yard") { res.status(201).json(await startSortYard({ tenantId: ctx.tenantId, franchiseId: child.franchiseId, childId: child.childId, parentUid: ctx.uid, years, nowIso: nowIso() })); return; }

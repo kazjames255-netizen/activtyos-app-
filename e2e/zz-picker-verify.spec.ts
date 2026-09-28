@@ -65,8 +65,8 @@ test("seed", async () => {
   await mk("m5", "Decimals sheet", tid(MATHS, "Year 5")); await mk("s4", "Plants sheet", tid(SCI, "Year 4")); await mk("plain", "Plain note without sheet", tid(MATHS, "Year 4"));
   const L = await seedOakLesson(T, { stamp, subject: SCI, topicId: tid(SCI, "Year 4"), widget: null });
   ids.lesson = L.noteId; ids.quiz = L.quizId; ids.lessonTitle = L.title;
-  for (const [k, q] of [["m4a", ""], ["m4b", ""], ["m5", ""], ["s4", ""], ["lesson", L.quizId]] as const)
-    execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/seedWorksheet.ts"), tenantId, ids[k]!, ...(q ? [q] : [])], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
+  for (const [k, q] of [["m4a", L.quizId], ["m4b", L.quizId], ["m5", L.quizId], ["s4", L.quizId], ["lesson", L.quizId]] as const)
+    execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/seedWorksheet.ts"), tenantId, ids[k]!, q], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
   for (const k of ["m4a", "m4b", "m5", "s4", "lesson"]) {
     const n = await apiFetch<{ topicId: string; title: string; body: string }>(`/api/learning-hub/notes/${ids[k]}`, T);
     await apiFetch(`/api/learning-hub/notes/${ids[k]}`, T, { method: "PUT", body: JSON.stringify({ topicId: n.topicId, title: n.title, body: n.body ?? "", published: true }) });
@@ -99,7 +99,7 @@ test("homework worksheet picker", async ({ browser }) => {
   await expect(wp.locator("[data-ui=card]")).toHaveCount(5, { timeout: 15_000 });
   // badges
   await expect(wp.locator("[data-ui=card]", { hasText: ids.lessonTitle! })).toContainText("Interactive");
-  await expect(wp.locator("[data-ui=card]", { hasText: `Plants sheet ${stamp}` })).toContainText("PDF only");
+  await expect(wp.locator("[data-ui=card]", { hasText: `Plants sheet ${stamp}` })).toContainText("Interactive");
   await expect(wp.locator("[data-ui=card]", { hasText: "Plain note without sheet" })).toHaveCount(0);
   // filter year 5
   await wp.getByRole("tab", { name: /^Year 5/ }).click();
@@ -133,9 +133,8 @@ test("homework worksheet picker", async ({ browser }) => {
   await page.screenshot({ path: path.join(shots, "hw-worksheets-selected-1440.png") });
   // Preview from a card and from a chip
   await a.getByTestId("hub-hw-ws-preview-btn").click();
-  const pv = page.locator("#hub-hw-worksheet-preview");
+  const pv = page.locator("#hub-hw-quiz-preview");
   await expect(pv).toBeVisible({ timeout: 20_000 });
-  await expect(pv.locator("object, iframe, embed").first()).toBeVisible({ timeout: 30_000 });
   await page.screenshot({ path: path.join(shots, "hw-worksheets-preview-1440.png") });
   await page.keyboard.press("Escape");
   await expect(pv).toHaveCount(0);

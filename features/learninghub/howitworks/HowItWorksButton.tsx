@@ -17,11 +17,11 @@ class Fence extends Component<{ children: ReactNode }, { bad: boolean }> {
 
 // A clearly visible "How it works" entry. `hero` = the white pill on the hub's blue banner; `link` = a quiet text link for empty states
 // and dialogs (with an optional scene to jump to). Mounting a button also mounts the (lazy, initially empty) host that answers it.
-export default function HowItWorksButton({ role, variant = "hero", scene, topic, label, band, autoplay }: { role?: HowRole; variant?: "hero" | "link" | "card" | "kid"; scene?: string; topic?: string; label?: string; band?: HowBand; /** A page's own Watch button: open the video and start playing at once (no second play press). */ autoplay?: boolean }) {
+export default function HowItWorksButton({ role, variant = "hero", scene, topic, label, band, autoplay, clip, tour }: { role?: HowRole; variant?: "hero" | "link" | "card" | "kid" | "showme"; /** A "Show me" clip id (scripts/clips.ts): a few scenes of a film, about 15 seconds. */ clip?: string; /** Play the role's short first-visit tour. */ tour?: boolean; scene?: string; topic?: string; label?: string; band?: HowBand; /** A page's own Watch button: open the video and start playing at once (no second play press). */ autoplay?: boolean }) {
   const r: HowRole = role ?? "tutor";
   const tr = useT();
-  const text = label ?? tr("hubhow.btn");
-  const click = () => openHowItWorks({ role: r, scene, topic, band, autoplay });
+  const text = label ?? tr(variant === "showme" ? "hubhow.showMe" : "hubhow.btn");
+  const click = () => openHowItWorks({ role: r, scene, topic, band, autoplay, clip, tour });
   return (
     <>
       {variant === "hero" && (
@@ -33,6 +33,12 @@ export default function HowItWorksButton({ role, variant = "hero", scene, topic,
       )}
       {variant === "link" && (
         <button type="button" onClick={click} data-testid="hiw-open-link" className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg px-1 text-[12.5px] font-extrabold text-[var(--brand,#1d3a8f)] underline decoration-[1.5px] underline-offset-[3px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand,#1d3a8f)]">
+          <span aria-hidden>▶</span>{text}
+        </button>
+      )}
+      {variant === "showme" && (
+        <button type="button" onClick={click} data-testid="hiw-showme" data-clip={clip} title={tr("hubhow.showMeTitle")} aria-label={`${text}: ${tr("hubhow.showMeTitle")}`}
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-[var(--brand,#1d3a8f)] bg-[var(--surface,#fff)] px-3.5 text-[12.5px] font-extrabold text-[var(--brand,#1d3a8f)] transition hover:bg-[var(--brand,#1d3a8f)] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand,#1d3a8f)]">
           <span aria-hidden>▶</span>{text}
         </button>
       )}

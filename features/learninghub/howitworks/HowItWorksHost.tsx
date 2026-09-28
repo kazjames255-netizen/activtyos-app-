@@ -2,11 +2,12 @@
 
 import "./howitworks.css";
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEscapeLayer } from "../escapeLayer";
 import type { HowBand, HowRole } from "./types";
 import { ALLOWED, scriptFor, hasChooser, topicsFor, topicOfScene, headingFor, SCRIPT_LIST } from "./scripts";
+import { CLIPS, TOURS, collectScenes, composeScript, seconds, topicHolding } from "./scripts/clips";
 import { markDone } from "./scripts/progress";
 import HowItWorksChooser from "./HowItWorksChooser";
 import { useHowText } from "./i18n";
@@ -27,6 +28,7 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
   const [scene, setScene] = useState<string | null>(null);
   const [topic, setTopic] = useState<string | null>(null);
   const [auto, setAuto] = useState(false);
+  const [clip, setClip] = useState<string | null>(null);   // a "Show me" clip id, or "tour" for the first-visit tour
   const [band, setBand] = useState<HowBand | undefined>(defaultBand);
   const me = useRef(Symbol("hiw-host"));
   const box = useRef<HTMLDivElement | null>(null);
@@ -42,7 +44,7 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
       opener.current = document.activeElement as HTMLElement | null;
       // a viewer only ever gets the explainers they may see (tutor: tutor; parent: parent + what their child sees; child: child)
       const want = d.role && ALLOWED[defaultRole].includes(d.role) ? d.role : defaultRole;
-      setRole(want); setScene(d.scene ?? null); setTopic(d.topic ?? topicOfScene(want, d.scene) ?? null); setBand(d.band ?? defaultBand); setAuto(!!d.autoplay); setOpen(true);
+      setRole(want); setScene(d.scene ?? null); setTopic(d.topic ?? topicOfScene(want, d.scene) ?? null); setBand(d.band ?? defaultBand); setAuto(!!d.autoplay); setClip(d.tour ? (TOURS[want] ? "tour" : null) : d.clip && CLIPS[d.clip] && CLIPS[d.clip].role === want ? d.clip : null); setOpen(true);
     };
     const on = (e: Event) => {
       if (hosts[hosts.length - 1] !== id) return;
@@ -73,15 +75,23 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
     return () => { document.removeEventListener("keydown", trap, true); document.body.style.overflow = prevOverflow; opener.current?.focus?.(); };
   }, [open]);
 
-  const finishedTopic = useCallback(() => { if (topic) markDone(role, topic); }, [role, topic]);
+  const finishedTopic = useCallback(() => { if (topic && !clip) markDone(role, topic); }, [role, topic, clip]);
+  // A "Show me" clip / the tour: a few scenes of the existing films, in one script (the player translates each scene by id).
+  const clipIds = clip === "tour" ? TOURS[role] : clip ? CLIPS[clip]?.scenes ?? null : null;
+  const clipScript = useMemo(() => {
+    if (!clip || !clipIds) return null;
+    const scenes = collectScenes(role, clipIds, (x) => H.script(x), band);
+    return composeScript(role, clipIds, (x) => x, { key: clip === "tour" ? "tour" : `clip-${clip}`, band, title: clip === "tour" ? H.ui("tourTitle") : scenes[0]?.title ?? H.ui("clipHeading"), tagline: clip === "tour" ? H.ui("tourTag", { s: seconds(scenes) }) : H.ui("clipTag", { s: seconds(scenes) }) });
+  }, [clip, clipIds, role, band, H]);
   if (!open || typeof document === "undefined") return null;
-  const chooser = hasChooser(role) && !topic;
-  const script = H.script(scriptFor(role, band, topic));
+  const chooser = hasChooser(role) && !topic && !clipScript;
+  const script = clipScript ?? H.script(scriptFor(role, band, topic));
   const lib = topicsFor(role);
-  const nextTopic = topic && hasChooser(role) ? lib[lib.findIndex((x) => x.topic === topic) + 1] : undefined;
-  const tryIt = script.tryIt && role === "tutor" ? () => { const sub = script.tryIt!.sub; close(); window.setTimeout(() => hubGoto(sub), 80); } : undefined;
+  const nextTopic = topic && !clipScript && hasChooser(role) ? lib[lib.findIndex((x) => x.topic === topic) + 1] : undefined;
+  const tryIt = script.tryIt && role === "tutor" && clip !== "tour" ? () => { const sub = script.tryIt!.sub; close(); window.setTimeout(() => hubGoto(sub), 80); } : undefined;
   const nextVideo = nextTopic ? { label: H.ui("nextVideo", { title: H.script(nextTopic).title }), onPick: () => { setTopic(nextTopic.topic ?? null); setScene(null); setAuto(true); } } : undefined;
-  const topicOthers = topic ? [
+  const fullVideo = clip && clip !== "tour" && clipIds ? [{ label: H.ui("clipFull"), onPick: () => { setClip(null); setTopic(topicHolding(role, clipIds[0]) ?? null); setScene(null); setAuto(true); } }] : [];
+  const topicOthers = clipScript ? [...fullVideo, ...(hasChooser(role) ? [{ label: H.ui("allVideosPlay"), onPick: () => { setClip(null); setTopic(null); setScene(null); } }] : [])] : topic ? [
     ...(hasChooser(role) ? [{ label: H.ui("allVideosPlay"), onPick: () => { setTopic(null); setScene(null); } }] : [{ label: H.ui("fullTour"), onPick: () => { setTopic(null); setScene(null); } }]),
   ] : hasChooser(role) ? [] : lib.map((x) => ({ label: `▶ ${H.script(x).title}`, onPick: () => { setTopic(x.topic ?? null); setScene(null); } }));
   const choices = ALLOWED[defaultRole];
@@ -95,7 +105,7 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
             <div className="hiw-roles" role="tablist" aria-label={H.ui("whichVideo")}>
               {choices.map((r) => {
                 const sc = H.script(scriptFor(r, band));
-                return <button key={r} type="button" role="tab" aria-selected={r === role} data-testid={`hiw-role-${r}`} onClick={() => { setRole(r); setScene(null); setTopic(null); }}>{r === defaultRole ? sc.audience : sc.viewLabel ?? sc.audience}</button>;
+                return <button key={r} type="button" role="tab" aria-selected={r === role} data-testid={`hiw-role-${r}`} onClick={() => { setRole(r); setScene(null); setTopic(null); setClip(null); }}>{r === defaultRole ? sc.audience : sc.viewLabel ?? sc.audience}</button>;
               })}
             </div>
           ) : <div className="hiw-roles" />}
@@ -110,8 +120,8 @@ export default function HowItWorksHost({ defaultRole, band: defaultBand }: { def
             </div>
           ) : (
             <>
-              {topic && hasChooser(role) && <div style={{ padding: "0 0 8px" }}><button type="button" className="hiw-back" data-testid="hiw-all-videos" onClick={() => { setTopic(null); setScene(null); }}><DirArrow dir="back" /> {H.ui("allVideos")}</button></div>}
-              <Player key={`${role}:${band ?? ""}:${topic ?? ""}:${scene ?? ""}:${auto ? "a" : ""}`} script={script} startScene={scene} keys kid={kidViewer} onFinish={finishedTopic} autoplay={auto} autofocus onTryIt={tryIt} nextVideo={nextVideo} others={[...topicOthers, ...choices.filter((r) => r !== role).map((r) => ({ label: `▶ ${H.script(scriptFor(r, band)).viewLabel ?? H.script(scriptFor(r, band)).audience}`, onPick: () => { setRole(r); setScene(null); setTopic(null); } }))]} />
+              {topic && !clipScript && hasChooser(role) && <div style={{ padding: "0 0 8px" }}><button type="button" className="hiw-back" data-testid="hiw-all-videos" onClick={() => { setTopic(null); setScene(null); }}><DirArrow dir="back" /> {H.ui("allVideos")}</button></div>}
+              <Player key={`${role}:${band ?? ""}:${clip ?? ""}:${topic ?? ""}:${scene ?? ""}:${auto ? "a" : ""}`} script={script} startScene={scene} keys kid={kidViewer} onFinish={finishedTopic} autoplay={auto} autofocus onTryIt={tryIt} nextVideo={nextVideo} others={[...topicOthers, ...choices.filter((r) => r !== role).map((r) => ({ label: `▶ ${H.script(scriptFor(r, band)).viewLabel ?? H.script(scriptFor(r, band)).audience}`, onPick: () => { setRole(r); setScene(null); setTopic(null); setClip(null); } }))]} />
             </>
           )}
         </div>

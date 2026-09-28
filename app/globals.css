@@ -352,3 +352,6 @@ html[data-ho-office="1"] .op-hero {
 }
 #learning-hub[data-calm="1"] *, #learning-hub[data-calm="1"] *::before, #learning-hub[data-calm="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 #learning-hub[data-text="large"] { zoom: 1.15; }
+
+/* Dialog footer must be opaque so scrolled content never shows through behind the action buttons. */
+.hub-sheet-foot { background: var(--surface); border-top: 1px solid var(--line); position: relative; z-index: 1; }

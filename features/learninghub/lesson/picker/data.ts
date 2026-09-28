@@ -59,8 +59,9 @@ export async function fetchCell(qs: string, area: MapArea, year: number | null):
 
 // "Recently used" is per browser and per kind; it only ever holds ids + titles.
 const RK = "hub.picker.recent.v1";
+export const RECENT_MAX = 5; // shelf stays tidy: only the 5 most recent picks
 export type Recent = { id: string; title: string; year?: number | null };
 export const readRecent = (kind: string): Recent[] => { try { const o = JSON.parse(localStorage.getItem(RK) || "{}"); return Array.isArray(o[kind]) ? o[kind] : []; } catch { return []; } };
 export const pushRecent = (kind: string, it: Recent) => {
-  try { const o = JSON.parse(localStorage.getItem(RK) || "{}"); o[kind] = [it, ...(Array.isArray(o[kind]) ? o[kind] : []).filter((x: Recent) => x.id !== it.id)].slice(0, 8); localStorage.setItem(RK, JSON.stringify(o)); } catch { /* a nicety */ }
+  try { const o = JSON.parse(localStorage.getItem(RK) || "{}"); o[kind] = [it, ...(Array.isArray(o[kind]) ? o[kind] : []).filter((x: Recent) => x.id !== it.id)].slice(0, RECENT_MAX); localStorage.setItem(RK, JSON.stringify(o)); } catch { /* a nicety */ }
 };

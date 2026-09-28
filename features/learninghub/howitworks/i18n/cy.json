@@ -56,7 +56,12 @@
   "readScript": "Darllen y sgript gyfan",
   "noVoice": "Dim llais ar gyfer yr iaith hon ar y ddyfais hon: capsiynau’n unig.",
   "tryNow": "Rho gynnig nawr →",
-  "nextVideo": "Fideo nesaf: {title}"
+  "nextVideo": "Fideo nesaf: {title}",
+  "tourTitle": "Taith gyflym",
+  "tourTag": "Y prif leoedd, un ar ôl y llall. Tua {s} eiliad.",
+  "clipHeading": "Cipolwg cyflym",
+  "clipTag": "Cipolwg cyflym. Tua {s} eiliad.",
+  "clipFull": "▶ Gwylio'r fideo llawn"
  },
  "scripts": {
   "tutor:std:main": {

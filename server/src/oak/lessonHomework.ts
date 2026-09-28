@@ -58,8 +58,8 @@ async function stageSelect() {
   for (const tenant of tenants) {
     // A raw unsharded .get() against ~7,900 docs times out at real-tenant scale (same note as audit-worksheet-quizzes.ts) — use
     // the app's own sharded, field-masked reader instead.
-    const notes = await shardedTenantRead(db.collection("hubNotes"), tenant, ["title", "body", "topicId", "worksheetQuizId", "worksheetFile"]);
-    const need = notes.filter((d) => !d.get("worksheetQuizId") && !d.get("worksheetFile") && d.get("title") && d.get("body") && d.get("topicId"));
+    const notes = await shardedTenantRead(db.collection("hubNotes"), tenant, ["title", "body", "topicId", "worksheetQuizId"]);
+    const need = notes.filter((d) => !d.get("worksheetQuizId") && d.get("title") && d.get("body") && d.get("topicId"));
     // Batch-fetch every distinct topic doc via getAll() instead of one .get() per note — sequential awaits over
     // ~1,300 distinct topics took 3+ minutes (found 28 Sep 2026 on the real tenant) and killed this stage outright.
     const topicIds = [...new Set(need.map((d) => d.get("topicId") as string))].filter((id) => !topicCache.has(id));

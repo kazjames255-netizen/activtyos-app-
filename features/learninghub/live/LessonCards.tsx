@@ -288,9 +288,9 @@ export function LessonRow({ lesson, now, isTutor, readOnly = false, topic, tutor
                 <Ico name="video" size={16} />{info.cta}
               </button>
             ) : !isTutor ? (
-              <span className="inline-flex min-h-[44px] flex-1 items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3 text-[12px] font-semibold text-[var(--ink-2)] sm:flex-none"><Ico name="lock" size={14} />{info.waiting ? tx("hublive.aKit_waiting") : tx("hublive.aKit_opensIn", { span: humanSpan(t.opensMs - now) })}</span>
+              <span className="inline-flex min-h-[44px] flex-1 items-center gap-1.5 rounded-xl bg-[var(--panel)] px-3 text-[12px] font-semibold text-[var(--ink-2)] sm:flex-none"><Ico name="lock" size={14} />{info.waiting ? tx("hublive.aKit_waiting") : tx("hublive.aKit_ended")}</span>
             ) : (
-              <span className="inline-flex min-h-[44px] flex-1 items-center gap-1.5 px-1 text-[12px] font-semibold text-[var(--ink-3)] sm:flex-none"><Ico name="lock" size={14} />{tx("hublive.aCards_roomOpensIn", { span: humanSpan(t.opensMs - now) })}</span>
+              <span className="inline-flex min-h-[44px] flex-1 items-center gap-1.5 px-1 text-[12px] font-semibold text-[var(--ink-3)] sm:flex-none"><Ico name="lock" size={14} />{tx("hublive.aKit_ended")}</span>
             )}
             {isTutor && (
               <>

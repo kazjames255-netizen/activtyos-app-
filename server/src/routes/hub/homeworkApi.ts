@@ -53,7 +53,7 @@ const homeworkBody = z.object({
   instructions: z.string().max(5000).default(""),
   assessmentId: z.string().max(100).nullable().optional(),
   noteIds: z.array(z.string().min(1).max(100)).max(20).default([]),
-  // Worksheets to attach (notes that have a `worksheetFile`); omitted on an edit = keep the current ones.
+  // Worksheets to attach (notes that have an auto-marked quiz, `worksheetQuizId`); omitted on an edit = keep the current ones.
   worksheetNoteIds: z.array(z.string().min(1).max(100)).max(10).optional(),
   flashcardTopicId: z.string().max(100).nullable().optional(),
   dueAt: z.string().max(40).optional(),
@@ -80,8 +80,8 @@ async function checkRefs(ctx: HubCtx, b: { assessmentId?: string | null; noteIds
   }
   if (b.worksheetNoteIds?.length) {
     if (b.worksheetNoteIds.some((id) => !okId(id))) return { status: 404, error: "Worksheet not found" };
-    const snaps = await db.getAll(...b.worksheetNoteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "franchiseId", "worksheetFile", "published"] });
-    if (snaps.some((s) => !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId")) || !s.get("worksheetFile"))) return { status: 404, error: "Worksheet not found" };
+    const snaps = await db.getAll(...b.worksheetNoteIds.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "franchiseId", "worksheetQuizId", "published"] });
+    if (snaps.some((s) => !s.exists || !canReadContent(ctx, s.get("tenantId")) || !canSee(ctx, s.get("franchiseId")) || !s.get("worksheetQuizId"))) return { status: 404, error: "Worksheet not found" };
     // A draft worksheet is invisible to families, so it can't be newly attached (one already on the homework may stay until removed).
     if (snaps.some((s) => s.get("published") === false && !keepWorksheets.includes(s.id))) return { status: 400, error: "Publish that worksheet's lesson before setting it as homework", code: "worksheet_draft" } as { status: number; error: string };
   }
@@ -116,7 +116,7 @@ export async function unreachableFor(ctx: HubCtx, assessmentId: string, students
       continue;
     }
     const dob = dobs.get(e.childId) ?? null;
-    if (audienceFit(aud, { yearGroup: effectiveYearGroup(e, dob, cfg.yearGroups), age: ageInYears(dob) }) === "no") {
+    if (audienceFit(aud, { yearGroup: effectiveYearGroup(e, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance), age: ageInYears(dob) }) === "no") {
       out.push({ childId: e.childId, childName: e.childName, reason: `"${title}" isn't set for ${e.childName}'s year group or age` });
     }
   }
@@ -157,15 +157,15 @@ const newSub = (ctx: HubCtx, hwId: string, e: { childId: string; parentUid: stri
 });
 
 interface Counts { assigned: number; submitted: number; marked: number }
-interface WsInfo { noteId: string; title: string; size: number; quizId?: string }
-/** Title / size / auto-marked quiz of the worksheets a homework lists (notes of this tenant that still carry a worksheetFile). */
+interface WsInfo { noteId: string; title: string; quizId?: string }
+/** Title / auto-marked quiz of the worksheets a homework lists (notes of this tenant that carry a worksheetQuizId). */
 async function worksheetsOut(tenantId: string, ids: string[] | undefined, publishedOnly: boolean): Promise<WsInfo[]> {
   const want = [...new Set(ids ?? [])].filter(okId);
   if (!want.length) return [];
-  const snaps = await db.getAll(...want.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published", "worksheetFile", "worksheetQuizId"] });
-  const by = new Map(snaps.filter((s) => s.exists && canReadContent({ tenantId }, s.get("tenantId")) && s.get("worksheetFile") && (!publishedOnly || s.get("published") !== false)).map((s) => {
+  const snaps = await db.getAll(...want.map((id) => notesCol.doc(id)), { fieldMask: ["tenantId", "title", "published", "worksheetQuizId"] });
+  const by = new Map(snaps.filter((s) => s.exists && canReadContent({ tenantId }, s.get("tenantId")) && typeof s.get("worksheetQuizId") === "string" && s.get("worksheetQuizId") && (!publishedOnly || s.get("published") !== false)).map((s) => {
     const q = s.get("worksheetQuizId");
-    return [s.id, { noteId: s.id, title: s.get("title") as string, size: Number(s.get("worksheetFile.size")) || 0, ...(typeof q === "string" && q ? { quizId: q } : {}) } as WsInfo] as const;
+    return [s.id, { noteId: s.id, title: s.get("title") as string, ...(typeof q === "string" && q ? { quizId: q } : {}) } as WsInfo] as const;
   }));
   return want.map((id) => by.get(id)).filter((x): x is WsInfo => !!x);
 }

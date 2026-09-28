@@ -56,7 +56,12 @@
   "readScript": "Lire tout le texte",
   "noVoice": "Aucune voix pour cette langue sur cet appareil : sous-titres uniquement.",
   "tryNow": "Essaie maintenant →",
-  "nextVideo": "Vidéo suivante : {title}"
+  "nextVideo": "Vidéo suivante : {title}",
+  "tourTitle": "Une visite rapide",
+  "tourTag": "Les principaux endroits, l'un après l'autre. Environ {s} secondes.",
+  "clipHeading": "Un aperçu rapide",
+  "clipTag": "Un aperçu rapide. Environ {s} secondes.",
+  "clipFull": "▶ Voir la vidéo complète"
  },
  "scripts": {
   "tutor:std:main": {

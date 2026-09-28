@@ -5,6 +5,8 @@ import { journeyView } from "../journey";
 import { lookOf } from "../theme";
 import { HostAvatar, HOST_NAME } from "../characters/host";
 import type { JourneyOverview } from "../store";
+import type { HighScore } from "../arcadeLocal";
+import { ArcadeMenu } from "./ArcadeUI";
 import type { TT, TPl } from "./tt";
 import { IconFish, IconMap, IconStar } from "./icons";
 
@@ -13,8 +15,8 @@ const Crown = () => <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden=
 const stageName = (T: TT, s: StageDef) => (s.boss ? T(`boss_${biomeOf(s.biome).chaser}`) : T("stage_n", { n: s.idx }));
 
 /** THE MAP: five biomes of four stages each. Stages open by mastery (2 stars on the one before); locked ones still show what is coming. */
-export function JourneyMap({ T, TP, info, demo, onStage, onDaily, onPit, onFree, onWardrobe, onVillage, fish, onIceMap, onMtc, onSettings, onFinale, onUnlockAll, onExit }: {
-  T: TT; TP: TPl; info: JourneyOverview | null; demo: boolean; onStage: (s: StageDef) => void; onDaily: () => void; onPit: () => void; onFree: () => void; onWardrobe: () => void; onVillage: () => void; fish: number; onIceMap: () => void; onMtc: (() => void) | null; onSettings: () => void; onFinale?: (() => void) | null; onUnlockAll: (() => void) | null; onExit?: () => void;
+export function JourneyMap({ T, TP, info, demo, onStage, onDaily, onPit, onFree, onArcade, high, calm, onWardrobe, onVillage, fish, onIceMap, onMtc, onSettings, onFinale, onUnlockAll, onExit }: {
+  T: TT; TP: TPl; info: JourneyOverview | null; demo: boolean; onStage: (s: StageDef) => void; onDaily: () => void; onPit: () => void; onFree: () => void; onArcade: (mode: "arcade" | "arcade-daily" | "arcade-endless") => void; high: HighScore[]; calm: boolean; onWardrobe: () => void; onVillage: () => void; fish: number; onIceMap: () => void; onMtc: (() => void) | null; onSettings: () => void; onFinale?: (() => void) | null; onUnlockAll: (() => void) | null; onExit?: () => void;
 }) {
   const head = useRef<HTMLHeadingElement>(null); const cur = useRef<HTMLDivElement>(null);
   useEffect(() => { head.current?.focus(); }, []);
@@ -41,6 +43,8 @@ export function JourneyMap({ T, TP, info, demo, onStage, onDaily, onPit, onFree,
           </div>
         </div>
         {demo && <p style={{ margin: "10px 0 0" }}><span className="ps-demo" data-testid="ps-demo-badge">{T("demo_badge")}</span>{onUnlockAll && !info?.journey.unlockAll && <button className="ps-link" type="button" style={{ color: "#ffe58a" }} onClick={onUnlockAll} data-testid="ps-unlock-all">{T("demo_unlock_all")}</button>}</p>}
+
+        <ArcadeMenu T={T} info={info} high={high} calm={calm} onPlay={onArcade} />
 
         <div className="ps-row" style={{ justifyContent: "stretch", alignItems: "stretch", marginTop: 14 }}>
           <div className="ps-card" style={{ flex: "1 1 260px", padding: 14, margin: 0, width: "auto" }} data-testid="ps-daily">

@@ -21,8 +21,9 @@ import { lessonStage, lessonTiming, type Lesson } from "./live/lessonTypes";
 import { topicLabel } from "./types";
 import { takeHubIntent } from "./hubIntent";
 import { InPersonApp } from "./inperson/InPersonApp";
-import { listSessions, type IpSession } from "./inperson/api";
+import { listSessions, startScheduledSession, type IpSession } from "./inperson/api";
 import { InPersonRow } from "./live/InPersonRow";
+import { ScheduledInPersonRow } from "./live/ScheduledInPersonRow";
 import { NewSessionChooser, type SessionHow, type SessionWhen } from "./live/NewSessionChooser";
 import { wantBoardFirst } from "./live/board/callObject";
 import { GroupViewChip, useGroupView } from "./groupKit";
@@ -70,6 +71,8 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
   // The merged "New session" chooser (When: now/later, How: video/in person) and where its answer routes to.
   const [chooserOpen, setChooserOpen] = useState(false);
   const [startNow, setStartNow] = useState(false);
+  // The form is scheduling an IN-PERSON lesson (New session → In person → Schedule for later).
+  const [formInPerson, setFormInPerson] = useState(false);
   // "new" = the in-person setup screen (a fresh session); an IpSession = resuming one still left open.
   const [ipOverlay, setIpOverlay] = useState<"new" | IpSession | null>(null);
   // In-person sessions are ordinary hubLessons rows under the hood (mode: "in_person" — server/src/routes/hub/inPersonApi.ts)
@@ -118,15 +121,20 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
   const attendeesOf = (l: Lesson) => l.students?.length ? l.students.map((s) => s.childName) : (l.childIds ?? []).map((id) => nameOf.get(id) ?? t("hublive.aPanel_student"));
   const tutorOf = (l: Lesson) => l.tutorName || students.find((s) => s.tutorName)?.tutorName || t("hublive.aPanel_yourTutor");
 
+  // Lessons scheduled AHEAD to run in person (mode "in_person", still not started): no room, nothing to join, so they get their own
+  // rows with a Start button instead of the video join window. Once started they become ordinary in-person sessions (ipSessions below).
+  const videoLessons = useMemo(() => (lessons ?? []).filter((l) => l.mode !== "in_person"), [lessons]);
+  const ipScheduled = useMemo(() => (lessons ?? []).filter((l) => l.mode === "in_person" && l.status === "scheduled" && new Date(l.startsAt).getTime() + l.durationMins * 60_000 > now - 3 * 86_400_000)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt)), [lessons, now]);
   const { upcoming, past } = useMemo(() => {
     const up: Lesson[] = [], pa: Lesson[] = [];
-    for (const l of lessons ?? []) (["upcoming", "open"].includes(lessonTiming(l, now).phase) ? up : pa).push(l);
+    for (const l of videoLessons) (["upcoming", "open"].includes(lessonTiming(l, now).phase) ? up : pa).push(l);
     // Live first, then soonest; lessons past their slot (still joinable) sink so a fresh one leads.
     const rank = (l: Lesson) => { const st = lessonStage(l, now); return st === "live" ? 0 : st === "grace" ? 2 : 1; };
     up.sort((a, b) => rank(a) - rank(b) || a.startsAt.localeCompare(b.startsAt));
     pa.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
     return { upcoming: up, past: pa };
-  }, [lessons, now]);
+  }, [videoLessons, now]);
 
   // In-person sessions folded into the same picture: "live" ones are exactly as "happening now" as a video lesson
   // mid-call (a tutor should never lose track of one left open); "ended" ones are real history, so they interleave
@@ -195,6 +203,16 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
     if (stageInfo(l, now, canEdit).canJoin) { setLobbyId(l.id); return; }
     document.querySelector(`[data-lesson-id="${l.id}"], #hub-next-lesson`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
+  const startScheduledIp = async (l: Lesson) => {
+    setBusyId(l.id);
+    try { const s = await startScheduledSession(qs, l.id); if (mounted.current) setIpOverlay(s); load(); }
+    catch (e) { onError(errMsg(e, t("hublive.aIp_startFail"))); }
+    finally { if (mounted.current) setBusyId(null); }
+  };
+  const ipRowFor = (l: Lesson) => (
+    <ScheduledInPersonRow key={l.id} lesson={l} now={now} isTutor={canEdit} readOnly={readOnly} tutorLabel={tutorOf(l)} attendees={attendeesOf(l)} busy={busyId === l.id}
+      onStart={() => void startScheduledIp(l)} onEdit={() => setEditor(l)} onCancel={() => void cancelLesson(l)} onCancelFollowing={() => void cancelLesson(l, true)} />
+  );
   const rowFor = (l: Lesson) => (
     <LessonRow key={l.id} lesson={l} now={now} isTutor={canEdit} readOnly={readOnly} topic={l.topicId ? topicById.get(l.topicId) ?? null : null}
       tutorLabel={tutorOf(l)} attendees={attendeesOf(l)} busy={busyId === l.id}
@@ -210,20 +228,22 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
       groups={groups}
       initialGroupId={editor === "new" ? presetGroup : null}
       startNow={editor === "new" && startNow}
-      onClose={() => { setEditor(null); setPresetGroup(null); setStartNow(false); }}
-      onSaved={(l) => { setEditor(null); setPresetGroup(null); setStartNow(false); setTab(l.held ? "past" : "upcoming"); load(); if (startNow) setLobbyId(l.id); }}
+      inPerson={editor === "new" && formInPerson}
+      onClose={() => { setEditor(null); setPresetGroup(null); setStartNow(false); setFormInPerson(false); }}
+      onSaved={(l) => { setEditor(null); setPresetGroup(null); setStartNow(false); setFormInPerson(false); setTab(l.held ? "past" : "upcoming"); load(); if (startNow) setLobbyId(l.id); }}
     />
   );
 
   if (lessons === null) return <div className="grid gap-3" aria-busy="true" aria-label={t("hublive.aPanel_loading")}><StageSkeleton /></div>;
 
   // The New session chooser's answer routes to whichever existing flow already does the real work: LessonForm
-  // (video, either starting now or scheduled for later) or InPersonApp (in person — always now; see NewSessionChooser).
+  // (video now/later, or in person scheduled for later) or InPersonApp (in person, starting right now; see NewSessionChooser).
   const chooseSession = (when: SessionWhen, how: SessionHow) => {
     setChooserOpen(false);
     if (viewGroup) setPresetGroup(viewGroup.id);
-    if (how === "video") { setStartNow(when === "now"); setEditor("new"); }
-    else setIpOverlay("new");
+    if (how === "video") { setFormInPerson(false); setStartNow(when === "now"); setEditor("new"); }
+    else if (when === "now") setIpOverlay("new");
+    else { setStartNow(false); setFormInPerson(true); setEditor("new"); }
   };
   const hasAnything = lessons.length > 0 || (ipSessions?.length ?? 0) > 0;
 
@@ -276,7 +296,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
               onEditNotes={readOnly ? undefined : () => setNotesFor(next.id)}
               onEdit={canEdit && !readOnly ? () => setEditor(next) : undefined}
             />
-          ) : (
+          ) : ipScheduled.length || ipLive.length ? null : (   // an in-person lesson still open (Resume) or scheduled is something coming up: never say "Nothing coming up" above it
             <div className="rounded-3xl border border-[var(--brand-line)] bg-[var(--brand-soft)] px-6 py-7 text-center">
               <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--surface)] text-[var(--brand)]" aria-hidden><Ico name="check" size={24} strokeWidth={2.4} /></div>
               <div className="mt-1 text-[16px] font-extrabold text-[var(--brand-strong)]" style={DISPLAY}>{t("hublive.aPanel_nothingTitle")}</div>
@@ -284,7 +304,7 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
             </div>
           )}
 
-          <TodayStrip lessons={lessons} now={now} isTutor={canEdit} topicById={topicById} attendeesOf={attendeesOf} tutorOf={tutorOf} onOpen={openStrip} />
+          <TodayStrip lessons={videoLessons} now={now} isTutor={canEdit} topicById={topicById} attendeesOf={attendeesOf} tutorOf={tutorOf} onOpen={openStrip} />
 
           {ipLive.length > 0 && (
             <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-ip-still-open">
@@ -294,12 +314,18 @@ function LivePanel(props: PanelProps & { call: NonNullable<ReturnType<typeof use
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Segmented label={t("hublive.aPanel_title")} value={tab} onChange={setTab} options={[{ v: "upcoming", label: t("hublive.aPanel_upcoming"), count: rest.length }, { v: "past", label: t("hublive.aPanel_past"), count: pastItems.length }]} />
+            <Segmented label={t("hublive.aPanel_title")} value={tab} onChange={setTab} options={[{ v: "upcoming", label: t("hublive.aPanel_upcoming"), count: rest.length + ipScheduled.length }, { v: "past", label: t("hublive.aPanel_past"), count: pastItems.length }]} />
           </div>
 
           {tab === "upcoming" ? (
-            rest.length ? (
+            rest.length || ipScheduled.length ? (
               <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-lessons-upcoming">
+                {ipScheduled.length > 0 && (
+                  <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" id="hub-ip-scheduled">
+                    <Overline>{t("hublive.aIp_scheduledTitle")}</Overline>
+                    {ipScheduled.map(ipRowFor)}
+                  </div>
+                )}
                 {liveRows.length > 0 && (
                   <>
                     <Overline right={<span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[var(--hub-green-ink)]"><span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--green)] motion-reduce:animate-none" />{t("hublive.aPanel_running", { n: liveRows.length })}</span>}>{t("hublive.aPanel_liveNow")}</Overline>

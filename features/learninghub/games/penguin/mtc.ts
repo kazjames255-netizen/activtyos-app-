@@ -7,9 +7,11 @@ import { makeRng } from "../../tools/engine/rng";
 import { mix } from "./core";
 
 export const MTC = { n: 25, practice: 3, answerMs: 6000, pauseMs: 3000, maxOverlap: 7 } as const;
-// Per-form limits on the first factor, by table. TODO(verify): the 10 / 11 / 12 rows came from a secondary source because the PDF extraction of those rows was
-// garbled; re-verify all rows against the official framework before this mode ships to families (see doc C section 4).
+// Per-form limits on the first factor, by table. VERIFIED against the official STA "Multiplication tables check: assessment framework" (2018, updated for 2022),
+// section 5.2.1 Table 1 - every row incl. 10 / 11 / 12 matches. Section 5.2.2 Table 2 adds: KS1 tables (2, 5, 10) must make up 3-7 items of each form (KS2: 18-22).
 export const MTC_LIMITS: Record<number, [number, number]> = { 2: [0, 2], 3: [1, 3], 4: [1, 3], 5: [1, 3], 6: [2, 4], 7: [2, 4], 8: [2, 4], 9: [2, 4], 10: [0, 2], 11: [1, 3], 12: [2, 4] };
+/** Framework Table 2: min / max number of KS1 (2, 5, 10 table) items in one form. */
+export const MTC_KS1: readonly [number, number] = [3, 7];
 export interface MtcItem { a: number; b: number }
 export const mtcKey = (i: MtcItem) => `${Math.min(i.a, i.b)}x${Math.max(i.a, i.b)}`;
 const pairKey = (a: number, b: number) => (a <= b ? `${a}x${b}` : `${b}x${a}`);
@@ -24,11 +26,13 @@ export function makeMtcForm(seed: number, prev: string[] = []): MtcItem[] {
     const rng = makeRng(mix(seed, 7000 + attempt));
     const counts: Record<number, number> = {}; let total = 0;
     for (const t of tables) { counts[t] = MTC_LIMITS[t]![0]; total += counts[t]!; }
+    const ks1Of = () => (counts[2] ?? 0) + (counts[5] ?? 0) + (counts[10] ?? 0);
     while (total < MTC.n) {
       const room = tables.filter((t) => counts[t]! < MTC_LIMITS[t]![1]);
       const pool = room.flatMap((t) => (t === 6 || t === 7 || t === 8 || t === 9 || t === 12 ? [t, t, t] : [t]));
       const t = pool[rng.int(0, pool.length - 1)]!; counts[t]!++; total++;
     }
+    if (ks1Of() < MTC_KS1[0] || ks1Of() > MTC_KS1[1]) continue; // framework Table 2: KS1 items are minimised, 3-7 per form
     const used = new Set<string>(); const cnt2: Record<number, number> = {}; const items: MtcItem[] = [];
     let bad = false;
     for (const a of rng.shuffle(tables)) {

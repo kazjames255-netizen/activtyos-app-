@@ -99,15 +99,15 @@ async function retry<T>(fn: () => Promise<T>): Promise<T> {
 interface HwRow { id: string; title: string }
 const tutorHomework = (title: string) => retry(async () => (await apiFetch<HwRow[]>("/api/learning-hub/homework", await token(accounts.freelancer))).find((h) => h.title === title));
 
-/** Give a lesson note an Oak-style worksheet (PDF in Storage + note pointers), then PUT the note unchanged so the API's list index picks it up. */
-async function seedWorksheet(noteId: string, quizId?: string) {
-  execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/seedWorksheet.ts"), tenantId, noteId, ...(quizId ? [quizId] : [])], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
+/** Give a lesson note an auto-marked worksheet quiz pointer, then PUT the note unchanged so the API's list index picks it up. */
+async function seedWorksheet(noteId: string, quizId: string) {
+  execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/seedWorksheet.ts"), tenantId, noteId, quizId], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
   const t = await token(accounts.freelancer);
   const n = await apiFetch<{ topicId: string; title: string; body: string; published: boolean }>(`/api/learning-hub/notes/${noteId}`, t);
   await apiFetch(`/api/learning-hub/notes/${noteId}`, t, { method: "PUT", body: JSON.stringify({ topicId: n.topicId, title: n.title, body: n.body ?? "", published: true }) });
 }
 
-test("Set homework is bare; a worksheet is picked, previewed (PDF + interactive quiz) and survives the preview closing; list + parent see it", async ({ browser }) => {
+test("Set homework is bare; a worksheet is picked, previewed (interactive quiz) and survives the preview closing; list + parent see it", async ({ browser }) => {
   test.setTimeout(300_000);
   await seedWorksheet(L.noteId, L.quizId);
   const ctx = await ctxFor(browser, "freelancer");
@@ -132,13 +132,8 @@ test("Set homework is bare; a worksheet is picked, previewed (PDF + interactive 
   await row.locator("[data-pick]").click();
   await expect(dlg.getByTestId("hub-hw-attached-worksheets")).toContainText(L.title);
 
-  // Preview before/after choosing: the PDF is embedded, the interactive quiz opens on top; Esc closes only the top layer.
+  // Preview before/after choosing: the interactive quiz opens; Esc closes it.
   await row.getByTestId("hub-hw-ws-preview-btn").click();
-  const wp = page.locator("#hub-hw-worksheet-preview");
-  await expect(wp).toBeVisible({ timeout: 30_000 });
-  await expect(wp.locator("object[type='application/pdf']")).toBeVisible({ timeout: 30_000 });
-  await page.screenshot({ path: "test-results/hw-worksheet-preview.png" });
-  await wp.getByTestId("hub-hw-ws-quiz-btn").click();
   const qp = page.locator("#hub-hw-quiz-preview");
   await expect(qp).toBeVisible({ timeout: 30_000 });
   await expect(qp).toContainText(L.quiz[0]!.prompt.slice(0, 30), { timeout: 30_000 });
@@ -147,9 +142,6 @@ test("Set homework is bare; a worksheet is picked, previewed (PDF + interactive 
   await page.screenshot({ path: "test-results/hw-quiz-preview.png" });
   await page.keyboard.press("Escape");
   await expect(qp).toHaveCount(0);
-  await expect(wp).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(wp).toHaveCount(0);
   await expect(dlg).toBeVisible();
   await expect(dlg.getByLabel("Title")).toHaveValue(mine);
   await expect(row.locator("[data-pick]")).toHaveAttribute("aria-pressed", "true");
@@ -164,12 +156,14 @@ test("Set homework is bare; a worksheet is picked, previewed (PDF + interactive 
   expect(hw).toBeTruthy();
 
   // Tutor list: the worksheet row + View worksheet.
+  // The form can stay open (blank) after a save: close it, then open the Set homework list.
+  if (await dlg.isVisible().catch(() => false)) { await page.keyboard.press("Escape"); await expect(dlg).toHaveCount(0); }
   await openTab(page, /Set homework/);
   const card = cardWith(page, mine, "Hand-ins");
   await expect(card).toBeVisible({ timeout: 30_000 });
   await expect(card).toContainText(`Worksheet: ${L.title}`);
   await card.getByTestId("hub-hw-view-worksheet").click();
-  await expect(page.locator("#hub-hw-worksheet-preview object")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("#hub-hw-quiz-preview")).toBeVisible({ timeout: 30_000 });
   await page.keyboard.press("Escape");
   await ctx.close();
   // The family's row carries the worksheet (interactive: its quiz id) so the child can do it in the quiz player.

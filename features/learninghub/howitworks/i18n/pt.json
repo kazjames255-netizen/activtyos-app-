@@ -56,7 +56,12 @@
   "readScript": "Ler o guião completo",
   "noVoice": "Não há voz para este idioma neste dispositivo: só legendas.",
   "tryNow": "Experimenta agora →",
-  "nextVideo": "Próximo vídeo: {title}"
+  "nextVideo": "Próximo vídeo: {title}",
+  "tourTitle": "Uma visita rápida",
+  "tourTag": "Os principais locais, um a seguir ao outro. Cerca de {s} segundos.",
+  "clipHeading": "Um olhar rápido",
+  "clipTag": "Um olhar rápido. Cerca de {s} segundos.",
+  "clipFull": "▶ Ver o vídeo completo"
  },
  "scripts": {
   "tutor:std:main": {

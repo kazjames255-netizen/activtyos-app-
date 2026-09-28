@@ -6680,6 +6680,7 @@ components:
       properties:
         parentDigest: { type: boolean, default: false, description: "Weekly 'This week in <child>'s learning' email to each enrolled child's parent (Sundays 17:00 UK). OFF by default. Sending also needs the server env HUB_DIGEST_ENABLED=1." }
         homeworkNudges: { type: boolean, default: false, description: "Friendly homework reminders to the parent: one `nudgeLeadHours` before the due date and one gentle 'not handed in yet' a day after; max 2 per homework, only while not handed in. OFF by default." }
+        autoEnrolOnBooking: { type: boolean, default: false, description: "When true, a child on a parent's booking with this provider (POST /my/bookings) is enrolled in the Learning Hub automatically: active, no subject list (= every subject), no tutor. Only ever ADDS a missing enrolment — one the tutor paused or removed is never touched or re-activated. OFF by default; never sends email. Editable via PUT /config, the Enrol dialog switch, or Setup." }
         nudgeLeadHours: { type: integer, minimum: 1, maximum: 72, default: 24 }
         questionKinds:
           type: array

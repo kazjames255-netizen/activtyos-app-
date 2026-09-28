@@ -73,6 +73,15 @@ scene of every tutor topic video ends with a **Try it now →** button (closes t
 form, via `openHowItWorks`'s sibling `hubGoto()` in `open.ts`) and a **Next video** button. "Watched" is only ticked once the last scene
 is reached, never on open; reopening a video resumes from the last scene it was on (localStorage, best-effort).
 
+## First-visit tour, "Show me" clips and Watch along
+
+None of these is a new video: each is made of scenes of the existing films (`scripts/clips.ts`), played by the same player, so captions, narration and all 10 translations come for free.
+
+- **"Show me" clips** (`CLIPS`, `TAB_CLIP`): one or two scenes (about 15 seconds; the e2e spec fails a clip over 20 s). A "Show me" button sits beside the "Watch:" link at the top of each tutor area and the parent Homework tab (`TabHowTo.tsx`, `HowItWorksButton variant="showme"`). It opens the window with `openHowItWorks({ role, clip, autoplay })`; the window offers "Watch the full video" to move to the whole topic. Watching a clip never ticks the topic as watched.
+- **First-visit tour** (`TOURS`, `FirstTimeTour.tsx`): tutors and parents get ONE quiet card on their Hub Home (tutor: 10 scenes, one per area; parent: 6). It is an offer, never an ambush: nothing plays until they press "Start the tour", it is remembered per signed-in person per role (`localStorage` `aos.hiw.tour.<uid>.<role>`), afterwards only a small "Take the tour again" link remains, and the tour autoplays only when the device has not asked for reduced motion (no animation in the card itself, so it is calm-mode safe). A child's "tour" is their own short film, reached from the big button on their Home.
+- **Watch along** (`family/WatchAlong.tsx`): `?tab=notes&child=<id>&open=lesson:<noteId>&watch=1`. A parent sees the child's own (assigned) lesson exactly as the child does, but the lesson player runs in its tutor-preview `readOnly` mode: nothing is started, answered or saved, and a banner says so. Entry points: a "Watch along" button under each Home homework row that has an interactive lesson, and the link in the weekly digest and homework reminder emails (`server/src/lib/hubDigest.ts hubLink`, `hubDigestEmail.ts watchBlock`). Sending stays off by default (`HUB_DIGEST_ENABLED`); tutors never get the banner or the read-only mode from this link.
+- Message text for all three lives in `lib/i18n/messages/areas/hubhow.ts` (entry points), `howitworks/i18n/ui.ts` + the 10 overlays (window text) and `hubDigestEmail.ts` (emails). `e2e/how-it-works-tour-clips-watch.spec.ts` checks that every `hubhow.*` key used in the code exists in all 11 locales and that no raw key is ever painted.
+
 ## Changing the words
 
 Edit `say`, `keys` and the `on:` phrases in `scripts/*.ts`. `e2e/how-it-works.spec.ts` fails if a key or cue phrase is not in the narration,

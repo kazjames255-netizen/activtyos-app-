@@ -202,22 +202,19 @@ export function ProgressBar({ pct, tone = "brand", label }: { pct: number; tone?
 // ── dialog ───────────────────────────────────────────────────────────────────
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-/** Kaz: "still no scrol bar" — confirmed the dialog DOES scroll (trackpad/keys), just with no visible
- *  bar to grab: macOS's "show scroll bars: automatically based on mouse or trackpad" setting hides the
- *  native bar for trackpad users in some browsers even with `::-webkit-scrollbar` styling (a system-level
- *  choice CSS can't override there). This draws our own always-visible thumb over the scroll area instead,
- *  so it never depends on the OS/browser's own scrollbar visibility rules. */
+/** Dialog body scroller. The native bar is styled always-visible in globals.css (.hub-sheet-scroll); this adds big
+ *  ▼/▲ page buttons (and Alt+↑/↓) for keyboard and trackpad users. The scroller MUST be a flex child with min-h-0
+ *  (not h-full), otherwise it grows to its content and clips instead of scrolling. */
 function DialogScrollBody({ children }: { children: ReactNode }) {
+  const tr = useT();
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const [thumb, setThumb] = useState<{ top: number; height: number } | null>(null);
+  const [pos, setPos] = useState<{ canDown: boolean; canUp: boolean }>({ canDown: false, canUp: false });
   const recalc = useCallback(() => {
     const el = scrollerRef.current;
     if (!el) return;
     const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollHeight <= clientHeight + 1) { setThumb(null); return; }
-    const height = Math.max(32, (clientHeight / scrollHeight) * clientHeight);
-    const top = (scrollTop / (scrollHeight - clientHeight)) * (clientHeight - height);
-    setThumb({ top, height });
+    if (scrollHeight <= clientHeight + 1) { setPos({ canDown: false, canUp: false }); return; }
+    setPos({ canDown: scrollTop + clientHeight < scrollHeight - 8, canUp: scrollTop > 8 });
   }, []);
   useEffect(() => {
     const el = scrollerRef.current;
@@ -228,12 +225,15 @@ function DialogScrollBody({ children }: { children: ReactNode }) {
     [...el.children].forEach((c) => ro.observe(c));
     return () => ro.disconnect();
   }, [recalc, children]);
+  const page = (dir: 1 | -1) => { const el = scrollerRef.current; if (el && dir) el.scrollBy({ top: dir * el.clientHeight * 0.8, behavior: "smooth" }); };
+  const btn = "grid h-12 w-12 place-items-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[18px] font-extrabold text-[var(--brand)] shadow-[var(--shadow-md,0_6px_18px_rgba(0,0,0,.22))] hover:bg-[var(--brand-soft)]";
   return (
-    <div className="relative min-h-0 flex-1">
-      <div ref={scrollerRef} onScroll={recalc} className="hub-sheet-scroll h-full overflow-y-auto px-5 py-4">{children}</div>
-      {thumb && (
-        <div aria-hidden className="pointer-events-none absolute inset-y-1 right-1 w-2.5 rounded-full" style={{ background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}>
-          <div className="absolute w-full rounded-full" style={{ top: thumb.top, height: thumb.height, background: "var(--ink-2)" }} />
+    <div className="relative flex min-h-0 flex-1 flex-col" onKeyDown={(e) => { if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); page(e.key === "ArrowDown" ? 1 : -1); } }}>
+      <div ref={scrollerRef} onScroll={recalc} className="hub-sheet-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+      {(pos.canDown || pos.canUp) && (
+        <div className="pointer-events-none absolute bottom-3 right-7 flex flex-col gap-2" data-testid="hub-dialog-scroll-btns">
+          {pos.canUp && <button type="button" data-testid="hub-dialog-scroll-up" aria-label={tr("hubshell.k_scrollUp")} title={tr("hubshell.k_scrollUp")} onClick={() => page(-1)} className={`pointer-events-auto ${btn} ${FOCUS}`}>▲</button>}
+          {pos.canDown && <button type="button" data-testid="hub-dialog-scroll-down" aria-label={tr("hubshell.k_scrollDown")} title={tr("hubshell.k_scrollDown")} onClick={() => page(1)} className={`pointer-events-auto ${btn} ${FOCUS}`}>▼</button>}
         </div>
       )}
     </div>
@@ -242,7 +242,7 @@ function DialogScrollBody({ children }: { children: ReactNode }) {
 
 /** Modal dialog: bottom sheet on phones, centred card on desktop. Esc closes,
  *  focus is trapped inside and restored on close, body scroll is locked. */
-export function Dialog({ title, subtitle, onClose, children, footer, size = "md", id, plain = false }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; size?: "md" | "lg" | "xl" | "2xl"; id?: string; /** Lessons-area look: plain surface instead of the warm cream sheet (homework screens). */ plain?: boolean }) {
+export function Dialog({ title, subtitle, onClose, children, footer, size = "md", id, plain = false }: { title: string; subtitle?: ReactNode; onClose: () => void; children: ReactNode; footer?: ReactNode; size?: "md" | "lg" | "xl" | "2xl" | "3xl"; id?: string; /** Lessons-area look: plain surface instead of the warm cream sheet (homework screens). */ plain?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const tr = useT();
   const closeRef = useRef(onClose);
@@ -271,7 +271,7 @@ export function Dialog({ title, subtitle, onClose, children, footer, size = "md"
   }, [ready]);
   // Kaz: "wider so i dont have to scrol" — "Set homework" has dense rows (students, subjects, year chips)
   // that wrap to many lines at 920px; "2xl" gives them room to lay out in fewer, wider rows.
-  const width = size === "2xl" ? "sm:max-w-[1200px]" : size === "xl" ? "sm:max-w-[920px]" : size === "lg" ? "sm:max-w-[680px]" : "sm:max-w-[520px]";
+  const width = size === "3xl" ? "sm:max-w-[1500px] sm:w-[96vw]" : size === "2xl" ? "sm:max-w-[1200px]" : size === "xl" ? "sm:max-w-[920px]" : size === "lg" ? "sm:max-w-[680px]" : "sm:max-w-[520px]";
   return (
     <FullscreenPortal onReady={markReady}>
     <div className="hub-layer fixed inset-0 z-[400] flex items-end justify-center sm:items-center sm:p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -345,7 +345,8 @@ export function StudentPicker({ students, value, onChange, idPrefix = "student",
       </div>
       {students.length > 1 && (
         <div className="mt-2 flex flex-wrap items-center gap-x-3">
-          <button type="button" onClick={toggleShown} disabled={shown.length === 0} className={`min-h-[44px] lg:min-h-[32px] rounded-md px-1 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>
+          <button type="button" onClick={toggleShown} disabled={shown.length === 0} className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border-2 border-[var(--brand)] bg-[var(--brand-soft)] px-4 text-[13px] font-extrabold text-[var(--brand-strong)] transition-colors hover:bg-[var(--brand)] hover:text-white disabled:opacity-50 ${FOCUS}`}>
+            <Ico name="users" size={15} />
             {allShown ? (filtering ? tr("hubshell.k_clearShown") : tr("hubshell.k_clearAll")) : filtering ? tr("hubshell.k_selectAllShown", { n: shown.length }) : tr("hubshell.k_selectEveryone")}
           </button>
           {students.length > 8 && <span className="text-[11.5px] text-[var(--ink-3)]">{tr("hubshell.k_nOfNSelected", { n: value.length, total: students.length })}</span>}

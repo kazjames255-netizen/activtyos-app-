@@ -4,6 +4,8 @@ const part: Record<string, Record<string, string>> = {
   en: {
     k_loading: "Loading",
     k_close: "Close",
+    k_scrollDown: "Scroll down",
+    k_scrollUp: "Back to top",
     k_confirm: "Confirm",
     k_keep: "Keep",
     k_errKid: "Oops! Let's try again.",
@@ -165,6 +167,8 @@ const part: Record<string, Record<string, string>> = {
   pl: {
     k_loading: "Ładowanie",
     k_close: "Zamknij",
+    k_scrollDown: "Przewiń w dół",
+    k_scrollUp: "Do góry",
     k_confirm: "Potwierdź",
     k_keep: "Zachowaj",
     k_errKid: "Ups! Spróbujmy jeszcze raz.",
@@ -326,6 +330,8 @@ const part: Record<string, Record<string, string>> = {
   ro: {
     k_loading: "Se încarcă",
     k_close: "Închide",
+    k_scrollDown: "Derulează în jos",
+    k_scrollUp: "Sus",
     k_confirm: "Confirmă",
     k_keep: "Păstrează",
     k_errKid: "Hopa! Hai să mai încercăm o dată.",
@@ -487,6 +493,8 @@ const part: Record<string, Record<string, string>> = {
   ur: {
     k_loading: "لوڈ ہو رہا ہے",
     k_close: "بند کریں",
+    k_scrollDown: "نیچے جائیں",
+    k_scrollUp: "اوپر جائیں",
     k_confirm: "تصدیق کریں",
     k_keep: "رہنے دیں",
     k_errKid: "اوہو! چلیں دوبارہ کوشش کرتے ہیں۔",
@@ -648,6 +656,8 @@ const part: Record<string, Record<string, string>> = {
   pa: {
     k_loading: "ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ",
     k_close: "ਬੰਦ ਕਰੋ",
+    k_scrollDown: "ਹੇਠਾਂ ਜਾਓ",
+    k_scrollUp: "ਉੱਪਰ ਜਾਓ",
     k_confirm: "ਪੁਸ਼ਟੀ ਕਰੋ",
     k_keep: "ਰੱਖੋ",
     k_errKid: "ਓਹੋ! ਚਲੋ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੀਏ।",
@@ -809,6 +819,8 @@ const part: Record<string, Record<string, string>> = {
   bn: {
     k_loading: "লোড হচ্ছে",
     k_close: "বন্ধ করুন",
+    k_scrollDown: "নিচে যান",
+    k_scrollUp: "উপরে যান",
     k_confirm: "নিশ্চিত করুন",
     k_keep: "রেখে দিন",
     k_errKid: "ইশ! চলো আবার চেষ্টা করি।",
@@ -970,6 +982,8 @@ const part: Record<string, Record<string, string>> = {
   ar: {
     k_loading: "جارٍ التحميل",
     k_close: "إغلاق",
+    k_scrollDown: "التمرير للأسفل",
+    k_scrollUp: "إلى الأعلى",
     k_confirm: "تأكيد",
     k_keep: "إبقاء",
     k_errKid: "عذرًا! لنحاول مرة أخرى.",
@@ -1131,6 +1145,8 @@ const part: Record<string, Record<string, string>> = {
   pt: {
     k_loading: "A carregar",
     k_close: "Fechar",
+    k_scrollDown: "Rolar para baixo",
+    k_scrollUp: "Voltar ao topo",
     k_confirm: "Confirmar",
     k_keep: "Manter",
     k_errKid: "Ops! Vamos tentar outra vez.",
@@ -1292,6 +1308,8 @@ const part: Record<string, Record<string, string>> = {
   es: {
     k_loading: "Cargando",
     k_close: "Cerrar",
+    k_scrollDown: "Desplazar abajo",
+    k_scrollUp: "Volver arriba",
     k_confirm: "Confirmar",
     k_keep: "Conservar",
     k_errKid: "¡Vaya! Vamos a intentarlo otra vez.",
@@ -1453,6 +1471,8 @@ const part: Record<string, Record<string, string>> = {
   fr: {
     k_loading: "Chargement",
     k_close: "Fermer",
+    k_scrollDown: "Défiler vers le bas",
+    k_scrollUp: "Retour en haut",
     k_confirm: "Confirmer",
     k_keep: "Garder",
     k_errKid: "Oups ! Essayons encore.",
@@ -1614,6 +1634,8 @@ const part: Record<string, Record<string, string>> = {
   cy: {
     k_loading: "Wrthi’n llwytho",
     k_close: "Cau",
+    k_scrollDown: "Sgrolio i lawr",
+    k_scrollUp: "Yn ôl i'r brig",
     k_confirm: "Cadarnhau",
     k_keep: "Cadw",
     k_errKid: "Wps! Gad i ni drio eto.",

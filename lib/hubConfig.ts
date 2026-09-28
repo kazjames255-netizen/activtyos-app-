@@ -55,6 +55,12 @@ export interface HubSettings {
   homeworkNudges: boolean;
   /** How long before the due date the reminder goes out (1-72 hours; default 24). */
   nudgeLeadHours: number;
+  /** When true, a child on a parent's booking with this provider is enrolled in the Learning Hub automatically (no subjects, no tutor) instead of
+   *  waiting in the "Enrol a student" list. OFF by default; a paused/removed enrolment is never re-added. (server/src/lib/hubAutoEnrol.ts) */
+  autoEnrolOnBooking: boolean;
+  /** Each 1 September a student's year group moves up by itself (dob-derived ones always do; year groups set by hand move up from the
+   *  year they were set) unless a child is held back on their own profile. ON by default. (server/src/lib/hubRules.ts yearStatus) */
+  yearAutoAdvance: boolean;
 }
 
 /** The colour choices a subject can wear (ids only — the actual colours live in features/learninghub/subjectColour.ts). */
@@ -119,6 +125,8 @@ export const HUB_DEFAULTS: HubSettings = {
   parentDigest: false,
   homeworkNudges: false,
   nudgeLeadHours: 24,
+  autoEnrolOnBooking: false,
+  yearAutoAdvance: true,
 };
 
 const LEGACY_KIND_IDS = ["single", "multi", "short", "number", "written"];
@@ -152,6 +160,8 @@ export function mergeHub(stored: Partial<HubSettings> | null | undefined): HubSe
     questionToolsAdd: cleanQuestionToolsAdd(s.questionToolsAdd),
     parentDigest: s.parentDigest === true,
     homeworkNudges: s.homeworkNudges === true,
+    autoEnrolOnBooking: s.autoEnrolOnBooking === true,
+    yearAutoAdvance: s.yearAutoAdvance !== false,
     nudgeLeadHours: typeof s.nudgeLeadHours === "number" && Number.isInteger(s.nudgeLeadHours) && s.nudgeLeadHours >= 1 && s.nudgeLeadHours <= 72 ? s.nudgeLeadHours : 24,
     lessonAccess: s.lessonAccess === "year" || s.lessonAccess === "all" ? s.lessonAccess : "assigned",
   };

@@ -26,11 +26,12 @@ emails are `@gmail.com`, not `@activityos-test.com`, so they don't meet the
 
 ## What was seeded (via `server/src/oak/seedTestWorksheets.ts`, test-only, idempotent)
 
-- **24 sample worksheets**, Years 1–9, across Maths / English / Science,
+- **Sample worksheets**, Years 1–9, across Maths / English / Science,
   published, no publisher/brand strings (checked against
-  `scripts/check-no-oak.mjs`'s pattern). Roughly a 60/40 mix of:
-  - **Interactive** — has a 2-question auto-marked quiz (`worksheetQuizId`)
-  - **PDF only**
+  `scripts/check-no-oak.mjs`'s pattern). Every worksheet is **Interactive**:
+  it has a 2-question auto-marked quiz (`worksheetQuizId`). There are no
+  worksheet PDFs any more (the feature was removed; the seed script skips the
+  old PDF-only entries).
 - **3 sample students**, enrolled with realistic year groups, all linked to
   one throwaway parent (`sample-family-il9czn@activityos-test.com`, family
   link so "Assign to" and the year `yearAll` quick pick work):
@@ -61,9 +62,8 @@ cd server && npx tsx src/oak/seedTestWorksheets.ts Il9CzN5ROzQ00J5MhXmj slideqa-
    - **Worksheet (optional)** search box + subject chips (All subjects /
      English / Maths / Science with counts) + year chips (**All years**
      selected by default, then Y1…Y9 with per-year counts).
-   - Cards show **Interactive** or **PDF only** badges. Preview opens the
-     PDF; for an Interactive worksheet a second "Preview the interactive
-     quiz" button opens the quiz on top.
+   - Cards show an **Interactive** badge. Preview opens the interactive
+     quiz.
    - Picking a worksheet + a student + Assign homework → `201`.
 4. On the family/child side (parent `sample-family-il9czn@activityos-test.com`,
    same test password), Homework shows the assignment; opening an Interactive
@@ -75,9 +75,8 @@ cd server && npx tsx src/oak/seedTestWorksheets.ts Il9CzN5ROzQ00J5MhXmj slideqa-
 
 - `01-form-top.png`, `02-picker.png` — bare form + picker with subject/year
   chips and cards (All years default, non-zero counts).
-- `03-pdf-only-search.png` — a PDF-only card (search "Pythagoras").
-- `04-preview-pdf.png`, `05-preview-quiz.png` — PDF preview and the
-  interactive-quiz preview on top of it.
+- `03-pdf-only-search.png`, `04-preview-pdf.png` — historical (from when PDF
+  worksheets existed); `05-preview-quiz.png` — the interactive-quiz preview.
 - `06-attached.png`, `07-assigned.png` — worksheet attached, homework
   assigned (`201`).
 - `10-parent-hub.png`, `11-child-homework.png`, `11b-homework-open.png` —

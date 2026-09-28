@@ -18,7 +18,7 @@ export type MailKind = "digest" | "nudge_before" | "nudge_after";
 export interface DigestData {
   childName: string;
   provider: string;
-  homework: { title: string; status: "assigned" | "submitted" | "marked"; dueAt: string | null; score?: number; max?: number }[];
+  homework: { title: string; status: "assigned" | "submitted" | "marked"; dueAt: string | null; score?: number; max?: number; /** An interactive lesson on this homework (for the "Watch along" link). */ noteId?: string }[];
   quizzes: { title: string; pct: number | null }[];
   lessons: { title: string }[];
   streakDays: number;
@@ -35,7 +35,8 @@ export type Celebrate =
   | { kind: "keep" };
 
 export interface NudgeData { childName: string; provider: string; title: string; dueAt: string }
-export interface Links { hub: string; stop: string }
+/** `watch`: the parent's view-only "Watch along" link to the child's lesson (optional: only when the homework has one). */
+export interface Links { hub: string; stop: string; watch?: string }
 
 type S = Record<string, string>;
 const EN: S = {
@@ -71,6 +72,8 @@ const EN: S = {
   n_before: "A little reminder that “{title}” is due {date}. It hasn't been handed in yet, so a bit of time today would be perfect.",
   n_after: "“{title}” was due {date} and hasn't been handed in yet. No worries, it's easy to catch up. If {name} needs more time, just message the tutor.",
   n_ignore: "If it's already done, please ignore this. Thank you!",
+  watch_cta: "Watch along with {name}",
+  watch_note: "View only, as {name} sees it. Nothing is saved.",
   n_cta: "Open the homework",
   stop_nudge: "Stop homework reminders",
   u_title_digest: "Stop the weekly summary?",
@@ -84,6 +87,7 @@ const EN: S = {
 const T: Record<LocaleCode, Partial<S>> = {
   en: EN,
   pl: {
+    watch_cta: "Oglądaj razem z: {name}", watch_note: "Podgląd lekcji dokładnie tak, jak widzi ją {name}. Nic, co tam zrobisz, nie zostanie zapisane.",
     subject: "Ten tydzień w nauce – {name}",
     hello: "Dzień dobry,",
     intro: "Oto krótkie podsumowanie tygodnia nauki: {name} w {provider}.",
@@ -114,6 +118,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "Nie udało się odczytać tego linku. Odpowiedz na dowolną wiadomość od korepetytora, a pomożemy.",
   },
   ro: {
+    watch_cta: "Urmărește împreună cu {name}", watch_note: "O privire doar pentru vizualizare asupra lecției, exact cum o vede {name}. Nimic din ce faci acolo nu se salvează.",
     subject: "Săptămâna aceasta în învățarea lui {name}",
     hello: "Bună ziua,",
     intro: "Iată o scurtă privire asupra săptămânii lui {name} la {provider}.",
@@ -150,6 +155,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "Linkul nu a putut fi citit. Răspundeți la orice e-mail de la profesor și vă vom ajuta.",
   },
   ur: {
+    watch_cta: "{name} کے ساتھ دیکھیں", watch_note: "سبق کی صرف دیکھنے والی جھلک، بالکل ویسی جیسی {name} کو نظر آتی ہے۔ وہاں آپ جو کچھ بھی کریں گے وہ محفوظ نہیں ہوگا۔",
     subject: "اس ہفتے {name} کی تعلیم کا احوال",
     hello: "السلام علیکم،",
     intro: "{provider} میں اس ہفتے {name} کی کارکردگی کی ایک مختصر جھلک یہ ہے۔",
@@ -180,6 +186,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "یہ لنک پڑھا نہیں جا سکا۔ براہِ کرم ٹیوٹر کی کسی بھی ای میل کا جواب دیں، ہم مدد کریں گے۔",
   },
   pa: {
+    watch_cta: "{name} ਦੇ ਨਾਲ ਵੇਖੋ", watch_note: "ਪਾਠ ਦੀ ਸਿਰਫ਼ ਵੇਖਣ ਵਾਲੀ ਝਲਕ, ਬਿਲਕੁਲ ਜਿਵੇਂ {name} ਨੂੰ ਦਿਸਦਾ ਹੈ। ਉੱਥੇ ਤੁਸੀਂ ਜੋ ਵੀ ਕਰੋਗੇ ਉਹ ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾਵੇਗਾ।",
     subject: "ਇਸ ਹਫ਼ਤੇ {name} ਦੀ ਪੜ੍ਹਾਈ",
     hello: "ਹੈਲੋ,",
     intro: "{provider} ਵਿੱਚ ਇਸ ਹਫ਼ਤੇ {name} ਦੀ ਪੜ੍ਹਾਈ ਦੀ ਇੱਕ ਛੋਟੀ ਝਲਕ ਇਹ ਹੈ।",
@@ -210,6 +217,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "ਇਹ ਲਿੰਕ ਪੜ੍ਹਿਆ ਨਹੀਂ ਜਾ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਟਿਊਟਰ ਦੀ ਕਿਸੇ ਵੀ ਈਮੇਲ ਦਾ ਜਵਾਬ ਦਿਓ, ਅਸੀਂ ਮਦਦ ਕਰਾਂਗੇ।",
   },
   bn: {
+    watch_cta: "{name}-এর সঙ্গে দেখুন", watch_note: "পাঠটির শুধু দেখার একটি ঝলক, ঠিক যেমন {name} দেখে। সেখানে আপনি যা-ই করুন তা সংরক্ষিত হবে না।",
     subject: "এই সপ্তাহে {name}-এর শেখা",
     hello: "প্রিয় অভিভাবক,",
     intro: "{provider}-এ এই সপ্তাহে {name}-এর পড়াশোনা কেমন চলল, তার একটি সংক্ষিপ্ত ঝলক এখানে।",
@@ -240,6 +248,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "লিংকটি পড়া যায়নি। অনুগ্রহ করে শিক্ষকের যেকোনো ইমেইলের উত্তর দিন, আমরা সাহায্য করব।",
   },
   ar: {
+    watch_cta: "شاهد مع {name}", watch_note: "نظرة للعرض فقط على الدرس، تمامًا كما يراه {name}. لن يُحفظ أي شيء تفعله هناك.",
     subject: "أسبوع {name} في التعلّم",
     hello: "مرحبًا،",
     intro: "إليكم لمحة سريعة عن أداء {name} هذا الأسبوع مع {provider}.",
@@ -270,6 +279,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "تعذّرت قراءة هذا الرابط. يُرجى الرد على أي رسالة من المعلّم وسنساعدكم.",
   },
   pt: {
+    watch_cta: "Ver em conjunto com {name}", watch_note: "Uma vista só de leitura da aula, exatamente como {name} a vê. Nada do que fizer aí é guardado.",
     subject: "Esta semana na aprendizagem de {name}",
     hello: "Olá,",
     intro: "Eis um breve resumo de como correu a semana de {name} com {provider}.",
@@ -300,6 +310,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "Não foi possível ler esta ligação. Responda a qualquer e-mail do tutor e ajudaremos.",
   },
   es: {
+    watch_cta: "Ver en paralelo con {name}", watch_note: "Una vista de solo lectura de la lección, exactamente como la ve {name}. Nada de lo que hagas allí se guarda.",
     subject: "Esta semana en el aprendizaje de {name}",
     hello: "Hola:",
     intro: "Este es un breve resumen de cómo le fue a {name} esta semana con {provider}.",
@@ -330,6 +341,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "No se pudo leer este enlace. Responda a cualquier correo del tutor y le ayudaremos.",
   },
   fr: {
+    watch_cta: "Regarder avec {name}", watch_note: "Un aperçu en lecture seule de la leçon, exactement comme {name} la voit. Rien de ce que vous y faites n'est enregistré.",
     subject: "Cette semaine dans les apprentissages de {name}",
     hello: "Bonjour,",
     intro: "Voici un bref aperçu de la semaine de {name} avec {provider}.",
@@ -360,6 +372,7 @@ const T: Record<LocaleCode, Partial<S>> = {
     u_bad: "Ce lien n'a pas pu être lu. Répondez à un e-mail du professeur et nous vous aiderons.",
   },
   cy: {
+    watch_cta: "Gwylio gyda {name}", watch_note: "Golwg gwylio'n unig ar y wers, yn union fel mae {name} yn ei gweld. Ni chaiff dim a wnewch yno ei gadw.",
     subject: "Dysgu {name} yr wythnos hon",
     hello: "Helo,",
     intro: "Dyma gipolwg cyflym ar sut hwyl gafodd {name} yr wythnos hon gyda {provider}.",
@@ -444,6 +457,12 @@ const h2 = (t: string) => `<h2 style="margin:22px 0 8px;font-size:15px;color:${B
 const ul = (rows: string[]) => `<ul style="margin:0 0 6px;padding-inline-start:20px;font-size:14px;line-height:1.7">${rows.map((r) => `<li>${r}</li>`).join("")}</ul>`;
 const button = (href: string, label: string) => `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 10px"><tr><td style="background:${BRAND};border-radius:12px"><a href="${esc(href)}" style="display:inline-block;padding:16px 32px;font-size:17px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:12px">${esc(label)}</a></td></tr></table>`;
 
+/** The optional, quiet "Watch along" line under the main button: a view-only link to the child's own lesson (no button weight, so it never competes). */
+function watchBlock(links: Links, s: S, v: Record<string, string | number>): string {
+  if (!links.watch) return "";
+  return p(`<a href="${esc(links.watch)}" style="color:${BRAND};font-weight:600">👀 ${f(s.watch_cta, v)}</a><br><span style="color:${MUTED};font-size:13px">${f(s.watch_note, v)}</span>`);
+}
+
 function celebrateText(c: Celebrate, s: S, name: string, loc: string): string {
   switch (c.kind) {
     case "score": return fill(s.c_score, { name, pct: c.pct, title: c.title });
@@ -483,7 +502,7 @@ export function renderDigest(d: DigestData, loc: LocaleCode, links: Links): Rend
   if (d.upcoming.length) {
     body += h2(s.up) + ul(d.upcoming.map((u) => f(u.kind === "homework" ? s.up_hw : s.up_lesson, { title: u.title, date: fmtDate(u.at, loc) })));
   }
-  body += button(links.hub, s.cta) + p(f(s.sign, v), `color:${MUTED};font-size:14px`);
+  body += button(links.hub, s.cta) + watchBlock(links, s, v) + p(f(s.sign, v), `color:${MUTED};font-size:14px`);
   const foot = `<div>${f(s.why, v)}</div>`;
   return { subject, locale: loc, html: scrubHtml(shell(loc, { title: subject, provider: d.provider, body, foot, stopHref: links.stop, stopLabel: s.stop_digest })) };
 }
@@ -492,7 +511,7 @@ export function renderNudge(kind: "nudge_before" | "nudge_after", n: NudgeData, 
   const s = strings(loc);
   const v = { name: n.childName, provider: n.provider, title: n.title, date: fmtDate(n.dueAt, loc) };
   const subject = fill(kind === "nudge_before" ? s.n_subject_before : s.n_subject_after, v);
-  const body = p(esc(s.hello)) + p(f(kind === "nudge_before" ? s.n_before : s.n_after, v)) + button(links.hub, s.n_cta)
+  const body = p(esc(s.hello)) + p(f(kind === "nudge_before" ? s.n_before : s.n_after, v)) + button(links.hub, s.n_cta) + watchBlock(links, s, v)
     + p(f(s.n_ignore, v), `color:${MUTED};font-size:14px`) + p(f(s.sign, v), `color:${MUTED};font-size:14px`);
   return { subject, locale: loc, html: scrubHtml(shell(loc, { title: subject, provider: n.provider, body, foot: `<div>${f(s.why, v)}</div>`, stopHref: links.stop, stopLabel: s.stop_nudge })) };
 }

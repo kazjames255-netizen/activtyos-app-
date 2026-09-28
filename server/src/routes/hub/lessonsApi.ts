@@ -19,7 +19,7 @@ import { eligibleStudents, isParent, lessonsCol, notesCol, nowIso, tenantEnrolme
 //  · the room is private + expires; the URL alone lets nobody in
 //  · a meeting token is minted ONLY for (a) a tutor of this tenant/scope who can
 //    write the lesson, or (b) a parent whose ENROLLED child is in `childIds`
-//  · only inside the join window (10 min before start → 30 min after the end),
+//  · any time before the join window closes (30 min after the end) — early join is allowed; a family may enter before 10 min pre-start only once the tutor is in,
 //    and never for a cancelled / ended lesson
 //  · only the tutor is `is_owner` (can mute / remove people)
 // The room itself is created lazily on the first join, so scheduling a lesson
@@ -59,6 +59,11 @@ interface LessonDoc {
   seriesId?: string; seriesIndex?: number; seriesCount?: number;
   /** "Log a lesson already held": recorded after the fact (ended, attendance as the tutor entered it, never had a room). */
   held?: boolean;
+  /** In-person only: scheduled ahead from the New session dialog (POST /lessons {mode:"in_person"}). Such a row stays `scheduled` — no room,
+   *  nothing to join — until the tutor starts it (POST /in-person/sessions/:id/start), when it becomes an ordinary in-person session. */
+  scheduledAhead?: boolean;
+  /** In-person only: the quiz the tutor set out to run (the lesson is noteIds[0]). */
+  assessmentId?: string | null;
   createdBy: string; createdAt: string; updatedAt: string;
 }
 type Lesson = LessonDoc & { id: string };
@@ -85,6 +90,9 @@ const lessonBody = z.object({
   /** Log a lesson that has ALREADY been held: a past start, no room, `attendedChildIds` recorded as present. */
   held: z.boolean().optional(),
   attendedChildIds: z.array(z.string().min(1).max(100)).max(30).optional(),
+  /** "in_person" = schedule a lesson to run later with the children beside the tutor (no video room). Absent = a video lesson. */
+  mode: z.enum(["video", "in_person"]).optional(),
+  assessmentId: z.string().min(1).max(100).nullable().optional(),
 });
 
 /** A lesson start must carry a time — a bare date ("2026-03-10") is refused rather than guessed. */
@@ -113,7 +121,7 @@ function windowOut(l: Lesson, now = new Date()) {
   const w = joinWindow(l.startsAt, l.durationMins, l.roomUntil);
   // Joinable at any point in the window unless cancelled — an "ended" lesson can be re-entered (people leave by
   // accident, or the tutor presses End too soon), so `status: ended` no longer locks anyone out.
-  return { opensAt: w.opensAt.toISOString(), closesAt: w.closesAt.toISOString(), joinable: l.status !== "cancelled" && l.held !== true && windowState(now, w) === "open" };
+  return { opensAt: w.opensAt.toISOString(), closesAt: w.closesAt.toISOString(), joinable: l.mode !== "in_person" && l.status !== "cancelled" && l.held !== true && windowState(now, w) === "open" };
 }
 
 /** Validate notes attached to a lesson: they must be THIS tenant's notes the caller may see. → ids, or null. */
@@ -134,7 +142,8 @@ function tutorOut(l: Lesson, names: Map<string, string>) {
     videos: videosOut(l.videos), noteIds: l.noteIds ?? [], groupIds: l.groupIds ?? [],
     attendance: l.attendance ?? {}, tutorJoinedAt: l.tutorJoinedAt ?? null, endedAt: l.endedAt ?? null,
     franchiseId: l.franchiseId ?? null, createdAt: l.createdAt,
-    seriesId: l.seriesId ?? null, seriesIndex: l.seriesIndex ?? null, seriesCount: l.seriesCount ?? null, held: l.held === true, ...windowOut(l),
+    seriesId: l.seriesId ?? null, seriesIndex: l.seriesIndex ?? null, seriesCount: l.seriesCount ?? null, held: l.held === true,
+    mode: l.mode === "in_person" ? "in_person" as const : "video" as const, assessmentId: l.assessmentId ?? null, ...windowOut(l),
   };
 }
 
@@ -147,12 +156,12 @@ function familyOut(l: Lesson, ctx: HubCtx) {
   return {
     id: l.id, title: l.title, topicId: l.topicId ?? null, startsAt: l.startsAt, durationMins: l.durationMins,
     childIds: mine.map((c) => c.childId), students: mine.map((c) => ({ childId: c.childId, childName: c.childName })),
-    status: l.status, tutorName: l.tutorName, notes: l.notes ?? "", videos: videosOut(l.videos), noteIds: l.noteIds ?? [], attended: mine.some((c) => !!l.attendance?.[c.childId]), waitingForTutor: waitingForTutor(l), ...windowOut(l),
+    status: l.status, tutorName: l.tutorName, notes: l.notes ?? "", videos: videosOut(l.videos), noteIds: l.noteIds ?? [], attended: mine.some((c) => !!l.attendance?.[c.childId]), waitingForTutor: waitingForTutor(l), mode: l.mode === "in_person" ? "in_person" as const : "video" as const, ...windowOut(l),
   };
 }
 
 const allLessons = async (tenantId: string): Promise<Lesson[]> =>
-  (await lessonsCol.where("tenantId", "==", tenantId).get()).docs.map((d) => ({ id: d.id, ...(d.data() as LessonDoc) })).filter((l) => l.mode !== "in_person" && l.mode !== "remote_sync");
+  (await lessonsCol.where("tenantId", "==", tenantId).get()).docs.map((d) => ({ id: d.id, ...(d.data() as LessonDoc) })).filter((l) => l.mode !== "remote_sync" && (l.mode !== "in_person" || (l.scheduledAhead === true && (l.status === "scheduled" || l.status === "cancelled"))));
 
 // GET /lessons — T: the lessons in scope (last 90 days onwards); P: their children's upcoming + recent.
 hubLessonsApi.get("/lessons", async (req, res) => {
@@ -181,6 +190,9 @@ hubLessonsApi.post("/lessons", async (req, res) => {
   const parsed = lessonBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const b = parsed.data;
+  const inPerson = b.mode === "in_person";
+  if (inPerson && b.held) { res.status(400).json({ error: "An in-person lesson is recorded when you run it — schedule it for later, or start one now from New session" }); return; }
+  if (inPerson && b.videos?.length) { res.status(400).json({ error: "An in-person lesson has no video call — add videos to the lesson notes instead" }); return; }
   const startsAt = startIso(b.startsAt);
   if (!startsAt) { res.status(400).json({ error: "Give the lesson a start date and time" }); return; }
   const endMs = new Date(startsAt).getTime() + b.durationMins * 60_000;
@@ -209,13 +221,19 @@ hubLessonsApi.post("/lessons", async (req, res) => {
   if (typeof vids === "string") { res.status(400).json({ error: vids }); return; }
   const noteIds = await checkNoteIds(ctx, b.noteIds);
   if (!noteIds) { res.status(404).json({ error: "Lesson not found" }); return; }
+  if (inPerson && b.assessmentId) {
+    if (!okId(b.assessmentId)) { res.status(404).json({ error: "Quiz not found" }); return; }
+    const a = await db.collection("hubAssessments").doc(b.assessmentId).get();
+    if (!a.exists || a.get("tenantId") !== ctx.tenantId || !canSee(ctx, a.get("franchiseId"))) { res.status(404).json({ error: "Quiz not found" }); return; }
+  }
   const now = nowIso();
   const seriesId = count > 1 ? lessonsCol.doc().id : undefined;
   const refs = starts.map(() => lessonsCol.doc());
   const docs = starts.map((st, i): LessonDoc => ({
     tenantId: ctx.tenantId, franchiseId: ctx.franchiseId, tutorUid: ctx.uid, tutorName: b.tutorName || ctx.name || "Your tutor",
     title: b.title, topicId: b.topicId ?? null, startsAt: st, durationMins: b.durationMins, childIds,
-    status: b.held ? "ended" : "scheduled", roomName: b.held ? null : roomNameFor(refs[i]!.id), roomUrl: null, notes: b.notes, videos: vids, noteIds, groupIds: groups.map((g) => g.id),
+    status: b.held ? "ended" : "scheduled", roomName: b.held || inPerson ? null : roomNameFor(refs[i]!.id), roomUrl: null, notes: b.notes, videos: vids, noteIds, groupIds: groups.map((g) => g.id),
+    ...(inPerson ? { mode: "in_person" as const, scheduledAhead: true, assessmentId: b.assessmentId ?? null } : {}),
     attendance: b.held ? Object.fromEntries(attended.map((c) => [c, st])) : {}, tutorJoinedAt: b.held ? st : null, endedAt: b.held ? new Date(endMs).toISOString() : null,
     ...(b.held ? { held: true, needsTutor: false } : {}),
     ...(seriesId ? { seriesId, seriesIndex: i, seriesCount: count } : {}),
@@ -228,9 +246,13 @@ hubLessonsApi.post("/lessons", async (req, res) => {
   if (!b.held) {
     void notifyFamilies({
       tenantId: ctx.tenantId, childIds, ref: refs[0]!.id, tab: "live",
-      compose: (names) => ({ title: count > 1 ? "Weekly live lessons scheduled" : "Live lesson scheduled", body: count > 1
-        ? `${nameList(names)}: "${first.title}" with ${first.tutorName}, every week from ${when(startsAt)} (${count} lessons). You can join from My Classroom.`
-        : `${nameList(names)}: "${first.title}" with ${first.tutorName}, ${when(startsAt)}. You can join from My Classroom.` }),
+      compose: (names) => inPerson
+        ? ({ title: count > 1 ? "Weekly in-person lessons scheduled" : "In-person lesson scheduled", body: count > 1
+          ? `${nameList(names)}: "${first.title}" with ${first.tutorName}, in person, every week from ${when(startsAt)} (${count} lessons).`
+          : `${nameList(names)}: "${first.title}" with ${first.tutorName}, in person, ${when(startsAt)}.` })
+        : ({ title: count > 1 ? "Weekly live lessons scheduled" : "Live lesson scheduled", body: count > 1
+          ? `${nameList(names)}: "${first.title}" with ${first.tutorName}, every week from ${when(startsAt)} (${count} lessons). You can join from My Classroom.`
+          : `${nameList(names)}: "${first.title}" with ${first.tutorName}, ${when(startsAt)}. You can join from My Classroom.` }),
     });
   }
   const names = new Map(students.map((s) => [s.childId, s.childName]));
@@ -238,10 +260,12 @@ hubLessonsApi.post("/lessons", async (req, res) => {
 });
 
 /** A visible-and-writable lesson, or a refusal already sent. */
-async function editableLesson(ctx: HubCtx, id: string, res: import("express").Response): Promise<Lesson | null> {
+async function editableLesson(ctx: HubCtx, id: string, res: import("express").Response, allowScheduledInPerson = false): Promise<Lesson | null> {
   if (!okId(id)) { res.status(404).json({ error: "Lesson not found" }); return null; }
   const snap = await lessonsCol.doc(id).get();
-  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || (snap.get("mode") === "in_person" || snap.get("mode") === "remote_sync") || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return null; }
+  // A lesson scheduled AHEAD for in person (still `scheduled`, never started) is edited / cancelled like any other; once started it is an in-person session (inPersonApi).
+  const ipScheduled = allowScheduledInPerson && snap.get("mode") === "in_person" && snap.get("scheduledAhead") === true && (snap.get("status") === "scheduled" || snap.get("status") === "cancelled");
+  if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || ((snap.get("mode") === "in_person" && !ipScheduled) || snap.get("mode") === "remote_sync") || !canSeeStudent(ctx, snap.get("franchiseId"))) { res.status(404).json({ error: "Lesson not found" }); return null; }
   if (!canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That lesson belongs to head office" }); return null; }
   return { id: snap.id, ...(snap.data() as LessonDoc) };
 }
@@ -252,10 +276,10 @@ const namesFor = async (ctx: HubCtx) => new Map([...(await tenantEnrolments(ctx)
 hubLessonsApi.put("/lessons/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
-  const parsed = lessonBody.omit({ repeatWeeks: true, timeZone: true, held: true, attendedChildIds: true }).partial()
+  const parsed = lessonBody.omit({ repeatWeeks: true, timeZone: true, held: true, attendedChildIds: true, mode: true }).partial()
     .extend({ status: z.literal("cancelled").optional(), applyTo: z.enum(["this", "following"]).optional() }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const cur = await editableLesson(ctx, req.params.id, res);
+  const cur = await editableLesson(ctx, req.params.id, res, true);
   if (!cur) return;
   const b = parsed.data;
   const onlyNotes = Object.keys(b).every((k) => k === "notes" || k === "videos" || k === "noteIds" || k === "applyTo"); // what a tutor may still add to an ended lesson
@@ -332,7 +356,7 @@ hubLessonsApi.put("/lessons/:id", async (req, res) => {
         .filter((l) => l.id !== cur.id && l.startsAt > cur.startsAt && OPEN.has(l.status) && canWriteRow(ctx, l.franchiseId));
       for (const l of later) { await lessonsCol.doc(l.id).update({ status: "cancelled", updatedAt: nowIso() }); void deleteRoom(l.roomUrl ? l.roomName : null); }
     }
-    void notifyFamilies({ tenantId: ctx.tenantId, childIds: cur.childIds, ref: cur.id, tab: "live", compose: (n) => ({ title: "Live lesson cancelled", body: later.length
+    void notifyFamilies({ tenantId: ctx.tenantId, childIds: cur.childIds, ref: cur.id, tab: "live", compose: (n) => ({ title: cur.mode === "in_person" ? "In-person lesson cancelled" : "Live lesson cancelled", body: later.length
       ? `${nameList(n)}: "${next.title}" on ${when(cur.startsAt)} and the ${later.length} weekly lesson${later.length === 1 ? "" : "s"} after it have been cancelled.`
       : `${nameList(n)}: "${next.title}" on ${when(cur.startsAt)} has been cancelled.` }) });
   } else {
@@ -340,9 +364,9 @@ hubLessonsApi.put("/lessons/:id", async (req, res) => {
     if (cur.roomUrl && cur.roomName && (roomExp || patch.childIds)) void setRoomExpiry(cur.roomName, roomExp, patch.childIds?.length);
     if (moved) {
       const existing = next.childIds.filter((c) => !added.includes(c));
-      void notifyFamilies({ tenantId: ctx.tenantId, childIds: existing, ref: cur.id, tab: "live", compose: (n) => ({ title: "Live lesson time changed", body: `${nameList(n)}: "${next.title}" is now ${when(startsAt)}.` }) });
+      void notifyFamilies({ tenantId: ctx.tenantId, childIds: existing, ref: cur.id, tab: "live", compose: (n) => ({ title: next.mode === "in_person" ? "In-person lesson time changed" : "Live lesson time changed", body: `${nameList(n)}: "${next.title}" is now ${when(startsAt)}.` }) });
     }
-    if (added.length) void notifyFamilies({ tenantId: ctx.tenantId, childIds: added, ref: cur.id, tab: "live", compose: (n) => ({ title: "Live lesson scheduled", body: `${nameList(n)}: "${next.title}" with ${next.tutorName}, ${when(startsAt)}.` }) });
+    if (added.length) void notifyFamilies({ tenantId: ctx.tenantId, childIds: added, ref: cur.id, tab: "live", compose: (n) => ({ title: next.mode === "in_person" ? "In-person lesson scheduled" : "Live lesson scheduled", body: `${nameList(n)}: "${next.title}" with ${next.tutorName}${next.mode === "in_person" ? ", in person" : ""}, ${when(startsAt)}.` }) });
   }
   res.json(tutorOut(next, await namesFor(ctx)));
 });
@@ -351,7 +375,7 @@ hubLessonsApi.put("/lessons/:id", async (req, res) => {
 hubLessonsApi.delete("/lessons/:id", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
-  const cur = await editableLesson(ctx, req.params.id, res);
+  const cur = await editableLesson(ctx, req.params.id, res, true);
   if (!cur) return;
   await lessonsCol.doc(cur.id).delete();
   await deleteBoardForLesson(cur.id); // the lesson's whiteboard goes with it
@@ -370,7 +394,10 @@ hubLessonsApi.post("/lessons/:id/end", async (req, res) => {
   if (!cur) return;
   if (cur.status === "cancelled") { res.status(409).json({ error: "This lesson was cancelled", code: "lesson_closed" }); return; }
   if (cur.status !== "ended") {
-    await lessonsCol.doc(cur.id).update({ status: "ended", endedAt: nowIso(), updatedAt: nowIso(), needsTutor: true });
+    // Ended BEFORE its scheduled start (an early "just in case" session): the lesson itself is untouched — it goes back to
+    // "scheduled" for its real date/time rather than showing as ended, and only the room is torn down.
+    if (Date.now() < new Date(cur.startsAt).getTime()) await lessonsCol.doc(cur.id).update({ status: "scheduled", endedAt: null, updatedAt: nowIso(), needsTutor: false, tutorJoinedAt: null });
+    else await lessonsCol.doc(cur.id).update({ status: "ended", endedAt: nowIso(), updatedAt: nowIso(), needsTutor: true });
     void deleteRoom(cur.roomUrl ? cur.roomName : null);
   }
   const fresh = await lessonsCol.doc(cur.id).get();
@@ -451,7 +478,7 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
   const state = windowState(new Date(), w);
   if (state !== "open") {
     res.status(409).json({
-      error: state === "early" ? `You can join from ${when(w.opensAt.toISOString())} (10 minutes before it starts).` : "The joining window for this lesson has closed.",
+      error: "The joining window for this lesson has closed.",
       code: "outside_join_window", state, opensAt: w.opensAt.toISOString(), closesAt: w.closesAt.toISOString(),
     });
     return;
@@ -459,6 +486,9 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
 
   // Safeguarding: after the tutor ENDS (or reopens) a lesson, a family can't recreate the room with no tutor in it. Only a tutor's own
   // join (below) clears the flag and flips the lesson live again.
+  // Early join: a tutor can start any scheduled lesson at any time. A family may go in earlier than 10 minutes before the start
+  // only once their tutor is already in (status live) — a child is never left alone in a room that days-early nobody opened.
+  if (!isOwner && Date.now() < w.opensAt.getTime() && lesson.status !== "live") { res.status(409).json({ error: "Your tutor hasn't started this lesson yet — you can join once they do.", code: "waiting_for_tutor" }); return; }
   if (!isOwner && waitingForTutor(lesson)) { res.status(409).json({ error: "Your tutor ended the lesson — you can rejoin once they reopen it.", code: "waiting_for_tutor" }); return; }
 
   // ── video ──
@@ -471,8 +501,12 @@ hubLessonsApi.post("/lessons/:id/join", rateLimit("hub-join", 30), async (req, r
     if (nowMs > w.endsAt.getTime() && roomExpiry(w.endsAt, roomUntil, lesson.reopenedAt).getTime() < nowMs + STAY_EXTENSION_MS) {
       roomUntil = new Date(Math.min(nowMs + STAY_EXTENSION_MS, Math.max(w.endsAt.getTime(), lesson.reopenedAt ? new Date(lesson.reopenedAt).getTime() : 0) + MAX_OVERRUN_MS)).toISOString();
     }
-    const expires = roomExpiry(w.endsAt, roomUntil, lesson.reopenedAt);
+    let expires = roomExpiry(w.endsAt, roomUntil, lesson.reopenedAt);
+    // An early room (lesson hours or days away) lives at most MAX_OVERRUN_MS from now — every join re-extends it — so a "just in
+    // case" session never holds a Daily room open for days. Within that horizon it still lasts until the scheduled end + prompt.
+    if (nowMs < w.opensAt.getTime() && expires.getTime() > nowMs + MAX_OVERRUN_MS) expires = new Date(nowMs + MAX_OVERRUN_MS);
     const win = joinWindow(lesson.startsAt, lesson.durationMins, roomUntil);
+    win.closesAt = new Date(Math.min(win.closesAt.getTime(), expires.getTime() + 30 * 60_000)); // the meeting token never outlives the room by more than the late-join grace
     const room = await ensureRoom(lesson.id, expires, lesson.childIds.length);
     void setRoomExpiry(room.name, expires); // an already-existing room keeps the same (possibly extended) expiry
     const token = await mintToken({ roomName: room.name, userName, isOwner, endsAt: w.endsAt, closesAt: win.closesAt, userId: attendChild ? `c:${attendChild}` : undefined });

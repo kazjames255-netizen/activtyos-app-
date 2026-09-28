@@ -4,8 +4,8 @@
 //   cd server && npx tsx src/hubSelfTest3.ts
 import assert from "node:assert/strict";
 import {
-  ageInYears, audienceFit, audienceKey, cleanVideos, effectiveRetake, effectiveYearGroup, failStreak, normAudience, overallAttainment, parseYouTube, retakeDecision,
-  ukYearGroup, validateHubPatch, videoOut, videosOut, yearGroupFromDob,
+  academicStartYear, advanceYear, ageInYears, audienceFit, audienceKey, cleanVideos, effectiveRetake, effectiveYearGroup, failStreak, normAudience, overallAttainment, parseYouTube, retakeDecision,
+  ukYearGroup, validateHubPatch, videoOut, videosOut, yearGroupFromDob, yearStatus,
 } from "./lib/hubRules";
 import { autoSplit } from "./lib/hubScoring";
 import { HUB_DEFAULTS } from "../../lib/hubConfig";
@@ -60,6 +60,50 @@ t("effectiveYearGroup: auto follows the dob; tagged wins; null = unknown; legacy
   assert.equal(effectiveYearGroup({ yearGroup: null, yearGroupAuto: false }, "2016-03-14", list, D("2026-10-01")), null);
   assert.equal(effectiveYearGroup({}, "2016-03-14", list, D("2026-10-01")), "Year 6");
   assert.equal(effectiveYearGroup({ yearGroupAuto: true }, null, list), null, "no dob → unknown");
+});
+
+console.log("automatic September rollover (hand-set years)");
+t("the academic year turns at UK midnight on 1 Sept, whatever the server's timezone", () => {
+  assert.equal(academicStartYear(new Date("2026-08-31T22:59:59Z")), 2025); // 23:59:59 on 31 Aug in London (BST)
+  assert.equal(academicStartYear(new Date("2026-08-31T23:00:00Z")), 2026); // 00:00 on 1 Sept in London
+  assert.equal(academicStartYear(new Date("2027-01-15T12:00:00Z")), 2026);
+  assert.equal(academicStartYear(new Date("2027-08-31T22:59:59Z")), 2026);
+  assert.equal(academicStartYear(new Date("2027-08-31T23:00:00Z")), 2027);
+});
+t("a hand-set year moves up by itself each 1 Sept from its anchor", () => {
+  const list = HUB_DEFAULTS.yearGroups, e = { yearGroup: "Year 4", yearGroupAuto: false, yearAnchor: 2025 };
+  assert.equal(effectiveYearGroup(e, null, list, new Date("2026-08-31T22:59:59Z")), "Year 4", "still 2025/26");
+  assert.equal(effectiveYearGroup(e, null, list, new Date("2026-08-31T23:00:00Z")), "Year 5", "1 Sept 2026");
+  assert.equal(effectiveYearGroup(e, null, list, new Date("2027-09-01T12:00:00Z")), "Year 6", "two Septembers on");
+  assert.equal(effectiveYearGroup({ ...e, yearAnchor: 2026 }, null, list, new Date("2026-10-01T12:00:00Z")), "Year 4", "set this year → unchanged");
+});
+t("rolls along the tenant's OWN list (Reception → Year 1, Grades) and case-insensitively", () => {
+  assert.equal(effectiveYearGroup({ yearGroup: "reception", yearAnchor: 2025 }, null, HUB_DEFAULTS.yearGroups, new Date("2026-10-01T12:00:00Z")), "Year 1");
+  const grades = ["Grade 1", "Grade 2", "Grade 3"];
+  assert.equal(effectiveYearGroup({ yearGroup: "Grade 1", yearAnchor: 2025 }, null, grades, new Date("2026-10-01T12:00:00Z")), "Grade 2");
+  assert.equal(effectiveYearGroup({ yearGroup: "Beginner", yearAnchor: 2020 }, null, grades, new Date("2026-10-01T12:00:00Z")), "Beginner", "a label not in the list never moves");
+});
+t("caps at the last year in the list and flags may-have-left", () => {
+  const list = HUB_DEFAULTS.yearGroups, on = new Date("2026-10-01T12:00:00Z");
+  assert.deepEqual(yearStatus({ yearGroup: "Year 13", yearAnchor: 2025 }, null, list, on), { yearGroup: "Year 13", mayHaveLeft: true });
+  assert.deepEqual(yearStatus({ yearGroup: "Year 12", yearAnchor: 2025 }, null, list, on), { yearGroup: "Year 13", mayHaveLeft: false }, "lands on the last year: not left yet");
+  assert.deepEqual(advanceYear("Year 11", 2020, list, on), { label: "Year 13", overflow: true });
+  assert.deepEqual(yearStatus({ yearGroupAuto: true }, "2007-03-14", list, on), { yearGroup: null, mayHaveLeft: true }, "an automatic student past Year 13 by age");
+  assert.deepEqual(yearStatus({ yearGroupAuto: true }, "2016-03-14", list, on), { yearGroup: "Year 6", mayHaveLeft: false });
+});
+t("held back (per child or by the tenant default) stays put; no anchor stays put", () => {
+  const list = HUB_DEFAULTS.yearGroups, on = new Date("2027-10-01T12:00:00Z"), e = { yearGroup: "Year 4", yearAnchor: 2025 };
+  assert.equal(effectiveYearGroup({ ...e, yearMoveUp: false }, null, list, on), "Year 4");
+  assert.equal(effectiveYearGroup(e, null, list, on, false), "Year 4", "tenant default off");
+  assert.equal(effectiveYearGroup({ ...e, yearMoveUp: true }, null, list, on, false), "Year 6", "child override beats a tenant default of off");
+  assert.equal(effectiveYearGroup({ ...e, yearMoveUp: false }, null, list, on, true), "Year 4", "child hold beats a tenant default of on");
+  assert.equal(effectiveYearGroup({ yearGroup: "Year 4" }, null, list, on), "Year 4", "not yet anchored: pinned until the backfill stamps it");
+  assert.equal(effectiveYearGroup({ yearGroup: null, yearAnchor: 2020 }, null, list, on), null, "unknown stays unknown");
+});
+t("yearAutoAdvance is a settings boolean", () => {
+  assert.equal(HUB_DEFAULTS.yearAutoAdvance, true);
+  assert.deepEqual(validateHubPatch({ yearAutoAdvance: false }), { ok: true, patch: { yearAutoAdvance: false } });
+  assert.equal(validateHubPatch({ yearAutoAdvance: "no" }).ok, false);
 });
 
 console.log("audience eligibility");

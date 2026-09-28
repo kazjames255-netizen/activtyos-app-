@@ -3,7 +3,7 @@
 import { mergeHub } from "../../../lib/hubConfig";
 import { LOCALES } from "../../../lib/i18n/config";
 import {
-  buildDigest, digestDue, inQuietHours, makeToken, nudgeDecision, processDigests, processNudges, readToken, subKey, weekKey,
+  buildDigest, digestDue, hubLink, inQuietHours, makeToken, nudgeDecision, processDigests, processNudges, readToken, subKey, weekKey,
   type ClaimMeta, type LogStore, type RunOpts, type TenantData,
 } from "./hubDigest";
 import { DIGEST_LOCALES, fmtDate, normLocale, renderDigest, renderNudge, renderUnsubPage, strings } from "./hubDigestEmail";
@@ -196,6 +196,19 @@ for (const loc of ["ur", "pa", "bn", "ar", "cy"] as const) {
 }
 ok(strings("cy").subject === "Dysgu {name} yr wythnos hon", "cy digest subject is grammatical");
 ok(!/منذ/.test(strings("ar").c_streak) && !/خامل/.test(JSON.stringify(strings("ar"))), "ar streak line has no 'since' / 'idle' wording");
+
+// Watch-along (view-only) link: the child's own lesson, never sent unless the homework has a lesson, ids validated, every locale carries the line.
+{
+  const w = new URL(hubLink("c1", { lesson: "note_9", watch: true }));
+  ok(w.pathname === "/custdash/learninghub" && w.searchParams.get("tab") === "notes" && w.searchParams.get("child") === "c1" && w.searchParams.get("open") === "lesson:note_9" && w.searchParams.get("watch") === "1", "watch-along hubLink shape");
+  const plain = new URL(hubLink("c1", { tab: "homework", hw: "h1" }));
+  ok(plain.searchParams.get("open") === "hw:h1" && !plain.searchParams.has("watch"), "the normal homework link is unchanged");
+  const nd = { childName: "Ava", provider: "Oak Tutors", title: "Fractions", dueAt: "2026-09-29T09:00:00Z" };
+  const withW = renderNudge("nudge_before", nd, "en", { hub: "https://x/hub", stop: "https://x/stop", watch: "https://x/watch?a=1&watch=1" }).html;
+  ok(withW.includes("https://x/watch?a=1&amp;watch=1") && withW.includes("Watch along with Ava") && withW.includes("Nothing is saved"), "nudge shows the watch-along link + view-only note");
+  ok(!renderNudge("nudge_before", nd, "en", { hub: "https://x/hub", stop: "https://x/stop" }).html.includes("Watch along"), "no lesson = no watch-along line");
+  for (const loc of DIGEST_LOCALES) ok(!!strings(loc).watch_cta && strings(loc).watch_cta.includes("{name}") && strings(loc).watch_note.length > 10, `${loc} has the watch-along strings`);
+}
 
 console.log(`${n} checks, ${bad} failed`);
 process.exit(bad ? 1 : 0);

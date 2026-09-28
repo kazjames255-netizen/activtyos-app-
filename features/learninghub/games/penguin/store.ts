@@ -12,8 +12,8 @@ import { makeMtcForm, makeMtcPractice, MTC, type MtcAnswer, type MtcItem } from 
 import { DAILY_SOFT_CAP, fluentCount, lightFact, newProfileLite, recordMtc, recordRun, weekDaysOf, weekStart, type MtcRunResult, type ProfileLite, type RunResult } from "./record";
 import { POLICY } from "./config";
 
-export interface StartOpts { mode: "solo" | "quick" | "calm" | "pit" | "daily"; stageId?: string; loadout?: string[]; tables?: number[]; timer?: "none" | "soft"; lanes?: 3 | 4; forms?: ("x" | "d" | "m")[] }
-export interface JourneyInfo { journey: { stars: Stars; unlockAll: boolean; totalStars: number; maxStars: number; bosses: number }; unlocks: Unlocks; daily: { modifier: Modifier }; fishTotal?: number }
+export interface StartOpts { mode: "solo" | "quick" | "calm" | "pit" | "daily" | "arcade" | "arcade-daily" | "arcade-endless"; stageId?: string; loadout?: string[]; tables?: number[]; timer?: "none" | "soft"; lanes?: 3 | 4; forms?: ("x" | "d" | "m")[] }
+export interface JourneyInfo { journey: { stars: Stars; unlockAll: boolean; totalStars: number; maxStars: number; bosses: number }; unlocks: Unlocks; daily: { modifier: Modifier }; /** Arcade personal bests (arcade.ts) */ arcade?: ProfileLite["arcade"]; fishTotal?: number }
 export interface LightFact { key: string; thaw: number; attempts: number; correct: number; medianMs: number }
 export type Started = {
   sessionId: string; seed: number; cfg: Cfg; plan: Plan; best: { fish: number; correct: number; pace: number[] } | null; facts: LightFact[]; fluentFacts: number;
@@ -90,17 +90,18 @@ const loadDb = (): DemoDb => { try { const d = JSON.parse(localStorage.getItem(D
 const saveDb = (d: DemoDb) => { try { localStorage.setItem(DKEY, JSON.stringify(d)); } catch { /* private mode */ } };
 export const resetDemo = () => { try { localStorage.removeItem(DKEY); } catch { /* ignore */ } };
 
-const jinfo = (db: DemoDb, facts: ReadonlyMap<string, FactState>, now: string): JourneyInfo => { const v = journeyView(db.profile.journey, db.profile.unlockAll); return { journey: { stars: db.profile.journey, unlockAll: db.profile.unlockAll, totalStars: v.totalStars, maxStars: v.maxStars, bosses: v.bossesCleared }, unlocks: unlocksFor(db.profile.journey, facts.values(), db.profile.unlockAll), daily: { modifier: modifierOfDay(now.slice(0, 10)) }, fishTotal: db.profile.fishTotal ?? 0 }; };
+const jinfo = (db: DemoDb, facts: ReadonlyMap<string, FactState>, now: string): JourneyInfo => { const v = journeyView(db.profile.journey, db.profile.unlockAll); return { journey: { stars: db.profile.journey, unlockAll: db.profile.unlockAll, totalStars: v.totalStars, maxStars: v.maxStars, bosses: v.bossesCleared }, unlocks: unlocksFor(db.profile.journey, facts.values(), db.profile.unlockAll), daily: { modifier: modifierOfDay(now.slice(0, 10)) }, arcade: db.profile.arcade ?? {}, fishTotal: db.profile.fishTotal ?? 0 }; };
 
 export function demoBackend(name = "Explorer", opts: { support?: { calm?: boolean; noTimer?: boolean }; unlockAll?: boolean } = {}): Backend {
   return {
     demo: true, childName: name,
     async start(o) {
       const db = loadDb(); const now = new Date().toISOString(); const facts = new Map(Object.entries(db.facts));
-      const seed = (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
-      const built = buildRun({ body: { ...o, calm: o.mode === "calm" }, facts, profile: db.profile, support: opts.support ?? {}, age: 9, nowIso: now, seed, firstEver: facts.size === 0 });
+      const randomSeed = (Math.floor(Math.random() * 0xffffffff) >>> 0) || 1;
+      const built = buildRun({ body: { ...o, calm: o.mode === "calm" }, facts, profile: db.profile, support: opts.support ?? {}, age: 9, nowIso: now, seed: randomSeed, firstEver: facts.size === 0 });
       if (!built.ok) throw new Error(built.error);
       const { cfg, plan, key } = built;
+      const seed = built.seed ?? randomSeed;
       const id = `demo-${seed}`; db.sessions[id] = { seed, cfg, plan, key };
       const keep = Object.keys(db.sessions).slice(-6); db.sessions = Object.fromEntries(keep.map((k) => [k, db.sessions[k]!])); saveDb(db);
       const day = now.slice(0, 10); const today = db.profile.plays.day === day ? db.profile.plays.count : 0;

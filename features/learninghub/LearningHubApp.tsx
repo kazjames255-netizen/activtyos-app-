@@ -12,6 +12,7 @@ import { HubTabs, type HubTab } from "./HubTabs";
 import { EmptyState, ErrorBanner, FOCUS, isOfflineError, HubStyles, Icon, Skeleton, SkeletonRows } from "./kit";
 import { NotesPanel } from "./NotesPanel";
 import TabHowTo from "./howitworks/TabHowTo";
+import FirstTimeTour from "./howitworks/FirstTimeTour";
 import { NOTES_META, PANEL_MODULES, STUDENTS_MODULE, TAB_ORDER } from "./panels";
 import type { PanelMeta, PanelProps } from "./panelTypes";
 import { TopicFilter } from "./TopicFilter";
@@ -477,6 +478,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
           {sidebar && <aside className="lg:sticky lg:top-3">{topicFilter("sidebar")}</aside>}
 
           <main className="min-w-0">
+            {!kid && active === "home" && <FirstTimeTour role={tutor ? "tutor" : "parent"} />}
             {!kid && <TabHowTo tutor={tutor} tab={active} />}
             {/* Notes stays mounted (hidden) on other tabs so an unsaved draft survives a tab switch. */}
             {settled && (

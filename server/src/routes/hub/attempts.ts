@@ -200,7 +200,7 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
   // here used to dead-end a child who was properly shown an off-year-group lesson (e.g. `lessonAccess: "all"`,
   // or general browsing): they'd play the whole thing and then hit "this quiz isn't set up for your year
   // group" with no way forward, even though nothing about seeing the LESSON was ever wrong.
-  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") {
+  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg)) === "no") {
     res.status(409).json({ error: `${asm.title} isn't set for ${child.childName || "this student"}'s year group or age.`, code: "not_for_this_child" });
     return;
   }
@@ -218,7 +218,7 @@ hubAttemptsApi.post("/assessments/:id/attempts", async (req, res) => {
     // (and only a placement test that is FOR this child, both audience AND assignment, counts — several may
     // exist per subject, one per audience, and not every audience-fitting one was assigned to this child).
     const all = [...(await assessmentRows(ctx.tenantId)).values()]; // cached rows — was a read of every assessment per quiz start
-    const facts = await childFacts(child, cfg.yearGroups);
+    const facts = await childFacts(child, cfg);
     const hasDiag = all.some((x) => {
       return x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no" && diagnosticAssignedTo(x, child.childId);
     });

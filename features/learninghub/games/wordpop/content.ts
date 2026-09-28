@@ -1,4 +1,5 @@
 import { shuffleOptionIds, type QuizItem } from "../quiz/core";
+import { WORDPOP_EXTRA } from "./content.extra";
 
 // WORD POP — fast spelling / homophones / common exception words. The item SHAPE is identical to the other
 // quiz-quest games (a seeded multiple-choice bank), but the mechanic is genuinely different: quick-fire, timed,
@@ -40,7 +41,10 @@ const RAW: SpellItem[] = [
   { key: "sp_p7", topic: "pattern", difficulty: 3, sentence: "The old castle had a hidden ___.", correct: "chamber", wrongs: ["chaimber", "chammber"], explanation: "“chamber” — ch makes a ‘ch’ sound, and the a is short before the m." },
   { key: "sp_p8", topic: "pattern", difficulty: 1, sentence: "The ___ scratched at the door.", correct: "kitten", wrongs: ["kiten", "kittin"], explanation: "“kitten” doubles the t after the short i sound." },
 ];
-export const WORDPOP_ITEMS: QuizItem[] = RAW.map((s) => {
+const WORDPOP_BASE: QuizItem[] = RAW.map((s) => {
   const { options, correctId } = shuffleOptionIds(s.key, s.correct, s.wrongs);
   return { key: s.key, topics: ["spelling", s.topic], difficulty: s.difficulty, prompt: s.sentence, options, correctId, explanation: s.explanation };
 });
+
+/** The original bank plus the extra items (content.extra.ts): 100+ items in all. */
+export const WORDPOP_ITEMS: QuizItem[] = [...WORDPOP_BASE, ...WORDPOP_EXTRA];

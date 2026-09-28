@@ -276,10 +276,9 @@ export function Lobby({ lesson, isTutor, tutorLabel, attendees, topicLabel, join
             <button type="button" id="hub-lobby-join" disabled={!info.canJoin || joining || needPick} onClick={start}
               className={`inline-flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-2xl px-6 text-[16px] font-extrabold shadow-[0_10px_28px_rgba(0,0,0,0.3)] transition hover:-translate-y-px disabled:cursor-not-allowed motion-reduce:transition-none motion-reduce:hover:transform-none ${FOCUS} ${info.canJoin ? "bg-white text-[var(--brand-strong)]" : "bg-white/20 text-white/80 shadow-none"}`}>
               <Ico name={info.canJoin ? "video" : "lock"} size={19} />
-              {joining ? tx("hublive.aLobby_connecting") : info.canJoin ? (info.cta ?? tx("hublive.aKit_joinLesson")) : info.waiting ? (info.cta ?? tx("hublive.aKit_waiting")) : tx("hublive.aKit_opensIn", { span: humanSpan(t.opensMs - now) })}
+              {joining ? tx("hublive.aLobby_connecting") : info.canJoin ? (info.cta ?? tx("hublive.aKit_joinLesson")) : info.waiting ? (info.cta ?? tx("hublive.aKit_waiting")) : tx("hublive.aKit_ended")}
             </button>
             {info.waiting && <p className="text-center text-[12px] text-white/75">{info.sub}</p>}
-            {!info.canJoin && !info.waiting && <p className="text-center text-[12px] text-white/75">{tx("hublive.aLobby_testNow")}</p>}
             {info.canJoin && problem && <p className="text-center text-[12px] text-white/75">{tx("hublive.aLobby_noDevices")}</p>}
             </div>
           </div>

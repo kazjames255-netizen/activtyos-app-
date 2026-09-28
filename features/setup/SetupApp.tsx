@@ -53,7 +53,6 @@ import { LevelsEditorDraft } from "@/features/learninghub/progress/levels";
 import { YearGroupsEditor } from "@/features/learninghub/quiz/YearGroupsEditor";
 import { SubjectColoursEditor } from "@/features/learninghub/SubjectColourPicker";
 import { ParentEmailSettings } from "@/features/learninghub/digest/ParentEmailSettings";
-import { YearReminder } from "@/features/learninghub/students/YearReminderCard";
 import type { Student } from "@/features/learninghub/types";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
@@ -1383,7 +1382,6 @@ export function SetupApp() {
   // actually opened (not on every Setup visit for every other tab).
   const me = peekMe();
   const hubTenantId = me?.tenantId ?? null;
-  const hubFranchiseId = me?.franchiseId ?? null;
   const hubQs = hubTenantId ? `?tenantId=${encodeURIComponent(hubTenantId)}` : "";
   const [hubStudents, setHubStudents] = useState<Student[] | null>(null);
   const loadHubStudents = useCallback(() => {
@@ -2594,19 +2592,24 @@ export function SetupApp() {
 
             <Section title={t("hubshell.su_yearsTitle")} lede={t("hubshell.su_yearsLede")}>
               <YearGroupsEditor groups={h.yearGroups} onChange={(g) => setH({ yearGroups: g })} defaults={HUB_DEFAULTS.yearGroups} />
+              <Row label={t("hubshell.su_yearAdvance")} hint={t("hubshell.su_yearAdvanceHint")}>
+                <span data-testid="setup-year-advance"><Toggle on={h.yearAutoAdvance !== false} onChange={(v) => setH({ yearAutoAdvance: v })} labels={[t("hubshell.su_on"), t("hubshell.su_off")]} /></span>
+              </Row>
+              {(hubStudents ?? []).some((s) => s.mayHaveLeft && s.active !== false) && (
+                <p data-testid="setup-year-left" className="text-[12.5px] font-semibold text-[var(--ink-2)]">{t("hubshell.su_yearLeftNote", { n: (hubStudents ?? []).filter((s) => s.mayHaveLeft && s.active !== false).length })}</p>
+              )}
             </Section>
 
             <Section title={t("hubshell.su_coloursTitle")} lede={t("hubshell.su_coloursLede")}>
               <SubjectColoursEditor colours={h.subjectColours ?? {}} onChange={(subjectColours) => setH({ subjectColours })} />
             </Section>
 
-            <Section title={t("hubshell.su_reminderTitle")} lede={t("hubshell.su_reminderLede")}>
-              {hubTenantId && hubStudents ? (
-                <YearReminder alwaysShow tenantId={hubTenantId} qs={hubQs} canEdit readOnly={false} franchiseId={hubFranchiseId} students={hubStudents} yearGroups={h.yearGroups} refreshStudents={loadHubStudents} />
-              ) : (
-                <p className="text-[13px] font-semibold text-[var(--ink-2)]">{t("setup.loading")}</p>
-              )}
+            <Section title={t("hubshell.su_enrolTitle")} lede={t("hubshell.su_enrolLede")}>
+              <Row label={t("hubshell.su_autoEnrol")} hint={t("hubshell.su_autoEnrolHint")}>
+                <span data-testid="setup-auto-enrol"><Toggle on={!!h.autoEnrolOnBooking} onChange={(v) => setH({ autoEnrolOnBooking: v })} labels={[t("hubshell.su_on"), t("hubshell.su_off")]} /></span>
+              </Row>
             </Section>
+
 
             <Section title={t("hubplan.dg_title")}>
               <ParentEmailSettings parentDigest={!!h.parentDigest} homeworkNudges={!!h.homeworkNudges} nudgeLeadHours={h.nudgeLeadHours ?? 24} onChange={setH} students={hubStudents ?? []} qs={hubQs} />

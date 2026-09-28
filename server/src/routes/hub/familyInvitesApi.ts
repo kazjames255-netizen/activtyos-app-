@@ -5,7 +5,7 @@ import { db } from "../../firebase";
 import { customerAreaOn } from "../../lib/customerArea";
 import { canSeeStudent, canWriteRow, forgetEnrolments, hubConfig, hubEnrolments, okId, requireEdit, resolveCtx, type EnrolmentDoc } from "../../lib/hubCore";
 import { forgetHub } from "../../lib/hubCache";
-import { inList, yearGroupFromDob } from "../../lib/hubRules";
+import { academicStartYear, inList, yearGroupFromDob } from "../../lib/hubRules";
 import { resolveTutor } from "./tutorsApi";
 
 // Learning Hub — FAMILY INVITES (F13). A tutor whose family has never booked (a pure tutoring business) makes a link;
@@ -149,7 +149,7 @@ hubFamilyInvitesApi.post("/family-invites/:token/accept", async (req, res) => {
   const dob = typeof child.get("dob") === "string" && child.get("dob") ? (child.get("dob") as string) : null;
   const cfg = await hubConfig(d.tenantId, d.franchiseId);
   const yg = d.yearGroup
-    ? { yearGroup: inList(cfg.yearGroups, d.yearGroup) ?? d.yearGroup, yearGroupAuto: false }
+    ? { yearGroup: inList(cfg.yearGroups, d.yearGroup) ?? d.yearGroup, yearGroupAuto: false, yearAnchor: academicStartYear() }
     : { yearGroup: yearGroupFromDob(dob, cfg.yearGroups), yearGroupAuto: true };
   const now = new Date().toISOString();
   const alreadyActive = prev.exists && prev.get("active") !== false;
@@ -159,7 +159,7 @@ hubFamilyInvitesApi.post("/family-invites/:token/accept", async (req, res) => {
     // A child who is already in keeps what the tutor set for them; a new (or re-activated) one gets what the invite says.
     subjects: alreadyActive ? ((prev.get("subjects") as string[] | undefined) ?? []) : d.subjects,
     tutorUid: alreadyActive ? ((prev.get("tutorUid") as string | null) ?? null) : d.tutorUid, tutorName: alreadyActive ? ((prev.get("tutorName") as string | undefined) ?? "") : d.tutorName,
-    active: true, ...(alreadyActive && prev.get("yearGroup") !== undefined ? { yearGroup: (prev.get("yearGroup") as string | null) ?? null, yearGroupAuto: prev.get("yearGroupAuto") === true } : yg),
+    active: true, ...(alreadyActive && prev.get("yearGroup") !== undefined ? { yearGroup: (prev.get("yearGroup") as string | null) ?? null, yearGroupAuto: prev.get("yearGroupAuto") === true, ...(typeof prev.get("yearAnchor") === "number" ? { yearAnchor: prev.get("yearAnchor") as number } : {}), ...(typeof prev.get("yearMoveUp") === "boolean" ? { yearMoveUp: prev.get("yearMoveUp") as boolean } : {}) } : yg),
     createdBy: prev.exists ? (prev.get("createdBy") as string) : d.createdBy, createdAt: prev.exists ? (prev.get("createdAt") as string) : now, updatedAt: now,
   };
   const carried: Partial<EnrolmentDoc> = {};

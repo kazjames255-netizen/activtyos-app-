@@ -38,7 +38,7 @@ export function PickCard({ item, selected, single, compact, onPick, actions, bad
         {!compact && (
           <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3 text-[11px] font-semibold text-[var(--ink-2)]">
             {item.isLesson && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--violet)", 12), color: "var(--violet)" }}><Icon name="sparkle" size={11} />{t("hubpicker.interactive")}</span>}
-            {item.hasWorksheet && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--brand)", 12), color: "var(--brand)" }}><Icon name="notes" size={11} />{item.isLesson ? t("hubpicker.worksheet") : item.worksheetQuizId ? t("hubpicker.interactive") : t("hubpicker.pdfOnly")}</span>}
+            {item.hasWorksheet && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-extrabold" style={{ background: tint("var(--brand)", 12), color: "var(--brand)" }}><Icon name="notes" size={11} />{item.isLesson ? t("hubpicker.worksheet") : t("hubpicker.interactive")}</span>}
             {item.questionCount != null && <span className="font-extrabold">{t("hubpicker.quizMeta", { n: item.questionCount })}</span>}
             {item.subject && <span className="truncate">{item.subject}</span>}
             {badges}

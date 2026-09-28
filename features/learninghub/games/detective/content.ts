@@ -1,4 +1,5 @@
 import { shuffleOptionIds, type QuizItem } from "../quiz/core";
+import { DETECTIVE_EXTRA } from "./content.extra";
 
 // STORY DETECTIVE — reading comprehension / inference. Four original, wholly public-domain-style short mysteries
 // (never anything copyrighted or attributable to a specific publisher), each with a small set of questions covering
@@ -15,7 +16,7 @@ function q(key: string, passage: string, tag: "inference" | "vocab-in-context" |
   return { key, topics: [tag], difficulty, prompt, passage, options, correctId, explanation };
 }
 
-export const DETECTIVE_ITEMS: QuizItem[] = [
+const DETECTIVE_BASE: QuizItem[] = [
   q("dt_lh1", PASSAGE_LIGHTHOUSE, "inference", 1, "Why does Mira's stomach tighten when she sees the glove?", "She realises it belongs to Tomkin, who lied about being near the lighthouse.", ["She is afraid of the dark stairwell.", "She dropped her grandfather's lamp-oil can.", "She is worried about the fishing boats."], "The text says she recognised the glove as Tomkin's and remembers he'd ‘sworn... he'd never once set foot near the lighthouse’ — the inference is that he lied."),
   q("dt_lh2", PASSAGE_LIGHTHOUSE, "vocab-in-context", 1, "In this passage, what does “stairwell” most likely mean?", "The enclosed space containing a staircase.", ["A type of old lamp.", "A small boat.", "A page torn from a book."], "“stairwell” describes an enclosed space with stairs in it — Mira is climbing 206 steps inside it, and her breath is clouding, which fits a narrow, cold, enclosed space."),
   q("dt_lh3", PASSAGE_LIGHTHOUSE, "sequencing", 2, "What happens LAST in this passage?", "Mira notices a page has been torn from the logbook.", ["Mira climbs the two hundred and six steps.", "Mira finds a torn glove by the lens.", "Mira lights the lamp."], "The events in order are: climb the steps, find the glove, light the lamp, then finally notice the torn page — the last thing mentioned."),
@@ -29,3 +30,6 @@ export const DETECTIVE_ITEMS: QuizItem[] = [
   q("dt_is2", PASSAGE_ISLAND, "vocab-in-context", 2, "In this passage, what does “half-buried” suggest about the compass?", "Part of it was covered by sand and part was visible.", ["It was cut exactly in half.", "It was underwater.", "It had been recently painted."], "“half-buried” means partly covered — Jonah could see a ‘glint of something metal’, which is why he noticed it at all."),
   q("dt_is3", PASSAGE_ISLAND, "sequencing", 3, "What does Jonah do immediately after noticing the compass points due west no matter how he turns it?", "He notices the scratched letters and the date on the case.", ["He crosses the wet sand.", "He finds the oilcloth map.", "The coastguard's flag goes up."], "After noticing the strange needle, the very next thing described is the scratched letters and date on the case — the map is found only after that."),
 ];
+
+/** The original bank plus the extra items (content.extra.ts): the original four cases plus six more. */
+export const DETECTIVE_ITEMS: QuizItem[] = [...DETECTIVE_BASE, ...DETECTIVE_EXTRA];

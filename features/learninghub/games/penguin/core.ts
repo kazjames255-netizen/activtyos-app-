@@ -12,6 +12,7 @@
 import { makeRng, type Rng } from "../../tools/engine/rng";
 export const TICK_HZ = 60;
 
+import { cleanArcadeCfg, type ArcadeCfg } from "./arcade";
 import { POLICY, POWERS, STAGE_SCRIPT, setPieceItems, setPieceLen, setPiecesOf, type ChaserKind, type Form, type GateStyle, type Modifier, type PowerId } from "./config";
 export { POLICY };
 export type { Form };
@@ -167,11 +168,14 @@ export interface Cfg {
   /** Journey: which stage this run is (null = free play), its biome (art + how gates look), moving gates, the chaser of a boss stage, the helpers taken along, today's safe modifier. */
   stage: string | null; biome: number; style: GateStyle; shoals: boolean; chaser: ChaserKind | null; loadout: PowerId[]; mod: Modifier | null;
   /** The child's very first run: the first gates are eased (one wrong lane removed) and the right block glows. */ tutorial: boolean;
+  /** Arcade mode (arcade.ts): lives, combo scoring, daily / endless. The simulation ignores it entirely - it is folded from the sim's results by the client (live) and the server (authoritative). */
+  arcade?: ArcadeCfg | null;
 }
 export const MODE_DEFAULTS: Record<Mode, { n: number; calm: boolean; maxNew: number }> = {
   solo: { n: 12, calm: false, maxNew: 6 }, quick: { n: 6, calm: false, maxNew: 3 }, calm: { n: 8, calm: true, maxNew: 4 },
 };
 export function makeCfg(p: Partial<Cfg> & { mode?: Mode } = {}): Cfg {
+  const arcade = cleanArcadeCfg(p.arcade);
   const mode: Mode = p.calm ? "calm" : p.mode ?? "solo";
   const d = MODE_DEFAULTS[mode];
   const ok = (xs: unknown, lo: number, hi: number) => (Array.isArray(xs) ? [...new Set(xs.map(Number).filter((x) => Number.isInteger(x) && x >= lo && x <= hi))].sort((a, b) => a - b) : []);
@@ -181,6 +185,7 @@ export function makeCfg(p: Partial<Cfg> & { mode?: Mode } = {}): Cfg {
     tables: ok(p.tables, 2, 12), pinned: ok(p.pinned, 2, 12), forms: (Array.isArray(p.forms) ? [...new Set(p.forms.filter((f): f is Form => f === "x" || f === "d" || f === "m"))] : []).length ? [...new Set((p.forms as Form[]).filter((f) => f === "x" || f === "d" || f === "m"))] : ["x"], tutorial: p.tutorial === true,
     stage: typeof p.stage === "string" ? p.stage.slice(0, 8) : null, biome: Math.max(1, Math.min(5, Math.floor(p.biome ?? 1))), style: p.style ?? "blocks", shoals: p.shoals === true && !d.calm, chaser: p.chaser ?? null,
     loadout: (Array.isArray(p.loadout) ? [...new Set(p.loadout.filter((x): x is PowerId => POWERS.some((q) => q.id === x)))] : []).slice(0, POLICY.loadoutSlots), mod: p.mod ?? null,
+    ...(arcade ? { arcade } : {}),
   };
 }
 

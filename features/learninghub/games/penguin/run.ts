@@ -1,11 +1,13 @@
 // Build a run from a start request: which stage / mode, the config, the plan. PURE: shared by the SERVER (which is the authority) and the offline demo.
 import { POLICY, modifierOfDay, stageById, type Form, type PowerId } from "./config";
-import { frontier, makeCfg, selectPlan, type Cfg, type FactState, type Plan } from "./core";
+import { frontier, makeCfg, selectPlan, THETA0, type Cfg, type FactState, type Plan } from "./core";
+import { ARCADE, arcadeCfg, arcadeDailySeed, arcadeDailyTables, type ArcadeKind } from "./arcade";
 import { isOpen, pitPlan, selectStagePlan, stageCfg, unlocksFor } from "./journey";
 import { bestKey, type ProfileLite } from "./record";
 
 export interface StartBody { mode?: unknown; stageId?: unknown; loadout?: unknown; tables?: unknown; lanes?: unknown; forms?: unknown; timer?: unknown; calm?: unknown }
-export type Built = { ok: true; cfg: Cfg; plan: Plan; key: string } | { ok: false; status: number; error: string };
+/** `seed` is set only when the request fixes it (the Arcade daily challenge: one seed per day, the same for every child); otherwise the caller's random seed stands. */
+export type Built = { ok: true; cfg: Cfg; plan: Plan; key: string; seed?: number } | { ok: false; status: number; error: string };
 
 export function buildRun(o: { body: StartBody; facts: ReadonlyMap<string, FactState>; profile: ProfileLite; support: { calm?: boolean; noTimer?: boolean }; age: number | null; nowIso: string; seed: number; firstEver: boolean }): Built {
   const { body, facts, profile, nowIso, seed } = o;
@@ -31,6 +33,19 @@ export function buildRun(o: { body: StartBody; facts: ReadonlyMap<string, FactSt
   if (body.mode === "pit") {
     const cfg = makeCfg({ mode: wantCalm ? "calm" : "solo", calm: wantCalm, n: 8, maxNew: 0, lanes, forms: ["x"] });
     return { ok: true, cfg, plan: pitPlan(seed, cfg, facts, nowIso, profile.theta), key: "pit" };
+  }
+  // ARCADE (arcade.ts): lives + combo scoring over the same simulation. Calm keeps the run but drops the lives and the timer.
+  if (body.mode === "arcade" || body.mode === "arcade-daily" || body.mode === "arcade-endless") {
+    const kind: ArcadeKind = body.mode === "arcade" ? "run" : body.mode === "arcade-daily" ? "daily" : "endless";
+    const arcade = arcadeCfg(kind, { calm: wantCalm, age: o.age });
+    if (kind === "daily") {
+      const day = nowIso.slice(0, 10), dseed = arcadeDailySeed(day);
+      // Fixed for everyone: same seed, same four tables, four lanes, and a plan built from NO personal history.
+      const dcfg = makeCfg({ mode: wantCalm ? "calm" : "solo", calm: wantCalm, n: ARCADE.n.daily, lanes: 4, tables: arcadeDailyTables(day), maxNew: 12, forms: ["x"], approachSec: arcade.timerSec, arcade });
+      return { ok: true, cfg: dcfg, plan: selectPlan(dseed, dcfg, new Map(), `${day}T00:00:00.000Z`, null, THETA0), key: "arcade:daily", seed: dseed };
+    }
+    const acfg = makeCfg({ mode: wantCalm ? "calm" : "solo", calm: wantCalm, n: ARCADE.n[kind], lanes, tables: Array.isArray(body.tables) ? (body.tables as unknown[]).map(Number) : [], pinned: profile.pinned, forms: ["x"], approachSec: arcade.timerSec, arcade });
+    return { ok: true, cfg: acfg, plan: selectPlan(seed, acfg, facts, nowIso, rolling, profile.theta), key: `arcade:${kind}` };
   }
   const mode = wantCalm ? "calm" : body.mode === "quick" ? "quick" : "solo";
   const forms = (Array.isArray(body.forms) && (o.age ?? 9) >= 8 ? (body.forms as unknown[]).filter((f): f is Form => f === "x" || f === "d" || f === "m") : ["x"]) as Form[];

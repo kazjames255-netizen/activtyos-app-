@@ -60,6 +60,7 @@ import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
 import { sessionsClearGap } from "../lib/schedulingGap";
+import { autoEnrolFromBooking } from "../lib/hubAutoEnrol";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -1798,6 +1799,14 @@ my.post("/bookings", async (req, res) => {
       uid: familyUid,
       children: bookings.map((b) => ({ name: b.child, childId: b.childId, age: b.age })),
     });
+    // Learning Hub: a provider who switched on "auto-enrol on booking" (settings.hub.autoEnrolOnBooking, off by default) gets these children
+    // on their roster straight away. Only ever adds a missing enrolment; best-effort, never fails the booking.
+    void autoEnrolFromBooking({
+      tenantId: listing.tenantId,
+      franchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null,
+      parentUid: familyUid,
+      children: bookings.map((b) => ({ childId: b.childId, name: b.child })),
+    }).catch((e) => console.error("[my] hub auto-enrol failed:", (e as Error).message));
     // The provider's staff can now read the SEND plans of the children they've
     // just been given. Granted here rather than by the client, so a parent
     // can't widen access to a file by asking; and only for the tenant they

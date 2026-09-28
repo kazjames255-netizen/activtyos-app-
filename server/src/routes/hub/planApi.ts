@@ -13,7 +13,7 @@ import { cleanSupport } from "../../../../features/learninghub/support";
 
 const refOf = (e: EnrolmentDoc): ChildRef => ({
   childId: e.childId, childName: e.childName ?? "", franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [], parentUid: e.parentUid,
-  waived: [], active: e.active !== false, yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto }, retakeGrants: [], support: cleanSupport(e.support),
+  waived: [], active: e.active !== false, yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto, yearAnchor: e.yearAnchor, yearMoveUp: e.yearMoveUp }, retakeGrants: [], support: cleanSupport(e.support),
 });
 
 // Learning Hub — AUTO-PLAN A WEEK (suggest only). GET /plan/suggest?childId=|groupId=&days=7&minutesPerDay=20
@@ -103,7 +103,7 @@ hubPlanApi.get("/plan/suggest", async (req, res) => {
   const now = new Date();
   for (const k of kids) {
     const dob = dobs.get(k.ref.childId) ?? null;
-    k.yearLabel = effectiveYearGroup(k.ref.yg, dob, cfg.yearGroups);
+    k.yearLabel = effectiveYearGroup(k.ref.yg, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance);
     k.age = dob ? Math.floor((now.getTime() - Date.parse(dob)) / (365.25 * 86_400_000)) : null;
   }
   const yr = (l: string | null) => { const m = l ? /(\d{1,2})/.exec(l) : null; return m ? Number(m[1]) : null; };

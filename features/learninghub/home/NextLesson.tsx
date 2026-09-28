@@ -34,7 +34,7 @@ function Countdown({ ms }: { ms: number }) {
   );
 }
 
-export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCount, later = [], onGo, onSchedule, embedded = false, readOnly = false }: {
+export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCount, later = [], onGo, onSchedule, alsoUp = [], embedded = false, readOnly = false }: {
   lesson: Lesson | null;
   isTutor: boolean;
   /** A view-only staff role: no schedule / start / join buttons (the server refuses those writes). */
@@ -47,6 +47,8 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
   later?: { id: string; title: string; when: string; who: string }[];
   onGo: () => void;
   onSchedule?: () => void;
+  /** Nothing live is booked but other work is coming (a quiz to resume, homework due): listed here so this card never says "nothing" while the page shows something. */
+  alsoUp?: { key: string; title: string; note: string; onClick: () => void }[];
   /** Rendered inside another hero (student greeting) — no outer gradient. */
   embedded?: boolean;
 }) {
@@ -59,10 +61,23 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
       <section aria-label={tr("hubshell.hm_nextLesson")} data-ui="card" className={`home-rise relative flex h-full min-w-0 flex-col justify-center overflow-hidden text-white ${embedded ? "" : "min-h-[220px] rounded-3xl p-6 sm:p-7"}`} style={embedded ? undefined : { ...HERO_BG, ...rise(0) }}>
         {!embedded && <Icon name="video" size={170} strokeWidth={1} className="pointer-events-none absolute -bottom-8 -end-6 text-white opacity-[0.08]" />}
         <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/75">{tr("hubshell.hm_nextLesson")}</div>
-        <h2 className={`mt-1.5 font-extrabold leading-tight ${embedded ? "text-[21px]" : "text-[24px] sm:text-[28px]"}`} style={DISPLAY}>{isTutor ? tr("hubshell.hm_nothingCal") : tr("hubshell.hm_noLessonBooked")}</h2>
-        <p className="mt-2 max-w-[440px] text-[13.5px] leading-relaxed text-white/85">
-          {isTutor ? tr("hubshell.hm_emptyTutorBody") : tr("hubshell.hm_emptyParentBody")}
-        </p>
+        <h2 className={`mt-1.5 font-extrabold leading-tight ${embedded ? "text-[21px]" : "text-[24px] sm:text-[28px]"}`} style={DISPLAY}>{alsoUp.length ? tr("hubshell.hm_comingUpHead") : isTutor ? tr("hubshell.hm_nothingCal") : tr("hubshell.hm_noLiveBooked")}</h2>
+        {alsoUp.length > 0 ? (
+          <ul className="mt-2 grid gap-1.5" data-testid="hub-coming-up">
+            {alsoUp.slice(0, 3).map((x) => (
+              <li key={x.key}>
+                <button type="button" onClick={x.onClick} className={`flex min-h-[44px] w-full items-center justify-between gap-3 rounded-xl border border-white/25 bg-white/10 px-3 py-2 text-start text-white ${FOCUS}`}>
+                  <span className="min-w-0"><span className="block truncate text-[14px] font-extrabold">{x.title}</span><span className="block text-[12px] text-white/80">{x.note}</span></span>
+                  <Icon name="chevronRight" size={16} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 max-w-[440px] text-[13.5px] leading-relaxed text-white/85">
+            {isTutor ? tr("hubshell.hm_emptyTutorBody") : tr("hubshell.hm_emptyParentBody")}
+          </p>
+        )}
         {!(isTutor && readOnly) && <div className="mt-5">
           <BigButton variant="white" icon={isTutor ? "plus" : "video"} onClick={isTutor ? (onSchedule ?? onGo) : onGo}>{isTutor ? tr("hubshell.hm_scheduleVideo") : tr("hubshell.hm_seeLessons")}</BigButton>
         </div>}
@@ -75,7 +90,6 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
   const live = open && t.inProgress;
   const title = lesson.title || tr("hubshell.hm_lesson");
   const untilStart = t.startMs - now;
-  const untilOpen = t.opensMs - now;
   const names = attendees.length ? attendees : [];
   const overrun = open && !t.early && !t.inProgress;
   const ringInfo = stageInfo(lesson, now, isTutor).ring;
@@ -138,7 +152,7 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
         ) : (
           <div>
             <Countdown ms={untilStart} />
-            <div className="mt-2 text-[11.5px] font-semibold text-white/75">{tr("hubshell.hm_joinOpens", { span: humanSpan(untilOpen) })}</div>
+            <div className="mt-2 text-[11.5px] font-semibold text-white/75">{isTutor ? tr("hubshell.hm_earlyTutor") : tr("hubshell.hm_earlyFamily")}</div>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2.5">
@@ -146,9 +160,12 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
           {open && !(isTutor && readOnly) ? (
             <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? (live ? "hubshell.hm_ariaRejoin" : "hubshell.hm_ariaStart") : "hubshell.hm_ariaJoin", { title })}>{lesson.status === "ended" || (isTutor && live && lesson.status === "live") ? tr("hubshell.hm_rejoinLesson") : isTutor ? (live ? tr("hubshell.hm_rejoinLesson") : tr("hubshell.hm_startLesson")) : tr("hubshell.hm_joinLesson")}</BigButton>
           ) : (
+            <>
+            {!(isTutor && readOnly) && lesson.status !== "cancelled" && <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? "hubshell.hm_ariaStart" : "hubshell.hm_ariaJoin", { title })}>{isTutor ? tr("hubshell.hm_startLesson") : tr("hubshell.hm_joinLesson")}</BigButton>}
             <button type="button" onClick={onGo} className={`inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-white/35 bg-white/14 px-5 text-[13.5px] font-extrabold text-white transition hover:bg-white/22 motion-reduce:transition-none ${FOCUS}`}>
               {tr("hubshell.hm_lessonDetails")} <Icon name="chevronRight" size={15} />
             </button>
+            </>
           )}
         </div>
       </div>

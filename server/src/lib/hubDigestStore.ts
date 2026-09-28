@@ -92,7 +92,7 @@ export async function loadTenantData(tenantId: string, now: Date, o: { attempts:
 
   const cutoff = new Date(now.getTime() - 14 * 86_400_000).toISOString();
   const homework: HwRow[] = hwSnap.docs.filter((d) => String(d.get("dueAt") ?? "") >= cutoff).map((d) => ({
-    id: d.id, title: d.get("title") ?? "", dueAt: d.get("dueAt"), createdAt: d.get("createdAt") ?? "", assignedChildIds: d.get("assignedChildIds") ?? [], franchiseId: d.get("franchiseId") ?? null,
+    id: d.id, title: d.get("title") ?? "", dueAt: d.get("dueAt"), createdAt: d.get("createdAt") ?? "", assignedChildIds: d.get("assignedChildIds") ?? [], franchiseId: d.get("franchiseId") ?? null, noteIds: d.get("noteIds") ?? [],
   }));
   const hwIds = new Set(homework.map((h) => h.id));
   const submissions = new Map<string, SubRow>();

@@ -14,8 +14,8 @@ export async function requiredQuizIds(tenantId: string, hw: { assessmentId?: str
   const ids = [...new Set(hw.worksheetNoteIds ?? [])].filter(okId);
   const worksheet: string[] = [];
   if (ids.length) {
-    for (const n of await db.getAll(...ids.map((i) => notesCol.doc(i)), { fieldMask: ["tenantId", "worksheetQuizId", "worksheetFile"] })) {
-      const q = n.exists && n.get("tenantId") === tenantId && n.get("worksheetFile") ? n.get("worksheetQuizId") : null;
+    for (const n of await db.getAll(...ids.map((i) => notesCol.doc(i)), { fieldMask: ["tenantId", "worksheetQuizId"] })) {
+      const q = n.exists && n.get("tenantId") === tenantId ? n.get("worksheetQuizId") : null;
       if (typeof q === "string" && q) worksheet.push(q);
     }
   }

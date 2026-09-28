@@ -1,4 +1,4 @@
-// Make the RUNNING API process see notes an Admin-SDK script wrote (worksheetFile / worksheetQuizId): POST /notes/index-refresh as the tenant's tutor.
+// Make the RUNNING API process see notes an Admin-SDK script wrote (worksheetQuizId): POST /notes/index-refresh as the tenant's tutor.
 //   import { refreshNotesIndex } from "./refreshNotesIndex";  await refreshNotesIndex(tenantId, noteIds)   // patch those notes in place
 //                                                             await refreshNotesIndex(tenantId)            // drop index + disk snapshot (one rebuild)
 //   CLI:  cd server && npx tsx src/oak/refreshNotesIndex.ts --tenants <id[,id…]>       (full drop; the real tenants need --real)

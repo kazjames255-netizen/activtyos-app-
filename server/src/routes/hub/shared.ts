@@ -193,7 +193,7 @@ export interface ChildRef {
   waived: string[];
   active: boolean;
   /** Stored year-group fields (see EnrolmentDoc) and the assessments a tutor allowed one more attempt at. */
-  yg: { yearGroup?: string | null; yearGroupAuto?: boolean };
+  yg: { yearGroup?: string | null; yearGroupAuto?: boolean; yearAnchor?: number; yearMoveUp?: boolean };
   retakeGrants: string[];
   /** R-5 support profile (defaults when the enrolment has none). */
   support: SupportProfile;
@@ -201,9 +201,9 @@ export interface ChildRef {
 
 /** What is known about a student for audience checks: their year group now, and their age. */
 export interface KidFacts { yearGroup: string | null; age: number | null }
-export async function childFacts(child: ChildRef, yearGroups: string[]): Promise<KidFacts> {
+export async function childFacts(child: ChildRef, cfg: { yearGroups: string[]; yearAutoAdvance: boolean }): Promise<KidFacts> {
   const dob = (await childDobs([child.childId])).get(child.childId) ?? null;
-  return { yearGroup: effectiveYearGroup(child.yg, dob, yearGroups), age: ageInYears(dob) };
+  return { yearGroup: effectiveYearGroup(child.yg, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance), age: ageInYears(dob) };
 }
 
 /** The enrolled child this caller may act on, or a 404 has been sent. Tenant is
@@ -229,7 +229,7 @@ export async function childRefFor(ctx: HubCtx, childId: unknown, opts: { needAct
   return {
     childId, childName: e.childName ?? "", franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [],
     parentUid: e.parentUid, waived: (e.diagnosticWaived ?? []).map((s) => s.toLowerCase()), active,
-    yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto }, retakeGrants: Array.isArray(e.retakeGrants) ? e.retakeGrants : [], support: cleanSupport(e.support),
+    yg: { yearGroup: e.yearGroup, yearGroupAuto: e.yearGroupAuto, yearAnchor: e.yearAnchor, yearMoveUp: e.yearMoveUp }, retakeGrants: Array.isArray(e.retakeGrants) ? e.retakeGrants : [], support: cleanSupport(e.support),
   };
 }
 

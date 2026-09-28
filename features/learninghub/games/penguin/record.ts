@@ -4,6 +4,7 @@ import { applyToFact, classifyError, DEFAULT_RT0_MS, eloTheta, fluentMs, freshFa
 import { markMtc, mtcKey, type MtcAnswer, type MtcItem } from "./mtc";
 import { STAGES, stageById, POLICY as CFGPOLICY } from "./config";
 import { journeyView, starsFor, unlocksFor, type Stars } from "./journey";
+import { arcadeStars, tally, type ArcadeKind, type ArcadeRow } from "./arcade";
 
 export interface Best { fish: number; correct: number; answered: number; pace: number[]; at: string }
 export interface ProfileLite {
@@ -13,12 +14,14 @@ export interface ProfileLite {
   journey: Stars; unlockAll: boolean;
   /** every fish ever collected (the village is paid for with these; what was spent lives on the device, so a lost device never loses progress) */
   fishTotal?: number;
+  /** Arcade personal bests per kind (arcade.ts). The daily one is for the day in `at`. */
+  arcade?: Partial<Record<ArcadeKind, { score: number; bestCombo: number; at: string }>>;
 }
 export const newProfileLite = (): ProfileLite => ({ pinned: [], bests: {}, plays: { day: "", count: 0 }, theta: THETA0, nAnswers: 0, roll: [], rt0Samples: [], rt0Ms: DEFAULT_RT0_MS, xp: { day: "", xp: 0 }, days: [], mtcAt: [], lastMtc: [], journey: {}, unlockAll: false });
 
 void STAGES;
 /** Personal bests are kept per stage (`b1s2`), per daily challenge and per free-play mode. */
-export const bestKey = (cfg: Cfg) => cfg.stage ?? (cfg.mod ? "daily" : cfg.mode);
+export const bestKey = (cfg: Cfg) => cfg.arcade ? `arcade:${cfg.arcade.kind}` : cfg.stage ?? (cfg.mod ? "daily" : cfg.mode);
 export const DAILY_SOFT_CAP = CFGPOLICY.dailySoftCap;
 export const weekStart = (iso: string) => { const d = new Date(iso.slice(0, 10) + "T00:00:00Z"); const dow = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - dow); return d.toISOString().slice(0, 10); };
 export const weekDaysOf = (days: string[], nowIso: string) => days.filter((d) => d >= weekStart(nowIso)).length;
@@ -82,6 +85,17 @@ export function recordRun(cfg: Cfg, sum: Summary, factsIn: ReadonlyMap<string, F
       };
     }
   }
+  // ARCADE: fold the SAME re-simulated results the server just replayed (arcade.ts). Lives, combo, score and Game Over come from here, never from the browser.
+  let arcade: null | { kind: ArcadeKind; score: number; bestCombo: number; lives: number; maxLives: number; over: boolean; correct: number; wrong: number; misses: number; stars: 0 | 1 | 2 | 3; newBest: boolean; previousBest: number | null; rows: ArcadeRow[] } = null;
+  if (cfg.arcade) {
+    const st = tally(cfg.arcade, sum.results);
+    const prevA = prof.arcade?.[st.kind] ?? null;
+    const prevScore = prevA && (st.kind !== "daily" || prevA.at.slice(0, 10) === day) ? prevA.score : null; // the daily best is a per-day best
+    const complete = st.over || st.correct + st.wrong + st.misses >= Math.min(6, cfg.n);
+    const newBestA = complete && st.score > 0 && (prevScore === null || st.score > prevScore);
+    if (newBestA) prof.arcade = { ...(prof.arcade ?? {}), [st.kind]: { score: st.score, bestCombo: Math.max(st.bestCombo, prevA?.bestCombo ?? 0), at: nowIso } };
+    arcade = { kind: st.kind, score: st.score, bestCombo: st.bestCombo, lives: st.lives, maxLives: st.maxLives, over: st.over, correct: st.correct, wrong: st.wrong, misses: st.misses, stars: arcadeStars(st, cfg.n), newBest: newBestA, previousBest: prevScore, rows: st.rows };
+  }
   const result = {
     done: sum.done, answered: sum.answered, correct: sum.correct, timeouts: sum.timeouts, fish: sum.fish, bestStreak: sum.bestStreak, seconds: Math.round(sum.ticks / TICK_HZ), productiveSeconds: Math.round(sum.activeTicks / TICK_HZ),
     newBest, previousBest: prev ? { fish: prev.fish } : null, faster: fasterDetail.map((x) => x.k), fasterDetail, thawGained, mode: cfg.mode,
@@ -90,7 +104,7 @@ export function recordRun(cfg: Cfg, sum: Summary, factsIn: ReadonlyMap<string, F
     pace: sum.pace, facts: keys.map((k) => lightFact(after.get(k)!)), thetaBefore: theta0, thetaAfter: prof.theta,
     xp, xpToday: prof.xp.xp, xpCap: POLICY.xpDailyCap, weekDays: weekDaysOf(prof.days, nowIso), weekGoal: POLICY.weekGoalDays, todayCount: prof.plays.count, softCap: prof.plays.count >= DAILY_SOFT_CAP,
     fluentFacts: fluentCount(merged.values()), stage, helpUsed: sum.helpUsed, caught: sum.caught,
-    fishTotal: prof.fishTotal ?? 0, hits: sum.hits, tricks: sum.tricks, bags: sum.bags, bossDown: sum.bossDown, friend: sum.friend, sealed: sum.sealed,
+    arcade, fishTotal: prof.fishTotal ?? 0, hits: sum.hits, tricks: sum.tricks, bags: sum.bags, bossDown: sum.bossDown, friend: sum.friend, sealed: sum.sealed,
     /** questions answered right the FIRST time they were asked (a re-asked question never counts again): the child-facing number, out of the stage's own question count */
     firstTry: sum.firstTry, firstTryCorrect: sum.firstTryCorrect, asked: Math.min(sum.firstTry, cfg.n),
     // Mastery bridge: game evidence is LOW weight and flagged as a game (docs C section 9 proposes tutor 0.5 / delayed retention 0.35 / in-session 0.15).

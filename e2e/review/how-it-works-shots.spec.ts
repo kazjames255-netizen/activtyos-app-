@@ -47,7 +47,7 @@ test("00 fixture", async ({ browser }) => {
     await apiFetch(`${HUB}/students/${k.id}`, t, { method: "PUT", body: JSON.stringify({ subjects: [...(cur?.subjects ?? []), subject] }) });
   }
   await apiFetch(`${HUB}/students/${fx.kids[1].id}`, t, { method: "PUT", body: JSON.stringify({ yearGroup: "Year 1" }) });
-  // the lesson gets a worksheet (PDF + interactive version), exactly what the bulk loader leaves behind, so the worksheet picker has a real row
+  // the lesson gets an auto-marked worksheet quiz pointer, exactly what the worksheet-quiz converter leaves behind, so the worksheet picker has a real row
   execFileSync("npx", ["tsx", path.join(ROOT, "e2e/helpers/seedWorksheet.ts"), fx.tenantId, lesson.noteId, lesson.quizId], { cwd: path.join(ROOT, "server"), stdio: "pipe" });
   const nn = await apiFetch<{ topicId: string; title: string; body: string }>(`/api/learning-hub/notes/${lesson.noteId}?tenantId=${fx.tenantId}`, t);
   await apiFetch(`/api/learning-hub/notes/${lesson.noteId}?tenantId=${fx.tenantId}`, t, { method: "PUT", body: JSON.stringify({ topicId: nn.topicId, title: nn.title, body: nn.body ?? "", published: true }) });

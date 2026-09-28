@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GAME_TITLE, JUICE, lookOf } from "./theme";
 import { COSMETICS, STAGES, POLICY, biomeOf, isDeviceCos, stageById, type StageDef } from "./config";
 import { journeyView } from "./journey";
-import { type Gate, type Result, type SimEvent } from "./core";
+import { replay, type Gate, type Result, type SimEvent } from "./core";
+import { applyArcade, newArcade, tally, type ArcadeState } from "./arcade";
+import { loadHighScores, saveHighScore, type HighScore } from "./arcadeLocal";
 import { createAudio, type GameAudio } from "./engine/audio";
 import { Game, type Hud } from "./engine/game";
 import { HOST_NAME, HostAvatar, HostSkin } from "./characters/host";
@@ -19,6 +21,7 @@ import { JourneyMap } from "./ui/JourneyMap";
 import { StageCard } from "./ui/StageCard";
 import { Chapter } from "./ui/Chapter";
 import { StageSummary } from "./ui/StageSummary";
+import { ArcadeHud, ArcadeSummary } from "./ui/ArcadeUI";
 import { Wardrobe, equippedIds } from "./ui/Wardrobe";
 import { Village } from "./ui/Village";
 import { FINALE, PROLOGUE, StoryScene, type Panel } from "./ui/StoryScene";
@@ -79,6 +82,10 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
   const [story, setStory] = useState<{ panels: Panel[]; then: () => void } | null>(null);
   const sessionStart = useRef(0); const fbTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastOpts = useRef<StartOpts>({ mode: "solo" });
+  // ARCADE (arcade.ts): the live tally the HUD draws and that ends the run at Game Over. The server folds the same rules over its own re-simulation - this is display + the stop.
+  const [arc, setArc] = useState<ArcadeState | null>(null); const arcRef = useRef<ArcadeState | null>(null); const overTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [high, setHigh] = useState<HighScore[]>([]);
+  useEffect(() => { setHigh(loadHighScores()); }, []);
   const startedRef = useRef<Started | null>(null); startedRef.current = started;
 
   const calmRun = !!started?.cfg.calm;
@@ -112,6 +119,8 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
   // ── run flow ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   const beginRun = useCallback((s: Started, o: StartOpts) => {
     lastOpts.current = o; setStarted(s); setResult(null); setFb(null); setGate(null); setPaused(false); setError("");
+    if (overTimer.current) clearTimeout(overTimer.current);
+    arcRef.current = s.cfg.arcade ? newArcade(s.cfg.arcade) : null; setArc(arcRef.current);
     if (!sessionStart.current) sessionStart.current = Date.now();
     const calm = s.cfg.calm;
     setSoundOn(!calm && !prefs.muted);
@@ -142,8 +151,9 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
         const r = await backend.resumable();
         if (!r) { setScreen("map"); return; } // stale by the time we got here (finished / expired elsewhere) - fall back honestly
         const s = await backend.resume(r.sessionId);
-        lastOpts.current = { mode: "solo" };
+        lastOpts.current = { mode: s.cfg.arcade ? (s.cfg.arcade.kind === "daily" ? "arcade-daily" : s.cfg.arcade.kind === "endless" ? "arcade-endless" : "arcade") : "solo" };
         setStarted(s); setResult(null); setFb(null); setGate(null); setPaused(false); setError("");
+        arcRef.current = s.cfg.arcade ? tally(s.cfg.arcade, replay(s.seed, s.cfg, s.plan, s.checkpoint.log, s.checkpoint.endTick).results) : null; setArc(arcRef.current);
         if (!sessionStart.current) sessionStart.current = Date.now();
         const calm = s.cfg.calm;
         setSoundOn(!calm && !prefs.muted);
@@ -188,6 +198,11 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
       setLive(kind === "ok" ? T("sr_correct", { answer: r.answer }) : kind === "wrong" ? T("sr_detour", { fact: `${r.shown} = ${r.answer}` }) : T("fb_miss"));
       if (fbTimer.current) clearTimeout(fbTimer.current);
       if (kind === "wrong") fbTimer.current = setTimeout(() => setFb(null), 2600);
+      const A = startedRef.current?.cfg.arcade;
+      if (A && arcRef.current && !arcRef.current.over) {
+        const next = applyArcade(arcRef.current, r, A); arcRef.current = next; setArc(next);
+        if (next.over) { setLive(T("arc_over_live", { n: next.score })); overTimer.current = setTimeout(() => gameRef.current?.finishNow(), 1300); } // a beat to see the answer, then the run ends
+      }
     };
     H.current.event = (e) => {
       if (e.t === "breath") { gameRef.current?.setPaused(true); setPaused(true); setLive(T("breath_title")); }
@@ -205,6 +220,7 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
       try {
         const r = await backend.finish(s, log, endTick);
         if (r.friend && s.cfg.stage && !(prefs.friends ?? []).includes(s.cfg.stage)) setPrefs({ friends: [...(prefs.friends ?? []), s.cfg.stage] }); // the freed friend moves into the Igloo Village
+        if (r.arcade && r.arcade.score > 0) setHigh(saveHighScore({ score: r.arcade.score, kind: r.arcade.kind, at: new Date().toISOString() }));
         setResult(r); setScreen("summary");
         audioRef.current?.finish(r.newBest || (r.stage?.stars ?? 0) >= 2);
         setLive(T("sr_done", { correct: r.firstTryCorrect, answered: r.firstTry }));
@@ -283,10 +299,11 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
             </div>
           )}
           <div className="ps-stats">
-            {!calmRun && <span className="ps-chip2" data-testid="ps-fish"><IconFish /> <b>{hud.fish}</b>{hud.mult > 1 && <span aria-label={T("boost", { n: hud.mult })}>x{hud.mult}</span>}</span>}
+            {arc && <ArcadeHud T={T} arc={arc} />}
+            {!calmRun && !arc && <span className="ps-chip2" data-testid="ps-fish"><IconFish /> <b>{hud.fish}</b>{hud.mult > 1 && <span aria-label={T("boost", { n: hud.mult })}>x{hud.mult}</span>}</span>}
             {hud.rings && (hud.phase === "travel" || hud.phase === "feedback") && <span className="ps-chip2 ps-ringchip" data-testid="ps-rings" role="img" aria-label={T("rings_label", { n: hud.rings.got, of: hud.rings.of })}>{T("rings_chip", { n: hud.rings.got, of: hud.rings.of })}</span>}
             {hud.friend && !calmRun && <span className="ps-chip2" data-testid="ps-friend" role="img" aria-label={T("friend_helping")}>{T("friend_chip")}</span>}
-            {!calmRun && hud.streak >= 3 && <span className="ps-chip2" data-testid="ps-streak">{T("streak", { n: hud.streak })}</span>}
+            {!calmRun && !arc && hud.streak >= 3 && <span className="ps-chip2" data-testid="ps-streak">{T("streak", { n: hud.streak })}</span>}
             {hud.chase && <span className="ps-chip2" data-testid="ps-chase" role="img" aria-label={T("chase_label", { boss: T(`boss_${biomeOf(started!.cfg.biome).chaser}`) })} style={{ flexDirection: "column", alignItems: "stretch", minWidth: 150 }}><span style={{ fontSize: 12 }}>{T(`boss_${biomeOf(started!.cfg.biome).chaser}`)} · {T("boss_hp")}</span><span style={{ height: 8, borderRadius: 6, background: "rgba(255,255,255,.25)", overflow: "hidden" }}><i style={{ display: "block", height: "100%", width: `${Math.round(hud.bossFill * 100)}%`, background: "var(--ps-gold)", transition: "width .3s" }} /></span></span>}
             {(hud.hint || hud.shield || hud.star) && <span className="ps-power" aria-label={T("powerups")}>
               {hud.hint && <span><IconHint s={16} /> {T("pw_hint")}</span>}{hud.shield && <span><IconShield s={16} /> {T("pw_shield")}</span>}{hud.star && <span><IconStar s={16} /> {T("pw_star")}</span>}
@@ -335,7 +352,7 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
 
       {screen === "map" && (
         <>
-          <JourneyMap T={T} TP={TP} info={info} demo={backend.demo} onStage={openStage} onDaily={() => void play({ mode: "daily" })} onPit={() => void play({ mode: "pit" })} onFree={() => void play({ mode: forcedCalm ? "calm" : prefs.mode })}
+          <JourneyMap T={T} TP={TP} info={info} demo={backend.demo} onStage={openStage} onDaily={() => void play({ mode: "daily" })} onPit={() => void play({ mode: "pit" })} onFree={() => void play({ mode: forcedCalm ? "calm" : prefs.mode })} onArcade={(m) => void play({ mode: m })} high={high} calm={forcedCalm}
             onWardrobe={() => setScreen("wardrobe")} onVillage={() => setScreen("village")} fish={fishBal} onIceMap={() => setScreen("icemap")} onMtc={mtc ? () => setScreen("mtc") : null} onSettings={() => setScreen("settings")} onFinale={(info?.journey.stars["b5s4"] ?? 0) > 0 ? () => runFinale() : null}
             onUnlockAll={backend.demo ? () => { void (backend as Backend & { unlockAll?: () => Promise<void> }).unlockAll?.().then(refresh); } : null} onExit={onExit} />
           {error && <p role="alert" style={{ position: "absolute", insetInline: 0, bottom: 8, textAlign: "center", color: "#ffb4b4", fontWeight: 700, zIndex: 6 }}>{error}</p>}
@@ -346,7 +363,10 @@ export default function PenguinJourney({ backend, support, onExit, mtc = true, u
         <StageCard T={T} stage={stage} best={info.journey.stars[stage.id] ?? 0} unlocks={info.unlocks} loadout={prefs.loadout} setLoadout={(l) => setPrefs({ loadout: l })} firstOfBiome={stage.idx === 1} busy={false} onStart={startStage} onClose={() => setScreen("map")} />
       )}
       {(screen === "starting" || screen === "finishing") && <div className="ps-over" style={{ background: "transparent", pointerEvents: "none" }} aria-hidden="true">{screen === "finishing" && <HostAvatar pose="cheer" size={130} still={reduced} />}</div>}
-      {screen === "summary" && result && started && (
+      {screen === "summary" && result && started && result.arcade && (
+        <ArcadeSummary T={T} result={result} high={high} calm={calmRun} demo={backend.demo} onAgain={() => void play(lastOpts.current)} onMenu={() => { setResult(null); setScreen("map"); }} />
+      )}
+      {screen === "summary" && result && started && !result.arcade && (
         <StageSummary T={T} TP={TP} result={result} started={started} calm={calmRun} demo={backend.demo} restDue={restDue}
           nextLabel={finaleDue ? T("finale_btn") : T("next_stage")} onNext={finaleDue ? () => runFinale() : result.stage?.cleared && nextStageDef() ? () => { const n = nextStageDef()!; setResult(null); openStage(n); } : null}
           onAgain={() => void play(lastOpts.current)} onMap={() => leave(() => { setResult(null); setScreen("map"); })} onRest={() => leave(() => { setResult(null); setScreen("map"); })} />

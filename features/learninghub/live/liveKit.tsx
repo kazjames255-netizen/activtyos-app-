@@ -67,8 +67,9 @@ export function stageInfo(lesson: Lesson, now: number, isTutor: boolean): StageI
     const value = d >= 1 ? String(d) : h >= 1 ? `${h}h ${String(m).padStart(2, "0")}` : String(Math.max(1, Math.round(untilStart / 60_000)));
     const unit = d >= 1 ? (d === 1 ? tr("aKit_unitDay") : tr("aKit_unitDays")) : h >= 1 ? tr("aKit_unitToStart") : tr("aKit_unitMin");
     return {
-      stage, pill: tr("aKit_nextLesson"), cta: tr("aKit_opensIn", { span: humanSpan(t.opensMs - now) }), canJoin: false,
-      sub: tr("aKit_roomOpensAt", { time: fmtClock(new Date(t.opensMs).toISOString()) }),
+      // Early join: the room is never locked until 10 minutes before — a tutor can start any time, a family can join once the tutor is in.
+      stage, pill: tr("aKit_nextLesson"), cta: isTutor ? tr("aKit_startLesson") : tr("aKit_joinLesson"), canJoin: true,
+      sub: isTutor ? tr("aKit_earlySubTutor") : tr("aKit_earlySubFamily"),
       ring: { progress: Math.max(0.03, 1 - untilStart / (6 * 3_600_000)), value, unit, tone: "white", label: tr("aKit_startsIn", { span: humanSpan(untilStart) }) },
     };
   }

@@ -28,7 +28,10 @@ export function lookupHub(locale: LocaleCode, key: string): string | undefined {
 
 async function fetchOne(l: LocaleCode): Promise<void> {
   try {
-    const r = await fetch(`/i18n/hub/${l}`);
+    // A build id in the URL (next.config.ts) so a new deploy never reads the previous build's cached catalogue (a key added since would show raw,
+    // e.g. "hubhow.showMe", until the stale copy revalidated); in development the copy is never cached at all, so a key added while the dev server runs shows at once.
+    const v = process.env.NEXT_PUBLIC_BUILD_ID;
+    const r = await fetch(`/i18n/hub/${l}${v ? `?v=${v}` : ""}`, process.env.NODE_ENV === "production" ? undefined : { cache: "no-store" });
     if (!r.ok) throw new Error(String(r.status));
     loaded[l] = (await r.json()) as Cat;
   } catch {

@@ -57,7 +57,7 @@ async function newLessonSubject(page: Page, subject: string) {
   await expect(page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: subject })).toBeVisible({ timeout: 20_000 });
 }
 async function openNotes(page: Page) {
-  await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 30_000 });
   await openTab(page, /^Lessons/);
   await expect(page.locator("#hub-notes")).toBeVisible({ timeout: 20_000 });
 }
@@ -96,7 +96,7 @@ test.describe("the page on/off switch (Setup → Features)", () => {
     expect((await saved).ok()).toBe(true);
 
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 30_000 });
 
     // With the hub on, Setup gains a "Learning Hub" settings tab.
     await page.goto("/freelancer/setup?tab=hub");
@@ -127,24 +127,24 @@ test.describe("tutor builds topics and notes", () => {
   test("Home leads the tab strip, Live lessons follows; every panel has a tab", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
-    // The tutor strip is grouped: seven top tabs, Home first (the default), Lessons second, then a sub-tab row under most of them.
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 30_000 });
+    // The tutor strip is grouped: eight top tabs (Home, Students, Lessons, Flashcards, Entry tests, Quizzes, Homework, Messages), Home first (the default), then a sub-tab row under most of them.
     const tops = page.locator('[role="tab"][data-top]');
-    await expect(tops).toHaveCount(7);
+    await expect(tops).toHaveCount(8);
     await expect(tops.first()).toHaveAttribute("data-top", "home");
-    await expect(tops.nth(1)).toHaveAttribute("data-top", "lessons");
+    await expect(tops.nth(2)).toHaveAttribute("data-top", "lessons");
     await expect(tops.first()).toHaveAttribute("aria-selected", "true");
     // Every old panel is still one top tab (+ one sub-tab) away; nothing is hidden.
     // (Each top tab opens with its sub-sections in view: the side card at desktop width, the pill row elsewhere.)
     const reach = (sub: string) => page.locator(`[role="tab"][data-sub="${sub}"]`);
-    await tops.nth(1).click();
-    for (const sub of ["lessons", "live", "schedule", "teach", "tools", "flashcards"]) await expect(reach(sub)).toBeVisible();
+    await tops.nth(2).click();
+    for (const sub of ["lessons", "live", "progress", "tools"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="students"]').click();
     for (const sub of ["students", "enrol"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="quizzes"]').click();
-    for (const sub of ["quizzes", "starting", "newquiz"]) await expect(reach(sub)).toBeVisible();
+    for (const sub of ["quizzes", "newquiz"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="homework"]').click();
-    for (const sub of ["mark", "inbox", "set"]) await expect(reach(sub)).toBeVisible();
+    for (const sub of ["mark", "inbox", "results", "set"]) await expect(reach(sub)).toBeVisible();
     // Roving tabindex + arrow keys.
     await tops.first().focus();
     await page.keyboard.press("End");
@@ -175,15 +175,12 @@ test.describe("tutor builds topics and notes", () => {
     await page.getByRole("button", { name: "Save lesson" }).click();
 
     // The flat lesson list is secondary now — search reveals it (or "Browse all lessons").
-    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
-    const card = cardWith(page, noteTitle);
-    await expect(card).toBeVisible({ timeout: 20_000 });
-    await expect(card.getByText("worksheet.pdf")).toBeVisible(); // attachment chip on the card
-    await card.getByRole("button", { name: noteTitle, exact: true }).click(); // the whole card opens the reading view
+    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(noteTitle);
+    // The curriculum map's search lists a not-yet-placed lesson under "Found, but not yet placed on the map".
+    await expect(page.getByText("Found, but not yet placed on the map")).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: noteTitle, exact: true }).click(); // opens the reading view
     await expect(page.getByRole("heading", { name: noteTitle })).toBeVisible();
     await expect(page.getByRole("link", { name: /worksheet\.pdf/ })).toHaveAttribute("href", /\/api\/images\/.+sig=/);
-    await page.getByRole("button", { name: "All lessons" }).click();
-    await expect(cardWith(page, noteTitle)).toBeVisible();
   });
 
   test("a half-written note survives a tab switch and asks before it's discarded", async ({ page }) => {
@@ -210,13 +207,16 @@ test.describe("tutor builds topics and notes", () => {
     await openNotes(page);
     await expect(page.getByRole("button", { name: /Subjects and topics/ })).toHaveCount(0);
     await expect(page.getByTestId("curriculum-card")).toBeVisible({ timeout: 20_000 });
-    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
-    await expect(cardWith(page, noteTitle)).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(noteTitle);
+    await expect(page.getByRole("button", { name: noteTitle, exact: true })).toBeVisible({ timeout: 20_000 }); // listed under "not yet placed on the map"
   });
 
   test("a subject can't be created twice under different casing", async () => {
     const t = await token(accounts.freelancer);
-    const r = await raw("/api/learning-hub/topics", t, { method: "POST", body: JSON.stringify({ subject: subject.toUpperCase(), topic: "algebra" }) });
+    // Own the precondition (the inline editor no longer leaves a topic literally named "algebra" behind): create it, then re-create it shouted.
+    const first = await raw("/api/learning-hub/topics", t, { method: "POST", body: JSON.stringify({ subject, topic: "algebra" }) });
+    expect([201, 409]).toContain(first.status);
+    const r = await raw("/api/learning-hub/topics", t, { method: "POST", body: JSON.stringify({ subject: subject.toUpperCase(), topic: "ALGEBRA" }) });
     expect(r.status).toBe(409);
   });
 });
@@ -243,7 +243,7 @@ test.describe("tutor enrols a student (Students tab)", () => {
   test("find the child, pick their subjects, enrol — then pause and resume", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/freelancer/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 30_000 });
     await openTab(page, /Students/);
     await expect(page.locator("#hub-students")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Enrol a student/ }).first().click();
@@ -299,7 +299,7 @@ test.describe("a family reads it (the student side)", () => {
   test("sees published notes read-only, never drafts or edit controls", async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto("/custdash/learninghub");
-    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: /Teaching Hub|Learning Hub|My Classroom/ }).first()).toBeVisible({ timeout: 30_000 });
     const provider = page.getByLabel("Provider");
     if (await provider.isVisible().catch(() => false)) await provider.selectOption(accounts.freelancer.tenantId!);
     // A family with several children picks one in the header (remembered per provider).
@@ -308,16 +308,15 @@ test.describe("a family reads it (the student side)", () => {
     else if (await page.getByRole("radio", { name: childName }).isVisible().catch(() => false)) await page.getByRole("radio", { name: childName }).click();
 
     await openNotes(page);
-    await page.getByPlaceholder("Search lessons…").fill(noteTitle);
-    await expect(cardWith(page, noteTitle)).toBeVisible({ timeout: 20_000 });
+    // Families only see lessons assigned to their child (homework / a shared session), never the provider's whole library:
+    // this published-but-unassigned note must not appear, drafts never do, and there are no edit controls.
+    const search = page.getByPlaceholder(/Search (areas or )?lessons/);
+    if (await search.isVisible().catch(() => false)) await search.fill(noteTitle);
+    await expect(page.getByText(noteTitle)).toHaveCount(0);
     await expect(page.getByText(`Draft ${stamp}`)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /new lesson|add topic|enrol/i })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Edit/ })).toHaveCount(0);
     await expect(tabOf(page, /Students/)).toHaveCount(0); // the roster is a tutor's tool
-    // The reading view has a worksheet shelf; still no edit / delete.
-    await cardWith(page, noteTitle).getByRole("button", { name: noteTitle, exact: true }).click();
-    await expect(page.getByRole("link", { name: /worksheet\.pdf/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Edit|Delete/ })).toHaveCount(0);
   });
 
   test("a family can't write, and can't read a provider it isn't linked to", async () => {
@@ -361,8 +360,8 @@ test.describe("a staff member authors too", () => {
     await page.getByTestId("sb-add-text").click();
     await page.getByTestId("sb-block-0").locator("textarea").fill("Newton's laws in brief.");
     await page.getByRole("button", { name: "Save lesson" }).click();
-    await page.getByPlaceholder("Search lessons…").fill(staffNote);
-    await expect(cardWith(page, staffNote)).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(staffNote);
+    await expect(page.getByRole("button", { name: staffNote, exact: true })).toBeVisible({ timeout: 20_000 }); // under "not yet placed on the map"
     await setHub(accounts.company, false);
   });
 });

@@ -4,10 +4,11 @@
 // oceans, well-known physical features) - nothing invented or ambiguous. Server and client both import this file,
 // so the item bank marking the game and the item bank rendering it are the exact same data (BACKEND-PATTERN.md).
 import type { QuizItem } from "../quiz/core";
+import { COMPASS_EXTRA } from "./content.extra";
 
 const opt = (...pairs: [string, string][]) => pairs.map(([id, text]) => ({ id, text }));
 
-export const COMPASS_ITEMS: QuizItem[] = [
+const COMPASS_BASE: QuizItem[] = [
   // ── 8-point compass directions ──────────────────────────────────────────────────────────────────────────────
   { key: "cq-dir-1", topics: ["compass"], difficulty: 1, prompt: "Which direction is directly opposite North?", options: opt(["n", "North"], ["s", "South"], ["e", "East"], ["w", "West"]), correctId: "s", explanation: "North and South sit at opposite ends of the compass rose." },
   { key: "cq-dir-2", topics: ["compass"], difficulty: 1, prompt: "Which direction is directly opposite East?", options: opt(["w", "West"], ["e", "East"], ["n", "North"], ["s", "South"]), correctId: "w", explanation: "East and West are opposite points on the compass." },
@@ -68,3 +69,6 @@ export const COMPASS_ITEMS: QuizItem[] = [
   { key: "cq-phys-10", topics: ["physical"], difficulty: 2, prompt: "What do we call the starting point of a river?", options: opt(["source", "The source"], ["mouth", "The mouth"], ["delta", "The delta"], ["basin", "The basin"]), correctId: "source", explanation: "A river's source is where it begins, often in hills or mountains." },
   { key: "cq-phys-11", topics: ["physical"], difficulty: 2, prompt: "What do we call the point where a river flows into the sea?", options: opt(["mouth", "The mouth"], ["source", "The source"], ["tributary", "A tributary"], ["bank", "The bank"]), correctId: "mouth", explanation: "A river's mouth is where it finally reaches the sea, lake or another river." },
 ];
+
+/** The original bank plus the extra items (content.extra.ts): 100+ items. */
+export const COMPASS_ITEMS: QuizItem[] = [...COMPASS_BASE, ...COMPASS_EXTRA];

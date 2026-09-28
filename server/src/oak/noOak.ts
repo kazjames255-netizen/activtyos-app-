@@ -24,7 +24,7 @@ export function mentionsOak(s: string): boolean {
 /** Strings that are identifiers / URLs / storage paths rather than prose: not user-visible copy, left alone (counted separately). */
 export const isInternalString = (s: string) => !/\s/.test(s) && /[-_/.:]/.test(s) && /^[\w\-./:%?=&#~+@]{4,}$/.test(s) && s.toLowerCase() !== "oak";
 /** Object keys whose values are internal (ids, provenance, storage). */
-const SKIP_KEYS = new Set(["id", "tenantId", "source", "provider", "url", "oakDeck", "worksheetFile", "file", "fileId", "path", "storagePath", "sig", "hash", "createdBy", "topicId", "quizId", "noteId", "imported", "licence"]);
+const SKIP_KEYS = new Set(["id", "tenantId", "source", "provider", "url", "oakDeck", "file", "fileId", "path", "storagePath", "sig", "hash", "createdBy", "topicId", "quizId", "noteId", "imported", "licence"]);
 
 const SENT_SPLIT = /(?<=[.!?…])(\s+)|(\n+)/;
 function scrubOnce(s: string): string {

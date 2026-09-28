@@ -320,19 +320,35 @@ test.describe("live lessons", () => {
     const b = await send("POST", `${HUB}/lessons`, tutor, { ...body, title: `Later ${stamp}`, startsAt: new Date(now + 3 * 86_400_000).toISOString() });
     expect(b.status).toBe(201);
     l2 = b.body.id as string;
-    expect(b.body.joinable).toBe(false);
+    expect(b.body.joinable).toBe(true); // early join: a lesson days away is enterable
     await expectBell("Live lesson scheduled", `Fractions live ${stamp}`);
   });
 
-  test("the join window is enforced for tutor and family alike", async () => {
-    for (const [who, t, query] of [["tutor", tutor, ""], ["family", parent, qc(child1)]] as const) {
-      const r = await send("POST", `${HUB}/lessons/${l2}/join${query}`, t, {});
-      expect(r.status, who).toBe(409);
-      expect(r.body.code, who).toBe("outside_join_window");
-      expect(r.body.state, who).toBe("early");
-      expect(new Date(r.body.opensAt as string).getTime()).toBeLessThan(new Date(r.body.closesAt as string).getTime());
-      expect(r.body).not.toHaveProperty("token");
-    }
+  test("early join: a lesson days away can be started by the tutor at any time; the family follows once the tutor is in; ending it early leaves the lesson scheduled and unmoved", async () => {
+    const before = (await send("GET", `${HUB}/lessons`, tutor)).body as { lessons?: { id: string; startsAt: string }[] } | { id: string; startsAt: string }[];
+    const list = Array.isArray(before) ? before : (before.lessons ?? []);
+    const startsAt = list.find((x) => x.id === l2)?.startsAt;
+    expect(startsAt, "the later lesson is listed").toBeTruthy();
+    // A family can't walk into an empty room days early: the tutor has to start it first.
+    const wait = await send("POST", `${HUB}/lessons/${l2}/join${qc(child1)}`, parent, {});
+    expect(wait.status, JSON.stringify(wait.body)).toBe(409);
+    expect(wait.body.code).toBe("waiting_for_tutor");
+    expect(wait.body).not.toHaveProperty("token");
+    // The tutor can start it right now, however far away it is; the room is short-lived (not held open for days).
+    const t = await send("POST", `${HUB}/lessons/${l2}/join`, tutor, {});
+    expect(t.status, JSON.stringify(t.body)).toBe(200);
+    expect(t.body.isOwner).toBe(true);
+    expect(new Date(t.body.roomExpiresAt as string).getTime()).toBeLessThanOrEqual(Date.now() + 4 * 3600_000 + 60_000);
+    // ...and now the family can go in too.
+    const f = await send("POST", `${HUB}/lessons/${l2}/join${qc(child1)}`, parent, {});
+    expect(f.status, JSON.stringify(f.body)).toBe(200);
+    expect(f.body.isOwner).toBe(false);
+    // Ending it BEFORE its scheduled start leaves the lesson scheduled for its real time — nothing to re-schedule.
+    expect((await send("POST", `${HUB}/lessons/${l2}/end`, tutor, {})).status).toBe(200);
+    const after = (await send("GET", `${HUB}/lessons`, tutor)).body as { lessons?: { id: string; startsAt: string; status: string }[] } | { id: string; startsAt: string; status: string }[];
+    const row = (Array.isArray(after) ? after : (after.lessons ?? [])).find((x) => x.id === l2)!;
+    expect(row.status).toBe("scheduled");
+    expect(row.startsAt).toBe(startsAt);
   });
 
   test("inside the window: tokens for the tutor (owner) and the enrolled family only", async () => {

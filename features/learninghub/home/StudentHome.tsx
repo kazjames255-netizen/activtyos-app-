@@ -18,6 +18,7 @@ import { Attainment } from "../progress/Attainment";
 import { useStudentHome } from "./useHomeData";
 import { AskTutorLink, useFamily, useSupport } from "../family/FamilyContext";
 import { openLink } from "../family/link";
+import { WatchAlongButton } from "../family/WatchAlong";
 import { kidBand } from "../family/KidMode";
 import { PARENT_COPY, overdueVerdict } from "../family/parentCopy";
 import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
@@ -198,6 +199,10 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           </div>
           <div className="w-[340px] flex-none rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm sm:p-5">
             <NextLessonHero embedded lesson={next} isTutor={false} attendees={[]} extraCount={Math.max(0, d.upcoming.length - 1)}
+              alsoUp={next ? undefined : [
+                ...(d.step ? [{ key: "step", title: d.step.a.title, note: d.step.kicker, onClick: () => openLink({ kind: "quiz", id: d.step!.a.id }, { tab: d.step!.go }) }] : []),
+                ...d.todo.slice(0, 2).map((h) => ({ key: h.id + h.submission.id, title: h.title, note: h.st.label, onClick: () => go("homework") })),
+              ].slice(0, 3)}
               topicLabel={next?.topicId && topicById.get(next.topicId) ? topicLabel(topicById.get(next.topicId)!) : undefined} onGo={() => go("live")} />
           </div>
         </div>
@@ -258,6 +263,7 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
                       <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{h.title}</span><span className="block text-[12px] font-bold" style={{ color: tone.fg }}>{h.st.label}</span></span>
                       <Icon name="chevronRight" size={16} className="text-[var(--ink-3)]" />
                     </button>
+                    {!kidMode && h.notes.find((n) => n.interactive) && <WatchAlongButton noteId={h.notes.find((n) => n.interactive)!.id} className="mt-0.5" />}
                   </li>
                 );
               })}

@@ -56,7 +56,12 @@
   "readScript": "Citește tot textul",
   "noVoice": "Nu există voce pentru această limbă pe acest dispozitiv: doar subtitrări.",
   "tryNow": "Încearcă acum →",
-  "nextVideo": "Videoclipul următor: {title}"
+  "nextVideo": "Videoclipul următor: {title}",
+  "tourTitle": "Un tur rapid",
+  "tourTag": "Principalele locuri, unul după altul. Aproximativ {s} secunde.",
+  "clipHeading": "O privire rapidă",
+  "clipTag": "O privire rapidă. Aproximativ {s} secunde.",
+  "clipFull": "▶ Urmărește filmul întreg"
  },
  "scripts": {
   "tutor:std:main": {

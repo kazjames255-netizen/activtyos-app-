@@ -188,7 +188,7 @@ async function kidsFor(ctx: HubCtx, only: ChildRef | null): Promise<Kid[]> {
   return Promise.all(enrols.map(async (e) => {
     const cfg = await cfgOf(e.franchiseId ?? null);
     const dob = dobs.get(e.childId) ?? null;
-    const facts = { yearGroup: effectiveYearGroup(e, dob, cfg.yearGroups), age: ageInYears(dob) };
+    const facts = { yearGroup: effectiveYearGroup(e, dob, cfg.yearGroups, new Date(), cfg.yearAutoAdvance), age: ageInYears(dob) };
     return { childId: e.childId, franchiseId: e.franchiseId ?? null, subjects: e.subjects ?? [], fit: (a: Audience) => audienceFit(a, facts) };
   }));
 }
@@ -381,7 +381,7 @@ async function childOverlay(ctx: HubCtx, child: ChildRef, list: Row[], all: Row[
     if (!a.baselineReset) active.add(a.subject.toLowerCase());
   }
   const cfg = await hubConfig(ctx.tenantId, child.franchiseId);
-  const facts = await childFacts(child, cfg.yearGroups);
+  const facts = await childFacts(child, cfg);
   // Is there a published diagnostic FOR THIS CHILD (their scope + audience) for each subject? Only then can a
   // quiz honestly be "locked behind" it.
   const diagSubjects = new Set(all.filter((a) => a.type === "diagnostic" && a.published !== false && fitsChild(a.franchiseId, child) && audienceFit(normAudience(a.audience), facts) !== "no" && diagnosticAssignedTo(a, child.childId)).map((a) => a.subject.toLowerCase()));

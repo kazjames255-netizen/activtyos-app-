@@ -51,14 +51,18 @@ export function readToken(t: unknown): { tenantId: string; email: string; scope:
 export const unsubUrl = (tenantId: string, email: string, scope: Scope, locale: LocaleCode = "en") => `${apiBase()}/api/hub-digest/unsubscribe?u=${encodeURIComponent(makeToken(tenantId, email, scope))}&l=${locale}`;
 export const prefDocId = (tenantId: string, email: string) => `${tenantId}__${email.trim().toLowerCase()}`;
 
-/** /custdash/learninghub?tab=…&child=…&open=hw:<id> — the shape the hub reads (features/learninghub/family/link.ts). */
-export function hubLink(childId: string, o?: { tab?: string; hw?: string }): string {
+/** /custdash/learninghub?tab=…&child=…&open=hw:<id> — the shape the hub reads (features/learninghub/family/link.ts).
+ *  `lesson` + `watch`: the parent's WATCH-ALONG link, `?tab=notes&child=…&open=lesson:<noteId>&watch=1` — the child's own lesson, view-only. */
+export function hubLink(childId: string, o?: { tab?: string; hw?: string; lesson?: string; watch?: boolean }): string {
   const q = new URLSearchParams();
-  if (o?.tab) q.set("tab", o.tab);
+  if (o?.lesson && o.watch) q.set("tab", "notes"); else if (o?.tab) q.set("tab", o.tab);
   q.set("child", childId);
-  if (o?.hw) q.set("open", `hw:${o.hw}`);
+  if (o?.lesson && o.watch) { q.set("open", `lesson:${o.lesson}`); q.set("watch", "1"); }
+  else if (o?.hw) q.set("open", `hw:${o.hw}`);
   return `${webBase()}/custdash/learninghub?${q}`;
 }
+/** A lesson id that is safe to put in a link (the hub only accepts `[A-Za-z0-9_-]{1,100}`). */
+const safeId = (id: unknown): string | undefined => (typeof id === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(id) ? id : undefined);
 
 // ── time helpers (UK wall clock, like every other sweep) ───────────────────
 export function ukParts(d: Date): { date: string; minutes: number; dow: number } {
@@ -78,7 +82,7 @@ export function digestDue(now: Date): boolean { const u = ukParts(now); return u
 const day = (iso: string | null | undefined) => (iso ? ukParts(new Date(iso)).date : "");
 
 // ── data shapes (already loaded; see hubDigestStore.ts) ────────────────────
-export interface HwRow { id: string; title: string; dueAt: string; createdAt: string; assignedChildIds: string[]; franchiseId: string | null }
+export interface HwRow { id: string; title: string; dueAt: string; createdAt: string; assignedChildIds: string[]; franchiseId: string | null; /** Lessons attached to the homework (hubNotes ids), for the parent's "Watch along" link. */ noteIds?: string[] }
 export interface SubRow { status: "assigned" | "submitted" | "marked"; submittedAt: string | null; mark: { score: number; max: number; markedAt?: string } | null }
 export interface AttemptRow { title: string; subject: string; pct: number | null; passMarkPct: number; status: string; type: string; submittedAt: string | null }
 export interface LessonRow { id: string; title: string; startsAt: string; status: string; childIds: string[]; attendance: Record<string, string> }
@@ -116,7 +120,7 @@ export function buildDigest(td: TenantData, e: EnrolRow, now: Date): DigestData 
     const status = s?.status ?? "assigned";
     const touched = inWeek(h.createdAt) || inWeek(s?.submittedAt) || inWeek(s?.mark?.markedAt) || (status === "assigned" && Date.parse(h.dueAt) >= from && Date.parse(h.dueAt) <= to);
     if (!touched) continue;
-    homework.push({ title: h.title, status, dueAt: h.dueAt, ...(status === "marked" && s?.mark ? { score: s.mark.score, max: s.mark.max } : {}) });
+    homework.push({ title: h.title, status, dueAt: h.dueAt, ...(status === "marked" && s?.mark ? { score: s.mark.score, max: s.mark.max } : {}), ...(status === "assigned" && safeId(h.noteIds?.[0]) ? { noteId: safeId(h.noteIds?.[0]) } : {}) });
   }
   homework.sort((a, b) => a.title.localeCompare(b.title));
 
@@ -244,7 +248,8 @@ export async function processDigests(td: TenantData, o: RunOpts): Promise<Item[]
     if (td.muted.has(email)) { out.push({ ...it, status: "skipped", reason: "parent_muted_learning_emails" }); continue; }
     const data = buildDigest(td, e, o.now);
     if (!data) { out.push({ ...it, status: "skipped", reason: "nothing_to_report" }); continue; }
-    const r = renderDigest(data, locale, { hub: hubLink(e.childId), stop: unsubUrl(td.tenantId, email, "digest", locale) });
+    const watchNote = data.homework.find((x) => x.noteId)?.noteId;
+    const r = renderDigest(data, locale, { hub: hubLink(e.childId), ...(watchNote ? { watch: hubLink(e.childId, { lesson: watchNote, watch: true }) } : {}), stop: unsubUrl(td.tenantId, email, "digest", locale) });
     const key = `digest:${td.tenantId}:${e.childId}:${wk}`;
     out.push(await deliver(o, key, { tenantId: td.tenantId, childId: e.childId, kind: "digest", capKey: `digest:${td.tenantId}:${e.childId}:${wk}`, cap: MAX_DIGESTS_PER_WEEK }, email, r, it, td.provider, unsubUrl(td.tenantId, email, "digest", locale)));
   }
@@ -273,7 +278,8 @@ export async function processNudges(td: TenantData, o: RunOpts): Promise<Item[]>
       const it = { childId, childName: firstName(e.childName), kind, homeworkId: h.id, locale };
       if (td.optOut.has(`nudge:${email}`)) { out.push({ ...it, status: "skipped", reason: "parent_opted_out" }); continue; }
       if (td.muted.has(email)) { out.push({ ...it, status: "skipped", reason: "parent_muted_learning_emails" }); continue; }
-      const r = renderNudge(kind, { childName: firstName(e.childName), provider: td.provider, title: h.title, dueAt: h.dueAt }, locale, { hub: hubLink(childId, { tab: "homework", hw: h.id }), stop: unsubUrl(td.tenantId, email, "nudge", locale) });
+      const watchNote = safeId(h.noteIds?.[0]);
+      const r = renderNudge(kind, { childName: firstName(e.childName), provider: td.provider, title: h.title, dueAt: h.dueAt }, locale, { hub: hubLink(childId, { tab: "homework", hw: h.id }), ...(watchNote ? { watch: hubLink(childId, { lesson: watchNote, watch: true }) } : {}), stop: unsubUrl(td.tenantId, email, "nudge", locale) });
       out.push(await deliver(o, `${capKey}:${kind}`, { tenantId: td.tenantId, childId, kind, homeworkId: h.id, capKey, cap: MAX_NUDGES_PER_HOMEWORK }, email, r, it, td.provider, unsubUrl(td.tenantId, email, "nudge", locale)));
     }
   }

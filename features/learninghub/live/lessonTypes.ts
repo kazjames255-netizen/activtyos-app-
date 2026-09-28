@@ -42,6 +42,8 @@ export interface Lesson {
   held?: boolean;
   /** Family rows: the tutor ended (or reopened) the lesson and hasn't come back in — families can't (re)join until they do. */
   waitingForTutor?: boolean;
+  /** "in_person" = scheduled to run with the children beside the tutor: no room, nothing to join (server/src/routes/hub/lessonsApi.ts). Absent = video. */
+  mode?: "video" | "in_person";
 }
 
 export interface JoinInfo {
@@ -100,14 +102,14 @@ export function classifyJoinError(status: number | undefined, message: string, c
     case "waiting_for_tutor": return "waiting";
     case "child_required": return "child";
     case "not_your_lesson": return "forbidden";
-    case "outside_join_window": return "not_open";
+    case "outside_join_window": return "ended"; // the window only ever closes now — there is no "too early"
     case "lesson_closed": return "ended";
     case "video_unavailable": return "unavailable";
   }
   if (status === 503 || /video_unavailable|unavailable/i.test(message)) return "unavailable";
   if (status === 410 || /\bended\b|cancel|has closed/i.test(message)) return "ended";
   if (status === 404) return "forbidden"; // a lesson that isn't yours (a second guardian) — retrying can never work
-  if (status === 403 || status === 409 || status === 425 || /window|not open|too early|opens/i.test(message)) return /not.*enrol|forbidden/i.test(message) ? "forbidden" : "not_open";
+  if (status === 403 || status === 409 || status === 425 || /window|not open|too early|opens/i.test(message)) return /not.*enrol|forbidden/i.test(message) ? "forbidden" : "other"; // "not_open" (too early) no longer exists: early join is allowed
   return "other";
 }
 

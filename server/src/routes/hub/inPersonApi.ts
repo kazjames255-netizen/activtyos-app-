@@ -42,11 +42,13 @@ export const hubInPersonApi = Router();
 interface SessionDoc {
   tenantId: string; franchiseId: string | null; mode: "in_person";
   tutorUid: string; tutorName: string; title: string; topicId: string | null;
-  startsAt: string; durationMins: number; childIds: string[]; status: "live" | "ended" | "cancelled";
+  startsAt: string; durationMins: number; childIds: string[]; status: "scheduled" | "live" | "ended" | "cancelled";
   roomName: null; roomUrl: null; notes: string; videos: unknown[]; noteIds: string[]; groupIds: string[];
   attendance: Record<string, string>; tutorJoinedAt: string | null; endedAt: string | null;
   /** The lesson (hubNotes id) / quiz (hubAssessments id) the tutor set out to run. */
   noteId?: string | null; assessmentId?: string | null;
+  /** Scheduled ahead from the New session dialog (POST /lessons {mode:"in_person"}); status stays "scheduled" until POST /in-person/sessions/:id/start. */
+  scheduledAhead?: boolean;
   /** Oral warm-up tallies the tutor tapped in per child (class-level practice: nothing here feeds mastery). */
   warmup?: { childId: string; correct: number; total: number }[];
   createdBy: string; createdAt: string; updatedAt: string;
@@ -57,12 +59,13 @@ const CLASS_MAX = 30;
 const digest = (...parts: string[]) => createHash("sha256").update(parts.join("\u0000")).digest("hex").slice(0, 40);
 
 /** A live/ended in-person session this tutor may act on (tenant + scope), else a refusal has been sent. */
-async function sessionFor(ctx: HubCtx, id: string, res: Response, write: boolean): Promise<Session | null> {
+async function sessionFor(ctx: HubCtx, id: string, res: Response, write: boolean, allowScheduled = false): Promise<Session | null> {
   const nf = () => { res.status(404).json({ error: "Session not found" }); return null; };
   if (!okId(id)) return nf();
   const snap = await lessonsCol.doc(id).get();
   if (!snap.exists || snap.get("tenantId") !== ctx.tenantId || snap.get("mode") !== "in_person" || !canSeeStudent(ctx, snap.get("franchiseId"))) return nf();
   if (write && !canWriteRow(ctx, snap.get("franchiseId"))) { res.status(403).json({ error: "That session belongs to head office" }); return null; }
+  if (write && !allowScheduled && snap.get("status") === "scheduled") { res.status(409).json({ error: "This in-person lesson hasn't started yet — press Start in-person session first", code: "not_started" }); return null; }
   return { id: snap.id, ...(snap.data() as SessionDoc) };
 }
 
@@ -178,7 +181,7 @@ hubInPersonApi.get("/in-person/sessions", async (req, res) => {
   if (!ctx || !requireEdit(ctx, res)) return;
   const status = req.query.status === "live" || req.query.status === "ended" ? req.query.status : null;
   const snap = await lessonsCol.where("tenantId", "==", ctx.tenantId).where("mode", "==", "in_person").get();
-  const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as SessionDoc) })).filter((s) => canSeeStudent(ctx, s.franchiseId) && s.status !== "cancelled" && (!status || s.status === status))
+  const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as SessionDoc) })).filter((s) => canSeeStudent(ctx, s.franchiseId) && s.status !== "cancelled" && s.status !== "scheduled" && (!status || s.status === status))
     .sort((a, b) => b.startsAt.localeCompare(a.startsAt)).slice(0, 20);
   const names = await namesOf(ctx, [...new Set(rows.flatMap((s) => s.childIds))]);
   res.json(rows.map((s) => sessionOut(s, names)));
@@ -189,6 +192,33 @@ hubInPersonApi.get("/in-person/sessions/:id", async (req, res) => {
   if (!ctx || !requireEdit(ctx, res)) return;
   const s = await sessionFor(ctx, req.params.id, res, false);
   if (!s) return;
+  res.json({ ...sessionOut(s, await namesOf(ctx, s.childIds)), results: await resultsOf(ctx, s.id) });
+});
+
+// POST /in-person/sessions/:id/start — the tutor runs a lesson they scheduled ahead (POST /lessons {mode:"in_person"}): the row goes
+// from `scheduled` to `live` (attendance starts as "everyone chosen", like a session begun on the spot) and the lesson / quiz they
+// attached is what the session opens with. Idempotent: an already-live session comes back unchanged.
+hubInPersonApi.post("/in-person/sessions/:id/start", async (req, res) => {
+  const ctx = await resolveCtx(req, res);
+  if (!ctx || !requireEdit(ctx, res)) return;
+  const s = await sessionFor(ctx, req.params.id, res, true, true);
+  if (!s) return;
+  if (s.status === "cancelled") { res.status(409).json({ error: "This lesson was cancelled", code: "lesson_closed" }); return; }
+  if (s.status === "scheduled") {
+    const now = nowIso();
+    const patch = {
+      status: "live" as const, tutorJoinedAt: now, updatedAt: now, tutorUid: ctx.uid, tutorName: ctx.name || s.tutorName,
+      attendance: Object.fromEntries(s.childIds.map((c) => [c, now])), noteId: s.noteId ?? s.noteIds?.[0] ?? null, assessmentId: s.assessmentId ?? null,
+    };
+    // Compare-and-set on status so a double tap (or two devices) starts it once.
+    const ref = lessonsCol.doc(s.id);
+    const won = await db.runTransaction(async (tx) => { const cur = await tx.get(ref); if (cur.get("status") !== "scheduled") return false; tx.update(ref, patch); return true; });
+    if (won) pingHub(ctx.tenantId, "hubLessons");
+    const fresh = await sessionFor(ctx, s.id, res, false);
+    if (!fresh) return;
+    res.json({ ...sessionOut(fresh, await namesOf(ctx, fresh.childIds)), results: await resultsOf(ctx, fresh.id) });
+    return;
+  }
   res.json({ ...sessionOut(s, await namesOf(ctx, s.childIds)), results: await resultsOf(ctx, s.id) });
 });
 
@@ -302,12 +332,12 @@ async function gateFor(ctx: HubCtx, child: ChildRef, asm: AssessmentDoc & { id: 
   const out = (skip: Skip | null) => ({ skip, granted, finished: finished.length });
   // See attempts.ts's own start-attempt check: a lesson's own exit quiz (`asm.lessonId` set) is exempt — whatever
   // already let this child into the lesson is the real gate, not the quiz's inherited `audience`.
-  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg.yearGroups)) === "no") return out({ code: "not_for_this_child", message: `${asm.title} isn't set for ${name}'s year group or age.` });
+  if (!asm.lessonId && audienceFit(normAudience(asm.audience), await childFacts(child, cfg)) === "no") return out({ code: "not_for_this_child", message: `${asm.title} isn't set for ${name}'s year group or age.` });
   const subjectKey = asm.subject.toLowerCase();
   if (asm.type === "diagnostic" && diag.active.has(subjectKey)) return out({ code: "diagnostic_done", message: `${name} has already taken the ${asm.subject} diagnostic. Reset their baseline first to record another.` });
   if (asm.type === "quiz" && cfg.requireDiagnostic && !diag.taken.has(subjectKey) && !child.waived.includes(subjectKey)) {
     const all = [...(await assessmentRows(ctx.tenantId)).values()];
-    const facts = await childFacts(child, cfg.yearGroups);
+    const facts = await childFacts(child, cfg);
     if (all.some((x) => x.type === "diagnostic" && x.published !== false && x.subject.toLowerCase() === subjectKey && fitsChild(x.franchiseId, child) && audienceFit(normAudience(x.audience), facts) !== "no" && diagnosticAssignedTo(x, child.childId))) {
       return out({ code: "diagnostic_required", message: `${name} needs to take the ${asm.subject} diagnostic first.` });
     }

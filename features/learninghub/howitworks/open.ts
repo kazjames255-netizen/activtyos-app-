@@ -1,6 +1,6 @@
 import type { HowBand, HowRole } from "./types";
 
-export interface OpenDetail { role?: HowRole; /** Child explainer band (ks1 = the extra-simple one). */ band?: HowBand; /** Which topic video (tutor library: roster, lessons, tools, live, homework, quizzes, progress; parent / child: homework). Tutors with no topic get the chooser. */ topic?: string; /** Scene id to start on. */ scene?: string; /** Start playing straight away (a page's Watch button): no second play press. */ autoplay?: boolean }
+export interface OpenDetail { role?: HowRole; /** Child explainer band (ks1 = the extra-simple one). */ band?: HowBand; /** Which topic video (tutor library: roster, lessons, tools, live, homework, quizzes, progress; parent / child: homework). Tutors with no topic get the chooser. */ topic?: string; /** Scene id to start on. */ scene?: string; /** Start playing straight away (a page's Watch button): no second play press. */ autoplay?: boolean; /** A "Show me" clip id (scripts/clips.ts CLIPS): a few scenes of a film, about 15 seconds. */ clip?: string; /** The short first-visit tour of the role (scripts/clips.ts TOURS). */ tour?: boolean }
 export const hiwEvent = "aos:how-it-works";
 // The window itself is lazy-loaded: a click that lands before it has mounted is remembered for a few seconds and replayed by the host on mount.
 let pending: { d: OpenDetail; t: number } | null = null;

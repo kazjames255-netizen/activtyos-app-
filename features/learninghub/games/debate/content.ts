@@ -1,4 +1,5 @@
 import { shuffleOptionIds, type QuizItem } from "../quiz/core";
+import { DEBATE_EXTRA } from "./content.extra";
 
 // DEBATE KEEP — persuasive writing / argumentation (KS2-KS3). Genuinely the same mechanic as Compass Quest / Museum
 // Vault / Colour Lab (a seeded multiple-choice item bank, server-marked) so it shares that plumbing rather than
@@ -23,7 +24,7 @@ function structure(key: string, topic: string, difficulty: 1 | 2 | 3, prompt: st
   return { key, topics: [topic], difficulty, prompt, options, correctId, explanation };
 }
 
-export const DEBATE_ITEMS: QuizItem[] = [
+const DEBATE_BASE: QuizItem[] = [
   tech("db_t1", "rhetorical_question", 1, "“Do you really want to be the reason our playground stays broken?” — which technique is this?", TECH_NAME.rhetorical_question!, [TECH_NAME.statistic!, TECH_NAME.anecdote!, TECH_NAME.repetition!], "A rhetorical question is asked to make the reader think, not to get an answer — it pulls them into agreeing."),
   tech("db_t2", "rule_of_three", 1, "“This plan is cheaper, safer and faster than the old one.” — which technique is this?", TECH_NAME.rule_of_three!, [TECH_NAME.expert_opinion!, TECH_NAME.hyperbole!, TECH_NAME.direct_address!], "Three points in a row (cheaper, safer, faster) sound more complete and more convincing than one or two — this is the rule of three."),
   tech("db_t3", "emotive_language", 1, "“It broke my heart to see the abandoned animals shivering in the cold.” — which technique is this?", TECH_NAME.emotive_language!, [TECH_NAME.statistic!, TECH_NAME.counter_argument!, TECH_NAME.rule_of_three!], "Words like ‘broke my heart’ and ‘shivering’ are chosen to make the reader FEEL something, not just know a fact — that's emotive language."),
@@ -47,3 +48,6 @@ export const DEBATE_ITEMS: QuizItem[] = [
   structure("db_o3", "structure-essay", 3, "A persuasive essay is being planned. Which of these belongs RIGHT AFTER the writer states their clear stance?", "The main case: points and evidence that support that stance.", ["The opening hook that first grabbed the reader's attention.", "The closing call to action.", "A counter-argument from the other side."], "A persuasive essay hooks the reader, states its stance, then makes its case — the counter-argument and conclusion come later, once the case has been made."),
   structure("db_o4", "structure-essay", 3, "Where does answering the OBVIOUS objection (a counter-argument) usually belong in a persuasive essay?", "After the writer's main case has been made, before the conclusion.", ["Before the writer states their own stance.", "As the very first sentence.", "It should never appear — it would weaken the argument."], "Naming and answering the other side's best point after making your own case shows you've thought it through — and makes the conclusion that follows feel earned, not one-sided."),
 ];
+
+/** The original bank plus the extra items (content.extra.ts): 100+ items. */
+export const DEBATE_ITEMS: QuizItem[] = [...DEBATE_BASE, ...DEBATE_EXTRA];

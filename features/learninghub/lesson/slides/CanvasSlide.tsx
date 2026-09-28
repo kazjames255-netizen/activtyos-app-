@@ -313,7 +313,7 @@ export function CanvasSlide({ block, reveal = 0, edit = false, onChange, onPick,
             ...(el.delay && !hidden ? { "--dl": `${el.delay}s` } : {}),
           };
           const sr = { "data-sr": hidden ? "off" : fresh ? "fresh" : "on", ...(auto ? { "data-sr-auto": "" } : {}) } as Record<string, string>;
-          if (el.k === "img") return <ImgEl key={i} el={el} ar={block.w / block.h} pos={pos} sr={sr} th={th} lib={lib} edit={edit} onDown={(e) => beginDrag(e, i, "move")} />;
+          if (el.k === "img") return <ImgEl key={i} el={el} ar={block.w / block.h} pos={pos} sr={sr} th={th} lib={lib} edit={edit} labelled={hasTextOn(block.els, i)} onDown={(e) => beginDrag(e, i, "move")} />;
           if (el.k === "shape") return <ShapeEl key={i} el={el} pos={pos} sr={sr} th={th} block={block} u={u} id={`${uid}-${i}`} />;
           return (
             <TextEl key={`${i}-${ver[i] ?? 0}`} el={el} pos={pos} sr={sr} th={th} themed={themed} u={u} edit={edit} r={r} capH={roomBelow(block.els, i)}
@@ -393,19 +393,32 @@ const GENERIC_STOCK_SIDS = new Set([
   // because this occurrence went through our own storage re-encode (resize/webp) before it could be hashed the same way.
 ]);
 
-function ImgEl({ el, ar, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; ar: number; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; lib: Lib | null; edit: boolean; onDown: (e: RPointerEvent) => void }) {
+/** Text written ON a small picture (a speech bubble, a labelled box): the whole text box sits inside the picture's stored frame, so the words were placed against
+ *  that (possibly stretched) frame. Big pictures (backdrops, panels, photos with a caption strip) are left to the normal fit. */
+function hasTextOn(els: CanvasEl[], i: number): boolean {
+  const g = els[i];
+  if (g.w * g.h > 0.45) return false;
+  const tol = 0.01;
+  return els.some((t, j) => j > i && t.k === "text" && t.paras.some((p) => p.runs.some((r) => /\S/.test(r.t)))
+    && t.x >= g.x - tol && t.x + t.w <= g.x + g.w + tol && t.y >= g.y - tol && t.y + t.h <= g.y + g.h + tol);
+}
+
+function ImgEl({ el, ar, pos, sr, th, lib, edit, labelled = false, onDown }: { el: CanvasImg; ar: number; pos: CSSProperties; sr: Record<string, string>; th?: ElTheme; lib: Lib | null; edit: boolean; labelled?: boolean; onDown: (e: RPointerEvent) => void }) {
   if (th?.panel) return <div aria-hidden="true" {...sr} style={{ ...pos, background: "var(--sb-card)", borderRadius: "2.4cqw", boxShadow: "0 .3cqw 1.6cqw var(--sb-glow), inset 0 0 0 .18cqw var(--sb-a-line)" }} />;
   if (th?.outlineImg) return <div aria-hidden="true" {...sr} style={{ ...pos, background: th.fill, borderRadius: th.outlineImg === "dot" ? "50%" : "999px", boxShadow: "0 .25cqw 1cqw var(--sb-glow), inset 0 0 0 .1cqw var(--sb-a-line)" }} />;
   const pic = el.picId ? lib?.byId[el.picId] : undefined;
   const c = el.crop;
   // Aspect lock for CROPPED pictures: the crop window (in the picture's own pixels) is drawn to fill the box, so a box whose shape differs from the window's
   // squeezes / stretches it. Once the picture's natural size is known, a window that drifts > 6% from the box shape is fitted inside the box (contain), centred.
+  // Except a LABELLED picture (text sits on it): the words were placed against the stretched frame the author drew, so the frame is kept (speech bubbles: the
+  // fitted bubble came out smaller than its own sentence and its outline cut through the text — calibration cluster overlap:text-img). The same for an uncropped
+  // labelled picture: `contain` letterboxed a stretched speech-bubble outline inside its frame, so its sentence stuck out of it (clean-sample misses).
   const [nat, setNat] = useState<[number, number] | null>(null);
   let fw = 1, fh = 1;
   if (c && nat) {
     const ra = (nat[0] * Math.max(0.05, 1 - c[0] - c[2])) / (nat[1] * Math.max(0.05, 1 - c[1] - c[3]));
     const ba = (el.w * ar) / Math.max(1e-6, el.h);
-    if (ra > 0 && ba > 0 && Math.abs(ra / ba - 1) > 0.06) { if (ra > ba) fh = ba / ra; else fw = ra / ba; }
+    if (!labelled && ra > 0 && ba > 0 && Math.abs(ra / ba - 1) > 0.06) { if (ra > ba) fh = ba / ra; else fw = ra / ba; }
   }
   const sx = c ? 1 / Math.max(0.05, 1 - c[0] - c[2]) : 1, sy = c ? 1 / Math.max(0.05, 1 - c[1] - c[3]) : 1;
   const genericStock = !!el.sid && GENERIC_STOCK_SIDS.has(el.sid);
@@ -416,7 +429,7 @@ function ImgEl({ el, ar, pos, sr, th, lib, edit, onDown }: { el: CanvasImg; ar: 
       ? <img src={el.url} alt={el.alt} draggable={false} loading="lazy"
           ref={c ? (im) => { if (im && im.complete && im.naturalWidth && im.naturalHeight) setNat((o) => (o && o[0] === im.naturalWidth && o[1] === im.naturalHeight ? o : [im.naturalWidth, im.naturalHeight])); } : undefined}
           onLoad={c ? (e) => { const im = e.currentTarget; if (im.naturalWidth && im.naturalHeight) setNat([im.naturalWidth, im.naturalHeight]); } : undefined}
-          style={c ? { position: "absolute", maxWidth: "none", width: `${sx * 100}%`, height: `${sy * 100}%`, left: `${-c[0] * sx * 100}%`, top: `${-c[1] * sy * 100}%` } : { width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+          style={c ? { position: "absolute", maxWidth: "none", width: `${sx * 100}%`, height: `${sy * 100}%`, left: `${-c[0] * sx * 100}%`, top: `${-c[1] * sy * 100}%` } : { width: "100%", height: "100%", objectFit: labelled ? "fill" : "contain", display: "block" }} />
       // no real picture stored (or one Oak's own generic/stock art was dropped from): our own mark, never Oak's placeholder art
       : <div aria-hidden="true" style={{ width: "100%", height: "100%", display: "grid", placeItems: "center", background: "var(--sb-card, rgba(0,0,0,.05))", borderRadius: "8%" }}>
           <div style={{ width: "42%", height: "42%" }}><TeachingHubGlyph /></div>

@@ -86,6 +86,11 @@ export interface EnrolmentDoc {
    *  undefined = an enrolment from before year groups existed (derived on the fly); null = tutor says unknown. */
   yearGroup?: string | null;
   yearGroupAuto?: boolean;
+  /** Hand-set year group: the academic start year (2026 = the year from 1 Sept 2026) it was true in. It moves up along the tenant's
+   *  list by the academic years since (server/src/lib/hubRules.ts yearStatus). Absent = pinned as stored. */
+  yearAnchor?: number;
+  /** Per-child override of the tenant's "move up each September" setting: false = held back. Absent = follow the tenant default. */
+  yearMoveUp?: boolean;
   /** Lower-cased subjects a tutor waived the placement test for. */
   diagnosticWaived?: string[];
   /** Assessment ids a tutor allowed ONE more attempt at (consumed on start). */
@@ -276,7 +281,7 @@ export async function hubConfig(tenantId: string, franchiseId?: string | null): 
   return mergeHub(s.hub as Partial<HubSettings> | undefined);
 }
 
-export { ageInYears, ukYearGroup, yearGroupFromDob, effectiveYearGroup } from "./hubRules";
+export { ageInYears, ukYearGroup, yearGroupFromDob, effectiveYearGroup, yearStatus, academicStartYear } from "./hubRules";
 
 /** Dates of birth for these children (null = none on file). Read straight from the family's child
  *  profiles with a field mask — only the dob leaves Firestore, and only to derive an age / year group. */

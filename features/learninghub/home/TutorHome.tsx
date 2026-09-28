@@ -17,7 +17,6 @@ import { RhythmChart } from "./RhythmChart";
 import { useTutorHome } from "./useHomeData";
 import { ScopeToggle, useScope } from "../mineKit";
 import { TutorLiveBanner } from "../remotesync/TutorLiveBanner";
-import { YearReminder } from "../students/YearReminderCard";
 
 type Go = NonNullable<PanelProps["goTo"]>;
 
@@ -134,7 +133,6 @@ export function TutorHome(props: PanelProps) {
   return (
     <div id="hub-home-tutor" className="space-y-4">
       <TutorLiveBanner qs={qs} goTo={() => go("notes")} />
-      <YearReminder tenantId={props.tenantId} qs={qs} canEdit={props.canEdit} readOnly={props.readOnly} franchiseId={props.franchiseId ?? null} students={students} yearGroups={config.yearGroups} refreshStudents={props.refreshStudents} />
       {allFailed > 0 && allFailed < 4 && (
         <div className="space-y-2">
           {(Object.keys(failed) as (keyof typeof failed)[]).map((k) => <PartError key={k} what={({ lessons: t("hubshell.hm_partLessons"), inbox: t("hubshell.hm_partInbox"), overview: t("hubshell.hm_partMastery"), attempts: t("hubshell.hm_partAttempts") })[k]} message={failed[k]} onRetry={reload} />)}

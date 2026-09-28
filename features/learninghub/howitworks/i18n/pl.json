@@ -56,7 +56,12 @@
   "readScript": "Przeczytaj cały tekst",
   "noVoice": "Brak głosu dla tego języka na tym urządzeniu: tylko napisy.",
   "tryNow": "Wypróbuj teraz →",
-  "nextVideo": "Następny film: {title}"
+  "nextVideo": "Następny film: {title}",
+  "tourTitle": "Krótka wycieczka",
+  "tourTag": "Najważniejsze miejsca, jedno po drugim. Około {s} sekund.",
+  "clipHeading": "Krótki przegląd",
+  "clipTag": "Krótki przegląd. Około {s} sekund.",
+  "clipFull": "▶ Obejrzyj cały film"
  },
  "scripts": {
   "tutor:std:main": {

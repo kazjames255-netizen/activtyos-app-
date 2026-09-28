@@ -268,7 +268,7 @@ export function useHubData(mode: "student" | "tutor", opts?: { initialChildId?: 
 // ── "is a lesson live right now?" ────────────────────────────────────────────
 // Drives the pulsing dot on the Live lessons tab. One quiet GET /lessons (the
 // Live panel does its own); any failure just means "no dot".
-interface LessonLite { startsAt: string; durationMins: number; status: string }
+interface LessonLite { startsAt: string; durationMins: number; status: string; mode?: string }
 export function useLiveNow(childQs: string, enabled: boolean): boolean {
   const [lessons, setLessons] = useState<{ key: string; rows: LessonLite[] } | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -296,7 +296,7 @@ export function useLiveNow(childQs: string, enabled: boolean): boolean {
 
   if (!enabled || lessons?.key !== childQs) return false;
   return lessons.rows.some((l) => {
-    if (l.status === "cancelled" || l.status === "ended") return false;
+    if (l.status === "cancelled" || l.status === "ended" || l.mode === "in_person") return false; // no video room to be "live" in
     const start = new Date(l.startsAt).getTime();
     const end = start + l.durationMins * 60_000;
     return (l.status === "live" && now <= end + 30 * 60_000) || (now >= start && now <= end);

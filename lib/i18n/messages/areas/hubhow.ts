@@ -3,6 +3,8 @@
 // Covers the "How it works" ENTRY points (hero pill, kid card, "Watch: ..." links). The explainer videos / narration themselves are still English.
 const hubhow: Record<string, Record<string, string>> = {
   en: {
+    watchYourChild: "your child",
+    showMe: "Show me", showMeTitle: "A quick clip from the video, about 15 seconds", tourTitle: "New here? Take a quick tour", tourBody: "A quick look at the main places. You can skip it.", tourStart: "Start the tour", tourNotNow: "Not now", tourReplay: "Take the tour again", watchAlong: "Watch along", watchBannerTitle: "You are watching along with {name}", watchBannerBody: "This is what {name} sees. View only: nothing here is saved.",
     btn: "How it works", btnThis: "How this works", heroTitle: "Watch a short, narrated walkthrough", heroAria: "{label} — watch a short guided video",
     kidAria: "{label}: watch and listen", kidSub: "Watch and listen. It is short!", cardSub: "A short narrated walkthrough, with real screens.",
     w_home: "Watch: your Home screen", w_students: "Watch: your students", w_notes: "Watch: lessons and the curriculum", w_tools: "Watch: how tools work",
@@ -10,6 +12,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Watch: quizzes and starting quizzes", w_flashcards: "Watch: flashcards", w_dashboard: "Watch: how progress works", w_messages: "Watch: messages", w_hwParent: "Watch: how homework works",
   },
   pl: {
+    watchYourChild: "swoim dzieckiem",
+    showMe: "Pokaż mi", showMeTitle: "Krótki fragment filmu, około 15 sekund", tourTitle: "Jesteś tu pierwszy raz? Zobacz krótką wycieczkę", tourBody: "Krótki przegląd najważniejszych miejsc, z napisami i dźwiękiem. Możesz go pominąć i wrócić do niego później.", tourStart: "Zacznij wycieczkę", tourNotNow: "Nie teraz", tourReplay: "Obejrzyj wycieczkę jeszcze raz", watchAlong: "Oglądaj razem", watchBannerTitle: "Oglądasz razem z: {name}", watchBannerBody: "Dokładnie to widzi {name}. To tylko podgląd: nic, co tu klikniesz, nie zostanie zapisane ani nie zmieni odpowiedzi ucznia ({name}).",
     btn: "Jak to działa", btnThis: "Jak to działa", heroTitle: "Obejrzyj krótki przewodnik z narracją", heroAria: "{label} — obejrzyj krótki film instruktażowy",
     kidAria: "{label}: obejrzyj i posłuchaj", kidSub: "Obejrzyj i posłuchaj. To krótkie!", cardSub: "Krótki przewodnik z narracją, na prawdziwych ekranach.",
     w_home: "Obejrzyj: twój ekran główny", w_students: "Obejrzyj: twoi uczniowie", w_notes: "Obejrzyj: lekcje i program nauczania", w_tools: "Obejrzyj: jak działają narzędzia",
@@ -17,6 +21,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Obejrzyj: quizy i quizy startowe", w_flashcards: "Obejrzyj: fiszki", w_dashboard: "Obejrzyj: jak działają postępy", w_messages: "Obejrzyj: wiadomości", w_hwParent: "Obejrzyj: jak działają prace domowe",
   },
   ro: {
+    watchYourChild: "copilul tău",
+    showMe: "Arată-mi", showMeTitle: "Un scurt fragment din film, aproximativ 15 secunde", tourTitle: "Ești nou aici? Fă un tur rapid", tourBody: "O privire scurtă asupra principalelor locuri, cu subtitrări și sunet. Îl poți sări oricând și îl regăsești mai târziu.", tourStart: "Începe turul", tourNotNow: "Nu acum", tourReplay: "Fă din nou turul", watchAlong: "Urmărește împreună", watchBannerTitle: "Urmărești împreună cu {name}", watchBannerBody: "Exact asta vede {name}. Este doar pentru vizualizare: nimic din ce atingi aici nu se salvează și nu schimbă răspunsurile lui {name}.",
     btn: "Cum funcționează", btnThis: "Cum funcționează", heroTitle: "Urmărește un scurt ghid cu narațiune", heroAria: "{label} — urmărește un scurt clip ghidat",
     kidAria: "{label}: urmărește și ascultă", kidSub: "Urmărește și ascultă. Este scurt!", cardSub: "Un scurt ghid narat, cu ecrane reale.",
     w_home: "Urmărește: ecranul tău principal", w_students: "Urmărește: elevii tăi", w_notes: "Urmărește: lecțiile și programa școlară", w_tools: "Urmărește: cum funcționează instrumentele",
@@ -24,6 +30,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Urmărește: teste și teste de start", w_flashcards: "Urmărește: fișe de memorare", w_dashboard: "Urmărește: cum funcționează progresul", w_messages: "Urmărește: mesajele", w_hwParent: "Urmărește: cum funcționează temele",
   },
   ur: {
+    watchYourChild: "آپ کے بچے",
+    showMe: "مجھے دکھائیں", showMeTitle: "ویڈیو کا ایک مختصر حصہ، تقریباً 15 سیکنڈ", tourTitle: "یہاں نئے ہیں؟ ایک مختصر دورہ کریں", tourBody: "اہم مقامات پر ایک مختصر نظر، کیپشن اور آواز کے ساتھ۔ اسے کسی بھی وقت چھوڑ دیں اور بعد میں دوبارہ دیکھیں۔", tourStart: "دورہ شروع کریں", tourNotNow: "ابھی نہیں", tourReplay: "دورہ دوبارہ کریں", watchAlong: "ساتھ دیکھیں", watchBannerTitle: "آپ {name} کے ساتھ دیکھ رہے ہیں", watchBannerBody: "{name} بالکل یہی دیکھتا ہے۔ یہ صرف دیکھنے کے لیے ہے: یہاں آپ جو بھی دبائیں گے وہ محفوظ نہیں ہوگا اور {name} کے جوابات نہیں بدلے گا۔",
     btn: "یہ کیسے کام کرتا ہے", btnThis: "یہ کیسے کام کرتا ہے", heroTitle: "ایک مختصر بیانیہ رہنما ویڈیو دیکھیں", heroAria: "{label} — ایک مختصر رہنما ویڈیو دیکھیں",
     kidAria: "{label}: دیکھیں اور سنیں", kidSub: "دیکھیں اور سنیں۔ یہ مختصر ہے!", cardSub: "اصل اسکرینوں کے ساتھ ایک مختصر بیانیہ رہنما۔",
     w_home: "دیکھیں: آپ کی ہوم اسکرین", w_students: "دیکھیں: آپ کے طلبہ", w_notes: "دیکھیں: اسباق اور نصاب", w_tools: "دیکھیں: ٹولز کیسے کام کرتے ہیں",
@@ -31,6 +39,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "دیکھیں: کوئز اور ابتدائی کوئز", w_flashcards: "دیکھیں: فلیش کارڈز", w_dashboard: "دیکھیں: پیش رفت کیسے کام کرتی ہے", w_messages: "دیکھیں: پیغامات", w_hwParent: "دیکھیں: ہوم ورک کیسے کام کرتا ہے",
   },
   pa: {
+    watchYourChild: "ਤੁਹਾਡੇ ਬੱਚੇ",
+    showMe: "ਮੈਨੂੰ ਦਿਖਾਓ", showMeTitle: "ਵੀਡੀਓ ਦਾ ਇੱਕ ਛੋਟਾ ਹਿੱਸਾ, ਲਗਭਗ 15 ਸਕਿੰਟ", tourTitle: "ਇੱਥੇ ਨਵੇਂ ਹੋ? ਇੱਕ ਛੋਟਾ ਦੌਰਾ ਕਰੋ", tourBody: "ਮੁੱਖ ਥਾਵਾਂ ਦੀ ਇੱਕ ਛੋਟੀ ਝਲਕ, ਕੈਪਸ਼ਨ ਅਤੇ ਆਵਾਜ਼ ਸਮੇਤ। ਇਸਨੂੰ ਕਦੇ ਵੀ ਛੱਡ ਸਕਦੇ ਹੋ ਅਤੇ ਬਾਅਦ ਵਿੱਚ ਮੁੜ ਵੇਖ ਸਕਦੇ ਹੋ।", tourStart: "ਦੌਰਾ ਸ਼ੁਰੂ ਕਰੋ", tourNotNow: "ਹੁਣ ਨਹੀਂ", tourReplay: "ਦੌਰਾ ਦੁਬਾਰਾ ਕਰੋ", watchAlong: "ਨਾਲ ਵੇਖੋ", watchBannerTitle: "ਤੁਸੀਂ {name} ਦੇ ਨਾਲ ਵੇਖ ਰਹੇ ਹੋ", watchBannerBody: "{name} ਬਿਲਕੁਲ ਇਹੀ ਵੇਖਦਾ ਹੈ। ਇਹ ਸਿਰਫ਼ ਵੇਖਣ ਲਈ ਹੈ: ਇੱਥੇ ਤੁਸੀਂ ਜੋ ਵੀ ਦਬਾਓਗੇ ਉਹ ਸੰਭਾਲਿਆ ਨਹੀਂ ਜਾਵੇਗਾ ਅਤੇ {name} ਦੇ ਜਵਾਬ ਨਹੀਂ ਬਦਲੇਗਾ।",
     btn: "ਇਹ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ", btnThis: "ਇਹ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ", heroTitle: "ਇੱਕ ਛੋਟੀ ਬਿਆਨ ਵਾਲੀ ਗਾਈਡ ਵੇਖੋ", heroAria: "{label} — ਇੱਕ ਛੋਟੀ ਗਾਈਡ ਵੀਡੀਓ ਵੇਖੋ",
     kidAria: "{label}: ਵੇਖੋ ਅਤੇ ਸੁਣੋ", kidSub: "ਵੇਖੋ ਅਤੇ ਸੁਣੋ। ਇਹ ਛੋਟਾ ਹੈ!", cardSub: "ਅਸਲੀ ਸਕ੍ਰੀਨਾਂ ਨਾਲ ਇੱਕ ਛੋਟੀ ਬਿਆਨ ਵਾਲੀ ਗਾਈਡ।",
     w_home: "ਵੇਖੋ: ਤੁਹਾਡੀ ਹੋਮ ਸਕ੍ਰੀਨ", w_students: "ਵੇਖੋ: ਤੁਹਾਡੇ ਵਿਦਿਆਰਥੀ", w_notes: "ਵੇਖੋ: ਪਾਠ ਅਤੇ ਪਾਠਕ੍ਰਮ", w_tools: "ਵੇਖੋ: ਟੂਲ ਕਿਵੇਂ ਕੰਮ ਕਰਦੇ ਹਨ",
@@ -38,6 +48,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "ਵੇਖੋ: ਕਵਿਜ਼ ਅਤੇ ਸ਼ੁਰੂਆਤੀ ਕਵਿਜ਼", w_flashcards: "ਵੇਖੋ: ਫਲੈਸ਼ਕਾਰਡ", w_dashboard: "ਵੇਖੋ: ਤਰੱਕੀ ਕਿਵੇਂ ਕੰਮ ਕਰਦੀ ਹੈ", w_messages: "ਵੇਖੋ: ਸੁਨੇਹੇ", w_hwParent: "ਵੇਖੋ: ਹੋਮਵਰਕ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ",
   },
   bn: {
+    watchYourChild: "আপনার সন্তান",
+    showMe: "আমাকে দেখান", showMeTitle: "ভিডিওর একটি ছোট অংশ, প্রায় ১৫ সেকেন্ড", tourTitle: "এখানে নতুন? একটি দ্রুত ভ্রমণ করুন", tourBody: "প্রধান জায়গাগুলোর একটি সংক্ষিপ্ত ঝলক, ক্যাপশন ও শব্দসহ। যেকোনো সময় বাদ দিন এবং পরে আবার দেখুন।", tourStart: "ভ্রমণ শুরু করুন", tourNotNow: "এখন নয়", tourReplay: "ভ্রমণটি আবার করুন", watchAlong: "সঙ্গে দেখুন", watchBannerTitle: "আপনি {name}-এর সঙ্গে দেখছেন", watchBannerBody: "{name} ঠিক এটিই দেখে। এটি শুধু দেখার জন্য: এখানে আপনি যা-ই চাপুন তা সংরক্ষিত হবে না এবং {name}-এর উত্তর বদলাবে না।",
     btn: "এটি কীভাবে কাজ করে", btnThis: "এটি কীভাবে কাজ করে", heroTitle: "একটি ছোট বর্ণনাসহ গাইড দেখুন", heroAria: "{label} — একটি ছোট গাইড ভিডিও দেখুন",
     kidAria: "{label}: দেখুন ও শুনুন", kidSub: "দেখুন ও শুনুন। এটি ছোট!", cardSub: "আসল স্ক্রিনসহ একটি ছোট বর্ণনাসহ গাইড।",
     w_home: "দেখুন: আপনার হোম স্ক্রিন", w_students: "দেখুন: আপনার শিক্ষার্থীরা", w_notes: "দেখুন: পাঠ ও পাঠ্যক্রম", w_tools: "দেখুন: টুল কীভাবে কাজ করে",
@@ -45,6 +57,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "দেখুন: কুইজ ও শুরুর কুইজ", w_flashcards: "দেখুন: ফ্ল্যাশকার্ড", w_dashboard: "দেখুন: অগ্রগতি কীভাবে কাজ করে", w_messages: "দেখুন: বার্তা", w_hwParent: "দেখুন: বাড়ির কাজ কীভাবে কাজ করে",
   },
   ar: {
+    watchYourChild: "طفلك",
+    showMe: "أرني", showMeTitle: "مقطع قصير من الفيديو، نحو 15 ثانية", tourTitle: "هل أنت جديد هنا؟ قم بجولة سريعة", tourBody: "نظرة قصيرة على الأماكن الرئيسية، مع ترجمة نصية وصوت. يمكنك تخطيها في أي وقت والعودة إليها لاحقًا.", tourStart: "ابدأ الجولة", tourNotNow: "ليس الآن", tourReplay: "أعد الجولة", watchAlong: "شاهد معه", watchBannerTitle: "أنت تشاهد مع {name}", watchBannerBody: "هذا بالضبط ما يراه {name}. هو للعرض فقط: لن يُحفظ أي شيء تنقر عليه هنا ولن يغيّر إجابات {name}.",
     btn: "كيف يعمل", btnThis: "كيف يعمل هذا", heroTitle: "شاهد جولة قصيرة مع شرح صوتي", heroAria: "{label} — شاهد فيديو إرشاديًا قصيرًا",
     kidAria: "{label}: شاهد واستمع", kidSub: "شاهد واستمع. إنه قصير!", cardSub: "جولة قصيرة مع شرح صوتي، على شاشات حقيقية.",
     w_home: "شاهد: شاشتك الرئيسية", w_students: "شاهد: طلابك", w_notes: "شاهد: الدروس والمنهج", w_tools: "شاهد: كيف تعمل الأدوات",
@@ -52,6 +66,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "شاهد: الاختبارات واختبارات البداية", w_flashcards: "شاهد: البطاقات التعليمية", w_dashboard: "شاهد: كيف يعمل التقدم", w_messages: "شاهد: الرسائل", w_hwParent: "شاهد: كيف تعمل الواجبات المنزلية",
   },
   pt: {
+    watchYourChild: "o seu filho",
+    showMe: "Mostra-me", showMeTitle: "Um pequeno excerto do vídeo, cerca de 15 segundos", tourTitle: "É novo aqui? Faça uma visita rápida", tourBody: "Um olhar breve pelos principais locais, com legendas e som. Pode saltá-la a qualquer momento e encontrá-la mais tarde.", tourStart: "Começar a visita", tourNotNow: "Agora não", tourReplay: "Fazer a visita outra vez", watchAlong: "Ver em conjunto", watchBannerTitle: "Está a ver em conjunto com {name}", watchBannerBody: "Isto é exatamente o que {name} vê. É só para ver: nada do que tocar aqui é guardado nem altera as respostas de {name}.",
     btn: "Como funciona", btnThis: "Como isto funciona", heroTitle: "Veja um breve guia narrado", heroAria: "{label} — veja um breve vídeo guiado",
     kidAria: "{label}: veja e ouça", kidSub: "Veja e ouça. É curto!", cardSub: "Um breve guia narrado, com ecrãs reais.",
     w_home: "Veja: o seu ecrã principal", w_students: "Veja: os seus alunos", w_notes: "Veja: as aulas e o currículo", w_tools: "Veja: como funcionam as ferramentas",
@@ -59,6 +75,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Veja: questionários e questionários iniciais", w_flashcards: "Veja: cartões de memória", w_dashboard: "Veja: como funciona o progresso", w_messages: "Veja: as mensagens", w_hwParent: "Veja: como funcionam os trabalhos de casa",
   },
   es: {
+    watchYourChild: "tu hijo o hija",
+    showMe: "Muéstrame", showMeTitle: "Un fragmento breve del vídeo, unos 15 segundos", tourTitle: "¿Eres nuevo? Haz un recorrido rápido", tourBody: "Un vistazo breve a los lugares principales, con subtítulos y sonido. Puedes saltarlo cuando quieras y encontrarlo después.", tourStart: "Empezar el recorrido", tourNotNow: "Ahora no", tourReplay: "Repetir el recorrido", watchAlong: "Ver en paralelo", watchBannerTitle: "Estás viendo en paralelo con {name}", watchBannerBody: "Esto es exactamente lo que ve {name}. Es solo de lectura: nada de lo que toques aquí se guarda ni cambia las respuestas de {name}.",
     btn: "Cómo funciona", btnThis: "Cómo funciona esto", heroTitle: "Mira una breve guía narrada", heroAria: "{label} — mira un breve vídeo guiado",
     kidAria: "{label}: mira y escucha", kidSub: "Mira y escucha. ¡Es corto!", cardSub: "Una breve guía narrada, con pantallas reales.",
     w_home: "Mira: tu pantalla de inicio", w_students: "Mira: tus alumnos", w_notes: "Mira: las lecciones y el currículo", w_tools: "Mira: cómo funcionan las herramientas",
@@ -66,6 +84,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Mira: cuestionarios y cuestionarios iniciales", w_flashcards: "Mira: tarjetas de estudio", w_dashboard: "Mira: cómo funciona el progreso", w_messages: "Mira: los mensajes", w_hwParent: "Mira: cómo funcionan las tareas",
   },
   fr: {
+    watchYourChild: "votre enfant",
+    showMe: "Montre-moi", showMeTitle: "Un court extrait de la vidéo, environ 15 secondes", tourTitle: "Nouveau ici ? Faites une visite rapide", tourBody: "Un bref aperçu des principaux endroits, avec sous-titres et son. Vous pouvez l'ignorer à tout moment et la retrouver plus tard.", tourStart: "Commencer la visite", tourNotNow: "Pas maintenant", tourReplay: "Refaire la visite", watchAlong: "Regarder avec l'enfant", watchBannerTitle: "Vous regardez avec {name}", watchBannerBody: "C'est exactement ce que voit {name}. C'est en lecture seule : rien de ce que vous touchez ici n'est enregistré et cela ne modifie pas les réponses de {name}.",
     btn: "Comment ça marche", btnThis: "Comment ça marche", heroTitle: "Regardez un court guide commenté", heroAria: "{label} — regardez une courte vidéo guidée",
     kidAria: "{label} : regarde et écoute", kidSub: "Regarde et écoute. C’est court !", cardSub: "Un court guide commenté, avec de vrais écrans.",
     w_home: "Regardez : votre écran d’accueil", w_students: "Regardez : vos élèves", w_notes: "Regardez : les leçons et le programme", w_tools: "Regardez : comment fonctionnent les outils",
@@ -73,6 +93,8 @@ const hubhow: Record<string, Record<string, string>> = {
     w_diagnostic: "Regardez : quiz et quiz de départ", w_flashcards: "Regardez : cartes mémoire", w_dashboard: "Regardez : comment fonctionne le suivi", w_messages: "Regardez : les messages", w_hwParent: "Regardez : comment fonctionnent les devoirs",
   },
   cy: {
+    watchYourChild: "eich plentyn",
+    showMe: "Dangos i mi", showMeTitle: "Clip byr o'r fideo, tua 15 eiliad", tourTitle: "Yn newydd yma? Ewch am daith gyflym", tourBody: "Cipolwg byr ar y prif leoedd, gyda chapsiynau a sain. Gallwch ei hepgor unrhyw bryd a'i ganfod eto'n hwyrach.", tourStart: "Dechrau'r daith", tourNotNow: "Ddim nawr", tourReplay: "Mynd ar y daith eto", watchAlong: "Gwylio gyda'ch gilydd", watchBannerTitle: "Rydych yn gwylio gyda {name}", watchBannerBody: "Dyma'n union beth mae {name} yn ei weld. Gwylio'n unig yw hyn: nid oes dim a gyffyrddwch ag ef yma yn cael ei gadw, ac nid yw'n newid atebion {name}.",
     btn: "Sut mae'n gweithio", btnThis: "Sut mae hyn yn gweithio", heroTitle: "Gwyliwch daith fer wedi'i hadrodd", heroAria: "{label} — gwyliwch fideo cyfarwyddo byr",
     kidAria: "{label}: gwyliwch a gwrandewch", kidSub: "Gwyliwch a gwrandewch. Mae'n fyr!", cardSub: "Taith fer wedi'i hadrodd, gyda sgriniau go iawn.",
     w_home: "Gwyliwch: eich sgrin Cartref", w_students: "Gwyliwch: eich myfyrwyr", w_notes: "Gwyliwch: y gwersi a'r cwricwlwm", w_tools: "Gwyliwch: sut mae'r offer yn gweithio",

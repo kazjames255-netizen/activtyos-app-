@@ -1,5 +1,5 @@
 // Run: server/node_modules/.bin/tsx features/learninghub/games/penguin/mtc.selftest.ts
-import { makeMtcForm, MTC, MTC_LIMITS, markMtc, mtcKey, cleanMtcAnswers } from "./mtc";
+import { makeMtcForm, MTC, MTC_KS1, MTC_LIMITS, markMtc, mtcKey, cleanMtcAnswers } from "./mtc";
 let fails = 0; const ok = (c: unknown, m: string) => { if (!c) { fails++; console.error("FAIL", m); } };
 let prev: string[] = [];
 for (let seed = 1; seed <= 300; seed++) {
@@ -10,6 +10,7 @@ for (let seed = 1; seed <= 300; seed++) {
   ok(new Set(keys).size === MTC.n, "no repeat and no reversal (unordered pair used once) " + seed);
   ok(f.every((i) => i.a >= 2 && i.a <= 12 && i.b >= 2 && i.b <= 12), "tables 2-12, no 1x");
   for (const t of Object.keys(MTC_LIMITS).map(Number)) { const c = f.filter((i) => i.a === t).length; ok(c >= MTC_LIMITS[t]![0] && c <= MTC_LIMITS[t]![1], `table ${t} first-factor count ${c} within limits`); }
+  { const ks1 = f.filter((i) => i.a === 2 || i.a === 5 || i.a === 10).length; ok(ks1 >= MTC_KS1[0] && ks1 <= MTC_KS1[1], `KS1 items ${ks1} within framework Table 2 (3-7) seed ${seed}`); }
   ok(f.filter((i) => prev.includes(mtcKey(i))).length <= MTC.maxOverlap, "<= 30% overlap with previous form");
   const ps = f.map((i) => i.a * i.b); ok(!ps.every((p, i) => i === 0 || p >= ps[i - 1]!), "not sorted by difficulty");
   prev = keys;
