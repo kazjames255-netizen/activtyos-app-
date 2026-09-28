@@ -126,8 +126,8 @@ export function TutorHome(props: PanelProps) {
   if (!ready || !parts || !d) return <HomeSkeleton label={t("hubshell.hm_loadingDay")} />;
   // An in-person session still open is the most "now" thing there is: it leads the card (Resume), ahead of anything scheduled.
   const ipAsLesson = (x: IpSession): Lesson => ({
-    id: x.id, title: x.title, topicId: null, startsAt: x.startsAt, childIds: x.childIds,
-    durationMins: Math.max(60, Math.ceil((now - new Date(x.startsAt).getTime()) / 60_000) + 30),
+    id: x.id, title: x.title, topicId: null, startsAt: x.startedAt ?? x.startsAt, childIds: x.childIds,
+    durationMins: Math.max(60, Math.ceil((now - new Date(x.startedAt ?? x.startsAt).getTime()) / 60_000) + 30),
     students: x.students.map((st) => ({ childId: st.childId, childName: st.childName })),
     status: "live", tutorName: x.tutorName, mode: "in_person",
   });

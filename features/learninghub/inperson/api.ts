@@ -8,7 +8,7 @@ import { hubPath, type KindRule, type TakeQuestion } from "../shared-assess/api"
 export interface IpStudent { childId: string; childName: string; present: boolean }
 export interface IpWarm { childId: string; correct: number; total: number }
 export interface IpSession {
-  id: string; title: string; status: "live" | "ended" | "cancelled"; startsAt: string; endedAt: string | null; tutorName: string;
+  id: string; title: string; status: "live" | "ended" | "cancelled"; startsAt: string; startedAt?: string; endedAt: string | null; tutorName: string;
   noteId: string | null; assessmentId: string | null; groupIds: string[]; childIds: string[];
   attendance: Record<string, string>; students: IpStudent[]; warmup: IpWarm[]; notes?: string;
 }

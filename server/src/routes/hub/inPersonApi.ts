@@ -80,6 +80,8 @@ const namesOf = async (ctx: HubCtx, ids: string[]): Promise<Map<string, string>>
 
 const sessionOut = (s: Session, names: Map<string, string>) => ({
   id: s.id, mode: "in_person" as const, title: s.title, status: s.status, startsAt: s.startsAt, endedAt: s.endedAt ?? null,
+  // When the tutor actually began running it: a lesson scheduled for tomorrow and started today keeps its future `startsAt`.
+  startedAt: (s as { tutorJoinedAt?: string }).tutorJoinedAt ?? s.startsAt,
   tutorName: s.tutorName, noteId: s.noteId ?? null, assessmentId: s.assessmentId ?? null, groupIds: s.groupIds ?? [],
   childIds: s.childIds, attendance: s.attendance ?? {},
   students: s.childIds.map((id) => ({ childId: id, childName: names.get(id) ?? "Student", present: !!s.attendance?.[id] })),

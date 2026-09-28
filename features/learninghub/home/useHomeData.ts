@@ -100,7 +100,7 @@ export function useLiveInPerson(qs: string, enabled: boolean): IpSession[] {
   const [rows, setRows] = useState<IpSession[]>([]);
   const load = useCallback(() => {
     if (!enabled) { setRows([]); return; }
-    listLiveSessions(qs).then((r) => setRows(Array.isArray(r) ? r : [])).catch(() => setRows([]));
+    listLiveSessions(qs).then((r) => setRows(Array.isArray(r) ? [...r].sort((a, b) => (b.startedAt ?? b.startsAt).localeCompare(a.startedAt ?? a.startsAt)) : [])).catch(() => setRows([]));
   }, [qs, enabled]);
   // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount / when the provider changes
   useEffect(() => { load(); }, [load]);
