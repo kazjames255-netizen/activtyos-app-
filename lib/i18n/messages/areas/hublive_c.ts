@@ -89,7 +89,7 @@ const hublive_c: Record<string, Record<string, string>> = {
     cNowTap: "Now tap what {name} said",
     cOpenLessonFail: "Couldn't open that lesson",
     cOptLesson: "An interactive lesson",
-    cOptQuiz: "A quiz or placement test",
+    cOptQuiz: "A quiz or entry test",
     cOptionAria: "{name}: option {l}",
     cOptionAriaText: "{name}: option {l}, {text}",
     cOptionN: "Option {l}",

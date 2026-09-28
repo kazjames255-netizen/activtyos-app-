@@ -71,7 +71,7 @@ const hublessons: Record<string, Record<string, string>> = {
     "qzCouldntStart": "Couldn't start the quiz",
     "qzNotForYear": "This quiz isn't set up for your year group. Ask your tutor if you think that's a mistake.",
     "qzDiagKid": "Do the starting quiz for this subject first, then come back to this one.",
-    "qzDiagAdult": "Take your placement test first, then come back to this quiz.",
+    "qzDiagAdult": "Take your entry test first, then come back to this quiz.",
     "quizTag": "Quiz",
     "qzReadOnlyInfo": "Students answer this {n}-question quiz here, one question at a time. Their score counts towards mastery. Nothing is started in preview.",
     "skipToEndArrow": "Skip to the end →",

@@ -33,7 +33,7 @@ const hubplan: Record<string, Record<string, string>> = {
     reason_scored: "Scored {pct}% on {topic} {when}",
     reason_scored_nw: "Scored {pct}% on {topic}",
     reason_stale: "Scored {pct}% on {topic} {when}, not revisited since",
-    reason_baseline: "Placement test showed {pct}% on {topic}; no quiz on it yet",
+    reason_baseline: "Entry test showed {pct}% on {topic}; no quiz on it yet",
     reason_group: "{weak} of {total} students are below the secure mark on {topic} (average {pct}%)",
     when_today: "today",
     when_yesterday: "yesterday",

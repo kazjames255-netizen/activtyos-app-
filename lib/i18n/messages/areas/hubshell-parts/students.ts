@@ -10,7 +10,7 @@ const part: Record<string, Record<string, string>> = {
     st_yearAuto: "Automatic — from their date of birth",
     st_yearAutoNote: "Automatic — from their date of birth ({note})",
     st_yearNow: "now {year}",
-    st_yearHelp: "Used to show the right quizzes and placement tests. Leave on Automatic and we work it out from their date of birth; pick a year to set it yourself.",
+    st_yearHelp: "Used to show the right quizzes and entry tests. Leave on Automatic and we work it out from their date of birth; pick a year to set it yourself.",
     st_formerTutor: "Former tutor",
     st_tutor: "Tutor",
     st_unassigned: "Unassigned — every tutor sees them",

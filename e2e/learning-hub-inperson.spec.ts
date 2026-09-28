@@ -447,7 +447,7 @@ test.describe("setup: year filter + send to the children's portals", () => {
     await openTab(page, /Teach in person/);
     const app = page.getByTestId("inperson-app");
     await expect(app).toBeVisible();
-    await app.getByRole("tab", { name: "A quiz or placement test" }).click();
+    await app.getByRole("tab", { name: "A quiz or entry test" }).click();
     await app.getByLabel("Search quizzes").fill(L.quizTitle);
     await app.getByRole("radio", { name: new RegExp(esc(L.quizTitle)) }).first().click();
     await app.getByRole("button", { name: nameB, exact: true }).click();
@@ -509,7 +509,7 @@ test.describe("shared LessonPicker on Teach in person", () => {
     }
     // Quiz tab: the same card language.
     await page.setViewportSize({ width: 1440, height: 900 });
-    await app.getByRole("tab", { name: "A quiz or placement test" }).click();
+    await app.getByRole("tab", { name: "A quiz or entry test" }).click();
     await expect(app.getByTestId("ip-quiz-cards")).toBeVisible({ timeout: 20_000 });
     await page.screenshot({ path: path.join(shots, "setup-quiz-1440.png"), fullPage: true });
     await ctx.close();

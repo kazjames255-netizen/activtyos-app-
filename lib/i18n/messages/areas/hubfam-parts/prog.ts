@@ -32,7 +32,7 @@ const en: Record<string, string> = {
   pgSummary_one: "<b>{n}</b> student · <b>{s}</b> with scores", pgSummary_other: "<b>{n}</b> students · <b>{s}</b> with scores",
   pgSummarySub_one: "<b>{n}</b> student · <b>{s}</b> with scores in <b>{subject}</b>", pgSummarySub_other: "<b>{n}</b> students · <b>{s}</b> with scores in <b>{subject}</b>",
   pgOnlyScored: "Only students with scores",
-  pgNobody: "Nobody has been scored in {subject} yet. Marked quizzes and placement tests fill these columns in as they come in.",
+  pgNobody: "Nobody has been scored in {subject} yet. Marked quizzes and entry tests fill these columns in as they come in.",
   pgNoStudentsTitle: "No students to show yet", pgNoStudentsBody: "Enrol students in the Teaching Hub roster, then set them a quiz. Their mastery will appear here.",
   pgMasteryByStudent: "Mastery by student. Scroll for more columns.", pgStudent: "Student", pgNoScores: "No scores yet", pgOverall: "Overall", pgTopic: "Topic",
   pgOpenProgress: "Open {name}'s progress", pgPaused: "Paused", pgPausedActive: "Paused · active {ago}", pgActive: "Active {ago}", pgNotStartedYet: "Not started yet",
