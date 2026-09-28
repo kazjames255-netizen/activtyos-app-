@@ -40,7 +40,7 @@ export class ApiError extends Error {
 // a safety-net widening, not a fix for the underlying cold-start slowness itself (see hubCache.ts).
 const TIMEOUT_MS = 45_000;
 
-function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
+export function withTimeout<T>(p: Promise<T>, label: string): Promise<T> {
   // `label` names an internal step ("Getting your sign-in token"), so it stays
   // out of the production message for the same reason as the fetch errors below.
   const message = process.env.NODE_ENV === "production"

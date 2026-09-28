@@ -7,7 +7,7 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from "fir
 import { firebaseAuth } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { fetchRoleHome } from "@/lib/roles";
-import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost } from "@/lib/api";
+import { ApiError, get as apiGet, isTwoFaRequired, post as apiPost, withTimeout } from "@/lib/api";
 import { FieldLabel, Input } from "@/components/ui";
 import { AUTH_LIGHT, AosMark, AosWordmark } from "@/components/auth/AuthBrand";
 
@@ -185,7 +185,10 @@ function LoginForm() {
     setNotice(null);
     setBusy(true);
     try {
-      await signInWithEmailAndPassword(firebaseAuth, email, password);
+      // Firebase's own sign-in call talks straight to Google's servers, not ours, and has
+      // no timeout of its own — a slow/blocked DNS lookup (identitytoolkit.googleapis.com)
+      // used to leave the button stuck on "Signing in…" forever with no error at all.
+      await withTimeout(signInWithEmailAndPassword(firebaseAuth, email, password), "Signing in");
       if (await stopForClosedAccount()) return;
       await goHome();
     } catch (err) {
@@ -194,7 +197,9 @@ function LoginForm() {
       // an ad blocker / privacy extension / VPN in this browser profile stopping
       // the call to Google's sign-in service. Say so, rather than blaming the
       // credentials.
-      if (errCode === "auth/network-request-failed" || /network|fetch|failed to fetch/i.test((err as Error)?.message ?? "")) {
+      if (err instanceof ApiError && err.status === 408) {
+        setError("Couldn't reach the sign-in service in time. An ad blocker, privacy extension or VPN in this browser may be blocking it — try an incognito window, or check your connection.");
+      } else if (errCode === "auth/network-request-failed" || /network|fetch|failed to fetch/i.test((err as Error)?.message ?? "")) {
         setError("Couldn't reach the sign-in service. An ad blocker, privacy extension or VPN in this browser may be blocking it — try an incognito window, or disable extensions for this site.");
       } else if (errCode === "auth/too-many-requests") {
         setError("Too many attempts — please wait a minute and try again.");
