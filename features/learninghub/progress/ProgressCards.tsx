@@ -17,11 +17,13 @@ import { useSupport } from "../family/FamilyContext";
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
 //
-// Comic-panel chrome (Kaz picked this over nine flatter options — a thick dark outline and a hard offset
-// "sticker" shadow, instead of a soft gradient wash). Kaz: "remove the dots" — dropped the halftone texture.
-const COMIC_CARD: CSSProperties = { background: "var(--surface)", border: "3px solid var(--ink)", boxShadow: "5px 5px 0 var(--ink)" };
+// Comic-panel chrome (Kaz picked this over nine flatter options — a thick outline and a hard offset "sticker"
+// shadow, instead of a soft gradient wash). Kaz: "remove the dots" — dropped the halftone texture. Kaz: "blue
+// border not black" — the outline/shadow/icon-ring is the brand blue, not var(--ink).
+const COMIC_LINE = "var(--brand)";
+const COMIC_CARD: CSSProperties = { background: "var(--surface)", border: `3px solid ${COMIC_LINE}`, boxShadow: `5px 5px 0 ${COMIC_LINE}` };
 function IconBadge({ icon, color }: { icon: string; color: string }) {
-  return <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: color, border: "2.5px solid var(--ink)" }}>{icon}</span>;
+  return <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: color, border: `2.5px solid ${COMIC_LINE}` }}>{icon}</span>;
 }
 /** The starburst badge for a card's headline count — the comic-panel treatment's signature flourish. */
 function StarBurst({ value }: { value: ReactNode }) {
