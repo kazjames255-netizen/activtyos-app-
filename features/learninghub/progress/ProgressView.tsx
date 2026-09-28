@@ -1,6 +1,6 @@
 "use client";
 
-import { SubjectGlyph } from "../subjectArt";
+import { SubjectTile } from "../subjectArt";
 import { subjectSwatch } from "../subjectColour";
 import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui";
@@ -10,6 +10,8 @@ import { NEUTRAL, OK, timeAgo, type Tone } from "../shared-assess/format";
 import { useHubData } from "../shared-assess/hooks";
 import { LIFT } from "../shared-assess/motion";
 import { display, EmptyState, FOCUS, Meter, Notice, ScoreRing, Skeleton } from "../shared-assess/ui";
+import { GlassOrb } from "../shared-ui/GlassOrb";
+import { useSupport } from "../family/FamilyContext";
 import { Attainment } from "./Attainment";
 import { ProgressCards } from "./ProgressCards";
 import { BandChip, GrowthChip, TrendChart } from "./charts";
@@ -113,6 +115,7 @@ export function ProgressView({ p, childId, onLoaded }: { p: PanelProps; childId:
 
 function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: string | null }) {
   const { t: tr, tp } = useHubI18n();
+  const calm = useSupport().calm;
   const bands = p.config.masteryBands;
   const sw = subjectSwatch(s.subject);
   const started = s.masteryPct != null;
@@ -125,19 +128,23 @@ function SubjectCard({ s, p, who }: { s: MasterySubject; p: PanelProps; who: str
   return (
     <Card className={`overflow-hidden ${LIFT}`} id={`hub-progress-${s.subject}`}
       style={{ background: `linear-gradient(135deg, ${tint(sw.base, 22)}, ${tint(sw.base, 7)})`, borderColor: tint(sw.base, 38) }}>
-      <div className="p-4 sm:p-5">
-        <div className="flex items-center gap-2.5">
-          <span aria-hidden className="grid h-9 w-9 flex-none place-items-center rounded-full" style={{ background: tint(sw.base, 34), color: sw.base }}><SubjectGlyph subject={s.subject} size={18} /></span>
-          <div className="min-w-0 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)] [overflow-wrap:anywhere]">{s.subject}</div>
-          <div className="ms-auto flex-none text-[26px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={display}>{pctLabel ?? "–"}</div>
+      <div className="flex items-center gap-4 p-4 sm:p-5">
+        <div className="grid flex-none justify-items-center gap-1">
+          <GlassOrb pct={started ? s.masteryPct : null} color={sw.base} size={96} calm={calm}
+            aria={`${s.subject}: ${pctLabel ?? tr("hubfam.pgNotStarted")}`}
+            center={started ? <span className="text-[24px] font-extrabold leading-none" style={display}>{pctLabel}</span> : undefined} />
+          {started && topics.length > 0 && <div className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{tp("hubfam.pgOfTopics", topics.length, { a: practised, b: topics.length })}</div>}
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-          <BandChip bands={bands} band={s.band} />
-          {started && <GrowthChip growth={s.growthPct} baseline={s.baselinePct} />}
-        </div>
-        <div className="mt-3">
-          <div className="mb-1 flex justify-between gap-2 text-[11px] font-semibold text-[var(--ink-3)]"><span>{who === null && !p.canEdit ? PARENT_COPY.topicsTried : tr("hubfam.pgCoverage")}</span><span className="tabular-nums">{topics.length > 0 ? tp("hubfam.pgOfTopicsPract", topics.length, { a: practised, b: topics.length }) : tr("hubfam.pgPctPract", { pct: cov })}</span></div>
-          <Meter pct={cov} tone={cov >= 100 ? OK : BRAND} height={7} label={tr("hubfam.pgCoverageAria", { pct: cov })} />
+        <div className="min-w-0 flex-1">
+          <h3 className="m-0 flex items-center gap-2 text-[18px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" style={display}><SubjectTile subject={s.subject} size={26} />{s.subject}</h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <BandChip bands={bands} band={s.band} />
+            {started && <GrowthChip growth={s.growthPct} baseline={s.baselinePct} />}
+          </div>
+          <div className="mt-3">
+            <div className="mb-1 flex justify-between gap-2 text-[11px] font-semibold text-[var(--ink-3)]"><span>{who === null && !p.canEdit ? PARENT_COPY.topicsTried : tr("hubfam.pgCoverage")}</span><span className="tabular-nums">{topics.length > 0 ? tp("hubfam.pgOfTopicsPract", topics.length, { a: practised, b: topics.length }) : tr("hubfam.pgPctPract", { pct: cov })}</span></div>
+            <Meter pct={cov} tone={cov >= 100 ? OK : BRAND} height={7} label={tr("hubfam.pgCoverageAria", { pct: cov })} />
+          </div>
         </div>
       </div>
       {partial && <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-2 text-[12px] leading-snug text-[var(--ink-2)] sm:px-5">{who ? tr("hubfam.pgPartialWho", { a: practised, b: topics.length, name: who }) : tr("hubfam.pgPartialYou", { a: practised, b: topics.length })}</div>}
