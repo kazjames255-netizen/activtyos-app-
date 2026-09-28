@@ -10,7 +10,7 @@ import { useHubMessagesReady } from "@/lib/i18n/hubMessages";
 // Read-only. Every game's own progress endpoint already allows a tutor (server/src/routes/hub/gamesApi.ts, quizArcadeApi.ts); an endpoint that
 // fails or has nothing is skipped, so an area only appears once there is something real to say about it.
 interface Topic { name: string; attempts: number; acc: number }
-interface Part { area: string; unfinished?: number; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
+interface Part { area: string; unfinished?: number; partialAnswers?: number; lastAt: string | null; attempts: number; correct: number | null; topics: Topic[]; solved?: number; weekDays?: number; weekGoal?: number }
 
 const pretty = (s: string) => { const t = s.replace(/[-_]+/g, " ").trim(); return t.charAt(0).toUpperCase() + t.slice(1); };
 const wk = (r: { weekDays?: number; weekGoal?: number }) => ({ weekDays: r.weekDays, weekGoal: r.weekGoal });
@@ -33,11 +33,13 @@ const fromMini = (area: string) => (r: unknown): Part => {
   const q = r as Mini; const n = q.puzzlesSolved ?? q.roundsSolved ?? Object.keys(q.bests ?? {}).length;
   return { area, lastAt: q.runs[0]?.at ?? null, attempts: 0, correct: null, topics: [], solved: n, ...wk(q) };
 };
-interface Facts { practice: { trials: number; accuracy: number | null }; wrong: { key: string }[]; runs: { at: string }[]; weekDays: number; weekGoal: number; unfinished?: number }
+interface Facts { practice: { trials: number; accuracy: number | null }; wrong: { key: string }[]; runs: { at: string }[]; weekDays: number; weekGoal: number; unfinished?: number; partial?: { runs: number; answered: number; correct: number; lastAt: string | null } }
 const fromFacts = (area: string) => (r: unknown): Part => {
   const q = r as Facts;
   const acc = q.practice.accuracy ?? 0;
-  return { area, unfinished: q.unfinished ?? 0, lastAt: q.runs[0]?.at ?? null, attempts: q.practice.trials, correct: q.practice.accuracy === null ? null : Math.round(acc * q.practice.trials),
+  const pa = q.partial?.answered ?? 0;   // answers from runs left part-way still count as practice
+  const last = [q.runs[0]?.at ?? null, q.partial?.lastAt ?? null].filter((x): x is string => !!x).sort().pop() ?? null;
+  return { area, unfinished: q.unfinished ?? 0, lastAt: last, attempts: q.practice.trials + pa, partialAnswers: pa, correct: (q.practice.accuracy === null ? 0 : Math.round(acc * q.practice.trials)) + (q.partial?.correct ?? 0),
     topics: q.wrong.slice(0, 3).map((f) => ({ name: f.key.slice(2).replace("x", "×"), attempts: 1, acc: 0 })), ...wk(q) };
 };
 
@@ -81,7 +83,7 @@ export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail 
     for (const p of parts ?? []) {
       const cur = by.get(p.area);
       if (!cur) { by.set(p.area, { ...p }); continue; }
-      cur.attempts += p.attempts; cur.correct = cur.correct === null && p.correct === null ? null : (cur.correct ?? 0) + (p.correct ?? 0);
+      cur.partialAnswers = (cur.partialAnswers ?? 0) + (p.partialAnswers ?? 0); cur.attempts += p.attempts; cur.correct = cur.correct === null && p.correct === null ? null : (cur.correct ?? 0) + (p.correct ?? 0);
       cur.topics = [...cur.topics, ...p.topics]; cur.solved = (cur.solved ?? 0) + (p.solved ?? 0);
       if ((p.lastAt ?? "") > (cur.lastAt ?? "")) cur.lastAt = p.lastAt;
     }
@@ -126,6 +128,7 @@ export function GamesPlayedPanel({ childId, childName, tenantQuery = "", detail 
                   <div style={{ fontSize: 12.5, opacity: 0.85 }}>{T("pl_right", { pct, n: a.attempts })}</div>
                 </>
               )}
+              {(a.partialAnswers ?? 0) > 0 && <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>{T("pl_partial", { n: a.partialAnswers ?? 0 })}</div>}
               {good.length > 0 && <div style={{ fontSize: 12.5, marginTop: 4 }}>{T("pl_good_at", { list: good.join(", ") })}</div>}
               {weak.length > 0 && <div style={{ fontSize: 12.5, marginTop: 2 }}>{T("pl_needs_work", { list: weak.join(", ") })}</div>}
             </li>

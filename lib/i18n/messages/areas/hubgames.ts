@@ -351,6 +351,7 @@ const hubgames: Record<string, Record<string, string>> = {
     pl_started: "{name} has started a game but not finished a run yet, so there are no scores to show. A run counts once it is finished.",
     pl_week: "Played on {days} of {goal} days this week.",
     pl_doing_well: "Doing well", pl_getting_there: "Getting there", pl_needs_help: "Needs help", pl_just_started: "Just started",
+    pl_partial: "Includes {n} answers from a run left part-way.",
     pl_right: "{pct}% right ({n} answers)", pl_solved: "{n} solved",
     pl_good_at: "Good at: {list}", pl_needs_work: "Needs work: {list}",
     pl_best: "Strongest: {area}.", pl_worst: "Needs the most help: {area}.",

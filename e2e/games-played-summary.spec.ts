@@ -64,3 +64,27 @@ test("after a times-tables run the summary names the AREA (Times tables) with a 
   await expect(page.getByText(/hasn't played any games/)).toHaveCount(0);
   await ctx.close();
 });
+
+test("a run started but not finished is said plainly; leaving it part-way still shows the answers so far", async ({ browser }) => {
+  test.setTimeout(300_000);
+  const name2 = `Hal${stamp}`;
+  const listing = await provisionLiveListing(accounts.freelancer, { title: `E2E Games Partial ${stamp}`, price: 0 });
+  const id2 = await createParentChild(accounts.parent, { name: name2, dob: "2016-05-14" });
+  await bookViaApi(accounts.parent, listing, { child: name2, dates: [listing.runFrom] }).catch((e) => { if (!/clash|existing booking/i.test(String(e))) throw e; });
+  await apiPost(`${HUB}/students`, await token(accounts.freelancer), { childId: id2, subjects: [`Maths ${stamp}`] });
+  const q2 = `?tenantId=${tenantId}&childId=${id2}`;
+  const s = await apiPost<{ sessionId: string; seed: number; cfg: Cfg; plan: Plan }>(`${HUB}/games/sessions${q2}`, await token(accounts.parent), { childId: id2, mode: "quick" });
+  const ctx = await browser.newContext({ storageState: statePath("freelancer"), viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  const open = async () => { await page.goto("/freelancer/learninghub?tab=dashboard"); await page.getByText(name2).first().click({ timeout: 90_000 }); };
+  await open();
+  await expect(page.getByTestId("games-started")).toContainText(name2, { timeout: 60_000 });   // started, nothing to score yet: not "never played"
+  const bot = playBot(s.seed, s.cfg, s.plan, { acc: 0.9, think: 30 });
+  const mid = Math.floor(bot.endTick / 2);
+  await apiPost(`${HUB}/games/sessions/${s.sessionId}/checkpoint${q2}`, await token(accounts.parent), { childId: id2, log: bot.log.filter((e) => e[0] <= mid), endTick: mid });
+  await open();
+  const area = page.getByTestId("games-area-times");
+  await expect(area).toBeVisible({ timeout: 60_000 });
+  await expect(area).toContainText("left part-way");
+  await ctx.close();
+});
