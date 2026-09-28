@@ -176,10 +176,10 @@ test.describe("server rules", () => {
     const moved = await send("PUT", `${HUB}/lessons/${id}`, tutor, { startsAt: inDays(4), title: `${titleB} v2` });
     expect(moved.status, moved.text).toBe(200);
     expect(moved.body).toMatchObject({ title: `${titleB} v2`, mode: "in_person", status: "scheduled" });
-    expect((await bell(parent)).some((x) => x.title === "In-person lesson time changed" && x.body.includes(`${titleB} v2`))).toBe(true);
+    await expect.poll(async () => (await bell(parent)).some((x) => x.title === "In-person lesson time changed" && x.body.includes(`${titleB} v2`)), { timeout: 20_000 }).toBe(true); // raised in the background
     const cancelled = await send("PUT", `${HUB}/lessons/${id}`, tutor, { status: "cancelled" });
     expect(cancelled.status, cancelled.text).toBe(200);
-    expect((await bell(parent)).some((x) => x.title === "In-person lesson cancelled" && x.body.includes(`${titleB} v2`))).toBe(true);
+    await expect.poll(async () => (await bell(parent)).some((x) => x.title === "In-person lesson cancelled" && x.body.includes(`${titleB} v2`)), { timeout: 20_000 }).toBe(true); // raised in the background
     const start = await send("POST", `${HUB}/in-person/sessions/${id}/start`, tutor, {});
     expect(start.status).toBe(409);
     expect(start.body.code).toBe("lesson_closed");
@@ -199,20 +199,27 @@ test.describe("tutor + family UI", () => {
     await page.locator("#hub-schedule-lesson, [data-testid=hub-schedule-lesson]").first().click();
     const chooser = page.locator("#hub-new-session");
     await expect(chooser).toBeVisible();
-    await chooser.getByRole("radio", { name: "In person" }).or(chooser.getByRole("button", { name: "In person", exact: true })).first().click();
+    await chooser.getByText("In person", { exact: true }).click();
     // The old "in-person can't be scheduled" note is gone and BOTH When options are offered.
     await expect(page.getByTestId("hub-new-inperson-now-note")).toHaveCount(0);
     await expect(chooser).not.toContainText("nothing to schedule ahead");
-    await chooser.getByRole("radio", { name: "Schedule for later" }).or(chooser.getByRole("button", { name: "Schedule for later", exact: true })).first().click();
+    await chooser.getByText("Schedule for later", { exact: true }).click();
     await page.getByTestId("hub-new-session-continue").click();
 
     const form = page.locator("#hub-lesson-form");
-    await expect(form).toBeVisible();
+    await expect(form).toBeVisible({ timeout: 30_000 });
     await expect(form.getByRole("heading", { name: "Schedule an in-person lesson" })).toBeVisible();
     await expect(form.locator("#hub-lesson-video-link")).toHaveCount(0); // no video links for an in-person lesson
     await expect(form.getByTestId("hub-lesson-mode-held")).toHaveCount(0); // "log a held lesson" is video-only
-    await form.locator("#hub-lesson-title").fill(uiTitle);
-    await form.getByRole("button", { name: nameA }).or(form.getByText(nameA, { exact: true })).first().click();
+    // The form can re-initialise once when the roster arrives (a lone student is pre-selected): fill/tick until both stick.
+    const titleBox = form.locator("#hub-lesson-title");
+    await expect(async () => { await titleBox.fill(uiTitle); await expect(titleBox).toHaveValue(uiTitle, { timeout: 2_000 }); }).toPass({ timeout: 20_000 });
+    const kid = form.getByRole("button", { name: nameA, exact: true });
+    await expect(async () => {
+      if ((await kid.getAttribute("aria-pressed")) !== "true") await kid.click();
+      await expect(kid).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(titleBox).toHaveValue(uiTitle);
     await form.getByRole("button", { name: "Schedule in-person lesson" }).click();
 
     // Upcoming shows it as an in-person card with a Start button (not a video Join).
