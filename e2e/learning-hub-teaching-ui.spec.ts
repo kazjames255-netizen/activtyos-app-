@@ -43,7 +43,7 @@ async function setHub(op: TestAccount, on: boolean) {
   await apiFetch("/api/library", s.idToken, { method: "PUT", body: JSON.stringify({ settings }) });
 }
 const token = async (a: TestAccount) => (await fbSignIn(a.email)).idToken;
-import { tabOf, openTab } from "./helpers/hubTabs";
+import { tabOf, openTab, pickChild } from "./helpers/hubTabs";
 /** A dialog / sheet must be a LIGHT surface (perceived luminance well above mid-grey), not the app's dark :root fallback. */
 async function expectLight(el: import("@playwright/test").Locator) {
   const lum = await el.evaluate((n) => {
@@ -97,6 +97,8 @@ test.beforeAll(async () => {
   for (const [front, back] of [["1/2 + 1/2", "1"], ["3/4 − 1/4", "1/2"], ["Simplify 4/8", "1/2"], ["1/3 of 12", "4"]]) {
     await apiPost("/api/learning-hub/flashcards", t, { topicId, front: `${front} (${stamp})`, back, published: true });
   }
+  // Cards reach a child only when their topic is given to them (explicitly, or by assigning one of its lessons) — enrolment alone brings none.
+  await apiPost("/api/learning-hub/flashcards/assign", t, { topicId, childIds: [childId] });
 });
 test.beforeEach(async () => { await setHub(accounts.freelancer, true); }); // other specs toggle the hub on this account
 test.afterAll(async () => { /* leave the hub on: the standing account is shared with the other hub specs */ });
@@ -118,11 +120,7 @@ async function openParentHub(page: Page, tab: RegExp) {
   await gotoHub(page, "/custdash/learninghub");
   const provider = page.getByLabel("Provider");
   if (await provider.isVisible().catch(() => false)) await provider.selectOption(accounts.freelancer.tenantId!);
-  // The child picker is a pill row (radiogroup) for up to three children, a select beyond that.
-  const select = page.getByRole("combobox", { name: "Child" });
-  const pill = page.getByRole("radio", { name: childName });
-  if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
-  else if (await pill.isVisible({ timeout: 8_000 }).catch(() => false)) await pill.click();
+  await pickChild(page, childName);
   await openTab(page, tab);
 }
 async function openTutorHub(page: Page, tab: RegExp) {
@@ -141,8 +139,12 @@ test.describe("homework: set → hand in → mark → see the mark", () => {
     await expect(dlg).toBeVisible();
     await dlg.getByLabel("Title").fill(hwTitle);
     await dlg.getByLabel("Instructions").fill("Add the fractions and show your working.");
-    await dlg.getByRole("button", { name: childName, exact: true }).click();
-    await expect(dlg.getByRole("button", { name: childName, exact: true })).toHaveAttribute("aria-pressed", "true");
+    const chip = dlg.getByRole("button", { name: childName, exact: true });
+    // The roster can refresh right after the dialog opens and reset the pick: tick until it sticks.
+    await expect(async () => {
+      if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.click();
+      await expect(chip).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
     const saved = page.waitForResponse((r) => r.url().includes("/api/learning-hub/homework") && r.request().method() === "POST");
     await dlg.getByRole("button", { name: "Assign homework" }).click();
     expect((await saved).status()).toBe(201);
@@ -178,11 +180,10 @@ test.describe("homework: set → hand in → mark → see the mark", () => {
     test.setTimeout(180_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
-    await openTutorHub(page, /Homework/);
-    await page.locator('[data-filter="submitted"]').click();
-    const row = cardWith(page, hwTitle, childName);
+    await openTutorHub(page, /Homework/); // the Homework tab opens "Marking & results": a "Needs marking" queue, then the markbook
+    // A waiting hand-in is a row in the queue, carrying the child's name and the homework title.
+    const row = page.getByRole("listitem").filter({ hasText: hwTitle }).filter({ hasText: childName }).first();
     await expect(row).toBeVisible({ timeout: 30_000 });
-    await expect(row).toHaveAttribute("data-status", "submitted");
     await row.click();
     const dlg = page.locator("#hub-mark-dialog");
     await expect(dlg).toBeVisible();
@@ -196,10 +197,8 @@ test.describe("homework: set → hand in → mark → see the mark", () => {
     await dlg.getByRole("button", { name: "Save mark" }).click();
     expect((await marked).ok()).toBe(true);
     await expect(dlg).toHaveCount(0);
-    await page.locator('[data-filter="marked"]').click();
-    const done = cardWith(page, hwTitle, childName);
-    await expect(done).toHaveAttribute("data-status", "marked", { timeout: 20_000 });
-    await expect(done).toContainText("8/10");
+    // Marked: it leaves the "Needs marking" queue (the family sees the mark in the next test).
+    await expect(page.getByRole("listitem").filter({ hasText: hwTitle }).filter({ hasText: childName })).toHaveCount(0, { timeout: 20_000 });
     await ctx.close();
   });
 
@@ -256,6 +255,8 @@ test.describe("flashcards: the family reviews what's due", () => {
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
     await openTutorHub(page, /Flashcards/);
+    // The deck lists every subject's cards (tens of thousands with the shared library): narrow to this run's subject first.
+    await page.getByRole("button", { name: subject, exact: true }).click();
     await expect(page.locator(`[data-topic="${topicId}"]`)).toBeVisible({ timeout: 30_000 });
     await expect(cardWith(page, `1/2 + 1/2 (${stamp})`)).toContainText("Published");
     // Paste-add: two good lines and one bad line.
@@ -263,9 +264,9 @@ test.describe("flashcards: the family reviews what's due", () => {
     const dlg = page.locator("#hub-bulk-dialog");
     await dlg.getByLabel("Topic").selectOption(topicId);
     await dlg.getByLabel("Paste your cards").fill(`Half of 10 (${stamp}) | 5\nDouble 7 (${stamp}) | 14\nno separator here`);
-    await expect(dlg).toContainText("2 cards ready");
-    await expect(dlg).toContainText("Line 3");
-    await dlg.getByRole("button", { name: /Add 2 cards/ }).click();
+    await expect(dlg).toContainText("Cards ready: 2");
+    await expect(dlg).toContainText(/Lines? 3/);
+    await dlg.getByRole("button", { name: /Add cards \(2\)/ }).click();
     await expect(dlg).toHaveCount(0, { timeout: 30_000 });
     await expect(cardWith(page, `Double 7 (${stamp})`)).toBeVisible({ timeout: 30_000 });
   });
@@ -278,11 +279,28 @@ test.describe("live lessons: schedule, list, and the join window", () => {
     const page = await ctx.newPage();
     await openTutorHub(page, /Live lessons/);
     await page.locator("#hub-schedule-lesson").first().click();
+    // "New session" asks two quick questions first: how (video call) and when (schedule for later).
+    const chooser = page.getByRole("dialog", { name: /New session/ });
+    if (await chooser.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await chooser.getByText("Video call", { exact: true }).click();
+      await chooser.getByText("Schedule for later", { exact: true }).click();
+      await chooser.getByRole("button", { name: "Continue" }).click();
+    }
     const dlg = page.locator("#hub-lesson-form");
-    await expect(dlg).toBeVisible();
-    await dlg.getByLabel("Title").fill(lessonTitle);
-    await dlg.getByLabel("Topic (optional)").selectOption(topicId);
-    await dlg.getByRole("button", { name: childName, exact: true }).click();
+    await expect(dlg).toBeVisible({ timeout: 30_000 });
+    // The form can re-initialise once when the roster arrives (a lone student is pre-selected): fill/tick until both stick.
+    const titleBox = dlg.getByLabel("Title", { exact: true });
+    await expect(async () => {
+      await titleBox.fill(lessonTitle);
+      await expect(titleBox).toHaveValue(lessonTitle, { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    // (the topic is optional and is picked in the lesson picker now — this test does not need one)
+    const kid = dlg.getByRole("button", { name: childName, exact: true });
+    await expect(async () => {
+      if ((await kid.getAttribute("aria-pressed")) !== "true") await kid.click();
+      await expect(kid).toHaveAttribute("aria-pressed", "true", { timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
+    await expect(titleBox).toHaveValue(lessonTitle);
     const saved = page.waitForResponse((r) => r.url().endsWith(`/api/learning-hub/lessons?tenantId=${accounts.freelancer.tenantId}`) && r.request().method() === "POST");
     await dlg.getByRole("button", { name: /Schedule (video lesson|or run a lesson)/ }).click();
     expect((await saved).status()).toBe(201);
@@ -447,7 +465,10 @@ test.describe("live lessons: rejoin, stay prompt and workspace", () => {
     // Layout presets and Present mode (P): tutor-only controls disappear, names can be hidden.
     await room.locator('[data-preset="work"]').click();
     await expect(room).toHaveAttribute("data-layout", "work");
-    // The floating video tile is draggable, resizable, and remembers where it was put.
+    // The floating video tile is draggable, resizable, and remembers where it was put. (It docks itself when the workspace has no clear
+    // corner for it, so give it a roomy window: at a small one it is docked and cannot be dragged.)
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.waitForTimeout(800); // the tile animates to its new corner (left/top transition)
     const tile = page.getByTestId("hub-video-pane");
     await expect(page.locator("[data-tile-grip]")).toBeVisible();
     const before = (await tile.boundingBox())!;
@@ -458,6 +479,7 @@ test.describe("live lessons: rejoin, stay prompt and workspace", () => {
     await page.mouse.up();
     await expect.poll(async () => Math.round((await tile.boundingBox())!.x)).not.toBe(Math.round(before.x));
     const stored = await page.evaluate(() => localStorage.getItem("hub-video-tile"));
+    expect(stored, `localStorage keys: ${await page.evaluate(() => Object.keys(localStorage).join(", "))}`).not.toBeNull();
     expect(JSON.parse(stored!)).toMatchObject({ size: "m" });
     await page.locator('[data-tile-size="s"]').click();
     await expect.poll(async () => Math.round((await tile.boundingBox())!.width)).toBeLessThan(Math.round(before.width));
@@ -547,7 +569,7 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await expect(gd).toHaveCount(0);
     const card = page.locator(`[data-group-card="${groupName}"]`);
     await expect(card).toBeVisible({ timeout: 20_000 });
-    await expect(card).toContainText("1 student");
+    await expect(card).toContainText(/Students: 1|1 student/);
     // Filtering the roster by the group leaves just our child, wearing the group chip.
     await card.locator("[data-group-filter]").click();
     await expect(cardWith(page, childName)).toContainText(groupName);
@@ -560,7 +582,7 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await expectLight(dlg);
     await expect(dlg.locator("[data-group-pick]", { hasText: groupName })).toHaveAttribute("aria-pressed", "true");
     await expect(dlg.getByRole("button", { name: childName, exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(dlg.locator("[data-recipient-summary]")).toContainText("Sending to 1 student");
+    await expect(dlg.locator("[data-recipient-summary]")).toContainText(/Sending to:? 1/);
     // Videos: instant format validation, a thumbnail preview, then it joins the list.
     await dlg.getByLabel("Title").fill(vidHw);
     await dlg.getByLabel("Instructions").fill("Watch first, then write three things you learned.");
@@ -604,7 +626,8 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await hwTile.locator("[data-group-action]").click();
     const chip = page.locator(`[data-group-view-chip="${groupName}"]`);
     await expect(chip).toBeVisible({ timeout: 30_000 });
-    await expect(chip).toContainText("1 student");
+    await expect(chip).toContainText(/Students: 1|1 student/);
+    await page.locator('[data-filter="all"]').click(); // the view opens on "To mark"; nothing is waiting for this group's one child, so look under All
     await expect(cardWith(page, vidHw)).toBeVisible();
     // Clearing removes the filter, and it doesn't come back.
     await chip.locator("[data-clear-group-view]").click();
@@ -623,7 +646,9 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
   test("the family gets the video above the instructions: a facade first, a sandboxed nocookie iframe only after play", async ({ browser }) => {
     test.setTimeout(180_000);
     const t = await token(accounts.freelancer);
-    await apiPost("/api/learning-hub/notes", t, { topicId, title: `Video note ${stamp}`, body: "Watch, then try it.", published: true, attachments: [], videos: [{ url: YT, title: "Neural nets", start: 30 }] });
+    const vnote = await apiPost<{ id: string }>("/api/learning-hub/notes", t, { topicId, title: `Video note ${stamp}`, body: "Watch, then try it.", published: true, attachments: [], videos: [{ url: YT, title: "Neural nets", start: 30 }] });
+    // Families only see what is assigned to their child: hand the note over through a homework.
+    await apiPost("/api/learning-hub/homework", t, { title: `Video note hw ${stamp}`, instructions: "Watch it.", noteIds: [vnote.id], assignedChildIds: [childId], dueAt: new Date(Date.now() + 5 * 86_400_000).toISOString() });
     const ctx = await ctxFor(browser, "parent");
     const page = await ctx.newPage();
     await openParentHub(page, /Homework/);
@@ -644,11 +669,11 @@ test.describe("groups + videos: a group quick action sets video homework", () =>
     await expect(frame).toHaveAttribute("loading", "lazy");
     await expect(frame).toHaveAttribute("title", /.+/);
     // The note carries a Video chip and an embed in its reading view.
-    await openTab(page, /^Lessons/);
-    const nc = cardWith(page, `Video note ${stamp}`);
-    await expect(nc.locator("[data-video-chip]")).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("button", { name: `Video note ${stamp}`, exact: true }).click();
-    await expect(page.locator("#hub-reader [data-video-embeds]")).toBeVisible();
+    // (the child's Lessons tab is a curriculum map now, so open the assigned note by its ?open= link)
+    const u = new URL(page.url());
+    u.searchParams.set("tab", "notes"); u.searchParams.set("child", childId); u.searchParams.set("open", `lesson:${vnote.id}`);
+    await page.goto(u.toString());
+    await expect(page.locator("#hub-reader [data-video-embeds]")).toBeVisible({ timeout: 30_000 });
     await ctx.close();
   });
 

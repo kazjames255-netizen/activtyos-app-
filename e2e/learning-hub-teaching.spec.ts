@@ -246,6 +246,9 @@ test.describe("flashcards: SM-2 spaced repetition", () => {
     cardA = await mk(`1/2 + 1/4 ${stamp}`);
     cardB = await mk(`1/3 + 1/6 ${stamp}`);
     cardDraft = await mk(`draft card ${stamp}`, false);
+    // Cards reach a child only when the topic is given to them (explicitly, or by assigning one of its lessons) — enrolment alone brings none.
+    const given = await send("POST", `${HUB}/flashcards/assign`, tutor, { topicId, childIds: [child1, child2] });
+    expect(given.status, given.text).toBeLessThan(300);
     expect((await send("POST", `${HUB}/flashcards`, tutor, { topicId: "nope", front: "x", back: "y" })).status).toBe(404);
     expect((await send("POST", `${HUB}/flashcards${q()}`, parent, { topicId, front: "x", back: "y" })).status).toBe(403);
     const due = await get<{ due: { id: string; front: string; back: string; isNew: boolean }[]; dueCount: number; newCount: number; upcoming: number }>(`${HUB}/flashcards/due${qc(child1)}&topicId=${topicId}`, parent);
@@ -449,13 +452,15 @@ test.describe("live lessons", () => {
 });
 
 test.describe("notifications", () => {
-  test("a published note tells the family; a draft doesn't; the category can be muted", async () => {
+  test("publishing a note is silent (no 'new lesson shared' alert, draft or not); the learning category can still be muted", async () => {
+    // The "new lesson shared" alert was retired: families only see what is assigned to their child, and "New homework" already covers that.
     const pub = await send("POST", `${HUB}/notes`, tutor, { topicId, title: `Adding fractions ${stamp}`, body: "…", published: true, attachments: [] });
     expect(pub.status).toBe(201);
     await send("POST", `${HUB}/notes`, tutor, { topicId, title: `Secret draft ${stamp}`, body: "…", published: false, attachments: [] });
-    await expectBell("New lesson shared", `Adding fractions ${stamp}`);
-    await new Promise((r) => setTimeout(r, 2500)); // give a (wrongly) fired draft alert time to appear
-    expect((await bell(parent)).some((n) => n.body.includes(`Secret draft ${stamp}`))).toBe(false);
+    await new Promise((r) => setTimeout(r, 2500)); // give a (wrongly) fired alert time to appear
+    const rung = await bell(parent);
+    expect(rung.some((n) => n.title === "New lesson shared" && n.body.includes(`Adding fractions ${stamp}`))).toBe(false);
+    expect(rung.some((n) => n.body.includes(`Secret draft ${stamp}`))).toBe(false);
     // Parents can mute the new `learning` category (bell stays, email stops).
     const on = await send("PUT", "/api/notifications/prefs", parent, { category: "learning", muted: true });
     expect(on.status).toBe(200);

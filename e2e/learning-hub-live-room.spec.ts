@@ -152,10 +152,11 @@ test("a whiteboard snapshot is a distinct 'board' note and does not announce a n
   expect(edited.status, edited.text).toBe(200);
   const back = await send("GET", `${HUB}/notes/${made.body.id}?tenantId=${tenantId}`, tutor);
   expect(back.body.kind).toBe("board");
-  // The family's bell rang for the ordinary lesson only.
+  // Publishing a lesson no longer rings the family's bell at all (the "new lesson published" notification was retired: families only see
+  // what is assigned to their child, and "new homework" already covers assigned lessons) — so neither the ordinary lesson nor the board snapshot announces.
   await new Promise((r) => setTimeout(r, 2000));
   const bell = (await send("GET", "/api/notifications", parent)).body.notifications as { title: string; body: string }[];
   const said = (t: string) => bell.some((n) => `${n.title} ${n.body}`.includes(t));
-  expect(said(`Ordinary ${stamp}`)).toBe(true);
+  expect(said(`Ordinary ${stamp}`)).toBe(false);
   expect(said(`Snapshot ${stamp}`)).toBe(false);
 });

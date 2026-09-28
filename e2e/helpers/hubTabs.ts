@@ -10,18 +10,16 @@ interface Entry { top: string; sub: string | null; labels: string[] }
 const MAP: Entry[] = [
   { top: "home", sub: null, labels: ["Home"] },
   { top: "lessons", sub: "lessons", labels: ["Lessons & curriculum", "Lessons"] },
-  { top: "lessons", sub: "live", labels: ["Live lessons"] },
-  { top: "lessons", sub: "schedule", labels: ["Schedule video lesson", "Schedule or run a lesson"] },
-  { top: "lessons", sub: "teach", labels: ["Teach in person"] },
+  { top: "lessons", sub: "live", labels: ["Live lessons", "Let's Teach", "Schedule video lesson", "Teach in person"] },
+  { top: "lessons", sub: "progress", labels: ["Progress"] },
   { top: "lessons", sub: "tools", labels: ["Tools"] },
-  { top: "lessons", sub: "flashcards", labels: ["Flashcards"] },
+  { top: "flashcards", sub: null, labels: ["Flashcards"] },
   { top: "students", sub: "students", labels: ["Students"] },
   { top: "students", sub: "enrol", labels: ["Enrol a student", "Enrol student"] },
-  { top: "progress", sub: null, labels: ["Progress"] },
+  { top: "starting", sub: null, labels: ["Starting quizzes", "Placement test", "Entry tests"] },
   { top: "quizzes", sub: "quizzes", labels: ["Quizzes"] },
-  { top: "quizzes", sub: "starting", labels: ["Starting quizzes", "Placement test"] },
   { top: "quizzes", sub: "newquiz", labels: ["New quiz"] },
-  { top: "homework", sub: "results", labels: ["Marking & results", "Results", "Inbox", "To mark"] },
+  { top: "homework", sub: null, labels: ["Homework", "To mark", "Inbox", "Results", "Marking"] }, // opens "Marking & results" (queue, inbox and markbook are one page now)
   { top: "homework", sub: "set", labels: ["Set homework"] },
   { top: "messages", sub: null, labels: ["Messages", "Student message centre"] },
 ];

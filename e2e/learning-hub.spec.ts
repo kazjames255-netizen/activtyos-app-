@@ -307,7 +307,7 @@ test.describe("a family reads it (the student side)", () => {
     if (await select.isVisible().catch(() => false)) await select.selectOption({ label: childName });
     else if (await page.getByRole("radio", { name: childName }).isVisible().catch(() => false)) await page.getByRole("radio", { name: childName }).click();
     // A parent with several children lands on "Everyone's progress": open this child's card to enter their hub.
-    if (!(await page.getByRole("tab").first().isVisible({ timeout: 5_000 }).catch(() => false))) await page.getByText(childName).first().click();
+    if (!(await page.getByRole("tab").first().isVisible({ timeout: 5_000 }).catch(() => false))) await page.locator('button, a, [role="button"], [data-ui="card"]').filter({ hasText: childName }).filter({ hasText: /Tutor:/ }).last().click();
 
     // The child's strip is Today / Homework / Learn / Progress / Games (the tutor's "Lessons" is the child's "Learn").
     await expect(page.getByRole("tab", { name: /^Learn/ })).toBeVisible({ timeout: 30_000 });

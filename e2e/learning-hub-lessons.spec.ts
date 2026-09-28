@@ -80,6 +80,8 @@ test.beforeAll(async () => {
   L = await seedOakLesson(t, { stamp, subject, topicId, widget: "neurone" });
   const plain = await apiPost<{ id: string }>("/api/learning-hub/notes", t, { topicId, title: plainTitle, body: plainText, published: true });
   plainId = plain.id;
+  // Families only see lessons assigned to their child: give this child both lessons through a homework.
+  await apiPost("/api/learning-hub/homework", t, { title: `Lessons hw ${stamp}`, instructions: "Read the lessons.", noteIds: [L.noteId, plainId], assignedChildIds: [childId], dueAt: new Date(Date.now() + 5 * 86_400_000).toISOString() });
 });
 test.beforeEach(async () => { await setHub(accounts.freelancer, true); });
 
@@ -108,6 +110,17 @@ async function openTutorLessons(page: Page) {
 }
 /** Find THIS run's lesson in the list (search is server-side) and open it. */
 async function openLesson(page: Page, title: string) {
+  // A tutor searches lessons; a family (whose list is just what was assigned) narrows by subject.
+  const famSearch = page.getByPlaceholder(/Find a subject or topic/);
+  if (await famSearch.isVisible().catch(() => false)) {
+    // A family's open lesson lives in the URL (?open=lesson:<id>): the child's Lessons tab is a curriculum map, so open this run's assigned lesson directly.
+    const id = title === L.title ? L.noteId : title === plainTitle ? plainId : "";
+    expect(id, `no id known for "${title}"`).toBeTruthy();
+    const u = new URL(page.url());
+    u.searchParams.set("tab", "notes"); u.searchParams.set("child", childId); u.searchParams.set("open", `lesson:${id}`);
+    await page.goto(u.toString());
+    return;
+  }
   await page.getByPlaceholder(/Search (areas or )?lessons/).fill(title);
   const card = cardWith(page, title);
   await expect(card).toBeVisible({ timeout: 20_000 });
@@ -369,8 +382,8 @@ test.describe("parent plays the lesson end to end", () => {
 
     // "Back to lessons" returns to the list, focus mode released (the tabs are back).
     await page.getByTestId("lesson-exit").click();
-    await expect(cardWith(page, L.title)).toBeVisible();
-    await expect(tabOf(page, /^Lessons/)).toBeVisible();
+    await expect(page.getByTestId("lesson-player")).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: /^Lessons/ })).toBeVisible(); // the Learn tab's Lessons sub-tab is back (focus mode released)
     await ctx.close();
   });
 
@@ -379,11 +392,7 @@ test.describe("parent plays the lesson end to end", () => {
     const ctx = await ctxFor(browser, "parent");
     const page = await ctx.newPage();
     await openParentLessons(page);
-    await page.getByPlaceholder(/Search (areas or )?lessons/).fill(plainTitle);
-    const card = cardWith(page, plainTitle);
-    await expect(card).toBeVisible({ timeout: 20_000 });
-    await expect(card).not.toContainText("Interactive");
-    await card.getByRole("button", { name: plainTitle, exact: true }).click();
+    await openLesson(page, plainTitle); // the family's assigned note (opened by its ?open= link)
     await expect(page.getByRole("heading", { name: plainTitle })).toBeVisible();
     await expect(page.getByText(plainText)).toBeVisible();
     await expect(page.getByTestId("lesson-player")).toHaveCount(0);
