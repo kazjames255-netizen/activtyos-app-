@@ -69,6 +69,7 @@ export function TutorHomework(p: PanelProps) {
   const [editor, setEditor] = useState<HW | "new" | null>(null);
   const [marking, setMarking] = useState<string | null>(null);
   // A group quick action from the Students tab lands here with its form open ("Set a quiz" focuses the quiz picker).
+  const [markOpen, setMarkOpen] = useState(true);   // the Needs marking list above the markbook can be folded away
   const [view2, setView2] = useState<{ kind: "note" | "quiz" | "worksheet"; id: string; title?: string; quizId?: string } | null>(null);
   const [preset, setPreset] = useState<{ groupId: string; quiz: boolean; assessmentId?: string; noteIds?: string[]; title?: string; instructions?: string; childIds?: string[]; packNoteId?: string } | null>(null);
   const tookIntent = useRef(false);
@@ -218,7 +219,16 @@ export function TutorHomework(p: PanelProps) {
           )}
 
           {/* One place for marking AND results: everything waiting for a mark (homework hand-ins, quiz written answers, entry tests) above the markbook. */}
-          {view === "results" && <div className="grid gap-4"><MarkQueue p={p} q={mq} /><ResultsBoard inbox={inbox} homework={homework} now={now} groups={groups} onOpen={setMarking} /></div>}
+          {view === "results" && <div className="grid gap-4">
+            <section aria-label={tr("resNeedsMarking", { n: mq.count })} data-testid="hub-mark-section">
+              <button type="button" aria-expanded={markOpen} onClick={() => setMarkOpen((v) => !v)} data-testid="hub-mark-toggle"
+                className="mb-2 flex min-h-[44px] w-full items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 text-start font-extrabold text-[var(--ink)] shadow-[var(--shadow-sm)] hover:border-[var(--brand)]">
+                <span>{tr("resNeedsMarking", { n: mq.count })}</span>
+                <span className="inline-flex items-center gap-1.5 text-[12px] text-[var(--brand)]">{markOpen ? tr("resClose") : tr("resOpen")}<span aria-hidden>{markOpen ? "▲" : "▼"}</span></span>
+              </button>
+              {markOpen && <MarkQueue p={p} q={mq} />}
+            </section>
+            <ResultsBoard inbox={inbox} homework={homework} now={now} groups={groups} onOpen={setMarking} /></div>}
 
           {view === "assignments" && (
             <div className="grid gap-2.5" id="hub-assignments">
