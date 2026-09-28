@@ -793,7 +793,7 @@ const hublessons: Record<string, Record<string, string>> = {
     "fcWhatsIn": "What’s in it",
     "fcPlusMore": "+{n} more",
     "fcInTotal": "{total} in total — we’ll do {n} at a time.",
-    "fcStartReview": "Start review",
+    "fcStartReview": "Start",
     "fcShortcutsLine": "Space flips the card · 1 Again · 2 Hard · 3 Good · 4 Easy",
     "fcMoreScheduled_one": "{n} more card scheduled for later.",
     "fcMoreScheduled_other": "{n} more cards scheduled for later.",
