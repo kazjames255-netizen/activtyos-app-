@@ -365,8 +365,10 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   // never on Homework or Today. It already only ever lists the child's enrolled subjects (and their one chosen
   // language, not every language taught) because `topics` itself is narrowed to `child.subjects` in
   // useHubData.ts before it ever reaches here.
+  // Reception–Y2 (KS1): no subject chips or search on "Stars" (the drill-in is for readers), and no typing box anywhere.
+  const ks1Kid = kid && bandOrDefault(hub.child?.yearGroup) === "ks1";
   const chips = tutor || kid
-    ? active === "quizzes" || active === "diagnostic" || active === "dashboard"   // Progress drills into a subject's topics with these chips; NOT homework: that page never uses the subject filter (owner: only show these when a card below uses them)
+    ? active === "quizzes" || active === "diagnostic" || (active === "dashboard" && !ks1Kid)   // Progress drills into a subject's topics with these chips; NOT homework: that page never uses the subject filter (owner: only show these when a card below uses them)
     : !!famActiveTop && ["learn", "progress"].includes(famActiveTop.id);
   // Notes (Lessons & curriculum) has its own primary browse now — the always-open curriculum card, whose tiles
   // lead straight to a lesson list — so it no longer needs the subject/topic sidebar. Tools has its own filters.
@@ -381,7 +383,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   })();
 
   const topicFilter = (variant: "sidebar" | "chips") => (ready ? (
-    <TopicFilter topics={topics} noteStats={noteStats} filter={filter} onFilter={onFilter} canEdit={canEdit && !readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError} variant={variant} />
+    <TopicFilter topics={topics} noteStats={noteStats} filter={filter} onFilter={onFilter} canEdit={canEdit && !readOnly} franchiseId={provider.franchiseId ?? null} qs={qs} onChanged={refresh} onError={setError} variant={variant} noSearch={ks1Kid} />
   ) : variant === "chips" ? (
     <div role="status" aria-busy="true" aria-label={t("hubshell.loadingSubjects")} className="mb-4 flex gap-2">{[104, 92, 108, 96].map((w, i) => <Skeleton key={i} className="h-11 flex-none !rounded-full" style={{ width: w }} />)}</div>
   ) : (

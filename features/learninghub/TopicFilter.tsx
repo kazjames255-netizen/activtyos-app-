@@ -19,6 +19,8 @@ import { isRtlDoc, scrollEdges } from "./rtl";
 // opens the same tree in a bottom sheet.
 
 interface Props {
+  /** Reception–Y2 children: no typing, so no search box. */
+  noSearch?: boolean;
   topics: Topic[];
   /** Note counts from the server (GET /notes/counts); null until they arrive — the badges then read 0. */
   noteStats: NoteStats | null;
@@ -79,7 +81,7 @@ function useEdgeFade() {
   return { ref, style, onScroll: read };
 }
 
-export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, franchiseId, qs, onChanged, onError, variant = "sidebar" }: Props) {
+export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, franchiseId, qs, onChanged, onError, variant = "sidebar", noSearch = false }: Props) {
   const isDesktop = useIsDesktop();
   const tr = useT();
   const fullTree = useMemo(() => buildTree(topics), [topics]);
@@ -415,7 +417,7 @@ export function TopicFilter({ topics, noteStats, filter, onFilter, canEdit, fran
         {/* Family only: one search bar over the cards below (quizzes/homework/lessons), combining what the chip
             row and the now-removed "Browse topics" sheet used to split across two affordances — typing narrows
             the item cards themselves by title/topic, exactly like the provider's curriculum-map search (ccSearchPh). */}
-        {!canEdit && (
+        {!canEdit && !noSearch && (
           <div className="relative mt-2 max-w-[320px]">
             <input type="search" value={filter.q ?? ""} onChange={(e) => onFilter({ ...filter, q: e.target.value })} placeholder={tr("hubshell.k_findPh")} aria-label={tr("hubshell.k_find")} data-testid="hub-topic-search"
               className={`min-h-[44px] w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 text-[13.5px] font-semibold text-[var(--ink)] ${FOCUS}`} />
