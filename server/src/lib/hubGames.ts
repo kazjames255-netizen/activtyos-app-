@@ -265,14 +265,22 @@ export async function resumeSession(o: { tenantId: string; childId: string; sess
   };
 }
 
+/** Cost/CPU bound on the "left part-way" rows read + replayed per facts overview: abandoned "Back to Games" runs stay `paused` forever, so the
+ *  unbounded query (and a synchronous replay of every one) grew with every abandoned run. No orderBy on purpose (it would need a composite index). */
+const OPEN_RUNS_LIMIT = 60, PARTIAL_REPLAY_MAX = 20, PARTIAL_MAX_AGE_MS = 30 * 86_400_000;
+
 /** Tutor / family read of a child's fact strengths. Tutor extras (docs C 6.2): heat map, response-time profile, misconceptions, retention, practice quality, effort flags, productive vs total time. */
 export async function factsOverview(tenantId: string, childId: string, nowIso = new Date().toISOString()) {
-  const openRuns = (st: "started" | "paused") => sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", st).get();
+  const openRuns = (st: "started" | "paused") => sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", st).limit(OPEN_RUNS_LIMIT).get();
   const [facts, profile, sess, started, paused] = await Promise.all([loadFacts(tenantId, childId), loadProfile(tenantId, childId), sessionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", "done").get(), openRuns("started"), openRuns("paused")]);
   // Runs a child LEFT part-way ("Back to Games" saves a server-verified checkpoint): their answers so far are real practice evidence for the tutor, so replay
   // each checkpoint and report the totals. Read-only: this never touches per-fact memory (that is written when a run is finished), so no score is invented.
   let partial: { runs: number; answered: number; correct: number; lastAt: string | null } = { runs: 0, answered: 0, correct: 0, lastAt: null };
-  for (const d of paused.docs) {
+  const ageCutoff = new Date(new Date(nowIso).getTime() - PARTIAL_MAX_AGE_MS).toISOString();
+  const savedAtOf = (d: FirebaseFirestore.QueryDocumentSnapshot) => String((d.get("checkpoint") as { savedAt?: string } | undefined)?.savedAt ?? d.get("updatedAt") ?? "");
+  // Replay only the 20 most recent, and ignore runs abandoned more than 30 days ago (stale evidence, and unbounded CPU otherwise).
+  const recentPaused = paused.docs.filter((d) => savedAtOf(d) >= ageCutoff).sort((a, b) => savedAtOf(b).localeCompare(savedAtOf(a))).slice(0, PARTIAL_REPLAY_MAX);
+  for (const d of recentPaused) {
     const cp = d.get("checkpoint") as { log?: unknown; endTick?: number; savedAt?: string } | undefined;
     const log = cp && unpackLog(cp.log);
     if (!cp || !log || d.get("kind") !== "slide") continue;

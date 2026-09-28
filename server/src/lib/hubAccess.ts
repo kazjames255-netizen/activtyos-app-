@@ -20,13 +20,14 @@ export async function familyNoteRule(ctx: HubCtx): Promise<((n: NoteRow) => bool
   if (!kids.length) return () => false;
   // Resolved PER CHILD (their own provider franchise may set a different rule); a note opens if ANY child in scope may open it.
   // A tenant that never set `lessonAccess` gets "assigned" (lib/hubConfig.ts default), i.e. only what the tutor set.
-  const modes = await Promise.all(kids.map(async (c) => (await hubConfig(ctx.tenantId, c.franchiseId)).lessonAccess as LessonAccess));
+  // One config read per child (was two: once for the mode and again for the year list) — reused below.
+  const cfgs = await Promise.all(kids.map((c) => hubConfig(ctx.tenantId, c.franchiseId)));
+  const modes = cfgs.map((cfg) => cfg.lessonAccess as LessonAccess);
   if (modes.includes("all")) return null;
   const sets = await Promise.all(kids.map((c) => childAssignedNoteIds(ctx.tenantId, c.childId)));
   const roster = modes.includes("year") ? await tenantRoster(ctx.tenantId) : [];
   // The year they are in NOW: an automatic year follows the dob and a hand-set one moves up each September, so the stored value alone goes stale.
   const dobs = modes.includes("year") ? await childDobs(kids.map((c) => c.childId)) : new Map<string, string | null>();
-  const cfgs = modes.includes("year") ? await Promise.all(kids.map((c) => hubConfig(ctx.tenantId, c.franchiseId))) : [];
   const years = kids.map((c, i) => { const e = roster.find((r) => r.childId === c.childId); return yearNo(e ? effectiveYearGroup(e, dobs.get(c.childId) ?? null, cfgs[i]!.yearGroups, new Date(), cfgs[i]!.yearAutoAdvance) : null); });
   return (n) => kids.some((_, i) => childMayOpen(modes[i]!, n, sets[i]!, years[i]!));
 }

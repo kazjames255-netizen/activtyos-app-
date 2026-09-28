@@ -6,6 +6,7 @@ import { buildQueue, isQuality, sm2, type SrsState } from "../../lib/hubSrs";
 import { chunk, eligibleStudents, flashcardsCol, isParent, nowIso, parentChild, reviewsCol, tenantEnrolments, topicFamily, visibleTopic } from "./teachingCommon";
 import { cardIndex, childAssignedNoteIds, noteIndex, patchCard, tenantTopics as cachedTopics, topicRank, type CardRow } from "../../lib/hubIndex";
 import { hubCached } from "../../lib/hubCache";
+import { scheduleMasteryRecompute } from "./mastery";
 import { pingHub } from "../../lib/hubPing";
 
 // Learning Hub — FLASHCARDS & SPACED REPETITION (milestone 7). Contract:
@@ -76,7 +77,12 @@ async function assignedScopeFor(tenantId: string, childId: string): Promise<Assi
 }
 /** The whole tenant's assignments at once, grouped by child — one read instead of one per roster row (the tutor
  *  stats table computes "cards available" for every student). */
-async function assignedScopeByChild(tenantId: string): Promise<Map<string, AssignedScope>> {
+// Cached 20s (cost): this scanned the tenant's WHOLE hubHomework on every /flashcards/stats + realtime refresh, billed per doc.
+// Stats are an overview table, so ≤20s of staleness after a homework edit is fine; reuses the existing "assignedNotes" kind
+// (extra "fc-byChild") so no new cache kind is needed.
+const assignedScopeByChild = (tenantId: string): Promise<Map<string, AssignedScope>> =>
+  hubCached("assignedNotes", tenantId, "fc-byChild", 20_000, () => loadAssignedScopeByChild(tenantId));
+async function loadAssignedScopeByChild(tenantId: string): Promise<Map<string, AssignedScope>> {
   const snap = await assignmentsCol().where("tenantId", "==", tenantId).select("childId", "topicId", "cardIds").get();
   const m = new Map<string, AssignedScope>();
   for (const d of snap.docs) {
@@ -207,6 +213,7 @@ hubFlashcardsApi.post("/flashcards/:id/review", async (req, res) => {
     return r;
   });
   res.json({ nextDueAt: out.nextDueAt, intervalDays: out.intervalDays, easeFactor: out.easeFactor, repetitions: out.repetitions });
+  scheduleMasteryRecompute(ctx.tenantId, kid.childId, kid.franchiseId ?? null); // reviews now feed mastery (30% weight) — keep the stored rows in step
 });
 
 // ── Tutor: stats, list, CRUD ─────────────────────────────────────────────────
@@ -220,7 +227,8 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
     // Only the five fields the stats use, cached for a few seconds (a tenant's review rows grow with students × cards studied).
     hubCached("reviews", ctx.tenantId, "", 20_000, async () =>
       (await reviewsCol.where("tenantId", "==", ctx.tenantId).select("childId", "cardId", "nextDueAt", "intervalDays", "lastReviewedAt").get()).docs.map((d) => d.data() as RevLite)),
-    assignedScopeByChild(ctx.tenantId),
+    // Two whole-tenant scans (assignments + homework): cached like the reviews above so a tutor reloading the stats table does not re-read them each time.
+    hubCached("scopes", ctx.tenantId, "byChild", 20_000, () => assignedScopeByChild(ctx.tenantId)),
   ]);
   const cards = [...index.values()].filter((c) => canSee(ctx, c.franchiseId));
   const byTopic = new Map<string, number>();
