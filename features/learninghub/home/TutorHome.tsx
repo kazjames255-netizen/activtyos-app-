@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../kit";
 import { requestHomeworkFilter, requestMarkQueue, setHubIntent } from "../hubIntent";
 import { pctOf } from "../homework/hwTypes";
-import { lessonTiming } from "../live/lessonTypes";
+import { lessonTiming, type Lesson } from "../live/lessonTypes";
+import type { IpSession } from "../inperson/api";
 import type { PanelProps } from "../panelTypes";
 import { topicLabel } from "../types";
 import { fmtClock, relDay, useCountUp, useNow } from "../teachKit";
@@ -14,7 +15,7 @@ import { DAY, improvement, perDay } from "./homeLib";
 import { relTimeT, useH } from "./homeI18n";
 import { NextLessonHero, over } from "./NextLesson";
 import { RhythmChart } from "./RhythmChart";
-import { useTutorHome } from "./useHomeData";
+import { useLiveInPerson, useTutorHome } from "./useHomeData";
 import { ScopeToggle, useScope } from "../mineKit";
 import { TutorLiveBanner } from "../remotesync/TutorLiveBanner";
 
@@ -56,6 +57,7 @@ export function TutorHome(props: PanelProps) {
   useEffect(() => { try { if (localStorage.getItem("hub.home.more") === "1") setMore(true); } catch { /* private mode */ } }, []);
   const toggleMore = () => setMore((m) => { const n = !m; try { localStorage.setItem("hub.home.more", n ? "1" : "0"); } catch { /* ignore */ } return n; });
   const { ready, parts, failed, reload } = useTutorHome(qs, onError);
+  const ipLive = useLiveInPerson(qs, !props.readOnly);
   const now = useNow(30_000);
   // F11: a tutor in a multi-tutor business sees their own next lessons by default (Everyone is one tap away).
   const myUid = props.me?.uid ?? null;
@@ -120,7 +122,17 @@ export function TutorHome(props: PanelProps) {
   }, [parts, now, students, config.masteryBands, mineOnly, myUid, locale]); // eslint-disable-line react-hooks/exhaustive-deps -- t is rebuilt each render; it only changes with `locale`
 
   if (!ready || !parts || !d) return <HomeSkeleton label={t("hubshell.hm_loadingDay")} />;
-  const next = d.upcoming[0] ?? null;
+  // An in-person session still open is the most "now" thing there is: it leads the card (Resume), ahead of anything scheduled.
+  const ipAsLesson = (x: IpSession): Lesson => ({
+    id: x.id, title: x.title, topicId: null, startsAt: x.startsAt, childIds: x.childIds,
+    durationMins: Math.max(60, Math.ceil((now - new Date(x.startsAt).getTime()) / 60_000) + 30),
+    students: x.students.map((st) => ({ childId: st.childId, childName: st.childName })),
+    status: "live", tutorName: x.tutorName, mode: "in_person",
+  });
+  const lead = ipLive[0] ? ipAsLesson(ipLive[0]) : null;
+  const next = lead ?? d.upcoming[0] ?? null;
+  const afterNext = lead ? d.upcoming : d.upcoming.slice(1);
+  const moreCount = ipLive.length + d.upcoming.length - 1;
   const topicById = new Map(props.topics.map((t) => [t.id, t]));
   const nameOf = new Map(students.map((s) => [s.childId, s.childName]));
   const attendees = next ? (next.students?.length ? next.students.map((s) => s.childName) : (next.childIds ?? []).map((id) => nameOf.get(id) ?? t("hubshell.hm_student"))) : [];
@@ -142,8 +154,8 @@ export function TutorHome(props: PanelProps) {
       {firstRun && <FirstRunGuide onStep={(i) => { if (i === 0) go("students"); else if (i === 1) go("notes"); else { setHubIntent({ kind: "homework", groupId: "" }); go("homework"); } }} />}
       {multiTutor && <div className="flex justify-end"><ScopeToggle scope={scope} onChange={setScope} mine={mineCount} all={allLessons?.length ?? 0} what="lessons" /></div>}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <NextLessonHero lesson={next} isTutor readOnly={props.readOnly} attendees={attendees} extraCount={Math.max(0, d.upcoming.length - 1)}
-          later={d.upcoming.slice(1, 3).map((l) => ({ id: l.id, title: l.title, when: `${relDay(l.startsAt, now)} · ${fmtClock(l.startsAt)}`, who: (l.students?.length ? l.students.map((x) => x.childName) : (l.childIds ?? []).map((id) => nameOf.get(id) ?? "")).filter(Boolean).slice(0, 2).map((n) => n.split(" ")[0]).join(", ") }))}
+        <NextLessonHero lesson={next} isTutor readOnly={props.readOnly} attendees={attendees} extraCount={Math.max(0, moreCount)} inPerson={next?.mode === "in_person"}
+          later={afterNext.slice(0, 2).map((l) => ({ id: l.id, title: l.title, when: `${relDay(l.startsAt, now)} · ${fmtClock(l.startsAt)}`, who: (l.students?.length ? l.students.map((x) => x.childName) : (l.childIds ?? []).map((id) => nameOf.get(id) ?? "")).filter(Boolean).slice(0, 2).map((n) => n.split(" ")[0]).join(", ") }))}
           topicLabel={next?.topicId && topicById.get(next.topicId) ? topicLabel(topicById.get(next.topicId)!) : undefined}
           onGo={() => go("live")} onSchedule={() => go("live")} />
 

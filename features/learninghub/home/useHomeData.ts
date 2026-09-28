@@ -5,6 +5,7 @@ import { get } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { InboxRow, StudentHomework } from "../homework/hwTypes";
 import type { Lesson } from "../live/lessonTypes";
+import { listLiveSessions, type IpSession } from "../inperson/api";
 import { errMsg } from "../types";
 import { getShared } from "../homework/homeworkFeed";
 import { asArray, hubUrl, type AssessmentLite, type AttemptRow, type DueLite, type MasteryLite, type OverviewStudent } from "./homeLib";
@@ -92,4 +93,17 @@ export function useStudentHome(qs: string, childId: string | null, onError: (m: 
     assessments: { path: hubUrl(qs, "/assessments", c), pick: (r) => asArray<AssessmentLite>(r), empty: [] },
   }), [qs, c]);
   return useParts<StudentParts>(`s|${qs}|${childId ?? ""}`, make, onError);
+}
+
+/** In-person sessions still open ("2 of 2 here"). They are not in GET /lessons, so Home fetches them on their own; tutor-only (the endpoint refuses view-only roles). */
+export function useLiveInPerson(qs: string, enabled: boolean): IpSession[] {
+  const [rows, setRows] = useState<IpSession[]>([]);
+  const load = useCallback(() => {
+    if (!enabled) { setRows([]); return; }
+    listLiveSessions(qs).then((r) => setRows(Array.isArray(r) ? r : [])).catch(() => setRows([]));
+  }, [qs, enabled]);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount / when the provider changes
+  useEffect(() => { load(); }, [load]);
+  useRealtime(["hubLessons"], load);
+  return rows;
 }

@@ -34,7 +34,7 @@ function Countdown({ ms }: { ms: number }) {
   );
 }
 
-export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCount, later = [], onGo, onSchedule, alsoUp = [], embedded = false, readOnly = false }: {
+export function NextLessonHero({ lesson, isTutor, inPerson = false, attendees, topicLabel, extraCount, later = [], onGo, onSchedule, alsoUp = [], embedded = false, readOnly = false }: {
   lesson: Lesson | null;
   isTutor: boolean;
   /** A view-only staff role: no schedule / start / join buttons (the server refuses those writes). */
@@ -47,6 +47,8 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
   later?: { id: string; title: string; when: string; who: string }[];
   onGo: () => void;
   onSchedule?: () => void;
+  /** The lesson runs with the children beside the tutor (no room): Start / Resume say so, and there is no join window. */
+  inPerson?: boolean;
   /** Nothing live is booked but other work is coming (a quiz to resume, homework due): listed here so this card never says "nothing" while the page shows something. */
   alsoUp?: { key: string; title: string; note: string; onClick: () => void }[];
   /** Rendered inside another hero (student greeting) — no outer gradient. */
@@ -107,6 +109,7 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
           {live && <span className="home-live h-2 w-2 rounded-full" style={{ background: "var(--red)" }} aria-hidden />}
           {status}
         </span>
+        {inPerson && <span data-testid="hub-next-inperson" className="inline-flex items-center rounded-full border border-white/25 bg-white/15 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.1em]">{tr("hubshell.hm_inPersonBadge")}</span>}
         <span className="text-[12.5px] font-bold text-white/85">{tr("hubshell.hm_lessonMeta", { day: relDay(lesson.startsAt, now), clock: fmtClock(lesson.startsAt), mins: lesson.durationMins })}</span>
       </div>
 
@@ -158,10 +161,10 @@ export function NextLessonHero({ lesson, isTutor, attendees, topicLabel, extraCo
         <div className="flex flex-wrap items-center gap-2.5">
           {extraCount > 0 && !embedded && <span className="text-[12px] font-bold text-white/80">{tr("hubshell.hm_moreComing", { n: extraCount })}</span>}
           {open && !(isTutor && readOnly) ? (
-            <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? (live ? "hubshell.hm_ariaRejoin" : "hubshell.hm_ariaStart") : "hubshell.hm_ariaJoin", { title })}>{lesson.status === "ended" || (isTutor && live && lesson.status === "live") ? tr("hubshell.hm_rejoinLesson") : isTutor ? (live ? tr("hubshell.hm_rejoinLesson") : tr("hubshell.hm_startLesson")) : tr("hubshell.hm_joinLesson")}</BigButton>
+            <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? (live ? "hubshell.hm_ariaRejoin" : "hubshell.hm_ariaStart") : "hubshell.hm_ariaJoin", { title })}>{inPerson && isTutor ? (lesson.status === "live" ? tr("hubshell.hm_resumeInPerson") : tr("hubshell.hm_startInPerson")) : lesson.status === "ended" || (isTutor && live && lesson.status === "live") ? tr("hubshell.hm_rejoinLesson") : isTutor ? (live ? tr("hubshell.hm_rejoinLesson") : tr("hubshell.hm_startLesson")) : tr("hubshell.hm_joinLesson")}</BigButton>
           ) : (
             <>
-            {!(isTutor && readOnly) && lesson.status !== "cancelled" && <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? "hubshell.hm_ariaStart" : "hubshell.hm_ariaJoin", { title })}>{isTutor ? tr("hubshell.hm_startLesson") : tr("hubshell.hm_joinLesson")}</BigButton>}
+            {!(isTutor && readOnly) && lesson.status !== "cancelled" && <BigButton variant="white" icon="video" onClick={onGo} ariaLabel={tr(isTutor ? "hubshell.hm_ariaStart" : "hubshell.hm_ariaJoin", { title })}>{isTutor ? (inPerson ? tr("hubshell.hm_startInPerson") : tr("hubshell.hm_startLesson")) : tr("hubshell.hm_joinLesson")}</BigButton>}
             <button type="button" onClick={onGo} className={`inline-flex min-h-[48px] items-center gap-1.5 rounded-full border border-white/35 bg-white/14 px-5 text-[13.5px] font-extrabold text-white transition hover:bg-white/22 motion-reduce:transition-none ${FOCUS}`}>
               {tr("hubshell.hm_lessonDetails")} <Icon name="chevronRight" size={15} />
             </button>
