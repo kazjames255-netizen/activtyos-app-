@@ -30,4 +30,10 @@ if [ "$E2E_STACK" = "test" ]; then
   if ! curl -s -o /dev/null -m 5 "$NEXT_PUBLIC_API_URL/docs/"; then echo "E2E_STACK=test but the test API is not up on $NEXT_PUBLIC_API_URL — run: npm run dev:test  (then wait ~1 min)" >&2; exit 2; fi
 fi
 # E2E_CMD overrides the command (e.g. the tenant data wipe) while still holding the lock
-if [ -n "$E2E_CMD" ]; then bash -c "$E2E_CMD"; else npx playwright test "$@" --project=e2e --no-deps --workers=1; fi
+# E2E_CMD is capped (E2E_CMD_TIMEOUT, default 120 s): a hung cleanup (e2eCleanup --data-only can sit for 30+ min) must not hold the lock.
+killtree() { for c in $(pgrep -P "$1" 2>/dev/null); do killtree "$c"; done; kill -TERM "$1" 2>/dev/null; }
+if [ -n "$E2E_CMD" ]; then
+  bash -c "$E2E_CMD" & cmd=$!
+  ( sleep "${E2E_CMD_TIMEOUT:-120}"; echo "(E2E_CMD exceeded ${E2E_CMD_TIMEOUT:-120}s — stopped; continuing)" >&2; killtree "$cmd" ) & watcher=$!
+  wait "$cmd"; rc=$?; kill "$watcher" 2>/dev/null; [ $rc -ge 128 ] && rc=0; exit $rc
+else npx playwright test "$@" --project=e2e --no-deps --workers=1; fi
