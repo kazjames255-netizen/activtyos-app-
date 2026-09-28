@@ -718,7 +718,10 @@ test.describe("interactive lessons in the call + tab error boundary", () => {
     const tLesson = tws.getByTestId("ws-lesson-player");
     await expect(tLesson).toHaveAttribute("data-drive", "1", { timeout: 30_000 });
     const tPlayer = tLesson.getByTestId("lesson-player");
-    await expect(tPlayer).toHaveAttribute("data-step", "start");
+    // A live, tutor-broadcast lesson skips the pointless "Start" click once the questions have loaded
+    // (LessonPlayer's `live` effect) — the tutor lands on the first real step, not "start".
+    await expect(tPlayer).not.toHaveAttribute("data-step", "start", { timeout: 15_000 });
+    const initialStep = (await tPlayer.getAttribute("data-step"))!;
 
     // ── the family joins late and lands in the same lesson, following ──
     const fctx = await ctxFor(browser, "parent", { permissions: ["camera", "microphone"] });
@@ -729,7 +732,7 @@ test.describe("interactive lessons in the call + tab error boundary", () => {
     const fLesson = fws.getByTestId("ws-lesson-player");
     await expect(fLesson).toHaveAttribute("data-following", "1", { timeout: 60_000 });
     const fPlayer = fLesson.getByTestId("lesson-player");
-    await expect(fPlayer).toHaveAttribute("data-step", "start");
+    await expect(fPlayer).toHaveAttribute("data-step", initialStep, { timeout: 30_000 });
 
     // ── the tutor moves; the family follows; going at their own pace lets go ──
     await tPlayer.getByTestId("preview-jump-words").click({ force: true });

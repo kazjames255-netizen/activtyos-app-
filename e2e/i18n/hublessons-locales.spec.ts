@@ -99,7 +99,7 @@ for (const loc of LOCALES) {
       const b = page.getByTestId(`preview-jump-${step}`);
       if (await b.count()) { await b.click({ force: true }).catch(() => undefined); await page.waitForTimeout(900); await shot(`player-${step}`); }
     }
-    await page.getByTestId("lesson-leave").first().click().catch(() => undefined);
+    await page.getByTestId("lesson-leave-open").first().click().catch(() => undefined);
 
     // editor (new lesson) + flashcards
     await page.goto("/freelancer/learninghub", { waitUntil: "load" });

@@ -471,7 +471,7 @@ export function LessonPlayer({ note, qs, childQs, childId, config, readOnly = fa
       {!hideHeader && (
         <header className={flatShell ? "px-[28px] py-[24px]" : "sticky top-0 z-10 -mx-1 mb-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)]/95 px-3 pb-2.5 pt-2 shadow-[var(--shadow-sm)] backdrop-blur sm:px-4"}>
           <div className="flex items-center gap-2.5">
-            {!hideLeave && <button type="button" onClick={exit} aria-label={readOnly ? t("hublessons.closePreview") : t("hublessons.leaveThisLesson")} data-testid="lesson-leave"
+            {!hideLeave && <button type="button" onClick={exit} aria-label={readOnly ? t("hublessons.closePreview") : t("hublessons.leaveThisLesson")} data-testid="lesson-leave-open"
               className={`flex flex-none items-center gap-1.5 ${FOCUS} ${readOnly ? "h-11 w-11 justify-center rounded-xl text-[var(--ink-2)] hover:bg-[var(--panel)]" : "h-9 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] font-extrabold text-[var(--ink-2)] hover:border-[var(--red)] hover:bg-[var(--red-soft)] hover:text-[var(--red)]"}`}>
               <Icon name="close" size={readOnly ? 20 : 15} />{!readOnly && t("hublessons.leaveLesson")}
             </button>}
