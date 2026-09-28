@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { errMsg, type Student } from "../types";
-import { FOCUS, Icon, SkeletonRows } from "../kit";
+import { FOCUS, Icon, SkeletonRows, tint } from "../kit";
 import { bandOrDefault } from "../family/kidCopy";
 import { getMap, getStudentYear, searchAreasByLesson, type CurriculumMap, type StudentArea } from "./api";
 import { stickerCopy, emojiFor } from "./stickers";
@@ -418,14 +418,16 @@ export function Tile({ area, kind, count, word, sub, badge, label, selected, onC
       </button>
     );
   }
-  // provider tile: a restrained "stat block" — white card, hairline border, a 4px top rule carrying
-  // the STRAND's colour (stable per strand, e.g. every "Writing" card matches). The status word carries
-  // its own colour (green/amber/red) so coverage is still legible without a rainbow of border colours.
+  // provider tile: a soft gradient wash tinted to the STRAND's colour (stable per strand, e.g. every
+  // "Writing" card matches) — Kaz, pointing at the student-progress cards' pastel gradient look: "the first
+  // screenshot needs to look a little like the second screenshot in terms of style". The status word still
+  // carries its own colour (green/amber/red) so coverage stays legible without a rainbow of border colours.
   const rule = strandColor(area);
   const statusColor = STATUS_COLOR[kind];
   return (
     <button type="button" onClick={onClick} aria-label={label} aria-pressed={selected} title={sub ? `${shortArea(area.area)} · ${sub}` : undefined} data-tile={kind} data-area={area.id} data-count={count} data-selected={selected ? "1" : undefined}
-      className={`relative grid h-[148px] w-full content-between gap-1.5 overflow-hidden rounded-[10px] border bg-[var(--surface)] px-3.5 pb-3 pt-3 text-start ${FOCUS} ${selected ? "border-[var(--brand)] ring-2 ring-[var(--brand)] ring-offset-1 ring-offset-[var(--panel)]" : "border-[var(--line)]"}`} style={{ borderTop: `4px solid ${rule}` }}>
+      className={`relative grid h-[148px] w-full content-between gap-1.5 overflow-hidden rounded-[10px] border px-3.5 pb-3 pt-3 text-start ${FOCUS} ${selected ? "border-[var(--brand)] ring-2 ring-[var(--brand)] ring-offset-1 ring-offset-[var(--panel)]" : ""}`}
+      style={{ background: `linear-gradient(135deg, ${tint(rule, 24)}, ${tint(rule, 8)})`, borderColor: selected ? undefined : tint(rule, 40) }}>
       {selected && <span aria-hidden className="absolute end-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-extrabold text-[var(--on-brand,#fff)]">✓</span>}
       <span className="min-w-0 truncate text-[10px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{curLabel(area.strand)}</span>
       <span className="line-clamp-2 text-[13px] font-extrabold leading-tight text-[var(--ink)]">{shortArea(area.area)}</span>
