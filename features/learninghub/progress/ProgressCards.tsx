@@ -121,7 +121,9 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   const now = useNow(60_000);
   const who = quiz?.who ?? (p.canEdit ? (p.students.find((x) => x.childId === childId)?.childName ?? "").split(" ")[0] : "");
   const games = useGamesPlayed(childId, p.qs.replace(/^\?/, ""));
-  const hw = useHubData<StudentHomework[]>(hubPath(p.qs, "/homework", { childId }), ["hubHomework", "hubSubmissions"]);
+  const hw = useHubData<StudentHomework[]>(p.canEdit ? null : hubPath(p.qs, "/homework", { childId }), ["hubHomework", "hubSubmissions"]);
+  // A tutor reads the inbox (one row per child per homework, every status) and keeps THIS child's rows.
+  const inbox = useHubData<{ childId: string; status: "assigned" | "submitted" | "marked"; dueAt: string }[]>(p.canEdit ? hubPath(p.qs, "/homework/inbox") : null, ["hubHomework", "hubSubmissions"]);
   // A family reads its own study queue; a tutor is refused that (it is the child's), so a tutor reads the roster stats and picks this child's row.
   const cards = useHubData<{ dueCount?: number; newCount?: number }>(p.canEdit ? null : hubPath(p.qs, "/flashcards/due", { childId }), ["hubCards"]);
   const stats = useHubData<{ students?: { childId: string; reviewed: number; cardsAvailable: number; due: number; mastered: number; lastReviewedAt: string | null }[] }>(p.canEdit ? hubPath(p.qs, "/flashcards/stats") : null, ["hubFlashcards"]);
@@ -129,8 +131,11 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
 
   const areas = games.areas;
   const scored = areas.filter((a) => a.correct !== null && a.attempts >= 8).map((a) => ({ a, pct: ((a.correct ?? 0) / a.attempts) * 100 })).sort((x, y) => y.pct - x.pct);
-  // A parent gets this child's homework rows; a tutor gets the tenant's homework list (no per-child status), so count what was set for THIS child.
-  const setForChild = p.canEdit && Array.isArray(hw.data) ? (hw.data as unknown as { assignedChildIds?: string[] }[]).filter((h) => h.assignedChildIds?.includes(childId)).length : null;
+  const hers = p.canEdit && Array.isArray(inbox.data) ? inbox.data.filter((r) => r.childId === childId) : null;
+  const herMarked = hers ? hers.filter((r) => r.status === "marked").length : 0;
+  const herWaiting = hers ? hers.filter((r) => r.status === "submitted").length : 0;
+  const herOpen = hers ? hers.filter((r) => r.status === "assigned") : [];
+  const herOverdue = herOpen.filter((r) => new Date(r.dueAt).getTime() < now).length;
   const rows = !p.canEdit && Array.isArray(hw.data) ? hw.data.filter((h) => h.childId === childId) : null;
   const handed = rows ? rows.filter((h) => h.submission.status !== "assigned").length : 0;
   const todo = rows ? rows.filter((h) => h.submission.status === "assigned") : [];
@@ -143,9 +148,21 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
       <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
       </>}
       <GamesCard T={T} areas={areas} scored={scored} unfinished={games.unfinished} ready={games.parts !== null} name={who} />
+      {p.canEdit ? (
+        <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")} value={hers && hers.length ? `${herMarked + herWaiting}/${hers.length}` : "–"}
+          sub={!hers ? (inbox.error ? "" : "") : !hers.length ? T("pc_hw_none") : (
+            <span className="grid gap-0.5" data-testid="pc-hw-summary">
+              <span>{T("pc_hw_handed")}</span>
+              {herMarked > 0 && <span>{T("pc_hw_marked", { n: herMarked })}</span>}
+              {herWaiting > 0 && <span>{T("pc_hw_waiting", { n: herWaiting })}</span>}
+              {herOpen.length > 0 && <span className={herOverdue ? "font-extrabold text-[var(--red)]" : ""}>{T("pc_hw_incomplete", { n: herOpen.length })}{herOverdue ? ` (${T("pc_hw_overdue", { n: herOverdue })})` : ""}</span>}
+            </span>
+          )} />
+      ) : (
       <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")}
-        value={setForChild !== null ? (setForChild || "–") : rows && rows.length ? `${handed}/${rows.length}` : "–"}
-        sub={hw.error ? "" : setForChild !== null ? (setForChild ? T("pc_hw_set") : T("pc_hw_none")) : !rows || !rows.length ? T("pc_hw_none") : overdue ? T("pc_hw_overdue", { n: overdue }) : todo.length ? T("pc_hw_todo", { n: todo.length }) : T("pc_hw_clear")} />
+        value={rows && rows.length ? `${handed}/${rows.length}` : "–"}
+        sub={hw.error ? "" : !rows || !rows.length ? T("pc_hw_none") : overdue ? T("pc_hw_overdue", { n: overdue }) : todo.length ? T("pc_hw_todo", { n: todo.length }) : T("pc_hw_clear")} />
+      )}
       {p.canEdit ? (
         <Card testId="pc-cards" color="var(--cat-1)" icon="🃏" label={T("pc_cards")} value={mine ? `${mine.reviewed}/${mine.cardsAvailable}` : "–"}
           sub={mine ? T("pc_cards_completed") : stats.error ? "" : T("pc_cards_none")} />
