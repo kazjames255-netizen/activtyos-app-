@@ -216,7 +216,8 @@ export function CurriculumCard({ qs, canEdit, mayAuthor, students: studentsProp,
 
       <div className="border-t border-[var(--line)] px-4 pb-4 pt-3">
           {/* framework switch */}
-          {fwList.length > 1 && (
+          {/* GCSE is not for primary children: KS1/KS2 never see the framework switch. */}
+          {fwList.length > 1 && !(mode === "child" && (kidBand === "ks1" || kidBand === "ks2")) && (
             <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] p-1" role="group" aria-label={tr("hublessons.ccCurriculum")}>
               {fwList.map((f) => (
                 <button key={f.id} type="button" onClick={() => pickFw(f.id)} aria-pressed={fw === f.id} className={`min-h-[44px] lg:min-h-[36px] rounded-full px-3.5 text-[13px] font-extrabold ${FOCUS} ${fw === f.id ? "bg-[var(--brand)] text-white shadow" : "text-[var(--ink)]"}`}>{f.label}</button>
