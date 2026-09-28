@@ -236,6 +236,7 @@ const en: Record<string, string> = {
   resFlipDots: "Dots",
   resFlipScore: "Scores",
   resFlipPct: "Percent",
+  resUnmarkedKey: "Handed in, not marked yet",
   resNeedsMarking: "Needs marking ({n})",
   resOpen: "Open",
   resClose: "Close",

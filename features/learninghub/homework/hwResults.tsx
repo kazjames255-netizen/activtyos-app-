@@ -107,6 +107,7 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
       </div>
       <ul className="m-0 mb-3 flex list-none flex-wrap gap-x-3.5 gap-y-1 p-0 text-[12px] text-[var(--ink-2)]" aria-label={h("resKey")}>
         {LEGEND.map((l) => <li key={l} className="inline-flex items-center gap-1.5"><span aria-hidden className="grid h-4 w-4 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: COLOR[l] }}>{GLYPH[l]}</span>{legendText(x, l)}</li>)}
+        <li className="inline-flex items-center gap-1.5" data-testid="hub-results-unmarked-key"><span aria-hidden className="grid h-4 w-4 place-items-center rounded-full border-2 border-dashed text-[9px] font-extrabold" style={{ borderColor: COLOR.done, color: COLOR.done }}>✎</span>{h("resUnmarkedKey")}</li>
         <li className="inline-flex items-center gap-1.5"><span aria-hidden className="font-extrabold text-[var(--red)]">▼</span>{h("resBelowKey")}</li>
       </ul>
       {kids.length === 0 ? <p className="rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{h("resNone")}</p> : (
@@ -147,7 +148,9 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
                           title={`${t.label}${showScore ? ` · ${t.score}` : ""}${t.below ? ` · ${h("resBelowPass")}` : ""}`}
                           className={`relative inline-grid min-h-11 min-w-11 place-items-center rounded-2xl px-1 ${FOCUS}`}>
                           {/* DOT GRID: one coloured dot per task; the words and score are in the tooltip, the label and the screen-reader text. */}
-                          <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: COLOR[t.light] }}>{GLYPH[t.light]}</span>
+                          {t.toMark
+                            ? <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full border-2 border-dashed bg-[var(--surface)] text-[13px] font-extrabold" style={{ borderColor: COLOR[t.light], color: COLOR[t.light] }}>✎</span>
+                            : <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: COLOR[t.light] }}>{GLYPH[t.light]}</span>}
                           {t.below && <span aria-hidden className="absolute -end-0.5 -top-0.5 text-[11px] font-extrabold leading-none text-[var(--red)]">▼</span>}
                           {shown !== "dots" && t.pct !== null && <span aria-hidden className="block text-[11px] font-extrabold tabular-nums leading-none text-[var(--ink)]">{shown === "pct" ? `${t.pct}%` : t.score}</span>}
                           <span className="sr-only">{t.score} {t.label}</span>
