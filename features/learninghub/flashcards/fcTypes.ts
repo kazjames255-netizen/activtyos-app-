@@ -12,7 +12,8 @@ export interface FlashStats {
   totalCards: number;
   publishedCards: number;
   topics: { topicId: string; subject: string; topic: string; subtopic: string | null; cards: number }[];
-  students: { childId: string; childName: string; cardsAvailable: number; reviewed: number; due: number; new: number; mastered: number; lastReviewedAt: string | null }[];
+  /** `assigned` / `assignedReviewed`: cards given to the child (topic assignment or an assigned lesson) and how many of those they have reviewed; absent on an older server. */
+  students: { childId: string; childName: string; cardsAvailable: number; reviewed: number; assigned?: number; assignedReviewed?: number; due: number; new: number; mastered: number; lastReviewedAt: string | null }[];
 }
 
 /** The rating scale the server accepts: 1 Again · 3 Hard · 4 Good · 5 Easy. `labelKey` / `hintKey` are i18n keys (resolve with t()). */

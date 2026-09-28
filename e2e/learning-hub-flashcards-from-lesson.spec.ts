@@ -48,6 +48,19 @@ test("assigning the lesson to one child gives THAT child its topic's flashcards,
   expect((await due(withoutId)).due.map((c) => c.id)).not.toContain(cardId);
 });
 
+test("the tutor's student-progress stats count the cards ASSIGNED to each child (the ring's denominator), not the library", async () => {
+  const t = await token(accounts.freelancer);
+  type Row = { childId: string; cardsAvailable: number; reviewed: number; assigned?: number; assignedReviewed?: number };
+  const stats = () => apiFetch<{ students: Row[] }>(`${HUB}/flashcards/stats?tenantId=${tenantId}`, t);
+  // The assignment map is cached for 20s server-side, so poll.
+  await expect.poll(async () => (await stats()).students.find((s) => s.childId === withId)?.assigned ?? 0, { timeout: 45_000 }).toBeGreaterThanOrEqual(1);
+  const s = await stats();
+  const a = s.students.find((r) => r.childId === withId)!, b = s.students.find((r) => r.childId === withoutId)!;
+  expect(a.assignedReviewed).toBe(0);
+  expect(a.assigned!).toBeLessThanOrEqual(a.cardsAvailable);
+  expect(b.assigned ?? 0).toBe(0);
+});
+
 test("the tutor's card library can be narrowed by school year (and subject) on the server", async () => {
   const t = await token(accounts.freelancer);
   await apiPost(`${HUB}/topics`, t, { subject, topic: `Poems ${stamp}`, subtopic: "Year 5" });

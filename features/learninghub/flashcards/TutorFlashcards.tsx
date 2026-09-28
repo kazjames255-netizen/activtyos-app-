@@ -6,7 +6,7 @@ import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PanelProps } from "../panelTypes";
 import { canChangeRow, errMsg, topicLabel } from "../types";
-import { DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Notice, Pill, ProgressBar, Skeleton, fmtDay, useCountUp, withQs } from "../teachKit";
+import { DISPLAY, EmptyState, FOCUS, MenuItem, MoreMenu, Notice, Pill, Skeleton, useCountUp, withQs } from "../teachKit";
 import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { GradientTile, Ico } from "../teachIcons";
@@ -29,7 +29,6 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
-  const [allStudents, setAllStudents] = useState(false);
   // The library holds tens of thousands of cards, so it is narrowed here by subject and school year (sent to the server, not filtered on screen).
   const [subjectSel, setSubjectSel] = useState<string | null>(null);
   const [yearsSel, setYearsSel] = useState<number[]>([]);

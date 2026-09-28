@@ -240,8 +240,16 @@ hubFlashcardsApi.get("/flashcards/stats", async (req, res) => {
     const avail = cards.filter((c) => cardForChild(c, topics, kid, assignedByChild.get(e.childId) ?? new Map()));
     const availIds = new Set(avail.map((c) => c.id));
     const rev = (revByChild.get(e.childId) ?? []).filter((r) => availIds.has(r.cardId));
+    // Cards ASSIGNED to this child (an explicit topic/card assignment or a lesson given to them), not the whole library their
+    // enrolment subjects unlock. `cardsAvailable` can be tens of thousands, so progress against it always looks like 0%.
+    // No new reads: same cached assignment map; skipped entirely when the child has nothing assigned.
+    const scope = assignedByChild.get(e.childId);
+    const asg = scope && scope.size ? cards.filter((c) => cardForChild(c, topics, { ...kid, subjects: [] }, scope)) : [];
+    const asgIds = new Set(asg.map((c) => c.id));
+    const assignedReviewed = asg.length ? (revByChild.get(e.childId) ?? []).filter((r) => asgIds.has(r.cardId)).length : 0;
     return {
       childId: e.childId, childName: e.childName, cardsAvailable: avail.length, reviewed: rev.length,
+      assigned: asg.length, assignedReviewed,
       due: rev.filter((r) => r.nextDueAt <= nowIsoStr).length, new: avail.length - rev.length,
       mastered: rev.filter((r) => r.intervalDays >= MASTERED_DAYS).length,
       lastReviewedAt: rev.map((r) => r.lastReviewedAt).sort().pop() ?? null,
