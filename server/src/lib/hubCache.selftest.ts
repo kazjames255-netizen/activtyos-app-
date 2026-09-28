@@ -76,6 +76,26 @@ let bgPeak = 0, bgNow = 0;
 order.forEach((x) => { if (x.startsWith("bg-") && x.endsWith(":start")) bgNow++; if (x.startsWith("bg-") && x.endsWith(":end")) bgNow--; bgPeak = Math.max(bgPeak, bgNow); });
 ok(bgPeak <= 1, `background refreshes hold at most one slot (peak ${bgPeak})`);
 
+// 5b. probeEmpty: a cheap "nothing to read" check lets a load skip the FIFO queue entirely, even while the
+// concurrency cap is fully occupied by other blocking loads (the empty-tenant-behind-a-big-rebuild bug, hubIndex.ts).
+{
+  const capMs = 150;
+  const capFillers = Array.from({ length: 2 }, (_, i) => hubCached("questions", T(`cap${i}`), "", ttl, slow(capMs), { swr: true, disk: true }));
+  await sleep(20); // let the 2 filler loads actually claim both BIG_LOADS slots
+  ok(hubCacheLoads().running === 2, `cap is fully occupied before the probe-empty read starts (running=${hubCacheLoads().running})`);
+  const t0 = Date.now();
+  const probed = await hubCached("questions", T("empty"), "", ttl, load(0), { swr: true, disk: true, probeEmpty: async () => true });
+  const tookMs = Date.now() - t0;
+  ok(probed.size === 0, "probe-empty load still returns the real (empty) result");
+  ok(tookMs < capMs / 2, `probe-empty load did not wait behind the full queue (took ${tookMs}ms, fillers take ${capMs}ms)`);
+  await Promise.all(capFillers);
+  // a probe that says "not empty" (or throws) falls back to the normal gated path — no change in behavior
+  const gated = await hubCached("questions", T("notEmptyProbe"), "", ttl, load(2), { swr: true, disk: true, probeEmpty: async () => false });
+  ok(gated.size === 2, "probeEmpty=false still loads normally through the gate");
+  const errored = await hubCached("questions", T("throwingProbe"), "", ttl, load(2), { swr: true, disk: true, probeEmpty: async () => { throw new Error("boom"); } });
+  ok(errored.size === 2, "a throwing probe falls back to the normal gated path instead of failing the request");
+}
+
 // 6. startup warm-up: a snapshot on disk is loaded into memory without calling load()
 const t6 = T("warm");
 await hubCached("topics", t6, "", ttl, load(5), { swr: true, disk: true });

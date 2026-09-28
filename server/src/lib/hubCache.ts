@@ -110,7 +110,16 @@ function pump() {
   while (blockingQueue.length && canRun(false)) { bigRunning++; blockingQueue.shift()!(); }
   while (bgQueue.length && canRun(true)) { bigRunning++; bgRunning++; bgQueue.shift()!(); }
 }
-async function withBigSlot<T>(fn: () => Promise<T>, background: boolean): Promise<T> {
+// `probeEmpty` (opt-in, see hubIndex.ts's shardedTenantRead): a cheap `limit(1)` check a caller can supply to find out,
+// BEFORE joining the FIFO queue, that there is nothing to read at all (a tenant with zero rows of this kind). Without
+// this, an empty tenant's near-instant probe queued behind other tenants' full multi-megabyte rebuilds under the
+// BIG_LOADS cap exactly like a real rebuild would — e.g. a 0-row `cards` load measured 137.7s stuck FIFO behind a
+// 167.3s shared-library rebuild (docs/hub-slow-loads.md). The probe itself is real Firestore work either way (not
+// skipped, not cached more aggressively) — it just no longer has to wait its turn behind unrelated big loads.
+async function withBigSlot<T>(fn: () => Promise<T>, background: boolean, probeEmpty?: () => Promise<boolean>): Promise<T> {
+  if (probeEmpty) {
+    try { if (await probeEmpty()) return await fn(); } catch { /* probe failed — fall through to the normal gated path */ }
+  }
   if (canRun(background) && !(background ? bgQueue.length : blockingQueue.length)) { bigRunning++; if (background) bgRunning++; }
   else await new Promise<void>((r) => (background ? bgQueue : blockingQueue).push(r)); // pump() reserves the slot before calling r
   try { await new Promise((r) => setImmediate(r)); return await fn(); }
@@ -176,7 +185,7 @@ export type HubKind =
 const keyOf = (kind: HubKind, tenantId: string, extra = "") => `${kind}|${tenantId}|${extra}`;
 
 /** The cached value for (kind, tenant, extra), loading it (once, shared) when missing or older than `ttlMs`. */
-export async function hubCached<T>(kind: HubKind, tenantId: string, extra: string, ttlMs: number, load: () => Promise<T>, opts: { swr?: boolean; disk?: boolean } = {}): Promise<T> {
+export async function hubCached<T>(kind: HubKind, tenantId: string, extra: string, ttlMs: number, load: () => Promise<T>, opts: { swr?: boolean; disk?: boolean; probeEmpty?: () => Promise<boolean> } = {}): Promise<T> {
   const key = keyOf(kind, tenantId, extra);
   let hit = store.get(key);
   // Nothing in memory (a fresh process): a disk-flagged kind may have yesterday's build sitting in the tmp dir.
@@ -209,7 +218,7 @@ export async function hubCached<T>(kind: HubKind, tenantId: string, extra: strin
       try {
         await Promise.resolve(); // let `self` be assigned before anything below can run its `finally`
         const t0 = Date.now();
-        const v = await withReadLabel(`cache:${kind}|${tenantId}${extra ? `|${extra}` : ""}`, () => (opts.disk ? withBigSlot(load, background) : load()));
+        const v = await withReadLabel(`cache:${kind}|${tenantId}${extra ? `|${extra}` : ""}`, () => (opts.disk ? withBigSlot(load, background, opts.probeEmpty) : load()));
         const took = Date.now() - t0;
         if (took > 1_000) { // a slow index build is the main cold-start cost of the hub: say so (with its size) in the API log
           const n = v instanceof Map ? v.size : Array.isArray(v) ? v.length : null;

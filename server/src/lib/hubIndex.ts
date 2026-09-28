@@ -96,6 +96,12 @@ export async function shardedTenantRead(col: FirebaseFirestore.CollectionReferen
   return parts.flatMap((s) => s.docs);
 }
 
+/** A single trivial `limit(1)` existence check — cheap enough to run outside the BIG_LOADS queue (see hubCache.ts's
+ *  `withBigSlot`'s `probeEmpty`), so a tenant with zero rows of this kind never queues FIFO behind other tenants'
+ *  full sharded rebuilds just to find out there is nothing to read. */
+const isEmptyTenant = (col: FirebaseFirestore.CollectionReference, tenantId: string) => async (): Promise<boolean> =>
+  (await col.where("tenantId", "==", tenantId).limit(1).get()).empty;
+
 // ── topics ───────────────────────────────────────────────────────────────────
 export type TopicRow = TopicDoc & { id: string };
 // A single `where tenantId ==` stream (no `swr`, a 60s TTL) was fine for a ~700-topic tenant, but blocks the request
@@ -104,7 +110,7 @@ export type TopicRow = TopicDoc & { id: string };
 // the other big indexes) + `swr` so a request never blocks on a rebuild once the first one has landed, and `disk` so
 // a process restart doesn't either.
 const tenantTopicsOwn = (tenantId: string): Promise<TopicRow[]> =>
-  hubCached("topics", tenantId, "", TTL_TOPICS, async () => (await shardedTenantRead(topicsCol, tenantId, null)).map((d) => ({ id: d.id, ...(d.data() as TopicDoc) })), { swr: true, disk: true });
+  hubCached("topics", tenantId, "", TTL_TOPICS, async () => (await shardedTenantRead(topicsCol, tenantId, null)).map((d) => ({ id: d.id, ...(d.data() as TopicDoc) })), { swr: true, disk: true, probeEmpty: isEmptyTenant(topicsCol, tenantId) });
 export const tenantTopics = (tenantId: string): Promise<TopicRow[]> => withShared(tenantId, tenantTopicsOwn, listMerge);
 
 export const patchTopic = (tenantId: string, row: TopicRow | { id: string; deleted: true }) =>
@@ -131,7 +137,7 @@ const questionIndexOwn = (tenantId: string): Promise<Map<string, QRow>> =>
   hubCached("questions", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(questionsCol, tenantId, [...Q_FIELDS]);
     return new Map(docs.map((d) => [d.id, qRow(d.id, d.data() as Partial<QuestionDoc>)] as const));
-  }, { swr: true, disk: true });
+  }, { swr: true, disk: true, probeEmpty: isEmptyTenant(questionsCol, tenantId) });
 export const questionIndex = (tenantId: string): Promise<Map<string, QRow>> => withShared(tenantId, questionIndexOwn, mapMerge);
 export const patchQuestion = (tenantId: string, id: string, doc: Partial<QuestionDoc> | null) =>
   patchHub<Map<string, QRow>>("questions", tenantId, (m) => { if (doc) m.set(id, qRow(id, doc)); else m.delete(id); });
@@ -204,7 +210,7 @@ const noteIndexOwn = (tenantId: string): Promise<Map<string, NoteRow>> =>
       if (bodies.has(d.id)) data.body = bodies.get(d.id);
       return [d.id, noteRow(d.id, data)] as const;
     }));
-  }, { swr: true, disk: true });
+  }, { swr: true, disk: true, probeEmpty: isEmptyTenant(notesCol, tenantId) });
 export const noteIndex = (tenantId: string): Promise<Map<string, NoteRow>> => withShared(tenantId, noteIndexOwn, mapMerge);
 export const patchNote = (tenantId: string, id: string, doc: NoteDocLike | null) =>
   patchHub<Map<string, NoteRow>>("notes", tenantId, (m) => { if (doc) m.set(id, noteRow(id, doc)); else m.delete(id); });
@@ -215,7 +221,7 @@ const assessmentRowsOwn = (tenantId: string): Promise<Map<string, AsmRow>> =>
   hubCached("assessments", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(assessmentsCol, tenantId, null);
     return new Map(docs.map((d) => [d.id, { id: d.id, ...(d.data() as AssessmentDoc) }] as const));
-  }, { swr: true, disk: true });
+  }, { swr: true, disk: true, probeEmpty: isEmptyTenant(assessmentsCol, tenantId) });
 export const assessmentRows = (tenantId: string): Promise<Map<string, AsmRow>> => withShared(tenantId, assessmentRowsOwn, mapMerge);
 export const patchAssessment = (tenantId: string, id: string, doc: AssessmentDoc | null) =>
   patchHub<Map<string, AsmRow>>("assessments", tenantId, (m) => { if (doc) m.set(id, { id, ...doc }); else m.delete(id); });
@@ -245,7 +251,7 @@ const cardIndexOwn = (tenantId: string): Promise<Map<string, CardRow>> =>
   hubCached("cards", tenantId, "", TTL_INDEX, async () => {
     const docs = await shardedTenantRead(flashcardsCol, tenantId, ["topicId", "franchiseId", "published", "createdAt"]);
     return new Map(docs.map((d) => [d.id, { id: d.id, topicId: d.get("topicId") as string, franchiseId: (d.get("franchiseId") as string | null) ?? null, published: d.get("published") !== false, createdAt: (d.get("createdAt") as string) ?? "" }] as const));
-  }, { swr: true, disk: true });
+  }, { swr: true, disk: true, probeEmpty: isEmptyTenant(flashcardsCol, tenantId) });
 export const cardIndex = (tenantId: string): Promise<Map<string, CardRow>> => withShared(tenantId, cardIndexOwn, mapMerge);
 export const patchCard = (tenantId: string, id: string, doc: { topicId?: string; franchiseId?: string | null; published?: boolean; createdAt?: string } | null) =>
   patchHub<Map<string, CardRow>>("cards", tenantId, (m) => {
