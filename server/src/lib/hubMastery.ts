@@ -2,7 +2,8 @@
 // child's attempts and topics, calls these, and stores the result in `hubMastery`.
 // Rules live in docs/learning-hub.md ("Mastery", "Diagnostic").
 
-export interface Slice { got: number; max: number }
+/** One scored piece of evidence for a topic. `w` = how much it counts against a quiz (default 1; flashcards count less). */
+export interface Slice { got: number; max: number; w?: number }
 
 /** The parts of a stored attempt mastery cares about. */
 export interface AttemptLite {
@@ -16,16 +17,17 @@ export interface AttemptLite {
   baselineReset?: boolean;
 }
 
-export const MASTERY_WINDOW = 5;
+/** Every score counts (owner: "not last 5 scores in lessons but all scores"), the newest a little more than the oldest so real improvement still shows. */
+export const MASTERY_RECENCY = 0.9;
 
-/** Weighted mastery from per-topic slices, NEWEST FIRST: the last 5 with max>0,
- *  weight 0.5^i (newest i=0): Σw·(got/max)/Σw × 100, rounded. null = nothing yet. */
+/** Weighted mastery from per-topic slices, NEWEST FIRST: EVERY slice with max>0 counts,
+ *  weight w·0.9^i (newest i=0): Σw·(got/max)/Σw × 100, rounded. null = nothing yet. */
 export function weightedMastery(slicesNewestFirst: Slice[]): number | null {
-  const use = slicesNewestFirst.filter((s) => s.max > 0).slice(0, MASTERY_WINDOW);
+  const use = slicesNewestFirst.filter((s) => s.max > 0);
   if (!use.length) return null;
   let num = 0;
   let den = 0;
-  use.forEach((s, i) => { const w = Math.pow(0.5, i); num += w * (s.got / s.max); den += w; });
+  use.forEach((s, i) => { const w = (s.w ?? 1) * Math.pow(MASTERY_RECENCY, i); num += w * (s.got / s.max); den += w; });
   return Math.round((num / den) * 100);
 }
 
@@ -70,24 +72,28 @@ export function baselines(attempts: AttemptLite[]): Map<string, { subject: strin
   return out;
 }
 
-/** Rebuild every per-topic mastery row for ONE child from their attempts.
+/** Scored evidence that is not a quiz attempt (a marked typed homework, a topic's flashcard reviews): the topic it belongs to, when, and its score. */
+export interface Extra { topicId: string; subject: string; at: string; got: number; max: number; w: number }
+
+/** Rebuild every per-topic mastery row for ONE child from their attempts (+ any extra scored evidence).
  *  Quiz attempts (status "marked") feed the trend; diagnostics only set the baseline. */
-export function computeTopicMastery(attempts: AttemptLite[]): Map<string, TopicMastery> {
+export function computeTopicMastery(attempts: AttemptLite[], extras: Extra[] = []): Map<string, TopicMastery> {
   const quizzes = attempts.filter((a) => a.assessmentType === "quiz" && a.status === "marked" && a.submittedAt).sort(byNewest);
-  const perTopic = new Map<string, { subject: string; slices: Slice[]; last: string }>();
-  for (const a of quizzes) {
-    for (const [topicId, s] of Object.entries(a.byTopic ?? {})) {
-      if (!(s.max > 0)) continue;
-      const e = perTopic.get(topicId) ?? { subject: a.subject, slices: [], last: a.submittedAt! };
-      e.slices.push(s); // already newest first
-      perTopic.set(topicId, e);
-    }
-  }
+  const perTopic = new Map<string, { subject: string; items: { at: string; slice: Slice }[]; last: string }>();
+  const add = (topicId: string, subject: string, at: string, slice: Slice) => {
+    const e = perTopic.get(topicId) ?? { subject, items: [], last: at };
+    e.items.push({ at, slice });
+    if (at > e.last) e.last = at;
+    perTopic.set(topicId, e);
+  };
+  for (const a of quizzes) for (const [topicId, s] of Object.entries(a.byTopic ?? {})) if (s.max > 0) add(topicId, a.subject, a.submittedAt!, s);
+  for (const x of extras) if (x.max > 0) add(x.topicId, x.subject, x.at, { got: x.got, max: x.max, w: x.w });
   const base = baselines(attempts);
   const out = new Map<string, TopicMastery>();
   for (const [topicId, e] of perTopic) {
+    const newestFirst = e.items.sort((p, q) => q.at.localeCompare(p.at)).map((i) => i.slice);
     out.set(topicId, {
-      topicId, subject: e.subject, masteryPct: weightedMastery(e.slices), attempts: e.slices.length,
+      topicId, subject: e.subject, masteryPct: weightedMastery(newestFirst), attempts: newestFirst.length,
       baselinePct: base.get(topicId)?.pct ?? null, lastAttemptAt: e.last,
     });
   }

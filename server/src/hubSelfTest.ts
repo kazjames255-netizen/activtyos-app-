@@ -115,20 +115,34 @@ t("reveal policy: never inside a running attempt", () => {
 });
 
 console.log("mastery");
-t("weights 0.5^i newest-first; only the last 5 count; max=0 slices skipped", () => {
+t("every score counts, weights w·0.9^i newest-first; max=0 slices skipped", () => {
   assert.equal(weightedMastery([]), null);
   assert.equal(weightedMastery([{ got: 0, max: 0 }]), null);
   assert.equal(weightedMastery([{ got: 1, max: 1 }]), 100);
-  // newest 100%, then 0%: (1·1 + 0.5·0) / 1.5 = 66.67 → 67
-  assert.equal(weightedMastery([{ got: 1, max: 1 }, { got: 0, max: 1 }]), 67);
-  // newest 0%, then 100%: (0 + 0.5) / 1.5 = 33.3 → 33
-  assert.equal(weightedMastery([{ got: 0, max: 1 }, { got: 1, max: 1 }]), 33);
-  // a 6th (oldest) slice is ignored
+  // newest 100%, then 0%: 1 / 1.9 = 52.6 → 53
+  assert.equal(weightedMastery([{ got: 1, max: 1 }, { got: 0, max: 1 }]), 53);
+  // newest 0%, then 100%: 0.9 / 1.9 = 47.4 → 47
+  assert.equal(weightedMastery([{ got: 0, max: 1 }, { got: 1, max: 1 }]), 47);
+  // a 6th (oldest) slice is NO LONGER ignored: five 1/2 then a 0/2 → 44
   const five = Array.from({ length: 5 }, () => ({ got: 1, max: 2 }));
-  assert.equal(weightedMastery([...five, { got: 0, max: 2 }]), 50);
+  assert.equal(weightedMastery([...five, { got: 0, max: 2 }]), 44);
   assert.equal(weightedMastery([{ got: 0, max: 0 }, { got: 1, max: 2 }]), 50, "an empty slice doesn't take a weight slot");
-  // partial slices: 3/4 newest, 1/2 next → (0.75 + 0.25) / 1.5 = 66.67 → 67
-  assert.equal(weightedMastery([{ got: 3, max: 4 }, { got: 1, max: 2 }]), 67);
+  // partial slices: 3/4 newest, 1/2 next → (0.75 + 0.45) / 1.9 = 63.2 → 63
+  assert.equal(weightedMastery([{ got: 3, max: 4 }, { got: 1, max: 2 }]), 63);
+  // a small-weight slice (flashcards, w 0.3) moves the score less than a quiz: 100% then 0% at w 0.3 → 1 / 1.27 = 78.7 → 79
+  assert.equal(weightedMastery([{ got: 1, max: 1 }, { got: 0, max: 1, w: 0.3 }]), 79);
+  // twenty perfect scores and one bad old one: still high, but the old bad one counts
+  assert.ok((weightedMastery([...Array.from({ length: 20 }, () => ({ got: 1, max: 1 })), { got: 0, max: 1 }]) ?? 0) < 100);
+});
+t("extra evidence (homework marks, flashcards) joins the quizzes of its topic, newest first", () => {
+  const rows = computeTopicMastery([], [
+    { topicId: "tp", subject: "Maths", at: "2026-09-10T10:00:00Z", got: 0, max: 10, w: 1 },
+    { topicId: "tp", subject: "Maths", at: "2026-09-12T10:00:00Z", got: 10, max: 10, w: 1 },
+  ]);
+  // newest 100%, older 0%: 1 / 1.9 → 53; two scores behind it; last = the newest date
+  assert.equal(rows.get("tp")?.masteryPct, 53);
+  assert.equal(rows.get("tp")?.attempts, 2);
+  assert.equal(rows.get("tp")?.lastAttemptAt, "2026-09-12T10:00:00Z");
 });
 t("bands: highest min ≤ pct, unsorted input ok", () => {
   const bands = [{ min: 80, label: "Secure" }, { min: 0, label: "Learning" }, { min: 50, label: "Developing" }];
@@ -173,11 +187,11 @@ t("quiz slices: newest first, marked only, growth vs baseline", () => {
     at("qp", "quiz", 4, { alg: [0, 4] }, { status: "pending_marking" }), // not marked → ignored
   ];
   const r = computeTopicMastery(list).get("alg")!;
-  // newest marked is q2 (100%), then q1 (50%): (1 + 0.25)/1.5 = 83.3 → 83
-  assert.equal(r.masteryPct, 83); assert.equal(r.attempts, 2); assert.equal(r.baselinePct, 25);
+  // newest marked is q2 (100%), then q1 (50%): (1 + 0.9·0.5)/1.9 = 76.3 → 76
+  assert.equal(r.masteryPct, 76); assert.equal(r.attempts, 2); assert.equal(r.baselinePct, 25);
   assert.equal(r.lastAttemptAt, "2026-01-03T10:00:00.000Z");
   const roll = rollupSubject("Maths", [{ ...r, subject: "Maths" }], 2, new Set(["alg", "geo"]));
-  assert.equal(roll.masteryPct, 83); assert.equal(roll.coverage, 0.5); assert.equal(roll.baselinePct, 25); assert.equal(roll.growthPct, 58);
+  assert.equal(roll.masteryPct, 76); assert.equal(roll.coverage, 0.5); assert.equal(roll.baselinePct, 25); assert.equal(roll.growthPct, 51);
   assert.equal(computeTopicMastery([]).size, 0);
 });
 t("subject rollup: mean of attempted topics; coverage; nothing attempted", () => {

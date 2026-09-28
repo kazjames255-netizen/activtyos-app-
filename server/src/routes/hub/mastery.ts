@@ -3,13 +3,14 @@ import { z } from "zod";
 import { db } from "../../firebase";
 import { canSeeStudent, canWriteRow, hubConfig, requireEdit, resolveCtx, subjectAllowed } from "../../lib/hubCore";
 import { forgetHub, hubCached } from "../../lib/hubCache";
-import { questionIndex, tenantRoster, tenantTopics } from "../../lib/hubIndex";
-import { bandFor, computeTopicMastery, rollupSubject, trendOf, type AttemptLite } from "../../lib/hubMastery";
+import { noteIndex, questionIndex, tenantRoster, tenantTopics } from "../../lib/hubIndex";
+import { bandFor, computeTopicMastery, rollupSubject, trendOf, type AttemptLite, type Extra } from "../../lib/hubMastery";
 import { overallAttainment } from "../../lib/hubRules";
 import {
   attemptsCol, childFor, childSubjectOk, fitsChild, loadTopics, masteryCol, nowIso, requestedChild,
   type Topic,
 } from "./shared";
+import { homeworkCol, reviewsCol, submissionsCol } from "./teachingCommon";
 
 // Learning Hub — mastery. The maths is in lib/hubMastery.ts (pure). Two paths:
 //  • GET /mastery (one child) is computed FRESH from that child's attempts, so it
@@ -27,6 +28,42 @@ async function liteAttempts(tenantId: string, childId: string): Promise<LiteAtte
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<LiteAttempt, "id">) }));
 }
 
+/** Flashcards count for LESS than a quiz (a self-rated card is weaker evidence than a marked one). */
+const FLASHCARD_WEIGHT = 0.3;
+
+/** Scored evidence that is not a quiz attempt, placed on the topic it belongs to (owner: "add all"):
+ *  • a marked TYPED homework (no quiz behind it: a quiz homework is already a marked attempt, so it is never counted twice), on the topics of the lessons attached to it;
+ *  • the child's flashcard reviews, one small-weight slice per topic (cards rated Good / Easy out of cards reviewed).
+ *  Games are deliberately NOT included: their topics are their own and do not map to the hub's, and every game already states its evidence is low weight. */
+async function loadExtras(tenantId: string, childId: string): Promise<Extra[]> {
+  const [topicRows, notes, subs, revs] = await Promise.all([
+    tenantTopics(tenantId), noteIndex(tenantId),
+    submissionsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).where("status", "==", "marked").select("homeworkId", "attemptId", "attemptIds", "mark").get(),
+    reviewsCol.where("tenantId", "==", tenantId).where("childId", "==", childId).select("topicId", "lastQuality", "lastReviewedAt").get(),
+  ]);
+  const subjectOf = new Map(topicRows.map((t) => [t.id, t.subject] as const));
+  const out: Extra[] = [];
+  const typed = subs.docs.filter((d) => !d.get("attemptId") && !((d.get("attemptIds") as string[] | undefined)?.length) && Number(d.get("mark.max")) > 0 && typeof d.get("mark.score") === "number");
+  const hwIds = [...new Set(typed.map((d) => d.get("homeworkId") as string))];
+  const noteIdsOf = new Map<string, string[]>();
+  if (hwIds.length) for (const h of await db.getAll(...hwIds.map((id) => homeworkCol.doc(id)), { fieldMask: ["tenantId", "noteIds"] })) if (h.exists && h.get("tenantId") === tenantId) noteIdsOf.set(h.id, (h.get("noteIds") as string[] | undefined) ?? []);
+  for (const d of typed) {
+    const topics = new Set((noteIdsOf.get(d.get("homeworkId") as string) ?? []).map((n) => notes.get(n)?.topicId).filter((t): t is string => !!t && subjectOf.has(t)));
+    for (const topicId of topics) out.push({ topicId, subject: subjectOf.get(topicId)!, at: String(d.get("mark.markedAt") ?? ""), got: Number(d.get("mark.score")), max: Number(d.get("mark.max")), w: 1 });
+  }
+  const perTopic = new Map<string, { got: number; max: number; at: string }>();
+  for (const d of revs.docs) {
+    const topicId = d.get("topicId") as string;
+    if (!subjectOf.has(topicId)) continue;
+    const e = perTopic.get(topicId) ?? { got: 0, max: 0, at: "" };
+    e.max += 1; if (Number(d.get("lastQuality")) >= 4) e.got += 1;
+    const at = String(d.get("lastReviewedAt") ?? ""); if (at > e.at) e.at = at;
+    perTopic.set(topicId, e);
+  }
+  for (const [topicId, e] of perTopic) out.push({ topicId, subject: subjectOf.get(topicId)!, at: e.at, got: e.got, max: e.max, w: FLASHCARD_WEIGHT });
+  return out.filter((x) => x.at);
+}
+
 /** Rebuild the stored `hubMastery` rows for one child from their attempts. Rows are
  *  derived, so this also deletes ones that no longer apply (e.g. after a baseline reset). */
 export async function recomputeChildMastery(tenantId: string, childId: string, franchiseId: string | null): Promise<void> {
@@ -37,7 +74,7 @@ export async function recomputeChildMastery(tenantId: string, childId: string, f
   ]);
   const topics = new Map(topicRows.map((t) => [t.id, t] as const));
   const cfg = await hubConfig(tenantId, franchiseId);
-  const rows = computeTopicMastery(attempts);
+  const rows = computeTopicMastery(attempts, await loadExtras(tenantId, childId));
   const now = nowIso();
   const keep = new Set<string>();
   const ops: ((b: FirebaseFirestore.WriteBatch) => void)[] = [];
@@ -81,7 +118,7 @@ hubMasteryApi.get("/mastery", async (req, res) => {
     if (q.published && fitsChild(q.franchiseId, child) && topicById.has(q.topicId)) withContent.add(q.topicId);
   }
 
-  const rows = computeTopicMastery(attempts);
+  const rows = computeTopicMastery(attempts, await loadExtras(ctx.tenantId, child.childId));
   const subjects = new Map<string, { subject: string; rows: ReturnType<typeof topicRow>[]; content: Set<string> }>();
   const slot = (subject: string) => {
     const k = subject.toLowerCase();
