@@ -32,15 +32,16 @@ function Attention({ icon, tone, count, label, hint, onClick }: { icon: IconName
   return (
     <button type="button" onClick={onClick} aria-label={tr("hubshell.hm_attnAria", { count, label, hint })}
       className={`home-lift group flex min-h-[64px] w-full items-center gap-3 rounded-2xl border p-3 text-start ${FOCUS}`}
-      style={zero ? { background: "var(--panel)", borderColor: "var(--line)" } : { background: t.bg, borderColor: t.line }}>
-      <span aria-hidden className="grid h-11 w-11 flex-none place-items-center rounded-xl" style={{ background: zero ? "var(--surface)" : "var(--surface)", color: zero ? "var(--ink-3)" : t.fg, boxShadow: "var(--shadow-sm)" }}>
-        <Icon name={zero ? "check" : icon} size={21} />
+      style={zero ? { background: `color-mix(in srgb, ${t.bg} 45%, var(--surface))`, borderColor: `color-mix(in srgb, ${t.line} 70%, transparent)` } : { background: t.bg, borderColor: t.line }}>
+      <span aria-hidden className="relative grid h-11 w-11 flex-none place-items-center rounded-xl" style={{ background: "var(--surface)", color: t.fg, boxShadow: "var(--shadow-sm)", opacity: zero ? 0.85 : 1 }}>
+        <Icon name={icon} size={21} />
+        {zero && <span className="absolute -bottom-1 -end-1 grid h-[18px] w-[18px] place-items-center rounded-full text-white" style={{ background: "var(--green, #1f8a4c)", boxShadow: "0 0 0 2px var(--surface)" }}><Icon name="check" size={11} /></span>}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-[13px] font-extrabold leading-tight text-[var(--ink)]">{label}</span>
-        <span className="mt-0.5 block truncate text-[11.5px] font-semibold text-[var(--ink-2)]">{zero ? tr("hubshell.hm_allClear") : hint}</span>
+        <span className="mt-0.5 block truncate text-[11.5px] font-bold" style={{ color: zero ? TONES.green.fg : "var(--ink-2)" }}>{zero ? tr("hubshell.hm_allClear") : hint}</span>
       </span>
-      <span className="text-[28px] font-extrabold tabular-nums leading-none" style={{ fontFamily: "var(--ff-display)", color: zero ? "var(--ink-3)" : t.fg }}>{shown}</span>
+      <span className="text-[28px] font-extrabold tabular-nums leading-none" style={{ fontFamily: "var(--ff-display)", color: t.fg, opacity: zero ? 0.55 : 1 }}>{shown}</span>
       <Icon name="chevronRight" size={16} className="text-[var(--ink-3)] transition group-hover:translate-x-0.5" />
     </button>
   );
