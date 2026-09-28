@@ -11,14 +11,16 @@ import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { GradientTile, Ico } from "../teachIcons";
 import { subjectColor } from "../kit";
+import { subjectSwatch } from "../subjectColour";
 import { YearGroupPicker } from "../YearGroupPicker";
 import { BulkDialog, CardDialog } from "./CardDialogs";
+import { StudentRings } from "./StudentRings";
 import type { Card, FlashStats } from "./fcTypes";
 
 // Tutor flashcards: a card bank per topic (create / edit / delete / publish,
 // bulk paste) and how the students are getting on (server stats).
 
-export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly, franchiseId }: PanelProps) {
+export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly, franchiseId, goTo }: PanelProps) {
   const { t: tr, locale } = useI18n();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [stats, setStats] = useState<FlashStats | null>(null);
@@ -146,24 +148,7 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
             ].map((t) => <StatTile key={t.label} {...t} />)}
           </div>
 
-          {stats && stats.students.length > 0 && (
-            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-sm)]" aria-label={tr("hublessons.tfStudentProgress")}>
-              <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{tr("hublessons.tfStudentProgress")}</div>
-              <div className="grid gap-2.5">
-                {[...stats.students].sort((a, b) => b.due - a.due || (b.lastReviewedAt ?? "").localeCompare(a.lastReviewedAt ?? "")).slice(0, allStudents ? 200 : 5).map((s) => (
-                  <div key={s.childId} className="grid items-center gap-x-4 gap-y-1 sm:grid-cols-[150px_minmax(0,1fr)_auto]">
-                    <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.childName}</div>
-                    <div>
-                      <ProgressBar pct={s.cardsAvailable ? (s.reviewed / s.cardsAvailable) * 100 : 0} label={tr("hublessons.tfProgressAria", { name: s.childName, a: s.reviewed, b: s.cardsAvailable })} />
-                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">{[tr("hublessons.tfCompleted", { p: s.cardsAvailable ? Math.round((s.reviewed / s.cardsAvailable) * 100) : 0, a: s.reviewed, b: s.cardsAvailable }), s.lastReviewedAt ? tr("hublessons.tfLast", { day: fmtDay(s.lastReviewedAt) }) : tr("hublessons.tfNotStarted")].join(" · ")}</div>
-                    </div>
-                    <div className="flex gap-1.5">{s.due > 0 && <Pill tone="gold">{tr("hublessons.tfDueN", { n: s.due })}</Pill>}{s.new > 0 && <Pill tone="violet">{tr("hublessons.tfNewN", { n: s.new })}</Pill>}{s.due === 0 && s.new === 0 && <Pill tone="green">{tr("hublessons.tfUpToDate")}</Pill>}</div>
-                  </div>
-                ))}
-              </div>
-              {stats.students.length > 5 && <button type="button" onClick={() => setAllStudents((v) => !v)} className={`mt-2 min-h-[44px] lg:min-h-[40px] rounded-lg px-1 text-[12px] font-bold text-[var(--brand)] hover:underline ${FOCUS}`}>{allStudents ? tr("hublessons.tfShowFewer") : tr("hublessons.tfShowAll", { n: stats.students.length })}</button>}
-            </section>
-          )}
+          {stats && stats.students.length > 0 && <StudentRings students={stats.students} goTo={goTo} />}
 
           <div className="flex flex-wrap items-center gap-2" data-testid="fc-filters">
             <div role="group" aria-label={tr("hubshell.k_subject")} className="flex flex-wrap gap-1.5">
@@ -201,8 +186,8 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
                   </div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {list.map((c) => (
-                    <MiniCard key={c.id} card={c} accent={subjectColor(t.subject)} flipped={flipped.has(c.id)} busy={busy === c.id} confirming={confirmDel === c.id} locked={readOnly ? "view" : canChangeRow(franchiseId, c.franchiseId) ? null : "head-office"}
+                  {list.map((c, i) => (
+                    <MiniCard key={c.id} card={c} index={i + 1} subject={t.subject} accent={subjectColor(t.subject)} flipped={flipped.has(c.id)} busy={busy === c.id} confirming={confirmDel === c.id} locked={readOnly ? "view" : canChangeRow(franchiseId, c.franchiseId) ? null : "head-office"}
                       onFlip={() => setFlipped((st) => { const n = new Set(st); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}
                       onEdit={() => setDialog({ kind: "card", card: c, topicId: c.topicId })}
                       onPublish={() => void setPublished([c], !c.published)}
@@ -237,39 +222,57 @@ function StatTile({ label, value, tone }: { label: string; value: number; tone: 
   );
 }
 
-/** A fixed-height flip card: hover (or tap) turns it to show the back; the status
- *  dot and the ⋯ menu stay put underneath, so every card in the grid is the same size. */
-function MiniCard({ card: c, accent, flipped, busy, confirming, locked, onFlip, onEdit, onPublish, onAskDelete, onCancelDelete, onDelete }: {
-  card: Card; accent: string; flipped: boolean; busy: boolean; confirming: boolean; locked: "view" | "head-office" | null;
+const cardEmoji = (subject: string) =>
+  /math/i.test(subject) ? "🧮" : /engl|lit|read|writ/i.test(subject) ? "📖" : /sci|bio|chem|phys/i.test(subject) ? "🔬"
+  : /french|german|spanish|lang|latin|welsh|urdu|arabic/i.test(subject) ? "🗣️" : /hist|geog|human|relig|citizen/i.test(subject) ? "🌍"
+  : /comput|ict|code|data/i.test(subject) ? "💻" : /art|design/i.test(subject) ? "🎨" : /music/i.test(subject) ? "🎵" : "🃏";
+
+/** A fixed-height flip card that looks like a real flashcard: a coloured paper face (the topic's subject colour,
+ *  dotted like index-card stock), a deck of card edges behind it, an index badge and a status pill that stay put
+ *  on both sides. Hover (or tap / Enter) turns it to show the back; the ⋯ menu stays underneath, so every card
+ *  in the grid is the same size. */
+function MiniCard({ card: c, index, subject, accent, flipped, busy, confirming, locked, onFlip, onEdit, onPublish, onAskDelete, onCancelDelete, onDelete }: {
+  card: Card; index: number; subject: string; accent: string; flipped: boolean; busy: boolean; confirming: boolean; locked: "view" | "head-office" | null;
   onFlip: () => void; onEdit: () => void; onPublish: () => void; onAskDelete: () => void; onCancelDelete: () => void; onDelete: () => void;
 }) {
   const { t: tr } = useI18n();
-  const face = "absolute inset-0 flex flex-col rounded-xl px-3.5 py-3";
+  const sw = subjectSwatch(subject);
+  const face = "absolute inset-0 flex flex-col overflow-hidden rounded-xl px-4 pb-3 pt-9";
   const hide = { backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" } as const;
+  const paper = { backgroundImage: `radial-gradient(color-mix(in srgb, ${accent} 24%, transparent) 1px, transparent 1.5px), linear-gradient(155deg, color-mix(in srgb, ${accent} 20%, var(--surface)), color-mix(in srgb, ${accent} 6%, var(--surface)))`, backgroundSize: "14px 14px, 100% 100%" };
+  const emoji = cardEmoji(subject);
   return (
-    <div data-ui="card" data-card={c.id} data-published={c.published}
-      className={`group flex h-[176px] flex-col rounded-2xl border bg-[var(--surface)] p-1.5 shadow-[var(--shadow-sm)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow)] motion-reduce:transition-none motion-reduce:hover:transform-none ${c.published ? "border-[var(--line)]" : "border-dashed border-[var(--gold-line)]"}`}>
-      <div className="min-h-0 flex-1 [perspective:900px]">
-        <button type="button" aria-label={flipped ? tr("hublessons.tfShowFront") : tr("hublessons.tfShowBack")} aria-pressed={flipped} onClick={onFlip}
-          className={`relative block h-full w-full rounded-xl text-start transition-transform duration-500 ease-out motion-reduce:transition-none ${FOCUS} ${flipped ? "" : "[@media(hover:hover)]:group-hover:[transform:rotateY(180deg)]"}`}
-          style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : undefined }}>
-          <span className={`${face} bg-[var(--panel)]`} style={{ ...hide, boxShadow: `inset 3px 0 0 ${accent}` }}>
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-3)]">{tr("hublessons.tfFront")}</span>
-            <span className="mt-1 line-clamp-4 block whitespace-pre-wrap break-words text-[13.5px] font-extrabold leading-snug text-[var(--ink)]">{c.front}</span>
-            <Ico name="refresh" size={14} className="absolute bottom-2.5 end-3 text-[var(--ink-3)] opacity-60" />
+    <div data-ui="card" data-card={c.id} data-published={c.published} role="group" aria-label={`#${index}`} className="group relative pb-1 pe-1.5 pt-1">
+      {/* the deck: two card edges peeking out behind */}
+      <span aria-hidden className="pointer-events-none absolute inset-x-2 bottom-1 top-2 rounded-2xl border" style={{ background: `color-mix(in srgb, ${accent} 11%, var(--surface))`, borderColor: sw.ring, transform: "rotate(2.4deg)" }} />
+      <span aria-hidden className="pointer-events-none absolute inset-x-1 bottom-0 top-1.5 rounded-2xl border" style={{ background: `color-mix(in srgb, ${accent} 16%, var(--surface))`, borderColor: sw.ring, transform: "rotate(-1.8deg)" }} />
+      <div className={`relative flex h-[196px] flex-col rounded-2xl border bg-[var(--surface)] p-1.5 shadow-[0_10px_24px_-14px_color-mix(in_srgb,var(--ink)_45%,transparent)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_16px_30px_-14px_color-mix(in_srgb,var(--ink)_50%,transparent)] motion-reduce:transition-none motion-reduce:hover:transform-none ${c.published ? "" : "border-dashed"}`}
+        style={{ borderColor: c.published ? sw.ring : "var(--gold-line)" }}>
+        <div className="relative min-h-0 flex-1 [perspective:900px]">
+          {/* badges live above the flipper so both faces keep them */}
+          <span aria-hidden className="pointer-events-none absolute start-2.5 top-2.5 z-10 grid h-6 min-w-6 place-items-center rounded-full px-1.5 text-[11px] font-extrabold tabular-nums text-white shadow-sm" style={{ background: accent }}>#{index}</span>
+          <span className={`pointer-events-none absolute end-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold ${c.published ? "border-[var(--green-line,var(--line))] bg-[var(--green-soft,var(--surface))] text-[var(--hub-green-ink)]" : "border-[var(--gold-line)] bg-[var(--gold-soft,var(--surface))] text-[var(--ink-2)]"}`}>
+            <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${c.published ? "bg-[var(--green)]" : "border border-[var(--gold)] bg-transparent"}`} />
+            {c.published ? tr("hublessons.npPublished") : tr("hublessons.edDraft")}
           </span>
-          <span className={`${face} text-white`} style={{ ...hide, transform: "rotateY(180deg)", background: "linear-gradient(140deg, var(--brand-2), var(--brand))" }}>
-            <span className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-white/75">{tr("hublessons.tfBack")}</span>
-            <span className="mt-1 line-clamp-4 block whitespace-pre-wrap break-words text-[13.5px] font-semibold leading-snug">{c.back}</span>
-          </span>
-        </button>
-      </div>
-      <div className="flex min-h-[44px] items-center gap-2 ps-2">
-        <span className={`inline-flex items-center gap-1.5 text-[11.5px] font-bold ${c.published ? "text-[var(--hub-green-ink)]" : "text-[var(--ink-3)]"}`}>
-          <span aria-hidden className={`h-2 w-2 rounded-full ${c.published ? "bg-[var(--green)]" : "border-2 border-[var(--gold)] bg-transparent"}`} />
-          {c.published ? tr("hublessons.npPublished") : tr("hublessons.edDraft")}
-        </span>
-        {locked === "head-office" && <span className="ms-auto pe-2 text-[11px] font-bold text-[var(--ink-3)]" title={tr("hublessons.tfHeadOfficeTitle")}>{tr("hublessons.tfHeadOffice")}</span>}
+          <button type="button" aria-label={flipped ? tr("hublessons.tfShowFront") : tr("hublessons.tfShowBack")} aria-pressed={flipped} onClick={onFlip} title={`${c.front}\n—\n${c.back}`}
+            className={`relative block h-full w-full rounded-xl text-start transition-transform duration-500 ease-out motion-reduce:transition-none ${FOCUS} ${flipped ? "" : "[@media(hover:hover)]:group-hover:[transform:rotateY(180deg)]"}`}
+            style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : undefined }}>
+            <span className={face} style={{ ...hide, ...paper, boxShadow: `inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent), inset 0 0 0 1px ${sw.ring}` }}>
+              <span aria-hidden className="pointer-events-none absolute -bottom-3 -end-2 select-none text-[76px] leading-none opacity-[0.16]">{emoji}</span>
+              <span className="inline-flex w-fit items-center rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em]" style={{ background: `color-mix(in srgb, ${accent} 16%, var(--surface))`, color: sw.fg }}>{tr("hublessons.tfFront")}</span>
+              <span className="mt-1.5 line-clamp-4 block whitespace-pre-wrap break-words text-[16px] font-extrabold leading-snug" style={{ ...DISPLAY, color: "var(--ink)" }}>{c.front}</span>
+              <span aria-hidden className="absolute bottom-2.5 start-3.5 opacity-70" style={{ color: sw.fg }}><Ico name="refresh" size={15} /></span>
+            </span>
+            <span className={`${face} text-white`} style={{ ...hide, transform: "rotateY(180deg)", backgroundImage: `radial-gradient(rgba(255,255,255,.22) 1px, transparent 1.5px), linear-gradient(145deg, ${accent}, color-mix(in srgb, ${accent} 68%, var(--ink)))`, backgroundSize: "14px 14px, 100% 100%" }}>
+              <span aria-hidden className="pointer-events-none absolute -bottom-3 -end-2 select-none text-[76px] leading-none opacity-[0.18]">{emoji}</span>
+              <span className="inline-flex w-fit items-center rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white">{tr("hublessons.tfBack")}</span>
+              <span className="mt-1.5 line-clamp-4 block whitespace-pre-wrap break-words text-[15px] font-bold leading-snug">{c.back}</span>
+            </span>
+          </button>
+        </div>
+        <div className="flex min-h-[44px] items-center gap-2 ps-2">
+          {locked === "head-office" && <span className="pe-2 text-[11px] font-bold text-[var(--ink-3)]" title={tr("hublessons.tfHeadOfficeTitle")}>{tr("hublessons.tfHeadOffice")}</span>}
         {!locked && <span className="ms-auto">
           <MoreMenu label={tr("hublessons.tfCardActions")}>
             {(close) => confirming ? (
@@ -287,6 +290,7 @@ function MiniCard({ card: c, accent, flipped, busy, confirming, locked, onFlip, 
             )}
           </MoreMenu>
         </span>}
+        </div>
       </div>
     </div>
   );
