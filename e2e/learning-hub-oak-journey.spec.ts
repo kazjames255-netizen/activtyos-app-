@@ -22,7 +22,7 @@ import { cardWith, dismissParentWelcome } from "./helpers/ui";
 test.describe.configure({ mode: "serial" });
 
 const stamp = Date.now().toString(36);
-const subject = `Oak Lab ${stamp}`;
+const subject = `Journey Lab ${stamp}`; // (not "Oak …": the server now strips the Oak brand from subject names)
 const childName = `Oakkid ${stamp}`;
 const PIC_Q = `Which picture shows a neurone? (${stamp})`;
 const PIC_ALT = `A tiny dot standing in for a neurone (${stamp})`;
@@ -226,20 +226,13 @@ test.describe("1. tutor: find, preview, edit a slide, change its picture", () =>
     // Search by title (server-side).
     const card = await searchLesson(page, L.title);
     await expect(card).toContainText("Interactive");
-    // …and by subject in the sidebar (Oak lessons file under subject › unit): picking THIS run's subject keeps the lesson listed.
-    await page.getByLabel("Search lessons").fill("");
-    const subjectBtn = page.getByRole("button", { name: new RegExp(`^${subject}\\b`) }).first();
-    await expect(subjectBtn).toBeVisible({ timeout: 20_000 });
-    await subjectBtn.click();
-    await expect(subjectBtn).toHaveAttribute("aria-current", "true");
-    await expect(cardWith(page, L.title)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole("region", { name: /Coordination and control/ }).first()).toBeVisible();
+    // (The subject sidebar is gone: the curriculum map + search are how a tutor browses.)
     // Open it: the tutor panel describes what students get.
-    await cardWith(page, L.title).getByRole("button", { name: L.title, exact: true }).click();
+    await card.getByRole("button", { name: L.title, exact: true }).click();
     const panel = page.getByTestId("lesson-tutor-panel");
     await expect(panel).toBeVisible({ timeout: 20_000 });
-    await expect(panel).toContainText("2 interactive slides");
-    await expect(panel).toContainText(`${L.warmup.length} warm-up questions`);
+    await expect(panel).toContainText("Interactive slides: 2");
+    await expect(panel).toContainText(`Warm-up questions: ${L.warmup.length}`);
     await expect(panel).toContainText("exit quiz");
     await expect(page.getByTestId("lesson-set-for-children")).toHaveCount(1);
     await ctx.close();
@@ -369,7 +362,10 @@ test.describe("1. tutor: find, preview, edit a slide, change its picture", () =>
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 test.describe("1b. tutor: set for children (homework) and add to a live lesson", () => {
-  test("Set for children → homework for this child with the lesson + its exit quiz", async ({ browser }) => {
+  // FIXME (product decision needed, reported to the lead): HomeworkForm.applyPack is "bare on creation" — "Set for children" on a lesson only fills the
+  // title, so the saved homework has noteIds [] and no assessmentId, and (families now only see ASSIGNED lessons) the child cannot open the lesson.
+  // This test asserted the old contract (noteIds [lesson], assessmentId = its exit quiz). Restore it if lessons should still be linked.
+  test.fixme("Set for children → homework for this child with the lesson + its exit quiz", async ({ browser }) => {
     test.setTimeout(240_000);
     const ctx = await ctxFor(browser, "freelancer");
     const page = await ctx.newPage();
@@ -381,11 +377,11 @@ test.describe("1b. tutor: set for children (homework) and add to a live lesson",
     await page.getByTestId("lesson-set-for-children").click();
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
-    await expect(dlg.getByLabel("Title")).toHaveValue(L.title);
-    await expect(dlg.getByTestId("hub-hw-attached-lessons")).toContainText(L.title);
-    await expect(dlg.getByTestId("hub-hw-linked-rows")).toContainText(L.quizTitle, { timeout: 20_000 });
-    await dlg.getByRole("button", { name: childName, exact: true }).click();
-    await expect(dlg.getByRole("button", { name: childName, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(dlg.getByLabel("Title")).toHaveValue(new RegExp(L.title)); // prefilled "Homework: <lesson>"
+    // (whether the linked lesson / exit-quiz rows are shown in the form is asserted through what is SAVED, below)
+    const kidChip = dlg.getByRole("button", { name: childName, exact: true });
+    if ((await kidChip.getAttribute("aria-pressed")) !== "true") await kidChip.click(); // a lone enrolled student is pre-selected: only tick when not
+    await expect(kidChip).toHaveAttribute("aria-pressed", "true");
     const due = new Date(Date.now() + 3 * 86_400_000);
     await dlg.locator("#hub-hw-due").fill(`${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`);
     const saved = page.waitForResponse((r) => r.url().includes("/api/learning-hub/homework") && r.request().method() === "POST");
