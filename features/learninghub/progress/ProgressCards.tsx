@@ -16,7 +16,7 @@ import { useNow } from "../teachKit";
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
 function Card({ color, icon, label, value, sub, testId }: { color: string; icon: string; label: string; value: ReactNode; sub?: ReactNode; testId: string }) {
   return (
-    <div data-testid={testId} className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid={testId} className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>{icon}</span>
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
@@ -32,7 +32,7 @@ const tone = (pct: number) => (pct >= 80 ? "var(--green)" : pct >= 60 ? "var(--g
 function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty: string; total: number | string; sub: string; rows: { title: string; pct: number }[] }) {
   const color = "var(--cat-4)";
   return (
-    <div data-testid="pc-quiz" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid="pc-quiz" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>📝</span>
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
@@ -57,7 +57,7 @@ function QuizzesCard({ label, empty, total, sub, rows }: { label: string; empty:
 function TopicsCard({ label, total, sub, rows }: { label: string; total: number; sub: string; rows: { name: string; subject: string; pct: number }[] }) {
   const color = "var(--cat-2)";
   return (
-    <div data-testid="pc-topics" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid="pc-topics" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>🧩</span>
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{label}</div>
@@ -86,7 +86,7 @@ function GamesCard({ T, areas, scored, unfinished, ready, name }: { T: (k: strin
   const recent = areas.slice(0, RECENT);   // useGamesPlayed already sorts by last played, newest first
   const days = areas.find((a) => a.weekDays !== undefined);
   return (
-    <div data-testid="pc-games" className="rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
+    <div data-testid="pc-games" className="min-h-[212px] rounded-2xl px-3.5 py-3" style={{ background: `linear-gradient(135deg, ${tint(color, 26)}, ${tint(color, 9)})`, border: `1.5px solid ${tint(color, 42)}` }}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full text-[16px]" style={{ background: tint(color, 34) }}>🎮</span>
         <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-2)]">{T("pc_games")}</div>
@@ -132,7 +132,7 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   const overdue = todo.filter((h) => new Date(h.dueAt).getTime() < now).length;
 
   return (
-    <div className="grid grid-cols-2 items-start gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
+    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-3" data-testid="hub-progress-cards">
       {quiz && <>
       <QuizzesCard label={quiz.labels.latest} empty={quiz.labels.noQuiz} total={quiz.taken >= 20 ? "20+" : quiz.taken} sub={quiz.labels.taken} rows={quiz.recent} />
       <TopicsCard label={quiz.labels.topics} total={quiz.topics} sub={quiz.labels.across} rows={quiz.topicsRecent} />
