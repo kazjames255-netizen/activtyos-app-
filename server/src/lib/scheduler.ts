@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { withReadLabel } from "./readMeter";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The scheduler — time-based work on plain Firestore, no extra infra.
@@ -74,9 +75,9 @@ const timers: NodeJS.Timeout[] = [];
  *  the process down. */
 export function sweep(name: string, everyMs: number, fn: () => Promise<void>): void {
   const tick = async () => {
-    if (!(await claimSweep(name, everyMs))) return;
+    if (!(await withReadLabel(`sweep:${name}:claim`, () => claimSweep(name, everyMs)))) return;
     try {
-      await fn();
+      await withReadLabel(`sweep:${name}`, fn);
     } catch (e) {
       console.error(`[scheduler] sweep "${name}" failed:`, (e as Error).message);
     }

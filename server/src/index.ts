@@ -97,6 +97,8 @@ import { learningHub } from "./routes/learningHub";
 import { noOakResponse } from "./oak/noOakResponse";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
+import { readStats, resetReadStats, withReadLabel } from "./lib/readMeter";
+import { timingSafeEqual } from "node:crypto";
 
 const app = express();
 // Behind the host's proxy (Railway/Vercel: one hop) req.ip must be the real
@@ -119,6 +121,30 @@ app.use(
     },
   }),
 );
+// Firestore read meter (lib/readMeter.ts): attribute every read made while serving a request to its route, ids collapsed
+// (`http:GET /api/hub/notes/:id`), and expose the totals at GET /internal/read-stats (loopback only, or READ_STATS_KEY header).
+app.use((req, _res, next) => {
+  const label = `http:${req.method} ${req.path.split("/").map((s) => (/^[A-Za-z0-9_-]{16,}$/.test(s) || /^\d+$/.test(s) ? ":id" : s)).join("/").slice(0, 80)}`;
+  withReadLabel(label, next);
+});
+app.get("/internal/read-stats", (req, res) => {
+  // With READ_STATS_KEY set (required in production): the key must match, compared in constant time. Without a key (dev only): loopback
+  // callers only, and never a request that came through a proxy (x-forwarded-for present) — behind a same-host reverse proxy every
+  // request would otherwise look local.
+  const key = process.env.READ_STATS_KEY;
+  let ok = false;
+  if (key) {
+    const got = Buffer.from(String(req.header("x-read-stats-key") ?? ""));
+    const want = Buffer.from(key);
+    ok = got.length === want.length && timingSafeEqual(got, want);
+  } else if (process.env.NODE_ENV !== "production") {
+    const ip = req.socket.remoteAddress ?? "";
+    ok = (ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1") && !req.header("x-forwarded-for");
+  }
+  if (!ok) { res.status(404).end(); return; }
+  if (req.query.reset === "1") resetReadStats();
+  res.json(readStats(Number(req.query.top) || 50));
+});
 // Stripe Billing webhook — must see the RAW body for signature verification,
 // so it mounts before the JSON parser (its router does its own raw parsing).
 app.use("/api/stripe/webhook", stripeWebhook);

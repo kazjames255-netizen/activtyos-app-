@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { cert, getApps, initializeApp, type AppOptions } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import "./lib/readMeter"; // counts every Firestore document read, attributed (see lib/readMeter.ts)
 
 // Credential resolution order:
 //   1. Emulator mode (FIRESTORE_EMULATOR_HOST set) — no real credentials are
