@@ -817,6 +817,7 @@ const hublessons: Record<string, Record<string, string>> = {
     "tfStudentProgress": "Student progress",
     "tfProgressAria": "{name}: {a} of {b} cards started",
     "tfStarted": "{a}/{b} started",
+    "tfCompleted": "{p}% completed ({a} of {b} cards)",
     "tfMastered": "mastered: {n}",
     "tfLast": "last {day}",
     "tfNotStarted": "not started",

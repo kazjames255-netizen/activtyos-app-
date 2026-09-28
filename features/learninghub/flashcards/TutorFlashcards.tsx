@@ -150,7 +150,7 @@ export function TutorFlashcards({ qs, topics, covered, filter, onError, readOnly
                     <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.childName}</div>
                     <div>
                       <ProgressBar pct={s.cardsAvailable ? (s.reviewed / s.cardsAvailable) * 100 : 0} label={tr("hublessons.tfProgressAria", { name: s.childName, a: s.reviewed, b: s.cardsAvailable })} />
-                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">{[tr("hublessons.tfStarted", { a: s.reviewed, b: s.cardsAvailable }), tr("hublessons.tfMastered", { n: s.mastered }), s.lastReviewedAt ? tr("hublessons.tfLast", { day: fmtDay(s.lastReviewedAt) }) : tr("hublessons.tfNotStarted")].join(" · ")}</div>
+                      <div className="mt-1 text-[11px] text-[var(--ink-3)]">{[tr("hublessons.tfCompleted", { p: s.cardsAvailable ? Math.round((s.reviewed / s.cardsAvailable) * 100) : 0, a: s.reviewed, b: s.cardsAvailable }), s.lastReviewedAt ? tr("hublessons.tfLast", { day: fmtDay(s.lastReviewedAt) }) : tr("hublessons.tfNotStarted")].join(" · ")}</div>
                     </div>
                     <div className="flex gap-1.5">{s.due > 0 && <Pill tone="gold">{tr("hublessons.tfDueN", { n: s.due })}</Pill>}{s.new > 0 && <Pill tone="violet">{tr("hublessons.tfNewN", { n: s.new })}</Pill>}{s.due === 0 && s.new === 0 && <Pill tone="green">{tr("hublessons.tfUpToDate")}</Pill>}</div>
                   </div>

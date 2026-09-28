@@ -11,6 +11,7 @@ import { tint } from "../kit";
 import type { StudentHomework } from "../homework/hwTypes";
 import { useGamesPlayed, verdictOf, TONE } from "../games/GamesPlayedPanel";
 import { useNow } from "../teachKit";
+import { timeAgo } from "../shared-assess/format";
 
 // The row of colourful "at a glance" cards on Progress: quizzes (from the mastery data ProgressView already loaded), then games, homework and flashcards
 // (each read from its own endpoint; a card whose data is unavailable just shows a dash). Each card has its own colour so they are easy to tell apart.
@@ -122,7 +123,10 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
   const who = quiz?.who ?? (p.canEdit ? (p.students.find((x) => x.childId === childId)?.childName ?? "").split(" ")[0] : "");
   const games = useGamesPlayed(childId, p.qs.replace(/^\?/, ""));
   const hw = useHubData<StudentHomework[]>(hubPath(p.qs, "/homework", { childId }), ["hubHomework", "hubSubmissions"]);
-  const cards = useHubData<{ dueCount?: number; newCount?: number }>(hubPath(p.qs, "/flashcards/due", { childId }), ["hubCards"]);
+  // A family reads its own study queue; a tutor is refused that (it is the child's), so a tutor reads the roster stats and picks this child's row.
+  const cards = useHubData<{ dueCount?: number; newCount?: number }>(p.canEdit ? null : hubPath(p.qs, "/flashcards/due", { childId }), ["hubCards"]);
+  const stats = useHubData<{ students?: { childId: string; reviewed: number; cardsAvailable: number; due: number; mastered: number; lastReviewedAt: string | null }[] }>(p.canEdit ? hubPath(p.qs, "/flashcards/stats") : null, ["hubFlashcards"]);
+  const mine = p.canEdit ? stats.data?.students?.find((x) => x.childId === childId) ?? null : null;
 
   const areas = games.areas;
   const scored = areas.filter((a) => a.correct !== null && a.attempts >= 8).map((a) => ({ a, pct: ((a.correct ?? 0) / a.attempts) * 100 })).sort((x, y) => y.pct - x.pct);
@@ -143,8 +147,13 @@ export function ProgressCards({ p, childId, quiz }: { p: PanelProps; childId: st
       <Card testId="pc-homework" color="var(--green)" icon="📚" label={T("pc_hw")}
         value={setForChild !== null ? (setForChild || "–") : rows && rows.length ? `${handed}/${rows.length}` : "–"}
         sub={hw.error ? "" : setForChild !== null ? (setForChild ? T("pc_hw_set") : T("pc_hw_none")) : !rows || !rows.length ? T("pc_hw_none") : overdue ? T("pc_hw_overdue", { n: overdue }) : todo.length ? T("pc_hw_todo", { n: todo.length }) : T("pc_hw_clear")} />
+      {p.canEdit ? (
+        <Card testId="pc-cards" color="var(--cat-1)" icon="🃏" label={T("pc_cards")} value={mine ? `${mine.cardsAvailable ? Math.round((mine.reviewed / mine.cardsAvailable) * 100) : 0}%` : "–"}
+          sub={mine ? `${mine.due > 0 ? T("pc_cards_dueN", { n: mine.due }) : T("pc_cards_uptodate")}${mine.lastReviewedAt ? ` · ${timeAgo(mine.lastReviewedAt)}` : ""}` : stats.error ? "" : T("pc_cards_none")} />
+      ) : (
       <Card testId="pc-cards" color="var(--cat-1)" icon="🃏" label={T("pc_cards")} value={cards.data ? cards.data.dueCount ?? 0 : "–"}
         sub={cards.data ? ((cards.data.newCount ?? 0) > 0 ? T("pc_cards_new", { n: cards.data.newCount ?? 0 }) : (cards.data.dueCount ?? 0) > 0 ? T("pc_cards_sub") : T("pc_cards_none")) : cards.error ? "" : T("pc_cards_none")} />
+      )}
     </div>
   );
 }
