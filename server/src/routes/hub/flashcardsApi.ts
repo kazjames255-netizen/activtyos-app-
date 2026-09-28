@@ -357,7 +357,10 @@ hubFlashcardsApi.get("/flashcards", async (req, res) => {
   const limit = paged ? intQ(req.query.limit, 60, 200) : UNPAGED_MAX;
   let rows: Card[];
   let total: number;
-  if (family && family.size <= 30 && !needle) {
+  if (family && family.size === 0) {
+    // A topic / year / subject filter that matches no topic: nothing to read (Firestore rejects an empty `in` list with a 500).
+    rows = []; total = 0;
+  } else if (family && family.size <= 30 && !needle) {
     const snap = await flashcardsCol.where("tenantId", "==", ctx.tenantId).where("topicId", "in", [...family]).get();
     const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as CardDoc) })).filter((c) => canSee(ctx, c.franchiseId) && (pub === null || (c.published !== false) === pub))
       .sort(order);
