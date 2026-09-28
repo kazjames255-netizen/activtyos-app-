@@ -49,8 +49,12 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
   const { h, hp } = x;
   const [size, setSize] = useState<number>(8);
   const [groupId, setGroupId] = useState("");
+  const [subject, setSubject] = useState("");
+  const [shown, setShown] = useState<"dots" | "score" | "pct">("dots");   // the flip: dots only, scores (5/10) or percent (50%) under each dot
   const sorted = useMemo(() => [...homework].sort((a, b) => b.dueAt.localeCompare(a.dueAt)), [homework]);
-  const cols = useMemo(() => (size <= 0 ? sorted : sorted.slice(0, size)), [sorted, size]);
+  const subjects = useMemo(() => [...new Set(homework.map((y) => y.subject).filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b)), [homework]);
+  const bySubject = useMemo(() => (subject ? sorted.filter((y) => y.subject === subject) : sorted), [sorted, subject]);
+  const cols = useMemo(() => (size <= 0 ? bySubject : bySubject.slice(0, size)), [bySubject, size]);
   const members = useMemo(() => { const g = groups.find((y) => y.id === groupId); return g ? membersOf(g) : null; }, [groups, groupId]);
   const kids = useMemo(() => {
     const m = new Map<string, { id: string; name: string; cells: Map<string, InboxRow> }>();
@@ -85,7 +89,21 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
             </Select>
           </label>
         )}
-        <span className="text-[12px] text-[var(--ink-3)]" data-testid="hub-results-count">{h("resShowing", { shown: cols.length, total: sorted.length })}</span>
+        {subjects.length > 0 && (
+          <label className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{h("resSubject")}
+            <Select data-testid="hub-results-subject" aria-label={h("resSubject")} value={subject} onChange={(e) => setSubject(e.target.value)} className="min-h-[40px]">
+              <option value="">{h("resAllSubjects")}</option>
+              {subjects.map((sb) => <option key={sb} value={sb}>{sb}</option>)}
+            </Select>
+          </label>
+        )}
+        <div role="group" aria-label={h("resFlip")} className="inline-flex overflow-hidden rounded-full border border-[var(--line)]" data-testid="hub-results-flip">
+          {(["dots", "score", "pct"] as const).map((m) => (
+            <button key={m} type="button" aria-pressed={shown === m} onClick={() => setShown(m)} data-testid={`hub-results-flip-${m}`}
+              className={`min-h-[40px] px-3 text-[12px] font-extrabold ${FOCUS} ${shown === m ? "bg-[var(--brand)] text-white" : "bg-[var(--surface)] text-[var(--ink-2)]"}`}>{h(m === "dots" ? "resFlipDots" : m === "score" ? "resFlipScore" : "resFlipPct")}</button>
+          ))}
+        </div>
+        <span className="text-[12px] text-[var(--ink-3)]" data-testid="hub-results-count">{h("resShowing", { shown: cols.length, total: bySubject.length })}</span>
       </div>
       <ul className="m-0 mb-3 flex list-none flex-wrap gap-x-3.5 gap-y-1 p-0 text-[12px] text-[var(--ink-2)]" aria-label={h("resKey")}>
         {LEGEND.map((l) => <li key={l} className="inline-flex items-center gap-1.5"><span aria-hidden className="grid h-4 w-4 place-items-center rounded-full text-[10px] font-extrabold text-white" style={{ background: COLOR[l] }}>{GLYPH[l]}</span>{legendText(x, l)}</li>)}
@@ -127,10 +145,11 @@ export function ResultsBoard({ inbox, homework, now, groups = [], onOpen }: { in
                       <td key={c.id} className="border-t border-[var(--line)] px-1 py-1 text-center">
                         <button type="button" onClick={() => onOpen(r.submissionId)} aria-label={h("resCellAria", { name: k.name, title: c.title, state: t.label, score: showScore ? `, ${t.score}${t.below ? `, ${h("resBelowPass")}` : ""}` : "" })} data-light={t.light} data-below={t.below ? "1" : undefined}
                           title={`${t.label}${showScore ? ` · ${t.score}` : ""}${t.below ? ` · ${h("resBelowPass")}` : ""}`}
-                          className={`relative inline-grid h-11 w-11 place-items-center rounded-full ${FOCUS}`}>
+                          className={`relative inline-grid min-h-11 min-w-11 place-items-center rounded-2xl px-1 ${FOCUS}`}>
                           {/* DOT GRID: one coloured dot per task; the words and score are in the tooltip, the label and the screen-reader text. */}
                           <span aria-hidden className="grid h-7 w-7 place-items-center rounded-full text-[13px] font-extrabold text-white" style={{ background: COLOR[t.light] }}>{GLYPH[t.light]}</span>
                           {t.below && <span aria-hidden className="absolute -end-0.5 -top-0.5 text-[11px] font-extrabold leading-none text-[var(--red)]">▼</span>}
+                          {shown !== "dots" && t.pct !== null && <span aria-hidden className="block text-[11px] font-extrabold tabular-nums leading-none text-[var(--ink)]">{shown === "pct" ? `${t.pct}%` : t.score}</span>}
                           <span className="sr-only">{t.score} {t.label}</span>
                         </button>
                       </td>

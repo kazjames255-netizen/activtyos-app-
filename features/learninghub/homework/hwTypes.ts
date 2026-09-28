@@ -19,6 +19,8 @@ export interface TutorHomework {
   /** YouTube videos (≤6) and the groups it was set for (display only). */
   videos?: HubVideo[]; groupIds?: string[];
   counts: { assigned: number; submitted: number; marked: number };
+  /** The subject it belongs to (its quiz's, else its lessons'), for the markbook's subject filter. */
+  subject?: string | null;
 }
 
 /** One row of the tutor's inbox — includes the hand-in itself, so marking needs no second call. */

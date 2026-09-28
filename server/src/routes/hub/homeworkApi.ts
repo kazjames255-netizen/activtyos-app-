@@ -6,7 +6,7 @@ import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { checkDataUrl } from "../../lib/hubUpload";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { ageInYears, audienceFit, cleanVideos, normAudience, videosOut, type StoredVideo } from "../../lib/hubRules";
-import { noteIndex } from "../../lib/hubIndex";
+import { assessmentRows, noteIndex, tenantTopics } from "../../lib/hubIndex";
 import { autoMark, combinedMark, finishedFor, requiredQuizIds } from "../../lib/hubHwSync";
 import {
   assessmentsCol, attemptsCol, dropSubmissionFiles, eligibleStudents, filesOut, homeworkCol, imagesCol, isParent, notesCol, nowIso,
@@ -247,7 +247,16 @@ hubHomeworkApi.get("/homework", async (req, res) => {
       .sort((a, b) => b.dueAt.localeCompare(a.dueAt))
       ;
     const ws = new Map((await worksheetsOut(ctx.tenantId, list.flatMap((h) => h.worksheetNoteIds ?? []), false)).map((w) => [w.noteId, w] as const));
-    res.json(list.map((h) => tutorHomeworkOut(h.id, h, counts.get(h.id) ?? { assigned: 0, submitted: 0, marked: 0 }, (h.worksheetNoteIds ?? []).map((i) => ws.get(i)).filter((x): x is WsInfo => !!x))));
+    // The subject each homework belongs to (for the markbook's "by subject" filter): its quiz's subject, else the subject of its lessons' topics.
+    const [asm, notes, topicRows] = await Promise.all([assessmentRows(ctx.tenantId), noteIndex(ctx.tenantId), tenantTopics(ctx.tenantId)]);
+    const subjectOfTopic = new Map(topicRows.map((t) => [t.id, t.subject] as const));
+    const subjectOf = (h: HomeworkDoc): string | null => {
+      const q = h.assessmentId ? asm.get(h.assessmentId)?.subject : null;
+      if (q) return q;
+      for (const n of h.noteIds ?? []) { const t = notes.get(n)?.topicId; const sb = t ? subjectOfTopic.get(t) : null; if (sb) return sb; }
+      return null;
+    };
+    res.json(list.map((h) => ({ ...tutorHomeworkOut(h.id, h, counts.get(h.id) ?? { assigned: 0, submitted: 0, marked: 0 }, (h.worksheetNoteIds ?? []).map((i) => ws.get(i)).filter((x): x is WsInfo => !!x)), subject: subjectOf(h) })));
     return;
   }
 
