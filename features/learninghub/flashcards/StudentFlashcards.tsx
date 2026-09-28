@@ -13,7 +13,7 @@ import { subjectEmoji } from "../shared-ui/subjectEmoji";
 import { useI18n } from "@/lib/i18n/provider";
 import { pickPlural } from "@/lib/i18n/plural";
 import { StackedCards } from "./StackedCards";
-import { ChildChip, useChildGate, WhoIsLearning } from "../family/FamilyContext";
+import { ChildChip, useChildGate, useFamily, WhoIsLearning } from "../family/FamilyContext";
 import { ReviewSession } from "./ReviewSession";
 import type { DueResponse, QueueCard } from "./fcTypes";
 
@@ -22,6 +22,7 @@ import type { DueResponse, QueueCard } from "./fcTypes";
 
 export function StudentFlashcards({ qs, childId, filter, covered, students, topics, onError, setFocus }: PanelProps) {
   const { t: tr, locale } = useI18n();
+  const fam = useFamily();
   const [data, setData] = useState<DueResponse | null>(null);
   const [session, setSession] = useState<QueueCard[] | null>(null);
   const inSession = useRef(false);
@@ -145,9 +146,10 @@ export function StudentFlashcards({ qs, childId, filter, covered, students, topi
               </div>
             )}
             {data.dueCount + data.newCount > queue.length && !filter.subject && <p className="mt-3 text-[12px] text-white/75">{tr("hublessons.fcInTotal", { total: data.dueCount + data.newCount, n: queue.length })}</p>}
-            <div className="mt-5"><WhoIsLearning childId={childId} tone="dark" /></div>
+            {/* A child on their own screen never needs the "who is learning" chip — that is for the grown-up. */}
+            {!fam.kid && <div className="mt-5"><WhoIsLearning childId={childId} tone="dark" /></div>}
             <button type="button" id="hub-fc-start" disabled={!gate.ok} onClick={() => { if (gate.ok) setSession(queue); }}
-              className={`inline-flex min-h-[54px] items-center gap-2.5 rounded-2xl bg-white px-7 text-[15px] font-extrabold text-[var(--brand-strong)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition disabled:opacity-50 hover:-translate-y-px active:scale-[.98] motion-reduce:transition-none ${FOCUS}`}>
+              className={`mt-5 inline-flex min-h-[60px] w-full items-center justify-center gap-2.5 rounded-2xl bg-white px-8 text-[18px] font-extrabold sm:w-auto text-[var(--brand-strong)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition disabled:opacity-50 hover:-translate-y-px active:scale-[.98] motion-reduce:transition-none ${FOCUS}`}>
               <Ico name="play" size={16} />{tr("hublessons.fcStartReview")}
             </button>
             <p className="mt-2.5 hidden text-[11.5px] text-white/70 sm:block">{tr("hublessons.fcShortcutsLine")}</p>
