@@ -83,7 +83,7 @@ test.afterAll(async () => {
 
 test.describe("swap an item on a set homework", () => {
   test("rules: same item, missing item, foreign item, and a family can't swap", async () => {
-    const swap = (t: string, body: unknown, id = hw) => send("POST", `${HUB}/homework/${id}/swap`, t, body);
+    const swap = (t: string, body: unknown, id = hw) => send("POST", `${HUB}/homework/${id}/swap?tenantId=${accounts.freelancer.tenantId}`, t, body); // a family must name the provider too (else 400 before the role check)
     expect((await swap(tutor, { kind: "lesson", fromId: lessonA, toId: lessonA })).status).toBe(400);
     expect((await swap(tutor, { kind: "lesson", fromId: lessonB, toId: lessonA })).status).toBe(400);          // B isn't on it
     expect((await swap(tutor, { kind: "lesson", fromId: lessonA, toId: "no-such-lesson" })).status).toBe(404);
@@ -141,7 +141,7 @@ test.describe("badges", () => {
 
 test.describe("feedback bank", () => {
   test("saves a tidy private list, in order; capped; a family has none", async () => {
-    const put = (t: string, snippets: string[]) => send("PUT", `${HUB}/feedback-bank`, t, { snippets });
+    const put = (t: string, snippets: string[]) => send("PUT", `${HUB}/feedback-bank?tenantId=${tenantId}`, t, { snippets });
     const saved = await put(tutor, ["  Great   work  ", "great work", "", "Try again"]);
     expect(saved.status).toBe(200);
     expect(saved.body.snippets).toEqual(["Great work", "Try again"]);         // trimmed, repeats and blanks dropped
@@ -153,7 +153,7 @@ test.describe("feedback bank", () => {
     expect((await put(tutor, Array.from({ length: 30 }, (_, i) => `Comment ${i}`))).status).toBe(200);
     // Private to the tutor: another provider's tutor sees their own (empty) list; a family can't use it at all.
     expect((await send("GET", `${HUB}/feedback-bank`, other)).body.snippets).not.toContain("Comment 0");
-    expect((await send("GET", `${HUB}/feedback-bank`, parent)).status).toBe(403);
+    expect((await send("GET", `${HUB}/feedback-bank?tenantId=${tenantId}`, parent)).status).toBe(403);
     expect((await put(parent, ["nope"])).status).toBe(403);
     await put(tutor, []);                                                     // leave the shared tutor account clean
   });

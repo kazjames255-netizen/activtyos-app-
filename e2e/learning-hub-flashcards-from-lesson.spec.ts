@@ -44,7 +44,7 @@ test("before the lesson is assigned nobody has the card", async () => {
 test("assigning the lesson to one child gives THAT child its topic's flashcards, and not their sibling", async () => {
   const t = await token(accounts.freelancer);
   await apiPost(`${HUB}/homework`, t, { title: `Cards hw ${stamp}`, instructions: "Do the lesson.", noteIds: [L.noteId], assignedChildIds: [withId], dueAt: new Date(Date.now() + 5 * 86_400_000).toISOString() });
-  await expect.poll(async () => (await due(withId)).due.map((c) => c.id), { timeout: 30_000 }).toContain(cardId);
+  await expect.poll(async () => (await due(withId)).due.map((c) => c.id), { timeout: 75_000, intervals: [2_000] }).toContain(cardId) /* the assigned-notes cache lives 30 s (TTL_ROSTER) */;
   expect((await due(withoutId)).due.map((c) => c.id)).not.toContain(cardId);
 });
 
