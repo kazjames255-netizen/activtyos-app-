@@ -5,6 +5,7 @@ import { canReadContent, canSee, canSeeStudent, canWriteRow, childDobs, effectiv
 import { nameList, notifyFamilies } from "../../lib/hubNotify";
 import { scheduleMasteryRecompute } from "./mastery";
 import { pingHub } from "../../lib/hubPing";
+import { forgetHub } from "../../lib/hubCache";
 import { checkDataUrl } from "../../lib/hubUpload";
 import { activeMembers, visibleGroups } from "../../lib/hubGroups";
 import { ageInYears, audienceFit, cleanVideos, normAudience, videosOut, type StoredVideo } from "../../lib/hubRules";
@@ -347,6 +348,7 @@ hubHomeworkApi.post("/homework", async (req, res) => {
   batch.set(ref, doc);
   for (const s of students) batch.set(submissionsCol.doc(subId(ref.id, s.childId)), newSub(ctx, ref.id, s, now));
   await batch.commit();
+  forgetHub(ctx.tenantId, "assignedNotes"); // families only see lessons assigned to their child: drop the cached assignment sets so a change shows at once
   notifyAssigned(ctx.tenantId, ref.id, doc.title, doc.dueAt, doc.assignedChildIds);
   res.status(201).json(tutorHomeworkOut(ref.id, doc, { assigned: students.length, submitted: 0, marked: 0 }, await worksheetsOut(ctx.tenantId, doc.worksheetNoteIds, false)));
 });
@@ -429,6 +431,7 @@ hubHomeworkApi.put("/homework/:id", async (req, res) => {
   }
   batch.update(snap.ref, patch);
   await batch.commit();
+  forgetHub(ctx.tenantId, "assignedNotes"); // families only see lessons assigned to their child: drop the cached assignment sets so a change shows at once
   if (added.length) notifyAssigned(ctx.tenantId, snap.id, patch.title ?? before.title, dueAt, added);
   const [subs] = await Promise.all([submissionsCol.where("tenantId", "==", ctx.tenantId).where("homeworkId", "==", snap.id).get()]);
   const counts: Counts = { assigned: 0, submitted: 0, marked: 0 };
@@ -517,6 +520,7 @@ hubHomeworkApi.post("/homework/:id/swap", async (req, res) => {
   }
   batch.update(snap.ref, patch);
   await batch.commit();
+  forgetHub(ctx.tenantId, "assignedNotes"); // families only see lessons assigned to their child: drop the cached assignment sets so a change shows at once
   pingHub(ctx.tenantId, "hubSubmissions");
   if (told.length) {
     const [fromT, toT] = await Promise.all([itemTitle(kind, fromId), itemTitle(kind, toId)]);
@@ -542,6 +546,7 @@ hubHomeworkApi.delete("/homework/:id", async (req, res) => {
   for (const d of subs.docs) batch.delete(d.ref);
   batch.delete(snap.ref);
   await batch.commit();
+  forgetHub(ctx.tenantId, "assignedNotes"); // families only see lessons assigned to their child: drop the cached assignment sets so a change shows at once
   for (const d of subs.docs) void dropSubmissionFiles(ctx.tenantId, d.id); // every upload made for these hand-ins, attached or not
   res.json({ ok: true });
 });

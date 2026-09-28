@@ -674,8 +674,8 @@ learningHub.get("/notes", async (req, res) => {
 
 // POST /notes/index-refresh — tell THIS API process that notes were written behind its back (the worksheet-quiz
 // converter: it uses the Admin SDK, so the cached notes index never sees `worksheetQuizId`). Tutors of the tenant.
-// {ids:[…≤500]} → those notes are re-read and patched into the index in place (no rebuild). No ids → the tenant's notes index AND its
-// disk snapshot are dropped (one full rebuild on the next read). Body {} is safe to call any time.
+// {ids:[…≤500]} → those notes are re-read and patched into the index in place (no rebuild). No ids → the tenant's notes AND topics indexes AND their
+// disk snapshots are dropped (one full rebuild on the next read). Body {} is safe to call any time.
 learningHub.post("/notes/index-refresh", async (req, res) => {
   const ctx = await resolveCtx(req, res);
   if (!ctx || !requireEdit(ctx, res)) return;
@@ -688,7 +688,7 @@ learningHub.post("/notes/index-refresh", async (req, res) => {
     res.json({ ok: true, patched: n });
     return;
   }
-  forgetHub(ctx.tenantId, "notes");
+  forgetHub(ctx.tenantId, "notes", "topics"); // topics too: a fixture/import script that adds a topic behind the API's back must see it (GET /notes/:id 404s without its topic)
   res.json({ ok: true, rebuilt: true });
 });
 
