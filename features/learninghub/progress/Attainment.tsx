@@ -92,6 +92,10 @@ export function Attainment({ overall, bands, subjects = [], variant = "card", on
             })}
           </div>
           {has && (
+            <span aria-hidden className="pointer-events-none absolute bottom-[calc(50%+14px)] -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-extrabold tabular-nums shadow-[var(--shadow-sm)]" data-testid="hub-attainment-here"
+              style={{ left: `${Math.min(96, Math.max(4, grow))}%`, background: hero ? "white" : toneAt(cur, n).fill, color: hero ? "var(--brand-strong)" : "white" }}>{Math.round(pct!)}%</span>
+          )}
+          {has && (
             <span aria-hidden className="absolute top-1/2 h-[19px] w-[19px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] shadow-[var(--shadow)]" data-testid="hub-attainment-marker"
               style={{ left: `${Math.min(99, Math.max(1, grow))}%`, background: hero ? "var(--brand-strong)" : "var(--surface)", borderColor: hero ? "white" : toneAt(cur, n).fill, transition: reduced ? "none" : "left 700ms cubic-bezier(.2,.8,.2,1)" }} />
           )}
