@@ -78,6 +78,8 @@ export interface EmailSendInput {
   sentByName: string;
   /** Set when fired from the scheduled queue, for provenance. */
   scheduledId?: string;
+  /** The franchise that sent it (null/absent = head office / a freelancer). Lets each franchise see only its own history. */
+  franchiseId?: string | null;
   /** Files attached to every recipient in this call (e.g. a payslip PDF —
    *  routes/payslips.ts calls performEmailSend once per employee so each
    *  gets only their own). */
@@ -103,6 +105,7 @@ export interface EmailHistoryDoc {
   /** Recipients whose client fetched the open pixel. */
   openedBy: string[];
   scheduledId?: string;
+  franchiseId?: string | null;
   /** The identity this campaign went out under (lib/sender.ts) — recorded so
    *  "who did this come from?" is answerable from the history alone. */
   fromName?: string;
@@ -129,6 +132,7 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
     delivered: 0,
     openedBy: [],
     ...(input.scheduledId ? { scheduledId: input.scheduledId } : {}),
+    ...(input.franchiseId ? { franchiseId: input.franchiseId } : {}),
     ...(sender.name ? { fromName: sender.name } : {}),
     ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
   };

@@ -658,16 +658,36 @@ async function scheduledEmailSends(): Promise<void> {
     };
     if (!s.tenantId || !s.sendAt || s.sendAt > now) continue;
     await fireOnce(`schedmail_${d.id}`, { tenantId: s.tenantId }, async () => {
+      let recipients = (s.recipients ?? []).filter((r) => r.includes("@"));
+      // The list was frozen when the email was SCHEDULED. A family who unsubscribed
+      // (or was opted out / removed from marketing) in the meantime must not get a
+      // marketing email anyway — re-apply the suppression + explicit opt-out rules
+      // now, exactly as a live blast would. (Single transactional sends are exempt.)
+      if ((s.audience ?? "all") === "all") {
+        const [sup, cust] = await Promise.all([
+          db.collection("emailSuppressions").where("tenantId", "==", s.tenantId!).get(),
+          db.collection("customers").where("tenantId", "==", s.tenantId!).get(),
+        ]);
+        const blocked = new Set<string>();
+        for (const x of sup.docs) { const e = String(x.get("email") ?? "").toLowerCase(); if (e) blocked.add(e); }
+        for (const x of cust.docs) { const e = String(x.get("email") ?? "").toLowerCase(); if (e && x.get("marketingOptIn") === false) blocked.add(e); }
+        recipients = recipients.filter((r) => !blocked.has(r.toLowerCase()));
+      }
+      if (!recipients.length) {
+        await d.ref.set({ status: "sent", sentAt: new Date().toISOString(), note: "Every recipient had unsubscribed by send time — nothing sent." }, { merge: true });
+        return;
+      }
       const sent = await performEmailSend({
         tenantId: s.tenantId!,
         subject: s.subject ?? "(no subject)",
         body: s.body ?? "",
         html: s.html,
-        recipients: (s.recipients ?? []).filter((r) => r.includes("@")),
+        recipients,
         audience: s.audience ?? "all",
         sentBy: s.createdBy ?? "operator",
         sentByName: s.createdByName ?? "Operator",
         scheduledId: d.id,
+        franchiseId: (s as { franchiseId?: string | null }).franchiseId ?? null,
       });
       await d.ref.set({ status: "sent", sentAt: new Date().toISOString(), emailId: sent.id }, { merge: true });
     }).catch((err) => console.error(`[sweeps] scheduled email ${d.id}:`, (err as Error).message));

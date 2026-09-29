@@ -8,7 +8,7 @@ import { ukNow } from "../lib/scheduler";
 import { inboundAddress, inboundConfigured, inboundDomain, tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
 import { ukToday } from "../lib/ukDate";
-import { franchiseFamilyEmails } from "../lib/franchiseScope";
+import { franchiseFamilyEmails, franchiseTeam } from "../lib/franchiseScope";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
 // families: everyone who's booked, or one address. Reuses the transactional
@@ -104,6 +104,20 @@ function netScope(req: Request): string | null | undefined {
 }
 const inScope = (b: { franchiseId?: string | null }, scope: string | null | undefined): boolean =>
   scope === undefined ? true : scope === null ? !b.franchiseId : b.franchiseId === scope;
+
+/** The franchise a caller is locked to (a franchise account or its staff), else null. */
+const myFranchise = (req: Request): string | null => {
+  const a = req.auth!;
+  return (a.role === "franchise" || a.role === "staff") && a.franchiseId ? a.franchiseId : null;
+};
+/** Send history + scheduled queue are tenant-wide collections: a franchise sees only what it (or
+ *  its team) sent, never head office's or a sibling franchise's campaigns or payslip mails. */
+async function emailDocsForCaller<T extends { franchiseId?: string | null; sentBy?: string; createdBy?: string }>(req: Request, tenantId: string, rows: T[]): Promise<T[]> {
+  const fid = myFranchise(req);
+  if (!fid) return rows;
+  const team = await franchiseTeam(tenantId, fid);
+  return rows.filter((r) => r.franchiseId ? r.franchiseId === fid : team.emails.has(String(r.sentBy ?? r.createdBy ?? "").toLowerCase()));
+}
 
 // The distinct families (booker name + email) for a tenant — everyone who's
 // booked and isn't cancelled/declined. This is the "all families" audience.
@@ -310,7 +324,9 @@ emails.get("/mailbox", async (req, res) => {
   if (!tenantId) return;
   const address = await inboundAddress(tenantId);
   const s = await readSummary(tenantId);
-  res.json({ configured: inboundConfigured, address, received: s.received, lastAt: s.lastAt, pendingVerification: s.pending });
+  // The mailbox belongs to the account holder: a franchise doesn't get head office's mail counts or its Gmail setup code.
+  const fr = myFranchise(req);
+  res.json({ configured: inboundConfigured, address, received: fr ? 0 : s.received, lastAt: fr ? null : s.lastAt, pendingVerification: fr ? null : s.pending });
 });
 
 // GET /api/emails — the send history (operators).
@@ -318,7 +334,8 @@ emails.get("/", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; franchiseId?: string | null; sentBy?: string })[];
+  const list = await emailDocsForCaller(req, tenantId, all);
   list.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -346,6 +363,7 @@ emails.post("/send", async (req, res) => {
     audience: input.audience,
     sentBy: req.user?.email ?? "operator",
     sentByName: req.user?.name ?? req.user?.email ?? "Operator",
+    franchiseId: myFranchise(req),
   });
   res.status(201).json(doc);
 });
@@ -387,6 +405,7 @@ emails.post("/schedule", async (req, res) => {
     audience: input.audience,
     sendAt,
     status: "scheduled" as const,
+    franchiseId: myFranchise(req),
     createdBy: req.user?.email ?? "operator",
     createdByName: req.user?.name ?? req.user?.email ?? "Operator",
     createdAt: new Date().toISOString(),
@@ -400,8 +419,8 @@ emails.get("/scheduled", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await schedCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs
-    .map((d) => { const { recipients: _r, ...rest } = d.data() as Record<string, unknown>; return { id: d.id, ...rest }; })
+  const list = (await emailDocsForCaller(req, tenantId, snap.docs
+    .map((d) => { const { recipients: _r, ...rest } = d.data() as Record<string, unknown>; return { id: d.id, ...rest } as Record<string, unknown> & { franchiseId?: string | null; createdBy?: string }; })))
     .sort((a, b) => `${(a as { sendAt?: string }).sendAt}`.localeCompare(`${(b as { sendAt?: string }).sendAt}`));
   res.json(list);
 });
@@ -411,7 +430,7 @@ emails.delete("/scheduled/:id", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await schedCol.doc(req.params.id).get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Scheduled email not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== tenantId || (await emailDocsForCaller(req, tenantId, [snap.data() as { franchiseId?: string | null; createdBy?: string }])).length === 0) { res.status(404).json({ error: "Scheduled email not found" }); return; }
   if (snap.data()!.status !== "scheduled") { res.status(409).json({ error: "This email has already been sent" }); return; }
   await snap.ref.set({ status: "cancelled", cancelledAt: new Date().toISOString() }, { merge: true });
   res.json({ ok: true });
@@ -461,11 +480,19 @@ async function recentMessages(tenantId: string): Promise<FirebaseFirestore.Query
   return (await msgCol.where("tenantId", "==", tenantId).get()).docs;
 }
 
+async function messageForCaller(req: Request, tenantId: string, m: FirebaseFirestore.DocumentData): Promise<boolean> {
+  const fr = myFranchise(req);
+  return !fr || (await franchiseFamilyEmails(tenantId, fr)).has(String(m.fromEmail ?? "").toLowerCase());
+}
+
 // GET /api/emails/messages — the recent window (client filters folders).
 emails.get("/messages", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
-  const snap = { docs: await recentMessages(tenantId) };
+  // The inbox is the tenant's redirected mailbox (head office's). A franchise sees only mail from ITS OWN families.
+  const fr = myFranchise(req);
+  const famSet = fr ? await franchiseFamilyEmails(tenantId, fr) : null;
+  const snap = { docs: (await recentMessages(tenantId)).filter((d) => !famSet || famSet.has(String(d.get("fromEmail") ?? "").toLowerCase())) };
   const now = new Date().toISOString();
   const list = [] as (Record<string, unknown> & { id: string; at?: string })[];
   for (const d of snap.docs) {
@@ -488,7 +515,7 @@ emails.patch("/messages/:id", async (req, res) => {
   const parsed = msgPatchSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const snap = await msgCol.doc(req.params.id).get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Message not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== tenantId || !(await messageForCaller(req, tenantId, snap.data()!))) { res.status(404).json({ error: "Message not found" }); return; }
   const p = parsed.data;
   const update: Record<string, unknown> = { ...p };
   if (p.snoozedUntil) update.folder = "snoozed";
@@ -503,7 +530,7 @@ emails.delete("/messages/:id", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await msgCol.doc(req.params.id).get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Message not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== tenantId || !(await messageForCaller(req, tenantId, snap.data()!))) { res.status(404).json({ error: "Message not found" }); return; }
   await snap.ref.delete();
   res.json({ ok: true });
 });
