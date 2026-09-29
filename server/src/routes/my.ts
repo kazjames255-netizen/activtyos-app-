@@ -799,6 +799,19 @@ my.post("/bookings", async (req, res) => {
     return;
   }
 
+  // The family's own stored postcode (GET /api/me / account settings) —
+  // carried onto every booking (not just home-visit) so operator views like
+  // the Task Manager parent picker have something to show. Fetched once and
+  // reused below for the home-visit service-address fallback too.
+  let familyPostcode: string | undefined;
+  let familyUserDoc: { address?: string; postcode?: string } | undefined;
+  if (familyUid) {
+    familyUserDoc = (await db.collection("users").doc(familyUid).get()).data() as
+      | { address?: string; postcode?: string }
+      | undefined;
+    if (familyUserDoc?.postcode?.trim()) familyPostcode = familyUserDoc.postcode.trim();
+  }
+
   // ── Home-visit service address ──────────────────────────────────────────
   // For a home-visit (or "both") listing, resolve where THIS session actually
   // happens: what checkout sent, else the family's saved account address —
@@ -806,9 +819,8 @@ my.post("/bookings", async (req, res) => {
   // that fails this never gets created.
   let serviceAddress: { address: string; postcode: string } | undefined = input.serviceAddress;
   if (listing.deliveryMode === "home-visit" || listing.deliveryMode === "both") {
-    if (!serviceAddress?.postcode?.trim() && familyUid) {
-      const u = (await db.collection("users").doc(familyUid).get()).data() as { address?: string; postcode?: string } | undefined;
-      if (u?.postcode?.trim()) serviceAddress = { address: u.address ?? "", postcode: u.postcode };
+    if (!serviceAddress?.postcode?.trim() && familyUserDoc?.postcode?.trim()) {
+      serviceAddress = { address: familyUserDoc.address ?? "", postcode: familyUserDoc.postcode };
     }
     if (!serviceAddress?.postcode?.trim()) {
       res.status(400).json({ error: "This provider comes to you — add the address the session should run at" });
@@ -1510,6 +1522,7 @@ my.post("/bookings", async (req, res) => {
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
             ...(serviceAddress ? { serviceAddress } : {}),
+            ...(familyPostcode ? { postcode: familyPostcode } : {}),
             tenantId: listing.tenantId,
             // Attribute the booking to whichever franchise OWNS the listing, so a
             // parent booking on a franchise's listing shows in that franchise's
@@ -1818,6 +1831,7 @@ my.post("/bookings", async (req, res) => {
       email: familyEmail,
       phone: onBehalf?.phone ?? ("phone" in input ? input.phone : undefined),
       uid: familyUid,
+      postcode: familyPostcode,
       children: bookings.map((b) => ({ name: b.child, childId: b.childId, age: b.age })),
     });
     // Learning Hub: a provider who switched on "auto-enrol on booking" (settings.hub.autoEnrolOnBooking, off by default) gets these children

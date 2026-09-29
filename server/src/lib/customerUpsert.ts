@@ -6,7 +6,7 @@ import { db } from "../firebase";
 // writes — a failed upsert must never fail a booking.
 export async function upsertCustomerFromBooking(
   tenantId: string,
-  booking: { booker: string; email: string; phone?: string; child?: string; childId?: string; age?: number; uid?: string | null },
+  booking: { booker: string; email: string; phone?: string; postcode?: string; child?: string; childId?: string; age?: number; uid?: string | null },
 ): Promise<void> {
   if (!booking.email) return;
   try {
@@ -34,6 +34,7 @@ export async function upsertCustomerFromBooking(
         // The account link (§K): customer ↔ parent account is now a real uid,
         // not just an email match, whenever a booking gives us one.
         ...(booking.uid ? { uid: booking.uid } : {}),
+        ...(booking.postcode ? { postcode: booking.postcode } : {}),
         children: kid,
       });
       return;
@@ -48,6 +49,9 @@ export async function upsertCustomerFromBooking(
     const patch: Record<string, unknown> = {};
     if (missing.length) patch.children = [...children, ...missing];
     if (booking.uid && doc.data().uid !== booking.uid) patch.uid = booking.uid;
+    // Fill a MISSING postcode from the booking — never overwrite one the
+    // provider already has on file (same rule as phone in the basket upsert).
+    if (booking.postcode && !((doc.data().postcode as string | undefined) ?? "").trim()) patch.postcode = booking.postcode;
     if (Object.keys(patch).length) await doc.ref.update(patch);
   } catch (e) {
     console.error("[customers] upsert failed:", (e as Error).message);
@@ -65,6 +69,7 @@ export async function upsertFamilyFromBasket(
     booker: string;
     email: string;
     phone?: string;
+    postcode?: string;
     uid?: string | null;
     children: { name?: string; childId?: string; age?: number }[];
   },
@@ -99,6 +104,7 @@ export async function upsertFamilyFromBasket(
         email: family.email,
         phone: family.phone ?? "",
         ...(family.uid ? { uid: family.uid } : {}),
+        ...(family.postcode ? { postcode: family.postcode } : {}),
         children: kids,
       });
       return;
@@ -114,6 +120,9 @@ export async function upsertFamilyFromBasket(
     // Fill a MISSING phone from what the family gave at checkout — but never
     // overwrite one the provider already has on file.
     if (family.phone?.trim() && !((doc.data().phone as string | undefined) ?? "").trim()) patch.phone = family.phone.trim();
+    // Same rule for postcode — filled from the account's stored postcode,
+    // never overwriting a value the provider already holds.
+    if (family.postcode && !((doc.data().postcode as string | undefined) ?? "").trim()) patch.postcode = family.postcode;
     if (Object.keys(patch).length) await doc.ref.update(patch);
   } catch (e) {
     console.error("[customers] family upsert failed:", (e as Error).message);

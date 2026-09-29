@@ -211,6 +211,14 @@ export interface Booking {
    *  area before the booking is allowed to complete. Absent on venue bookings. */
   serviceAddress?: { address: string; postcode: string };
 
+  /** The booking family's own postcode, copied from their account at checkout
+   *  (GET /api/me / account settings) — NOT the home-visit service address
+   *  above, which can differ (e.g. a grandparent's house). Absent for
+   *  bookings made before this was captured, or where the family has never
+   *  set a postcode on their account. Read defensively by any consumer
+   *  (e.g. the Task Manager parent picker). */
+  postcode?: string;
+
   // Transient UI state (kept on the record to match the legacy flows).
   _cancelling?: boolean;
   _refundType?: "full" | "partial" | "none";

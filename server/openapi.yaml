@@ -902,6 +902,10 @@ tags:
     description: The provider's document store (operators write, staff read)
   - name: compliance
     description: Staff certifications with expiry tracking (operators write, staff read)
+  - name: credentials-public
+    description: >
+      The public "Scan to verify" page a staff certificate's QR points to
+      (/v/{ref}) — no auth, no account, the ref is the only key.
   - name: discounts
     description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
   - name: splitfees
@@ -3030,6 +3034,24 @@ paths:
         "200": { description: "{ok:true}" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/public/credentials/{ref}:
+    get:
+      tags: [credentials-public]
+      summary: >
+        Verify a staff certificate by its QR ref (public, no auth). Same
+        response shape whether the ref is unknown, malformed, pending or
+        rejected — `found:false` — so the page can never confirm that a
+        different ref exists, or that a found-but-rejected one was rejected.
+        Only a currently `verified` record on `routes/credentials.ts`
+        (`credentialRecords`) returns real data, and only the minimum to
+        confirm it: no DBS number, files, issuer or other staff data.
+      parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: >
+            `{found:false}`, or `{found:true, status:"valid"|"expired", ref,
+            name, type, verifiedOn, expiry}`
 
   /api/expenses:
     get:
@@ -7862,6 +7884,14 @@ components:
           properties:
             address: { type: string }
             postcode: { type: string }
+        postcode:
+          type: string
+          description: |
+            The booking family's own postcode, copied from their account
+            (GET /api/me) at checkout — not the home-visit serviceAddress
+            above, which can differ. Absent for bookings made before this was
+            captured, or where the family never set a postcode on their
+            account.
         booker: { type: string, example: Sarah Jones }
         email: { type: string, example: sarah.j@email.com }
         phone: { type: string }
@@ -8313,6 +8343,11 @@ components:
         name: { type: string }
         email: { type: string }
         phone: { type: string }
+        postcode:
+          type: string
+          description: |
+            Filled from the family's account postcode the first time they
+            book (never overwrites a value the provider already holds).
         children:
           type: array
           items:
