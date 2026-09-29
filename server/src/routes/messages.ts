@@ -688,6 +688,9 @@ messages.post("/broadcast", async (req, res) => {
   // One record per bulk send — the single row the operator sees instead of N threads.
   await broadcastsCol.add({
     tenantId,
+    // Whose send this is, so a franchise's history shows only its own (a head-office send lists up to
+    // 500 of its families by name and email).
+    franchiseId: (req.auth!.role === "franchise" || req.auth!.role === "staff") ? (req.auth!.franchiseId ?? null) : null,
     body: parsed.data.body,
     subject: parsed.data.subject ?? "",
     sentAt: now,
@@ -704,7 +707,11 @@ messages.get("/broadcasts", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await broadcastsCol.where("tenantId", "==", tenantId).get();
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { sentAt?: string; senderUid?: string | null })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { sentAt?: string; senderUid?: string | null; franchiseId?: string | null })[];
+  // A franchise (and its staff) sees only ITS OWN bulk sends — never head office's or a sibling's
+  // (each lists the families it went to). Older records carry no franchiseId, so stay head-office only.
+  const brAuth = req.auth!;
+  if ((brAuth.role === "franchise" || brAuth.role === "staff") && brAuth.franchiseId) list = list.filter((b) => b.franchiseId === brAuth.franchiseId);
   // Plain staff see only their own bulk sends (the recipient lists are families).
   const staffUid = plainStaffUid(req);
   if (staffUid !== null) list = list.filter((b) => !!staffUid && b.senderUid === staffUid);
