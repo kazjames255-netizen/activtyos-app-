@@ -13,8 +13,9 @@ export const expenses = Router();
 const col = db.collection("expenses");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
 const expenseSchema = z.object({
-  date: z.string().max(10),
+  date: isoDay,
   category: z.string().trim().min(1).max(60),
   amount: z.number().nonnegative(),
   supplier: z.string().trim().max(120).optional(),
@@ -24,13 +25,13 @@ const expenseSchema = z.object({
   // bill); "paid" is money that's left. Due date + paidAt support the pending
   // workflow. Defaults to paid so a plain logged spend needs nothing extra.
   status: z.enum(["pending", "paid"]).default("paid"),
-  dueDate: z.string().max(10).optional(),
+  dueDate: isoDay.optional(),
   paidAt: z.string().max(40).optional(),
   // A recurring cost (e.g. weekly venue hire): the client sends the cadence +
   // an end date, and POST materialises one row per occurrence sharing a
   // seriesId so the whole run can be badged and deleted together.
   repeat: z.enum(["weekly", "fortnightly", "monthly"]).optional(),
-  repeatUntil: z.string().max(10).optional(),
+  repeatUntil: isoDay.optional(),
   seriesId: z.string().trim().max(60).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;

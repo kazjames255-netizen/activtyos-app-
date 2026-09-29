@@ -85,7 +85,7 @@ const taskSchema = z.object({
   // tasks. The email is the stable identity; the name is what's displayed.
   whoEmail: z.string().max(160).optional(),
   prio: z.enum(["urgent", "high", "med", "low"]).optional(),
-  due: z.string().max(10).nullable().optional(),      // ISO date (yyyy-mm-dd) or null
+  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").nullable().optional(), // ISO date (yyyy-mm-dd) or null
   time: z.string().max(5).nullable().optional(),      // optional HH:MM deadline time
   status: z.enum(["backlog", "todo", "prog", "done"]).optional(),
   link: linkSchema.optional(),                        // {k,v} or null
@@ -216,11 +216,17 @@ function repeatDates(start: string, until: string, freq: string): string[] {
   const dates: string[] = [];
   const d = new Date(`${start}T00:00:00Z`);
   const end = new Date(`${until}T00:00:00Z`);
+  const anchorDay = d.getUTCDate();
   while (d <= end && dates.length < REPEAT_MAX) {
     const day = d.getUTCDay();
     if (freq !== "weekdays" || (day !== 0 && day !== 6)) dates.push(d.toISOString().slice(0, 10));
     if (freq === "weekly") d.setUTCDate(d.getUTCDate() + 7);
-    else if (freq === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
+    else if (freq === "monthly") {
+      // Keep the start's day-of-month, clamped to short months (31 Jan → 28 Feb → 31 Mar); setUTCMonth rolled over and skipped February.
+      const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+      const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      d.setTime(Date.UTC(y, m, Math.min(anchorDay, last)));
+    }
     else d.setUTCDate(d.getUTCDate() + 1);
   }
   return dates;

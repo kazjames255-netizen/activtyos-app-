@@ -34,6 +34,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const STATUSES = ["draft", "sent", "paid", "cancelled"] as const;
 const OWED = new Set(["sent"]); // sent-but-unpaid is money still to collect
 
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
   qty: z.number().nonnegative().default(1),
@@ -52,8 +53,8 @@ const invoiceSchema = z.object({
   amount: z.number().nonnegative().optional(),
   lineItems: z.array(lineItemSchema).max(50).optional(),
   taxRate: z.number().min(0).max(100).optional(),   // VAT %, applied to the subtotal
-  date: z.string().max(10),
-  dueDate: z.string().max(10).optional(),
+  date: isoDay,
+  dueDate: isoDay.optional(),
   status: z.enum(STATUSES).default("draft"),
   paidVia: z.enum(["link", "manual"]).optional(),   // how it was marked paid
   paidAt: z.string().max(40).optional(),

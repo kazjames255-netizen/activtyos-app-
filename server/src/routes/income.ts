@@ -12,8 +12,9 @@ export const income = Router();
 const col = db.collection("income");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
 const incomeSchema = z.object({
-  date: z.string().max(10),
+  date: isoDay,
   category: z.string().trim().min(1).max(60),
   amount: z.number().nonnegative(),
   source: z.string().trim().max(120).optional(), // who it came from
@@ -22,7 +23,7 @@ const incomeSchema = z.object({
   // + an end date, and POST materialises one row per occurrence sharing a
   // seriesId so the whole run can be badged and deleted together.
   repeat: z.enum(["weekly", "fortnightly", "monthly"]).optional(),
-  repeatUntil: z.string().max(10).optional(),
+  repeatUntil: isoDay.optional(),
   seriesId: z.string().trim().max(60).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;

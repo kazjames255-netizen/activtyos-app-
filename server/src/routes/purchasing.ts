@@ -19,6 +19,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const STATUSES = ["draft", "sent", "received", "paid", "cancelled"] as const;
 const OUTSTANDING = new Set(["sent", "received"]); // committed money not yet paid
 
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
   qty: z.number().nonnegative().default(1),
@@ -36,8 +37,8 @@ const poSchema = z.object({
   supplierPhone: z.string().trim().max(60).optional(),
   supplierAddress: z.string().trim().max(400).optional(),
   reference: z.string().trim().max(80).optional(),
-  date: z.string().max(10),
-  dueDate: z.string().max(10).optional(),
+  date: isoDay,
+  dueDate: isoDay.optional(),
   // PO-specific document fields (Deliver-to block + who raised it + free-text
   // comments to the supplier), mirroring a formal purchase order.
   deliveryAddress: z.string().trim().max(400).optional(),
@@ -52,7 +53,7 @@ const poSchema = z.object({
   attachmentUrl: z.string().trim().max(600).optional(),
   // A standing order/invoice (e.g. a monthly retainer): fan out one per period.
   repeat: z.enum(["weekly", "fortnightly", "monthly"]).optional(),
-  repeatUntil: z.string().max(10).optional(),
+  repeatUntil: isoDay.optional(),
   seriesId: z.string().trim().max(60).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -68,10 +69,19 @@ const MAX_OCCURRENCES = 104;
 function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10);
 }
-function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly"): string {
+/** Next date in a series. Monthly keeps the start's day-of-month, clamped to
+ *  shorter months (31 Jan → 28 Feb → 31 Mar) — setUTCMonth rolled 31 Jan over
+ *  to 3 Mar, skipped February and drifted every later occurrence. Same fix as
+ *  expenses.ts / income.ts. */
+function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly", anchorDay?: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  if (repeat === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
-  else d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
+  if (repeat === "monthly") {
+    const day = anchorDay ?? d.getUTCDate();
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(day, last))).toISOString().slice(0, 10);
+  }
+  d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
   return d.toISOString().slice(0, 10);
 }
 
@@ -117,7 +127,7 @@ purchasing.post("/", async (req, res) => {
     const sid = col.doc().id;
     const dueOffset = rest.dueDate ? Math.round((Date.parse(`${rest.dueDate}T00:00:00Z`) - Date.parse(`${rest.date}T00:00:00Z`)) / 86_400_000) : null;
     const dates: string[] = [];
-    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat), i++) dates.push(d);
+    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat, Number(rest.date.slice(8, 10))), i++) dates.push(d);
     const batch = db.batch();
     const items = dates.map((date) => {
       const ref = col.doc();
