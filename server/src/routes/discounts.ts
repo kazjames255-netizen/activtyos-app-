@@ -285,6 +285,10 @@ discounts.put("/:id", async (req, res) => {
   clear.forEach((k) => delete body[k]);
   const parsed = codeBase.partial().refine(pctCheck).safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  // The partial check above only sees the fields in THIS patch: {value: 250} on an existing percent code, or {type: "percent"} on an
+  // existing 500-off amount code, each passed alone. Re-check the merged result.
+  const merged = { type: parsed.data.type ?? (o.snap.data()!.type as string), value: parsed.data.value ?? (o.snap.data()!.value as number) };
+  if (!pctCheck(merged)) { res.status(400).json({ error: [{ message: "A percentage can't exceed 100" }] }); return; }
   const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.code ? { code: normaliseCode(parsed.data.code) } : {}) };
   for (const k of clear) patch[k] = FieldValue.delete();
   // Renaming onto another code's name would leave two codes that validate ambiguously (POST refuses this too).
