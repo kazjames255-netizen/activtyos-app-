@@ -45,7 +45,7 @@ const poSchema = z.object({
   deliveryAddress: z.string().trim().max(400).optional(),
   requestedBy: z.string().trim().max(120).optional(),
   comments: z.string().trim().max(2_000).optional(),
-  amount: z.number().nonnegative().optional(),
+  amount: z.number().nonnegative().max(1_000_000).optional(),
   lineItems: z.array(lineItemSchema).max(50).optional(),
   status: z.enum(STATUSES).default("draft"),
   notes: z.string().trim().max(2_000).optional(),

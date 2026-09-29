@@ -55,7 +55,7 @@ const imageSchema = z.object({
 
 const passSchema = z.object({
   name: z.string().min(1),
-  price: z.number().nonnegative(),
+  price: z.number().nonnegative().max(1_000_000),
   days: z.number().positive().optional(), // session count, for discount thresholds
 });
 

@@ -95,7 +95,7 @@ const actionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("cancel"),
     refund: z.enum(["full", "partial", "none"]),
-    amount: z.number().nonnegative().optional(),
+    amount: z.number().nonnegative().max(1_000_000).optional(),
     reason: z.string().max(120).optional(),
   }),
   z.object({ type: z.literal("cancel-child"), ki: z.number().int().nonnegative() }),
@@ -124,7 +124,7 @@ const createSchema = z.object({
   // free-text dates label (phone bookings for unscheduled things).
   blockId: z.string().min(1).optional(),
   dates: z.string().min(1).optional(),
-  amount: z.number().nonnegative(),
+  amount: z.number().nonnegative().max(1_000_000),
   method: z.string().min(1),
   // The family's phone, stored on the booking (never a "—" placeholder, d10s8).
   phone: z.string().trim().max(40).optional(),
@@ -876,7 +876,7 @@ bookings.post("/:ref/actions", async (req, res) => {
 //    and kept on Reconciliation as "needs refund / credit" (it used to drop off).
 const DUP_WINDOW_MS = 24 * 60 * 60 * 1000;
 const recordPaymentSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().positive().max(1_000_000),
   method: z.string().max(60).optional(),
   reference: z.string().max(120).optional(),
   // The day the money arrived: stored as the payment's createdAt and compared with Date.parse, so "garbage" must not get in.

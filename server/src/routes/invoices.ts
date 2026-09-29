@@ -51,7 +51,7 @@ const invoiceSchema = z.object({
   poAttachmentUrl: z.string().trim().max(600).optional(), // uploaded copy of that PO
   accountRef: z.string().trim().max(80).optional(),
   description: z.string().trim().max(300).optional(),
-  amount: z.number().nonnegative().optional(),
+  amount: z.number().nonnegative().max(1_000_000).optional(),
   lineItems: z.array(lineItemSchema).max(50).optional(),
   taxRate: z.number().min(0).max(100).optional(),   // VAT %, applied to the subtotal
   date: isoDay,

@@ -19,7 +19,7 @@ const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM
 const expenseSchema = z.object({
   date: isoDay,
   category: z.string().trim().min(1).max(60),
-  amount: z.number().nonnegative(),
+  amount: z.number().nonnegative().max(1_000_000),
   supplier: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(),
   receiptUrl: z.string().trim().max(600).optional(),

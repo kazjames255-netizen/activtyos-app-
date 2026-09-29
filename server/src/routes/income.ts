@@ -18,7 +18,7 @@ const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM
 const incomeSchema = z.object({
   date: isoDay,
   category: z.string().trim().min(1).max(60),
-  amount: z.number().nonnegative(),
+  amount: z.number().nonnegative().max(1_000_000),
   source: z.string().trim().max(120).optional(), // who it came from
   notes: z.string().trim().max(1_000).optional(),
   // A recurring receipt (e.g. a monthly retainer): the client sends the cadence

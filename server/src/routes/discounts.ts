@@ -336,7 +336,7 @@ discounts.delete("/:id", async (req, res) => {
 const validateSchema = z.object({
   tenantId: z.string().min(1).max(60),
   code: z.string().trim().min(1).max(40),
-  subtotal: z.number().nonnegative(),
+  subtotal: z.number().nonnegative().max(1_000_000),
   listingId: z.string().trim().max(60).optional(),
   attendees: z.number().int().positive().max(100).optional(),
 });
