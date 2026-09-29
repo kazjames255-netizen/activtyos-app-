@@ -12,6 +12,7 @@ import { ukToday } from "../lib/ukDate";
 import { siteChildIds, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
 import { customerAreaOn } from "../lib/customerArea";
 import { whereInChunks } from "../lib/firestoreIn";
+import { childVisibleTo } from "../lib/childAccess";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (Pupils) — the photos a provider shares of the day, and the feed a
@@ -92,6 +93,31 @@ async function siteMayTag(req: Request, childIds: string[], listingId?: string):
   return childIds.every((c) => kids.has(c));
 }
 
+/** Can this account tag these children? A childId alone proves nothing (children live on
+ *  the PARENT's account, shared across providers): without this a provider could tag ANY
+ *  child — and that family got a "new moment featuring…" bell + email from a provider they
+ *  never booked, and the caption in their feed. One bookings read covers the whole tag
+ *  list; only children not found there fall through to childVisibleTo's slower rules. */
+async function mayTagChildren(req: Request, childIds: string[]): Promise<boolean> {
+  const auth = req.auth!;
+  if (!childIds.length) return true;
+  if (!auth.tenantId) return false;
+  const fr = (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId ? auth.franchiseId : null;
+  const snap = await db.collection("bookings").where("tenantId", "==", auth.tenantId).get();
+  const seen = new Set<string>();
+  for (const d of snap.docs) {
+    const b = d.data() as { childId?: string; franchiseId?: string | null; kids?: { childId?: string }[] };
+    if (fr && (b.franchiseId ?? null) !== fr) continue;
+    if (b.childId) seen.add(b.childId);
+    for (const k of b.kids ?? []) if (k?.childId) seen.add(k.childId);
+  }
+  for (const id of new Set(childIds)) {
+    if (seen.has(id)) continue;
+    if (!(await childVisibleTo({ ...auth, tenantId: auth.tenantId }, id))) return false;
+  }
+  return true;
+}
+
 // POST /api/moments — share a moment (operators + staff).
 moments.post("/", async (req, res) => {
   const auth = req.auth!;
@@ -106,6 +132,10 @@ moments.post("/", async (req, res) => {
   }
   if (!(await siteMayTag(req, parsed.data.childIds, parsed.data.listingId))) {
     res.status(403).json({ error: "You can only share moments of children at the sites you're assigned to", code: "child_not_yours" });
+    return;
+  }
+  if (!(await mayTagChildren(req, parsed.data.childIds))) {
+    res.status(403).json({ error: "You can only tag children who are booked with you", code: "child_not_yours" });
     return;
   }
   const consent = await resolveChildren(parsed.data.childIds, parsed.data.photoType !== "work");
@@ -321,6 +351,11 @@ moments.put("/:id", async (req, res) => {
     return;
   }
   if (parsed.data.childIds) {
+    const already = new Set((own.snap.data()!.childIds as string[] | undefined) ?? []);
+    if (!(await mayTagChildren(req, parsed.data.childIds.filter((id) => !already.has(id))))) {
+      res.status(403).json({ error: "You can only tag children who are booked with you", code: "child_not_yours" });
+      return;
+    }
     const requireConsent = (parsed.data.photoType ?? (own.snap.data()!.photoType as string | undefined)) !== "work";
     const consent = await resolveChildren(parsed.data.childIds, requireConsent);
     if (!consent.ok) {
