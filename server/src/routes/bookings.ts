@@ -879,7 +879,8 @@ const recordPaymentSchema = z.object({
   amount: z.number().positive(),
   method: z.string().max(60).optional(),
   reference: z.string().max(120).optional(),
-  date: z.string().max(25).optional(),
+  // The day the money arrived: stored as the payment's createdAt and compared with Date.parse, so "garbage" must not get in.
+  date: z.string().max(25).refine((d) => Number.isFinite(Date.parse(d)), "Not a real date").optional(),
   confirmDuplicate: z.boolean().optional(),
 });
 const refKey = (r: unknown) => String(r ?? "").replace(/\s+/g, "").toUpperCase();
@@ -981,7 +982,7 @@ bookings.post("/:ref/record-payment", async (req, res) => {
 const reconcileSchema = z.object({
   method: z.string().max(60).optional(),
   reference: z.string().max(120).optional(),
-  date: z.string().max(25).optional(),
+  date: z.string().max(25).refine((d) => Number.isFinite(Date.parse(d)), "Not a real date").optional(),
   undo: z.boolean().optional(),
 });
 bookings.post("/:ref/reconcile", async (req, res) => {
