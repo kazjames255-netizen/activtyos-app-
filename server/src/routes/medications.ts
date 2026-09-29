@@ -609,6 +609,20 @@ medications.post("/:id/withdraw", async (req, res) => {
   if (!childId || !(await ownsChild(req.user!.uid, childId))) { res.status(404).json({ error: "Medication not found" }); return; }
   await snap.ref.set({ archived: true, consentGranted: false, consentWithdrawnAt: new Date().toISOString() }, { merge: true });
   res.json({ ok: true });
+  // Tell the team: a withdrawn consent means NO more doses, and until now they
+  // only found out when the dose button refused ("archived") mid-session.
+  const med = snap.data()!;
+  if (med.tenantId) {
+    const who = req.user?.name ?? req.user?.email ?? "A parent";
+    void notify({
+      tenantId: String(med.tenantId), to: { kind: "tenant" }, category: "medication", key: "med-consent",
+      title: `${who} withdrew consent for ${med.name} (${med.childName})`,
+      body: "Doses can no longer be recorded for this medication.",
+      subject: `Medication consent withdrawn: ${med.name} for ${med.childName}`,
+      emailHtml: `<p><b>${esc(who)}</b> has withdrawn consent for <b>${esc(String(med.name))}</b> for <b>${esc(String(med.childName))}</b>. Do not give any further doses.</p>`,
+      href: "/company/medication", ref: snap.id,
+    }).catch(() => {});
+  }
 });
 
 // POST /api/medications/:id/note — a parent adds/edits their own note on a med
