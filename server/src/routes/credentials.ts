@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { isBlankOrRealDay } from "../lib/ukDate";
 import { Router, json as jsonBody, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -50,8 +51,8 @@ const recordSchema = z.object({
   id: z.string().trim().min(1).max(80),
   staff: z.string().trim().min(1).max(120),
   typeId: z.string().trim().min(1).max(80),
-  issue: z.string().max(10).optional(),
-  expiry: z.string().max(10).optional(),
+  issue: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  expiry: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   issuer: z.string().max(160).optional(),
   number: z.string().max(80).optional(),
   fileId: z.string().max(60).optional(),

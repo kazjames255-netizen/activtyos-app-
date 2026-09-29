@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
-import { addDays } from "../lib/ukDate";
+import { addDays, isRealDay } from "../lib/ukDate";
 
 // ── Availability requests ───────────────────────────────────────────────────
 // An operator asks a specific staff member to submit their availability for a
@@ -38,7 +38,7 @@ const campSchema = z.object({
   open: z.string().max(8),
   close: z.string().max(8),
   weeks: z.number().int().min(1).max(26),
-  startDate: z.string().max(10), // Monday of week 1
+  startDate: z.string().max(10).refine(isRealDay, "Not a real calendar date"), // Monday of week 1
   // ISO dates the staffer has already been rostered/assigned to — locked in the
   // availability grid (they must request time off to change one).
   assignedDates: z.array(z.string().max(10)).max(200).optional(),

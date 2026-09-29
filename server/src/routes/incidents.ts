@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { esc } from "../lib/html";
@@ -45,8 +46,8 @@ const bodyMarkSchema = z.object({
 
 const logSchema = z.object({
   kind: z.enum(["accident", "incident", "safeguarding"]),
-  date: z.string().max(10), // ISO date of the event
-  time: z.string().max(8).optional(), // "14:30"
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"), // ISO date of the event
+  time: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(), // "14:30"
   childId: z.string().max(60).optional(),
   childName: z.string().trim().min(1).max(80),
   blockId: z.string().max(60).optional(),

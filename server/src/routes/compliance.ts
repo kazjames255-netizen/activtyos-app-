@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
-import { ukToday, ukTodayPlus } from "../lib/ukDate";
+import { ukToday, ukTodayPlus, isBlankOrRealDay } from "../lib/ukDate";
 
 // Compliance (Documents & Compliance) — staff certifications and their expiry:
 // DBS, safeguarding, paediatric first aid, insurance… The whole point is the
@@ -22,8 +22,8 @@ const certSchema = z.object({
   staffName: z.string().trim().min(1).max(120),
   type: z.string().trim().min(1).max(80),
   reference: z.string().trim().max(80).optional(),
-  issued: z.string().max(10).optional(),
-  expiry: z.string().max(10),
+  issued: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  expiry: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date"),
   documentUrl: z.string().trim().max(600).optional(),
   notes: z.string().trim().max(1_000).optional(),
 });
