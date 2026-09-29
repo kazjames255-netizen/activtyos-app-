@@ -9,6 +9,7 @@ import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { ukToday } from "../lib/ukDate";
 import { bareImageUrl, signImageUrl } from "../lib/signing";
+import { splitClears, applyClears } from "../lib/patchClear";
 
 // Purchasing (Money) — purchase orders & supplier invoices: what's on order,
 // from whom, for how much, and where it is in the flow (draft → sent →
@@ -168,7 +169,9 @@ async function own(req: Request, id: string) {
 purchasing.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Order not found" }); return; }
-  const parsed = poSchema.partial().safeParse(req.body);
+  // null = remove that optional field (an edit that blanks the reference/notes/attachment/due date must stick).
+  const { body, clear } = splitClears(req.body, ["category", "supplierEmail", "supplierPhone", "supplierAddress", "reference", "dueDate", "deliveryAddress", "requestedBy", "comments", "notes", "attachmentUrl"]);
+  const parsed = poSchema.partial().safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
   if (p.attachmentUrl) p.attachmentUrl = bareImageUrl(p.attachmentUrl);
@@ -190,7 +193,7 @@ purchasing.put("/:id", async (req, res) => {
       supplier: (before.supplier as string) || undefined,
       notes: `From PO${before.reference ? ` ${before.reference}` : ""}`,
       status: "pending" as const,
-      dueDate: (patch.dueDate as string | undefined) ?? (before.dueDate as string | undefined),
+      dueDate: clear.includes("dueDate") ? undefined : (patch.dueDate as string | undefined) ?? (before.dueDate as string | undefined),
       createdBy: req.user?.email ?? "unknown",
       createdByName: req.user?.name ?? req.user?.email ?? "Operator",
       createdAt: new Date().toISOString(),
@@ -198,6 +201,7 @@ purchasing.put("/:id", async (req, res) => {
     const expenseRef = await db.collection("expenses").add(expenseBase);
     patch.expenseId = expenseRef.id;
   }
+  applyClears(patch, clear); // after the received→expense hand-off above, which reads patch.dueDate
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json(signDoc({ id: after.id, ...(after.data() as Record<string, unknown>) }));

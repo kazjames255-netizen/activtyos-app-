@@ -297,7 +297,9 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, supplier: editor.supplier.trim() || undefined, notes: editor.notes.trim() || undefined, receiptUrl: editor.receiptUrl.trim() || undefined, status: editor.status, dueDate: editor.status === "pending" ? (editor.dueDate || undefined) : undefined, paidAt: editor.status === "paid" ? (editor.id ? undefined : new Date().toISOString()) : undefined };
+    // On edit an emptied field goes as null (= remove it); undefined would mean "leave as is" and the old value would come back.
+    const nn = <T,>(v: T | undefined): T | null | undefined => (v === undefined && editor.id ? null : v);
+    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, supplier: nn(editor.supplier.trim() || undefined), notes: nn(editor.notes.trim() || undefined), receiptUrl: nn(editor.receiptUrl.trim() || undefined), status: editor.status, dueDate: editor.status === "pending" ? nn(editor.dueDate || undefined) : nn(undefined), paidAt: editor.status === "paid" ? (editor.id ? undefined : new Date().toISOString()) : nn(undefined) };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/expenses/${encodeURIComponent(editor.id)}`, body);

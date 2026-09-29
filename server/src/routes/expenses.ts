@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import type { Role } from "../middleware/role";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import { bareImageUrl, signImageUrl } from "../lib/signing";
+import { splitClears, applyClears } from "../lib/patchClear";
 
 // Expenses (Money) — the provider's outgoings: what was spent, on what, with
 // an optional receipt. Operators only (Money is not a staff surface).
@@ -138,9 +139,12 @@ async function own(req: Request, id: string) {
 expenses.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Expense not found" }); return; }
-  const parsed = expenseSchema.partial().safeParse(req.body);
+  // null = remove that optional field (an edit that blanks the supplier/notes/receipt/due date must stick).
+  const { body, clear } = splitClears(req.body, ["supplier", "notes", "receiptUrl", "dueDate", "paidAt"]);
+  const parsed = expenseSchema.partial().safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const patch = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}), ...(parsed.data.receiptUrl ? { receiptUrl: bareImageUrl(parsed.data.receiptUrl) } : {}) };
+  const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}), ...(parsed.data.receiptUrl ? { receiptUrl: bareImageUrl(parsed.data.receiptUrl) } : {}) };
+  applyClears(patch, clear);
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   const doc = after.data() ?? {};
