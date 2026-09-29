@@ -283,7 +283,10 @@ messages.post("/", async (req, res) => {
       const famFr = (await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", parentEmail).limit(20).get()).docs.map((d) => d.get("franchiseId") as string | null | undefined).find(Boolean);
       if (famFr) tEmail = (await franchiseEmail(tenantId, famFr)) ?? tEmail;
       if (tEmail && t?.emailOnNewMessage !== false) {
-        emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl, tenantId });
+        // Straight to the Messages page of the portal that inbox lives in (the bare site URL
+        // dropped the provider on a login/home page with no hint where the message was).
+        const portal = famFr && tEmail !== ((t?.notifyEmail as string) || (t?.email as string | undefined)) ? "franchise" : t?.type === "freelancer" ? "freelancer" : "company";
+        emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/${portal}/messages`, tenantId });
       }
     } else {
       emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId, emailOnly });
