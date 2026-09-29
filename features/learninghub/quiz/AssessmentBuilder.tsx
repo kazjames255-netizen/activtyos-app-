@@ -46,10 +46,13 @@ export function AssessmentBuilder({ p, type: initialType, assessment, all, onClo
   const [pass, setPass] = useState(String(assessment?.passMarkPct ?? p.config.passMarkPct));
   const [published, setPublished] = useState(assessment?.published ?? false);
   const [aud, setAud] = useState<Audience>(assessment?.audience ?? NO_AUDIENCE);
-  // Diagnostics only: who it is actually assigned to. `null` = untouched legacy (every audience-fitting
-  // student counts, same as before assignment existed) — a brand-new diagnostic starts at `[]`, forcing an
-  // explicit choice. The moment the tutor toggles a checkbox this becomes a real array (see `toggleAssigned`).
-  const [assigned, setAssigned] = useState<string[] | null>(() => (assessment?.assignedChildIds !== undefined ? assessment.assignedChildIds : assessment ? null : []));
+  // Diagnostics only: who it is actually assigned to. `null` = untouched (every audience-fitting student
+  // counts) — both a brand-new diagnostic AND an existing legacy one without the field start at `null`, so
+  // every checkbox shows pre-checked and the quiz it gates locks for its whole fitting audience unless the
+  // tutor deliberately narrows it. The moment the tutor toggles a checkbox this becomes a real array (see
+  // `toggleAssigned`). (A server-side default of `[]` for a brand-new diagnostic used to make it reach NO
+  // child at all until this was touched — a real bug, fixed 29 Sep alongside the matching server default.)
+  const [assigned, setAssigned] = useState<string[] | null>(() => (assessment?.assignedChildIds !== undefined ? assessment.assignedChildIds : null));
   const [retake, setRetake] = useState<RetakeOverride>(assessment?.retakePolicy ?? "inherit");
   const [cool, setCool] = useState(String(assessment?.retakeCooldownHours ?? p.config.retakeCooldownHours ?? 24));
   const [search, setSearch] = useState("");

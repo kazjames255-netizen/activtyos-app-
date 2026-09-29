@@ -114,10 +114,17 @@ async function shape(ctx: HubCtx, franchiseId: string | null, b: z.infer<typeof 
   const topicIds = dedupe([...b.topicIds, ...questions.map(({ q }) => q.topicId)]);
   // Diagnostics only. Sent = the tutor's explicit list (deduped; `null` reverts to the legacy "everyone who
   // fits" fallback). Omitted on an edit keeps whatever is stored (including a legacy assessment's absent
-  // field). Omitted on a brand-new diagnostic = `[]` — nobody yet, so publishing one still forces a choice.
+  // field). Omitted on a brand-new diagnostic = `null` too (everyone who fits, the same legacy default) —
+  // an earlier `[]` default here silently made every API-created diagnostic (the AssessmentBuilder UI
+  // always sends an explicit list, but e2e/tutor-API callers that don't touch "Assign" never did) reach
+  // NO child at all: diagSubjects (childOverlay, below) never saw it, so a quiz never locked behind it and
+  // the diagnostic itself never appeared to any family — with no validation ever actually "forcing the
+  // choice" the old comment here described. Confirmed live (scratch investigation, 29 Sep): an identical
+  // diagnostic created with assignedChildIds omitted only showed `locked` on its quiz once assignedChildIds
+  // was explicitly set to `null`.
   const assignedChildIds = b.type !== "diagnostic" ? undefined
     : b.assignedChildIds !== undefined ? (b.assignedChildIds === null ? null : dedupe(b.assignedChildIds))
-    : before?.type === "diagnostic" ? (before.assignedChildIds ?? null) : [];
+    : before?.type === "diagnostic" ? (before.assignedChildIds ?? null) : null;
   return {
     type: b.type, title: b.title, subject, topicIds, questionIds: qIds, timeLimitMins: b.timeLimitMins,
     passMarkPct: b.passMarkPct ?? cfg.passMarkPct, published: b.published, audience, retakePolicy, retakeCooldownHours, assignedChildIds,
