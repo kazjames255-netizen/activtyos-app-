@@ -108,7 +108,18 @@ if (MAIL_LIVE) {
     + " Set MAIL_LIVE=1 to send for real, or MAIL_ALLOWLIST to receive at specific addresses.",
   );
 }
-const maySend = (to: string): boolean => MAIL_LIVE || MAIL_ALLOWLIST.has(to.trim().toLowerCase());
+// The e2e throwaway domain does not resolve, so a real send to it is a guaranteed hard bounce — and bounce
+// rate is what gets a sending domain suspended. A deployed instance with MAIL_LIVE=1 that shares this
+// Firestore (its sweeps fire session reminders / scheduled sends for the test accounts' data) was doing
+// exactly that (seen in Resend on 29 Sept). So: never mail it, whatever MAIL_LIVE says — only an explicit
+// MAIL_ALLOWLIST entry for that exact address overrides.
+const TEST_DOMAIN = /@activityos-test\.com$/i;
+const maySend = (to: string): boolean => {
+  const a = to.trim().toLowerCase();
+  if (MAIL_ALLOWLIST.has(a)) return true;
+  if (TEST_DOMAIN.test(a)) return false;
+  return MAIL_LIVE;
+};
 /** Would sendMail really deliver to this address right now? (Callers that keep a sent-log use it so a suppressed dev send doesn't burn the log.) */
 export const mailIsLiveFor = maySend;
 

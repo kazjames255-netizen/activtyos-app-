@@ -291,7 +291,9 @@ test.describe("email compliance & send engine (API)", () => {
     expect(doc!.subject).toBe(subject);
     await expect.poll(async () => {
       const list = await apiFetch<HistoryDoc[]>("/api/emails", token);
-      return list.find((h) => h.scheduledId === sched.id)?.delivered;
+      const h = list.find((x) => x.scheduledId === sched.id);
+      // The throwaway test domain is never really mailed (lib/mailer.ts) — the send is recorded as suppressed, not delivered.
+      return h ? (h.delivered ?? 0) + (h.suppressed ?? 0) : undefined;
     }, { timeout: 30_000 }).toBe(1);
   });
 });
