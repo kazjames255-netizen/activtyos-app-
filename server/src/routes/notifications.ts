@@ -4,6 +4,8 @@
 
 import { Router, type Request } from "express";
 import { z } from "zod";
+import { capsFor } from "../middleware/access";
+import { capLevel } from "../../../lib/accessMap";
 import {
   getPrefs,
   markRead,
@@ -43,7 +45,16 @@ notifications.get("/", async (req, res) => {
     : who.tenantId
       ? await notificationsForTenant(who.tenantId, 100, who.memberEmail, who.viewer)
       : [];
-  res.json({ notifications: items, unread: items.filter((n) => !n.readAt).length });
+  // A staff role set to None on an area (Setup → Roles & permissions) must not read that area's alerts off the team bell either: the
+  // medication / accident / trip / moment / task rows carry child and family names the same role is refused everywhere else.
+  // Alerts aimed at the person by name (toEmail) always show.
+  let shown = items;
+  if (req.auth!.role === "staff") {
+    const caps = await capsFor(req).catch(() => null);
+    const AREA: Record<string, string> = { accident: "incidents", incident: "incidents", medication: "medication", trip: "trips", calendar: "calendar", moment: "moments", register: "registers", task: "tasks" };
+    shown = items.filter((n) => (n as { toEmail?: string }).toEmail || !AREA[n.category] || capLevel(caps, AREA[n.category]) !== "none");
+  }
+  res.json({ notifications: shown, unread: shown.filter((n) => !n.readAt).length });
 });
 
 // POST /api/notifications/read — mark some (or all) as read.
