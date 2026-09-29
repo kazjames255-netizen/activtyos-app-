@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
-import { ukToday, isRealDay } from "../lib/ukDate";
+import { ukToday, isRealDay, isRealTime } from "../lib/ukDate";
 
 // Task Manager — the operator to-do system. A task hangs off a real operational
 // record (camp / booking / compliance / venue) which is what makes it ActivityOS
@@ -86,7 +86,7 @@ const taskSchema = z.object({
   whoEmail: z.string().max(160).optional(),
   prio: z.enum(["urgent", "high", "med", "low"]).optional(),
   due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date").nullable().optional(), // ISO date (yyyy-mm-dd) or null
-  time: z.string().max(5).nullable().optional(),      // optional HH:MM deadline time
+  time: z.string().max(5).refine((v) => v === "" || isRealTime(v), "Not a real time (HH:MM)").nullable().optional(),      // optional HH:MM deadline time
   status: z.enum(["backlog", "todo", "prog", "done"]).optional(),
   link: linkSchema.optional(),                        // {k,v} or null
   co: z.string().max(160).optional(),                 // freelancer: company the task is filed to
