@@ -247,8 +247,10 @@ const careSchema = z.object({
 });
 children.put("/:id", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !["company", "franchise", "freelancer"].includes(auth.role)) {
-    res.status(403).json({ error: "Only a manager can change a child's care details" });
+  const isOperator = ["company", "franchise", "freelancer"].includes(auth.role);
+  const isLeadStaff = auth.role === "staff" && auth.lead === true;
+  if (!auth.tenantId || !(isOperator || isLeadStaff)) {
+    res.status(403).json({ error: "Only a manager or lead can change a child's care details" });
     return;
   }
   const parsed = careSchema.safeParse(req.body);

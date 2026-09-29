@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import type { Role } from "../middleware/role";
+import type { AuthContext, Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
 import { ukToday } from "../lib/ukDate";
 
@@ -18,8 +18,9 @@ import { ukToday } from "../lib/ukDate";
 
 export const staffAnnouncements = Router();
 const col = db.collection("staffAnnouncements");
-const canPost = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
-const canRead = (role: Role) => role === "staff" || canPost(role);
+const canPost = (auth: Pick<AuthContext, "role" | "lead">) =>
+  auth.role === "company" || auth.role === "freelancer" || auth.role === "franchise" || (auth.role === "staff" && auth.lead === true);
+const canRead = (auth: Pick<AuthContext, "role" | "lead">) => auth.role === "staff" || canPost(auth);
 const readKey = (email: string) => email.trim().toLowerCase().replace(/\./g, ",");
 
 const postSchema = z.object({
@@ -43,7 +44,7 @@ function visible(auth: { role: Role; franchiseId: string | null }, a: { franchis
 // GET /api/staff-announcements — newest first, with `read` for the caller.
 staffAnnouncements.get("/", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canRead(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!auth.tenantId || !canRead(auth)) { res.status(403).json({ error: "Forbidden" }); return; }
   const me = readKey(req.user?.email ?? req.user?.uid ?? "");
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
   const list = snap.docs
@@ -54,7 +55,7 @@ staffAnnouncements.get("/", async (req, res) => {
       ...a,
       read: !!readBy?.[me],
       // Managers see how many have read it; staff don't see each other.
-      ...(canPost(auth.role) ? { readCount: Object.keys(readBy ?? {}).length } : {}),
+      ...(canPost(auth) ? { readCount: Object.keys(readBy ?? {}).length } : {}),
     }));
   res.json(list);
 });
@@ -62,7 +63,7 @@ staffAnnouncements.get("/", async (req, res) => {
 // POST /api/staff-announcements — post to the board and tell the team.
 staffAnnouncements.post("/", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canPost(auth.role)) { res.status(403).json({ error: "Only a manager can post to the staff board" }); return; }
+  if (!auth.tenantId || !canPost(auth)) { res.status(403).json({ error: "Only a manager can post to the staff board" }); return; }
   const parsed = postSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const now = new Date();
@@ -102,7 +103,7 @@ staffAnnouncements.post("/", async (req, res) => {
 // POST /api/staff-announcements/:id/read — I've read it.
 staffAnnouncements.post("/:id/read", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canRead(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!auth.tenantId || !canRead(auth)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.doc(req.params.id).get();
   if (!snap.exists || snap.get("tenantId") !== auth.tenantId || !visible(auth, snap.data() as { franchiseId?: string | null })) {
     res.status(404).json({ error: "Not found" });
@@ -116,7 +117,7 @@ staffAnnouncements.post("/:id/read", async (req, res) => {
 // DELETE /api/staff-announcements/:id — take a post down (managers).
 staffAnnouncements.delete("/:id", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canPost(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  if (!auth.tenantId || !canPost(auth)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.doc(req.params.id).get();
   if (!snap.exists || snap.get("tenantId") !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
   if (auth.role === "franchise" && snap.get("franchiseId") !== auth.franchiseId) { res.status(404).json({ error: "Not found" }); return; }
