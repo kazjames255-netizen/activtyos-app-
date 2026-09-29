@@ -8,7 +8,7 @@ import { walletsForFamily } from "../lib/wallet";
 import { entryFor, registerRows } from "../lib/registerRows";
 import type { Booking } from "../../../features/bookings/types";
 import { owedNow, isMoneyIn } from "../../../features/bookings/helpers";
-import { ukToday } from "../lib/ukDate";
+import { ukMonth, ukToday } from "../lib/ukDate";
 import { isFranchise, franchiseChildIds, franchiseFamilyEmails } from "../lib/franchiseScope";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -612,7 +612,7 @@ export async function headOfficeSnapshot(tenantId: string) {
     if (!frInfo.has(fid)) frInfo.set(fid, { name: u.franchiseName || u.name || "Franchise", area: u.franchiseArea ?? null, territory: u.franchiseTerritory?.status || "none" });
   }
 
-  const thisMonth = new Date().toISOString().slice(0, 7);
+  const thisMonth = ukMonth();
   interface Agg { revenue: number; revenueMonth: number; collected: number; bookings: number; families: Set<string>; children: Set<string> }
   const mk = (): Agg => ({ revenue: 0, revenueMonth: 0, collected: 0, bookings: 0, families: new Set(), children: new Set() });
   const byFr = new Map<string, Agg>();

@@ -9,6 +9,7 @@ import { franchiseForChild, loadSettings } from "../lib/tenantLibrary";
 import { childVisibleTo } from "../lib/childAccess";
 import { siteRecordFilter } from "../lib/siteScope";
 import { isPlainStaff, type Role } from "../middleware/role";
+import { whereInChunks } from "../lib/firestoreIn";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Medication (Pupils) — two records, because real practice is two things:
@@ -101,10 +102,10 @@ const tenantOf = (req: Request) => {
 };
 
 // A parent's own children (by uid) — the scope for everything a parent reads
-// or authorises. Firestore `in` caps at 10, which is plenty for one family.
+// or authorises. Queries over these ids go through whereInChunks (no cap).
 async function myChildIds(uid: string): Promise<string[]> {
   const snap = await db.collection("children").where("parentUid", "==", uid).get();
-  return snap.docs.map((d) => d.id).slice(0, 10);
+  return snap.docs.map((d) => d.id);
 }
 async function ownsChild(uid: string, childId: string): Promise<boolean> {
   const d = await db.collection("children").doc(childId).get();
@@ -132,8 +133,8 @@ medications.get("/", async (req, res) => {
     // A parent sees their OWN children's medications, across every provider.
     const ids = await myChildIds(req.user!.uid);
     if (!ids.length) { res.json([]); return; }
-    const snap = await medsCol.where("childId", "in", ids).get();
-    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; childName?: string })[];
+    const docs = await whereInChunks(medsCol, "childId", "in", ids);
+    let list = docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; childName?: string })[];
     if (req.query.includeArchived !== "1") list = list.filter((m) => !m.archived);
     list.sort((a, b) => (`${a.childName ?? ""}` < `${b.childName ?? ""}` ? -1 : 1));
     res.json(list);
@@ -454,8 +455,8 @@ medications.get("/administrations", async (req, res) => {
     // The parent's own children's dose history (the MAR they're entitled to).
     const ids = await myChildIds(req.user!.uid);
     if (!ids.length) { res.json([]); return; }
-    const snap = await adminCol.where("childId", "in", ids).get();
-    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string; medicationId?: string })[];
+    const docs = await whereInChunks(adminCol, "childId", "in", ids);
+    let list = docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string; medicationId?: string })[];
     if (typeof req.query.medicationId === "string") list = list.filter((x) => x.medicationId === req.query.medicationId);
     list.sort((a, b) => (`${b.date} ${b.time ?? ""}` < `${a.date} ${a.time ?? ""}` ? -1 : 1));
     res.json(list);

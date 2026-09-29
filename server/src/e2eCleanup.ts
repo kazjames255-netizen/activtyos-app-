@@ -33,6 +33,11 @@ const TENANT_SCOPED = [
   "hubTopics", "hubNotes", "hubEnrolments", "hubQuestions", "hubAssessments", "hubAttempts",
   "hubPings", "hubMastery", "hubHomework", "hubSubmissions", "hubFlashcards", "hubFlashcardReviews", "hubFeedbackBank", "hubLessons", "hubGroups", "hubBoards", "hubBoardTemplates", "hubFamilyInvites", "hubNcTags", "hubToolStates", "hubToolEvents", "hubDigestLog", "hubDigestPrefs", "hubGameSessions", "hubFactState", "hubGameProfile",
   "emailMessages", "scheduledEmails", "emailSuppressions",
+  // Milestones: the head-office template + one progress doc per franchise.
+  "milestones", "milestoneProgress",
+  // The append-only subscription lifecycle log — left behind, a throwaway
+  // account's cancellation would sit in HQ's churn history for ever.
+  "subscriptionEvents",
 ];
 
 // Collections owned by a USER (parents have no tenant): field → collection.

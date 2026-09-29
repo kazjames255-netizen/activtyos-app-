@@ -47,10 +47,14 @@ import { db } from "../firebase";
 //   gate walls it behind the plan picker.
 //
 // pastDueSince is stamped by lib/billing.ts (markPastDue / syncFromStripe);
-// a past_due record without one (older data) is stamped here on first sight.
-// "unpaid" is Stripe's end-of-dunning state; syncFromStripe currently folds
-// it into past_due, so today a lapsed card ends up read-only until Stripe
-// cancels the subscription (its retry settings), which then locks.
+// an overdue record without one (older data) is stamped here on first sight.
+// "unpaid" is Stripe's end-of-dunning state — every retry spent. syncFromStripe
+// maps it straight through (s13-sub4c, 21 Sept), so it LOCKS rather than
+// lingering read-only until Stripe eventually cancels: by then the grace
+// period is long gone and the card has been given every chance. The
+// subscription still exists, so it's recoverable — POST /subscription/card
+// (or /reactivate) pays the open invoice and the tenant goes straight back to
+// active, which is why this isn't folded into "canceled".
 // ─────────────────────────────────────────────────────────────────────────
 
 export const GRACE_DAYS = 14;
@@ -100,7 +104,7 @@ export async function subscriptionState(tenantId: string): Promise<SubState> {
   const t = await ref.get();
   const sub = t.exists ? (t.data()!.subscription as { status?: string; cancelAt?: string; pastDueSince?: string | null } | undefined) : undefined;
   const state = { status: sub?.status ?? "active", cancelAt: sub?.cancelAt ?? null, pastDueSince: sub?.pastDueSince ?? null, at: Date.now() };
-  if (state.status === "past_due" && !state.pastDueSince) {
+  if ((state.status === "past_due" || state.status === "unpaid") && !state.pastDueSince) {
     state.pastDueSince = new Date().toISOString();
     await ref.set({ subscription: { pastDueSince: state.pastDueSince } }, { merge: true }).catch(() => {});
   }
@@ -118,12 +122,20 @@ export async function takesNewBookings(tenantId: string): Promise<boolean> {
 }
 export const NOT_TAKING_BOOKINGS = "This provider isn't taking online bookings right now — please contact them directly.";
 
-function refusal(mode: "readonly" | "locked", owner: boolean): string {
+function refusal(mode: "readonly" | "locked", owner: boolean, status: string): string {
   const still = "Registers, children's details, incidents, first aid and medication still work.";
   if (mode === "readonly") {
     return owner
       ? `Your last ActivityOS payment failed over ${GRACE_DAYS} days ago, so your account is read-only until you update your card in Money → Subscription. ${still}`
       : `Your provider's ActivityOS payment is overdue, so this is read-only for now. ${still}`;
+  }
+  // "unpaid" locks like a cancellation but ISN'T one — the subscription is
+  // still there and a working card settles it immediately, so don't tell the
+  // operator it has ended.
+  if (status === "unpaid") {
+    return owner
+      ? `Your ActivityOS payment has failed every retry, so the account is paused. Update your card in Money → Subscription and we'll settle the outstanding invoice straight away. ${still}`
+      : `Your provider's ActivityOS payment hasn't gone through, so this is paused for now. ${still}`;
   }
   return owner
     ? `Your ActivityOS subscription has ended — reactivate it in Money → Subscription to continue. ${still}`
@@ -143,7 +155,8 @@ export async function enforceSubscription(req: Request, res: Response, next: Nex
     next();
     return;
   }
-  const { mode } = accessFor(await subscriptionState(auth.tenantId));
+  const state = await subscriptionState(auth.tenantId);
+  const { mode } = accessFor(state);
   const allowed =
     mode === "full" || mode === "grace"
     || under(req.path, SAFETY)
@@ -153,7 +166,7 @@ export async function enforceSubscription(req: Request, res: Response, next: Nex
     return;
   }
   res.status(402).json({
-    error: refusal(mode === "readonly" ? "readonly" : "locked", OWNER_ROLES.has(auth.role)),
+    error: refusal(mode === "readonly" ? "readonly" : "locked", OWNER_ROLES.has(auth.role), state.status),
     code: mode === "readonly" ? "subscription_readonly" : "subscription_locked",
   });
 }

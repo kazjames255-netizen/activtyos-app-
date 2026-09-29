@@ -4,6 +4,10 @@ import type { Sender } from "./sender";
 // Transactional email engine (product spec build item 9, minus per-provider
 // sending domains for now).
 //
+//  - RESEND_API_KEY configured → delivery over Resend's HTTPS API. Preferred
+//    on a PaaS: Railway blocks outbound SMTP, so port 587 just hangs — the
+//    first live send on the deployed API sat in "sending" forever with no
+//    error, because nodemailer had no timeout either (it does now).
 //  - SMTP_HOST configured → real delivery through any SMTP provider
 //    (Resend, Mailgun, SendGrid, Gmail app-password, …).
 //  - Not configured → a throwaway Ethereal test inbox: mails are NOT
@@ -24,6 +28,11 @@ function getTransport() {
           host: process.env.SMTP_HOST,
           port,
           secure: port === 465,
+          // A blocked SMTP port must surface as an error, not an open socket
+          // that never resolves (see the header note).
+          connectionTimeout: 15_000,
+          greetingTimeout: 10_000,
+          socketTimeout: 30_000,
           auth: process.env.SMTP_USER
             ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
             : undefined,
@@ -72,11 +81,14 @@ export const fromName = angled ? MAIL_FROM.slice(0, angled.index).trim().replace
 // So: unless this is production, transmit ONLY to allowlisted addresses and
 // log-and-skip everything else.
 //
-// A skipped send deliberately reports SUCCESS. Callers read the boolean as
-// "the transport accepted it", which is exactly what the Ethereal dev inbox
-// reported while never delivering anything either — so history counts, the
-// `delivered` column and the e2e assertions stay meaningful about the code
-// path, without a single message leaving the building.
+// A skipped send used to report SUCCESS, which made every "the parent was
+// emailed" and "the DSL was alerted" claim unfalsifiable (backlog b33):
+// history counted a delivery that never happened. Now the outcome is
+// reported honestly — `sendMailDetailed` distinguishes sent / suppressed /
+// failed, and what records a delivery (campaign history, notifications)
+// stores which of the three it was. `sendMail` keeps the old boolean for the
+// fire-and-forget callers that only care whether something went wrong: a
+// suppressed send is still "not an error", but it is no longer a delivery.
 // Opt-in ONLY — deliberately not implied by NODE_ENV. Every host sets
 // NODE_ENV=production, so the old rule meant the first staging deploy would
 // start mailing real parents from the scheduler sweeps and hard-bouncing the
@@ -112,18 +124,84 @@ export interface MailAttachment {
   cid?: string;
 }
 
-/** Returns true when the transport accepted the message — the campaign
- *  history uses it as the "delivered" count. Callers that don't care can
- *  keep treating this as fire-and-forget.
+/** Fire-and-forget send: true unless the transport REJECTED the message.
+ *  A suppressed send (not live, address not allowlisted) also returns true —
+ *  nothing went wrong, but nothing was delivered either, so anything that
+ *  records a delivery must use `sendMailDetailed` instead (backlog b33).
  *
  *  `sender` brands the mail for one provider: their name on the From line and
  *  their address on Reply-To. Omit it for platform mail. `opts.attachments`
  *  adds files (or inline `cid:` images). */
 export async function sendMail(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<boolean> {
+  return (await sendMailDetailed(to, subject, html, sender, opts)).status !== "failed";
+}
+
+/** What actually happened to one message.
+ *   - "sent"       the transport accepted it (Ethereal in dev = accepted, not delivered)
+ *   - "suppressed" MAIL_LIVE is off and this address isn't allowlisted — nothing left the building
+ *   - "failed"     the transport rejected it; `error` says why */
+export interface MailOutcome {
+  status: "sent" | "suppressed" | "failed";
+  /** True when the transport is the Ethereal dev inbox: accepted, never delivered. */
+  ethereal?: boolean;
+  error?: string;
+}
+
+// Demo/seed rows carry things like "seed" or a person's NAME where an address
+// belongs, and task reminders happily addressed them. Every one is a hard
+// bounce, and bounce rate is what gets a sending domain suspended — so refuse
+// anything that isn't shaped like an address before it reaches the transport.
+const looksLikeAddress = (to: string) => /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(to.trim());
+
+/** Resend's HTTPS API. Used in preference to SMTP whenever RESEND_API_KEY is
+ *  set, because hosts commonly block outbound SMTP. Inline `cid:` images map
+ *  to Resend's content_id so a provider's logo still renders. */
+async function sendViaResend(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+  const from = sender?.name || sender?.address
+    ? `${(sender.name ?? fromName).replace(/["\\]/g, "")} <${sender.address ?? fromAddress}>`
+    : MAIL_FROM;
+  const body: Record<string, unknown> = { from, to: [to], subject, html };
+  if (sender?.replyTo) body.reply_to = sender.replyTo;
+  if (opts?.headers) body.headers = opts.headers;
+  if (opts?.attachments?.length) {
+    body.attachments = opts.attachments.map((a) => ({
+      filename: a.filename,
+      content: Buffer.isBuffer(a.content) ? a.content.toString("base64") : Buffer.from(String(a.content), (a.encoding as BufferEncoding) ?? "utf8").toString("base64"),
+      ...(a.contentType ? { content_type: a.contentType } : {}),
+      ...(a.cid ? { content_id: a.cid } : {}),
+    }));
+  }
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (!r.ok) {
+      const detail = (await r.text()).slice(0, 300);
+      console.error(`[mail] failed to send "${subject}" to ${to}: ${r.status} ${detail}`);
+      return { status: "failed", error: `resend ${r.status}: ${detail}` };
+    }
+    const { id } = (await r.json()) as { id?: string };
+    console.log(`[mail] "${subject}" → ${to}` + (sender?.name ? ` as "${sender.name}"` : "") + (sender?.replyTo ? ` (reply-to: ${sender.replyTo})` : "") + (id ? ` [resend ${id}]` : ""));
+    return { status: "sent" };
+  } catch (e) {
+    console.error(`[mail] failed to send "${subject}" to ${to}:`, e);
+    return { status: "failed", error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function sendMailDetailed(to: string, subject: string, html: string, sender?: Sender, opts?: { attachments?: MailAttachment[]; headers?: Record<string, string> }): Promise<MailOutcome> {
+  if (!looksLikeAddress(to)) {
+    console.warn(`[mail] "${subject}" → ${JSON.stringify(to)} NOT AN ADDRESS — refused before sending`);
+    return { status: "failed", error: "not an email address" };
+  }
   if (!maySend(to)) {
     console.log(`[mail] "${subject}" → ${to} SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)`);
-    return true;
+    return { status: "suppressed" };
   }
+  if (process.env.RESEND_API_KEY) return sendViaResend(to, subject, html, sender, opts);
   try {
     const { t, ethereal } = await getTransport();
     const info = await t.sendMail({
@@ -145,9 +223,9 @@ export async function sendMail(to: string, subject: string, html: string, sender
         (sender?.replyTo ? ` (reply-to: ${sender.replyTo})` : "") +
         (ethereal ? ` (preview: ${nodemailer.getTestMessageUrl(info)})` : ""),
     );
-    return true;
+    return { status: "sent", ethereal };
   } catch (e) {
     console.error(`[mail] failed to send "${subject}" to ${to}:`, e);
-    return false;
+    return { status: "failed", error: e instanceof Error ? e.message : String(e) };
   }
 }

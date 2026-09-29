@@ -54,6 +54,7 @@ import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
 import { hoOverview } from "./routes/hoOverview";
 import { franchises } from "./routes/franchises";
+import { milestones } from "./routes/milestones";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
 import { emails, emailsInbound, emailsOpen, emailsResendInbound, emailsUnsub } from "./routes/emails";
@@ -91,6 +92,7 @@ import { me, tenants } from "./routes/tenants";
 import { twoFa } from "./routes/twoFa";
 import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
+import { installProcessHandlers, record } from "./lib/monitor";
 import { enforceSubscription } from "./middleware/subscription";
 import { enforceAccess } from "./middleware/access";
 import { learningHub } from "./routes/learningHub";
@@ -99,6 +101,7 @@ import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 import { readStats, resetReadStats, withReadLabel } from "./lib/readMeter";
 import { timingSafeEqual } from "node:crypto";
+import { tfc, tfcCallback } from "./routes/tfc";
 
 const app = express();
 // Behind the host's proxy (Railway/Vercel: one hop) req.ip must be the real
@@ -252,6 +255,12 @@ app.use("/api/providers", rateLimit("providers", 120), providersPublic);
 // middleware/role.ts), so these must stay reachable to a signed-in platform
 // user who hasn't verified yet, or verification could never happen.
 app.use("/api/auth/2fa", requireAuth, rateLimit("2fa", 20), twoFa);
+// HMRC's OAuth redirect after a parent signs in at GOV.UK to link their
+// Tax-Free Childcare account. It arrives as a plain browser navigation with
+// no Authorization header, so it must sit above requireAuth; the unguessable,
+// single-use `state` is what ties it to the parent who started it
+// (routes/tfc.ts).
+app.use("/api/tfc/callback", rateLimit("tfc-callback", 30), tfcCallback);
 
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
@@ -306,6 +315,7 @@ app.use("/api/growth", growth);
 app.use("/api/discounts", discounts);
 app.use("/api/splitfees", splitfees);
 app.use("/api/franchises", franchises);
+app.use("/api/milestones", milestones);
 app.use("/api/ho", hoOverview);
 app.use("/api/account", account);
 app.use("/api/privacy", privacy);
@@ -331,6 +341,10 @@ app.use("/api/messages", messages);
 app.use("/api/geo", geo);
 app.use("/api/uploads", uploads);
 // Before /api/my so the file routes aren't shadowed by anything there.
+// Tax-Free Childcare (parent side) — mounted before /api/my so its own
+// routes win. Parent-only; falls back to the manual reference when HMRC
+// isn't configured (routes/tfc.ts).
+app.use("/api/my/tfc", tfc);
 app.use("/api/my/feedback", feedback);
 app.use("/api/my/files", childFiles);
 app.use("/api/my/referral", referral);
@@ -374,6 +388,16 @@ app.use(
       res.status(400).json({ error: "That request wasn't valid — please try again." });
       return;
     }
+    // A 500 is a fault: record it and (first occurrence) raise the alarm, so
+    // "how would you know at 07:00 on a Monday?" has an answer (d27s3).
+    const fault = err as Error;
+    void record({
+      kind: "request",
+      signature: `500:${_req.method} ${(_req.route?.path as string) ?? _req.path}`,
+      message: fault?.message ?? String(err),
+      stack: fault?.stack,
+      context: { method: _req.method, path: _req.originalUrl, role: _req.auth?.role ?? "anon" },
+    });
     res.status(500).json({ error: "Internal server error" });
   },
 );
@@ -396,6 +420,28 @@ app.listen(port, () => {
 // scheduler — safe to start on every instance; exactly one runs each sweep.
 // See lib/scheduler.ts + lib/sweeps.ts.
 import("./lib/sweeps").then(({ startSweeps }) => startSweeps());
+
+// Crashes that would otherwise end the process without a trace.
+installProcessHandlers();
+
+// The watchdog. Runs on the same locked scheduler as everything else (so only
+// one instance checks), with a grace period so a fresh deploy isn't reported
+// as "never ran". Intervals mirror lib/sweeps.ts — the fast ones are enough to
+// prove the scheduler is alive.
+const STARTED = Date.now();
+import("./lib/scheduler").then(({ sweep }) => {
+  sweep("ops-watchdog", 15 * 60_000, async () => {
+    if (Date.now() - STARTED < 20 * 60_000) return; // let the sweeps run at least once
+    const { checkHeartbeats } = await import("./lib/monitor");
+    await checkHeartbeats({
+      "calendar-reminders": 60_000,
+      "medication-due": 60_000,
+      "scheduled-emails": 60_000,
+      "waitlist-expiry": 5 * 60_000,
+      "day-of-alerts": 10 * 60_000,
+    });
+  });
+});
 
 // Bootstrap the Platform (HQ) super-admin from env, if configured — so
 // setting ADMIN_EMAIL / ADMIN_PASSWORD in server/.env is all it takes.

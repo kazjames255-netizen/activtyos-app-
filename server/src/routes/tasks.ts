@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { ukToday } from "../lib/ukDate";
 
 // Task Manager — the operator to-do system. A task hangs off a real operational
 // record (camp / booking / compliance / venue) which is what makes it ActivityOS
@@ -248,7 +249,7 @@ tasks.post("/", async (req, res) => {
 
   // ── Recurrence ──────────────────────────────────────────────────────────
   // Needs a start: the task's own due date, or today if it has none.
-  const start = (base.due as string | null) || new Date().toISOString().slice(0, 10);
+  const start = (base.due as string | null) || ukToday();
   if (repeat.until < start) { res.status(400).json({ error: "The repeat end date is before the start date" }); return; }
 
   const dates = repeatDates(start, repeat.until, repeat.freq);

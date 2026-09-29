@@ -2298,6 +2298,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <TfcConnect
                     childName={tfcConnecting}
                     providerName={(ckSettings.providerName ?? "").trim() || "your provider"}
+                    reference={voucherRefs[tfcConnecting]}
                     onLinked={(reference) => {
                       setTfcLinked((m) => ({ ...m, [tfcConnecting]: reference }));
                       setVoucherRefs((m) => ({ ...m, [tfcConnecting]: reference }));

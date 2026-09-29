@@ -243,9 +243,15 @@ test.describe("meal shop", () => {
 
     await parentPage.getByRole("button", { name: /💳 Pay/ }).click();
     await expect(parentPage.getByText(/Pay for your meal/)).toBeVisible({ timeout: 15_000 });
-    // The deterministic 503 documented above — proves the order was created
-    // and priced server-side, and the pay flow is wired up correctly.
-    await expect(parentPage.getByText(/Payments aren.t configured/)).toBeVisible({ timeout: 15_000 });
+    // Either outcome proves the order was created and priced server-side and the
+    // pay flow is wired up. Which one depends on the environment, so accept both
+    // rather than asserting one machine's setup: with
+    // NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY set the real card form mounts; without
+    // it PayModal says so and stops.
+    await expect(
+      parentPage.getByText(/Payments aren.t configured/)
+        .or(parentPage.locator("iframe[name^='__privateStripeFrame']").first()),
+    ).toBeVisible({ timeout: 20_000 });
     await parentPage.getByRole("button", { name: "Close" }).click();
     await parentCtx.close();
 

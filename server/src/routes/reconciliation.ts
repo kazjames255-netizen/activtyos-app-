@@ -1,10 +1,17 @@
 import { Router } from "express";
 import { db } from "../firebase";
-import { operatorScope, managerScope } from "../middleware/role";
-import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { managerScope, canWrite, type Role } from "../middleware/role";
+import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
 import { ukToday } from "../lib/ukDate";
 import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
+import { bookingDocId } from "./bookings";
+import {
+  childcareOf, childcareRoute, isChildcare, isUnreconciled, loadChildcareSettings,
+  childcareSettingsComplete, paymentRecordsOf, referenceProblem, referenceLooksValid,
+  matchQuotedReference,
+  type ChildcareBooking, type ChildcarePayment,
+} from "../lib/childcare";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reconciliation — "the admin job providers dread most" (the doc). What money
@@ -86,12 +93,12 @@ function refundsOf(b: Booking): RefundRow[] {
 }
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-// GET /api/reconciliation — the full payment ledger (reconciled + awaiting) with
-// per-booking fields so the client can filter by method, status, date, season & listing.
-reconciliation.get("/", async (req, res) => {
-  const scope = managerScope(req, res);
-  if (!scope) return;
+type Scope = { role: string; tenantId: string | null; franchiseId: string | null };
 
+// The bookings this account may see: its own tenant, narrowed to its own
+// franchise for a franchise/staff token (the franchise lens every neighbouring
+// route applies). Platform sees everything unless it names a tenant.
+function scopedBookings(req: { query: Record<string, unknown> }, scope: Scope): FirebaseFirestore.Query {
   let q = db.collection("bookings") as FirebaseFirestore.Query;
   if (scope.role === "platform") {
     const t = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
@@ -100,13 +107,27 @@ reconciliation.get("/", async (req, res) => {
     q = q.where("tenantId", "==", scope.tenantId);
     if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId) q = q.where("franchiseId", "==", scope.franchiseId);
   }
-  const snap = await q.get();
+  return q;
+}
+
+// GET /api/reconciliation — the full payment ledger (reconciled + awaiting) with
+// per-booking fields so the client can filter by method, status, date, season & listing.
+reconciliation.get("/", async (req, res) => {
+  const scope = managerScope(req, res);
+  if (!scope) return;
+
+  const snap = await scopedBookings(req, scope).get();
   const today = ukToday();
 
   const items = snap.docs
-    .map((d) => fromDoc(d.data() as BookingDoc))
+    .map((d) => fromDoc(d.data() as BookingDoc) as ChildcareBooking)
     .filter((b) => relevant(b) || needsRefundOf(b) > 0)
-    .map((b) => ({
+    .map((b) => {
+      // Childcare bookings carry the spec's block as well as the flat fields
+      // (docs/tfc-build-spec.md). Additive — every existing field below is
+      // untouched, so nothing reading this response has to change.
+      const cc = isChildcare(b) ? childcareOf(b) : null;
+      return {
       ref: b.ref,
       booker: b.booker,
       email: b.email,
@@ -127,6 +148,15 @@ reconciliation.get("/", async (req, res) => {
       voucherReceiveBy: b.voucherReceiveBy ?? null,
       paymentRef: b.paymentRef ?? null,
       payRefs: b.payRefs ?? null,
+      // ── The two references, kept apart (d8s2) ────────────────────────
+      // OURS: minted per booking-and-child, check-summed, unique. This is the
+      // string to look for on the bank statement, and the only one a family is
+      // ever asked to quote. `null` on a booking taken before minting existed.
+      paymentReference: cc?.paymentReference ?? null,
+      // THEIRS: the scheme/HMRC account reference the booker typed. Context for
+      // a human, never a match — it may read "Caelan".
+      bookerReference: cc?.bookerReference ?? null,
+      referenceStrength: cc?.referenceStrength ?? "none",
       cardPaid: b.cardPaid ?? 0,
       reconNotes: b.reconNotes ?? [],
       nudges: b.nudges ?? 0,
@@ -139,7 +169,17 @@ reconciliation.get("/", async (req, res) => {
       // A voucher whose money should have arrived by now — the provider needs
       // to chase or accept. (Flag only; nothing auto-cancels — §Q.)
       overdue: b.pay === "Awaiting voucher payment" && !!b.voucherReceiveBy && b.voucherReceiveBy < today,
-    }))
+      // ── Childcare (Part B) ────────────────────────────────────────────
+      // `childcareRoute` is null on everything else, so a client can build the
+      // "Unreconciled childcare" filter without re-deriving the rule from
+      // method strings. `bankMatched` is OUR statement tick — deliberately
+      // separate from `reconciled` above, which is the pay-state.
+      childcareRoute: cc?.route ?? null,
+      childcare: cc,
+      bankMatched: cc?.reconciled ?? false,
+      referenceProblem: cc ? referenceProblem(b) : null,
+      };
+    })
     // Awaiting first (overdue at the very top), then most-recent.
     .sort((a, b) => {
       if (a.reconciled !== b.reconciled) return a.reconciled ? 1 : -1;
@@ -186,6 +226,317 @@ reconciliation.get("/", async (req, res) => {
         today: round2(refundsToday.reduce((s, r) => s + r.amount, 0)),
         byVia,
       },
+      // The headline childcare figures for the ledger page, unfiltered. The
+      // date-ranged version (with the gross series) is GET /childcare below.
+      // Cancelled bookings only appear in `items` when money is stuck on them
+      // (needsRefund) — that's a refund to make, not childcare still to collect.
+      childcare: rollUp(items.filter((i) => i.childcareRoute && i.status !== "Cancelled" && i.status !== "Declined")),
     },
   });
 });
+
+// ── Childcare analytics + the tick-off table (spec §B3/§B4) ──────────────
+// Four figures over a date range, on TWO axes that must not be merged:
+//   confirmed / unconfirmed   — the booker's promise (has money come in?)
+//   reconciled / unreconciled — our bank match (has a human ticked it off?)
+// plus the gross-bookings series behind the line chart. Computed here rather
+// than in the browser so the date range actually applies to the figures (the
+// client roll-up totals the whole ledger, whatever range is on screen) and so
+// the numbers can't drift between the ledger, Bookings and any future export.
+type Rolled = { amount: number; count: number; bookers: number };
+type LedgerRow = { email?: string; booker: string; ref: string; amount: number; amountPaid: number; outstanding: number; bankMatched: boolean; referenceProblem: string | null; referenceStrength?: string };
+
+function rollUp(rows: LedgerRow[]) {
+  const bookers = (l: LedgerRow[]) => new Set(l.map((i) => (i.email || i.booker || i.ref).trim().toLowerCase())).size;
+  const roll = (l: LedgerRow[], amount: number): Rolled => ({ amount: round2(amount), count: l.length, bookers: bookers(l) });
+  const paid = rows.filter((i) => i.amountPaid > 0);
+  const unpaid = rows.filter((i) => i.outstanding > 0);
+  const matched = rows.filter((i) => i.bankMatched);
+  const unmatched = rows.filter((i) => !i.bankMatched);
+  return {
+    gross: round2(rows.reduce((s, i) => s + i.amount, 0)),
+    bookings: rows.length,
+    // The booker's side.
+    confirmed: roll(paid, paid.reduce((s, i) => s + i.amountPaid, 0)),
+    unconfirmed: roll(unpaid, unpaid.reduce((s, i) => s + i.outstanding, 0)),
+    // Our side. NOTE these two do NOT sum to `gross`, deliberately: reconciled
+    // counts money that ARRIVED on ticked-off rows, unreconciled counts what is
+    // still OWED on the rest. A row ticked off with nothing paid adds to
+    // reconciled.count and 0 to reconciled.amount. Don't render them as a split
+    // of gross — they answer two different questions.
+    reconciled: roll(matched, matched.reduce((s, i) => s + i.amountPaid, 0)),
+    unreconciled: roll(unmatched, unmatched.reduce((s, i) => s + (i.outstanding || i.amount), 0)),
+    // Never a filter, only a flag: a parent who typed "Caelan" instead of a
+    // reference still has a real booking and real money (§B3 note).
+    missingReference: rows.filter((i) => i.referenceProblem === "missing").length,
+    malformedReference: rows.filter((i) => i.referenceProblem === "malformed").length,
+    // How much of the ledger has a reference WE minted (a strong match) versus
+    // how much still leans on something a parent typed. The second number only
+    // ever falls: every new childcare booking is minted.
+    mintedReference: rows.filter((i) => i.referenceStrength === "minted").length,
+    typedReferenceOnly: rows.filter((i) => i.referenceStrength === "typed").length,
+  };
+}
+
+// GET /api/reconciliation/childcare?from&to&route&scheme[&tenantId]
+//   from/to — inclusive ISO days, on the booking's date (first session day,
+//             else the day it was booked) — the same `date` the ledger filters.
+//   route   — "Tax-Free Childcare" | "Childcare vouchers" (omit for both).
+//   scheme  — one voucher company, e.g. "Edenred".
+reconciliation.get("/childcare", async (req, res) => {
+  const scope = managerScope(req, res);
+  if (!scope) return;
+  const tenantId = scope.tenantId ?? (typeof req.query.tenantId === "string" ? req.query.tenantId : null);
+  const str = (k: string) => (typeof req.query[k] === "string" ? (req.query[k] as string).trim() : "");
+  const from = str("from");
+  const to = str("to");
+  const route = str("route");
+  const scheme = str("scheme");
+
+  const snap = await scopedBookings(req, scope).get();
+  const all = snap.docs.map((d) => fromDoc(d.data() as BookingDoc) as ChildcareBooking);
+  // Childcare money sitting on a CANCELLED booking is owed back to the family.
+  // It is excluded from the live population below (a cancelled booking promises
+  // nothing and owes nothing), which meant the childcare view alone never showed
+  // it — the provider had to notice it on the main ledger. Reported as its own
+  // figure rather than folded into gross, so the totals still agree with the
+  // ledger underneath.
+  const owedBackRows = all
+    .filter((b) => isChildcare(b) && cancelledish(b) && needsRefundOf(b) > 0)
+    .filter((b) => {
+      const d = dateOf(b);
+      if (from && (!d || d < from)) return false;
+      if (to && (!d || d > to)) return false;
+      if (route && childcareRoute(b) !== route) return false;
+      if (scheme && (childcareOf(b).scheme ?? "") !== scheme) return false;
+      return true;
+    })
+    .map((b) => ({ ref: b.ref, booker: b.booker, email: b.email, date: dateOf(b), scheme: childcareOf(b).scheme ?? null, amount: needsRefundOf(b) }));
+  const bookings = all
+    // The same population the ledger counts: a waitlisted / offered /
+    // approval-needed booking has no place yet, so nothing is promised and
+    // nothing is owed. Counting them would make "gross childcare bookings"
+    // disagree with the ledger sitting underneath it.
+    .filter((b) => isChildcare(b) && !cancelledish(b) && !NO_PLACE_YET.includes(b.status))
+    .filter((b) => {
+      const d = dateOf(b);
+      if (from && (!d || d < from)) return false;
+      if (to && (!d || d > to)) return false;
+      if (route && childcareRoute(b) !== route) return false;
+      if (scheme && (childcareOf(b).scheme ?? "") !== scheme) return false;
+      return true;
+    });
+
+  // The tick-off table, in the spec's column order.
+  const rows = bookings.map((b) => {
+    const cc = childcareOf(b);
+    return {
+      ref: b.ref,                                   // Booking ID
+      bid: b.bid,
+      date: dateOf(b),                              // Booking date
+      bookedOn: (b.createdAt ?? "").slice(0, 10) || null,
+      learner: b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child,  // Learner name
+      booker: b.booker,
+      email: b.email,
+      listing: b.listing,
+      listingId: b.listingId ?? null,
+      route: cc.route,
+      scheme: cc.scheme,                            // Childcare scheme
+      // Childcare reference — OURS when we minted one (new bookings), else the
+      // one the booker typed, which may still be junk ("Caelan"). Shown either
+      // way; the tick below keys on neither.
+      reference: cc.reference,
+      // OURS: minted per booking-and-child, arithmetic-checkable, unique per
+      // tenant. The string to look for on the statement. Null = a booking taken
+      // before minting existed, so the row degrades to the typed one.
+      paymentReference: cc.paymentReference,
+      // THEIRS: the booker's own scheme/HMRC account reference — a hint only.
+      bookerReference: cc.bookerReference,
+      referenceStrength: cc.referenceStrength,
+      // One row per child: siblings on one booking pay from separate accounts,
+      // so each has their own minted reference (and their own typed one).
+      references: (cc.refs ?? []).map((r) => ({ child: r.child, childId: r.childId ?? null, paymentReference: r.paymentReference, bookerReference: r.bookerReference ?? null, amount: r.amount ?? null })),
+      referenceLooksValid: referenceLooksValid(b),
+      referenceProblem: referenceProblem(b),
+      amount: b.amount ?? 0,                        // Childcare payment (booking total)
+      childcareAmount: cc.amount ?? 0,              // …less anything taken by card at checkout
+      amountPaid: b.amountPaid ?? 0,
+      cardPaid: b.cardPaid ?? 0,
+      outstanding: round2(Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0))),
+      // A booking can hold more than one payment record: a reference per
+      // sibling, plus the card/bank remainder of a split (Part A, Step 4).
+      payments: paymentRecordsOf(b),
+      pay: b.pay,
+      status: b.status,
+      // The booker's promise…
+      confirmed: cc.confirmed,
+      promisedAt: cc.promisedAt,
+      confirmedAt: cc.confirmedAt,
+      // …and our bank match. Different question, own column (§B3 last column).
+      bankMatched: cc.reconciled,                   // Reconciled against bank statement ☐/☑
+      reconciledAt: cc.reconciledAt,
+      reconciledBy: cc.reconciledBy,
+      unreconciled: isUnreconciled(b),
+      reconNotes: b.reconNotes ?? [],
+    };
+  }).sort((a, b) => (a.bankMatched !== b.bankMatched ? (a.bankMatched ? 1 : -1) : (b.date || "").localeCompare(a.date || "")));
+
+  // Gross childcare bookings per day, for the line chart. Dense enough to plot
+  // as-is: only days with bookings, ascending.
+  const byDay = new Map<string, { gross: number; bookings: number }>();
+  for (const r of rows) {
+    if (!r.date) continue;
+    const d = byDay.get(r.date) ?? { gross: 0, bookings: 0 };
+    d.gross = round2(d.gross + r.amount);
+    d.bookings += 1;
+    byDay.set(r.date, d);
+  }
+  const series = [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, v]) => ({ date, ...v }));
+
+  // By scheme — which voucher company is slowest to pay.
+  const byScheme: Record<string, { count: number; gross: number; outstanding: number; unmatched: number }> = {};
+  for (const r of rows) {
+    const k = r.scheme || r.route || "Childcare";
+    const s = (byScheme[k] ??= { count: 0, gross: 0, outstanding: 0, unmatched: 0 });
+    s.count += 1;
+    s.gross = round2(s.gross + r.amount);
+    s.outstanding = round2(s.outstanding + r.outstanding);
+    if (!r.bankMatched) s.unmatched += 1;
+  }
+
+  const settings = tenantId ? await loadChildcareSettings(tenantId, scope.franchiseId) : null;
+  res.json({
+    range: { from: from || null, to: to || null, route: route || null, scheme: scheme || null },
+    // What a parent must add in their HMRC account before they can pay us.
+    settings,
+    settingsComplete: settings ? childcareSettingsComplete(settings) : false,
+    rows,
+    series,
+    byScheme,
+    summary: rollUp(rows),
+    // Childcare money on a CANCELLED booking — owed back to the family, not
+    // still to collect. Kept out of `summary`/`gross` on purpose so the totals
+    // agree with the ledger; surfaced here so the childcare view shows it at all.
+    owedBack: { count: owedBackRows.length, amount: round2(owedBackRows.reduce((t, r) => t + r.amount, 0)), rows: owedBackRows },
+  });
+});
+
+// POST /api/reconciliation/:ref/bank-match — the manual tick from §B3's last
+// column: "reconciled against bank statement". `{ matched: false }` unticks it.
+//
+// This is NOT the same action as POST /api/bookings/:ref/reconcile. That one
+// says "the money is in" and settles the booking (Paid, family emailed). This
+// one says "I have found the line on my bank statement", which is the operator
+// confirming OUR end of the match — it moves no money and tells the family
+// nothing, so an accidental tick is harmless and reversible.
+//
+// It deliberately takes an OPTIONAL statement reference and matches on nothing:
+// the parent's own reference may be junk ("Caelan" in the spec's own table), so
+// keying the tick on it would make exactly the rows that need a human
+// impossible to tick. A note is stored instead, for whoever asks later.
+//
+// That stays true now the server MINTS a reference per booking-and-child. A
+// minted reference is a strong match and the note says so when the statement
+// quotes it — but the money can still arrive quoting nothing, the wrong
+// reference, or a sibling's, so nothing here keys on it.
+reconciliation.post("/:ref/bank-match", async (req, res) => {
+  const scope = managerScope(req, res);
+  if (!scope) return;
+  if (!canWrite(scope.role as Role)) {
+    res.status(403).json({ error: "Your account is read-only for bookings" });
+    return;
+  }
+  const tenantId = scope.tenantId ?? (typeof req.query.tenantId === "string" ? req.query.tenantId : null);
+  if (!tenantId) {
+    res.status(400).json({ error: "tenantId required for platform accounts" });
+    return;
+  }
+  const body = (req.body ?? {}) as { matched?: unknown; statementRef?: unknown; note?: unknown };
+  const matched = body.matched === undefined ? true : body.matched === true;
+  const statementRef = typeof body.statementRef === "string" ? body.statementRef.trim().slice(0, 120) : "";
+  const note = typeof body.note === "string" ? body.note.trim().slice(0, 500) : "";
+  const who = req.user?.name ?? req.user?.email ?? "operator";
+  const at = new Date().toISOString();
+
+  // Same lookup as the bookings route: the tenant-prefixed doc id, falling back
+  // to a query for bookings written before that id scheme.
+  // Set inside the transaction: what the operator's optional statement
+  // reference matched, so the response can say so without re-deriving it.
+  let matchedRefInfo: ReturnType<typeof matchQuotedReference> | null = null;
+
+  const byId = db.collection("bookings").doc(bookingDocId(tenantId, req.params.ref));
+  let ref = byId;
+  if (!(await byId.get()).exists) {
+    const q = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", req.params.ref).limit(1).get();
+    if (!q.empty) ref = q.docs[0].ref;
+  }
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc) as ChildcareBooking;
+      if (b.tenantId !== tenantId) throw new NotFound();
+      // The franchise lens: a franchise may only tick off its own bookings.
+      if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId && b.franchiseId !== scope.franchiseId) throw new NotFound();
+      if (!isChildcare(b)) throw new NotChildcare();
+      const prev = (b.childcare && typeof b.childcare === "object" ? b.childcare : {}) as ChildcarePayment;
+      const cc = childcareOf(b);
+      const next: ChildcarePayment = {
+        // Everything already on the block survives — above all the MINTED
+        // references (paymentReference / refs / refScheme): the family has been
+        // given those strings, and a tick must never quietly drop them.
+        ...prev,
+        // Persist what was only derived until now, so the block stops depending
+        // on the flat fields once it has been touched.
+        scheme: prev.scheme ?? cc.scheme ?? null,
+        reference: prev.reference ?? cc.reference ?? null,
+        bookerReference: prev.bookerReference ?? cc.bookerReference ?? null,
+        amount: prev.amount ?? cc.amount ?? null,
+        promisedAt: prev.promisedAt ?? cc.promisedAt ?? null,
+        confirmedAt: prev.confirmedAt ?? null,
+        reconciledAt: matched ? at : null,
+        reconciledBy: matched ? { at, by: who, auto: false } : null,
+      };
+      b.childcare = next;
+      // What the statement reference was WORTH, recorded for whoever asks later.
+      // It still decides nothing — the tick is the human's, and matching is
+      // deliberately keyed on nothing (see above) because the money may arrive
+      // quoting neither reference. But "that string is the one we minted for
+      // Amara on this booking" and "that string is what the parent typed, which
+      // could be anything" are different facts, and the trail should say which.
+      const hit = statementRef ? matchQuotedReference(b, statementRef) : null;
+      matchedRefInfo = hit;
+      const strength = hit?.strength === "strong"
+        ? ` — that is our payment reference for ${hit.child ? `${hit.child} on ` : ""}this booking`
+        : hit?.strength === "hint"
+          ? " — matches the reference the booker typed themselves, which is a hint, not proof"
+          : hit
+            ? " — not a reference we issued for this booking"
+            : "";
+      // A running, attributed trail — the same provider-only notes the ledger
+      // already shows, so an untick isn't a silent erasure.
+      const line = matched
+        ? `Ticked off against the bank statement${statementRef ? ` (bank ref ${statementRef}${strength})` : ""}.${note ? ` ${note}` : ""}`
+        : `Bank-statement tick removed.${note ? ` ${note}` : ""}`;
+      b.reconNotes = [...(b.reconNotes ?? []), { at, by: who, text: line }];
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    res.json({
+      ref: updated.ref,
+      childcare: updated.childcare ?? null,
+      bankMatched: matched,
+      reconNotes: updated.reconNotes ?? [],
+      // What the optional statement reference was worth — for the screen to
+      // echo ("that's our reference for Amara"), never a gate on the tick.
+      match: matchedRefInfo,
+    });
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof NotChildcare) res.status(400).json({ error: "This booking isn't paid by a childcare scheme — reconcile it from the payment ledger instead." });
+    else throw e;
+  }
+});
+
+class NotFound extends Error {}
+class NotChildcare extends Error {}

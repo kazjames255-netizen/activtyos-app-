@@ -1,0 +1,212 @@
+{
+  "d6s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Real Stripe TEST-mode run against the live route code (in-process harness, server/.env sk_test_51TX…, balance.livemode=false). Parent POST /api/my/children {name,dob:2017-05-04} → 201, age 9 derived server-side. POST /api/my/bookings (Day pass, one session) → 201 booking APF-10312, status Confirmed, pay Unpaid, amount £37.50. POST /api/payments/checkout {refs:[APF-10312]} → 201 {paymentId, clientSecret, stripeAccount:null, amount:37.5}; the PaymentIntent Stripe actually created is pi_3UJZI5B8TXN2Ekrq0up4hrUm, amount 3750 gbp — exactly the quoted £37.50, priced from the stored booking, with receipt_email set to the parent. Confirmed with the test card pm_card_visa → PI succeeded, amount_received 3750. POST /api/payments/checkout/:id/confirm → 200 {status:\"succeeded\",paid:true,refs:[\"APF-10312\"]}; booking afterwards pay Paid, amountPaid 37.5, paymentIntentId stamped, reconciledBy null (correct — a human was at the keyboard).",
+    "notes": "Was blocked only on 'no STRIPE_SECRET_KEY' (prereq p3). Card is charged exactly what was quoted. Two caveats on the 'receipt shown' half: Stripe's own card receipt is what receipt_email buys (gated on the tenant's 'payments' automatic email), and the on-screen confirmation is browser-side — not exercised here. Payment ran on the PLATFORM account because the throwaway tenant has no Connect account and STRIPE_PLATFORM_FALLBACK=1 is set in dev; a real provider's direct charge is the same code path with stripeAccount set.",
+    "evidence": "Stripe test mode: pi_3UJZI5B8TXN2Ekrq0up4hrUm (3750 gbp, succeeded). Raw run output: scratchpad/za-stripe-retest/za_part1.out.json + za_part1.log",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d6s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "The tab-closed case now settles server-side. Booking APF-10313 (£37.50), POST /api/payments/checkout → PaymentIntent pi_3UJZICB8TXN2Ekrq1lwxVKjZ, confirmed at Stripe with pm_card_visa, and /api/payments/checkout/:id/confirm was NEVER called (booking read back Unpaid at that point — so the browser callback provably did not run). I then took the REAL event Stripe emitted (evt_3UJZICB8TXN2Ekrq1tqyeG4D, payment_intent.succeeded, livemode:false) and delivered it to the real router mounted exactly as index.ts mounts it (raw body before express.json), signed with stripe.webhooks.generateTestHeaderString → 200 {\"received\":true} and the server logged '[stripe-webhook] settled payment … from the webhook — the payer's browser never confirmed'. Booking flipped to pay Paid, amountPaid 37.5, paymentIntentId + stripeAccount stamped, reconciledBy {by:\"Stripe\",auto:true}; the payments doc went status succeeded, settledAuto true. REPLAY of the identical signed event → 200, still Paid / 37.5. A LATE browser confirm after the webhook → 200 {paid:true} and still 37.5 with reconciledBy unchanged. On the deployed API the endpoint is live and a secret is set: POST https://activtyos-app-production.up.railway.app/api/stripe/webhook with a junk signature → HTTP 400 {\"error\":\"Bad signature\"} (503 'Webhook not configured' is what an unconfigured deployment returns).",
+    "notes": "Was blocked on Stripe keys + the missing payment_intent webhook (backlog b7). Both halves are now real. Idempotency rests on the payments doc being claimed inside a transaction in lib/settlePayment.ts settlePaymentRecord, which is why browser-then-webhook and webhook-then-browser both end at one payment. Not verified end-to-end over the public internet (no Stripe CLI/live endpoint delivery in this run) — the delivery was a genuinely signed POST of a genuine Stripe event to the genuine router, locally.",
+    "evidence": "pi_3UJZICB8TXN2Ekrq1lwxVKjZ / evt_3UJZICB8TXN2Ekrq1tqyeG4D; curl -i https://activtyos-app-production.up.railway.app/api/stripe/webhook → 400 Bad signature; scratchpad/za-stripe-retest/za_part1.out.json",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Tax-Free Childcare exists as a real, selectable rail — no longer a front-end-only stub. Against the DEPLOYED API with a real parent Firebase ID token: GET /api/my/tfc/config → 200 {\"configured\":false}; POST /api/my/tfc/link/start → 200 {\"configured\":false} (server/src/routes/tfc.ts + lib/tfc.ts are a full HMRC Tax-Free Childcare Payments API v1.2 client: /config, /link/start, /link/status, /balance, /pay, plus the public /api/tfc/callback). A provider can list it (settings.payMethods including \"Tax-Free Childcare\"), checkout maps it to the 'tfc' rail and renders the TFC panel, and POST /api/my/bookings {method:\"Tax-Free Childcare\"} → 201 with the method stored and pay Unpaid. So steps 2–10 are testable as a product rather than as a specification.",
+    "notes": "The rail is selectable but it is a PROMISE-TO-PAY rail today: with no HMRC credentials every route answers configured:false and the browser falls back to the reference the parent types in (features/listings/tfc.ts is explicit about the two switches, and NEXT_PUBLIC_HMRC_TFC is unset). That limitation is what makes d8s2/d8s4/d8s5/d8s7 still fall short — see those. Checkout screen itself not clicked (API + code).",
+    "evidence": "GET https://activtyos-app-production.up.railway.app/api/my/tfc/config → 200 {configured:false}; server/src/routes/tfc.ts; scratchpad/za-stripe-retest/za_part5.out.json",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s2": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "The PROVIDER half is fixed; the REFERENCE half still fails the step's explicit check. Provider half: PUT /api/library settings.childcare is validated on write — {settingName:12345} → 400 'settings.childcare.settingName must be text'; a 60-char registrationNumber → 400 '…is too long (max 40 characters)'; a good write normalises ('EY 123 456' → 'EY123456', 'sw1a1aa' → 'SW1A 1AA', schemes ['Edenred','edenred','Computershare'] de-duped to two) — and it is published in the PUBLIC slice: GET /api/public/library/:tenantId → 200 with settings.childcare {settingName, registrationNumber, postcode, schemes}, so the 'add this provider to your HMRC account' panel renders for a signed-out booker. Reference half: it is still free text the parent types — items[].paymentRef, z.string().trim().max(120) (server/src/routes/my.ts:88). The spec's own bad example was accepted verbatim: a live booking (APF-10312, £80, Tax-Free Childcare, pay Unpaid) stored paymentRef 'Caelan'. The SAME reference 'ZAHERB78808TFC' was accepted on a second booking for a DIFFERENT child (201, APF-10314) — no uniqueness check per child or per booking, and nothing server-side mints one. There is format advice only: looksLikeTfcRef (/^[A-Za-z]{4}\\d{5}TFC$/) drives referenceProblem 'malformed' on the ledger and referenceLooksValid on the childcare rows (verified both ways: 'ZAHE78808TFC' → referenceLooksValid true, referenceProblem null; 'Caelan' and a 6-letter prefix → malformed), but a malformed reference still creates the booking.",
+    "notes": "Judged on what the step asks: 'Check the reference is unique per child and per booking — not free text you type yourself.' Today it is free text, reusable across children and bookings. A system-issued per-child reference can only come from HMRC (routes/tfc.ts linkAccount), which is unconfigured — so this is a fail the HMRC integration would fix, not a coding slip. What HAS landed since the last verdict: the account details the step's first half asks for are now real and reach an unauthenticated booker.",
+    "evidence": "POST /api/my/bookings paymentRef 'Caelan' → 201 APF-10312; same ref on two bookings → 201; GET /api/public/library/:tenantId → settings.childcare; scratchpad/za-stripe-retest/za_part3.out.json (settings, d8s2) + za_part4.out.json (refFormat)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "The operator can now see a TFC booking as childcare money awaiting payment, with its reference. GET /api/reconciliation rows for the two TFC bookings: {ref:APF-10313, method:'Tax-Free Childcare', childcareRoute:'Tax-Free Childcare', paymentRef:'ZAHERB78808TFC', voucherScheme:null, bankMatched:false, outstanding:80, pay:'Unpaid', status:'Confirmed', referenceProblem:'malformed'} and the same for APF-10312 with paymentRef 'Caelan'. summary.childcare carries {gross:240, bookings:3, confirmed:{0}, unconfirmed:{240,3 bookings,1 booker}, reconciled:{0}, unreconciled:{240}, missingReference:0, malformedReference:3}. GET /api/bookings also shows the row with pay Unpaid + paymentRef + method 'Tax-Free Childcare'. childcareRoute is non-null only for childcare bookings, so a client can build the 'awaiting childcare payment' list without re-deriving it from method strings, and the Reconciliation screen files it under its own 'Tax-Free Childcare' tab (methodCat, ReconciliationApp.tsx:42-51).",
+    "notes": "Upgrade from fail: the old complaint was that a TFC booking looked exactly like an unpaid card booking and joined the card chase list. It no longer does — childcareRoute + the childcare roll-up + the TFC tab separate it. Residual nit (not enough to fail the step): the pay word itself is still 'Unpaid' rather than an explicit 'Awaiting childcare payment', so the distinction lives in childcareRoute/the tab rather than in the status chip. Checked over the API, not on screen.",
+    "evidence": "scratchpad/za-stripe-retest/za_part3.out.json (d8s3); features/reconciliation/ReconciliationApp.tsx:42-51, 238-257",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s4": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Still nothing to send an inbound payment INTO. There is no HMRC EPP/settlement feed, no bank feed and no inbound money webhook: the only signed inbound endpoints on the deployed API are /api/stripe/webhook (cards — verified live, 400 'Bad signature' on a junk signature) and the Resend inbound-mail hook. server/src/routes/tfc.ts is the OUTBOUND, parent-initiated client and answers {configured:false} with no credentials — POST /api/my/tfc/pay cannot run (200 {configured:false} on the deployed API). The nearest new thing is POST /api/reconciliation/:ref/bank-match, and it is by design NOT this step: its own comment says it 'moves no money and tells the family nothing', it keys on nothing (a junk reference still ticks), and it leaves pay/amountPaid untouched — i.e. it is a human matching by hand, which is precisely what the step says must not be needed. A TFC booking still only becomes Paid through an operator action (record-payment / reconcile / the 'paid' row action). reconciledBy.auto:true is now genuinely written — but only by the Stripe card webhook (lib/settlePayment.ts settlePaymentRecord), never for childcare money.",
+    "notes": "Re-tested because Stripe's webhook landed; that webhook is for cards and does not touch this step. Unblocking needs HMRC credentials + the settlement feed (phase 3 of docs/tfc-build-spec.md). When it lands it should stamp the same reconciledBy {auto:true} shape the card path now uses.",
+    "evidence": "POST /api/my/tfc/pay (deployed, real parent token) → 200 {configured:false}; server/src/routes/reconciliation.ts:384-452 (bank-match); server/src/lib/settlePayment.ts; scratchpad/za-stripe-retest/za_part3.out.json (d8s4)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s5": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Still no childcare feed to replay (see d8s4), so the step itself cannot run. What IS now proven is the property the step is about, on the two rails that have a real feed: (1) CARD — the identical signed payment_intent.succeeded (evt_3UJZICB8TXN2Ekrq1tqyeG4D) delivered twice to the real router → 200 both times, booking settled once (pay Paid, amountPaid 37.5 after both), and a late browser confirm on top → still 37.5. The claim is structural: settlePaymentRecord claims the payments doc inside a Firestore transaction and later callers no-op. (2) SUBSCRIPTION — the identical signed invoice.payment_succeeded (evt_1UJZSNB8TXN2Ekrq9AFLUz8k) delivered twice → the tenant's subscription record byte-identical after each. (3) The MANUAL childcare analogue keeps its guard: £80 with reference 'Caelan' recorded twice on the same booking → 200 then 409 {code:'possible_duplicate'} 'This looks like a payment that's already been logged: £80.00 with reference Caelan was recorded against this booking on 25 Sept by … Only record it again if it's a second, separate payment.'; amountPaid stayed 80.",
+    "notes": "Kept at blocked rather than pass because the step's subject — an inbound TFC payment arriving twice — has no code path yet. Related defect found while proving the webhook half: a replayed invoice.payment_FAILED writes a SECOND 'Your ActivityOS payment failed' notification (see p2-r20 notes). Webhook handlers have no processed-event-id ledger; only the money-moving path is idempotent.",
+    "evidence": "scratchpad/za-stripe-retest/za_part1.out.json (d6s4 replay), za_part3.out.json (d8s5), za_part4.out.json (p2r20)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d8s7": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "The inbound half still cannot be tested (no HMRC/EPP feed — d8s4). The manual analogue, which IS built, is handled deliberately and I re-confirmed it: TFC booking APF-10316 (£80, reference ZACANC78808TFC) cancelled with refund 'none', then POST /api/bookings/APF-10316/record-payment £80 → 200; the booking keeps status Cancelled, pay Paid, amountPaid 80 AND carries receivedAfterCancel 80 (the overpay guard is deliberately waived for cancelled bookings — bookings.ts:893-903). GET /api/reconciliation keeps it on the ledger with needsRefund 80, outstanding 0, and summary.needsRefund {count:1,total:80}, so the money is visibly owed back rather than absorbed. Gap: that booking does NOT appear in GET /api/reconciliation/childcare (cancelled rows are filtered out so 'gross childcare bookings' agrees with the ledger) — so an operator working only the childcare view would not see the £80 that needs handing back; it is only on the main ledger.",
+    "notes": "Verdict stays blocked: what the step asks for (a payment ARRIVING for a cancelled booking) needs the feed. The built path is a genuine 'held for review' — money recorded, refund flagged, nothing silently absorbed. The childcare-view omission is worth a line in the TFC backlog: needsRefund is the one cancelled-booking figure the childcare screen probably should still show.",
+    "evidence": "scratchpad/za-stripe-retest/za_part3.out.json (d8s7); server/src/routes/bookings.ts:858-905; server/src/routes/reconciliation.ts:50, 267-290",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d8s10": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Unchanged, and now with a sharper consequence because the card leg really works. features/listings/checkout.tsx:2540-2545 still builds onBook({tfc:{amount, remainderVia, references}}), but ListingWizard's book() still has no tfc parameter and both call sites (ListingWizard.tsx:887 and :905) pass only basket/dayAssign/addonSel/method/children/addonAns/voucherScheme/discountCodes/voucherRefs/walletCap/phone/mealSel/serviceAddress — p.tfc is dropped on the floor. The server's basketSchema has no TFC-amount/remainder field either. I POSTed a booking carrying tfc:{amount:30,remainderVia:'card'}, tfcAmount:30 and cardPaid:50 explicitly → 201, and the stored booking (APF-10317) reads amount 80, cardPaid null, tfcAmount null, tfc null, method 'Tax-Free Childcare', i.e. one booking owing the WHOLE £80 through TFC. The concrete damage now that Stripe is wired: POST /api/payments/checkout on that booking → 201 with amount 80 — a card PaymentIntent for the entire total, not the £50 remainder. Totals cannot reconcile because only one leg is ever recorded.",
+    "notes": "Not a Stripe blocker any more — this is a front-end drop plus a missing server field, exactly as recorded on 12 Sept. childcareAmountOf() and the reconciliation rows already read booking.cardPaid, so the server half is waiting on a writer: pass p.tfc through ListingWizard.book(), add tfcAmount/remainderVia to basketSchema, and stamp cardPaid when the remainder is taken.",
+    "evidence": "features/listings/checkout.tsx:2540-2545; features/listings/ListingWizard.tsx:677, 887, 905; server/src/routes/my.ts basketSchema; scratchpad/za-stripe-retest/za_part3.out.json (d8s10)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d8s11": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "The FIGURES are now right and reachable; the SCREEN the step names still is not. API (all verified on throwaway fixtures): GET /api/reconciliation/childcare?from&to → 200 with settings {settingName, registrationNumber, postcode, schemes} + settingsComplete true; rows carrying reference / referenceLooksValid / referenceProblem / amount / childcareAmount / amountPaid / cardPaid / outstanding / confirmed / promisedAt / bankMatched / reconciledAt / reconciledBy / payments[]; a dense gross series [{2026-10-26,80,1},{10-27,80,1},{10-28,80,1}]; byScheme {'HMRC Tax-Free Childcare':{count:3,gross:240,outstanding:240,unmatched:3}}; and a summary that keeps the two axes apart. The arithmetic tracked every change: gross 240/3 bookings → after recording £80, confirmed {80,1} and unconfirmed {160,2} → after ticking two rows, reconciled count 2 / unreconciled {80,1} → after unticking one, reconciled count 1 / unreconciled {160,2}. A real date range applies (from=2020-01-01&to=2020-01-31 → 0 rows, zeroed summary). POST /api/reconciliation/:ref/bank-match → 200, writes childcare.reconciledAt + reconciledBy {by:'ZA TFC Co owner',auto:false} and an attributed note 'Ticked off against the bank statement (bank ref BACS 0099). ZA test'; {matched:false} unticks and appends 'Bank-statement tick removed.'; it ticks a junk-reference row ('Caelan') too, moves no money (amountPaid untouched), refuses a card booking (400 'This booking isn't paid by a childcare scheme — reconcile it from the payment ledger instead.') and a ghost ref (404). WHY STILL FAIL: (1) no UI — nothing in features/ or app/ calls /api/reconciliation/childcare or /bank-match (grep: zero hits), so an operator has no tick column and no date-ranged TFC view; the on-screen panel is still computed client-side over the WHOLE unfiltered ledger (ReconciliationApp.tsx:124-148). (2) The Tax-Free Childcare tab still tells the operator 'Tax-Free Childcare reconciles automatically … Once HMRC settles it, the booking is matched here without any manual work — so there's nothing to reconcile by hand' (ReconciliationApp.tsx:343-344). That is false while HMRC is unconfigured, and it contradicts the tick the backend just gained. (3) The same panel still carries a developer note addressed by name on an operator-facing screen: 'Amir — this is where Tax-Free Childcare is wired. Auto-reconciliation is pending the HMRC EPP … integration' (ReconciliationApp.tsx:346).",
+    "notes": "Two of the three items from the 13 Sept fail are answered (a promise/'sent' axis now exists as unconfirmed + promisedAt; the figures are computed server-side over a real range). The remaining blockers are Kaz's side (the tick column + date-ranged view) and copy (items 2 and 3), not the backend. One semantic nit: in rollUp() a row that is bank-matched but has no money in adds to reconciled.count but 0 to reconciled.amount, so reconciled.amount + unreconciled.amount need not equal gross — consistent with the documented meaning ('matched money' vs 'outstanding on unmatched rows'), but easy to misread on a dashboard.",
+    "evidence": "scratchpad/za-stripe-retest/za_part3.out.json (d8s11) + za_part4.out.json (refFormat); server/src/routes/reconciliation.ts:239-452; features/reconciliation/ReconciliationApp.tsx:124-148, 343-346",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d9s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Both halves, with real Stripe test-mode money. SUCCESS: £60 card booking APF-10313 paid on pi_3UJZM7B8TXN2Ekrq0McSOY5C, parent cancelled (refundPref card), operator POST /api/bookings/APF-10313/actions {type:'refund-approve'} → 200; Stripe really holds refund re_3UJZM7B8TXN2Ekrq0c9upEcg, amount 6000, status succeeded; booking pay Refunded, cancel.refundVia 'card'. FAILURE with a genuine Stripe refusal (not the app's own 'not configured' message): £40 booking APF-10314's charge was refunded OUTSIDE ActivityOS first (re_3UJZMIB8TXN2Ekrq0CUJuwrB, 4000, succeeded — i.e. the step's 'already-refunded payment'), then refund-approve → 502 'The refund didn't go through: Charge ch_3UJZMIB8TXN2Ekrq05lrM2vm has already been refunded.. Nothing was marked refunded — try again, or refund it in Stripe directly.' Afterwards the booking is pay Paid, cancel.refund back to 'pending' (still awaiting approval), cancel.refundError = Stripe's own sentence, refundAttempts 1; a second approve → 502 again (not a false 'already approved'), attempts 2, never Refunded. A failed-refund row is written to payments (status 'failed', with the error) so the attempt is not silent.",
+    "notes": "Was blocked for the success half and for a real Stripe refusal (prereq p3). Regression b12 holds against Stripe itself: wait, revert, surface the reason. Cosmetic: the surfaced message has a double full stop ('refunded..') because Stripe's sentence already ends in one — worth trimming in refundStripePayment's caller.",
+    "evidence": "re_3UJZM7B8TXN2Ekrq0c9upEcg (6000, succeeded); re_3UJZMIB8TXN2Ekrq0CUJuwrB (outside refund); scratchpad/za-stripe-retest/za_part2.out.json (d9s3_success, d9s3_fail)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d9s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Paid from the link with a real card. £200 booking APF-10315 (Unpaid, Bank transfer); POST /api/invoices {bookingRef:APF-10315, amount:200, status:'sent'} → 201 with payToken. Public GET /api/public/invoice/:token → 200 {amount:200, reference:'APF-10315', cardEnabled:true} (was cardEnabled:false with no keys). POST /api/public/invoice/:token/checkout → 201 {amount:200} → pi_3UJZMVB8TXN2Ekrq1jIIltGH, paid with pm_card_visa, then POST /api/public/invoice/:token/confirm/:paymentId → 200 {status:'succeeded',paid:true}. The BOOKING was settled too: pay Paid, amountPaid 200, settledByInvoice = the invoice id, invoicePaymentIntentIds [pi_3UJZMVB8TXN2Ekrq1jIIltGH] (the booking's own paymentIntentId is deliberately left alone so a refund still targets the original card payment). Invoice: status paid, paidVia 'link', bookingSettledAt stamped. Counted ONCE: a second confirm → 200 and amountPaid still 200; and replaying the real payment_intent.succeeded for that same intent through the webhook → 200 {received:true}, still Paid / 200.",
+    "notes": "Was blocked purely on 'the link's confirm needs Stripe'. The pay-link confirm and the webhook both go through settleInvoicePayment → settleInvoiceBooking, whose bookingSettledAt guard is what makes the third delivery a no-op. Regression b11 confirmed on the real card path, not just the manual one.",
+    "evidence": "pi_3UJZMVB8TXN2Ekrq1jIIltGH; evt_3UJZMVB8TXN2Ekrq1yvIY7xM (replayed); scratchpad/za-stripe-retest/za_part2.out.json (d9s5)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d19s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Run against real Stripe test money. Booking APF-10312 £100 paid by card (pi_3UJZLqB8TXN2Ekrq1beWhRp0, amount_received 10000) → pay Paid, amountPaid 100. Top-up invoice £20 raised against it and marked paid → booking stays pay 'Paid' (NOT 'Partially paid'), amountPaid 120, settledByInvoice set; re-saving 'paid' leaves amountPaid at 120 (counted once). Parent cancelled, operator refund-approve → 200: Stripe holds exactly ONE refund against the original card payment, re_3UJZLqB8TXN2Ekrq1csARyoP, amount 10000 (£100) — i.e. the card got what the card took, and the £120 refund did not get thrown at a £100 charge. The hand-paid £20 was written to payments as {type:'refund', method:'offline', status:'to-reimburse', note:'Paid outside the card payment (e.g. a top-up invoice) — pay this part back by hand'}. Booking afterwards: pay Refunded, refundedApproved 120, cancel.refundVia 'card', cancel.refundError null.",
+    "notes": "Was blocked on 'needs a Stripe test-mode run'. The 12 Sept fix (cardRefundable → cap the card part, remainder to 'to-reimburse') is now verified against Stripe rather than reasoned about. Note the refund goes to the ORIGINAL booking PaymentIntent, not the invoice's — confirmed by the refund id belonging to pi_3UJZLqB8TXN2Ekrq1beWhRp0.",
+    "evidence": "pi_3UJZLqB8TXN2Ekrq1beWhRp0 → re_3UJZLqB8TXN2Ekrq1csARyoP (10000, succeeded); scratchpad/za-stripe-retest/za_part2.out.json (d19s8)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 4
+  },
+  "d28s6": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Still not exercised, for a DIFFERENT reason than before: Stripe is configured, but only in TEST mode, and this step is explicitly live money. server/.env holds sk_test_51TX… — stripe.balance.retrieve() returns livemode:false, and the platform account is a sandbox (acct_1TXIjoB8TXN2Ekrq). I deliberately did not touch live-mode money, so no £1 real charge, no real refund, no payout was made or inspected. What the test-mode equivalent now proves (and did not before): a charge for exactly the quoted amount (pi_3UJZI5B8TXN2Ekrq0up4hrUm, 3750 gbp) and a real refund of exactly the right amount back to it (re_3UJZM7B8TXN2Ekrq0c9upEcg, 6000). The PAYOUT leg is untested in any mode.",
+    "notes": "Needs Kaz's LIVE platform keys on a deployed API, a real card and a real payout run — and a decision that it is time to move a pound of real money. The remaining live-only risks are the ones test mode genuinely cannot answer: Connect onboarding state on the real provider account, payout schedule/arrival, and live-mode radar/3DS behaviour.",
+    "evidence": "stripe.balance.retrieve() → livemode:false, acct_1TXIjoB8TXN2Ekrq (FR, standard sandbox); scratchpad/za-stripe-retest/za_part1.log",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "d28s7": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "The live-mode half is still out of scope (test keys only; live money deliberately untouched), so this stays blocked — but the DECLINE path is now exercised for real in test mode and behaves well. Booking APF-10314, PaymentIntent confirmed with pm_card_chargeDeclined → Stripe raises 'Your card was declined.', the PI stays requires_payment_method with last_payment_error 'Your card was declined.', POST /api/payments/checkout/:id/confirm answers 200 {status:'requires_payment_method', paid:false} (no money claimed, no 500), the booking stays pay Unpaid — and after the REAL payment_intent.payment_failed event (evt_3UJZINB8TXN2Ekrq0zq8yFFg) was delivered signed to the webhook, the booking carries cardFailed:true, so the provider's banner finally has something setting it. 3DS was NOT exercised: the challenge is a browser modal. Code read for the parent-facing half: features/payments/PayModal.tsx:35 and features/money/PayPage.tsx:33 both use stripeJs.confirmPayment({elements, redirect:'if_required'}), so stripe.js runs the 3DS challenge itself and a decline surfaces as error.message in the modal; the confirm call is only made after Stripe reports success, and a non-succeeded status is reported as 'Payment is <status> — it hasn't completed yet.'",
+    "notes": "To close this: a live-mode browser run with 4000 0000 0000 0002 (decline) and 4000 0027 6000 3184 (3DS required), watching what the PARENT sees. Everything below the UI is now verified on the decline side.",
+    "evidence": "pi_… declined (requires_payment_method, 'Your card was declined.'), evt_3UJZINB8TXN2Ekrq0zq8yFFg → cardFailed:true; features/payments/PayModal.tsx:27-51; scratchpad/za-stripe-retest/za_part1.out.json (declined)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 3
+  },
+  "p2-m1": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "server/src/routes/stripeWebhook.ts now handles seven event types: customer.subscription.updated, customer.subscription.deleted, customer.subscription.trial_will_end, invoice.payment_succeeded, invoice.payment_failed, payment_intent.succeeded, payment_intent.payment_failed. payment_intent.succeeded looks the intent up in `payments` (paymentForIntent) and settles through the SHARED path — settleInvoicePayment for an invoice payment, settlePaymentRecord otherwise — stamping {auto:true, by:'Stripe'} so Reconciliation reads 'Auto-reconciled'; payment_intent.payment_failed calls markCardFailed → booking.cardFailed. Settlement itself moved out of the browser-callback handlers into server/src/lib/settlePayment.ts and POST /api/payments/checkout/:id/confirm now calls the same function. The endpoint accepts either secret (STRIPE_WEBHOOK_SECRET or STRIPE_CONNECT_WEBHOOK_SECRET) so a separate Connect endpoint works. Live check: the deployed endpoint exists and has a secret — a junk signature returns 400 {\"error\":\"Bad signature\"}, not the 503 {\"error\":\"Webhook not configured\"} an unconfigured deployment returns.",
+    "notes": "Was a fail (backlog b7). Behaviour, not just presence, verified in d6s4/p2-m2.",
+    "evidence": "server/src/routes/stripeWebhook.ts:56-136; server/src/lib/settlePayment.ts; curl -i https://activtyos-app-production.up.railway.app/api/stripe/webhook → 400 Bad signature",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  },
+  "p2-m2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Same run as d6s1/d6s4. POST /api/payments/checkout for a £37.50 listing booking → 201; the PaymentIntent (pi_3UJZICB8TXN2Ekrq1lwxVKjZ) was confirmed away from the browser with a test card and POST /api/payments/checkout/:id/confirm was never called — the booking read back Unpaid at that moment. Delivering Stripe's own event for that intent (evt_3UJZICB8TXN2Ekrq1lwxVKjZ's payment_intent.succeeded, evt_3UJZICB8TXN2Ekrq1tqyeG4D), signed, to the real webhook router → 200 and the booking is status/pay Paid with amountPaid 37.5, paymentIntentId + stripeAccount stamped, reconciledBy {by:'Stripe', auto:true}; the `payments` doc exists with status succeeded and settledAuto true. Settled by the webhook, not the browser.",
+    "notes": "Was blocked on 'no STRIPE_SECRET_KEY' and on p2-m1. I did not wait 2 minutes for a real network delivery to a public URL — the delivery was synthetic in timing only (genuine Stripe event body, genuine signature, genuine router). The deployed endpoint is confirmed reachable and configured (400 Bad signature on a junk signature).",
+    "evidence": "scratchpad/za-stripe-retest/za_part1.out.json (d6s4) + za_part1.log ('[stripe-webhook] settled payment … the payer's browser never confirmed')",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  },
+  "p2-m32": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Exercised on a REAL test-mode subscription rather than the browser. POST /api/subscription/checkout → 200 SetupIntent seti_1UJZSFB8TXN2EkrqtLcYtWNd, confirmed with pm_card_visa; POST /api/subscription/card {setupIntentId} → 200 {ok:true, cardLast4:'4242', cardBrand:'visa'}; POST /api/subscription/start → 200, real Stripe subscription sub_1UJZSKB8TXN2EkrqCUNw8X5b status active with its first invoice in_1UJZSLB8TXN2EkrqehT4O5xO PAID (2900 = £29). Then removing the only card while that subscription is live: DELETE /api/subscription/card → 400 {\"error\":\"Cancel your subscription first — a live plan can't bill without a card.\"}. Nothing was detached: Stripe still lists visa·4242 on the customer and the tenant record still shows cardLast4 4242, status active. Refused outright, never a silent success.",
+    "notes": "The step's method is 'browser' and I tested the API the button calls, so the UI's own wording/disabled state is unverified. The route's rule is narrow and sensible: it only refuses while stripeSubscriptionId exists and status !== 'canceled' (a 'canceling' plan keeps its card until it actually ends). All Stripe objects created for this test were cancelled and the customer deleted afterwards.",
+    "evidence": "seti_1UJZSFB8TXN2EkrqtLcYtWNd, sub_1UJZSKB8TXN2EkrqCUNw8X5b, in_1UJZSLB8TXN2EkrqehT4O5xO; server/src/routes/subscription.ts:319-341; scratchpad/za-stripe-retest/za_part4.out.json (p2m32)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  },
+  "p2-m33": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "As a franchise account ($F1) of a company tenant, with Stripe keys present: GET /api/subscription 403 · GET /api/subscription/pricing 403 · PUT /api/subscription/pricing 403 · POST /api/subscription/checkout 403 · POST /api/subscription/card 403 · DELETE /api/subscription/card 403 · POST /api/subscription/start 403 · PUT /api/subscription 403 · POST /api/subscription/cancel 403 · POST /api/subscription/reactivate 403 · POST /api/payments/connect 403 · POST /api/payments/dashboard 403. The last two are the ones the earlier verdict could not see: they answered 503 before because needStripe() ran ahead of the role check; with a key set they are a clean 403. The only 200 is GET /api/subscription/access → {mode:'full', graceEndsAt:null, status:'active', pastDueSince:null, owner:false}, which is deliberate — it drives the read-only banner for every team role and exposes no plan, price, card or Stripe id.",
+    "notes": "Was blocked only on the two payments routes. Head office owns the tenant's Stripe and plan, as the step requires.",
+    "evidence": "scratchpad/za-stripe-retest/za_part4.out.json (p2m33)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  },
+  "p2-p9": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Run against the DEPLOYED API with a REAL Firebase ID token for a throwaway staff account (custom token → identitytoolkit exchange), so the ticket/verifyFresh path that blocked this before is now exercised. First, the step's literal shape is obsolete: GET /api/events?token=<idToken> → 401 {\"error\":\"Missing ticket\"}; the stream is now POST /api/events/ticket (200, 20s single-use ticket) then GET /api/events?ticket=…. With the stream OPEN and watching listings: the owner created a listing → the stream delivered data:{\"collection\":\"listings\"} at +5.4s (proving it was live). The staff account was then switched off through the real route (PATCH /api/invites/:token/status {status:'deactivated'} → 200 {account:'disabled'}, which also calls authAdmin.revokeRefreshTokens). AFTER that: a second listing write → the stream STILL delivered data:{\"collection\":\"listings\"} at +23.0s (≈9s after deactivation), and a THIRD write 70s later → data:{\"collection\":\"listings\"} again at +83.0s, well past the 60s revocation cache. The server never closed the stream (heartbeats :ping at +25s, +50s, +75s; serverClosed false). What IS refused, immediately: every new request with that token — POST /api/events/ticket → 401 'Invalid or expired token', GET /api/bookings → 401, and the same 70s later. So a reconnect is correctly locked out, but 'nothing further arrives' is false for a connection that was already open.",
+    "notes": "Was blocked ('needs the live server + a real staff token'). Now a real, reproducible failure. Blast radius is limited: the SSE payload is only a collection NAME (no data), and every REST refetch the nudge would trigger is 401 — so a switched-off staff member learns 'something in listings changed' and nothing more, until they disconnect. But the connection is unbounded: events.ts checks users.disabled/deactivatedAt only at connect time (routes/events.ts:57-64) and the Firestore listeners are never re-authorised. Fix shape: re-check the user (or a revocation generation) on a timer / before each send and res.end() the stream. Also worth updating the step text to the ticket handshake.",
+    "evidence": "scratchpad/za-stripe-retest/za_part6.out.json (+23012ms and +82968ms data lines after a +13692ms deactivation) and za_part5.out.json (401s on every reconnect); server/src/routes/events.ts:46-70",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  },
+  "p2-r20": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Replayed a REAL, genuinely signed invoice.payment_succeeded twice against the real webhook router (no Stripe CLI — the event body came from stripe.events.list and was signed with stripe.webhooks.generateTestHeaderString, so signature verification ran for real). Subject: subscription sub_1UJZSKB8TXN2EkrqCUNw8X5b, invoice in_1UJZSLB8TXN2EkrqehT4O5xO (status paid, amount_paid 2900, billing_reason subscription_create), event evt_1UJZSNB8TXN2Ekrq9AFLUz8k. Delivery 1 → 200 {received:true}; delivery 2 (same event) → 200. The tenant's subscription record was byte-identical before, after the first and after the replay (status active, currentPeriodEnd 2026-10-25T13:46:28.000Z, pastDueSince null, cardLast4 4242). Notifications: 0 before, 0 after the first, 0 after the replay — the success handler only re-pulls the subscription and re-syncs, so there is no 'paid' notification to double in the first place. Nothing changed on the replay.",
+    "notes": "Was blocked on 'needs the Stripe CLI against a staging endpoint'. PASS for what the step asserts — but a sibling defect turned up while testing it, and it is the exact failure mode the step was written to catch, one event type over: replaying invoice.payment_FAILED (same invoice object, type flipped, genuinely signed) left the subscription state correct (past_due, pastDueSince stamped once and UNCHANGED on the replay — markPastDue is idempotent) yet wrote a SECOND 'Your ActivityOS payment failed' notification: the tenant's notification count went 1 → 2. Stripe retries deliveries, and stripeWebhook.ts keeps no processed-event-id ledger, so an operator can be told twice (bell + email). Only the money-moving path is idempotent; the notifying paths are not. Worth a backlog item: record event.id and no-op on a repeat, or dedupe notifyBilling by key+window.",
+    "evidence": "evt_1UJZSNB8TXN2Ekrq9AFLUz8k / in_1UJZSLB8TXN2EkrqehT4O5xO / sub_1UJZSKB8TXN2EkrqCUNw8X5b; scratchpad/za-stripe-retest/za_part4.out.json (p2r20, p2r20_failed)",
+    "at": "2026-09-25",
+    "agent": "ZA (stripe retest)",
+    "retest": 2
+  }
+}

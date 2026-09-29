@@ -1,10 +1,140 @@
 openapi: 3.0.3
 info:
   title: ActivityOS API
-  version: 0.32.0
+  version: 0.35.0
   description: |
     Express + Firestore backend for ActivityOS — a **multi-tenant** platform
     for children's activity providers.
+
+    ## v0.35.0 — Childcare payment references are MINTED, not typed
+
+    The parent used to type the reference they would pay under and we stored it
+    verbatim, so "Caelan" was accepted and the same string could be reused on
+    two bookings for two children (acceptance d8s2). The server now mints one
+    per **booking-and-child** at checkout, and that is the only string a family
+    is ever asked to quote.
+
+    - **Format** `CC-TTT-SSSS-KX` — `CC` literal, 3 symbols of
+      `sha256(tenantId)`, the booking's own number in base 32 (4 symbols,
+      widening beyond 1,048,575), the child's slot on the booking, and a Luhn
+      mod-32 **check symbol**. Alphabet is Crockford base 32 (0-9 A-Z without
+      I, L, O, U); reading one back in folds I/l/L → 1 and O/o → 0 and ignores
+      case and separators, and every other single-symbol slip is *detected* by
+      the check symbol. Validation is arithmetic — offline, no lookup.
+    - **Uniqueness** is structural: within a tenant the reference is an
+      injective function of (booking number, child slot), and the booking
+      number comes from `tenants/{id}.nextBid`, bumped inside the transaction
+      that writes the bookings. Two children on one booking differ in the slot
+      symbol; two bookings differ in the serial. Across tenants two providers
+      can share the 3-symbol tenant discriminator and so mint one string — as
+      booking numbers themselves already collide across tenants — and that is
+      harmless: a reference is only ever resolved against one tenant's own
+      bookings and one tenant's own bank account.
+    - **On the booking** `childcare.paymentReference` (single-child bookings),
+      `childcare.refs[] = {child, childId, slot, paymentReference,
+      bookerReference, scheme, amount}` (one row per child), `childcare.refScheme`
+      ("cc1"), and `childcare.reference` = ours. Written once, at creation
+      (`POST /api/my/bookings` and the operator's `POST /api/bookings`), and
+      never rewritten — the family has already been given it.
+    - **The parent's own reference is kept, separately.** What they type at
+      checkout (`items[].paymentRef` — their HMRC / voucher ACCOUNT reference)
+      lands on `childcare.bookerReference` (and per child in `refs[]`), and the
+      flat `paymentRef`/`payRefs` fields are unchanged. It is context for a
+      human, never the thing we ask them to quote:
+      `PUT /api/bookings/{ref}/payment-ref` now corrects *that* field, and the
+      email it sends quotes OUR reference when one exists.
+    - **Reconciliation** decorates rather than keys. Every projection carries
+      `paymentReference` (ours), `bookerReference` (theirs) and
+      `referenceStrength` ("minted" | "typed" | "none"); `referenceProblem` is
+      null for a minted booking (nothing to chase) and unchanged otherwise;
+      `summary.mintedReference` / `summary.typedReferenceOnly` say how much of
+      the ledger still leans on hand-typed strings. The bank-statement tick
+      still **keys on nothing** — an optional `statementRef` is scored
+      (strong = ours, hint = theirs, none) into the note and the response, and
+      never gates the tick.
+    - **Existing bookings are untouched** (no migration): no `childcare.refs`,
+      so `paymentReference` is null, `referenceStrength` is "typed" (or "none"),
+      the reference column keeps showing whatever the parent typed, and
+      `referenceProblem` keeps flagging it. Nothing is minted retroactively — a
+      reference the family was never told would be a lie on the screen.
+
+    ## v0.34.0 — Subscription history (HQ churn stops rewriting itself)
+
+    A tenant's `subscription` record is CURRENT STATE — it is overwritten on
+    every transition, and reactivating clears `canceledAt`. HQ's churn numbers
+    were derived from it, so last quarter's chart changed whenever a provider
+    came back. Every lifecycle transition is now **appended** to a new
+    collection and never touched again:
+
+    - **`subscriptionEvents`** (append-only, no route writes to it):
+      `{tenantId, type: trial_started|started|canceling|canceled|reactivated,
+      state, at, month, seq, plan, band, cadence, mrr, subscriptionId,
+      source}`. Written by `lib/billing.ts syncFromStripe` — i.e. from the
+      Stripe webhook, the subscription routes and the sync sweep, whichever
+      notices first — plus the record-only (no Stripe keys) paths in
+      `/api/subscription`. A repeat is refused twice over: no row is appended
+      unless the tenant's newest event has a different `state`, and the doc id
+      is deterministic (`{tenantId}__{seq}__{type}`, `create`-only), so a
+      replayed webhook or a sweep can never add a second row for the same
+      transition.
+    - **`GET /api/platform/churn?months=6`** (platform role only) →
+      `{months: [{month, label, base, canceled, pct}]}`, oldest first,
+      computed from those events. A cancellation counts in the month **notice
+      was given** (`canceling`), not the month the term ran out, so a
+      `cancel_at_period_end` provider is visible immediately; `base` is who was
+      on the books when the month opened, replayed from the log.
+    - **`tenants/{id}.createdAt`** is guaranteed: set at creation (it always
+      was) and backfilled on the tenants that predate it; the churn aggregate
+      additionally falls back to the document's own create time, so a missing
+      value can never land in every month's denominator.
+
+    ## v0.33.0 — Milestones (head-office template + per-franchise progress)
+
+    Milestones — the phased operational roadmap head office writes and every
+    franchise works through — had **no server storage at all**. The template
+    lived in the head office's browser (`localStorage aos.milestones.template.v1`)
+    and a franchise's progress in the franchise's browser
+    (`aos.milestones.progress.v1`), so the two never met: a franchisor could not
+    see how any franchise was doing (the HO screen rendered invented sample
+    progress), a franchise lost everything on a new device, and because each
+    browser seeded its own random step ids the two halves could not have been
+    reconciled even by hand. (Acceptance p2-f13.)
+
+    Two collections, mirroring the `libraries` convention:
+    `milestones/{tenantId}` (the template) and `milestoneProgress/{tenantId}` /
+    `milestoneProgress/{tenantId}__fr__{franchiseId}` (one roadmap's progress).
+    Step/action **ids are stable slugs** seeded server-side (`lib/milestonePlan.ts`)
+    so head office's plan and every franchise's progress key off the same ids —
+    renaming or re-ordering a phase never wipes progress.
+    - **`GET /api/milestones`** → `{template: {phases, version, updatedAt,
+      updatedBy}, progress: {season, steps, extras, history, updatedAt},
+      canEditTemplate, canEditProgress, rollup}`. The template is seeded from
+      the default 5-phase plan on first read. `?franchiseId=<id>` lets head
+      office drill into one franchise (`__ho__`/absent = its own roadmap).
+    - **`PUT /api/milestones/template`** `{phases}` — **company / freelancer
+      only**; a franchise gets 403 (its template edits used to land in its own
+      localStorage and look published). Bumps `version`. Duplicate task ids are
+      rejected: progress is keyed by task id.
+    - **`PUT /api/milestones/progress`** `{season?, steps, extras?}` — saves the
+      CALLER's own progress. `extras` is a franchise's own extra checklist items
+      under a head-office task (`{[taskId]: [{id,title}]}`) — they belong here,
+      not in head office's template. Head office may **read** a franchise's
+      progress but never write it (403).
+    - **`POST /api/milestones/season`** `{season}` — "Start a new season". The
+      reset is a server-side rule: snapshot the finished season into `history`
+      (capped at 12), then clear the **recurring** phases only — a one-time
+      launch phase stays done, and the planned dates survive (p2-l11).
+    - **`GET /api/milestones/franchises`** — **company only**: one row per
+      franchise (plus head office's own) with `season`, `overall`,
+      `currentPhase`, `stepsDone/stepsTotal`, per-phase `pct` and `updatedAt`.
+      The network roll-up a franchisor never had.
+    - Scope: company = template RW + every franchise read + own progress RW;
+      freelancer = template + own progress (no network); franchise = template
+      read-only, its OWN progress RW, a foreign `?franchiseId=` **refused**, not
+      widened. **staff / parent / platform are refused outright** — Milestones is
+      an owner's screen in both portals.
+    - Realtime: collections `milestones` and `milestoneProgress` (a franchise's
+      stream is narrowed to its own progress doc).
 
     ## v0.32.0 — Per-provider sending identity (interim white-label)
 
@@ -248,6 +378,9 @@ info:
       - `POST /` — send, creating the thread if needed. Operator body
         `{parentEmail, parentName?, body}` (must be a customer → 400 if not);
         parent body `{tenantId, body}` (must have booked them → 403 if not).
+        Merge fields in an operator's text are resolved per family before the
+        message is stored/emailed (same seven tokens and neutral fallbacks as
+        bulk Email sends; `/broadcast` resolves them per RECIPIENT).
     - **`GET /api/my/providers`** — the distinct providers (tenantId + name) a
       parent has booked, powering the newsfeed labels and the "message a
       provider" picker.
@@ -753,6 +886,12 @@ tags:
     description: Reusable periods / passes / bundles library with server-side pricing
   - name: reconciliation
     description: Outstanding money matched to bookings (vouchers / TFC / bank / cash)
+  - name: tfc
+    description: >
+      Tax-Free Childcare — the parent links their HMRC account, reads its
+      balance and pays the provider from it (HMRC Payments API v1.2). Entirely
+      env-gated: with no HMRC credentials every route says "not connected" and
+      the parent falls back to paying inside HMRC and giving us the reference.
   - name: expenses
     description: The provider's outgoings (operators only)
   - name: purchasing
@@ -767,6 +906,11 @@ tags:
     description: Marketing discount codes — operator CRUD + parent validate; applied at checkout
   - name: splitfees
     description: Franchisor royalty report — franchise revenue × royalty (company accounts only)
+  - name: milestones
+    description: >
+      The operational roadmap — head office owns one template per tenant, each
+      franchise owns its own progress against it, and head office reads the
+      whole network's roll-up. Owners only (staff/parents refused).
   - name: emails
     description: Out-of-app email to families — send/dry-run + history (operators)
   - name: registers
@@ -1186,6 +1330,12 @@ paths:
     get:
       tags: [bookings]
       summary: Get one booking in the caller's scope
+      description: >
+        On a CHILDCARE booking (TFC / voucher) the response additionally carries
+        the derived `childcare` block — including the minted `paymentReference`
+        and `refs[]` (one per child: ours plus the reference the booker typed) —
+        and `childcarePayments[]`, the per-child/per-card payment records. Both
+        are money, so a staff token gets neither.
       parameters:
         - $ref: "#/components/parameters/refPath"
         - name: tenantId
@@ -1254,7 +1404,12 @@ paths:
     get:
       tags: [my]
       summary: The signed-in parent's bookings
-      description: All bookings (any provider) whose booker email matches the verified token.
+      description: >
+        All bookings (any provider) whose booker email matches the verified
+        token. A childcare booking also carries its derived `childcare` block,
+        so the family can re-read the payment reference we minted for each child
+        (`childcare.refs[].paymentReference`, or `childcare.paymentReference`
+        when one child is paying) at any time — not only on the done screen.
       responses:
         "200":
           description: The parent's bookings, newest ref first
@@ -1279,6 +1434,15 @@ paths:
         item's chosen days, then the listing's automatic discounts across
         the basket (multi-person → multi-session → early-bird; best rule of
         each kind wins). Clients send choices, never amounts.
+
+        **Childcare references.** `items[].paymentRef` is the BOOKER's own
+        account reference (their HMRC / voucher scheme reference) — captured,
+        stored on `childcare.bookerReference` (per child in `childcare.refs[]`)
+        and on the flat `paymentRef`/`payRefs` as before, and never quoted back
+        as ours. For a TFC/voucher booking the server MINTS the payment
+        reference the family must quote — one per booking-and-child — and the
+        created bookings in the 201 carry it on `childcare.paymentReference` /
+        `childcare.refs[].paymentReference`. See the v0.35.0 note above.
 
         Optional **`discountCode`** (Marketing): validated server-side and
         applied to the pass subtotal after automatic discounts; an
@@ -1443,6 +1607,181 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /api/my/tfc/config:
+    get:
+      tags: [tfc]
+      summary: Is the HMRC integration configured on this deployment?
+      description: >
+        `configured: false` means no HMRC credentials are set, and the parent
+        flow stays exactly as it was before the integration: a simulated link
+        in the browser and a manually typed payment reference. The web app
+        also has its own build-time switch (`NEXT_PUBLIC_HMRC_TFC`); this
+        route is the authority and overrides it.
+      responses:
+        "200":
+          description: Whether HMRC is wired up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { configured: { type: boolean } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/my/tfc/link/start:
+    post:
+      tags: [tfc]
+      summary: Begin linking one child's Tax-Free Childcare account
+      description: >
+        Returns the GOV.UK authorisation URL to open (plus the `state` to poll
+        with). A family that has linked before skips the hand-off entirely and
+        comes back `linked: true` immediately. The child must belong to the
+        caller. HMRC needs the parent's own 12-character TFC reference (4
+        letters + 5 digits + `TFC`) and the child's date of birth; without
+        both, the answer is `failure: "connection-failed"` and the parent pays
+        from HMRC manually.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                childId: { type: string }
+                childName: { type: string, description: "Used when no childId is known; resolved among the caller's own children" }
+                reference: { type: string, example: READ97040TFC }
+      responses:
+        "200":
+          description: Either a hand-off to start, or a link that is already done
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured: { type: boolean }
+                  url: { type: string, description: "GOV.UK authorise URL — open it, then poll /link/status" }
+                  state: { type: string }
+                  linked: { type: boolean }
+                  reference: { type: string }
+                  childFullName: { type: string, description: "The child's name as HMRC holds it — the confirmation the link worked" }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/my/tfc/link/status:
+    get:
+      tags: [tfc]
+      summary: Has the GOV.UK hand-off finished?
+      parameters:
+        - in: query
+          name: state
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Pending, linked, or failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  done: { type: boolean }
+                  linked: { type: boolean }
+                  reference: { type: string, nullable: true }
+                  childFullName: { type: string, nullable: true }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/my/tfc/balance:
+    post:
+      tags: [tfc]
+      summary: The live TFC balance for one linked child
+      description: >
+        `amount` is HMRC's `cleared_funds` in pounds — what may actually be
+        spent today (a payment may not exceed it). Anything other than a clean
+        read answers `ok: false`, and the checkout shows no balance line at all
+        rather than a figure that isn't the family's.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference]
+              properties: { reference: { type: string, example: READ97040TFC } }
+      responses:
+        "200":
+          description: The balance, or the failure that stopped it
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  amount: { type: number, description: "Cleared funds, in pounds" }
+                  status: { type: string, enum: [ACTIVE, INACTIVE] }
+                  totalBalance: { type: number }
+                  paidInByYou: { type: number }
+                  governmentTopUp: { type: number }
+                  topUpAllowance: { type: number }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/my/tfc/pay:
+    post:
+      tags: [tfc]
+      summary: Ask HMRC to pay the provider from the child's TFC account
+      description: >
+        The provider identity HMRC pays (`ccp_reg_reference` / `ccp_postcode`)
+        comes from the tenant's own `settings.childcare`, never from the
+        browser. Every attempt is recorded. Never a 5xx for a documented
+        failure — the failure comes back in the body so the checkout can show
+        the matching screen, and every one of them falls back to paying inside
+        HMRC and giving us the reference.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reference, amount]
+              properties:
+                reference: { type: string, example: READ97040TFC }
+                amount: { type: number, description: "Pounds; converted to whole pence on the wire" }
+                tenantId: { type: string }
+      responses:
+        "200":
+          description: The payment request's outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  paymentReference: { type: string }
+                  estimatedPaymentDate: { type: string, format: date }
+                  failure: { $ref: "#/components/schemas/TfcFailure" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/tfc/callback:
+    get:
+      tags: [tfc]
+      summary: HMRC's OAuth redirect after the parent signs in at GOV.UK
+      description: >
+        PUBLIC — it is a browser navigation from HMRC with no Authorization
+        header. The unguessable, single-use, 15-minute `state` is what ties it
+        to the parent and child who started the hand-off. Responds with a small
+        HTML page that tells the opener and closes itself.
+      security: []
+      parameters:
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: state, required: true, schema: { type: string } }
+        - { in: query, name: error, schema: { type: string }, description: "OAuth error name when the parent declined" }
+      responses:
+        "200": { description: An HTML page — linked, or the reason it wasn't }
+        "400": { description: The state is unknown, used or expired (HTML) }
+        "503": { description: HMRC isn't configured on this deployment (HTML) }
 
   /api/my/children:
     get:
@@ -1904,8 +2243,77 @@ paths:
       summary: Outstanding money + a by-method summary
       parameters: [{ name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }]
       responses:
-        "200": { description: "{items[], summary}" }
+        "200": { description: "{items[], summary}. Each item also carries the childcare fields: `childcareRoute` (\"Tax-Free Childcare\" | \"Childcare vouchers\" | null), `childcare` (the booking's childcare block, incl. the minted `paymentReference`/`refs[]`), `bankMatched`, `referenceProblem`, plus `paymentReference` (OURS — minted, null on a pre-minting booking), `bookerReference` (THEIRS — hand-typed, a hint only) and `referenceStrength` (\"minted\"|\"typed\"|\"none\"); `summary.childcare` is the unfiltered roll-up." }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/reconciliation/childcare:
+    get:
+      tags: [reconciliation]
+      summary: Childcare tick-off table + analytics over a date range (docs/tfc-build-spec.md §B3/§B4)
+      description: >
+        Manager/owner only; a franchise sees only its own bookings. Returns the
+        provider identity a parent must add in their HMRC account
+        (`settings` = settings.childcare, blanks filled from providerName /
+        voucherProviders), the tick-off `rows` in the spec's column order, the
+        gross-bookings `series` for the line chart, `byScheme`, and `summary`.
+        The summary keeps the two axes apart: `confirmed`/`unconfirmed` is the
+        BOOKER's promise, `reconciled`/`unreconciled` is OUR bank match.
+        A junk or missing reference is flagged (`referenceProblem`) and never
+        filters a row out.
+        Each row carries both references: `paymentReference` (OURS — minted per
+        booking-and-child, check-summed, the string to look for on the
+        statement; null on a booking taken before minting existed),
+        `bookerReference` (THEIRS — the account reference they typed, a hint
+        only), `references[]` (one `{child, childId, paymentReference,
+        bookerReference, amount}` per learner, because siblings pay from
+        separate accounts), `referenceStrength` and `referenceLooksValid`.
+        `summary.mintedReference` / `summary.typedReferenceOnly` count how much
+        of the table is ours versus still hand-typed.
+      parameters:
+        - { name: from, in: query, required: false, description: "Inclusive ISO day, on the booking's date", schema: { type: string } }
+        - { name: to, in: query, required: false, schema: { type: string } }
+        - { name: route, in: query, required: false, schema: { type: string, enum: ["Tax-Free Childcare", "Childcare vouchers"] } }
+        - { name: scheme, in: query, required: false, description: One voucher company, schema: { type: string } }
+        - { name: tenantId, in: query, required: false, description: Platform only, schema: { type: string } }
+      responses:
+        "200": { description: "{range, settings, settingsComplete, rows[], series[], byScheme, summary}" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/reconciliation/{ref}/bank-match:
+    post:
+      tags: [reconciliation]
+      summary: Tick a childcare booking off against the bank statement
+      description: >
+        The manual tick from the spec's last column. NOT the same as
+        POST /api/bookings/{ref}/reconcile — that one says "the money is in"
+        and settles the booking (Paid, family emailed); this one records only
+        that an operator found the line on their statement. It moves no money,
+        sends nothing to the family, and is reversible with `matched: false`.
+        Matching keys on nothing: the parent's own reference may be junk, so
+        an optional `statementRef` is stored as a note rather than used to
+        match. That still holds now the server mints a reference — a
+        `statementRef` is SCORED ("strong" = the reference we minted for this
+        booking/child, "hint" = only what the booker typed, "none") into the
+        note and the `match` field of the response, and the tick happens either
+        way. Writes `childcare.reconciledAt` + `childcare.reconciledBy`,
+        preserves the minted `refs[]`, and appends an attributed line to
+        `reconNotes`.
+      parameters: [{ name: ref, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                matched: { type: boolean, default: true }
+                statementRef: { type: string, description: The reference on YOUR bank line (optional, never used to match) }
+                note: { type: string }
+      responses:
+        "200": { description: "{ref, childcare, bankMatched, reconNotes, match: {strength: strong|hint|none, on: minted|booker|null, child, reference}}" }
+        "400": { description: Not a childcare booking }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /api/bookings/{ref}/record-payment:
     post:
@@ -2335,6 +2743,129 @@ paths:
       responses:
         "200": { description: "{settings}" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones:
+    get:
+      tags: [milestones]
+      summary: The tenant's milestones template + one roadmap's progress
+      description: >
+        The template is seeded from the default 5-phase plan on first read.
+        Head office may name a franchise with `?franchiseId=`; a franchise
+        always gets its own roadmap and a foreign id is refused (403).
+      parameters:
+        - { name: franchiseId, in: query, required: false, description: "Head office only — a franchiseId, or `__ho__`/absent for its own roadmap", schema: { type: string } }
+      responses:
+        "200":
+          description: "{template, progress, canEditTemplate, canEditProgress, rollup}"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  template:
+                    type: object
+                    properties:
+                      phases: { type: array, items: { $ref: "#/components/schemas/MilestonePhase" } }
+                      version: { type: integer, description: Bumped on every template save }
+                      updatedAt: { type: string, nullable: true }
+                      updatedBy: { type: string, nullable: true }
+                  progress: { $ref: "#/components/schemas/MilestoneProgress" }
+                  canEditTemplate: { type: boolean }
+                  canEditProgress: { type: boolean }
+                  rollup: { $ref: "#/components/schemas/MilestoneRollup" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: No such franchise in this network }
+
+  /api/milestones/template:
+    put:
+      tags: [milestones]
+      summary: Rewrite the plan every franchise follows (company / freelancer)
+      description: >
+        A franchise is refused — the template is head office's. Task ids must be
+        unique across the whole plan: progress is keyed by them, so KEEP the
+        existing ids when renaming or re-ordering (a new id loses that task's
+        progress for every franchise).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phases]
+              properties:
+                phases: { type: array, maxItems: 40, items: { $ref: "#/components/schemas/MilestonePhase" } }
+      responses:
+        "200": { description: "The stored template {phases, version, updatedAt, updatedBy}" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/progress:
+    put:
+      tags: [milestones]
+      summary: Save my own progress (head office, a solo operator, or a franchise)
+      description: >
+        Saves the CALLER's roadmap. Head office can read a franchise's progress
+        but never write it (403) — it is the franchise's own record.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MilestoneProgressWrite" }
+      responses:
+        "200": { description: The stored progress doc }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/season:
+    post:
+      tags: [milestones]
+      summary: Start a new season — snapshot, then reset the recurring phases
+      description: >
+        Server-side rule (not the browser's): the finished season is pushed onto
+        `history` (season, overall %, date — 12 kept) and every task in a
+        `recurring` phase is cleared (pct 0, its actions back to To do, taskId
+        dropped). One-time phases (launch setup, starting clubs) stay done, and
+        the planned start/end dates survive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [season]
+              properties:
+                season: { type: string, maxLength: 120, example: Summer 2027 }
+      responses:
+        "200": { description: The reset progress doc (with the new `history` head) }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/milestones/franchises:
+    get:
+      tags: [milestones]
+      summary: How the whole network is doing (company only)
+      responses:
+        "200":
+          description: "{version, franchises[]} — one row per franchise plus head office's own"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: integer }
+                  franchises:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/MilestoneRollup"
+                        - type: object
+                          properties:
+                            franchiseId: { type: string, nullable: true, description: null = head office's own roadmap }
+                            name: { type: string }
+                            season: { type: string }
+                            started: { type: boolean, description: false = this franchise has never saved any progress }
+                            updatedAt: { type: string, nullable: true }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /api/discounts:
@@ -2788,6 +3319,16 @@ paths:
         Operator body `{parentEmail, parentName?, body}` (the family must be a
         customer, else 400). Parent body `{tenantId, body}` (must have booked
         that provider, else 403).
+
+
+        **Merge fields** — an operator's `body`/`subject` is resolved before it
+        is stored or emailed: all seven tokens
+        (`{ParentName} {ChildName} {ProviderName} {ListingName} {SessionDate}
+        {VenueName} {BookingRef}`) fill from that family's most relevant booking
+        (next upcoming, else latest past), exactly as bulk Email sends and
+        `POST /api/messages/broadcast` do. Anything with no data behind it
+        degrades to neutral prose (`{BookingRef}` to an empty string) — a family
+        never receives a literal `{Token}`. A parent's message is never merged.
       requestBody:
         required: true
         content:
@@ -4249,6 +4790,49 @@ paths:
                       byRole:
                         type: object
                         additionalProperties: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /api/platform/churn:
+    get:
+      tags: [tenants]
+      summary: Churn per month from the append-only subscription history (platform role only)
+      description: |
+        Oldest month first. Computed from `subscriptionEvents` (append-only,
+        immutable), NOT from each tenant's current `subscription` doc — a
+        provider who cancels and later reactivates leaves both events behind,
+        so a month's number never changes once the month is over.
+
+        A cancellation is counted in the month **notice was given** (the
+        `canceling` event); the `canceled` event that follows it is the term
+        expiring and is not counted twice. A subscription that ends outright
+        with no notice counts at its `canceled`. `base` is the providers who
+        were on the books when the month opened, replayed from the log
+        (pre-billing tenants with no `subscription` field count from their
+        signup date; a signup that never chose a plan does not).
+      parameters:
+        - name: months
+          in: query
+          description: How many calendar months to return, ending with the current one (1–36, default 6).
+          schema: { type: integer, minimum: 1, maximum: 36, default: 6 }
+      responses:
+        "200":
+          description: One row per month, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  months:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month: { type: string, description: "`YYYY-MM` (UTC)" }
+                        label: { type: string, description: Short month name, e.g. `Sep` }
+                        base: { type: integer, description: Providers on the books when the month opened }
+                        canceled: { type: integer, description: Providers who gave notice (or ended outright) that month }
+                        pct: { type: number, description: canceled ÷ base as a percentage }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
@@ -7074,6 +7658,132 @@ components:
     Role:
       type: string
       enum: [platform, company, franchise, freelancer, staff, parent]
+
+    MilestoneAction:
+      type: object
+      description: A checklist item inside a task. Head office defines these in the template; a franchise's own extras live in `progress.extras`.
+      properties:
+        id: { type: string, maxLength: 80 }
+        title: { type: string, maxLength: 240 }
+
+    MilestoneStep:
+      type: object
+      description: A task inside a milestone. Its `id` is the progress key — never re-generate it.
+      required: [id, title]
+      properties:
+        id: { type: string, maxLength: 80, example: before-kit }
+        title: { type: string, maxLength: 240 }
+        detail: { type: string, maxLength: 2000 }
+        links:
+          type: array
+          maxItems: 12
+          description: Deep links into the app (`/franchise/<view>`).
+          items:
+            type: object
+            properties:
+              label: { type: string, maxLength: 80 }
+              href: { type: string, maxLength: 400 }
+        actions: { type: array, maxItems: 60, items: { $ref: "#/components/schemas/MilestoneAction" } }
+
+    MilestonePhase:
+      type: object
+      description: A milestone. `recurring` phases are the ones a new season resets.
+      required: [id, title, when, recurring, steps]
+      properties:
+        id: { type: string, maxLength: 80, example: before }
+        title: { type: string, maxLength: 160 }
+        subtitle: { type: string, maxLength: 400 }
+        when: { type: string, enum: [setup, before, during, after, clubs] }
+        recurring: { type: boolean }
+        icon: { type: string, maxLength: 16 }
+        steps: { type: array, maxItems: 80, items: { $ref: "#/components/schemas/MilestoneStep" } }
+
+    MilestoneStepState:
+      type: object
+      description: One task's progress — planned dates plus completion. When the task has actions, its effective % is rolled up from them and `pct` is ignored.
+      required: [pct]
+      properties:
+        start: { type: string, description: "YYYY-MM-DD" }
+        end: { type: string, description: "YYYY-MM-DD" }
+        pct: { type: number, minimum: 0, maximum: 100 }
+        actions:
+          type: object
+          description: Per-action state, keyed by action id.
+          additionalProperties:
+            type: object
+            properties:
+              status: { type: string, enum: [todo, prog, done] }
+              done: { type: boolean, description: Legacy — treated as status done }
+              priority: { type: string, enum: [low, med, high, urgent] }
+              note: { type: string, maxLength: 2000 }
+              assignee: { type: string, maxLength: 160 }
+              due: { type: string, description: "YYYY-MM-DD" }
+              taskId: { type: string, description: The Task Manager task this action was pushed to }
+
+    MilestoneProgressWrite:
+      type: object
+      required: [steps]
+      properties:
+        season: { type: string, maxLength: 120 }
+        steps:
+          type: object
+          description: Progress keyed by TASK id (template step id).
+          additionalProperties: { $ref: "#/components/schemas/MilestoneStepState" }
+        extras:
+          type: object
+          description: A franchise's own extra actions under a head-office task, keyed by task id.
+          additionalProperties: { type: array, maxItems: 60, items: { $ref: "#/components/schemas/MilestoneAction" } }
+
+    MilestoneProgress:
+      allOf:
+        - $ref: "#/components/schemas/MilestoneProgressWrite"
+        - type: object
+          properties:
+            tenantId: { type: string }
+            franchiseId: { type: string, nullable: true, description: null = head office's / a solo operator's own roadmap }
+            history:
+              type: array
+              description: Past seasons, newest first (12 kept), pushed by POST /api/milestones/season.
+              items:
+                type: object
+                properties:
+                  season: { type: string }
+                  overall: { type: integer }
+                  at: { type: string, description: "YYYY-MM-DD" }
+            updatedAt: { type: string, nullable: true }
+            updatedBy: { type: string, nullable: true }
+
+    MilestoneRollup:
+      type: object
+      description: Where a roadmap has got to — computed server-side from the template + that roadmap's progress, so head office and the franchise always read the same numbers.
+      properties:
+        overall: { type: integer, description: "% across every task" }
+        stepsTotal: { type: integer }
+        stepsDone: { type: integer }
+        currentPhase: { type: string, nullable: true, description: The first milestone that isn't finished }
+        phases:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              when: { type: string, enum: [setup, before, during, after, clubs] }
+              recurring: { type: boolean }
+              pct: { type: integer }
+              steps: { type: integer }
+              done: { type: integer }
+
+    TfcFailure:
+      type: string
+      description: >
+        The five Tax-Free Childcare failure states the checkout has a designed
+        screen for (features/listings/tfc.ts). HMRC's documented error codes
+        map onto these in server/src/lib/tfc.ts: E0033 → insufficient-funds,
+        E0027 → provider-not-added, E0030 → not-connected, ETFC2/E0401/401 →
+        connection-expired, everything else → connection-failed. All five end
+        at the same manual fallback.
+      enum: [not-connected, insufficient-funds, provider-not-added, connection-failed, connection-expired]
 
     Error:
       type: object

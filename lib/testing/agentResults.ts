@@ -66,6 +66,21 @@ import X from "./agent-results/plan2-agent-X.json";
 // 62MB unpaged) — supersedes plan2-agent-O's blocked reading; plus e2e suite
 // fixes (smoke-test cold-compile warm-up, signup consent-checkbox) — 17 Sept 2026.
 import Y from "./agent-results/plan2-agent-Y.json";
+// 25 Sept 2026 — re-test of everything whose verdict was fail/blocked only
+// because mail was off (Z), Stripe wasn't configured or had no webhook (ZA), or
+// nothing was deployed (ZB). Imported last, so these supersede the earlier
+// readings for the same step ids.
+import Z from "./agent-results/plan2-agent-Z.json";
+import ZA from "./agent-results/plan2-agent-ZA.json";
+import ZB from "./agent-results/plan2-agent-ZB.json";
+// Three entries whose verdict changed after the retest agents wrote them,
+// because the fix landed later the same day — re-verified, not assumed.
+import ZC from "./agent-results/plan2-agent-ZC.json";
+// 26 Sept — steps closed by the day's fixes, each re-verified against the real
+// routes. d8s2 stays a fail on purpose: the backend mints the reference, but
+// the step is about what the parent is GIVEN, and the checkout does not show
+// it yet.
+import ZD from "./agent-results/plan2-agent-ZD.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -88,4 +103,6 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(Q as Record<string, AgentResult>), ...(R as Record<string, AgentResult>), ...(S as Record<string, AgentResult>),
   ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
   ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
+  ...(Z as Record<string, AgentResult>), ...(ZA as Record<string, AgentResult>), ...(ZB as Record<string, AgentResult>),
+  ...(ZC as Record<string, AgentResult>), ...(ZD as Record<string, AgentResult>),
 };

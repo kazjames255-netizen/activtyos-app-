@@ -34,7 +34,7 @@ function signedUnsubToken(tenantId: string, email: string): string {
 // merge path is exercised by sending a tokened body and asserting delivery.
 
 interface DryRun { dryRun: boolean; recipientCount: number; sample: string[] }
-interface HistoryDoc { id: string; status: string; delivered: number; openedBy?: string[]; recipientCount: number; scheduledId?: string; subject: string; fromName?: string; replyTo?: string }
+interface HistoryDoc { id: string; status: string; delivered: number; suppressed?: number; failed?: number; openedBy?: string[]; recipientCount: number; scheduledId?: string; subject: string; fromName?: string; replyTo?: string }
 interface Segment { id: string; name: string; emails: string[] }
 interface SenderIdentity { fromName: string; fromAddress: string; replyTo: string | null }
 interface MsgSettings { notifyEmail: string; accountEmail: string }
@@ -167,7 +167,12 @@ test.describe("email compliance & send engine (API)", () => {
       return list.find((h) => h.id === sent.id)?.status;
     }, { timeout: 30_000 }).toBe("sent");
     const doc = (await apiFetch<HistoryDoc[]>("/api/emails", token)).find((h) => h.id === sent.id)!;
-    expect(doc.delivered).toBe(1);
+    // The history distinguishes sent / suppressed / failed (backlog b33): a dev
+    // machine with MAIL_LIVE off suppresses the send rather than delivering it,
+    // and must NOT report that as a delivery. Either way the message reached the
+    // transport decision point for exactly one recipient, and nothing failed.
+    expect((doc.delivered ?? 0) + (doc.suppressed ?? 0)).toBe(1);
+    expect(doc.failed ?? 0).toBe(0);
 
     // The recipient "opens" it: their client fetches the tracking pixel.
     const gif = await fetch(`${API_URL}/api/emails/open/${sent.id}?r=${encodeURIComponent(target)}`);

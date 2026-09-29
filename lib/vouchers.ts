@@ -51,7 +51,11 @@ export interface VoucherWindow {
 export const offerVouchers = (mode: WhenTooClose, w: VoucherWindow): boolean =>
   !w.tooClose || mode !== "hide";
 
-const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+// The DAY these instants fall on, read in UK time. Taking the UTC day instead
+// named the day before all through British Summer Time's 00:00–01:00 — a
+// "send your voucher by" date a day earlier than the provider's rule allows.
+const ukDayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+const iso = (ms: number) => ukDayFmt.format(new Date(ms));
 
 /**
  * @param firstSessionIso the earliest day they're booked in, if known

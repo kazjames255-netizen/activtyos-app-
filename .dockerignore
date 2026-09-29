@@ -1,0 +1,12 @@
+# Keep the build context small and secrets out of the image.
+node_modules
+server/node_modules
+.next
+.git
+e2e/.auth
+test-results
+playwright-report
+.env
+.env.local
+server/.env
+server/serviceAccountKey.json

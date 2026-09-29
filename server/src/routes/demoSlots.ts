@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { addDays, ukToday } from "../lib/ukDate";
 
 // "Book a demo" call slots — a weekly recurring template HQ manages (turn a
 // day/time on or off, add more), computed out into real bookable instances
@@ -51,8 +52,6 @@ function ukWallTimeToUtc(dateStr: string, timeStr: string): Date {
   return new Date(guess.getTime() + (guess.getTime() - ukAsUtc.getTime()));
 }
 
-const isoDate = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-
 // GET /api/demo-slots — public. Every open instance over the next 7 days
 // from active templates, minus blacked-out dates and ones a lead already holds.
 demoSlotsPublic.get("/", async (_req, res) => {
@@ -70,8 +69,7 @@ demoSlotsPublic.get("/", async (_req, res) => {
   const minLeadMs = 2 * 60 * 60 * 1000; // at least 2 hours' notice
   const candidates: { iso: string; durationMins: number }[] = [];
   for (let i = 0; i < 8; i++) {
-    const day = new Date(now.getTime() + i * 86_400_000);
-    const dateStr = isoDate(day);
+    const dateStr = addDays(ukToday(now), i);
     if (isBlacked(dateStr)) continue;
     const weekday = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
     for (const t of templates) {

@@ -1,5 +1,6 @@
 import { db } from "../firebase";
 import { loadSettings } from "./tenantLibrary";
+import { ukToday } from "./ukDate";
 
 // Settings → Staff & workforce, enforced. The certifications register
 // (Documents & compliance) is matched by STAFF NAME — certs carry no staff
@@ -63,7 +64,7 @@ export async function staffRosterBlock(tenantId: string, staffName: string, fran
   // Nothing in the register at all = the tenant isn't tracking compliance
   // here; the policy only bites once they've started recording certificates.
   if (snap.empty) return null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const mine = snap.docs
     .map((d) => d.data() as { staffName?: string; type?: string; expiry?: string })
     .filter((c) => (c.staffName ?? "").trim().toLowerCase() === name);

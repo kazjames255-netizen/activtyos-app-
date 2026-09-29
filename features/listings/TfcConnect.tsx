@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { linkAccount, HMRC_CONNECTED } from "./tfc";
+import { linkAccount, HMRC_CONNECTED, TFC_FAILURE_COPY, type TfcFailure } from "./tfc";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The GOV.UK hand-off, as designed: our "connect" screen → HMRC's consent
@@ -21,7 +21,7 @@ import { linkAccount, HMRC_CONNECTED } from "./tfc";
 // screen becomes the real thing with no change here.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Stage = "consent" | "handoff" | "done";
+type Stage = "consent" | "handoff" | "done" | "failed";
 
 // GOV.UK's own palette, hardcoded on purpose. This dialog stands in for HMRC's
 // screen, so it must look the same wherever it opens — and taking text colours
@@ -36,14 +36,19 @@ const GOV = {
   black: "#0b0c0c",
 };
 
-export function TfcConnect({ childName, providerName, onLinked, onClose }: {
+export function TfcConnect({ childName, providerName, reference, onLinked, onClose }: {
   childName: string;
   providerName: string;
+  /** The reference this parent has typed in the row, if any. HMRC needs it
+   *  (with the child's date of birth) to link — the row is the only place it
+   *  exists before the child record is saved. Ignored by the simulated link. */
+  reference?: string;
   onLinked: (reference: string) => void;
   onClose: () => void;
 }) {
   const [stage, setStage] = useState<Stage>("consent");
   const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<TfcFailure>("connection-failed");
   // Rendered into <body>, not where it sits in the tree. The checkout panel is
   // nested inside the booking flow, and any ancestor with overflow, a transform
   // or its own stacking context traps a position:fixed child — the dialog then
@@ -54,11 +59,16 @@ export function TfcConnect({ childName, providerName, onLinked, onClose }: {
   async function handOff() {
     setStage("handoff");
     setBusy(true);
-    // Real flow: window.location = <GOV.UK authorise URL>. Simulated: pause so
-    // the hand-off reads as a hand-off, then come back linked.
-    const r = await linkAccount(childName);
+    // Real flow: linkAccount opens GOV.UK in its own window and waits for the
+    // callback. Simulated (no HMRC credentials): it comes straight back linked.
+    const r = await linkAccount(childName, reference);
     setBusy(false);
-    if (r.linked && r.reference) { setStage("done"); onLinked(r.reference); }
+    if (r.linked && r.reference) { setStage("done"); onLinked(r.reference); return; }
+    // A link that didn't complete has its own designed screen, and every one
+    // of them ends at the same place: pay inside HMRC and give us the
+    // reference. Without this the dialog sat on "Signing you in…" forever.
+    setFailure(r.failure ?? "connection-failed");
+    setStage("failed");
   }
 
   if (!mounted) return null;
@@ -118,6 +128,29 @@ export function TfcConnect({ childName, providerName, onLinked, onClose }: {
             <div className="mx-auto mt-2 max-w-[380px] text-[11.5px] leading-[1.5]" style={{ color: GOV.muted }}>
               You&rsquo;ll enter your Government Gateway user ID and password on GOV.UK — never here.
               {!HMRC_CONNECTED && " (The live connection to HMRC isn’t switched on yet, so we’re completing this step for you.)"}
+            </div>
+          </div>
+        )}
+
+        {stage === "failed" && (
+          <div className="py-5 text-center">
+            <div className="text-[15px] font-extrabold" style={{ color: "#d4351c" }}>
+              {TFC_FAILURE_COPY[failure].title}
+            </div>
+            <div className="mx-auto mt-1.5 max-w-[380px] text-[12px] leading-[1.5]" style={{ color: GOV.muted }}>
+              {TFC_FAILURE_COPY[failure].detail}
+            </div>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => setStage("consent")}
+                className="rounded px-4 py-2 text-[13px] font-extrabold"
+                style={{ background: GOV.green, color: "#fff" }}>
+                Try again
+              </button>
+              <button type="button" onClick={onClose}
+                className="rounded border px-3 py-2 text-[12.5px] font-bold"
+                style={{ borderColor: GOV.line, color: GOV.ink }}>
+                Pay from HMRC instead
+              </button>
             </div>
           </div>
         )}

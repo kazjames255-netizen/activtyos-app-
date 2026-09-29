@@ -4,7 +4,7 @@ import { managerScope } from "../middleware/role";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import type { Booking } from "../../../features/bookings/types";
-import { ukToday } from "../lib/ukDate";
+import { addDays, ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Growth — the "Marketing strategies" page reimagined as a data-driven engine.
@@ -62,7 +62,7 @@ growth.get("/", async (req, res) => {
 
   const now = Date.now();
   const today = ukToday(new Date(now));
-  const in30 = new Date(now + 30 * DAY).toISOString().slice(0, 10);
+  const in30 = addDays(today, 30);
 
   // Operator-tunable segment thresholds (passed from the page, with sensible
   // defaults + clamps). "New" = first booked within N days · "Lapsed" = no

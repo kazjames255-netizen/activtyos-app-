@@ -1,0 +1,32 @@
+{
+ "p2-m3": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 25 Sept after the fix. A card payment settled through lib/settlePayment.ts (the path BOTH the browser callback and the Stripe webhook use) now produces exactly one 'Payment received' notification addressed to the payer, plus the rich customer email (observed as SUPPRESSED in dev because MAIL_LIVE is off there — the same send is delivered in production, where mail is live). Replaying the settle returns \"already\" and sends NO second notice. 4/4 checks.",
+  "notes": "The gap this step found was real and is closed: emailPaymentReceived + the bell were only ever called from bookings.ts's manual 'record payment', so a family paying by card was told nothing at all. The notice is sent after the money commits and only by the claiming caller, so a webhook retry or a late browser confirm cannot double-send, and a mail failure cannot undo settled money.",
+  "evidence": "server/src/verifyPaidNotice.mts (throwaway, deleted); server/src/lib/settlePayment.ts settlePaymentRecord()",
+  "at": "2026-09-25",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 4
+ },
+ "p2-p9": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 25 Sept after the fix. Real staff account, real ticket, SSE stream open and delivering; the account was then switched off (users.disabled + deactivatedAt, refresh tokens revoked) and the server CLOSED the stream within one 25s heartbeat (~7 frames in), where before it kept delivering collection nudges at +23s and +83s. New connections were already refused correctly. 2/2 checks.",
+  "notes": "routes/events.ts checked disabled/deactivatedAt only at connect; the heartbeat now re-reads the user first and ends the response if the account is off or gone. One read per connected account per 25s; a transient read failure never drops a good stream.",
+  "evidence": "server/src/verifySse.mts (throwaway, deleted); server/src/routes/events.ts",
+  "at": "2026-09-25",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 3
+ },
+ "d27s4": {
+  "verdict": "pass",
+  "method": "live-read",
+  "actual": "Rehearsed end to end on 26 Sept 2026. Point-in-time recovery is ENABLED on activityos-bef89 (version retention 7 days, was 1 hour), a DAILY backup schedule retains 98 days, and delete protection is ON. A restore of the live database as it stood at 14:40 UTC was cloned into a separate database and READ BACK: 119 tenants and 347 bookings, matching the snapshot moment rather than the live figures at the time (122 / 310, which had moved as fixtures were created and cleaned up). Wall-clock: about 27 minutes, during which the new database correctly refuses reads with FAILED_PRECONDITION.",
+  "notes": "A restore creates a NEW database from a snapshot — it never overwrites the live one, which is what makes practising it safe. The exact commands, the two mistakes that cost time (the clone creates the target itself, and both names must be full resource paths), the timing and how to clean up a drill database are now written into DEPLOY.md section 7, which is what this step asked for. The drill database was deleted afterwards.",
+  "evidence": "firebase firestore:databases:clone …; admin SDK getFirestore(app, \"restore-drill2\") count comparison; DEPLOY.md §7",
+  "at": "2026-09-26",
+  "agent": "ZC (post-fix re-verify)",
+  "retest": 3
+ }
+}

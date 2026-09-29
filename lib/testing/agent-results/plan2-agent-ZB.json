@@ -1,0 +1,42 @@
+{
+  "d1s1": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "Real signup on the DEPLOYED web app over HTTPS (https://activtyos-app-zayoxs-projects.vercel.app/signup), Chrome, 1512px viewport. 6-step wizard: step 1 'Let's get you set up' (Freelancer card) → step 2 'About your business' (name 'ZB Retest Coaching 0925', Sports coaching, 12 Test Street, Milton Keynes, MK14 6BN) → step 3 'How parents see you' → step 4 'How did you hear about us?' (Google / search) → step 5 'Your login' (zb.retest.0925@activityos-test.com + password + the required 'I agree, on behalf of my organisation…' checkbox) → 'Create account' → step 6 banner read 'ACCOUNT CREATED — Get paid'. No error banner at any step. 'Go to dashboard →' routed to /freelancer/bookings, i.e. the freelancer portal, where the subscription gate rendered ('ALMOST THERE — Pick your plan', Freelancer £29/mo, Stripe PaymentElement, 'Start 7-day free trial'). Cross-origin call to the Railway API worked: GET https://activtyos-app-production.up.railway.app/api/me with the Firebase token → 200 {role:\"freelancer\", tenantName:\"ZB Retest Coaching 0925\", displayName:\"ZB Retest Coaching 0925\", welcomed:false, tenantId:<id>}.",
+    "notes": "Was blocked ONLY on 'no staging url'; now exercised end-to-end on the real deployment. Two caveats, neither a failure of this step: (a) a brand-new account lands on the billing gate rather than the portal proper — by design (AGENTS.md: fresh signups hit the gate), and I deliberately did NOT enter card details, so the portal itself past the gate was not seen; (b) POSTCODE: MK14 6BN was typed at step 2 but /api/me came back postcode:null (may live on the tenant doc rather than /api/me — not chased, flagging only). Throwaway cleaned up afterwards: auth user, users doc, tenant dzaEzY7NShcxVX7zN5PE and its libraries doc deleted by a single-email script (no other @activityos-test.com account touched). Mail is live, so the welcome email went to the (throwaway) @activityos-test.com address only — no real family was mailed.",
+    "evidence": "Screenshots in-session: signup steps 1-6, 'ACCOUNT CREATED — Get paid', /freelancer/bookings plan gate. GET /api/me 200 with role=freelancer.",
+    "at": "2026-09-25",
+    "agent": "ZB (deploy retest)",
+    "retest": 3
+  },
+  "d5s2": {
+    "verdict": "fail",
+    "method": "browser",
+    "actual": "Re-read on the LIVE site over HTTPS (Chrome, 1512px) plus a link sweep: /v2/parents.html, /v2/schools.html, /v2/safeguarding.html all 200 and render correctly. Every distinct internal link on the three pages returns 200 over HTTPS (/v2/activly.html, /v2/freelancers|companies|franchises|schools|parents|pricing|security|tour.html, /v2/terms|privacy|dpa|safeguarding.html, /activly.html, /parent, /parent?tab=up, /demo, /login, /signup, /signup?plan=company) — no 404s (a control URL /v2/zzz-does-not-exist.html does return 404, so the sweep isn't a catch-all artefact). No placeholder text (only hit for 'todo' is the CSS class tick-todo). Nav highlighting is correct, not wrong: on schools.html the 'Built for ▾' dropdown carries class 'navdrop-btn on' and nothing else is marked; safeguarding.html and parents.html mark nothing. STILL FAILING, unchanged by deployment: each page's footer has 6 dead href=\"#\" links — 'Download on the App Store' and 'Get it on Google Play' badges (class ft-store) plus Instagram / Facebook / LinkedIn / YouTube icons (class ft-soc). Verified in the rendered DOM on the deployed pages: document.querySelectorAll('footer a[href=\"#\"]').length === 6 on each, and they are visibly rendered as real badges/icons in the footer screenshot.",
+    "notes": "Deployment was never the blocker for this one (agent A already called it fail on localhost); re-confirmed here on the public site so the verdict is now anchored to what the internet actually sees. The store badges are the worse half: they advertise iOS/Android apps that don't exist and click through to nothing. Still Kaz's call — drop them, or point them at real profiles/store listings. Not fixed by me (marketing site untouched, per instructions).",
+    "evidence": "https://activtyos-app-zayoxs-projects.vercel.app/v2/{parents,schools,safeguarding}.html — footer screenshot of parents.html showing App Store / Google Play badges + 4 social icons; per-URL HTTP status sweep; in-page JS reads of footer anchors and nav classes.",
+    "at": "2026-09-25",
+    "agent": "ZB (deploy retest)",
+    "retest": 3
+  },
+  "d5s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Against the DEPLOYED API (https://activtyos-app-production.up.railway.app, Railway, production mode): GET /openapi.json → HTTP/2 404, GET /docs → 404, GET /docs/ → 404. Each 404 is Express's own default HTML error page (server: railway-hikari, x-powered-by: Express, content-security-policy: default-src 'none'), i.e. the routes are not mounted at all rather than returning a redirect or an empty 200. GET /health on the same host → 200 {\"ok\":true}, so the API is up and it is genuinely the docs routes that are absent.",
+    "notes": "This is the proof the earlier 'blocked' verdict was waiting for: the gate in server/src/index.ts (mount only when NODE_ENV !== 'production' || PUBLIC_API_DOCS === '1') behaves correctly on a real production deployment, which also confirms NODE_ENV=production is set on Railway and PUBLIC_API_DOCS is not 1. The API map is not exposed to strangers.",
+    "evidence": "curl -i https://activtyos-app-production.up.railway.app/openapi.json → 404; /docs → 404; /docs/ → 404; /health → 200 {\"ok\":true}",
+    "at": "2026-09-25",
+    "agent": "ZB (deploy retest)",
+    "retest": 3
+  },
+  "d27s4": {
+    "verdict": "fail",
+    "method": "live-read",
+    "actual": "Read the live Firestore configuration with the owner's authenticated firebase CLI (read-only; no restore attempted). `firebase firestore:databases:get \"(default)\" --project activityos-bef89` returns: Point In Time Recovery = POINT_IN_TIME_RECOVERY_DISABLED, Version Retention Period = 3600s (one hour), Earliest Version Time = 2026-09-25T12:31:09Z, Delete Protection State = DELETE_PROTECTION_DISABLED, Location eur3, Edition STANDARD. `firebase firestore:backups:schedules:list` → 'No backup schedules for database (default) found.' `firebase firestore:backups:list` → 'No backups found.' So restoring the database to YESTERDAY is not possible today by any route: PITR is off, the recoverable window is the last 60 minutes, and there is not a single backup or backup schedule in existence. `firebase projects:list` also shows one project (activityos-bef89) — the deployed API and the web app both run against it, so there is no separate staging database to rehearse on either.",
+    "notes": "Upgrade from 'blocked' to 'fail': the deployment removed the excuse, and the answer is now measurable rather than pending — the capability does not exist. The half of the step I cannot do is the human half (asking Amir and timing him), and a restore rehearsal on the only database there is would be destructive, so it was deliberately not attempted. Concrete fix, in order: (1) enable PITR on (default) — one command, gives a rolling 7-day window; (2) add a daily backup schedule with ~14-day retention; (3) turn on delete protection; (4) rehearse a restore into a NEW database name (Firestore restores to a fresh database, it does not overwrite) and write the timing into DEPLOY.md, which still has no backup/restore/PITR section at all. Until (1) exists, any bad deploy, bad script or bad delete more than an hour old is unrecoverable, on real customer data.",
+    "evidence": "firebase firestore:databases:get \"(default)\" --project activityos-bef89 (PITR DISABLED, retention 3600s); firebase firestore:backups:schedules:list → none; firebase firestore:backups:list → none; DEPLOY.md has no backup/restore section",
+    "at": "2026-09-25",
+    "agent": "ZB (deploy retest)",
+    "retest": 3
+  }
+}

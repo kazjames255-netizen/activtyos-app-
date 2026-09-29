@@ -1,0 +1,62 @@
+{
+ "p2-n2": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 26 Sept after the fix. The step's own assertion — send a token-laden message via the plain POST /api/messages, not /from-booking — now resolves. New lib/mergeFields.ts is the single resolver for all three Messages paths. The same verification script was run against the OLD code and the new one: before, 14 assertions failed (the 1:1 body and subject went out verbatim); after, all seven tokens resolve on the 1:1 path, per-recipient on the broadcast, and on /from-booking.",
+  "notes": "Two further defects surfaced while fixing it: the broadcast filled only 2 of 7 tokens (and {ChildName} was blank whenever the booking used kids[] rather than child), and /from-booking's {VenueName} NEVER resolved because it looked for venues on the tenant doc while venues live on the libraries doc. Unresolved fields now degrade to neutral prose so the sentence still reads as English; {BookingRef} degrades to empty. A parent's own message is never merged — braces a parent types are text, not fields.",
+  "evidence": "server/src/lib/mergeFields.ts; before/after run of server/src/verifyMerge.mts (throwaway, deleted)",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 4
+ },
+ "p2-rt12": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Same fix as p2-n2, which this step exists to retest: the plain composer now shares the resolver with /from-booking. Verified on the real route with a template containing {SessionDate} — resolved, not literal.",
+  "notes": "Backlog item 29 can be closed. The UI (features/messages/MessagesApp.tsx) still pre-merges three tokens client-side before POSTing; harmless now that the server fills whatever is left, but redundant and weaker than the server's values — worth deleting in a UI pass.",
+  "evidence": "server/src/routes/messages.ts; server/src/lib/mergeFields.ts",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 3
+ },
+ "d27s3": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "There is now a real answer, where before it was honestly 'a customer will call'. server/src/lib/monitor.ts records every unhandled 500 (with method, path and role), uncaught exception, unhandled rejection and failed sweep into `incidentsOps` with message, stack and context; the FIRST occurrence of each distinct fault emails OPS_ALERT_EMAIL (set in production to the owner's address), with recurrences recorded but muted for an hour so a crash-loop sends one message; and an ops-watchdog sweep compares each fast sweep's heartbeat against its interval and raises 'background jobs have stopped' — what a dead instance, a stalled scheduler or a blown Firestore quota looks like from outside. Verified 5/5: a fault is recorded with context, a recurrence is recorded while the alert stays muted, a 3-hour-stale sweep is detected and raises the alarm, a sweep that just ran is not flagged.",
+  "notes": "Deliberately in-house rather than an APM: it uses only Firestore and the mailer, costs nothing and needed no account. It does NOT cover what an external uptime check would (the whole instance being unreachable, or DNS) — hosting-level alerting is still worth adding, and is tracked as b34.",
+  "evidence": "server/src/lib/monitor.ts; wired in server/src/index.ts (500s, crash handlers, watchdog) and server/src/lib/scheduler.ts (sweep failures + heartbeats); server/src/verifyMonitor.mts (throwaway, deleted)",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 2
+ },
+ "p2-m35": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 26 Sept after the fix, against TEST-mode Stripe with a real card, a real trial charge and the real webhook router: cancel then reactivate, and the cancellation STILL counts in churn afterwards — 28/28 checks. New append-only `subscriptionEvents` records each transition once (two independent idempotency guards, because the same transition is reachable from the webhook, its retry, a route and the 6h sweep), and GET /api/platform/churn?months=6 replays that log. The tenant doc still forgets the cancellation on reactivation, which was the old bug's cause — the log no longer does.",
+  "notes": "CAVEAT, so this pass is not read as more than it is: the HQ Fall-off CARD has not switched to the new endpoint yet (features/platform/FalloffCard.tsx still derives months client-side from /api/platform/providers), so the SCREEN keeps drifting until Kaz makes that change — it is written up for him. Two definitions changed with the fix and the numbers will move: a cancellation counts in the month NOTICE was given, and the base is providers who actually had a subscription when the month opened rather than every tenant row.",
+  "evidence": "server/src/lib/subscriptionEvents.ts; GET /api/platform/churn; server/src/churnVerify.mts (throwaway, deleted)",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 2
+ },
+ "p2-f13": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "The step says: if localStorage, mark needsBackend; if server, name the route and test it. It is now server-side and tested. Milestones storage moved to `milestones/{tenantId}` and `milestoneProgress/{tenantId}[__fr__{franchiseId}]` behind GET/PUT /api/milestones (+ /template, /progress, /season) and GET /api/milestones/franchises — the network roll-up that never existed. 44/44 checks against the real routes, including the 'new device' case, a franchise seeing none of another's progress, HO reading but never writing a franchise's progress, and staff/parents refused.",
+  "notes": "Two things were worse than the step recorded: HO mode rendered its roadmap against INVENTED sample progress (seedProgress), so the franchisor screen was decorative rather than merely disconnected; and step ids were generated per browser with crypto.randomUUID() while progress is keyed by step id, so the two sides could never have matched — the server now seeds the plan with stable slug ids, which is also what lets HO rename or re-order a phase without wiping every franchise's progress. CAVEAT: features/milestones/data.ts still reads localStorage until Kaz swaps it (written up in docs/milestones-handoff.md), so the SCREENS do not share data yet even though the store does.",
+  "evidence": "server/src/routes/milestones.ts; server/src/lib/milestonePlan.ts; server/src/milestonesVerify.mts (throwaway, deleted)",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 2
+ },
+ "d8s2": {
+  "verdict": "fail",
+  "method": "api",
+  "actual": "Still a fail, and deliberately so — but the backend half is now built. A childcare booking mints a reference PER CHILD at creation: CC-TTT-SSSS-KX (e.g. CC-35J-0A2-80B), Crockford base 32 with I/L/O/U excluded, a Luhn mod-32 check symbol, and uniqueness that is an injective function of (booking number, child slot) within a tenant — no scan, nothing to race. All 279 single-symbol substitutions of a live reference are rejected. The parent's own HMRC/voucher ACCOUNT reference is still captured separately and never quoted back as ours. 56/56 checks over real HTTP.",
+  "notes": "Why it is NOT a pass: the step is what the PARENT is given at checkout, and features/listings/checkout.tsx does not render the minted reference yet — it still shows the input asking them to make one up. Until Kaz shows it on the confirmation step (and on the parent's booking card), a family is still not given a reference, which is exactly what this step tests. Written up for him. Nothing is minted retroactively, on purpose: a reference the family was never told would be a lie on their bank statement.",
+  "evidence": "server/src/lib/childcare.ts attachChildcareRefs(); server/src/tfcRefVerify.mts (throwaway, deleted)",
+  "at": "2026-09-26",
+  "agent": "ZD (post-fix re-verify)",
+  "retest": 3
+ }
+}

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
+import { ukToday } from "../lib/ukDate";
 
 // Staff announcements — the internal notice board (managers post, staff read).
 //
@@ -69,7 +70,7 @@ staffAnnouncements.post("/", async (req, res) => {
     ...parsed.data,
     author: parsed.data.author || req.user?.name || req.user?.email || "Manager",
     role: parsed.data.role || "Manager",
-    date: now.toISOString().slice(0, 10),
+    date: ukToday(now),
     tenantId: auth.tenantId,
     franchiseId: auth.role === "franchise" ? auth.franchiseId : auth.role === "company" && parsed.data.franchiseId ? parsed.data.franchiseId : null,
     createdAt: now.toISOString(),

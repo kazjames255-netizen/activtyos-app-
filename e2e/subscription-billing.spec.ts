@@ -71,7 +71,9 @@ test("fresh signup hits the gate, starts a card-backed trial, cancels and reacti
 
   // Cancel keeps access until the period end…
   await page.getByRole("button", { name: "Cancel subscription" }).click();
-  await expect(page.getByText(/Cancels .* you keep access until then/)).toBeVisible({ timeout: 20_000 });
+  // Copy changed with the i18n rework: the date line plus a status badge.
+  await expect(page.getByText(/^Cancels on .+\.$/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Cancelling", { exact: true })).toBeVisible();
 
   // …and reactivating un-cancels without a new card or a second trial.
   await page.getByRole("button", { name: "Reactivate" }).click();

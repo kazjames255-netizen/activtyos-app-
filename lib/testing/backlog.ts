@@ -57,7 +57,7 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "cc5", who: "amir", severity: "high",
     title: "Reconciled rows can say auto vs by hand — nothing sets auto yet",
-    detail: "Booking.reconciledBy = { at, by, auto } is now stamped when someone ticks a payment off, and the badge reads \"Reconciled by hand · <name>\" or \"Auto-reconciled\". Rows settled before this exists show a plain \"Reconciled\" and claim nothing. When the HMRC EPP feed lands it should stamp auto: true — that's the only wiring needed for TFC rows to start reading as automatic.",
+    detail: "FIXED 21 Sept (Amir): anything settled without the payer's browser is stamped reconciledBy.auto = true, so the badge reads \"Auto-reconciled\". The HMRC feed stamps the same shape. Booking.reconciledBy = { at, by, auto } is now stamped when someone ticks a payment off, and the badge reads \"Reconciled by hand · <name>\" or \"Auto-reconciled\". Rows settled before this exists show a plain \"Reconciled\" and claim nothing. When the HMRC EPP feed lands it should stamp auto: true — that's the only wiring needed for TFC rows to start reading as automatic.",
     file: "server/src/routes/bookings.ts (reconcile), features/reconciliation/ReconciliationApp.tsx", step: "d8s11",
   },
   {
@@ -108,13 +108,13 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "b7", who: "amir", severity: "critical",
     title: "No Stripe Connect webhook — a payment may only be recorded if the browser calls back",
-    detail: "If a parent closes the tab as the payment confirms, the charge may succeed at Stripe and never be recorded against the booking. Establish whether this is true before Day 6; if it is, it is the single most expensive bug in the product.",
+    detail: "FIXED 21 Sept (Amir): settlement moved into server/src/lib/settlePayment.ts and called from BOTH the browser callback and a new payment_intent.succeeded webhook handler, idempotent via a transactional claim on the payments doc. Verified against a real Stripe test payment with the browser callback never firing. Connect events need \"listen to events on connected accounts\" enabled on the endpoint; STRIPE_CONNECT_WEBHOOK_SECRET is accepted for a separate endpoint. payment_intent.payment_failed now sets cardFailed. If a parent closes the tab as the payment confirms, the charge may succeed at Stripe and never be recorded against the booking. Establish whether this is true before Day 6; if it is, it is the single most expensive bug in the product.",
     file: "server/src/lib/stripe.ts", step: "d6s4",
   },
   {
     id: "b8", who: "amir", severity: "critical",
     title: "Day 8 may be testing a TFC checkout that doesn't exist yet",
-    detail: "Reviewers could not find a Tax-Free Childcare payment method in the checkout. This is the headline deliverable due 18 Sept. Confirm scope with Amir now rather than discovering it on the day.",
+    detail: "PARTLY FIXED 21 Sept (Amir): P1 (reconciliation) and P2 (the HMRC client) are both built. P1 — POST /api/reconciliation/:ref/bank-match is the statement tick (moves no money, emails nobody, reversible, keys on nothing), GET /api/reconciliation/childcare gives the four figures over a REAL date range, settings.childcare is validated and now published publicly (it was blank for every booker). P2 — server/src/lib/tfc.ts + routes/tfc.ts implement HMRC's Tax-Free Childcare Payments API v1.2 behind the three stubs in features/listings/tfc.ts, env-gated so unconfigured behaviour is exactly as before; verified against a local mock of the documented shapes, NOT yet against HMRC's sandbox. STILL NEEDS: an HMRC Developer Hub account + NS&I EPP approval (DEPLOY.md 6.8); the UI tick column, the Unreconciled-childcare tab and the checkout's pay-from-balance step (Kaz); and a decision on open questions 4 and 5. Reviewers could not find a Tax-Free Childcare payment method in the checkout. This is the headline deliverable due 18 Sept. Confirm scope with Amir now rather than discovering it on the day.",
     step: "d8s1",
   },
   {
@@ -268,13 +268,13 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "b32", who: "amir", severity: "critical",
     title: "Nothing is deployed — there is no staging environment",
-    detail: "28 days of localhost followed by a cold go-live tests nothing about hosting, HTTPS, env vars, cold starts or latency. DEPLOY.md documents 8 of the 43 environment variables.",
+    detail: "DEPLOYED 25 Sept (Amir). API on Railway (Docker, always-on so the sweeps run) at activtyos-app-production.up.railway.app — /health green, 20 env vars set incl. URL_SIGNING_SECRET and a real INBOUND_EMAIL_SECRET. Web on Vercel at activtyos-app-zayoxs-projects.vercel.app, public, CORS locked to that origin. Stripe webhook endpoint created and verified with a real test payment (platform + connected-account secrets both set). Firestore indexes deployed. Mail is LIVE over Resend's HTTPS API (Railway blocks outbound SMTP - SMTP hung silently, which is why the first send vanished) and a real send was confirmed delivered. Four deploy-blocking bugs fixed on the way: next build type-checked server/ (broke every build host), `sharp` was declared in nobody's dependencies, the Leads warm-up loaded all 71k leads at boot and OOM-killed the container in a loop (burning the 50k/day read cap), and task reminders were addressed to \"seed\". STILL OWED: custom domains (api./app.activityos.uk in Namecheap) + the Firebase authorised domain for them, the Blaze plan (still on free quotas), a real UK Stripe platform account (the keys in use are a French \"StrapSwatch sandbox\"), Vercel's production branch is still `main` (a push there would deploy 7 Aug), and no monitoring yet (b34). 28 days of localhost followed by a cold go-live tests nothing about hosting, HTTPS, env vars, cold starts or latency. DEPLOY.md documents 8 of the 43 environment variables.",
     step: "d1s1",
   },
   {
     id: "b33", who: "amir", severity: "critical",
     title: "Mail is off by default and a skipped send reports success",
-    detail: "Every 'the parent was emailed' and 'the DSL was alerted' step is unfalsifiable until this is on.",
+    detail: "FIXED 21 Sept (Amir): sendMailDetailed reports sent | suppressed | failed. Campaign history stores the three separately and every notification records what happened to its email half (including \"muted\"), so \"the parent was emailed\" is now falsifiable. Mail is still off unless MAIL_LIVE=1 — that is deliberate, and now documented in DEPLOY.md. Every 'the parent was emailed' and 'the DSL was alerted' step is unfalsifiable until this is on.",
     step: "d1s2",
   },
   {
@@ -286,13 +286,13 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "b35", who: "amir", severity: "high",
     title: "\"Today\" is computed in UTC in ~40 server files",
-    detail: "During British Summer Time that is yesterday until 01:00. The clocks go back on 25 Oct — the Sunday before autumn half-term.",
+    detail: "FIXED 21 Sept (Amir): business-logic days now use ukToday()/ukTodayPlus()/addDays() from lib/ukDate — DBS expiry, discount validity (checkout and preview could disagree for an hour), the statutory 30-day deletion clock, recurring tasks, demo slots, trips cut-off, child age, {SessionDate} merge, voucher send-by. createdAt-style stamps stay UTC on purpose. Month-bucketed HQ analytics are still UTC (wrong for one hour on the 1st in BST) — known, low value. During British Summer Time that is yesterday until 01:00. The clocks go back on 25 Oct — the Sunday before autumn half-term.",
     step: "d27s5",
   },
   {
     id: "b36", who: "amir", severity: "high",
     title: "The dashboard reads four entire collections per load, with no pagination",
-    detail: "The client aborts at 15 seconds. A provider with a real season's data may never see their dashboard, and the Firestore bill is per load.",
+    detail: "FIXED 21 Sept (Amir): blocks filter to endDate >= today, active-block count is an aggregation, listings/bookings/payments use field masks and date windows, and identical in-flight builds share one set of reads. Response JSON byte-identical across all nine lens permutations; no figure changed. NEEDS firestore.indexes.json deployed (firebase deploy --only firestore:indexes) — until then each narrowed query falls back to the old scan and logs the console link once. The client aborts at 15 seconds. A provider with a real season's data may never see their dashboard, and the Firestore bill is per load.",
     file: "server/src/routes/dashboard.ts", step: "d18s1",
   },
   {
@@ -427,7 +427,7 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "s13-sub4", who: "amir", severity: "medium",
     title: "Stripe side of the grace model",
-    detail: "Three Stripe follow-ups (not touched — never call Stripe in tests): (a) after Update card on a past_due subscription, pay the open invoice straight away (stripe.invoices.pay on latest_invoice) rather than waiting for Smart Retries; (b) POST /subscription/reactivate on a past_due tenant creates a NEW subscription without cancelling the past_due one — double-billing risk (the UI doesn't offer it for past_due today); (c) syncFromStripe folds Stripe's 'unpaid' into past_due, so an exhausted card stays read-only until Stripe cancels — map it to a locking state if Stripe is set to 'mark unpaid'.",
+    detail: "FIXED 21 Sept (never call Stripe in tests — verified out-of-band on a Stripe TEST-mode test clock, all objects deleted afterwards). New lib/billing.ts settleOpenInvoice(tenantId, subId, pm?) pays the subscription's OPEN latest_invoice off_session and then re-syncs the tenant from the live Stripe subscription, so Stripe — not the attempt — decides the status. (a) POST /subscription/card on a past_due/unpaid tenant now settles that invoice immediately instead of waiting for Smart Retries; a decline returns 402 {code:'card_saved_payment_failed'} with Stripe's own decline text, the card stays saved and the tenant stays past_due on its ORIGINAL pastDueSince (the grace clock is never restarted). Same fix also pins the new card on the SUBSCRIPTION (default_payment_method) — verified that detaching the old card does NOT clear it, so every future renewal was still aiming at a detached card. (b) POST /subscription/reactivate now asks Stripe whether the subscription is still alive: alive + cancel_at_period_end → un-cancel; alive + overdue → settle the open invoice (402 {code:'reactivate_payment_failed'} if it declines); only a genuinely canceled/gone one creates a new subscription. No second subscription can be bolted on beside an unpaid one, and the grandfathered Price is preserved (re-creating would re-snapshot today's catalogue). (c) syncFromStripe maps Stripe 'unpaid' to 'unpaid' instead of folding it into past_due, so accessFor() LOCKS it (it already did) rather than leaving an exhausted card read-only until Stripe cancels; pastDueSince is carried across past_due → unpaid, markPastDue can no longer un-lock an unpaid tenant, and the 402 copy says 'paused, update your card' rather than 'subscription has ended' — it's recoverable, Update card settles it. Note: this Stripe account's dunning setting is currently 'cancel' after retries, so 'unpaid' never occurs today; the mapping is what makes flipping it to 'mark unpaid' safe.",
     file: "server/src/routes/subscription.ts, server/src/lib/billing.ts", step: "d19s4",
   },
   // ── 13 Sept overnight run: features + roles enforcement, site-lead scope (agent "access") ──
@@ -833,6 +833,36 @@ export const BACKLOG: BacklogItem[] = [
     title: "Two different \"invite a team member\" flows disagree on whether an email is required",
     detail: "NOT FIXED — needs a decision. HoTeamApp (head-office combined view, /company/staff with no scope) explicitly supports a blank-email, link-only invite — the copy literally says \"email (optional — or copy a link)\". TeamApp (the plain per-site Team & invites view, reached via ?hoScope=__ho__ or a non-franchised account) is a 5-step wizard where step 1's Next button is disabled until an email is filled — there is no way to create a link-only invite through it, and the join page enforces that the new person signs up with EXACTLY that email (\"This invite was sent to X — sign up with that address\"). So the same underlying feature (invite by shareable link, no email) works in one operator view and not the other. Decide whether TeamApp should also allow a blank email (matching HoTeamApp), or whether HoTeamApp's optional-email path should go away for consistency.",
     file: "features/team/TeamApp.tsx, features/team/HoTeamApp.tsx", step: "n/a — found via e2e/secondary.spec.ts",
+  },
+  {
+    id: "s25-leads-paging", who: "kaz", severity: "high",
+    title: "The HQ Leads board loads all 71k leads into the browser",
+    detail: "Server-side stop-gap in place 25 Sept (Amir), but the design still needs changing. GET /api/leads used to read the WHOLE collection into memory and warm it at boot — on the deployed container that was an out-of-memory crash-loop, and ~71k Firestore reads per attempt against a 50k/day cap. It now caps at the newest LEADS_CACHE_MAX (5000) and warms only on the first request, and the response carries {truncated, cap} so the board can say it is showing a slice. The board's filters, counts and CSV export all still assume they have every lead client-side, so they are now computed over that slice. Real fix: server-side search/filter/paging (query params + a count endpoint) so the page never needs the whole list.",
+    file: "features/platform/LeadsApp.tsx, server/src/routes/leads.ts", step: "n/a — found deploying",
+  },
+  {
+    id: "s25-platform-unscoped-reads", who: "amir", severity: "high",
+    title: "HQ reads every booking on the platform, unscoped, in three places",
+    detail: "server/src/routes/platform.ts does a bare db.collection(\"bookings\").get() three times — every booking of every tenant, on every HQ page load. growth.ts reads seven whole collections per load and hoOverview.ts four. On the free plan (50k reads/day) this is the biggest remaining drain now that the dashboard is narrowed (b36), and it is the same fix: aggregation queries, date windows and field masks.",
+    file: "server/src/routes/platform.ts, growth.ts, hoOverview.ts", step: "n/a",
+  },
+  {
+    id: "s25-tfc-ui", who: "kaz", severity: "high",
+    title: "TFC: the server side is ready, four UI pieces are owed",
+    detail: "Backend landed 21 Sept (see b8). Owed on the front end: (1) the \"Reconciled against bank statement\" tick column, bound to POST /api/reconciliation/:ref/bank-match — note it is a DIFFERENT action from the existing \"reconcile\" (which means the money is in, pays the booking off and emails the family); (2) the \"Unreconciled childcare\" bookings tab — every /api/reconciliation row now carries childcareRoute and bankMatched; (3) point the childcare figures at GET /api/reconciliation/childcare so the From/To filter actually applies (today they are a client-side useMemo over the whole ledger) and to get the gross series; (4) step 4 of the parent journey — pay from the TFC balance, then card/bank for the remainder; POST /api/my/tfc/pay and the client helper are ready and called by nothing. Also worth renaming the UI copy: \"reconciled\" now means two things on one screen (paid vs matched to bank).",
+    file: "features/reconciliation/ReconciliationApp.tsx, features/listings/checkout.tsx", step: "d8s11",
+  },
+  {
+    id: "s25-tfc-tokens", who: "amir", severity: "critical",
+    title: "Parents' HMRC tokens are stored unencrypted",
+    detail: "tfcLinks/{childId} holds refresh tokens — long-lived keys to a family's Tax-Free Childcare account — in plaintext Firestore, with no revocation on unlink or account closure and no audit line per use. Fine while the integration is unconfigured (it is: no HMRC credentials yet), MUST NOT go live with real families. Needs KMS envelope encryption, deletion + HMRC revocation on unlink, and a per-use audit entry.",
+    file: "server/src/routes/tfc.ts", step: "n/a",
+  },
+  {
+    id: "s25-tfc-decisions", who: "decision", severity: "high",
+    title: "TFC: two behaviour questions still unanswered",
+    detail: "Both change what operators and families experience, and both are blocking the last of the TFC work. (1) Does a \"promise to pay\" by Tax-Free Childcare CONFIRM the booking immediately, or hold the place until the money lands? Today the place is held (pay: \"Awaiting voucher payment\") and nothing ever auto-cancels; childcare.confirmedAt is deliberately left unwritten until someone decides who may stamp it — the parent's \"I've paid\" tap, or only HMRC's settlement. (2) Who chases an unreconciled childcare payment: an automatic parent reminder, or the provider's job? The data a sweep would need (summary.unreconciled + byScheme) now exists either way. These are questions 4 and 5 of docs/tfc-build-spec.md.",
+    file: "docs/tfc-build-spec.md", step: "d8s11",
   },
 ];
 
