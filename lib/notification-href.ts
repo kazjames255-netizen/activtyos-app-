@@ -13,10 +13,20 @@ import type { PortalKey } from "@/lib/nav/config";
  * anything that has none. Parent links (`/custdash/…`) are left alone — a parent
  * is already in the right place, and their public pages aren't portal-scoped.
  */
+/** Pages the server links to under the operator portals that a portal's navigation simply doesn't have
+ *  (registered views are the only routable ones — anything else 404s). Staff have no events calendar
+ *  (a calendar-reminder bell on a coach's account linked to /staff/calendar, a 404) and their concern
+ *  form is `incident`, singular. Land them somewhere real instead. */
+const PORTAL_SLUG_FALLBACK: Record<string, Record<string, string>> = {
+  staff: { calendar: "dash", incidents: "incident" },
+};
+
 export function notificationHref(href: string, portal: PortalKey | string): string {
   if (!href.startsWith("/")) return href;
   if (portal === "custdash") return href;
   const KNOWN = /^\/(company|franchise|freelancer|staff|custdash)(\/|$)/;
-  if (KNOWN.test(href)) return href.replace(/^\/(company|franchise|freelancer|staff|custdash)/, `/${portal}`);
-  return `/${portal}${href}`;
+  const out = KNOWN.test(href) ? href.replace(/^\/(company|franchise|freelancer|staff|custdash)/, `/${portal}`) : `/${portal}${href}`;
+  const fallback = PORTAL_SLUG_FALLBACK[portal];
+  if (!fallback) return out;
+  return out.replace(/^(\/[a-z]+\/)([a-z-]+)(?=[/?#]|$)/, (m, pre: string, slug: string) => (fallback[slug] ? `${pre}${fallback[slug]}` : m));
 }
