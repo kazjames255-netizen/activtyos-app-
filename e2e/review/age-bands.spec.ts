@@ -60,7 +60,9 @@ test("KS2 Year 4: the normal kid strip and Home @390", async ({ browser }) => {
   await asChild(page, 1);
   await expect(page.getByTestId("hub-home-kid")).toHaveAttribute("data-band", "ks2");
   await expect(page.getByTestId("kid-icon-tabs")).toHaveCount(0);
-  for (const n of ["Home", "Quizzes", "Homework", "Flashcards"]) await expect(page.getByRole("tab", { name: n, exact: true })).toBeVisible();
+  // Kid mode (Year 3+) has FIVE top-level tabs; Quizzes/Flashcards/Live lessons/Starting quiz live
+  // inside "Learn" as sub-tabs (features/learninghub/familyGroups.ts KID_TOPS).
+  for (const n of ["Home", "Learn", "Homework", "Games", "My progress"]) await expect(page.getByRole("tab", { name: n, exact: true })).toBeVisible();
   await noAdultTabs(page);
   await page.screenshot({ path: path.join(OUT, "ks2-home-390.png") });
   await ctx.close();
