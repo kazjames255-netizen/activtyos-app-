@@ -104,6 +104,13 @@ import ZK from "./agent-results/plan2-agent-ZK.json";
 // per-age-band booking caps (Setup → Age groups) are now enforced at
 // checkout, not just stored.
 import ZF from "./agent-results/plan2-agent-ZF.json";
+// 29 Sept — Comms bugs batch: broadcast/listing-recipients now match by listing
+// id (not name) and exclude cancelled bookings, plus franchise-scope
+// /listing-recipients; the email composer's recipient count now honours
+// suppressions/marketingOptIn like a real send; post react/rsvp/ack now check
+// ownership, are idempotent per-person, and enforce RSVP capacity; the AI
+// chat's portal is derived from the authenticated role, never the client body.
+import ZG from "./agent-results/plan2-agent-ZG.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -133,4 +140,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(ZK as Record<string, AgentResult>),
   ...(ZI as Record<string, AgentResult>),
   ...(ZF as Record<string, AgentResult>),
+  ...(ZG as Record<string, AgentResult>),
 };

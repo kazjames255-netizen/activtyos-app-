@@ -16,6 +16,9 @@ import { customerAreaOn } from "../lib/customerArea";
 // ─────────────────────────────────────────────────────────────────────────
 export const posts = Router();
 const col = db.collection("posts");
+class PostNotFound extends Error {}
+class PostForbidden extends Error {}
+class PostFull extends Error {}
 const canPost = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
@@ -54,6 +57,7 @@ const postSchema = z.object({
   date: z.string().trim().max(40).optional(),           // event date
   time: z.string().trim().max(20).optional(),           // event time
   location: z.string().trim().max(160).optional(),      // event location
+  capacity: z.number().int().positive().max(100_000).optional(), // event: cap on "yes" RSVPs (unset = unlimited)
   cta: ctaSchema.optional(),                            // booking nudge {label,target}
   publishAt: z.string().trim().max(40).optional(),      // when status==="scheduled"
   folder: z.string().trim().max(80).optional(),         // library folder a newsletter is filed in
@@ -217,36 +221,136 @@ posts.delete("/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Family interactions — anyone signed in who can see the post. These bump
-// aggregate counters; per-parent "who reacted / who's coming / who acknowledged"
-// is a backend follow-up (see docs/newsfeed-handoff.md).
+// ── Family interactions — anyone signed in who can see the post, and each
+// person's own react/RSVP/ack tracked per-person (reactedBy/rsvpBy/ackBy, maps
+// keyed by uid on the post doc — a post's audience is small, so this stays far
+// lighter than a subcollection) so a repeat call is idempotent rather than a
+// free-running counter, and so a future UI can show "who reacted"/"who's
+// coming" from real state instead of a raw tally.
+type PostData = Record<string, unknown> & {
+  tenantId?: string;
+  status?: string;
+  franchiseId?: string | null;
+  reactedBy?: Record<string, true>;
+  rsvpBy?: Record<string, "yes" | "no" | "maybe">;
+  ackBy?: Record<string, true>;
+  rsvp?: { yes?: number; no?: number; maybe?: number } | null;
+  capacity?: number;
+};
+
+/** Whether this signed-in user may see (and therefore react/RSVP/acknowledge)
+ *  this one post — the identical rule GET /posts applies to its list, applied
+ *  to a single document by id instead. */
+async function canSeePost(req: Request, post: PostData): Promise<boolean> {
+  const auth = req.auth!;
+  if (!post.tenantId) return false;
+  if (auth.role === "parent") {
+    const email = req.user?.email;
+    if (!email) return false;
+    if ((post.status ?? "published") !== "published") return false;
+    if (post.franchiseId) {
+      const franSet = await parentFranchiseIds(email);
+      if (!franSet.has(post.franchiseId)) return false;
+    }
+    if (!(await customerAreaOn(post.tenantId, "newsfeed"))) return false;
+    const tenantIds = await parentTenantIds(email);
+    return tenantIds.includes(post.tenantId);
+  }
+  if (!auth.tenantId || post.tenantId !== auth.tenantId) return false;
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
+    return !post.franchiseId || post.franchiseId === auth.franchiseId;
+  }
+  // Company / freelancer see everything in their own tenant; platform has no
+  // tenant of its own here and is denied above.
+  return true;
+}
+
+/** The uid an interaction is filed under — every signed-in role carries one. */
+function actorUid(req: Request): string | null {
+  return req.user?.uid || null;
+}
+
 const reactBody = z.object({ on: z.boolean() });
 posts.post("/:id/react", async (req, res) => {
   const parsed = reactBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const uid = actorUid(req);
+  if (!uid) { res.status(401).json({ error: "Sign in required" }); return; }
   const ref = col.doc(req.params.id);
-  if (!(await ref.get()).exists) { res.status(404).json({ error: "Post not found" }); return; }
-  await ref.update({ reactions: FieldValue.increment(parsed.data.on ? 1 : -1) });
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new PostNotFound();
+      const post = snap.data() as PostData;
+      if (!(await canSeePost(req, post))) throw new PostForbidden();
+      const already = !!post.reactedBy?.[uid];
+      const { on } = parsed.data;
+      if (on === already) return; // idempotent: no double-count, no double-undo
+      tx.update(ref, {
+        [`reactedBy.${uid}`]: on ? true : FieldValue.delete(),
+        reactions: FieldValue.increment(on ? 1 : -1),
+      });
+    });
+  } catch (e) {
+    if (e instanceof PostNotFound) { res.status(404).json({ error: "Post not found" }); return; }
+    if (e instanceof PostForbidden) { res.status(403).json({ error: "You can't see this post" }); return; }
+    throw e;
+  }
   res.json({ ok: true });
 });
 
-const rsvpBody = z.object({ choice: z.enum(["yes", "no", "maybe"]), prev: z.enum(["yes", "no", "maybe"]).nullable().optional() });
+const rsvpBody = z.object({ choice: z.enum(["yes", "no", "maybe"]) });
 posts.post("/:id/rsvp", async (req, res) => {
   const parsed = rsvpBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const uid = actorUid(req);
+  if (!uid) { res.status(401).json({ error: "Sign in required" }); return; }
   const ref = col.doc(req.params.id);
-  const snap = await ref.get();
-  if (!snap.exists) { res.status(404).json({ error: "Post not found" }); return; }
-  const { choice, prev } = parsed.data;
-  const upd: Record<string, unknown> = { [`rsvp.${choice}`]: FieldValue.increment(1) };
-  if (prev && prev !== choice) upd[`rsvp.${prev}`] = FieldValue.increment(-1);
-  await ref.update(upd);
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new PostNotFound();
+      const post = snap.data() as PostData;
+      if (!(await canSeePost(req, post))) throw new PostForbidden();
+      const { choice } = parsed.data;
+      const prev = post.rsvpBy?.[uid] ?? null;
+      if (prev === choice) return; // idempotent: same choice again is a no-op
+      const cap = post.capacity;
+      if (choice === "yes" && cap != null) {
+        const goingNow = post.rsvp?.yes ?? 0;
+        // prev === "yes" moving to a different choice never needs a fresh seat.
+        if (prev !== "yes" && goingNow >= cap) throw new PostFull();
+      }
+      const upd: Record<string, unknown> = { [`rsvpBy.${uid}`]: choice, [`rsvp.${choice}`]: FieldValue.increment(1) };
+      if (prev && prev !== choice) upd[`rsvp.${prev}`] = FieldValue.increment(-1);
+      tx.update(ref, upd);
+    });
+  } catch (e) {
+    if (e instanceof PostNotFound) { res.status(404).json({ error: "Post not found" }); return; }
+    if (e instanceof PostForbidden) { res.status(403).json({ error: "You can't see this post" }); return; }
+    if (e instanceof PostFull) { res.status(409).json({ error: "This event is full" }); return; }
+    throw e;
+  }
   res.json({ ok: true });
 });
 
 posts.post("/:id/ack", async (req, res) => {
+  const uid = actorUid(req);
+  if (!uid) { res.status(401).json({ error: "Sign in required" }); return; }
   const ref = col.doc(req.params.id);
-  if (!(await ref.get()).exists) { res.status(404).json({ error: "Post not found" }); return; }
-  await ref.update({ seen: FieldValue.increment(1) });
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new PostNotFound();
+      const post = snap.data() as PostData;
+      if (!(await canSeePost(req, post))) throw new PostForbidden();
+      if (post.ackBy?.[uid]) return; // idempotent: already acknowledged
+      tx.update(ref, { [`ackBy.${uid}`]: true, seen: FieldValue.increment(1) });
+    });
+  } catch (e) {
+    if (e instanceof PostNotFound) { res.status(404).json({ error: "Post not found" }); return; }
+    if (e instanceof PostForbidden) { res.status(403).json({ error: "You can't see this post" }); return; }
+    throw e;
+  }
   res.json({ ok: true });
 });

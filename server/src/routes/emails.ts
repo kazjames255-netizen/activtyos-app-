@@ -237,10 +237,15 @@ emails.get("/audiences", async (req, res) => {
 });
 
 // GET /api/emails/recipients — the families the "all" blast would reach (name + email).
+// Must mirror resolveRecipients' filtering exactly, or the count shown beside the
+// composer lies: a suppressed/opted-out family that a real send already drops
+// still needs to be dropped from what's counted here too.
 emails.get("/recipients", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
-  const list = await familyRecipients(tenantId, netScope(req));
+  const scope = netScope(req);
+  const [all, blocked] = await Promise.all([familyRecipients(tenantId, scope), marketBlock(tenantId, scope)]);
+  const list = all.filter((r) => !blocked(r.email));
   res.json({ count: list.length, families: list, sample: list.slice(0, 20).map((r) => r.email) });
 });
 

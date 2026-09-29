@@ -128,8 +128,10 @@ const chatSchema = z.object({
     )
     .min(1)
     .max(20),
-  // The portal segment the user is in (company/freelancer/franchise/staff/
-  // custdash/platform) — so deep links use the right URL prefix + slugs.
+  // The portal segment the user is in — historically used verbatim for deep
+  // links, but NEVER trusted for that: it maps 1:1 from req.auth.role (see
+  // roleToPortal below), so this field is now read for nothing. Kept in the
+  // schema only so an older client body still validates.
   portal: z.enum(["company", "freelancer", "franchise", "staff", "custdash", "platform"]).optional(),
   // Head office only: the network scope it's viewing. Absent/null = the whole
   // network (→ head-office snapshot); a franchiseId = drilled into one franchise
@@ -734,10 +736,15 @@ ai.post("/chat", async (req, res) => {
       : "the owner/manager of a children's activity provider. The data is their business's live operational picture. Their portal's areas include: Dashboard, Bookings, Listings, Blocks & pricing, Registers, Families, Finances, Tasks, Messages.";
   }
 
-  // Resolve the portal (for correct deep-link URLs). Trust the client's value
-  // when it's consistent with the role; else fall back to the role's home.
-  const roleDefaultPortal = auth.role === "parent" ? "custdash" : auth.role === "platform" ? "platform" : auth.role === "staff" ? "staff" : "company";
-  const portal = parsed.data.portal ?? roleDefaultPortal;
+  // Resolve the portal (for correct deep-link URLs) — from the AUTHENTICATED
+  // role, never the client-supplied `portal` field: a role maps to exactly one
+  // portal, so this is not a preference to trust, and trusting it would let a
+  // staff/franchise account claim `portal:"company"` and get company-only
+  // paths (and the company-flavoured HOW-TO guide) back in the reply.
+  const roleToPortal: Record<typeof auth.role, "company" | "freelancer" | "franchise" | "staff" | "custdash" | "platform"> = {
+    company: "company", freelancer: "freelancer", franchise: "franchise", staff: "staff", parent: "custdash", platform: "platform",
+  };
+  const portal = roleToPortal[auth.role];
 
   const today = new Date();
   const system = [

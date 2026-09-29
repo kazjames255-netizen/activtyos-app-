@@ -124,8 +124,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [familyTargets, setFamilyTargets] = useState<string[]>(preEmails); // operator: 1+ family emails
   const [pickerOpen, setPickerOpen] = useState(!preCompose && !preParentCompose); // recipient picker expanded?
   const [composeMode, setComposeMode] = useState<"family" | "group">("family");
-  const [listings, setListings] = useState<string[]>([]);
-  const [listingTargets, setListingTargets] = useState<string[]>([]);
+  const [listings, setListings] = useState<{ id: string; name: string }[]>([]);
+  const [listingTargets, setListingTargets] = useState<string[]>([]); // listing ids
   const [listingQuery, setListingQuery] = useState("");
   const [listingRecipients, setListingRecipients] = useState<{ email: string; name: string; child?: string }[]>([]);
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
@@ -201,8 +201,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       .then((me) => {
         if (me.tenantName) setProviderName(me.tenantName);
         if (!me.tenantId) return;
-        return apiGet<{ name?: string }[]>(`/api/listings?tenantId=${encodeURIComponent(me.tenantId)}`)
-          .then((ls) => setListings([...new Set(ls.map((l) => l.name).filter((n): n is string => !!n))].sort()));
+        // ?mine=1 — every listing this operator manages (drafts/hidden/franchise-
+        // scoped included), with real ids: listing-recipients/broadcast match by
+        // listing ID, not name, so the picker must carry ids.
+        return apiGet<{ id: string; name?: string }[]>(`/api/listings?mine=1`)
+          .then((ls) => setListings(
+            ls.filter((l): l is { id: string; name: string } => !!l.name)
+              .map((l) => ({ id: l.id, name: l.name }))
+              .sort((a, b) => (a.name < b.name ? -1 : 1)),
+          ));
       })
       .catch(() => {});
     loadTemplates();
@@ -684,7 +691,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                       <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noListings")}</div>
                     ) : (() => {
                       const lq = listingQuery.trim().toLowerCase();
-                      const shown = listings.filter((l) => !lq || l.toLowerCase().includes(lq));
+                      const shown = listings.filter((l) => !lq || l.name.toLowerCase().includes(lq));
                       return (
                         <>
                           <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
@@ -696,7 +703,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                           </div>
                           {!pickerOpen && listingTargets.length > 0 && (
                             <div className="flex flex-wrap gap-1">
-                              {listingTargets.map((l) => <span key={l} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-strong)]">{l}</span>)}
+                              {listingTargets.map((id) => <span key={id} className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-strong)]">{listings.find((l) => l.id === id)?.name ?? id}</span>)}
                             </div>
                           )}
                           {pickerOpen && (<>
@@ -705,17 +712,17 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                             {shown.length === 0 ? (
                               <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noListingsMatch")}</div>
                             ) : shown.map((l) => {
-                              const on = listingTargets.includes(l);
+                              const on = listingTargets.includes(l.id);
                               return (
-                                <button key={l} type="button"
-                                  onClick={() => setListingTargets((cur) => (on ? cur.filter((x) => x !== l) : [...cur, l]))}
+                                <button key={l.id} type="button"
+                                  onClick={() => setListingTargets((cur) => (on ? cur.filter((x) => x !== l.id) : [...cur, l.id]))}
                                   className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-[var(--panel)]"
                                   style={on ? { background: "var(--brand-soft)" } : undefined}>
                                   <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border text-[11px] font-extrabold text-white"
                                     style={on ? { background: "var(--brand-2)", borderColor: "var(--brand-2)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
                                     {on ? "✓" : ""}
                                   </span>
-                                  <span className="truncate text-[12.5px] font-semibold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{l}</span>
+                                  <span className="truncate text-[12.5px] font-semibold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{l.name}</span>
                                 </button>
                               );
                             })}

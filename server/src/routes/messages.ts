@@ -459,23 +459,50 @@ const broadcastSchema = z.object({
 }).refine((d) => d.listings.length + d.emails.length > 0, { message: "Pick at least one listing or family" });
 const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+// Bookings store a blockId, not always a listingId directly — resolve via the
+// block, same convention as growth.ts's blockListing map. Listing NAMES are
+// never a safe match key (two listings can share a name, and a rename would
+// silently stop matching past bookings), so every listing-scoped broadcast
+// path matches by this resolved id.
+async function bookingListingIds(tenantId: string): Promise<Map<string, string | undefined>> {
+  const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
+  return new Map(blocksSnap.docs.map((d) => [d.id, (d.data() as { listingId?: string }).listingId] as const));
+}
+const listingIdOf = (b: { listingId?: string; blockId?: string }, blockListing: Map<string, string | undefined>): string | undefined =>
+  b.listingId ?? (b.blockId ? blockListing.get(b.blockId) : undefined);
+// Cancelled/declined families were never a live audience — same rule
+// familyRecipients (emails.ts) applies for the equivalent email audience.
+const liveBookingStatus = (status?: string) => status !== "Cancelled" && status !== "Declined";
+
 // POST /api/messages/listing-recipients — the families booked on the given
 // listings (deduped), so the operator can review + un-tick before broadcasting.
 messages.post("/listing-recipients", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
-  const listings: string[] = Array.isArray(req.body?.listings) ? req.body.listings.map(String) : [];
-  if (!listings.length) { res.json([]); return; }
-  const wanted = new Set(listings);
-  const bk = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const listingIds: string[] = Array.isArray(req.body?.listings) ? req.body.listings.map(String) : [];
+  if (!listingIds.length) { res.json([]); return; }
+  const wanted = new Set(listingIds);
+  const [bk, blockListing] = await Promise.all([
+    db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    bookingListingIds(tenantId),
+  ]);
   const byEmail = new Map<string, { email: string; name: string; child?: string; listing?: string }>();
   bk.docs.forEach((d) => {
-    const b = d.data() as { email?: string; booker?: string; listing?: string; child?: string };
-    if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) {
+    const b = d.data() as { email?: string; booker?: string; listing?: string; child?: string; listingId?: string; blockId?: string; status?: string };
+    if (!liveBookingStatus(b.status)) return;
+    const lid = listingIdOf(b, blockListing);
+    if (b.email && isEmail(b.email) && lid && wanted.has(lid)) {
       const el = b.email.toLowerCase();
       if (!byEmail.has(el)) byEmail.set(el, { email: el, name: b.booker ?? b.email, child: b.child, listing: b.listing });
     }
   });
+  // A franchise can only pull recipients for ITS OWN listings — never head
+  // office's or a sibling's (same isolation /broadcast already enforces).
+  const auth = req.auth!;
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
+    const fam = await franchiseFamilyEmails(tenantId, auth.franchiseId);
+    for (const e of [...byEmail.keys()]) if (!fam.has(e)) byEmail.delete(e);
+  }
   res.json([...byEmail.values()].sort((a, b) => (a.name < b.name ? -1 : 1)));
 });
 messages.post("/broadcast", async (req, res) => {
@@ -493,10 +520,16 @@ messages.post("/broadcast", async (req, res) => {
   // contexts below (mergeContexts() would otherwise scan the collection again).
   let bkSnap: FirebaseFirestore.QuerySnapshot | null = null;
   if (wanted.size) {
-    bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+    const [snap, blockListing] = await Promise.all([
+      db.collection("bookings").where("tenantId", "==", tenantId).get(),
+      bookingListingIds(tenantId),
+    ]);
+    bkSnap = snap;
     bkSnap.docs.forEach((d) => {
-      const b = d.data() as BookingLike;
-      if (b.email && isEmail(b.email) && b.listing && wanted.has(b.listing)) {
+      const b = d.data() as BookingLike & { blockId?: string };
+      if (!liveBookingStatus(b.status)) return;
+      const lid = listingIdOf(b, blockListing);
+      if (b.email && isEmail(b.email) && lid && wanted.has(lid)) {
         const el = b.email.toLowerCase();
         recipients.set(el, b.booker ?? b.email);
         if (b.child) childByEmail.set(el, b.child);

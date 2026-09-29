@@ -1,0 +1,42 @@
+{
+ "p2-n3": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 29 Sept after the fix, live against the real dev stack: seeded a tenant with an HO listing (block-backed, 4 live + 1 Cancelled booking) plus a SECOND listing sharing the exact same name (to prove matching is now by id, never name) plus a franchise-owned listing. POST /api/messages/listing-recipients on the HO listing returns exactly the 4 live families — the Cancelled one and the same-named-but-different-id listing's family are both excluded. POST /api/messages/broadcast on the same listing sends to exactly those 4 (sent: 4). A franchise ($F1) calling /listing-recipients on the HO listing it doesn't own gets back [] (200, empty — not a crash, not HO's families); the same franchise calling it on ITS OWN listing correctly sees its own family. 9/9 checks.",
+  "notes": "Fix: server/src/routes/messages.ts now resolves each booking's listing id via a shared bookingListingIds() helper (booking.listingId, falling back to booking.blockId -> block.listingId — the same fallback convention growth.ts already used for its listing lens) instead of matching the free-text `listing` name string, and excludes Cancelled/Declined bookings the same way emails.ts's familyRecipients() already did. /listing-recipients gained the franchise scoping /broadcast already had (franchiseFamilyEmails). Companion fix: features/messages/MessagesApp.tsx's listing picker now fetches /api/listings?mine=1 (real ids, and every listing the operator manages, not just the public live feed) and sends listing IDs as `listings` instead of names — the wire format had to change on both ends together, since the old broadcast targeting was genuinely name-keyed end to end.",
+  "evidence": "server/src/routes/messages.ts (bookingListingIds, listingIdOf, liveBookingStatus, /listing-recipients, /broadcast); features/messages/MessagesApp.tsx (listings state, listingTargets now ids); server/src/commsBugsVerify.mts (throwaway, deleted)",
+  "at": "2026-09-29",
+  "agent": "ZG",
+  "retest": 1
+ },
+ "p2-n6": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 29 Sept after the fix, live: read the composer's family count via GET /api/emails/recipients before and after suppressing one of the tenant's booked families (POST /api/emails/suppress). Before: the count includes that family. After: the count drops by exactly 1 and the family is gone from the returned list — matching a real dry-run send (POST /api/emails/send {dryRun:true}), whose recipientCount now agrees exactly with the composer's count. 5/5 checks.",
+  "notes": "Fix: emails.ts's GET /api/emails/recipients now runs the SAME marketBlock(tenantId, scope) predicate resolveRecipients() already used for real sends, filtering familyRecipients()'s output before counting/returning it. Previously familyRecipients() only excluded Cancelled/Declined bookings and never consulted emailSuppressions or marketingOptIn, so the number shown beside the composer over-counted relative to what a blast would actually reach.",
+  "evidence": "server/src/routes/emails.ts (GET /recipients); server/src/commsBugsVerify.mts (throwaway, deleted)",
+  "at": "2026-09-29",
+  "agent": "ZG",
+  "retest": 1
+ },
+ "p2-c11": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 29 Sept after the fix, live: (1) OWNERSHIP — a parent who never booked with the tenant gets 403 reacting to its post; a different tenant's own owner also gets 403 on it; an ack on a post a parent can't see is refused 403. (2) DEDUP — the same family calling react {on:true} twice leaves reactions at 1, not 2; un-reacting twice never goes negative (stays 0); RSVPing 'yes' twice leaves rsvp.yes at 1, not 2; acking twice leaves seen at 1, not 2. (3) CAPACITY — an event post created with capacity:1: the first family's RSVP fills it, a second family's yes is refused 409, and after the first family changes to 'no' the freed seat is taken by the second family. 20/20 checks.",
+  "notes": "Fix: server/src/routes/posts.ts's react/rsvp/ack now run in a Firestore transaction against per-person state (reactedBy/rsvpBy/ackBy — uid-keyed maps on the post doc, lighter than a subcollection for a feed post's audience) instead of a raw client-driven FieldValue.increment, so a repeat call is idempotent instead of a free-running counter. Every one of the three now calls a new canSeePost() helper first, which is the EXACT visibility rule GET /posts already applies to its own list (parent: published + franchise-target + newsfeed feature on + genuinely booked with that tenant; operator: same tenant, franchise-scoped like the list view), applied to one document by id — so a post's audience for interacting with it is identical to its audience for seeing it in the feed, and 404 for a genuinely missing post is now distinct from 403 for one that exists but isn't yours to react to. Added an optional `capacity` field to postSchema (an event's cap on 'yes' RSVPs, unset = unlimited, matching what the step expected the schema to already support) and the rsvp transaction now rejects (409) a 'yes' once rsvp.yes has reached it, re-checking inside the same transaction a freed seat opened by someone else changing their mind.",
+  "evidence": "server/src/routes/posts.ts (canSeePost, actorUid, PostNotFound/PostForbidden/PostFull, /:id/react /:id/rsvp /:id/ack); server/src/commsBugsVerify.mts (throwaway, deleted)",
+  "at": "2026-09-29",
+  "agent": "ZG",
+  "retest": 1
+ },
+ "p2-n16": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified 29 Sept after the fix, live: a staff account calling POST /api/ai/chat with body {portal:\"company\", messages:[...]} (spoofing head office's portal) gets a reply whose links never reference a company-only path (/company/setup, /company/finances, /company/marketing) — the NAVIGATION section built into the system prompt is generated from the STAFF portal regardless of what the client sent. Static check: server/src/routes/ai.ts no longer reads `parsed.data.portal` anywhere; `portal` is now `roleToPortal[auth.role]`, a fixed 1:1 map off the server-verified `req.auth.role`. 5/5 checks (the live-LLM assertion runs only when GROQ_API_KEY is set; the code-level checks always run).",
+  "notes": "Before the fix, `portal = parsed.data.portal ?? roleDefaultPortal` trusted the client field outright whenever present, and roleDefaultPortal itself was too coarse (company/freelancer/franchise all fell back to \"company\"). The fix removes the client field from the computation entirely — role maps 1:1 onto the six portal segments (company/freelancer/franchise/staff/parent->custdash/platform), which is exactly what server/src/middleware/role.ts's Role type already encodes, so no client input was ever actually needed here. The `portal` field stays in the zod schema (unused) only so an older client body still validates.",
+  "evidence": "server/src/routes/ai.ts (roleToPortal, portal); server/src/commsBugsVerify.mts (throwaway, deleted)",
+  "at": "2026-09-29",
+  "agent": "ZG",
+  "retest": 1
+ }
+}
