@@ -246,5 +246,21 @@
   "notes": "Spec precondition, not a product bug; the spec should clear the thread first or use a fresh parent.",
   "at": "2026-09-30",
   "agent": "plan3-P8"
+ },
+ "p3-p8-32": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "e2e/comms-ui.spec.ts 4/4 via scripts/e2e-locked.sh: parent bell badge -> panel -> deep link to /custdash/accidents -> badge clears; company booking alert deep-links to that booking; staff and franchise bells never show head office's booking alert.",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-33": {
+  "verdict": "fixed",
+  "method": "code+resend-log",
+  "actual": "Resend's log showed REAL sends of session reminders and scheduled campaigns to e2e-*@activityos-test.com (a domain that does not resolve) on 29 Sept, even though the local API is MAIL_LIVE=0: some other instance sharing this Firestore runs the sweeps with mail live (and older code).",
+  "notes": "lib/mailer.ts now never mails that domain unless the exact address is in MAIL_ALLOWLIST. OPEN for Kaz/Amir: find and stop (or redeploy) that other instance - it also emails real addresses from test data (e.g. 'Overdue: TEST' to a real support address) and runs pre-fix sweep code.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
  }
 }
