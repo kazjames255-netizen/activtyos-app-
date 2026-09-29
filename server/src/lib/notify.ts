@@ -268,16 +268,28 @@ async function franchiseOfAlert(input: NotifyInput): Promise<string | null> {
   }
 }
 
-/** The franchise account's own address, for its alert emails. */
-export async function franchiseEmail(tenantId: string, franchiseId: string): Promise<string | undefined> {
+/** The franchise account itself (its inbox + its own message-notification switches). */
+export async function franchiseAccount(tenantId: string, franchiseId: string): Promise<{ uid: string; email?: string; notifyEmail?: string; emailOnNewMessage?: boolean } | null> {
   try {
+    const shape = (d: FirebaseFirestore.DocumentSnapshot) => ({
+      uid: d.id,
+      email: (d.get("email") as string | undefined) ?? undefined,
+      notifyEmail: ((d.get("notifyEmail") as string | undefined) || "").trim() || undefined,
+      emailOnNewMessage: d.get("emailOnNewMessage") as boolean | undefined,
+    });
     const u = await db.collection("users").doc(franchiseId).get();
-    if (u.exists && u.get("tenantId") === tenantId && u.get("role") === "franchise") return (u.get("email") as string | undefined) ?? undefined;
+    if (u.exists && u.get("tenantId") === tenantId && u.get("role") === "franchise") return shape(u);
     const q = await db.collection("users").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).where("role", "==", "franchise").limit(1).get();
-    return q.empty ? undefined : ((q.docs[0].get("email") as string | undefined) ?? undefined);
+    return q.empty ? null : shape(q.docs[0]);
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+/** The franchise account's own address, for its alert emails (its chosen alert address, else its login). */
+export async function franchiseEmail(tenantId: string, franchiseId: string): Promise<string | undefined> {
+  const a = await franchiseAccount(tenantId, franchiseId);
+  return a ? (a.notifyEmail || a.email) : undefined;
 }
 
 /** Raise the bell and send the email. Fire-and-forget: a notification must

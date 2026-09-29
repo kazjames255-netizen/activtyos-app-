@@ -6,7 +6,7 @@ import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
 import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
-import { franchiseEmail } from "../lib/notify";
+import { franchiseAccount } from "../lib/notify";
 import { rateLimit } from "../lib/rateLimit";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { customerAreaOn } from "../lib/customerArea";
@@ -285,11 +285,16 @@ messages.post("/", (req, res, next) => (req.auth?.role === "parent" ? parentSend
       // family's thread shows in besides head office's) — same routing every
       // other team alert uses (lib/notify.ts), not head office's address.
       const famFr = (await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", parentEmail).limit(20).get()).docs.map((d) => d.get("franchiseId") as string | null | undefined).find(Boolean);
-      if (famFr) tEmail = (await franchiseEmail(tenantId, famFr)) ?? tEmail;
-      if (tEmail && t?.emailOnNewMessage !== false) {
+      let wantEmail = t?.emailOnNewMessage !== false;
+      let viaFranchise = false;
+      if (famFr) {
+        const acct = await franchiseAccount(tenantId, famFr);
+        if (acct) { tEmail = acct.notifyEmail || acct.email || tEmail; wantEmail = acct.emailOnNewMessage !== false; viaFranchise = true; }
+      }
+      if (tEmail && wantEmail) {
         // Straight to the Messages page of the portal that inbox lives in (the bare site URL
         // dropped the provider on a login/home page with no hint where the message was).
-        const portal = famFr && tEmail !== ((t?.notifyEmail as string) || (t?.email as string | undefined)) ? "franchise" : t?.type === "freelancer" ? "freelancer" : "company";
+        const portal = viaFranchise ? "franchise" : t?.type === "freelancer" ? "freelancer" : "company";
         emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/${portal}/messages`, tenantId });
       }
     } else {
@@ -367,10 +372,18 @@ const readSettings = (d?: FirebaseFirestore.DocumentData) => ({
   notifyEmail: (d?.notifyEmail as string) ?? "",
   accountEmail: (d?.email as string) ?? "", // shown as the fallback/placeholder
 });
+// A franchise shares its head office's tenant doc, so its message-notification switches live on ITS OWN
+// account (users/{uid}) — writing them to the tenant doc let a franchise redirect (or switch off) head
+// office's alert address, which every head-office booking / safeguarding alert email goes to.
+const franchiseSettings = async (req: Req) => {
+  const u = await db.collection("users").doc(req.user!.uid).get();
+  return { emailOnNewMessage: u.get("emailOnNewMessage") !== false, notifyEmail: ((u.get("notifyEmail") as string) ?? ""), accountEmail: ((u.get("email") as string) ?? req.user?.email ?? "") };
+};
 messages.get("/settings", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   if (req.auth!.role === "staff") { res.status(403).json({ error: "Only the account holder can change message notification settings" }); return; }
+  if (req.auth!.role === "franchise") { res.json(await franchiseSettings(req)); return; }
   const snap = await db.collection("tenants").doc(tenantId).get();
   res.json(readSettings(snap.data()));
 });
@@ -384,6 +397,11 @@ messages.put("/settings", async (req, res) => {
     const ne = String(req.body.notifyEmail ?? "").trim();
     if (ne && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ne)) { res.status(400).json({ error: "That doesn’t look like a valid email." }); return; }
     patch.notifyEmail = ne; // "" clears it → falls back to the account email
+  }
+  if (req.auth!.role === "franchise") {
+    await db.collection("users").doc(req.user!.uid).set(patch, { merge: true });
+    res.json(await franchiseSettings(req));
+    return;
   }
   const ref = db.collection("tenants").doc(tenantId);
   await ref.set(patch, { merge: true });
