@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -18,6 +19,7 @@ import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
 // ─────────────────────────────────────────────────────────────────────────
 
 export function BookPage({ id }: { id: string }) {
+  const t = useT();
   const [listing, setListing] = useState<ServerListing | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -41,7 +43,7 @@ export function BookPage({ id }: { id: string }) {
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
       .then(setListing)
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load this listing"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("p7pub.errLoadListing")));
   }, [id]);
   useEffect(() => firebaseAuth.onAuthStateChanged((u) => setSignedIn(!!u)), []);
   useEffect(() => {
@@ -61,10 +63,10 @@ export function BookPage({ id }: { id: string }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4f7ff] p-6">
         <div className="max-w-[420px] rounded-2xl border border-[#e8edf7] bg-white p-6 text-center">
-          <div className="text-[16px] font-extrabold text-[#171534]">This listing isn’t available</div>
+          <div className="text-[16px] font-extrabold text-[#171534]">{t("p7pub.listingNA")}</div>
           <p className="mt-1 text-[13px] text-[#8a86a3]">{error}</p>
           <Link href="/" className="mt-3 inline-block text-[13px] font-bold text-[#2f6bd8] underline">
-            ActivityOS home
+            {t("p7pub.homeLink")}
           </Link>
         </div>
       </div>
@@ -72,7 +74,7 @@ export function BookPage({ id }: { id: string }) {
   if (!listing)
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">
-        Loading…
+        {t("p7pub.loadingWord")}
       </div>
     );
 
@@ -90,17 +92,17 @@ export function BookPage({ id }: { id: string }) {
   const guardNav = (e: React.MouseEvent) => { if (!confirmLeavingBasket()) e.preventDefault(); };
   // In preview, the provider gets a single "Close" affordance, never parent nav.
   const topRight = preview ? (
-    <button type="button" onClick={() => window.close()} className={linkCls}>Close preview ✕</button>
+    <button type="button" onClick={() => window.close()} className={linkCls}>{t("p7pub.closePreview")}</button>
   ) : signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
-    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={guardNav} className={linkCls}>Sign in</Link>
+    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={guardNav} className={linkCls}>{t("p7pub.signIn")}</Link>
   ) : signedIn && !embedded ? (
     // Not shown in embeds — navigating a provider's iframe into the dashboard
     // would trap the parent page's visitor.
     <span className="flex items-center gap-4">
-      <Link href="/custdash/browse" onClick={guardNav} className={linkCls}>← Back to activities</Link>
-      <Link href="/custdash" onClick={guardNav} className={linkCls}>My home page</Link>
-      <Link href="/custdash/bookings" onClick={guardNav} className={linkCls}>My bookings</Link>
+      <Link href="/custdash/browse" onClick={guardNav} className={linkCls}>{t("p7pub.backToActivities")}</Link>
+      <Link href="/custdash" onClick={guardNav} className={linkCls}>{t("p7pub.myHomePage")}</Link>
+      <Link href="/custdash/bookings" onClick={guardNav} className={linkCls}>{t("p7nav.my_bookings")}</Link>
     </span>
   ) : null;
 
@@ -117,13 +119,13 @@ export function BookPage({ id }: { id: string }) {
         // Provider-only bar; parents never see this. Distinct amber so it reads
         // as "preview chrome", not part of the storefront.
         <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-[#fef3c7] px-4 py-2 text-center text-[12.5px] font-semibold text-[#92400e]">
-          <span>👁 Preview — this is exactly what a parent sees. This bar isn’t shown to them.</span>
-          <button type="button" onClick={() => window.close()} className="font-extrabold underline">Close</button>
+          <span>{t("p7pub.previewBar")}</span>
+          <button type="button" onClick={() => window.close()} className="font-extrabold underline">{t("p7pub.closeWord")}</button>
         </div>
       )}
       {embedded && fromStore && (
         <div className="px-4 pt-3 text-[12.5px]">
-          <button type="button" onClick={() => { if (confirmLeavingBasket()) window.history.back(); }} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>← All activities</button>
+          <button type="button" onClick={() => { if (confirmLeavingBasket()) window.history.back(); }} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>{t("p7pub.allActivities")}</button>
         </div>
       )}
       <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />

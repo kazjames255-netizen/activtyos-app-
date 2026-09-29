@@ -1,6 +1,7 @@
 "use client";
 
 import { dateLocale as dl } from "@/lib/i18n/format";
+import { useT } from "@/lib/i18n/provider";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -22,6 +23,7 @@ const fmtDate = (iso?: string) =>
   iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "short", timeZone: "UTC" }) : null;
 
 export function StorePage({ tenantId }: { tenantId: string }) {
+  const t = useT();
   const [listings, setListings] = useState<ServerListing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // The provider's chosen public name (own name vs business name, set at
@@ -33,7 +35,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
   useEffect(() => {
     apiPublic<ServerListing[]>(`/api/listings?tenantId=${encodeURIComponent(tenantId)}`)
       .then(setListings)
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load this provider"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("p7pub.errLoadProvider")));
   }, [tenantId]);
   // Arriving here IS the link: a family sent this provider's booking link, or
   // who found them and signed up, gets attached to that provider — so their
@@ -62,9 +64,9 @@ export function StorePage({ tenantId }: { tenantId: string }) {
   if (error)
     return <div className="flex min-h-[40vh] items-center justify-center bg-[#f4f7ff] p-6 text-[13px] text-[#e21d27]">{error}</div>;
   if (!listings)
-    return <div className="flex min-h-[40vh] items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">Loading…</div>;
+    return <div className="flex min-h-[40vh] items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">{t("p7pub.loadingWord")}</div>;
 
-  const provider = settings.providerName.trim() || listings[0]?.tenantName || "Our activities";
+  const provider = settings.providerName.trim() || listings[0]?.tenantName || t("p7pub.ourActivities");
   // The provider's own branding (Setup → Branding / Money): logo in the header,
   // accent on the eyebrow, top rule and Book buttons. Unset (or the stock
   // blue, which is what defaults fill in) = the page's own blues.
@@ -77,7 +79,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
       <div className="mx-auto max-w-[1080px] px-4 pt-6">
         <div className="mb-4 flex items-center gap-3">
           {logo && (
-            <img src={logo} alt={`${provider} logo`} className="h-12 w-12 flex-none rounded-xl border border-[#e8edf7] bg-white object-contain p-1" />
+            <img src={logo} alt={t("p7pub.logoAlt", { name: provider })} className="h-12 w-12 flex-none rounded-xl border border-[#e8edf7] bg-white object-contain p-1" />
           )}
           <div className="min-w-0">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2f6bd8]" style={accent ? { color: accent.text } : undefined}>
@@ -113,15 +115,15 @@ export function StorePage({ tenantId }: { tenantId: string }) {
                   <div className="p-3.5">
                     <div className="truncate text-[14.5px] font-extrabold text-[#171534]">{l.title || l.name}</div>
                     <div className="mt-0.5 text-[11.5px] text-[#8a86a3]">
-                      {runFrom && runTo ? `${runFrom} – ${runTo}` : "Dates TBC"}
-                      {spotsLeft > 0 && <span className="text-[#1d3a8f]" style={accent ? { color: accent.text } : undefined}> · places available</span>}
+                      {runFrom && runTo ? `${runFrom} – ${runTo}` : t("p7pub.datesTbc")}
+                      {spotsLeft > 0 && <span className="text-[#1d3a8f]" style={accent ? { color: accent.text } : undefined}>{" · "}{t("p7pub.placesAvailable")}</span>}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[13px] font-extrabold text-[#171534]">
-                        {from !== null ? `from ${money(from)}` : ""}
+                        {from !== null ? t("p7pub.fromPrice", { amt: money(from) }) : ""}
                       </span>
                       <span className="rounded-full bg-[#3f78d8] px-3 py-1 text-[11.5px] font-bold text-white" style={accent ? { background: accent.bg, color: accent.ink } : undefined}>
-                        Book →
+                        {t("p7pub.bookArrow")}
                       </span>
                     </div>
                   </div>

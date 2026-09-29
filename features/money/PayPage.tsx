@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { money } from "@/features/bookings/helpers";
+import { useT } from "@/lib/i18n/provider";
 
 interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
 interface CheckoutInfo { paymentId: string; clientSecret: string; stripeAccount: string | null; amount: number }
@@ -24,6 +25,7 @@ async function publicPost<T>(path: string): Promise<T> {
 
 /** Stripe's Payment Element + the confirm round-trip, inside <Elements>. */
 function CardForm({ token, info, onPaid, onError }: { token: string; info: CheckoutInfo; onPaid: () => void; onError: (m: string) => void }) {
+  const t = useT();
   const stripeJs = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -33,7 +35,7 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
     setBusy(true);
     const { error } = await stripeJs.confirmPayment({ elements, redirect: "if_required" });
     if (error) {
-      onError(error.message ?? "Payment failed");
+      onError(error.message ?? t("p7pub.payFailed"));
       setBusy(false);
       return;
     }
@@ -42,9 +44,9 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
         `/api/public/invoice/${encodeURIComponent(token)}/confirm/${encodeURIComponent(info.paymentId)}`,
       );
       if (res.paid) onPaid();
-      else onError(`Payment is ${res.status} — it hasn't completed yet.`);
+      else onError(t("p7pub.payStatus", { status: res.status }));
     } catch (e) {
-      onError(e instanceof Error ? e.message : "Couldn't verify the payment");
+      onError(e instanceof Error ? e.message : t("p7pub.errVerify"));
     }
     setBusy(false);
   }
@@ -53,13 +55,14 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
     <>
       <PaymentElement />
       <button type="button" disabled={busy || !stripeJs} onClick={pay} className="mt-3 w-full rounded-full bg-[#1d3a8f] px-4 py-3 text-[14px] font-extrabold text-white disabled:opacity-60">
-        {busy ? "Paying…" : `Pay ${money(info.amount)}`}
+        {busy ? t("p7pub.paying") : t("p7pub.payAmt", { amt: money(info.amount) })}
       </button>
     </>
   );
 }
 
 export function PayPage({ token }: { token: string }) {
+  const t = useT();
   const [inv, setInv] = useState<PublicInvoice | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "notfound" | "expired">("loading");
   // An expired link still says whose it was (and whether it had been paid).
@@ -91,7 +94,7 @@ export function PayPage({ token }: { token: string }) {
       // connected account or the client secret won't match.
       setStripePromise(loadStripe(PK, i.stripeAccount ? { stripeAccount: i.stripeAccount } : undefined));
     } catch (e) {
-      setPayError(e instanceof Error ? e.message : "Couldn't start the payment");
+      setPayError(e instanceof Error ? e.message : t("p7pub.errStartPay"));
     }
     setStarting(false);
   }
@@ -99,51 +102,51 @@ export function PayPage({ token }: { token: string }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f8fd] p-4 text-[#171534]">
       <div className="w-full max-w-[440px]">
-        {state === "loading" && <div className="py-20 text-center text-[13px] text-[#8a86a3]">Loading…</div>}
+        {state === "loading" && <div className="py-20 text-center text-[13px] text-[#8a86a3]">{t("p7pub.loadingWord")}</div>}
         {state === "notfound" && (
           <div className="rounded-2xl border border-[#ece6f1] bg-white p-8 text-center shadow-[0_10px_30px_-12px_rgba(29,58,143,.35)]">
             <div className="text-[28px]">🔗</div>
-            <div className="mt-1 text-[16px] font-extrabold">This payment link isn’t valid</div>
-            <p className="mt-1 text-[13px] leading-[1.6] text-[#8a86a3]">It may have expired or been mistyped. Ask your provider to resend it.</p>
+            <div className="mt-1 text-[16px] font-extrabold">{t("p7pub.linkInvalid")}</div>
+            <p className="mt-1 text-[13px] leading-[1.6] text-[#8a86a3]">{t("p7pub.linkInvalidBody")}</p>
           </div>
         )}
         {state === "expired" && (
           <div className="rounded-2xl border border-[#ece6f1] bg-white p-8 text-center shadow-[0_10px_30px_-12px_rgba(29,58,143,.35)]">
             <div className="text-[28px]">{expired?.status === "paid" ? "✓" : "⌛"}</div>
-            <div className="mt-1 text-[16px] font-extrabold">{expired?.status === "paid" ? "This invoice is paid" : "This payment link has expired"}</div>
+            <div className="mt-1 text-[16px] font-extrabold">{expired?.status === "paid" ? t("p7pub.invPaid") : t("p7pub.linkExpired")}</div>
             <p className="mt-1 text-[13px] leading-[1.6] text-[#8a86a3]">
-              {expired?.status === "paid" ? "This link has now closed. " : expired?.status === "cancelled" ? "This invoice was cancelled and the link has closed. " : ""}
+              {expired?.status === "paid" ? t("p7pub.linkClosed") + " " : expired?.status === "cancelled" ? t("p7pub.invCancelledClosed") + " " : ""}
               {expired?.status === "paid" || expired?.status === "cancelled"
-                ? `If you need a copy, ask ${expired?.provider || "your provider"}.`
-                : `If you still need to pay, ask ${expired?.provider || "your provider"} to send you a new link.`}
+                ? t("p7pub.askCopy", { provider: expired?.provider || t("p7pub.yourProvider") })
+                : t("p7pub.askNewLink", { provider: expired?.provider || t("p7pub.yourProvider") })}
             </p>
           </div>
         )}
         {state === "ok" && inv && (
           <div className="overflow-hidden rounded-2xl border border-[#ece6f1] bg-white shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]">
             <div className="p-5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-white/75">Payment request from</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-white/75">{t("p7pub.payRequestFrom")}</div>
               <div className="text-[19px] font-extrabold">{inv.provider}</div>
             </div>
             <div className="p-5">
               {inv.status === "paid" || justPaid ? (
                 <div className="rounded-xl bg-[#eaf0fc] p-4 text-center">
                   <div className="text-[22px]">✓</div>
-                  <div className="text-[15px] font-extrabold text-[#1d3a8f]">{justPaid ? "Paid — thank you!" : "This invoice is paid"}</div>
-                  <div className="mt-1 text-[12.5px] text-[#4a4763]">{money(inv.amount)}{inv.description ? ` · ${inv.description}` : ""}{inv.paidAt ? ` · paid ${fmtDay(inv.paidAt.slice(0, 10))}` : ""}</div>
-                  <div className="mt-1 text-[11.5px] text-[#8a86a3]">Nothing more to pay.</div>
+                  <div className="text-[15px] font-extrabold text-[#1d3a8f]">{justPaid ? t("p7pub.paidThanks") : t("p7pub.invPaid")}</div>
+                  <div className="mt-1 text-[12.5px] text-[#4a4763]">{money(inv.amount)}{inv.description ? ` · ${inv.description}` : ""}{inv.paidAt ? ` · ${t("p7pub.paidOn", { date: fmtDay(inv.paidAt.slice(0, 10)) })}` : ""}</div>
+                  <div className="mt-1 text-[11.5px] text-[#8a86a3]">{t("p7pub.nothingMore")}</div>
                 </div>
               ) : inv.status === "cancelled" ? (
                 <div className="rounded-xl bg-[#fbf8fc] p-4 text-center">
-                  <div className="text-[15px] font-extrabold">This invoice is closed</div>
-                  <div className="mt-1 text-[12.5px] text-[#8a86a3]">{inv.provider} cancelled it — there&rsquo;s nothing to pay. Contact them if you think that&rsquo;s wrong.</div>
+                  <div className="text-[15px] font-extrabold">{t("p7pub.invClosed")}</div>
+                  <div className="mt-1 text-[12.5px] text-[#8a86a3]">{t("p7pub.invCancelledBody", { provider: inv.provider })}</div>
                 </div>
               ) : (
                 <>
-                  <div className="text-[12px] text-[#8a86a3]">Amount due</div>
+                  <div className="text-[12px] text-[#8a86a3]">{t("p7pub.amountDue")}</div>
                   <div className="text-[34px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{money(inv.amount)}</div>
                   {inv.description && <div className="mt-2 text-[13px] text-[#4a4763]">{inv.description}</div>}
-                  <div className="mt-1 text-[12px] text-[#8a86a3]">{inv.reference ? `Booking ${inv.reference}` : ""}{inv.dueDate ? `${inv.reference ? " · " : ""}Due ${fmtDay(inv.dueDate)}` : ""}</div>
+                  <div className="mt-1 text-[12px] text-[#8a86a3]">{inv.reference ? t("p7pub.bookingRefLine", { ref: inv.reference }) : ""}{inv.dueDate ? `${inv.reference ? " · " : ""}${t("p7pub.dueLine", { date: fmtDay(inv.dueDate) })}` : ""}</div>
 
                   {inv.cardEnabled && PK ? (
                     info && stripePromise ? (
@@ -154,23 +157,23 @@ export function PayPage({ token }: { token: string }) {
                       </div>
                     ) : (
                       <button type="button" disabled={starting} onClick={() => void startCard()} className="mt-4 w-full rounded-full bg-[#1d3a8f] px-4 py-3 text-[14px] font-extrabold text-white disabled:opacity-60">
-                        {starting ? "Preparing secure payment…" : "Pay by card"}
+                        {starting ? t("p7pub.preparing") : t("p7pub.payByCard")}
                       </button>
                     )
                   ) : (
                     <div className="mt-4 rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3 text-center text-[12px] text-[#8a86a3]">
-                      {inv.provider} doesn&rsquo;t take card payments online yet — use one of the methods below.
+                      {t("p7pub.noCardOnline", { provider: inv.provider })}
                     </div>
                   )}
                   {payError && <div className="mt-2 text-center text-[12px] font-bold text-[#e21d27]">{payError}</div>}
 
                   {inv.payMethods.length > 0 && (
                     <div className="mt-4 rounded-xl border border-[#ece6f1] bg-[#fbf8fc] p-3">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#8a86a3]">Or pay {inv.provider} by</div>
+                      <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#8a86a3]">{t("p7pub.orPayBy", { provider: inv.provider })}</div>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {inv.payMethods.filter((m) => m !== "Card").map((m) => <span key={m} className="rounded-full border border-[#ece6f1] bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#4a4763]">{m}</span>)}
                       </div>
-                      <div className="mt-2 text-[11px] text-[#8a86a3]">Your provider will confirm once your payment lands.</div>
+                      <div className="mt-2 text-[11px] text-[#8a86a3]">{t("p7pub.providerConfirms")}</div>
                     </div>
                   )}
                 </>
@@ -178,7 +181,7 @@ export function PayPage({ token }: { token: string }) {
             </div>
           </div>
         )}
-        <div className="mt-3 text-center text-[10.5px] text-[#b7b3c9]">Secured by ActivityOS</div>
+        <div className="mt-3 text-center text-[10.5px] text-[#b7b3c9]">{t("p7pub.securedBy")}</div>
       </div>
     </div>
   );
