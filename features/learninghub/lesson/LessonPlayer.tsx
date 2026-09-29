@@ -171,6 +171,12 @@ function QuestionToolNote({ heading, id, prompt, subject, year, cardRef, off, ad
   const [dockOpen, setDockOpen] = useState(false);
   // Collapsed (tight) dock button: parked in the free strip UNDER the lesson card when there is one (never on top of the slide), else at the corner.
   const [btnTop, setBtnTop] = useState<number | null>(null);
+  // The corner fallback used to be a bare bottom-right pin — the exact spot the step's OWN nav footer (Back/Next,
+  // e.g. SlideDeck.tsx's `sticky bottom-0` bar) sticks to once its card is taller than the viewport, so the dock
+  // button (z-index above it, Z.dock) sat on top of "Next" and ate its clicks (factory-shots.spec.ts, 29 Sep: the
+  // preview's Next button intercepted at some scroll position). Measure the real "lesson-next" button and always
+  // park the fallback just above it instead of assuming the corner is free.
+  const [cornerBottom, setCornerBottom] = useState(16);
   const tight = dockLeft === null; // no free room beside the lesson (tablet / phone): the dock collapses to a button so it never covers the question
   useEffect(() => {
     const place = () => {
@@ -179,16 +185,19 @@ function QuestionToolNote({ heading, id, prompt, subject, year, cardRef, off, ad
       const gap = vw - r.right;
       setDockLeft(gap >= w + 24 ? Math.round(r.right + (gap - w) / 2) : null);
       setBtnTop(window.innerHeight - r.bottom >= 60 && r.bottom > 0 ? Math.round(r.bottom + 8) : null);
+      const navTop = document.querySelector('[data-testid="lesson-next"]')?.getBoundingClientRect().top;
+      setCornerBottom(navTop != null && navTop < window.innerHeight ? Math.max(16, Math.round(window.innerHeight - navTop + 12)) : 16);
     };
     place();
     window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, { passive: true, capture: true });
     const ro = typeof ResizeObserver !== "undefined" && cardRef.current ? new ResizeObserver(place) : null; if (ro && cardRef.current) ro.observe(cardRef.current);
-    return () => { window.removeEventListener("resize", place); ro?.disconnect(); };
+    return () => { window.removeEventListener("resize", place); window.removeEventListener("scroll", place, true); ro?.disconnect(); };
   }, [cardRef]);
   if (typeof document === "undefined") return null;
   return createPortal(
-    <aside ref={dockRef} data-testid="preview-tool-dock" style={{ zIndex: Z.dock, ...(tight && !dockOpen && btnTop !== null ? { top: btnTop } : {}), ...(dockLeft === null ? {} : { left: dockLeft, right: "auto" }) }} data-open="1" aria-label={tr("hublessons.tqAside")}
-      className={`pointer-events-none fixed end-3 flex w-[min(250px,calc(100vw-1.5rem))] ${tight && !dockOpen && btnTop !== null ? "justify-end" : tight && !dockOpen ? "inset-y-0 items-end justify-end pb-4" : "inset-y-0 items-center"}`}>
+    <aside ref={dockRef} data-testid="preview-tool-dock" style={{ zIndex: Z.dock, ...(tight && !dockOpen ? (btnTop !== null ? { top: btnTop } : { bottom: cornerBottom }) : {}), ...(dockLeft === null ? {} : { left: dockLeft, right: "auto" }) }} data-open="1" aria-label={tr("hublessons.tqAside")}
+      className={`pointer-events-none fixed end-3 flex w-[min(250px,calc(100vw-1.5rem))] ${tight && !dockOpen ? "justify-end" : "inset-y-0 items-center"}`}>
       {tight && !dockOpen && (
         <button type="button" onClick={() => setDockOpen(true)} aria-expanded="false" data-testid="preview-tool-dock-open"
           className={`pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-4 text-[13px] font-extrabold text-[var(--ink)] shadow-lg ${FOCUS}`}>🧰 {heading ?? tr("hublessons.toolsForQuestion")}</button>
