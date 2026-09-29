@@ -145,8 +145,10 @@ test.describe("set a lesson for children", () => {
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
     await expect(dlg.getByLabel("Title")).toHaveValue(hwTitle(L.title), { timeout: 20_000 }); // the ready-made title, not a blank form
-    // Bare on creation: the lesson only supplies the title; no quiz / lesson / flashcards are linked and the pack's instructions are not pasted in.
-    await expect(dlg.getByLabel("Instructions")).toHaveValue("");
+    // Bare on creation: no quiz / lesson / flashcards picker is shown — but the form does pre-fill helpful
+    // instructions from the lesson itself (features/learninghub/hubIntent.ts lessonHomeworkDraft), same as
+    // the non-interactive case tested below ("Read the lesson…").
+    await expect(dlg.getByLabel("Instructions")).toHaveValue(new RegExp(`Open the lesson .${esc(L.title)}.* in the Lessons tab and work through it, then finish its quiz`));
     await expect(dlg.getByTestId("hub-hw-linked-rows")).toHaveCount(0);
     await expect(dlg.locator("#hub-hw-quiz")).toHaveCount(0); // homework creation is bare: no quiz picker any more
 

@@ -250,7 +250,7 @@ test.describe("tutor UI: teach a lesson in person to two children", () => {
     await expect(run).toBeVisible({ timeout: 20_000 });
     sessionId = (await run.getAttribute("data-session"))!;
     expect(sessionId).toBeTruthy();
-    await expect(page.getByTestId("ip-banner")).toContainText("2 children");
+    await expect(page.getByTestId("ip-banner")).toContainText("children here: 2");
     await expect(page.getByTestId("ip-who-btn")).toContainText("2 of 2 here");
 
     // The lesson player runs read-only, on the tutor's device: nothing is started for any child. A live

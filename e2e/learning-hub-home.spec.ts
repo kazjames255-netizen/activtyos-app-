@@ -147,8 +147,10 @@ test("tutor: Home is the first, default tab and reflects this run's work", async
   await expect(tabOf(page, /Set homework/)).toHaveAttribute("aria-selected", "true");
   await page.getByRole("tab", { name: "Home", exact: true }).click();
   await expect(page.locator("#hub-home-tutor")).toBeVisible();
+  // "Schedule video lesson" was folded into the "Let's Teach" / live-lessons sub-tab
+  // (features/learninghub/tabGroups.ts) — it no longer has its own "schedule" sub-tab id.
   await openTab(page, /Schedule video lesson/);
-  await expect(page.locator('[role="tab"][data-sub="schedule"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[role="tab"][data-sub="live"]')).toHaveAttribute("aria-selected", "true");
   await ctx.close();
 });
 
