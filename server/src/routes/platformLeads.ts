@@ -25,7 +25,8 @@ const PLANS = ["freelancer", "company", "franchise"] as const;
  *  franchise network, or a community organisation. Drives the label on the
  *  name field and how the pipeline reads. */
 const KINDS = ["person", "business", "group", "franchise", "school", "cluster", "charity"] as const;
-const STAGES = ["new", "contacted", "interested", "demo", "trial", "won", "lost"] as const;
+// Must match the Sales board's columns (features/platform/SalesApp.tsx STAGES) — a stage the board has no tab for hides the lead everywhere.
+const STAGES = ["new", "contacted", "demo", "trial", "won", "lost"] as const;
 const ACTIVITY_TYPES = ["call", "email", "social", "demo", "note"] as const;
 
 // zod strips unknown keys, so a client re-sending a whole lead (id, activities,
