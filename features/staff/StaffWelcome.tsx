@@ -11,7 +11,7 @@
 // forces it). Front-end demo — real per-user "welcomed" state + identity are Amir's.
 import { useEffect, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses } from "./staffTasks";
+import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses, syncOutstandingDocs } from "./staffTasks";
 
 const FLAG = "aos.staff.welcomed.v1";
 
@@ -29,6 +29,9 @@ export function StaffWelcome() {
     setAvailOk(availabilityDone());
     setComp(complianceProgress());
     setLaterCount(outstandingDocs() + outstandingCourses());
+    let live = true;
+    void syncOutstandingDocs().then(() => { if (live) setLaterCount(outstandingDocs() + outstandingCourses()); });
+    return () => { live = false; };
   }, [forced]);
 
   const dismiss = () => { try { localStorage.setItem(FLAG, new Date().toISOString()); } catch { /* ignore */ } setOpen(false); };

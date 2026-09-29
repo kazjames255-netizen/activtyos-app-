@@ -10,7 +10,7 @@
 // remains. Demo/local — per-user identity is Amir's.
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses } from "./staffTasks";
+import { availabilityDone, complianceProgress, outstandingDocs, outstandingCourses, syncOutstandingDocs } from "./staffTasks";
 
 const HIDE_KEY = "aos.staff.reminderHidden.v1"; // sessionStorage
 
@@ -24,18 +24,25 @@ export function StaffReminderBanner() {
   const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
-    const next: Part[] = [];
-    // gating setup first, in the same order as the first-login launcher
-    if (!availabilityDone()) next.push({ label: "Set your availability", view: "availability", gating: true });
-    const comp = complianceProgress();
-    if (comp.total > 0 && comp.done < comp.total) next.push({ label: `Finish your compliance details (${comp.done}/${comp.total})`, view: "onboarding", gating: true });
-    // no-rush items
-    const courses = outstandingCourses();
-    if (courses > 0) next.push({ label: `${courses} course${courses > 1 ? "s" : ""} to complete`, view: "certificates", gating: false });
-    const docs = outstandingDocs();
-    if (docs > 0) next.push({ label: `${docs} document${docs > 1 ? "s" : ""} to read`, view: "documents", gating: false });
-    setParts(next);
+    let live = true;
+    const build = () => {
+      const next: Part[] = [];
+      // gating setup first, in the same order as the first-login launcher
+      if (!availabilityDone()) next.push({ label: "Set your availability", view: "availability", gating: true });
+      const comp = complianceProgress();
+      if (comp.total > 0 && comp.done < comp.total) next.push({ label: `Finish your compliance details (${comp.done}/${comp.total})`, view: "onboarding", gating: true });
+      // no-rush items
+      const courses = outstandingCourses();
+      if (courses > 0) next.push({ label: `${courses} course${courses > 1 ? "s" : ""} to complete`, view: "certificates", gating: false });
+      const docs = outstandingDocs();
+      if (docs > 0) next.push({ label: `${docs} document${docs > 1 ? "s" : ""} to read`, view: "documents", gating: false });
+      if (live) setParts(next);
+    };
+    build();
+    // A real account's document count comes from the server: fill it in once it lands.
+    void syncOutstandingDocs().then(build);
     try { setHidden(sessionStorage.getItem(HIDE_KEY) === "1"); } catch { setHidden(false); }
+    return () => { live = false; };
   }, [pathname]);
 
   if (hidden || parts.length === 0) return null;

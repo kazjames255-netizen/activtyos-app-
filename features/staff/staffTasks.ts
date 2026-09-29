@@ -8,6 +8,7 @@ import { DOCS_KEY, seedDocs, type DocItem } from "@/features/documents/Documents
 import { DEFAULT_FIELDS, fieldApplies, satisfied, type OnboardRecord } from "@/features/team/OnboardingApp";
 import { isDemoMode } from "@/lib/api";
 import { rolesCover, withoutDemoAssignments } from "@/features/learning/courseCompletions";
+import { fetchLibrary } from "@/features/documents/docStore";
 
 export const ME = "Marcus Bell";
 const ME_ROLE = "Lead";
@@ -46,13 +47,32 @@ export function complianceProgress(): { done: number; total: number } {
 }
 export const complianceDone = () => { const { done, total } = complianceProgress(); return total > 0 && done >= total; };
 
-/** Documents assigned to me that I haven't read-and-confirmed yet. */
+/** Documents assigned to me that I haven't read-and-confirmed yet. In the guided-tour demo that's the seeded sample library; for a real account it is
+ *  whatever the operator's server library says (see syncOutstandingDocs) — it used to count the seeded demo policies for every real member of
+ *  staff, so a provider with NO documents told each new starter "10 documents to read". */
+let docsOutstandingCache: number | null = null;
 export function outstandingDocs(): number {
+  if (!isDemoMode()) return docsOutstandingCache ?? 0;
   const stored = read<DocItem[]>(DOCS_KEY, []);
   const docs = Array.isArray(stored) && stored.length ? stored : seedDocs();
   const mine = docs.filter((d) => d.all || rmatch(d.roles, ME_ROLE) || rmatch(d.titles, ME_TITLE) || d.listings.some((l) => MY_LISTINGS.includes(l)));
   const reads = read<Record<string, Record<string, unknown>>>("aos.docs.read.v1", {})[ME] || {};
   return mine.filter((d) => !reads[d.id]).length;
+}
+/** Real accounts: ask the server which assigned documents this person still has to confirm (same rule as the Documents page). */
+export async function syncOutstandingDocs(): Promise<number> {
+  if (isDemoMode()) return outstandingDocs();
+  try {
+    const r = await fetchLibrary<DocItem>();
+    const list = r.docs ?? [];
+    const me = r.me;
+    const has = (arr: string[], m: string) => !!m && arr.some((x) => { const xl = x.toLowerCase(), ml = m.toLowerCase(); return xl.includes(ml) || ml.includes(xl.split(/[ /]/)[0]); });
+    const mine = list.filter((d) => d.all || has(d.roles, me?.role ?? "") || has(d.titles, me?.role ?? "") || d.listings.some((l) => (me?.listings ?? []).includes(l)));
+    const cur = new Map(list.map((d) => [d.id, d.version]));
+    const done = new Set((r.reads ?? []).filter((x) => cur.get(x.docId) === x.version).map((x) => x.docId));
+    docsOutstandingCache = mine.filter((d) => !done.has(d.id)).length;
+  } catch { /* keep the last answer — a reminder must never break the page */ }
+  return docsOutstandingCache ?? 0;
 }
 
 /** Courses assigned to me that I haven't passed yet. */
