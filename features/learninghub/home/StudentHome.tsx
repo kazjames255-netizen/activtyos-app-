@@ -21,7 +21,7 @@ import { openLink } from "../family/link";
 import { WatchAlongButton } from "../family/WatchAlong";
 import { kidBand } from "../family/KidMode";
 import { PARENT_COPY, overdueVerdict } from "../family/parentCopy";
-import { KID_COPY, bandOrDefault, useKidCopy } from "../family/kidCopy";
+import { KID_COPY, bandOrDefault, kidTitle, useKidCopy } from "../family/kidCopy";
 import { Mascot, useMascotEnabled } from "../mascot";
 import { KidHome, type KidRow, type KidStep } from "./KidHome";
 import { dayCounts } from "./KidWeek";
@@ -207,8 +207,10 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
           <div className="w-[340px] flex-none rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm sm:p-5">
             <NextLessonHero embedded lesson={next} isTutor={false} attendees={[]} extraCount={Math.max(0, d.upcoming.length - 1)}
               alsoUp={next ? undefined : [
-                ...(d.step ? [{ key: "step", title: d.step.a.title, note: d.step.kicker, onClick: () => openLink({ kind: "quiz", id: d.step!.a.id }, { tab: d.step!.go }) }] : []),
-                ...d.todo.slice(0, 2).map((h) => ({ key: h.id + h.submission.id, title: h.title, note: h.st.label, onClick: () => go("homework") })),
+                ...(d.step ? [{ key: "step", title: kidTitle(d.step.a.title, kind), note: d.step.kicker, onClick: () => openLink({ kind: "quiz", id: d.step!.a.id }, { tab: d.step!.go }) }] : []),
+                // A tutor's free-text homework title can carry "Overdue"/"Late" (kidCopy.ts's kidTitle) — this list
+                // renders even in kid mode (it isn't behind the `!kidMode` guard above), so it must strip them too.
+                ...d.todo.slice(0, 2).map((h) => ({ key: h.id + h.submission.id, title: kidTitle(h.title, kind), note: h.st.label, onClick: () => go("homework") })),
               ].slice(0, 3)}
               topicLabel={next?.topicId && topicById.get(next.topicId) ? topicLabel(topicById.get(next.topicId)!) : undefined} onGo={() => go("live")} />
           </div>
@@ -264,10 +266,10 @@ function StudentHomeFor(props: PanelProps & { childId: string }) {
                 const tone = h.st.overdue && !kind ? TONES.red : h.st.soon || h.st.overdue ? TONES.gold : TONES.neutral;
                 return (
                   <li key={h.id + h.submission.id}>
-                    <button type="button" onClick={() => go("homework")} aria-label={t("hubshell.hm_hwAria", { title: h.title, label: h.st.label })}
+                    <button type="button" onClick={() => go("homework")} aria-label={t("hubshell.hm_hwAria", { title: kidTitle(h.title, kind), label: h.st.label })}
                       className={`home-lift flex min-h-[56px] w-full items-center gap-3 rounded-2xl border p-2.5 text-start ${FOCUS}`} style={{ background: tone.bg, borderColor: tone.line }}>
                       <span aria-hidden className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--surface)]" style={{ color: tone.fg }}><Icon name={h.st.overdue && !kind ? "warning" : "homework"} size={19} /></span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{h.title}</span><span className="block text-[12px] font-bold" style={{ color: tone.fg }}>{h.st.label}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-extrabold text-[var(--ink)]">{kidTitle(h.title, kind)}</span><span className="block text-[12px] font-bold" style={{ color: tone.fg }}>{h.st.label}</span></span>
                       <Icon name="chevronRight" size={16} className="text-[var(--ink-3)]" />
                     </button>
                     {!kidMode && (h.notes.find((n) => n.interactive) ?? h.notes[0]) && <WatchAlongButton noteId={(h.notes.find((n) => n.interactive) ?? h.notes[0])!.id} className="mt-0.5" />}

@@ -5,6 +5,7 @@ import { StatTiles, type StatTile } from "../quiz/StatTiles";
 import { DISPLAY, FOCUS, Overline, type Tone } from "../teachKit";
 import { Ico } from "../teachIcons";
 import { subjectSwatch } from "../subjectColour";
+import { kidTitle } from "../family/kidCopy";
 import type { Topic } from "../types";
 import { HwTile } from "./hwKit";
 import { dueState, type StudentHomework as HW } from "./hwTypes";
@@ -80,7 +81,7 @@ export function HwCard({ hw, topic, now, kid, onOpen }: { hw: HW; topic: Topic |
       <HwTile topic={topic} size={52} tone={marked ? "green" : handed ? "brand" : hot ? "gold" : "gold"} icon={marked ? "check" : handed ? "send" : "homework"} />
       <span className="relative min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[15px] font-extrabold leading-snug text-[var(--ink)]" style={DISPLAY}>{hw.title}</span>
+          <span className="text-[15px] font-extrabold leading-snug text-[var(--ink)]" style={DISPLAY}>{kidTitle(hw.title, kid)}</span>
           {hw.assessmentId && <span className="rounded-full px-2 py-[2px] text-[11px] font-extrabold" style={{ background: "var(--violet-soft, var(--panel))", color: "var(--violet, var(--ink-2))" }}>{h("quiz")}</span>}
         </span>
         <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] font-semibold">

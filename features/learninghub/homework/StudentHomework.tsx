@@ -10,7 +10,7 @@ import { errMsg, fmtSize, type Note } from "../types";
 import { ACCEPT_FILES, DISPLAY, EmptyState, FOCUS, MAX_FILE, Notice, Pill, Skeleton, fmtDayTime, goToTab, readAsDataUrl, useNow, withQs } from "../teachKit";
 import { GradientTile, Ico } from "../teachIcons";
 import { ChildChip, useFamily, useSupport } from "../family/FamilyContext";
-import { useKidCopy } from "../family/kidCopy";
+import { kidTitle, useKidCopy } from "../family/kidCopy";
 import { closeLink, openLink, useLinkOpen } from "../family/link";
 import { VideoEmbeds } from "../videoKit";
 import { QuizBreakdown } from "./hwBreakdown";
@@ -201,7 +201,7 @@ function Detail({ kid, band, hw, qs, childId, now, onBack, onChanged, onError }:
           {sub.late && <span className={`rounded-full px-2.5 py-[3px] uppercase tracking-wide ${kid ? "bg-[var(--panel)] text-[var(--ink-2)]" : "bg-[var(--red)] text-white"}`}>{kid ? tr("stHandedIn") : tr("handedLate")}</span>}
         </div>
         <div className="mt-2.5"><ChildChip childId={childId} tone="soft" /></div>
-        <h2 className="mt-2 break-words text-[22px] font-extrabold leading-tight text-[var(--ink)] sm:text-[26px]" style={DISPLAY}>{hw.title}</h2>
+        <h2 className="mt-2 break-words text-[22px] font-extrabold leading-tight text-[var(--ink)] sm:text-[26px]" style={DISPLAY}>{kidTitle(hw.title, kid)}</h2>
         <div className="mt-1.5 text-[13px] text-[var(--ink-3)]">{tr("dueAt", { when: x.dayTime(hw.dueAt) })}{sub.submittedAt && <> · {tr("handedInAt", { when: x.dayTime(sub.submittedAt) })}</>}</div>
         <StatusStepper status={sub.status} className="mt-4 max-w-[380px]" />
 
