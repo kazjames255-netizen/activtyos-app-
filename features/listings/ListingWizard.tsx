@@ -363,6 +363,9 @@ export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "au
 export { applyDiscounts, emptyRule, ruleSummary } from "./discounts";
 export type { DiscountKind, DiscountLine, DiscountRule } from "./discounts";
 import { emptyRule, ruleSummary, type DiscountKind, type DiscountRule } from "./discounts";
+import { useT, useI18n, useWord, tNow } from "@/lib/i18n/provider";
+import { Rich } from "@/components/i18n/Rich";
+import { pickPlural } from "@/lib/i18n/plural";
 
 // Every heading a parent sees, so the operator can reword all of them.
 // `about` falls back to the editable "Section title" from step 2.
@@ -380,8 +383,8 @@ export const WHERE_HEAD_DEFAULT = { eyebrow: "Where is it", title: "Location" };
 /** The venue section's heading. Lives on the operator's library, not the listing — the same venue reads the same on every listing. */
 export function whereHeading(local: LocalState): { eyebrow: string; title: string } {
   return {
-    eyebrow: local.whereHeading?.eyebrow?.trim() || WHERE_HEAD_DEFAULT.eyebrow,
-    title: local.whereHeading?.title?.trim() || WHERE_HEAD_DEFAULT.title,
+    eyebrow: local.whereHeading?.eyebrow?.trim() || tNow("p7pg.h_where_eyebrow"),
+    title: local.whereHeading?.title?.trim() || tNow("p7pg.h_where_title"),
   };
 }
 
@@ -391,7 +394,9 @@ export function headingOf(d: WizardDraft, key: string, field: "eyebrow" | "title
   const custom = d.headings?.[`${key}.${field}`]?.trim();
   if (custom) return custom;
   if (key === "about" && field === "title" && d.descriptionSection.trim()) return d.descriptionSection.trim();
-  return def ? def[field] : "";
+  if (!def) return "";
+  const k = `p7pg.h_${key}_${field}`; const tv = tNow(k);
+  return tv !== k ? tv : def[field];
 }
 
 /**
@@ -650,6 +655,7 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
  * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
  * "Preview as a parent" (same ParentPreview component, same data shape). */
 export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing: ServerListing; topRight?: React.ReactNode; bookingOnly?: boolean; logo?: string | null }) {
+  const t = useT();
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
@@ -702,11 +708,11 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         }
         for (const [child, dates] of perChild) {
           const blk = blockOn(listing.blocks, dates[0]);
-          if (!blk) throw new Error("Those dates aren't open for booking any more.");
+          if (!blk) throw new Error(t("p7cl.errClosed"));
           lines.push({ blockId: blk.id, pass: item.name, dates, child, itemId: item.id, periodId: item.periodId });
         }
       }
-      if (!lines.length) throw new Error("Nobody is on any of these days yet.");
+      if (!lines.length) throw new Error(t("p7cl.errNobody"));
       const byBlock = new Map<string, Line[]>();
       for (const l of lines) byBlock.set(l.blockId, [...(byBlock.get(l.blockId) ?? []), l]);
       const refs: string[] = [];
@@ -773,7 +779,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         voucherDetails,
       });
     } catch (e) {
-      setBookState({ busy: false, error: e instanceof Error ? e.message : "Booking failed" });
+      setBookState({ busy: false, error: e instanceof Error ? e.message : t("p7cl.errBooking") });
       return;
     }
     setBookState({ busy: false, error: null });
@@ -814,13 +820,13 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
         <div className="text-[44px]">{needsApproval ? "📩" : "🎉"}</div>
         <h2 className="mt-2 text-[24px] font-extrabold tracking-[-0.01em] text-[#171534]">
           {needsApproval
-            ? `Request received${kids ? ` for ${kids}` : ""}!`
-            : `Congratulations${kids ? `, ${kids} is booked in!` : ", you’re booked in!"}`}
+            ? (kids ? t("p7cl.reqReceivedFor", { kids }) : t("p7cl.reqReceived"))
+            : (kids ? t("p7cl.bookedKids", { kids }) : t("p7cl.bookedYou"))}
         </h2>
         <p className="mt-1.5 text-[13px] text-[#6a6785]">
           {needsApproval
-            ? `${listing.tenantName || "The provider"} will review it and confirm your place — you’ll get another email then${scheme ? "" : ", and payment is only taken once it’s approved"}. We’ve emailed you the details below.`
-            : "A confirmation email is on its way with everything below."}
+            ? t(scheme ? "p7cl.approvalBodyScheme" : "p7cl.approvalBody", { provider: listing.tenantName || t("p7cl.theProvider") })
+            : t("p7cl.confirmEmail")}
         </p>
 
         <div className="mt-4 overflow-hidden rounded-2xl border border-[#e6e9f2] bg-white text-start shadow-[0_10px_30px_-14px_rgba(20,30,80,.25)]">
@@ -829,16 +835,16 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
             <div className="text-[11.5px] text-[#cdddf7]">{listing.tenantName}</div>
           </div>
           <div className="p-4">
-            {kids && <div className={rowCls}><span className={labCls}>Who</span><span className={valCls}>{kids}</span></div>}
-            {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>Pass</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
-            {when && <div className={rowCls}><span className={labCls}>📅 Starts</span><span className={valCls}>{when}</span></div>}
-            {where && <div className={rowCls}><span className={labCls}>📍 Where</span><span className={valCls}>{where}</span></div>}
+            {kids && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWho")}</span><span className={valCls}>{kids}</span></div>}
+            {done.passes.length > 0 && <div className={rowCls}><span className={labCls}>{t("p7cl.lblPass")}</span><span className={valCls}>{done.passes.join(", ")}</span></div>}
+            {when && <div className={rowCls}><span className={labCls}>{t("p7cl.lblStarts")}</span><span className={valCls}>{when}</span></div>}
+            {where && <div className={rowCls}><span className={labCls}>{t("p7cl.lblWhere")}</span><span className={valCls}>{where}</span></div>}
             <div className="mt-2 flex items-center justify-between border-t border-[#eef0f5] pt-2.5 text-[13px]">
-              <span className="text-[#8a86a3]">{done.refs.length === 1 ? "Reference" : "References"} {done.refs.join(", ")}</span>
+              <span className="text-[#8a86a3]">{done.refs.length === 1 ? t("p7cl.refOne") : t("p7cl.refMany")} {done.refs.join(", ")}</span>
               {scheme
-                ? <b className="text-[15px] text-[#a5670a]">{money(done.total)} to pay via {scheme}</b>
+                ? <b className="text-[15px] text-[#a5670a]">{t("p7cl.toPayVia", { amt: money(done.total), scheme })}</b>
                 : needsApproval
-                ? <b className="text-[15px] text-[#8a5300]">{money(done.total)} · payable once approved</b>
+                ? <b className="text-[15px] text-[#8a5300]">{t("p7cl.payableOnApproval", { amt: money(done.total) })}</b>
                 : <b className="text-[15px] text-[#171534]">{money(done.total)}</b>}
             </div>
           </div>
@@ -846,7 +852,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
 
         {scheme && (
           <div className="mt-3 rounded-2xl border border-[#f3d98a] bg-[#fdf6e3] p-4 text-start text-[12.5px] leading-relaxed text-[#7a5a12]">
-            <b>Almost there — your place is held.</b> Head over to your <b>{scheme}</b> account to pay <b>{money(done.total)}</b>, quoting these details (we&rsquo;ve emailed them too). Your booking shows as <b>awaiting voucher payment</b> until the money reaches {listing.tenantName || "your provider"}.
+            <Rich text={t("p7cl.almostThere", { scheme, amt: money(done.total), provider: listing.tenantName || t("p7cl.yourProvider") })} />
             {vDetails.length > 0 && (
               <table className="mt-2.5" cellPadding={0}>
                 <tbody>
@@ -856,22 +862,22 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
                       <td className="align-top font-extrabold text-[#5a4410]">{isUrlD(dt) ? <a href={/^https?:\/\//i.test(dt.value) ? dt.value : `https://${dt.value}`} target="_blank" rel="noreferrer" className="underline" style={{ color: "#2f6bd8" }}>{dt.value} ↗</a> : dt.value}</td>
                     </tr>
                   ))}
-                  <tr><td className="pe-4 text-[#a5834a]">Booking ref</td><td className="font-extrabold text-[#5a4410]">{done.refs.join(", ")}</td></tr>
-                  <tr><td className="pe-4 text-[#a5834a]">Amount</td><td className="font-extrabold text-[#5a4410]">{money(done.total)}</td></tr>
+                  <tr><td className="pe-4 text-[#a5834a]">{t("p7cl.bookingRef")}</td><td className="font-extrabold text-[#5a4410]">{done.refs.join(", ")}</td></tr>
+                  <tr><td className="pe-4 text-[#a5834a]">{t("p7cl.amountLbl")}</td><td className="font-extrabold text-[#5a4410]">{money(done.total)}</td></tr>
                 </tbody>
               </table>
             )}
             {website && (
               <div className="mt-2.5">
-                <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>Go to {scheme} to pay ↗</a>
+                <a href={website} target="_blank" rel="noreferrer" className="inline-flex rounded-lg px-4 py-2 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>{t("p7cl.goToPay")}</a>
               </div>
             )}
           </div>
         )}
 
         <div className="mt-5 flex flex-wrap justify-center gap-2">
-          <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>See my bookings</a>
-          <a href="/custdash/browse" className="rounded-lg border border-[#dbe0ec] bg-white px-5 py-2.5 text-[13px] font-bold text-[#4a4763]">← Browse more activities</a>
+          <a href="/custdash/bookings" className="rounded-lg px-5 py-2.5 text-[13px] font-bold text-white" style={{ background: "var(--brand-2,#2f6bd8)" }}>{t("p7cl.seeMyBookings")}</a>
+          <a href="/custdash/browse" className="rounded-lg border border-[#dbe0ec] bg-white px-5 py-2.5 text-[13px] font-bold text-[#4a4763]">{t("p7cl.browseMore")}</a>
         </div>
       </div>
     );
@@ -1703,7 +1709,7 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         <RichCard icon="💳" title="How can parents pay?" subtitle="Card is always accepted — turn other methods on or off" tint="teal">
           <div className="mb-2.5 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">Set each scheme&rsquo;s details once in <b>Setup → Payment methods</b>; here you just pick which apply to <b>this</b> listing. Parents always see <b>card</b>; whatever you switch on also shows in their checkout and at the top of the booking page.</div>
           <div className="flex flex-wrap gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-2)" }}>💳 Card <span className="font-normal text-[var(--ink-3)]">· always on</span></span>
+            <span className="inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[12px] font-bold" style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink-2)" }}>Card <span className="font-normal text-[var(--ink-3)]">· always on</span></span>
             {nonCard.map((m) => {
               const on = accepted.includes(m);
               return (
@@ -2724,11 +2730,11 @@ function BookingCutoff({ value, onChange }: { value: string; onChange: (v: strin
 }
 
 /** Parent-facing line under "Choose your dates" when the listing has a cut-off. */
-function cutoffNote(d: WizardDraft, color: string) {
+function cutoffNote(d: WizardDraft, color: string, tr: (k: string, v?: Record<string, string | number>) => string, locale: string) {
   const h = parseInt(d.bookingCutoffHours ?? "", 10);
   if (!Number.isFinite(h) || h <= 0) return null;
-  const label = h >= 48 && h % 24 === 0 ? `${h / 24} days` : `${h} hour${h === 1 ? "" : "s"}`;
-  return <div className="-mt-1 mb-2 text-[11.5px] font-semibold" style={{ color }}>🛑 Bookings close {label} before each session starts.</div>;
+  const label = h >= 48 && h % 24 === 0 ? pickPlural(tr, locale, "p7pol.dy", h / 24) : pickPlural(tr, locale, "p7pol.hr", h);
+  return <div className="-mt-1 mb-2 text-[11.5px] font-semibold" style={{ color }}>{tr("p7be.cutoffNote", { label })}</div>;
 }
 
 function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
@@ -2839,6 +2845,8 @@ type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: Blo
  * to choose between booking and queuing — they do both in one go.
  */
 function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: WizardDraft; tone: "light" | "dark" }) {
+  const tr = useT();
+  const { locale } = useI18n();
   if (!b.waitlistOn || !b.fullCount) return null;
   const dark = tone === "dark";
   // Red, to match the "full" markers (a full day's dot is #ff5470). A warm,
@@ -2851,7 +2859,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   if (b.waitDone) {
     return (
       <div className="mt-3 rounded-2xl border p-3.5 text-[12px] leading-[1.55]" style={box}>
-        <b>You&rsquo;re on the waiting list.</b>
+        <b>{tr("p7bw.onWaitlist")}</b>
         {/* Spell out exactly what they're queued for — a parent who booked
             three separate dates needs to know which ones this covers. */}
         {b.waitSel.length > 0 && (
@@ -2861,11 +2869,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
           </div>
         )}
         <div className="mt-1.5">
-          We&rsquo;ll email you the moment a place comes up
-          {(d.waitlistMode ?? "manual") === "auto"
-            ? " — first in the queue gets it, and you'll have 2 hours to take it."
-            : " — the organiser will be in touch if one does."}
-          {" "}You can see this any time under <b>My waiting list</b> in your account.
+          <Rich text={tr((d.waitlistMode ?? "manual") === "auto" ? "p7bw.waitAuto" : "p7bw.waitManual")} />
         </div>
       </div>
     );
@@ -2874,28 +2878,28 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   return (
     <div className="mt-3 rounded-2xl border p-3.5" style={box}>
       <div className="flex flex-wrap items-center gap-2">
-        <b className="text-[12.5px]">{b.fullCount} day{b.fullCount === 1 ? " is" : "s are"} full</b>
+        <b className="text-[12.5px]">{pickPlural(tr, locale, "p7bw.daysFull", b.fullCount)}</b>
         <button type="button" onClick={b.waitAll} className="ms-auto text-[11.5px] font-bold underline underline-offset-2">
-          {b.waitSel.length === b.fullCount ? "Clear all" : `Join the waiting list for all ${b.fullCount}`}
+          {b.waitSel.length === b.fullCount ? tr("p7med.clearAll") : tr("p7bw.joinAll", { n: b.fullCount })}
         </button>
       </div>
       <div className="mt-1.5 rounded-lg px-2.5 py-1.5 text-[11.5px] leading-[1.5]" style={{ background: dark ? "#00000030" : "#ffffff70" }}>
-        <span className="font-bold">Full:</span> {b.datesPretty(b.fullDays)}
+        <span className="font-bold">{tr("p7bw.fullLbl")}</span> {b.datesPretty(b.fullDays)}
       </div>
       <div className="mt-1.5 text-[11.5px] leading-[1.5]">
         {b.waitSel.length === 0
-          ? "Tap a full day above to join the waiting list for it — you can pick as many as you like."
-          : `On your list for ${b.waitSel.length} day${b.waitSel.length === 1 ? "" : "s"}: ${b.datesPretty(b.waitSel)}`}
+          ? tr("p7bw.tapFullDay")
+          : pickPlural(tr, locale, "p7bw.onYourList", b.waitSel.length, { dates: b.datesPretty(b.waitSel) })}
       </div>
       {b.waitSel.length > 0 && (
         <>
           <button type="button" onClick={() => b.setWaitDone(true)}
             className="mt-2.5 w-full rounded-xl py-2.5 text-[12.5px] font-extrabold text-white"
             style={{ background: cta }}>
-            Join the waiting list for {b.waitSel.length} day{b.waitSel.length === 1 ? "" : "s"}
+            {pickPlural(tr, locale, "p7bw.joinWaitN", b.waitSel.length)}
           </button>
           <div className="mt-1.5 text-[11px] leading-[1.45] opacity-90">
-            Nothing to pay — you&rsquo;re only charged if a place comes up and you take it.
+            {tr("p7bw.nothingToPayWait")}
           </div>
         </>
       )}
@@ -2907,6 +2911,8 @@ const BASKET_NOTE_KEY = "aos.basket.lastListing.v1";
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
   d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
+  const tr = useT();
+  const { locale } = useI18n();
   // A family can't pick a day that's already gone (the server enforces it too).
   // Operators still see every day — they may record a past attendance.
   // useState initialiser, not a bare new Date() in render (React Compiler).
@@ -2935,7 +2941,7 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
       if (raw) {
         const prev = JSON.parse(raw) as { listingId: string | null; title: string; count: number };
         if (prev.listingId !== d.id) {
-          setDroppedBasketNotice(`Your ${prev.count} pass${prev.count === 1 ? "" : "es"} for ${prev.title} ${prev.count === 1 ? "was" : "were"} cleared when you came here — only one club's basket is kept at a time.`);
+          setDroppedBasketNotice(pickPlural(tr, locale, "p7bw.dropped", prev.count, { title: prev.title }));
         }
         sessionStorage.removeItem(BASKET_NOTE_KEY);
       }
@@ -2954,7 +2960,7 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
       {droppedBasketNotice && (
         <div className="mb-2.5 flex items-start justify-between gap-2 rounded-xl border border-dashed border-[#d9a84e] bg-[#fff8e8] px-3 py-2 text-[12px] font-semibold text-[#7a5210]">
           <span>⚠️ {droppedBasketNotice}</span>
-          <button type="button" onClick={() => setDroppedBasketNotice(null)} className="shrink-0 font-extrabold opacity-70 hover:opacity-100" aria-label="Dismiss">✕</button>
+          <button type="button" onClick={() => setDroppedBasketNotice(null)} className="shrink-0 font-extrabold opacity-70 hover:opacity-100" aria-label={tr("p7bw.dismiss")}>✕</button>
         </div>
       )}
       {theme === "playful" ? <PlayfulBooking {...view} /> : <SportBooking {...view} surf={THEMES[theme]} />}
@@ -2993,6 +2999,8 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
 // planned days before they choose), the menu that runs and its allergens. Info
 // only — ordering/paying is a separate step in the customer Meals area.
 function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: string[]; tone?: "light" | "dark" }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const [open, setOpen] = useState(false);
   const menus = d.mealMenus ?? [];
   const plan = d.mealPlan ?? {};
@@ -3019,10 +3027,10 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 px-3.5 py-2.5 text-start">
         <span className="text-[16px]">🍽️</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[12.5px] font-extrabold" style={{ color: ink }}>Meals {chosen.length ? "on your days" : "available"}</span>
-          <span className="block text-[11px]" style={{ color: sub }}>{chosen.length ? `${chosen.length} day${chosen.length === 1 ? "" : "s"} with a menu` : `Menu set for ${showDays.length} day${showDays.length === 1 ? "" : "s"}`} · add meals at checkout</span>
+          <span className="block text-[12.5px] font-extrabold" style={{ color: ink }}>{chosen.length ? tr("p7bw.mealsOnDays") : tr("p7bw.mealsAvail")}</span>
+          <span className="block text-[11px]" style={{ color: sub }}>{chosen.length ? pickPlural(tr, locale, "p7bw.daysMenu", chosen.length) : pickPlural(tr, locale, "p7bw.menuSetFor", showDays.length)} · {tr("p7bw.addMealsCheckout")}</span>
         </span>
-        {allergens.length > 0 && <span className="hidden rounded-full px-1.5 py-[1px] text-[10px] font-bold capitalize sm:inline" style={{ background: dark ? "rgba(226,29,41,.18)" : "#fdebec", color: "#e21d27" }}>⚠ {allergens.length} allergen{allergens.length === 1 ? "" : "s"}</span>}
+        {allergens.length > 0 && <span className="hidden rounded-full px-1.5 py-[1px] text-[10px] font-bold capitalize sm:inline" style={{ background: dark ? "rgba(226,29,41,.18)" : "#fdebec", color: "#e21d27" }}>{pickPlural(tr, locale, "p7bw.allergenN", allergens.length)}</span>}
         <span className="text-[12px]" style={{ color: sub }}>{open ? "▲" : "▼"}</span>
       </button>
       {open && (
@@ -3046,7 +3054,7 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
               );
             })}
           </div>
-          <p className="mt-2 text-[10.5px]" style={{ color: sub }}>Allergens are shown for guidance — please tell the provider about any allergy when you book.</p>
+          <p className="mt-2 text-[10.5px]" style={{ color: sub }}>{tr("p7bw.allergenNote")}</p>
         </div>
       )}
     </div>
@@ -3055,6 +3063,8 @@ function MealsAtCheckout({ d, dates, tone = "light" }: { d: WizardDraft; dates: 
 
 // ── Booking · PLAYFUL (bright, rounded, blue) ──────────────────────────────
 function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, tenantId }: BookView) {
+  const tr = useT();
+  const { locale } = useI18n();
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", TEAL = "#06d6a0", INKp = "#232842", MUTp = "#7a8194", LINEp = "#e8edf7", SOFTb = "#eef4ff";
   const idle = { background: "#fff", color: INKp, borderColor: LINEp };
   // Numbered so the order to work through is obvious. Timing is skipped when
@@ -3068,22 +3078,22 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
   if (b.stage === "done") return (
     <div className="rounded-[26px] bg-white p-6 text-center" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full text-[26px]" style={{ background: TEAL, color: "#053b2a" }}>✓</div>
-      <div className="mt-3 text-[19px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Booked{b.child ? ` for ${b.child}` : ""}! 🎉</div>
-      <div className="mt-1.5 text-[13px] text-[#7a8194]">{d.bookingType === "auto" ? "Instantly confirmed." : "The provider will approve your booking."} A confirmation email is on its way.</div>
-      <button className="mt-4 rounded-full px-6 py-2.5 text-[13.5px] font-extrabold text-white" style={{ background: BLUE }} onClick={b.reset}>Book again</button>
+      <div className="mt-3 text-[19px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{b.child ? tr("p7bw.bookedFor", { child: b.child }) : tr("p7bw.bookedNoChild")}</div>
+      <div className="mt-1.5 text-[13px] text-[#7a8194]">{d.bookingType === "auto" ? tr("p7bw.instantlyConfirmed") : tr("p7bw.providerWillApprove")} {tr("p7bw.confEmailOnWay")}</div>
+      <button className="mt-4 rounded-full px-6 py-2.5 text-[13.5px] font-extrabold text-white" style={{ background: BLUE }} onClick={b.reset}>{tr("p7bw.bookAgain")}</button>
     </div>
   );
   if (b.stage === "checkout") return (
     <div className="overflow-hidden rounded-[26px] bg-white" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
-      <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Checkout</div>
+      <div className="px-5 pt-5 text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{tr("p7bw.checkoutHead")}</div>
       <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: "#fff", line: LINEp, ink: INKp, muted: MUTp, accent: BLUE, accentInk: "#fff", round: "rounded-2xl", inputBg: "#fff", bar: `linear-gradient(120deg,${DEEP},${BLUE})`, barInk: "#fff" }} />
     </div>
   );
   return (
     <div className="rounded-[26px] bg-white p-5" style={{ boxShadow: "0 24px 50px -26px rgba(47,107,216,.5)" }}>
       <div className="flex items-baseline justify-between">
-        <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>Choose dates &amp; times</span>
-        {b.pass && <span className="text-[13px] text-[#7a8194]">from <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
+        <span className="text-[20px] font-extrabold tracking-[-0.02em]" style={{ color: INKp }}>{tr("p7bw.chooseDatesTimes")}</span>
+        {b.pass && <span className="text-[13px] text-[#7a8194]">{tr("p7bw.fromWord")} <b style={{ color: DEEP }}>{money(b.unitPrice)}</b></span>}
       </div>
       {b.hint && (
         <div className="mt-2.5 flex items-start gap-2 rounded-2xl px-3 py-2 text-[12px] font-bold" style={{ background: SOFTb, color: DEEP }}>
@@ -3096,23 +3106,23 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           <span aria-hidden>⚡</span><span>{b.nudge}</span>
         </div>
       )}
-      {b.passes.length === 0 ? <div className="mt-2 text-[13px] text-[#7a8194]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
+      {b.passes.length === 0 ? <div className="mt-2 text-[13px] text-[#7a8194]">{tr("p7bw.pickBlock")}</div> : (
         <>
-          {step(1, "Choose your pass")}
+          {step(1, tr("p7bw.stepPass"))}
           <div className="flex flex-wrap gap-2">
-            {b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">· Closed</span> : !fits ? <span className="ms-1.5 no-underline">· Not enough days left</span> : null}</button>; })}
+            {b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? tr("p7bw.passClosedTip") : !fits ? tr("p7bw.notEnoughTip", { n: t.days }) : undefined} className="rounded-full border-2 px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">{tr("p7bw.closedTag")}</span> : !fits ? <span className="ms-1.5 no-underline">{tr("p7bw.notEnoughTag")}</span> : null}</button>; })}
           </div>
           {b.periods.length > 0 && <>
-            {step(2, "Choose a timing")}
+            {step(2, tr("p7bw.stepTiming"))}
             <div className="flex flex-wrap gap-2">
               {b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="rounded-2xl border-2 px-3.5 py-2 text-start text-[12px] font-bold leading-tight" style={p.id === b.periodId ? { background: BLUE, color: "#fff", borderColor: BLUE } : idle}>{p.range}{b.pass ? <span className={p.id === b.periodId ? "block text-[10px] font-semibold opacity-90" : "block text-[10px] font-semibold text-[#7a8194]"}>{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}
             </div>
           </>}
-          {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
-          {b.pass && cutoffNote(d, "#7a8194")}
+          {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? tr("p7bw.stepAnyDates") : tr("p7bw.stepDates"))}
+          {b.pass && cutoffNote(d, "#7a8194", tr, locale)}
           {weeks.length ? <div className="flex flex-col gap-3">
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
-              <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Week {w.n} <span className="font-semibold text-[#a6adba]">· from {fmtDate(w.mon)}</span></div>
+              <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>{tr("p7bw.weekN", { n: w.n })} <span className="font-semibold text-[#a6adba]">{tr("p7bw.fromDate", { date: fmtDate(w.mon) })}</span></div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
                 const dOff = b.off(iso); const dPast = b.past(iso); const on = b.sel.includes(iso); const dt = new Date(`${iso}T00:00:00Z`);
                 // Availability speaks only when it's bad news — a number on
@@ -3123,7 +3133,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dPast ? "This day has already passed" : full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                  title={dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[44px] flex-col items-center rounded-xl border-2 py-1.5 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#c2410c", color: "#c2410c", background: "#fff7ed" }
                     : dPast ? { borderColor: LINEp, color: "#cdd2db", background: "#f3f4f7", opacity: 0.6 }
@@ -3134,16 +3144,16 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5 rounded-full" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}
-          </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>Set the dates in “When it runs”.</div>}
+          </div> : <div className="rounded-2xl border-2 border-dashed p-3.5 text-center text-[12px] text-[#a6adba]" style={{ borderColor: LINEp }}>{tr("p7bw.setDatesWhen")}</div>}
           {b.hasCounts && (
             <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold" style={{ color: MUTp }}>
-              {([["#3f78d8", "Space"], ["#f59e0b", "Almost full"], ["#dc2626", "Full"]] as const).map(([c, l]) => (
+              {([["#3f78d8", tr("p7bw.legendSpace")], ["#f59e0b", tr("p7bw.almostFull")], ["#dc2626", tr("p7bw.fullWord")]] as const).map(([c, l]) => (
                 <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: c }} />{l}</span>
               ))}
             </div>
           )}
           {(() => {
-            const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
+            const note = capacityNote(d, b.seatsLeft ?? spacesLeft, tr, locale);
             if (!note) return null;
             // Same traffic light as the calendar — a different green here made
             // the key look like it belonged to something else.
@@ -3159,21 +3169,21 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             <div className="mt-4 flex items-start gap-2.5 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee" }}>
               <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
               <p className="text-[12.5px] leading-[1.5]" style={{ color: "#0f5132" }}>
-                <b>In your basket.</b> Pick more dates above if you&rsquo;d like another pass — otherwise carry on below.
+                {tr("p7bw.inBasket")}
               </p>
             </div>
           ) : (
           <div className="relative mt-11">
           <button className={`w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ background: BLUE, ["--aos-ready-ring" as string]: "rgba(47,107,216,.5)" } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}>
-            {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
+            {b.locked ? tr("p7bw.notOpenYet") : b.soldOut ? (d.waitlist ? tr("p7bw.soldOutJoin") : tr("p7bw.soldOut")) : !b.hasSpace ? (b.fullDates.length === 1 ? tr("p7bw.dateIsFull", { date: fmtDate(b.fullDates[0]) }) : pickPlural(tr, locale, "p7bw.nDaysFull", b.fullDates.length)) : b.canAdd ? (
               <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
-                <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
+                <span>{b.isSingle ? tr("p7bw.addSingleBasket", { n: b.sel.length, name: b.pass?.name ?? "" }) : tr("p7bw.addPassBasket", { name: b.pass?.name ?? "" })}</span>
                 <span className="inline-flex items-baseline gap-1.5">
                   {b.addNet < b.pendingGross && <s className="opacity-60">{money(b.pendingGross)}</s>}
                   <span>{money(b.addNet)}</span>
                 </span>
               </span>
-            ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more day${b.need - b.sel.length === 1 ? "" : "s"}` : "Pick a pass"}
+            ) : b.isSingle ? tr("p7bw.pickAtLeastOne") : b.pass ? pickPlural(tr, locale, "p7bw.selectMoreDays", Math.max(0, b.need - b.sel.length)) : tr("p7bw.pickAPass")}
           </button>
           {b.canAdd && <span className="aos-point" aria-hidden>👇</span>}
           </div>
@@ -3181,7 +3191,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           {b.addPreview && (
             <div className="mt-2 rounded-2xl p-3" style={{ background: "#e4f8ee" }}>
               <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#047857" }}>
-                ⚡ {b.addPreview.lines.length === 1 ? "Discount applied" : `${b.addPreview.lines.length} discounts applied`}
+                ⚡ {b.addPreview.lines.length === 1 ? tr("p7bw.discApplied") : tr("p7bw.discsApplied", { n: b.addPreview.lines.length })}
               </div>
               <div className="mt-1.5 flex flex-col gap-1">
                 {b.addPreview.lines.map((l, i) => (
@@ -3195,7 +3205,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
                 ))}
               </div>
               <div className="mt-2 flex items-baseline justify-between border-t pt-2" style={{ borderColor: "#bfe8d4" }}>
-                <span className="text-[11.5px] font-bold" style={{ color: "#0f766e" }}>You&apos;ll pay</span>
+                <span className="text-[11.5px] font-bold" style={{ color: "#0f766e" }}>{tr("p7bw.youllPay")}</span>
                 <span className="flex items-baseline gap-2">
                   <s className="text-[11px]" style={{ color: "#7aa894" }}>{money(b.addPreview.gross)}</s>
                   <b className="text-[16px] font-extrabold" style={{ color: "#047857" }}>{money(b.addPreview.total)}</b>
@@ -3206,8 +3216,8 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
         </>
       )}
       <div className="mt-5 border-t-2 border-dashed pt-4" style={{ borderColor: LINEp }}>
-        <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>Your basket</span><span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
-        {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">Nothing added yet — pick a pass and dates.</div> :
+        <div className="mb-2 flex items-center justify-between"><span className="text-[13.5px] font-extrabold" style={{ color: INKp }}>{tr("p7bw.yourBasket")}</span><span className="rounded-full px-2 py-[2px] text-[10px] font-extrabold" style={{ background: SOFTb, color: BLUE }}>{b.basket.length}</span></div>
+        {b.basket.length === 0 ? <div className="text-[12.5px] text-[#a6adba]">{tr("p7bw.nothingAdded")}</div> :
           <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 rounded-xl px-2.5 py-2 text-[12px]" style={{ background: "#f4f7ff" }}><span className="min-w-0"><b className="block" style={{ color: INKp }}>{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: "#5b6478" }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: BLUE }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b style={{ color: INKp }}>{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#c8ccd4] hover:text-[#e21d27]">✕</button></span></div>)}</div>}
         {b.basket.length > 0 && b.discountLines.length > 0 && (
           <div className="mt-2 rounded-xl p-2" style={{ background: "#e4f8ee" }}>
@@ -3219,13 +3229,13 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
           </div>
         )}
         <div className="mt-3 flex items-center justify-between text-[14px]">
-          <span className="text-[#7a8194]">Total</span>
+          <span className="text-[#7a8194]">{tr("p7bw.totalLbl")}</span>
           <span className="flex items-baseline gap-2">
             {b.saved > 0 && <s className="text-[12px] text-[#a6adba]">{money(b.subtotal)}</s>}
             <b style={{ color: DEEP }}>{money(b.total)}</b>
           </span>
         </div>
-        <button className="mt-3 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: DEEP }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</button>
+        <button className="mt-3 w-full rounded-2xl py-3.5 text-[14px] font-extrabold text-white disabled:opacity-40" style={{ background: DEEP }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}>{mode === "parent" ? tr("p7bw.nextAddChildren") : tr("p7bw.checkoutN", { n: b.basket.length })}</button>
       </div>
     </div>
   );
@@ -3233,6 +3243,8 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf, tenantId }: BookView & { surf: Surf }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const EL = surf.el;
   const LIME = surf.accent;      // headline accent (price, chips) — dark ink sits on it
   const INK = surf.accentInk;    // dark ink that reads on the accent
@@ -3256,14 +3268,14 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
       <div className="p-5 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center text-[26px] font-black" style={{ background: LIME, color: INK }}>✓</div>
         <div className="mt-3 text-[18px] font-black italic uppercase tracking-[-0.01em] text-white">Booked{b.child ? ` · ${b.child}` : ""}</div>
-        <div className="mt-2 text-[12.5px] text-[#8f9bb0]">{d.bookingType === "auto" ? "Instantly confirmed." : "Provider will approve your booking."} Confirmation email incoming.</div>
-        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase" style={{ ...skew, background: LIME, color: INK }} onClick={b.reset}><span style={unskew}>Book again</span></button>
+        <div className="mt-2 text-[12.5px] text-[#8f9bb0]">{d.bookingType === "auto" ? tr("p7bw.instantlyConfirmed") : tr("p7bw.providerApproves")} {tr("p7bw.confEmailOnWay")}</div>
+        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase" style={{ ...skew, background: LIME, color: INK }} onClick={b.reset}><span style={unskew}>{tr("p7bw.bookAgain")}</span></button>
       </div>
     </div>
   );
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: BAR }}>Checkout</div>
+      <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: BAR }}>{tr("p7bw.checkoutHead")}</div>
       <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: INK, round: "", inputBg: CELL, bar: BAR, barInk: "#fff" }} />
     </div>
   );
@@ -3271,8 +3283,8 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
     <div className={wrap} style={wrapStyle}>
       <div className="px-4 py-2.5" style={{ background: BAR }}>
         <div className="flex items-baseline justify-between">
-          <span className="text-[15px] font-black italic uppercase text-white">Choose dates &amp; times</span>
-          {b.pass && <span className="text-[11px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
+          <span className="text-[15px] font-black italic uppercase text-white">{tr("p7bw.chooseDatesTimes")}</span>
+          {b.pass && <span className="text-[11px] text-[#cfe8ff]">{tr("p7bw.fromWord")} <b className="italic text-white">{money(b.unitPrice)}</b></span>}
         </div>
         {b.hint && (
           <div className="mt-1.5 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
@@ -3291,16 +3303,16 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             here overlaps when the widget sits in a narrow sidebar. */}
         <div className="flex flex-col gap-4">
         <div className="min-w-0">
-        {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
+        {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">{tr("p7bw.pickBlock")}</div> : (
           <>
-            {step(1, "Choose your pass")}
-            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">· Closed</span> : !fits ? <span className="ms-1.5 no-underline">· Not enough days left</span> : null}</button>; })}</div>
+            {step(1, tr("p7bw.stepPass"))}
+            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? tr("p7bw.passClosedTip") : !fits ? tr("p7bw.notEnoughTip", { n: t.days }) : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ms-1.5 no-underline">{tr("p7bw.closedTag")}</span> : !fits ? <span className="ms-1.5 no-underline">{tr("p7bw.notEnoughTag")}</span> : null}</button>; })}</div>
             {b.periods.length > 0 && <>
-              {step(2, "Choose a timing")}
+              {step(2, tr("p7bw.stepTiming"))}
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-start text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
-            {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
-            {b.pass && cutoffNote(d, "#8f9bb0")}
+            {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? tr("p7bw.stepAnyDates") : tr("p7bw.stepDates"))}
+            {b.pass && cutoffNote(d, "#8f9bb0", tr, locale)}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
@@ -3311,7 +3323,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                 const queueable = full && b.waitlistOn && !dOff;
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
-                  title={dPast ? "This day has already passed" : full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
+                  title={dPast ? tr("p7bw.dayPassed") : full ? (queueable ? (waiting ? tr("p7bw.onWaitTap") : tr("p7bw.fullTapJoin")) : tr("p7bw.fullWord")) : left === null ? undefined : d.showSpaces ? (low ? tr("p7bw.onlyLeft", { n: left }) : tr("p7bw.placesLeftN", { n: left })) : (low ? tr("p7bw.almostFull") : tr("p7bw.spaceAvail"))}
                   className="relative flex w-[40px] flex-col items-center border py-1 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
@@ -3321,16 +3333,16 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
-            </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
+            </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>{tr("p7bw.setDatesWhen")}</div>}
             {b.hasCounts && (
               <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-bold" style={{ color: MUTs }}>
-                {([["#3ddc84", "Space"], ["#ffb020", "Almost full"], ["#ff5470", "Full"]] as const).map(([c, l]) => (
+                {([["#3ddc84", tr("p7bw.legendSpace")], ["#ffb020", tr("p7bw.almostFull")], ["#ff5470", tr("p7bw.fullWord")]] as const).map(([c, l]) => (
                   <span key={l} className="inline-flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5" style={{ background: c }} />{l}</span>
                 ))}
               </div>
             )}
             {(() => {
-              const note = capacityNote(d, b.seatsLeft ?? spacesLeft);
+              const note = capacityNote(d, b.seatsLeft ?? spacesLeft, tr, locale);
               if (!note) return null;
               const col = note.tone === "gone" ? "#ff5470" : note.tone === "low" ? "#ffb020" : "#3ddc84";
               return <div className="mt-3 flex items-center gap-1.5 text-[12px] font-bold" style={{ color: col }}>
@@ -3342,21 +3354,21 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <div className="mt-4 flex items-start gap-2.5 border p-3" style={{ borderColor: LIME, background: CELL }}>
                 <span className="aos-point-inline text-[22px] leading-none" aria-hidden>👆</span>
                 <p className="text-[12.5px] leading-[1.5]" style={{ color: "#d7ffa8" }}>
-                  <b>In your basket.</b> Pick more dates above if you&rsquo;d like another pass — otherwise carry on below.
+                  {tr("p7bw.inBasket")}
                 </p>
               </div>
             ) : (
             <div className="relative mt-6">
             <button className={`w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, color: INK, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
-                {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
+                {b.locked ? tr("p7bw.notOpenYet") : b.soldOut ? (d.waitlist ? tr("p7bw.soldOutJoin") : tr("p7bw.soldOut")) : !b.hasSpace ? (b.fullDates.length === 1 ? tr("p7bw.dateIsFull", { date: fmtDate(b.fullDates[0]) }) : pickPlural(tr, locale, "p7bw.nDaysFull", b.fullDates.length)) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
-                    <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
+                    <span>{b.isSingle ? tr("p7bw.addSingleBasket", { n: b.sel.length, name: b.pass?.name ?? "" }) : tr("p7bw.addPassBasket", { name: b.pass?.name ?? "" })}</span>
                     <span className="inline-flex items-baseline gap-1.5">
                       {b.addNet < b.pendingGross && <s className="opacity-60">{money(b.pendingGross)}</s>}
                       <span>{money(b.addNet)}</span>
                     </span>
                   </span>
-                ) : b.isSingle ? "Pick at least one day" : b.pass ? `Select ${Math.max(0, b.need - b.sel.length)} more` : "Pick a pass"}
+                ) : b.isSingle ? tr("p7bw.pickAtLeastOne") : b.pass ? tr("p7bw.selectMoreN", { n: Math.max(0, b.need - b.sel.length) }) : tr("p7bw.pickAPass")}
               </span></button>
             {b.canAdd && <span className="aos-point" aria-hidden>👇</span>}
             </div>
@@ -3364,7 +3376,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             {b.addPreview && (
               <div className="mt-2 border-s-[3px] p-3" style={{ borderInlineStartColor: LIME, background: CELL }}>
                 <div className="text-[10px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>
-                  ⚡ {b.addPreview.lines.length === 1 ? "Discount applied" : `${b.addPreview.lines.length} discounts applied`}
+                  ⚡ {b.addPreview.lines.length === 1 ? tr("p7bw.discApplied") : tr("p7bw.discsApplied", { n: b.addPreview.lines.length })}
                 </div>
                 <div className="mt-1.5 flex flex-col gap-1">
                   {b.addPreview.lines.map((l, i) => (
@@ -3378,7 +3390,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   ))}
                 </div>
                 <div className="mt-2 flex items-baseline justify-between border-t pt-2" style={{ borderColor: LINEs }}>
-                  <span className="text-[11.5px] font-bold" style={{ color: MUTs }}>You&apos;ll pay</span>
+                  <span className="text-[11.5px] font-bold" style={{ color: MUTs }}>{tr("p7bw.youllPay")}</span>
                   <span className="flex items-baseline gap-2">
                     <s className="text-[11px]" style={{ color: MUTs }}>{money(b.addPreview.gross)}</s>
                     <b className="text-[16px] font-black italic uppercase text-white">{money(b.addPreview.total)}</b>
@@ -3390,8 +3402,8 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         )}
         </div>
         <div className="mt-1 border-t pt-4" style={{ borderColor: LINEs }}>
-          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">Your basket</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
-          {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">Nothing added yet — pick a pass and dates.</div> :
+          <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">{tr("p7bw.yourBasket")}</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
+          {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">{tr("p7bw.nothingAdded")}</div> :
             <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[#c3ccdb]"><span className="min-w-0"><b className="block text-white">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
           {b.basket.length > 0 && b.discountLines.length > 0 && (
             <div className="mt-2 border p-2" style={{ borderColor: LIME, background: "rgba(198,255,0,.08)" }}>
@@ -3403,13 +3415,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
             </div>
           )}
           <div className="mt-3 flex items-center justify-between text-[14px]">
-            <span style={{ color: MUTs }}>Total</span>
+            <span style={{ color: MUTs }}>{tr("p7bw.totalLbl")}</span>
             <span className="flex items-baseline gap-2">
               {b.saved > 0 && <s className="text-[12px]" style={{ color: MUTs }}>{money(b.subtotal)}</s>}
               <b className="italic text-white">{money(b.total)}</b>
             </span>
           </div>
-          <button className="mt-3 w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
+          <button className="mt-3 w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? tr("p7bw.nextAddChildren") : tr("p7bw.checkoutN", { n: b.basket.length })}</span></button>
         </div>
         </div>
       </div>
@@ -3432,10 +3444,12 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
    *  public settings (vouchers, child questions). */
   tenantId?: string;
 }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const cats = local.categories.filter((c) => d.categoryIds.includes(c.id));
   const imgs = d.images;
   const town = venue?.address?.split(",").slice(-1)[0]?.trim() || venue?.address || "";
-  const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : "Dates TBC";
+  const runLabel = d.runFrom && d.runTo ? `${fmtDate(d.runFrom)} – ${fmtDate(d.runTo)}` : tr("p7pg.datesTbc");
   const dates = genDates(d.runFrom, d.runTo, d.days);
   const weeks = groupWeeks(dates);
   // Blank capacity means "not set", not zero — `|| 0` was showing "Sold out"
@@ -3584,6 +3598,8 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
 function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand, logo, topRight }: PageProps) {
+  const tr = useT();
+  const { locale } = useI18n();
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   // Fixed ASPECT (not height) so the hero crops identically on every screen and
   // matches the wizard's crop preview exactly — WYSIWYG.
@@ -3613,7 +3629,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         </span>
         <span className="flex items-center gap-4 [&_a]:text-[#2f6bd8]">
           {topRight}
-          <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
+          <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>{tr("p7pg.trusted")}</span>
         </span>
       </div>
       <div className={full ? "p-6 lg:p-7" : "p-5"}>
@@ -3625,7 +3641,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[10.5px] font-extrabold uppercase leading-tight tracking-[0.1em]">
             {cats.length ? cats.map((c, i) => (
               <span key={c.id} style={{ color: BLUE }}>{i > 0 && <span style={{ color: MUTp, opacity: 0.5 }}> / </span>}{c.name}</span>
-            )) : <span style={{ color: BLUE }}>Holiday camp</span>}
+            )) : <span style={{ color: BLUE }}>{tr("p7pg.holidayCamp")}</span>}
             {town && (
               <>
                 <span style={{ color: MUTp, opacity: 0.5 }}>|</span>
@@ -3633,11 +3649,11 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
               </>
             )}
           </div>
-          <h1 className="mt-1 font-extrabold leading-[1.06] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 27 : 21 }}>{d.title || "Your listing title"}</h1>
+          <h1 className="mt-1 font-extrabold leading-[1.06] tracking-[-0.03em]" style={{ color: INKp, fontSize: full ? 27 : 21 }}>{d.title || tr("p7pg.yourListingTitle")}</h1>
           </div>
           {opens.locked && (
             <div className="flex-none rounded-2xl px-3.5 py-2 text-end" style={{ background: "#eef3ff", border: `1.5px solid ${BLUE}` }}>
-              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em]" style={{ color: BLUE }}>⏰ Booking opens in</div>
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em]" style={{ color: BLUE }}>{tr("p7pg.bookingOpensIn")}</div>
               <div className="text-[17px] font-extrabold leading-tight tabular-nums" style={{ color: BLUE }}>{opens.countdown}</div>
               <div className="text-[10px]" style={{ color: MUTp }}>{opens.opensLabel}</div>
             </div>
@@ -3652,7 +3668,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* passes — fancy accordion, tap to open details */}
         {passSummary.length > 0 && (
           <div className="mt-4">
-            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em]" style={{ color: BLUE }}>Passes</div>
+            <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.14em]" style={{ color: BLUE }}>{tr("p7pg.passes")}</div>
             <div className="flex flex-col gap-2">
               {passesShown.map((p) => {
                 const isOpen = openPass === p.name;
@@ -3663,14 +3679,14 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                       <span className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-[12px] font-black text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>🎟</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[11.5px] font-extrabold leading-tight" style={{ color: INKp }}>{p.name}</span>
-                        {p.days ? <span className="text-[10px] font-semibold" style={{ color: MUTp }}>{p.days} day{p.days === 1 ? "" : "s"}{canOpen ? " · tap for details" : ""}</span> : null}
+                        {p.days ? <span className="text-[10px] font-semibold" style={{ color: MUTp }}>{pickPlural(tr, locale, "p7pg.daysN", p.days)}{canOpen ? " " + tr("p7pg.tapDetails") : ""}</span> : null}
                       </span>
                       <span className="flex-none text-[13px] font-black tracking-[-0.01em]" style={{ color: DEEP, fontVariantNumeric: "tabular-nums" }}><span className="text-[8.5px] font-bold" style={{ color: MUTp }}>FROM </span>{money(p.price)}</span>
                       {canOpen && <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white transition-transform" style={{ background: BLUE, transform: isOpen ? "rotate(180deg)" : "none" }}>⌄</span>}
                     </button>
                     {isOpen && (
                       <div className="border-t px-3 py-2 text-[11.5px] leading-[1.55]" style={{ borderColor: "#eef2fb", color: "#3d4763", background: "#f8faff" }}>
-                        {p.details || `A ${p.days}-day pass. Choose your dates when you book.`}
+                        {p.details || tr("p7pg.passDetail", { n: p.days ?? "" })}
                       </div>
                     )}
                   </div>
@@ -3678,7 +3694,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
               })}
               {passesExtra > 0 && (
                 <button type="button" onClick={() => setMorePasses((v) => !v)} className="self-start rounded-full px-4 py-1.5 text-[12px] font-extrabold text-white" style={{ background: `linear-gradient(140deg,${BLUE},${DEEP})` }}>
-                  {morePasses ? "Show fewer" : `+${passesExtra} more`}
+                  {morePasses ? tr("p7pg.showFewer") : tr("p7pg.plusMore", { n: passesExtra })}
                 </button>
               )}
             </div>
@@ -3690,7 +3706,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           <div className="mt-3 flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "#e4f8ee", border: "1.5px solid #b6e6c8" }}>
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: "#fff" }}>📞</span>
             <div className="min-w-0">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#1d3a8f" }}>Camp is on now — reach staff</div>
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.1em]" style={{ color: "#1d3a8f" }}>{tr("p7pg.campOnNow")}</div>
               <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className="text-[16px] font-black tracking-[-0.01em]" style={{ color: "#0b6b3a" }}>{d.sitePhone}</a>
             </div>
           </div>
@@ -3699,8 +3715,8 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* Ways to pay — card is always accepted; show whatever else this listing takes */}
         {d.payMethods && d.payMethods.length > 0 && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5 px-2 text-[12px]">
-            <span className="font-extrabold uppercase tracking-[0.08em] text-[#7a8194]">Ways to pay</span>
-            <span className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#cdddf7", background: "#eef4ff", color: "#1d3a8f" }}>💳 Card</span>
+            <span className="font-extrabold uppercase tracking-[0.08em] text-[#7a8194]">{tr("p7pg.waysToPay")}</span>
+            <span className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#cdddf7", background: "#eef4ff", color: "#1d3a8f" }}>{tr("p7pg.cardWord")}</span>
             {d.payMethods.map((m) => (
               <span key={m} className="rounded-full border px-2.5 py-1 font-bold" style={{ borderColor: "#b6e6c8", background: "#e4f8ee", color: "#0b6b3a" }}>{m}</span>
             ))}
@@ -3709,7 +3725,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
         {/* fancy fact strip (under the image) */}
         <div className="relative z-10 mx-2 -mt-6 flex flex-col overflow-hidden rounded-2xl bg-white sm:flex-row" style={{ boxShadow: "0 18px 34px -18px rgba(30,50,90,.35)" }}>
-          {([["📍", "Where", venue?.name || town || "Venue TBC", "#eef4ff", venue?.address || null], ["📆", "When", runLabel, "#e4f8ee", null], ["👧👦", "Ages", d.ageFrom && d.ageTo ? `${d.ageFrom}–${d.ageTo} years` : "All ages", "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
+          {([["📍", tr("p7pg.whereLbl"), venue?.name || town || tr("p7pg.venueTbc"), "#eef4ff", venue?.address || null], ["📆", tr("p7pg.whenLbl"), runLabel, "#e4f8ee", null], ["👧👦", tr("p7pg.agesLbl"), d.ageFrom && d.ageTo ? tr("p7pg.agesYears", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), "#fff0f5", null]] as [string, string, string, string, string | null][]).map(([e, k, v, tint, sub], i) => (
             <div key={k} className={`flex flex-1 items-center gap-3 px-4 py-3.5 ${i ? "border-t border-[#eef2fb] sm:border-s sm:border-t-0" : ""}`}>
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[16px]" style={{ background: tint }}>{e}</span>
               <div className="min-w-0"><div className="text-[9.5px] font-extrabold uppercase tracking-[0.1em] text-[#7a8194]">{k}</div><div className="truncate text-[13px] font-extrabold" style={{ color: DEEP }}>{v}</div>{sub && <div className="truncate text-[11px] font-medium text-[#7a8194]">{sub}</div>}</div>
@@ -3724,7 +3740,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             {d.sections.some((s) => s.text) && <PlayCard e="🎯" tint="#e7f0ff" title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{s.type}</div><p className="mt-1 text-[13.5px] leading-[1.6]" style={{ color: "#3d4763" }}>{s.text}</p></div>)}</PlayCard>}
             {d.outcomes.length > 0 && <PlayCard e="🌟" tint="#fff6e0" title={headingOf(d, "learn", "title")} sub={headingOf(d, "learn", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => chip(o, "⭐", i))}</div></PlayCard>}
             {d.provided.length > 0 && <PlayCard e="🎒" tint="#e4f8ee" title={headingOf(d, "included", "title")} sub={headingOf(d, "included", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o, i) => chip(o, "✅", i))}</div></PlayCard>}
-            {d.toBring.length > 0 && <PlayCard e="🧳" tint="#fff0f5" title="What to bring" sub="Please pack"><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o, i) => chip(o, "🎒", i))}</div></PlayCard>}
+            {d.toBring.length > 0 && <PlayCard e="🧳" tint="#fff0f5" title={tr("p7pg.whatToBring")} sub={tr("p7pg.pleasePack")}><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o, i) => chip(o, "🎒", i))}</div></PlayCard>}
             {d.safety.length > 0 && <PlayCard e="🛡️" tint="#fff0f5" title={headingOf(d, "safety", "title")} sub={headingOf(d, "safety", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o, i) => chip(o, "🚑", i))}</div></PlayCard>}
             {d.send.length > 0 && <PlayCard e="🤝" tint="#e0f5ff" title={headingOf(d, "send", "title")} sub={headingOf(d, "send", "eyebrow")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o, i) => chip(o, "♿", i))}</div></PlayCard>}
             {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
@@ -3741,7 +3757,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 </button>
                 {whereOpen && (<div className="mt-4">
                 <div className="text-[14px] font-extrabold" style={{ color: INKp }}>{venue.name}</div>
-                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>💻 Runs online</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
+                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{tr("p7pg.runsOnline")}</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTp }}>{venue.address}</div>}
                 {!isOnlineVenue(venue) && venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
                 {!!venue.facilities?.length && (
                   <div className={`mt-3 grid gap-2 ${grid2}`}>{venue.facilities.map((f, i) => chip(f, "✅", i))}</div>
@@ -3761,7 +3777,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
                 )}
                 {venue.directions && (
                   <div className="mt-3 rounded-2xl p-3.5" style={{ background: "#f4f7ff" }}>
-                    <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{isOnlineVenue(venue) ? "How to join" : "Getting there & parking"}</div>
+                    <div className="text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: BLUE }}>{isOnlineVenue(venue) ? tr("p7pg.howToJoin") : tr("p7pg.gettingThere")}</div>
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: "#3d4763" }}>{venue.directions}</p>
                   </div>
                 )}
@@ -3791,7 +3807,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
         {/* footer */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl px-6 py-5" style={{ background: DEEP, color: "#cdd8f0" }}>
           <div className="text-[17px] font-extrabold text-white">{brand}</div>
-          <div className="text-[11px] opacity-70">Bookings powered by ActivityOS</div>
+          <div className="text-[11px] opacity-70">{tr("p7pg.poweredBy")}</div>
         </div>
       </div>
     </div>
@@ -3800,6 +3816,8 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
 function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, logo, topRight }: PageProps & { surf: Surf }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const EL = surf.el;
   const LIME = surf.accent;      // headline accent (price, chips, borders)
@@ -3828,7 +3846,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
         </span>
         <span className="flex items-center gap-4 [&_a]:text-white">
           {topRight}
-          <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>
+          <span className="text-[11px]" style={{ color: MUTs }}>{tr("p7pg.secureCheckout")}</span>
         </span>
       </div>
       {/* title above the image — every chosen type listed, sized to fit */}
@@ -3841,7 +3859,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               {i > 0 && <span style={{ color: MUTs, opacity: 0.5 }}>/</span>}
               <span style={{ color: LIME }}>{c.name}</span>
             </span>
-          )) : <span style={{ color: LIME }}>Holiday camp</span>}
+          )) : <span style={{ color: LIME }}>{tr("p7pg.holidayCamp")}</span>}
           {town && (
             <>
               <span style={{ color: MUTs, opacity: 0.5 }}>|</span>
@@ -3849,11 +3867,11 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             </>
           )}
         </div>
-        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: "#fff" }}>{d.title || "Your listing title"}</h1>
+        <h1 className={`mt-1.5 font-black ${cond}`} style={{ fontSize: full ? 38 : 26, lineHeight: .94, color: "#fff" }}>{d.title || tr("p7pg.yourListingTitle")}</h1>
         </div>
         {opens.locked && (
           <div className="flex-none border px-3.5 py-2 text-end" style={{ borderColor: LIME, background: PANEL }}>
-            <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>⏰ Booking opens in</div>
+            <div className="text-[9.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{tr("p7pg.bookingOpensIn")}</div>
             <div className="text-[17px] font-black leading-tight tabular-nums text-white">{opens.countdown}</div>
             <div className="text-[10px]" style={{ color: MUTs }}>{opens.opensLabel}</div>
           </div>
@@ -3867,7 +3885,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
-        {([["📍", venue?.name || town || "Venue TBC", venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? `Ages ${d.ageFrom}–${d.ageTo}` : "All ages", null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
+        {([["📍", venue?.name || town || tr("p7pg.venueTbc"), venue?.address || null], ["📆", runLabel, null], ["👧👦", d.ageFrom && d.ageTo ? tr("p7pg.agesRange", { from: d.ageFrom, to: d.ageTo }) : tr("p7pg.allAges"), null]] as [string, string, string | null][]).map(([e, v, sub], i) => (
           <div key={i} className={`flex flex-1 items-center gap-2.5 px-5 py-3 ${i ? "border-t sm:border-s sm:border-t-0" : ""}`} style={i ? { borderColor: LINEs } : undefined}>
             <span className="text-[15px]">{e}</span>
             <span className="min-w-0 flex-1">
@@ -3880,8 +3898,8 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       {d.payMethods && d.payMethods.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 border-b px-5 py-2.5" style={{ borderColor: LINEs, background: PANEL }}>
-          <span className="me-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">Ways to pay</span>
-          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: `${LIME}26`, border: `1px solid ${LIME}` }}>💳 Card</span>
+          <span className="me-0.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/60">{tr("p7pg.waysToPay")}</span>
+          <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: `${LIME}26`, border: `1px solid ${LIME}` }}>{tr("p7pg.cardWord")}</span>
           {d.payMethods.map((m) => <span key={m} className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: "rgba(255,255,255,.06)", border: `1px solid ${LINEs}` }}>{m}</span>)}
         </div>
       )}
@@ -3936,7 +3954,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       ? <div className={`mt-1 text-[18px] font-black ${cond} text-white`}>—</div>
                       : (<>
                           <div className={`mt-1 truncate text-[18px] font-black ${cond} text-white`}>Up to {spacesLeft}</div>
-                          <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>Bookings show once the run is saved</div>
+                          <div className="mt-1 text-[10.5px]" style={{ color: MUTs }}>{tr("p7pg.bookingsShowOnce")}</div>
                         </>);
                   }
                   const total = blocks.reduce((n, x) => n + x.capacity, 0);
@@ -3947,7 +3965,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     <>
                       <div className={`mt-1 truncate text-[18px] font-black ${cond}`}
                         style={{ fontVariantNumeric: "tabular-nums", color: left <= 0 ? "#ff5470" : "#fff" }}>
-                        {left <= 0 ? "Sold out" : `${left} of ${total} left`}
+                        {left <= 0 ? tr("p7pg.soldOut") : tr("p7pg.leftOfTotal", { left, total })}
                       </div>
                       <div className="mt-1.5 h-1 w-full" style={{ background: "#26304a" }}>
                         <div className="h-full" style={{ width: `${pct}%`, background: left <= 0 ? "#ff5470" : LIME }} />
@@ -3979,7 +3997,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     else spans.push({ from: iso, to: iso, left: n });
                   });
                   const label = (sp: { from: string; to: string; left: number }) =>
-                    `${sp.from === sp.to ? fmtDate(sp.from) : `${fmtDate(sp.from)}–${fmtDate(sp.to)}`} (${sp.left} left)`;
+                    `${sp.from === sp.to ? fmtDate(sp.from) : `${fmtDate(sp.from)}–${fmtDate(sp.to)}`} ${tr("p7pg.spanLeft", { left: sp.left })}`;
 
                   return (
                     <>
@@ -3991,7 +4009,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       )}
                       {spans.length > 0 && (
                         <div className="mt-1 text-[10.5px] font-bold leading-[1.45]" style={{ color: "#ffb020" }}>
-                          ⚠ Nearly full: {spans.slice(0, 3).map(label).join(" · ")}{spans.length > 3 ? ` +${spans.length - 3} more` : ""}
+                          {tr("p7pg.nearlyFull", { spans: spans.slice(0, 3).map(label).join(" · ") + (spans.length > 3 ? " " + tr("p7pg.plusMore", { n: spans.length - 3 }) : "") })}
                         </div>
                       )}
                     </>
@@ -4007,14 +4025,14 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       Join the waiting list
                     </button>
                   ) : (
-                    <div className="mt-1.5 text-[11px]" style={{ color: MUTs }}>No waiting list on this one</div>
+                    <div className="mt-1.5 text-[11px]" style={{ color: MUTs }}>{tr("p7pg.noWaitlist")}</div>
                   )
                 )}
               </div>
               )}
               {d.sitePhone && listingRunningNow(d) && (
                 <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
-                  <div className={lab} style={{ color: LIME }}>📞 camp is on now — reach staff</div>
+                  <div className={lab} style={{ color: LIME }}>{tr("p7pg.campOnNowShort")}</div>
                   <a href={`tel:${d.sitePhone.replace(/\s+/g, "")}`} className={`mt-1 block text-[17px] font-black ${cond}`} style={{ color: "#fff" }}>{d.sitePhone}</a>
                 </div>
               )}
@@ -4039,7 +4057,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                           </button>
                           {isOpen && (
                             <div className="border-t px-2 py-1.5 text-[10.5px] leading-[1.5]" style={{ borderColor: LINEs, color: "#d7deea" }}>
-                              {pp.details || `A ${pp.days}-day pass. Choose your dates when you book.`}
+                              {pp.details || tr("p7pg.passDetail", { n: pp.days ?? "" })}
                             </div>
                           )}
                         </div>
@@ -4047,7 +4065,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     })}
                     {passesExtra > 0 && (
                       <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start rounded-full px-3 py-1 text-[11px] font-black ${cond}`} style={{ background: LIME, color: INK }}>
-                        {morePasses ? "Show fewer" : `+${passesExtra} more`}
+                        {morePasses ? tr("p7pg.showFewer") : tr("p7pg.plusMore", { n: passesExtra })}
                       </button>
                     )}
                   </div>
@@ -4056,7 +4074,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               <div className={wide} style={{ borderColor: LINEs, borderTop: `2px solid ${LIME}` }}>
                 <div className={lab} style={{ color: MUTs }}>discounts</div>
                 {live.length === 0 ? (
-                  <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>None on this listing</div>
+                  <div className="mt-1.5 text-[11.5px]" style={{ color: MUTs }}>{tr("p7pg.noneListing")}</div>
                 ) : (
                   <div className="mt-1.5 flex flex-col gap-1">
                     {live.slice(0, 3).map((r) => (
@@ -4065,8 +4083,8 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                           <span className="block text-[11px] leading-snug" style={{ color: "#c3ccdb" }}>{r.name.trim() || ruleSummary(r)}</span>
                           {/* Which tickets it covers — a rule on one pass shouldn't look universal. */}
                           <span className="block text-[9.5px]" style={{ color: MUTs }}>
-                            {r.passNames.length === 0 ? "All passes" : r.passNames.join(", ")}
-                            {r.kind === "early" && r.beforeDate ? ` · book by ${fmtDate(r.beforeDate)}` : ""}
+                            {r.passNames.length === 0 ? tr("p7pg.allPasses") : r.passNames.join(", ")}
+                            {r.kind === "early" && r.beforeDate ? " " + tr("p7pg.bookBy", { date: fmtDate(r.beforeDate) }) : ""}
                           </span>
                         </span>
                         <b className="flex-none text-[12px] font-black" style={{ color: LIME, fontVariantNumeric: "tabular-nums" }}>
@@ -4105,7 +4123,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
             {d.sections.some((s) => s.text) && <SportSec eye={headingOf(d, "about", "eyebrow")} title={headingOf(d, "about", "title")}>{d.sections.filter((s) => s.text).map((s) => <div key={s.id} className="mb-3 last:mb-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.1em]" style={{ color: CY }}>{s.type}</div><p className="mt-1 text-[14px] leading-[1.6]" style={{ color: "#c3ccdb" }}>{s.text}</p></div>)}</SportSec>}
             {d.outcomes.length > 0 && <SportSec eye={headingOf(d, "learn", "eyebrow")} title={headingOf(d, "learn", "title")}><div className={`grid gap-2 ${grid2}`}>{d.outcomes.map((o, i) => <SportRow key={o}><span className={`w-6 font-black ${cond}`} style={{ color: CY }}>{String(i + 1).padStart(2, "0")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.provided.length > 0 && <SportSec eye={headingOf(d, "included", "eyebrow")} title={headingOf(d, "included", "title")}><div className={`grid gap-2 ${grid2}`}>{d.provided.map((o) => <SportRow key={o}><span>{emo(o, "✅")}</span>{o}</SportRow>)}</div></SportSec>}
-            {d.toBring.length > 0 && <SportSec eye="Please pack" title="What to bring"><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o) => <SportRow key={o}><span>{emo(o, "🎒")}</span>{o}</SportRow>)}</div></SportSec>}
+            {d.toBring.length > 0 && <SportSec eye={tr("p7pg.pleasePack")} title={tr("p7pg.whatToBring")}><div className={`grid gap-2 ${grid2}`}>{d.toBring.map((o) => <SportRow key={o}><span>{emo(o, "🎒")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.safety.length > 0 && <SportSec eye={headingOf(d, "safety", "eyebrow")} title={headingOf(d, "safety", "title")}><div className={`grid gap-2 ${grid2}`}>{d.safety.map((o) => <SportRow key={o}><span>{emo(o, "🚑")}</span>{o}</SportRow>)}</div></SportSec>}
             {d.send.length > 0 && <SportSec eye={headingOf(d, "send", "eyebrow")} title={headingOf(d, "send", "title")}><div className={`grid gap-2 ${grid2}`}>{d.send.map((o) => <SportRow key={o}><span>{emo(o, "♿")}</span>{o}</SportRow>)}</div></SportSec>}
             {venue && (isOnlineVenue(venue) || venue.address || venue.lat !== undefined || venue.directions || venue.facilities?.length || venue.what3words || venue.transport) && (
@@ -4119,7 +4137,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 </button>
                 {whereOpen && (<div className="mt-3">
                 <div className="text-[14px] font-black text-white">{venue.name}</div>
-                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>💻 Runs online</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
+                {isOnlineVenue(venue) ? <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{tr("p7pg.runsOnline")}</div> : venue.address && <div className="mt-0.5 text-[13px]" style={{ color: MUTs }}>{venue.address}</div>}
                 {!isOnlineVenue(venue) && venue.lat !== undefined && <div className="mt-3"><VenueMap lat={venue.lat} lng={venue.lng} zoom={venue.zoom} height={170} /></div>}
                 {!!venue.facilities?.length && (
                   <div className="mt-3 flex flex-wrap gap-1.5">{venue.facilities.map((f) => (
@@ -4139,7 +4157,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                 )}
                 {venue.directions && (
                   <div className="mt-3 border p-3.5" style={{ borderColor: LINEs, background: PANEL }}>
-                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{isOnlineVenue(venue) ? "How to join" : "Getting there & parking"}</div>
+                    <div className="text-[10.5px] font-black uppercase tracking-[0.12em]" style={{ color: LIME }}>{isOnlineVenue(venue) ? tr("p7pg.howToJoin") : tr("p7pg.gettingThere")}</div>
                     <p className="mt-1 whitespace-pre-line text-[13px] leading-[1.6]" style={{ color: MUTs }}>{venue.directions}</p>
                   </div>
                 )}
@@ -4157,7 +4175,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-t px-6 py-5 text-[12px]" style={{ borderColor: LINEs, color: MUTs }}>
         <span className={`font-black ${cond} text-white`}>{brand}</span>
-        <span>Bookings powered by ActivityOS</span>
+        <span>{tr("p7pg.poweredBy")}</span>
       </div>
     </div>
   );

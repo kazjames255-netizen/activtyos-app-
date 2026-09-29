@@ -11,13 +11,16 @@ export function lowAt(capacity: number | null): number {
   if (!capacity || capacity <= 0) return 1;
   return Math.max(1, Math.min(LOW_LEFT, Math.ceil(capacity / 3)));
 }
-export function capacityNote(d: WizardDraft, left: number | null): { text: string; tone: "calm" | "low" | "gone" } | null {
+import { pickPlural } from "@/lib/i18n/plural";
+
+type TFn = (k: string, v?: Record<string, string | number>) => string;
+export function capacityNote(d: WizardDraft, left: number | null, tr?: TFn, locale?: string): { text: string; tone: "calm" | "low" | "gone" } | null {
   const cap = parseInt(d.maxAttendees, 10);
   if (!Number.isFinite(cap) || !d.showSpaces) return null;
   const remaining = left ?? cap;
-  if (remaining <= 0) return { text: "Sold out", tone: "gone" };
-  if (remaining <= lowAt(cap)) return { text: `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
-  return { text: "Lots of space left", tone: "calm" };
+  if (remaining <= 0) return { text: tr ? tr("p7be.soldOutNote") : "Sold out", tone: "gone" };
+  if (remaining <= lowAt(cap)) return { text: tr ? pickPlural(tr, locale ?? "en", "p7be.onlyPlaces", remaining) : `Only ${remaining} place${remaining === 1 ? "" : "s"} left that day`, tone: "low" };
+  return { text: tr ? tr("p7be.lotsOfSpace") : "Lots of space left", tone: "calm" };
 }
 export function blockOn(blocks: RunBlock[] | undefined, iso: string): RunBlock | null {
   return blocks?.find((b) => b.startDate <= iso && iso <= b.endDate) ?? null;

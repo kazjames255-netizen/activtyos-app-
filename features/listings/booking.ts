@@ -12,6 +12,8 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useState } from "react";
+import { tNow, useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
 import { applyDiscounts } from "./discounts";
 import { blockOn, lowAt } from "./capacity";
 import { money } from "@/features/bookings/helpers";
@@ -20,6 +22,7 @@ import type { BlockBooking, BookRule, RunBlock, WizardDraft } from "./ListingWiz
 import type { ChildProfile } from "./checkout";
 
 export function useOpensAt(opensAt?: string) {
+  const tb = useT();
   const at = opensAt ?? "";
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -36,7 +39,7 @@ export function useOpensAt(opensAt?: string) {
     const hh = Math.floor(s2 / 3600); s2 -= hh * 3600;
     const mm = Math.floor(s2 / 60); s2 -= mm * 60;
     const p2 = (n: number) => String(n).padStart(2, "0");
-    return dd > 0 ? `${dd} day${dd === 1 ? "" : "s"} ${hh}h ${mm}m` : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
+    return dd > 0 ? tb("p7be.cdDays", { d: dd, h: hh, m: mm }) : `${p2(hh)}:${p2(mm)}:${p2(s2)}`;
   })();
   const opensLabel = at && !Number.isNaN(openMs)
     ? new Date(openMs).toLocaleString(dl(), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })
@@ -60,7 +63,7 @@ export function hasParentBasketItems() {
 export function confirmLeavingBasket(): boolean {
   if (!hasParentBasketItems()) return true;
   if (typeof window === "undefined") return true;
-  return window.confirm("Going to another club will clear your basket — continue?");
+  return window.confirm(tNow("p7be.leaveBasket"));
 }
 
 export type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule;
@@ -72,6 +75,8 @@ export type BasketItem = { id: string; name: string; timing: string; price: numb
 // Shared booking logic — one source of truth, rendered in two visual themes.
 export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: { n: number; mon: string; days: string[] }[], blocks?: RunBlock[], mode: "operator" | "parent" = "operator") {
   const parentMode = mode === "parent";
+  const tb = useT();
+  const { locale: loc } = useI18n();
   // The children on this booking, and who's been taken off which line. Stored
   // as exceptions so a child added is on everything immediately.
   const [roster, setRoster] = useState<ChildProfile[]>([]);
@@ -302,6 +307,8 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   // "21st, 22nd, 23rd, 24th August" — grouped by month so the month isn't
   // repeated, and readable on the row itself rather than hidden in a tooltip.
   const datesPretty = (isos: string[]) => {
+    // Other languages: each date printed by Intl with its own month (Polish needs "sierpnia", not "sierpień"), so no English ordinals.
+    if (loc !== "en") return [...isos].sort().map((iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(dl(), { day: "numeric", month: "long", timeZone: "UTC" })).join(", ");
     const byMonth = new Map<string, number[]>();
     for (const iso of [...isos].sort()) {
       const dt = new Date(`${iso}T00:00:00Z`);
@@ -342,16 +349,16 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const hint = !pass
     ? ""
     : isSingle
-      ? `Tap every day you'd like — each one is a single-day pass (${sel.length} selected)`
+      ? tb("p7be.hintSingle", { sel: sel.length })
       : rule === "blocks"
-        ? `Tap a week to take the fixed ${need}-day block`
+        ? tb("p7be.hintBlocks", { need })
         : rule === "week"
           ? (weeks.length > 0 && weeks.every((w) => w.days.filter((x) => !off(x)).length <= need)
-              ? `Tap a week to take all ${need} days`
-              : `Pick any ${need} days within one week (${sel.length}/${need})`)
+              ? tb("p7be.hintWeekAll", { need })
+              : tb("p7be.hintWeekAny", { need, sel: sel.length }))
           : (need >= weeks.flatMap((w) => w.days).filter((x) => !off(x)).length && weeks.length > 0
-              ? `Tap any day to take the whole run — all ${need} days`
-              : `Pick any ${need} days across the weeks below (${sel.length}/${need})`);
+              ? tb("p7be.hintRunAll", { need })
+              : tb("p7be.hintRunAny", { need, sel: sel.length }));
   // What the basket would look like if they added the current selection — so
   // an already-earned discount is stated before they commit, not after.
   const addPreview = (() => {
@@ -390,14 +397,14 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
         const now = (inBasket + sel.length) * attendees;
         return {
           need: r.moreThan + 1 - now,
-          amt: r.method === "percent" ? `${r.value}% off` : `${money(r.value)} off`,
-          scope: r.passNames.length === 0 ? "" : ` on ${pass.name}`,
+          amt: r.method === "percent" ? tb("p7be.pctOff", { v: r.value }) : tb("p7be.amtOff", { amt: money(r.value) }),
+          scope: r.passNames.length === 0 ? "" : tb("p7be.scopeOn", { pass: pass.name }),
         };
       })
       .filter((o) => o.need > 0)
       .sort((a, b) => a.need - b.need);
     const best = options[0];
-    return best ? `Add ${best.need} more ${best.need === 1 ? "date" : "dates"} to get ${best.amt}${best.scope}` : null;
+    return best ? pickPlural(tb, loc, "p7be.nudge", best.need, { amt: best.amt, scope: best.scope }) : null;
   })();
   const reset = () => { setBasket([]); setChild(""); setParent(null); setAssign({}); setAddonSel({}); setMealSel({}); setPriceEdit({}); setTotalOverride(null); setStage("pick"); };
   const assignTo = (itemId: string, name: string) => setAssign((a) => ({ ...a, [itemId]: name }));

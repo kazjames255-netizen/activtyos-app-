@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isRTL, type LocaleCode } from "./config";
 import { CATALOGS } from "./messages";
-import { setDateLocale } from "./format";
+import { currentLocaleCode, setDateLocale } from "./format";
 import { translateWord } from "./words";
 import { hubReady, isHubKey, loadHub, lookupHub, subscribeHub } from "./hubMessages";
 
@@ -86,4 +86,9 @@ export function useT() {
 /** `const w = useWord(); w(b.status)` — see lib/i18n/words.ts. */
 export function useWord() {
   return useI18n().w;
+}
+
+/** Translate outside React (confirm() dialogs, non-hook helpers) in the language the picker is currently on. */
+export function tNow(key: string, vars?: Vars): string {
+  return translate(currentLocaleCode(), key, vars);
 }

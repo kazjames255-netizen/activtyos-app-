@@ -16,6 +16,9 @@ let current: LocaleCode = DEFAULT_LOCALE;
 /** Called by LanguageProvider whenever the language changes. */
 export function setDateLocale(l: LocaleCode): void { current = TAG[l] ? l : DEFAULT_LOCALE; }
 
+/** The active language code ("en", "pl"…). */
+export function currentLocaleCode(): LocaleCode { return current; }
+
 /** The tag to pass to toLocaleDateString / toLocaleTimeString / toLocaleString / Intl.* for the active language. */
 export function dateLocale(): string { return TAG[current]; }
 
