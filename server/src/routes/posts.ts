@@ -200,6 +200,9 @@ async function own(req: Request, id: string) {
   if (!auth.tenantId || !canManage(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  // A franchise (or its staff) may only change posts of ITS OWN franchise — never
+  // head office's network posts or a sibling franchise's.
+  if (auth.role === "franchise" && auth.franchiseId && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -209,7 +212,10 @@ posts.put("/:id", async (req, res) => {
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Only the provider can edit a post" : "Post not found" }); return; }
   const parsed = partialSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  await o.snap.ref.set({ ...parsed.data, editedAt: new Date().toISOString() }, { merge: true });
+  const patch: Record<string, unknown> = { ...parsed.data, editedAt: new Date().toISOString() };
+  // A franchise's posts stay targeted at that franchise: it can't re-aim one at the whole network.
+  if (req.auth!.role !== "company" && req.auth!.role !== "freelancer") delete patch.franchiseId;
+  await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
 });

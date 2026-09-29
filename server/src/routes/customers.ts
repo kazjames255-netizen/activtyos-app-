@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { auth, db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
-import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
+import { franchiseFamilyEmails, familyFranchiseMap, isFranchise, franchiseStamp } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
 
 // Customers & families — the tenant's parent records. Mostly SELF-FILLING:
@@ -134,7 +134,7 @@ customers.get("/", async (req, res) => {
   if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId && scope.tenantId) {
     scopeFid = scope.franchiseId;
     const fam = await franchiseFamilyEmails(scope.tenantId, scope.franchiseId);
-    list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
+    list = list.filter((c) => (!!c.email && fam.has(c.email.toLowerCase())) || (c as { franchiseId?: string | null }).franchiseId === scope.franchiseId);
   }
   // Head office can open ONE franchise's (or its own) families without leaving
   // the HO view — a ?franchiseId= narrows the list. "__ho__" = head-office-direct
@@ -145,10 +145,10 @@ customers.get("/", async (req, res) => {
       scopeFid = fq;
       if (fq === "__ho__") {
         const map = await familyFranchiseMap(scope.tenantId);
-        list = list.filter((c) => !!c.email && !map.has(c.email.toLowerCase()));
+        list = list.filter((c) => !!c.email && !map.has(c.email.toLowerCase()) && !(c as { franchiseId?: string | null }).franchiseId);
       } else {
         const fam = await franchiseFamilyEmails(scope.tenantId, fq);
-        list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
+        list = list.filter((c) => (!!c.email && fam.has(c.email.toLowerCase())) || (c as { franchiseId?: string | null }).franchiseId === fq);
       }
     }
   }
@@ -254,16 +254,31 @@ customers.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const doc = { ...withConsentStamp(parsed.data), tenantId: auth.tenantId };
+  // A family a franchise adds is that franchise's (the Families list shows a franchise
+  // only its own); head office / freelancer records carry no franchiseId.
+  const doc = { ...withConsentStamp(parsed.data), tenantId: auth.tenantId, franchiseId: franchiseStamp({ role: auth.role, franchiseId: auth.franchiseId ?? null }) };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
+
+/** A franchise may only touch its OWN families: ones it added (stamped with its franchiseId)
+ *  or anyone booked on its listings. Head office / freelancer: every family in the tenant. */
+async function customerInFranchiseScope(
+  auth: { role: string; tenantId?: string | null; franchiseId?: string | null },
+  c: FirebaseFirestore.DocumentData,
+): Promise<boolean> {
+  if (!isFranchise(auth as Parameters<typeof isFranchise>[0])) return true;
+  if ((c.franchiseId ?? null) === auth.franchiseId) return true;
+  const email = String(c.email ?? "").trim().toLowerCase();
+  return !!email && (await franchiseFamilyEmails(auth.tenantId!, auth.franchiseId!)).has(email);
+}
 
 async function ownCustomer(req: Request, id: string) {
   const auth = req.auth!;
   if (!canWrite(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await customerInFranchiseScope(auth, snap.data()!))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -341,7 +356,7 @@ customers.post("/:id/invite", async (req, res) => {
   const snap = await ref.get();
   // canWrite has already excluded platform and staff, so the tenant check
   // applies to everyone who gets this far — no exceptions to reason about.
-  if (!snap.exists || snap.data()!.tenantId !== scope.tenantId) {
+  if (!snap.exists || snap.data()!.tenantId !== scope.tenantId || !(await customerInFranchiseScope(scope, snap.data()!))) {
     res.status(404).json({ error: "Customer not found" });
     return;
   }

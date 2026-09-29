@@ -107,7 +107,10 @@ async function teamFor(req: Request) {
     db.collection("users").where("tenantId", "==", auth.tenantId).where("role", "==", "staff").get(),
     db.collection("listings").where("tenantId", "==", auth.tenantId).get(),
   ]);
-  const titleOf = new Map(listings.docs.map((d) => [d.id, String(d.get("title") ?? d.get("name") ?? "")]));
+  // A franchise (or its staff) only knows its own franchise's listings; head office sees the lot.
+  const titleOf = new Map(listings.docs
+    .filter((d) => !auth.franchiseId || (auth.role !== "franchise" && auth.role !== "staff") || d.get("franchiseId") === auth.franchiseId)
+    .map((d) => [d.id, String(d.get("title") ?? d.get("name") ?? "")]));
   return users.docs
     .filter((u) => u.get("disabled") !== true)
     .filter((u) => auth.role === "company" || auth.role === "freelancer" || u.get("franchiseId") === auth.franchiseId)

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { librarySnap } from "../lib/tenantLibrary";
 import { canWrite } from "../middleware/role";
+import { isFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
@@ -315,7 +316,9 @@ listings.get("/", async (req, res) => {
     const snap = await col.where("tenantId", "==", auth.tenantId).get();
     // A franchise manages only its OWN listings; the head office sees all (with
     // each listing's franchiseId so it can show an owner column / assign).
-    const docs = auth.role === "franchise"
+    // A franchise's own STAFF are scoped the same way (they carry its franchiseId) —
+    // matching on auth.role alone let them list head office's and sibling franchises' listings.
+    const docs = isFranchise(auth)
       ? snap.docs.filter((d) => (d.data() as { franchiseId?: string | null }).franchiseId === auth.franchiseId)
       : snap.docs;
     const list = await withBlocks(docs.map((d) => ({ id: d.id, data: d.data() })));
