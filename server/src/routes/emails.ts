@@ -546,7 +546,8 @@ emails.delete("/messages/:id", async (req, res) => {
 // INBOUND_EMAIL_SECRET must be set wherever this is exposed publicly; the
 // dev fallback below only exists because there is no deployed environment
 // yet (see PROD-READINESS.md).
-const INBOUND_SECRET = process.env.INBOUND_EMAIL_SECRET || "dev-inbound";
+// In production an unset secret means the generic endpoint is CLOSED — never the public literal "dev-inbound".
+const INBOUND_SECRET = process.env.INBOUND_EMAIL_SECRET || (process.env.NODE_ENV === "production" ? "" : "dev-inbound");
 
 const inboundSchema = z.object({
   tenantId: z.string().trim().max(60).optional(),
@@ -767,7 +768,7 @@ async function storeInbound(tenantId: string, input: InboundInput): Promise<{ id
 
 export const emailsInbound = Router();
 emailsInbound.post("/", async (req, res) => {
-  if (req.headers["x-inbound-secret"] !== INBOUND_SECRET) { res.status(401).json({ error: "Bad inbound secret" }); return; }
+  if (!INBOUND_SECRET || req.headers["x-inbound-secret"] !== INBOUND_SECRET) { res.status(401).json({ error: "Bad inbound secret" }); return; }
   const parsed = inboundSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
 
