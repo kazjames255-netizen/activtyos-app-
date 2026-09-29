@@ -15,7 +15,9 @@ const selected = async (page: Page) => {
   const sub = page.locator('[role="tab"][data-sub][aria-selected="true"]');
   if (await sub.count()) return sub.first().getAttribute("data-panel");
   const top = await page.locator('[role="tab"][data-top][aria-selected="true"]').first().getAttribute("data-top").catch(() => null);
-  if (top) return ({ progress: "dashboard", messages: "questions" } as Record<string, string>)[top] ?? top;
+  // Single-sub tops carry no [data-sub] row at all, so the top id itself has to translate back to its one panel key
+  // (tabGroups.ts / familyGroups.ts): "starting" (tutor's Entry tests) -> diagnostic, "today" (family/kid Home) -> home.
+  if (top) return ({ progress: "dashboard", messages: "questions", starting: "diagnostic", today: "home" } as Record<string, string>)[top] ?? top;
   return t.getAttribute("data-panel");
 };
 const pick = (page: Page, sub: string) => page.locator(`[role="tab"][data-sub="${sub}"]`).click();
@@ -33,7 +35,9 @@ for (const vpName of ["390", "1440"] as const) {
     }
     const lab = async (sel: string) => (await page.locator(sel).innerText()).replace(/\s+/g, " ").trim();
     await open(page, "/freelancer/learninghub?tab=diagnostic");
-    expect(await lab('[role="tab"][data-sub="starting"]')).toMatch(/Starting quizzes/);
+    // tabGroups.ts: "Starting quizzes" was renamed "Entry tests" and promoted to its own top-level tab (Kaz: "plcement
+    // quiz change name to entry tests and this has its own tab above next to quizzes") — it has no sub-row of its own.
+    expect(await lab('[role="tab"][data-top="starting"]')).toMatch(/Entry tests/);
     expect(await lab('[role="tab"][data-top="messages"]')).toMatch(/Messages/);
     // focus moves into the panel after a click, page does not jump, title follows
     await open(page, "/freelancer/learninghub?tab=home");
@@ -67,8 +71,11 @@ for (const vpName of ["390", "1440"] as const) {
     await open(page, `${base}&tab=diagnostic`);
     expect(await selected(page)).toBe("diagnostic");
     expect((await page.locator('[role="tab"][data-panel="diagnostic"]').innerText()).trim()).toMatch(/^Starting quizzes/);
-    await open(page, `${base}&tab=questions`);
-    expect(await selected(page)).toBe("questions");
+    // familyGroups.ts: Messages has no family top at all ("leaves the tab bar entirely" — reachable only by a direct
+    // link/notification), so no tab strip renders here; `open()`'s wait-for-a-tab would hang, so navigate directly.
+    await page.goto(`${base}&tab=questions`, { waitUntil: "domcontentloaded" });
+    await page.locator("#hub-tabpanel-questions").waitFor({ timeout: 60_000 });
+    expect(await page.locator('[role="tab"][data-top], [role="tab"][data-sub]').count()).toBe(0);
     // Kid mode set the way "Hand over" stores it (sessionStorage), so this checks routing, not the hand-over button.
     await page.addInitScript(([k, v]) => sessionStorage.setItem(k, v), [KIDKEY, JSON.stringify({ t: fx.tenantId, c: fx.kids[0].id })]);
     await open(page, `${base}&tab=home`);
@@ -88,7 +95,9 @@ test("offline error is friendly with Try again (parent)", async ({ browser }) =>
   const page = await ctx.newPage();
   await open(page, `/custdash/learninghub?tab=home&child=${fx.kids[0].id}`);
   await page.route("**/api/learning-hub/**", (r) => r.abort());
-  await page.locator('[role="tab"][data-panel="notes"]').click();
+  // familyGroups.ts: "notes" (Lessons) sits under the "learn" family top, not Home's own tab — no [data-panel="notes"]
+  // tab exists while Home is active. Clicking "learn" lands straight on its first sub (Lessons), same SPA transition.
+  await page.locator('[role="tab"][data-top="learn"]').first().click();
   const alert = page.locator("#learning-hub [role=alert]").filter({ hasText: /\S/ }).first();
   await expect(alert).toBeVisible({ timeout: 30_000 });
   const t = await alert.innerText();

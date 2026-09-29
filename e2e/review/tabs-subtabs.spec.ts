@@ -1,8 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import { buildFixture, ctxFor, gotoHubPage, VIEWPORTS, type Fx } from "./fixture";
 
-// Grouped tutor tabs (docs/teaching-hub-review/07-changes/N-grouped-tabs.md): seven top tabs with sub-tabs; the six Home quick-action tiles
-// are gone; every old ?tab= deep link lands on the right top tab + sub-tab; parents and children keep their flat strips.
+// Grouped tutor tabs (docs/teaching-hub-review/07-changes/N-grouped-tabs.md): eight top tabs with sub-tabs; the six Home quick-action tiles
+// are gone; every old ?tab= deep link lands on the right top tab + sub-tab. Parents and a Year 3+ child get their OWN grouped
+// nav too now (familyGroups.ts FAMILY_TOPS / KID_TOPS) — smaller and differently grouped, but no longer a flat strip either.
 //   npx playwright test -c playwright.review.config.ts e2e/review/tabs-subtabs.spec.ts --workers=1
 const KIDKEY = "aos.hub.kid";
 test.describe.configure({ mode: "default" });
@@ -21,24 +22,27 @@ async function goSub(page: Page, topId: string, subId: string) {
   return s.click();
 }
 
+// tabGroups.ts (29ab7334 + 4587376b + 354d24ad): Progress moved from its own top into a Lessons sub; Flashcards and
+// "Entry tests" (was "Starting quizzes" under Quizzes) are now their own top-level tabs; Schedule video lesson /
+// Teach in person merged into one plain "Let's Teach" (live) sub; To mark + Inbox folded into one "Marking & results".
 const LINKS: [string, string, string | null][] = [
   ["tab=home", "home", null],
   ["tab=notes", "lessons", "lessons"],
   ["tab=live", "lessons", "live"],
   ["tab=tools", "lessons", "tools"],
-  ["tab=flashcards", "lessons", "flashcards"],
+  ["tab=flashcards", "flashcards", null],
   ["tab=students", "students", "students"],
-  ["tab=dashboard", "progress", null],
+  ["tab=dashboard", "lessons", "progress"],
   ["tab=quizzes", "quizzes", "quizzes"],
-  ["tab=diagnostic", "quizzes", "starting"],
-  ["tab=placement", "quizzes", "starting"],
-  ["tab=homework", "homework", "mark"],
+  ["tab=diagnostic", "starting", null],
+  ["tab=placement", "starting", null],
+  ["tab=homework", "homework", "results"],
   ["tab=questions&open=doubt:x", "messages", null],
   ["tab=messages", "messages", null],
   ["tab=lessons", "lessons", "lessons"],
-  ["tab=progress", "progress", null],
-  ["tab=live&sub=schedule", "lessons", "schedule"],
-  ["tab=homework&sub=inbox", "homework", "inbox"],
+  ["tab=progress", "lessons", "progress"],
+  ["tab=live&sub=schedule", "lessons", "live"],
+  ["tab=homework&sub=inbox", "homework", "results"],
   ["tab=quizzes&sub=newquiz", "quizzes", "newquiz"],
   ["tab=nonsense", "home", null],
 ];
@@ -66,14 +70,14 @@ for (const vpName of ["390", "1440"] as const) {
     await expect(page.locator("#hub-home-tutor")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole("navigation", { name: "Quick actions" })).toHaveCount(0);
     await expect(page.locator("#hub-home-tutor").getByRole("button", { name: /^(New lesson|New quiz|Set homework|Schedule video lesson|Enrol student|Teach in person)\b/ })).toHaveCount(0);
-    // seven top tabs, each with an emoji, Home first
+    // eight top tabs, each with an emoji, Home first (tabGroups.ts: Flashcards and Entry tests are their own tops now)
     const tops = page.locator('[role="tab"][data-top]');
-    await expect(tops).toHaveText([/🏠 ?Home/, /📚 ?Lessons/, /🧑‍🎓 ?Students/, /📈 ?Progress/, /📝 ?Quizzes/, /📓 ?Homework/, /💬 ?Messages/]);
+    await expect(tops).toHaveText([/🏠 ?Home/, /🧑‍🎓 ?Students/, /📚 ?Lessons/, /🃏 ?Flashcards/, /🎯 ?Entry tests/, /📝 ?Quizzes/, /📓 ?Homework/, /💬 ?Messages/]);
     await expect(page.locator('[role="tab"][data-sub]')).toHaveCount(0); // Home has no sub-row
 
     // Lessons: opening the top tab shows its sub-sections AND the default page at once (no extra tap, no separate landing page).
     await clickTop(page, "lessons");
-    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Lessons & curriculum/, /Live lessons/, /Schedule video lesson/, /Teach in person/, /Tools/, /Flashcards/]);
+    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Lessons & curriculum/, /Let.s Teach/, /Progress/, /Tools/]);
     await expect(sub(page)).toHaveAttribute("data-sub", "lessons");
     await expect(page.locator("#hub-tabpanel-notes")).toBeVisible({ timeout: 30_000 });
     // Layout: ONE full-width gradient card at the top with the sub-sections across it in a row, the live page directly underneath (every width).
@@ -87,21 +91,20 @@ for (const vpName of ["390", "1440"] as const) {
     expect(cb.width, "card spans the page content width").toBeGreaterThan(strip.width * 0.9);
     const items = page.locator('[data-testid="hub-submenu"] [role="tab"]');
     for (const r of await items.all()) expect((await r.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-    for (const t of await page.locator('[data-testid="hub-submenu"] [role="tab"] > span[aria-hidden]:first-child').all()) { const b = (await t.boundingBox())!; expect(b.width, "emoji tile size").toBeGreaterThanOrEqual(40); }
+    // "minor" sub-tabs (e.g. Tools) deliberately render a smaller 32px icon tile (SubMenuCard.tsx's `h-8 w-8` vs `h-11 w-11`) — excluded from this check.
+    for (const t of await page.locator('[data-testid="hub-submenu"] [role="tab"]:not([data-minor]) > span[aria-hidden]:first-child').all()) { const b = (await t.boundingBox())!; expect(b.width, "emoji tile size").toBeGreaterThanOrEqual(40); }
     const boxes = await Promise.all((await items.all()).map((r) => r.boundingBox()));
-    if (vpName === "1440") expect(new Set(boxes.map((b) => Math.round(b!.y))).size, "all six items in one row").toBe(1);
+    if (vpName === "1440") expect(new Set(boxes.map((b) => Math.round(b!.y))).size, "all four items in one row").toBe(1);
     else {
       const sc = await page.locator('[data-testid="hub-submenu"] [role="tablist"]').evaluate((el) => ({ sw: (el.parentElement as HTMLElement).scrollWidth, cw: (el.parentElement as HTMLElement).clientWidth }));
       expect(sc.sw, "the row scrolls sideways at phone width").toBeGreaterThan(sc.cw);
     }
-    await clickSub(page, "schedule"); // an action item opens the existing dialog over the page
-    await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await clickSub(page, "teach");
-    await expect(page.getByTestId("inperson-app")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("inperson-app").getByRole("button", { name: /close|exit|back|cancel/i }).first().click();
-    await expect(page.getByTestId("inperson-app")).toHaveCount(0);
+    // "Let's Teach" (live) is a plain page now — the New session button handles now/later and video/in-person
+    // itself (tabGroups.ts: Schedule video lesson + Teach in person merged into this one panel, no longer nav actions).
+    await clickSub(page, "live");
+    await expect(page.locator("#hub-tabpanel-live")).toBeVisible({ timeout: 30_000 });
+    await expect(sub(page)).toHaveAttribute("data-sub", "live");
+    await clickSub(page, "lessons");
     await expect(sub(page)).toHaveAttribute("data-sub", "lessons");
 
     // Students -> Enrol a student opens the existing form
@@ -111,21 +114,22 @@ for (const vpName of ["390", "1440"] as const) {
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
 
-    // Quizzes: three items; New quiz opens the builder. Homework: To mark straight away when anything waits, else Inbox; Set homework opens the form.
+    // Quizzes: two items (Starting quizzes is its own "Entry tests" top now); New quiz opens the builder.
+    // Homework: Marking & results (To mark + Inbox folded in); Set homework opens the form.
     await clickTop(page, "quizzes");
-    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Quizzes/, /Starting quizzes/, /New quiz/]);
+    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Quizzes/, /New quiz/]);
     await clickSub(page, "newquiz");
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
     await clickTop(page, "homework");
-    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/To mark/, /Inbox/, /Set homework/]);
-    await expect(sub(page)).toHaveAttribute("data-sub", /^(mark|inbox)$/);
+    await expect(page.locator('[role="tab"][data-sub]')).toHaveText([/Marking & results/, /Set homework/]);
+    await expect(sub(page)).toHaveAttribute("data-sub", "results");
     await clickSub(page, "set");
     await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press("Escape");
     await expect(sub(page)).toHaveAttribute("data-sub", "set");
-    await clickSub(page, "inbox");
-    await expect(sub(page)).toHaveAttribute("data-sub", "inbox");
+    await clickSub(page, "results");
+    await expect(sub(page)).toHaveAttribute("data-sub", "results");
 
     // The last plain sub-section per top tab is reopened (an action item never is); the URL carries tab + sub.
     await clickTop(page, "lessons");
@@ -134,37 +138,47 @@ for (const vpName of ["390", "1440"] as const) {
     await clickTop(page, "home");
     await clickTop(page, "lessons");
     await expect(sub(page)).toHaveAttribute("data-sub", "tools");
-    await clickSub(page, "schedule"); await page.keyboard.press("Escape");
+    await clickSub(page, "live"); // switch to a different plain sub
     await clickTop(page, "home");
     await clickTop(page, "lessons");
-    await expect(sub(page)).toHaveAttribute("data-sub", "tools"); // not "schedule"
+    await expect(sub(page)).toHaveAttribute("data-sub", "live"); // recalls "live", not "tools"
+    await clickSub(page, "tools"); // back to tools, for the arrow-key test below
 
     // Arrow keys move along the sub-row and keep focus in it; the active sub-tab stays in view.
     await page.locator('[role="tab"][data-sub="tools"]').focus();
     await page.keyboard.press("ArrowRight");
-    await expect(sub(page)).toHaveAttribute("data-sub", "flashcards");
-    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-sub"))).toBe("flashcards");
+    await expect(sub(page)).toHaveAttribute("data-sub", "lessons"); // wraps to the first item (tools is last)
+    expect(await page.evaluate(() => document.activeElement?.getAttribute("data-sub"))).toBe("lessons");
     const vp = page.viewportSize()!;
-    await expect.poll(async () => { const b = await page.locator('[role="tab"][data-sub="flashcards"]').boundingBox(); return !!b && b.x >= 0 && b.x + b.width <= vp.width + 1; }, { message: "active sub-tab scrolled into view" }).toBe(true);
+    await expect.poll(async () => { const b = await page.locator('[role="tab"][data-sub="lessons"]').boundingBox(); return !!b && b.x >= 0 && b.x + b.width <= vp.width + 1; }, { message: "active sub-tab scrolled into view" }).toBe(true);
     if (vpName === "390") { expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true); }
     await ctx.close();
   });
 }
 
-test("parent + kid keep the flat strip", async ({ browser }) => {
+// familyGroups.ts (29ab7334, "redesign brief §1 Level 2"): parents and a Year 3+ child no longer get the plain
+// flat strip — they get their OWN grouped top nav (FAMILY_TOPS / KID_TOPS), separate from the tutor's TUTOR_TOPS.
+// A phone gets FamilyTabBar's fixed N-column grid (never scrolls); desktop gets the same HubTabs "top"/"sub"
+// strip the tutor uses, just over a different (smaller) set of tops.
+test("parent + kid get the family grouped strip (not the tutor's)", async ({ browser }) => {
   test.setTimeout(600_000);
   const ctx = await ctxFor(browser, "parent", VIEWPORTS["390"]);
   const page = await ctx.newPage();
   const base = `/custdash/learninghub?child=${fx.kids[0].id}`;
   await open(page, `${base}&tab=home`);
-  await expect(page.locator('[role="tab"][data-top], [role="tab"][data-sub]')).toHaveCount(0);
-  await expect(page.locator('[role="tab"][data-panel="home"]')).toBeVisible();
-  expect((await page.getByRole("tab").allInnerTexts()).join("|")).not.toMatch(/[📚🏠🧑📈📝📓💬]/u);
+  const mobileBar = page.getByTestId("hub-family-tabbar-mobile");
+  await expect(mobileBar).toBeVisible();
+  // FAMILY_TOPS: Today, Homework, Learn, Flashcards, Progress, Games — six tops, never the tutor's Students/Lessons.
+  await expect(mobileBar.locator('[role="tab"][data-top]')).toHaveCount(6);
+  await expect(page.locator('[role="tab"][data-top="students"]')).toHaveCount(0);
+  await expect(mobileBar.locator('[role="tab"][data-top="today"][aria-selected="true"]')).toBeVisible();
   await page.addInitScript(([k, v]) => sessionStorage.setItem(k, v), [KIDKEY, JSON.stringify({ t: fx.tenantId, c: fx.kids[0].id })]);
   await open(page, `${base}&tab=home`);
   await page.locator("#learning-hub[data-kid='1']").waitFor({ timeout: 60_000 });
-  await expect(page.locator('[role="tab"][data-top], [role="tab"][data-sub]')).toHaveCount(0);
+  // KID_TOPS (Year 3+): five tops — no standalone Flashcards top (it lives inside Learn for a child).
+  await expect(page.getByTestId("hub-family-tabbar-mobile").locator('[role="tab"][data-top]')).toHaveCount(5);
+  await expect(page.locator('[role="tab"][data-top="flashcards"]')).toHaveCount(0);
   await open(page, `${base}&tab=students`); // a tutor-only tab still falls back to Home for a child
-  await expect(page.locator('[role="tab"][aria-selected="true"]').first()).toHaveAttribute("data-panel", "home");
+  await expect(page.locator('[role="tab"][data-top][aria-selected="true"]').first()).toHaveAttribute("data-top", "today");
   await ctx.close();
 });

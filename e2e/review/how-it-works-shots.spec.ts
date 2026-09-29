@@ -252,6 +252,8 @@ T("cap t-builder", async (page) => {
   await go(page, tutorUrl("notes"));
   await page.getByRole("button", { name: /create new lesson/i }).first().click();
   await page.getByTestId("hub-note-topic-subjects").getByRole("button", { name: /^Science/ }).click();
+  // A brand-new lesson's topic picker is "fresh" (TopicPicker.tsx): it shows no topics at all until you search, to avoid a wall of existing titles.
+  await page.getByTestId("hub-note-topic-search").fill("nervous system");
   await page.getByTestId("hub-note-topic-list").getByRole("option", { name: /nervous system/i }).first().click();
   await page.getByTestId("sb-title").fill("How messages travel");
   await page.getByTestId("sb-add-block").click();
