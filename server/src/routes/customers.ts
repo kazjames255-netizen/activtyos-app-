@@ -14,6 +14,28 @@ export const customers = Router();
 
 const col = db.collection("customers");
 
+// The `children` collection carries no tenantId (by design — it backs a
+// parent's own cross-provider roster, GET /api/my/children, keyed only by
+// parentUid). A child only "belongs" to a tenant here when it actually
+// appears on one of THAT tenant's own bookings — same membership test
+// children.ts uses for its safeguarding card / Find-a-child (bookedChildren,
+// children.get("/:id")): a top-level childId or a kids[] entry, ANY status
+// (including cancelled — a family that once genuinely attended keeps its
+// safeguarding history visible to that provider, matching children.ts's
+// own "has" check, which doesn't filter on status either). Without this, a
+// parent who has booked with two different providers under the same email
+// leaks every child on their account into both providers' Families views.
+async function tenantChildIds(tenantId: string): Promise<Set<string>> {
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const ids = new Set<string>();
+  for (const d of snap.docs) {
+    const b = d.data() as { childId?: string; kids?: { childId?: string }[] };
+    if (b.childId) ids.add(b.childId);
+    for (const k of b.kids ?? []) if (k.childId) ids.add(k.childId);
+  }
+  return ids;
+}
+
 const childSchema = z.object({
   name: z.string().trim().min(1).max(80),
   age: z.number().int().min(0).max(17).optional(),
@@ -161,17 +183,35 @@ customers.get("/", async (req, res) => {
   // without this they'd never show in Families until a booking. Match each
   // customer to their account by email → uid, and add any child not already on
   // the record (de-duped by name).
+  // SECURITY (item 65): the `children` collection is global — keyed only by
+  // parentUid, no tenantId — because it also backs the parent's own
+  // cross-provider roster. A parent who has booked with two different
+  // providers on the same email must NOT have every child on their account
+  // merged into both providers' Families views. Only merge children that
+  // actually have a booking with THIS record's tenant (tenantChildIds,
+  // cached per tenant since `list` is one tenant except for platform's
+  // ?tenantId=-less "all tenants" view).
   const kidsCol = db.collection("children");
+  const tenantChildIdsCache = new Map<string, Promise<Set<string>>>();
+  const tenantChildIdsFor = (tenantId: string) => {
+    let p = tenantChildIdsCache.get(tenantId);
+    if (!p) { p = tenantChildIds(tenantId); tenantChildIdsCache.set(tenantId, p); }
+    return p;
+  };
   await Promise.all(
     list.map(async (c) => {
       const email = (c.email ?? "").trim();
       if (!email.includes("@")) return;
+      const cTenantId = (c.tenantId as string | undefined) || scope.tenantId || "";
+      if (!cTenantId) return;
       try {
         const uid = (await auth.getUserByEmail(email)).uid;
         const kids = await kidsCol.where("parentUid", "==", uid).get();
         if (kids.empty) return;
+        const booked = await tenantChildIdsFor(cTenantId);
         const have = new Set((c.children ?? []).map((k) => (k.name ?? "").trim().toLowerCase()));
         const extra = kids.docs
+          .filter((k) => booked.has(k.id))
           .map((k) => ({ id: k.id, ...(k.data() as Record<string, unknown>) }))
           .filter((k) => !have.has(String((k as { name?: string }).name ?? "").trim().toLowerCase()));
         if (extra.length) c.children = [...(c.children ?? []), ...(extra as Array<{ name?: string }>)];
@@ -484,10 +524,19 @@ customers.get("/:id/family", async (req, res) => {
       /* no account yet */
     }
   }
+  // SECURITY (item 65): the booking check above only proves the FAMILY has
+  // booked with this tenant, not that every child on the parent's global
+  // `children` roster has. Without a per-child filter here, a parent who
+  // has also booked with a different provider (same email) leaks that
+  // other provider's children into this tenant's safeguarding view too —
+  // exactly the "no one else's" promise this endpoint's own comment makes.
   let children: Record<string, unknown>[] = [];
   if (uid) {
-    const snap = await db.collection("children").where("parentUid", "==", uid).get();
-    children = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
+    const [snap, booked] = await Promise.all([
+      db.collection("children").where("parentUid", "==", uid).get(),
+      tenantChildIds(cust.tenantId),
+    ]);
+    children = snap.docs.filter((d) => booked.has(d.id)).map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }));
   }
   res.json({
     id: own.snap.id,
