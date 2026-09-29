@@ -103,7 +103,10 @@ export function MyScheduleApp() {
       setMyId(id);
       setStaffById(Object.fromEntries(staff.map((x) => [x.id, x.name])));
       setShifts(all.filter((sh) => sh.staffId && sh.staffId === id));
-      setAllShifts(all.filter((sh) => !!sh.staffId));
+      // Keep open/unassigned shifts (staffId null) too — the server deliberately
+      // includes them for every staff account so people can see what's unfilled;
+      // "team" tab renders them with an "Open — unassigned" marker, not as anyone.
+      setAllShifts(all);
     } catch { /* ignore */ }
     setClock(loadClock());
     // My assigned camp days → shifts (times from my submitted grid, else camp hours).
@@ -160,7 +163,7 @@ export function MyScheduleApp() {
   const weekStats = useMemo(() => {
     const rows = teamByDay.flatMap((d) => d.rows);
     return {
-      people: new Set(rows.map((r) => r.staffId)).size,
+      people: new Set(rows.map((r) => r.staffId).filter(Boolean)).size,
       hours: rows.reduce((a, s) => a + hrsOf(s.start, s.end), 0),
       roles: [...new Set(rows.map((r) => r.role).filter(Boolean))],
       busiest: teamByDay.reduce((best, d) => (d.rows.length > best.n ? { date: d.date, n: d.rows.length } : best), { date: "", n: 0 }),
@@ -387,17 +390,22 @@ export function MyScheduleApp() {
                   ) : (
                     <ul className="divide-y divide-[var(--line)]">
                       {rows.map((s) => {
-                        const isMe = s.staffId === myId || s.staffId === AVAIL_ID;
-                        const name = isMe ? t("schedule.you") : (staffById[s.staffId!] ?? t("schedule.staff"));
+                        // Open/unassigned shift — server sends these with staffId null
+                        // deliberately (see rota.ts) so staff can see what's unfilled.
+                        // Read-only: not attributed to anyone, not claimable from here.
+                        const isOpen = !s.staffId;
+                        const isMe = !isOpen && (s.staffId === myId || s.staffId === AVAIL_ID);
+                        const name = isOpen ? "Open — unassigned" : isMe ? t("schedule.you") : (staffById[s.staffId!] ?? t("schedule.staff"));
                         const col = roleCol(s.role);
                         const pos = barPos(s.start, s.end);
                         return (
-                          <li key={s.id} className={"flex items-center gap-3 px-3.5 py-2.5 " + (isMe ? "bg-[#f5f8ff]" : "")}>
-                            <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-black" style={{ background: col + "1f", color: col }}>{isMe ? initials(ME) : initials(staffById[s.staffId!] ?? "St")}</span>
+                          <li key={s.id} className={"flex items-center gap-3 px-3.5 py-2.5 " + (isOpen ? "bg-[#fffaf0]" : isMe ? "bg-[#f5f8ff]" : "")}>
+                            <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-black" style={isOpen ? { background: "transparent", color: "#8a5a09", border: "2px dashed #e3ae52" } : { background: col + "1f", color: col }}>{isOpen ? "?" : isMe ? initials(ME) : initials(staffById[s.staffId!] ?? "St")}</span>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{name}</span>
+                                <span className={"truncate text-[13px] font-extrabold " + (isOpen ? "italic text-[#8a5a09]" : "text-[var(--ink)]")}>{name}</span>
                                 {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.you")}</span>}
+                                {isOpen && <span className="rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#8a5a09]">Unfilled</span>}
                                 <span className="ml-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
                               </div>
                               <div className="mt-1 flex items-center gap-2">
