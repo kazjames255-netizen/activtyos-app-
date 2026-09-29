@@ -1202,8 +1202,15 @@ my.post("/bookings", async (req, res) => {
               const theirs = b.blockId ? otherRangeByBlock.get(b.blockId)?.get(day) : undefined;
               if (!theirs) continue;
               if (!sessionsClearGap(mine.start, mine.end, theirs.start, theirs.end, gapMinutes)) {
+                // Only name the booking (ref + times) when it is THIS family's own.
+                // The clash check spans the freelancer's whole calendar, so it is
+                // usually ANOTHER family's booking — whose ref and times must not
+                // be read out to a stranger (and isn't "your existing booking").
+                const mineToo = (b.email ?? "").trim().toLowerCase() === familyEmail.trim().toLowerCase();
                 res.status(409).json({
-                  error: `That clashes with your existing booking ${b.ref} (${theirs.start}–${theirs.end} on ${prettyDay(day)}) — you need at least ${gapMinutes} minutes between sessions.`,
+                  error: mineToo
+                    ? `That clashes with your existing booking ${b.ref} (${theirs.start}–${theirs.end} on ${prettyDay(day)}) — you need at least ${gapMinutes} minutes between sessions.`
+                    : `${prettyDay(day)} isn't available at that time — the provider is already booked around then. Please pick another date.`,
                 });
                 return;
               }
