@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
+import { scheduleLabel } from "./schedule";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 
@@ -321,7 +322,7 @@ export function ParentMedicationApp() {
                 <div className="p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     {m.condition && <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-2)" }}>{m.condition}</Badge>}
-                    {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("care.asNeeded")}</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
+                    {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("care.asNeeded")}</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {scheduleLabel(t, m.schedule)}</Badge>}
                     {m.consentGranted ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>{t("care.consentGiven")}</Badge>
                       : m.archived ? <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#c02636)" }}>{t("care.consentWithdrawn")}</Badge>
                       : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("care.awaitingConsent")}</Badge>}

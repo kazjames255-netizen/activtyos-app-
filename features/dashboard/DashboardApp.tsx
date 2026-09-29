@@ -15,7 +15,9 @@ import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { InboxCard, MessagesCard, NewsfeedCard, NotificationsCard } from "@/features/dashboard/CommsCards";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
-import { useT } from "@/lib/i18n/provider";
+import { useI18n, useT, useWord } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 import { GRAD, Tile } from "@/features/money/finance-kit";
 
 interface Dash {
@@ -32,8 +34,8 @@ interface Dash {
 // Just the task fields the dashboard's "Tasks today" card needs (full model lives in features/tasks).
 interface DashTask { id: string; t: string; status?: "backlog" | "todo" | "prog" | "done"; time?: string | null; due?: string | null; archived?: boolean; link?: { k: string; v: string; href?: string } | null }
 const TASK_STATUS: Record<string, { label: string; color: string }> = {
-  backlog: { label: "Backlog", color: "#8a93a6" }, todo: { label: "To do", color: "#3b82f6" },
-  prog: { label: "In progress", color: "#f59e0b" }, done: { label: "Done", color: "#16b364" },
+  backlog: { label: "p7dash.taskBacklog", color: "#8a93a6" }, todo: { label: "p7dash.taskTodo", color: "#3b82f6" },
+  prog: { label: "p7dash.taskProg", color: "#f59e0b" }, done: { label: "p7dash.taskDone", color: "#16b364" },
 };
 
 // ── shared bits (visual system lifted from the HQ provider-analytics page) ──
@@ -53,8 +55,8 @@ const compactMoney = (n: number) => (n >= 1000 ? `£${(n / 1000).toFixed(n >= 10
 const actColor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
 const availTone = (left: number, cap: number) =>
   left <= 0 ? { bg: "#fdebec", fg: "#c0392b", label: "full" }
-  : left <= Math.max(3, cap * 0.15) ? { bg: "#fdf3d8", fg: "#9a5a00", label: `${left} left` }
-  : { bg: "#e2f5ea", fg: "#0b8446", label: `${left} left` };
+  : left <= Math.max(3, cap * 0.15) ? { bg: "#fdf3d8", fg: "#9a5a00", label: `${left}` }
+  : { bg: "#e2f5ea", fg: "#0b8446", label: `${left}` };
 const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
 // Counts toward booked revenue / attendee tallies: neither cancelled/declined
 // nor waitlisted (a waitlisted place has paid nothing and holds no seat). The
@@ -327,6 +329,8 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
 
 export function DashboardApp() {
   const t = useT();
+  const w = useWord();
+  const { locale } = useI18n();
   const [d, setD] = useState<Dash | null>(null);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [bookingsErr, setBookingsErr] = useState<string | null>(null);
@@ -415,7 +419,7 @@ export function DashboardApp() {
     // the display name + its venue for the location line/filter.
     const byAct = new Map<string, { name: string; venue?: string; value: number }>();
     const bySeason = new Map<string, number>();
-    const seasonName = (b: Booking) => seasons.find((s) => s.id === (b.listingId ? listingSeason[b.listingId] : undefined))?.name ?? "No season";
+    const seasonName = (b: Booking) => seasons.find((s) => s.id === (b.listingId ? listingSeason[b.listingId] : undefined))?.name ?? "\u0000ns";
     const byStatus = new Map<string, number>();
     const payMix = new Map<string, number>();
     const families = new Set<string>();
@@ -516,7 +520,7 @@ export function DashboardApp() {
           <div className="rounded-2xl bg-white/12 px-4 py-3 text-end ring-1 ring-white/15">
             <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">{t("dashboard.onSiteToday")}</div>
             <div className="text-[30px] font-extrabold leading-none text-white" style={{ fontFamily: "var(--ff-display)" }}>{d.today.booked}</div>
-            <div className="mt-1 text-[11.5px] font-semibold text-white/85">{d.today.sessions.length} session{d.today.sessions.length === 1 ? "" : "s"} running</div>
+            <div className="mt-1 text-[11.5px] font-semibold text-white/85">{pickPlural(t, locale, "p7dash.sessRun", d.today.sessions.length)}</div>
           </div>
         </div>
       </div>
@@ -542,7 +546,7 @@ export function DashboardApp() {
           grad={GRAD.teal}
           aside={<Ring pct={d.occupancy.pct} label={`${d.occupancy.pct}%`} />}
         />
-        <Tile label={t("dashboard.takenThisWeek")} icon="💷" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
+        <Tile label={t("dashboard.takenThisWeek")} icon="💷" value={money(d.money.takenThisWeek)} sub={pickPlural(t, locale, "p7dash.newBk", d.bookings.newThisWeek)} grad={GRAD.green}>
           {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption={t("dashboard.collectedLast5Weeks")} />}
         </Tile>
         <Tile
@@ -550,7 +554,7 @@ export function DashboardApp() {
           icon="⏳"
           value={money(d.money.outstanding)}
           sub={
-            d.money.overdueVouchers ? `${d.money.overdueVouchers} overdue voucher${d.money.overdueVouchers === 1 ? "" : "s"}`
+            d.money.overdueVouchers ? pickPlural(t, locale, "p7dash.ovVoucher", d.money.overdueVouchers)
             : d.money.awaitingVoucher ? t("dashboard.awaitingVoucherPayment", { count: d.money.awaitingVoucher })
             : d.money.outstanding > 0 ? t("dashboard.unpaidInvoiced")
             : t("dashboard.allSettled")
@@ -629,7 +633,7 @@ export function DashboardApp() {
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{l.booked}/{l.capacity}</div>
                       <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct: l.pct })}</div>
                     </div>
-                    <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.label}</span>
+                    <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.label === "full" ? t("p7dash.fullWord") : t("p7dash.nLeft", { n: tone.label })}</span>
                   </button>
                 );
               })}
@@ -659,7 +663,7 @@ export function DashboardApp() {
                 return (
                   <button key={task.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-start text-[12.5px] hover:opacity-80">
                     <span className="flex items-start gap-2.5">
-                      <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
+                      <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={t(st.label)} />
                       <span className="min-w-0 flex-1 font-semibold">{task.t}</span>
                       <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{task.time ?? t("dashboard.today")}</span>
                     </span>
@@ -716,7 +720,7 @@ export function DashboardApp() {
             <Panel title={t("dashboard.revenueBySeason")}>
               {seasons.length === 0
                 ? <Empty>{t("dashboard.setupSeasons")}</Empty>
-                : <Breakdown entries={a.bySeason} />}
+                : <Breakdown entries={a.bySeason.map((x) => ({ ...x, label: x.label === "\u0000ns" ? t("p7dash.noSeason") : x.label }))} />}
             </Panel>
             {(() => {
               const locs = [...new Set(a.byActivity.map((e) => e.venue).filter((v): v is string => !!v))].sort();
@@ -740,10 +744,10 @@ export function DashboardApp() {
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Panel title={`🔻 ${t("dashboard.bookingFunnel")}`} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.lastMonths", { months })}</span>}>
-              <Funnel stages={a.funnel} />
+              <Funnel stages={a.funnel.map((x, i) => ({ ...x, label: i === 0 ? t("p7nav.bookings") : w(x.label) }))} />
               <div className="mt-3 border-t border-[var(--line)] pt-2.5 text-[11.5px] text-[var(--ink-3)]">
                 {a.funnel[0].value > 0
-                  ? <><b className="text-[var(--ink-2)]">{Math.round((a.funnel[2].value / a.funnel[0].value) * 100)}%</b> of bookings are paid · <b className="text-[var(--ink-2)]">{Math.round((a.funnel[1].value / a.funnel[0].value) * 100)}%</b> confirmed</>
+                  ? <Rich text={t("p7dash.funnelPaidPct", { pct: Math.round((a.funnel[2].value / a.funnel[0].value) * 100), pct2: Math.round((a.funnel[1].value / a.funnel[0].value) * 100) })} bClass="text-[var(--ink-2)]" />
                   : t("dashboard.noBookingsInWindow")}
               </div>
             </Panel>
@@ -768,11 +772,11 @@ export function DashboardApp() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.byStatus")}</div>
-                  {statusTotal ? <Donut segments={a.byStatus} center={`${statusTotal}`} sub={t("dashboard.bookedLabel")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
+                  {statusTotal ? <Donut segments={a.byStatus.map((x) => ({ ...x, label: w(x.label) }))} center={`${statusTotal}`} sub={t("dashboard.bookedLabel")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
                 <div className="sm:border-s sm:border-[var(--line)] sm:ps-5">
                   <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.paymentMix")}</div>
-                  {payTotal ? <Donut segments={a.payMix} center={`${paidPct}%`} sub={t("dashboard.paid")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
+                  {payTotal ? <Donut segments={a.payMix.map((x) => ({ ...x, label: w(x.label) }))} center={`${paidPct}%`} sub={t("dashboard.paid")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
               </div>
             </Panel>

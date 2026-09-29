@@ -11,6 +11,10 @@ import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { useI18n, useT } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
+import { scheduleLabel } from "./schedule";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -90,6 +94,7 @@ type MedDraft = Partial<Med> & { childName: string; name: string; dose: string }
 const emptyMed = (): MedDraft => ({ childName: "", name: "", dose: "", asNeeded: false, heldOnSite: false, consentGranted: false });
 
 function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onCancel: () => void; initialChild?: string }) {
+  const t = useT();
   const [d, setD] = useState<MedDraft>(() => ({ ...emptyMed(), childName: initialChild ?? "" }));
   const [freq, setFreq] = useState<"booked" | "chosen" | "asneeded">("booked");
   const [pickedDays, setPickedDays] = useState<string[]>([]);
@@ -114,10 +119,10 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
 
   async function save() {
     if (!d.childName?.trim() || !d.name?.trim() || !d.dose?.trim()) {
-      setError("Child, medicine and dose are required.");
+      setError(t("p7med.errRequired"));
       return;
     }
-    if (freq === "chosen" && pickedDays.length === 0) { setError("Tick the days from their bookings, or pick a different option."); return; }
+    if (freq === "chosen" && pickedDays.length === 0) { setError(t("p7med.errTickDays")); return; }
     setBusy(true);
     setError(null);
     // Same schedule strings as the parent form (so "On these days: …" reads and
@@ -131,16 +136,16 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
       await apiPost("/api/medications", { ...d, childId: linkedChildId ?? d.childId, asNeeded: freq === "asneeded", schedule });
       onSaved();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn’t save");
+      setError(e instanceof Error ? e.message : t("p7med.errSave"));
       setBusy(false);
     }
   }
   const canNext1 = !!d.childName?.trim() && !!d.name?.trim() && !!d.dose?.trim();
-  const STEPS: [number, string][] = [[1, "Medicine"], [2, "When & how"], [3, "Consent"]];
+  const STEPS: [number, string][] = [[1, t("p7med.stepMedicine")], [2, t("p7med.stepWhen")], [3, t("p7med.stepConsent")]];
 
   return (
     <Card className="mb-3.5 p-4">
-      <div className="mb-3 text-[13.5px] font-extrabold">Administer a medication</div>
+      <div className="mb-3 text-[13.5px] font-extrabold">{t("p7med.formTitle")}</div>
 
       {/* Big step indicator */}
       <div className="mb-4 flex items-center">
@@ -158,43 +163,43 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
       {step === 1 && (
         <div className="grid gap-2.5 sm:grid-cols-3">
           <div className="sm:col-span-3">
-            <FieldLabel>Child (booked)</FieldLabel>
+            <FieldLabel>{t("p7med.childBooked")}</FieldLabel>
             <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} />
             {d.childName.trim() && !d.childId && (
               <div className="mt-1.5 rounded-lg border border-[#f0c36d] bg-[#fff7e6] px-3 py-2 text-[11.5px] text-[#8a5a00]">
-                ⚠️ <b>{d.childName.trim()}</b> hasn&rsquo;t booked with you, so this medication can&rsquo;t be linked to their account — it won&rsquo;t appear in the parent&rsquo;s area or notify them. Medication can only be recorded against a child who has a booking.
+                <Rich text={t("p7med.notBooked", { name: d.childName.trim() })} />
               </div>
             )}
           </div>
-          <div><FieldLabel>Medicine</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Ventolin" className="w-full" /></div>
-          <div><FieldLabel>Dose</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder="e.g. one puff" className="w-full" /></div>
-          <div><FieldLabel>For (condition)</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder="e.g. asthma" className="w-full" /></div>
+          <div><FieldLabel>{t("p7med.stepMedicine")}</FieldLabel><Input value={d.name} onChange={(e) => set({ name: e.target.value })} placeholder={t("p7med.phMedicine")} className="w-full" /></div>
+          <div><FieldLabel>{t("p7med.lblDose")}</FieldLabel><Input value={d.dose} onChange={(e) => set({ dose: e.target.value })} placeholder={t("p7med.phDose")} className="w-full" /></div>
+          <div><FieldLabel>{t("p7med.lblCondition")}</FieldLabel><Input value={d.condition ?? ""} onChange={(e) => set({ condition: e.target.value })} placeholder={t("p7med.phCondition")} className="w-full" /></div>
         </div>
       )}
 
       {step === 2 && (
         <>
           <div>
-            <FieldLabel>When should staff give it?</FieldLabel>
+            <FieldLabel>{t("p7med.whenGive")}</FieldLabel>
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {([["booked", "📋 On every booked day"], ["chosen", "📅 Only on the days I pick"], ["asneeded", "🩹 Only when needed"]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
+              {([["booked", t("p7med.optBooked")], ["chosen", t("p7med.optChosen")], ["asneeded", t("p7med.optNeeded")]] as ["booked" | "chosen" | "asneeded", string][]).map(([id, label]) => (
                 <button key={id} type="button" onClick={() => setFreq(id)} className="rounded-xl border-2 px-4 py-2.5 text-[13px] font-extrabold transition-colors"
                   style={freq === id ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "#cfe0f7", background: "#eef4fd", color: "#1d3a8f" }}>{label}</button>
               ))}
             </div>
-            {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Only on days they&rsquo;re booked in — checked live against bookings, so new dates are covered and a dose on a non-booked day is flagged.</p>}
-            {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Given only if needed — never routinely.</p>}
+            {freq === "booked" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{t("p7med.hintBooked")}</p>}
+            {freq === "asneeded" && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{t("p7med.hintNeeded")}</p>}
             {freq === "chosen" && (
               <div className="mt-2">
                 {!d.childName?.trim() ? (
-                  <p className="text-[11.5px] text-[var(--ink-3)]">Pick the child in step 1 to see their booked days.</p>
+                  <p className="text-[11.5px] text-[var(--ink-3)]">{t("p7med.pickChildStep1")}</p>
                 ) : bookedDays.length === 0 ? (
-                  <p className="text-[11.5px] text-[var(--ink-3)]">No upcoming booked days for {d.childName} — they may not be booked yet.</p>
+                  <p className="text-[11.5px] text-[var(--ink-3)]">{t("p7med.noUpcomingDays", { name: d.childName })}</p>
                 ) : (
                   <>
                     <div className="mb-1.5 flex items-center gap-2">
-                      <button type="button" onClick={() => setPickedDays(pickedDays.length === bookedDays.length ? [] : [...bookedDays])} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{pickedDays.length === bookedDays.length ? "Clear all" : "Select all"}</button>
-                      <span className="text-[11px] text-[var(--ink-3)]">their upcoming booked days</span>
+                      <button type="button" onClick={() => setPickedDays(pickedDays.length === bookedDays.length ? [] : [...bookedDays])} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{pickedDays.length === bookedDays.length ? t("p7med.clearAll") : t("p7med.selectAll")}</button>
+                      <span className="text-[11px] text-[var(--ink-3)]">{t("p7med.upcomingDays")}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {bookedDays.map((day) => {
@@ -208,39 +213,39 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
               </div>
             )}
             <div className="mt-3">
-              <FieldLabel>Set times? (optional — add one or more)</FieldLabel>
+              <FieldLabel>{t("p7med.setTimes")}</FieldLabel>
               <div className="flex flex-wrap items-center gap-2">
                 <Input type="time" value={timeInput} onChange={(e) => setTimeInput(e.target.value)} className="w-auto" />
-                <Button sm onClick={addTime}>＋ Add time</Button>
-                <span className="text-[11px] text-[var(--ink-3)]">e.g. twice a day — a bell reminds staff at each time on days it&rsquo;s due</span>
+                <Button sm onClick={addTime}>{t("p7med.addTime")}</Button>
+                <span className="text-[11px] text-[var(--ink-3)]">{t("p7med.timesHint")}</span>
               </div>
               {times.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
-                  {times.map((t) => (
-                    <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {t}<button type="button" onClick={() => setTimes(times.filter((x) => x !== t))} aria-label="Remove time" className="text-[#1d3a8f]">✕</button></span>
+                  {times.map((tm) => (
+                    <span key={tm} className="inline-flex items-center gap-1.5 rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">🕒 {tm}<button type="button" onClick={() => setTimes(times.filter((x) => x !== tm))} aria-label={t("p7med.removeTime")} className="text-[#1d3a8f]">✕</button></span>
                   ))}
                 </div>
               )}
             </div>
           </div>
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            <div><FieldLabel>Storage</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder="e.g. in the office, room temperature" className="w-full" /></div>
+            <div><FieldLabel>{t("p7med.lblStorage")}</FieldLabel><Input value={d.storage ?? ""} onChange={(e) => set({ storage: e.target.value })} placeholder={t("p7med.phStorage")} className="w-full" /></div>
             <div>
               <div className="flex items-center justify-between">
-                <FieldLabel>Expiry date</FieldLabel>
-                <button type="button" onClick={() => { const n = !expiryNA; setExpiryNA(n); if (n) set({ expiryDate: "" }); }} className="text-[11px] font-bold" style={{ color: expiryNA ? "#1d3a8f" : "var(--ink-3)" }}>{expiryNA ? "✓ Not applicable" : "N/A"}</button>
+                <FieldLabel>{t("p7med.lblExpiry")}</FieldLabel>
+                <button type="button" onClick={() => { const n = !expiryNA; setExpiryNA(n); if (n) set({ expiryDate: "" }); }} className="text-[11px] font-bold" style={{ color: expiryNA ? "#1d3a8f" : "var(--ink-3)" }}>{expiryNA ? t("p7med.naDone") : t("p7med.naShort")}</button>
               </div>
               {expiryNA ? (
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] text-[var(--ink-3)]">Not applicable</div>
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] text-[var(--ink-3)]">{t("p7med.notApplicable")}</div>
               ) : (
                 <>
                   <Input type="date" value={d.expiryDate ?? ""} onChange={(e) => set({ expiryDate: e.target.value })} className="w-full" />
-                  {d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">⚠️ Expired — you can still enter it</span>}
+                  {d.expiryDate && d.expiryDate < todayIso() && <span className="mt-1 inline-block text-[11px] font-bold text-[#c02636]">{t("p7med.expiredWarn")}</span>}
                 </>
               )}
             </div>
           </div>
-          <div className="mt-2.5"><FieldLabel>Instructions</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder="e.g. give with food; wait 4 hours between doses; shake well" className="w-full" /></div>
+          <div className="mt-2.5"><FieldLabel>{t("p7med.lblInstructions")}</FieldLabel><Input value={d.instructions ?? ""} onChange={(e) => set({ instructions: e.target.value })} placeholder={t("p7med.phInstructions")} className="w-full" /></div>
         </>
       )}
 
@@ -248,23 +253,23 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
         <>
           <label className="flex items-center gap-2 text-[13px] font-bold">
             <input type="checkbox" checked={!!d.consentGranted} onChange={(e) => set({ consentGranted: e.target.checked })} />
-            The parent / carer has given written consent to administer this
+            {t("p7med.consentCheck")}
           </label>
           <label className="mt-2 flex items-center gap-2 text-[12.5px]">
             <input type="checkbox" checked={!!d.heldOnSite} onChange={(e) => set({ heldOnSite: e.target.checked })} />
-            The medicine is held on site
+            {t("p7med.heldOnSite")}
           </label>
-          {!d.consentGranted && <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">Without consent, a dose can’t be recorded against this medicine.</div>}
+          {!d.consentGranted && <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">{t("p7med.noConsentHint")}</div>}
         </>
       )}
 
       {error && <div className="mt-3 text-[12.5px] font-bold text-[var(--red)]">{error}</div>}
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3">
-        <Button onClick={onCancel}>Cancel</Button>
+        <Button onClick={onCancel}>{t("common.cancel")}</Button>
         <div className="flex gap-2">
-          {step > 1 && <Button onClick={() => setStep(step - 1)}>← Back</Button>}
-          {step < 3 && <Button variant="solid" disabled={step === 1 && !canNext1} onClick={() => setStep(step + 1)}>Next →</Button>}
-          {step === 3 && <Button variant="solid" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save medication"}</Button>}
+          {step > 1 && <Button onClick={() => setStep(step - 1)}>{t("p7med.btnBack")}</Button>}
+          {step < 3 && <Button variant="solid" disabled={step === 1 && !canNext1} onClick={() => setStep(step + 1)}>{t("p7med.btnNext")}</Button>}
+          {step === 3 && <Button variant="solid" disabled={busy} onClick={save}>{busy ? t("p7med.btnSaving") : t("p7med.btnSaveMed")}</Button>}
         </div>
       </div>
     </Card>
@@ -272,6 +277,7 @@ function MedForm({ onSaved, onCancel, initialChild }: { onSaved: () => void; onC
 }
 
 function AdministerForm({ med, onDone, requireWitness, booked }: { med: Med; onDone: (recorded: boolean, given?: boolean) => void; requireWitness?: boolean; booked?: Set<string> }) {
+  const t = useT();
   const [dose, setDose] = useState(med.dose);
   const [given, setGiven] = useState(true);
   const [date, setDate] = useState(todayIso());
@@ -282,44 +288,46 @@ function AdministerForm({ med, onDone, requireWitness, booked }: { med: Med; onD
   const [error, setError] = useState<string | null>(null);
   const stampNow = () => { setDate(todayIso()); setTime(nowTime()); };
   async function give() {
-    if (!date) { setError("Pick the day."); return; }
-    if (requireWitness && !witnessedBy.trim()) { setError("A witness is required for each dose."); return; }
+    if (!date) { setError(t("p7med.pickDay")); return; }
+    if (requireWitness && !witnessedBy.trim()) { setError(t("p7med.witnessReq")); return; }
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, given, doseGiven: given ? dose : "Not given", witnessedBy, notes });
+      await apiPost(`/api/medications/${encodeURIComponent(med.id)}/administer`, { date, time, given, doseGiven: given ? dose : "Not given", witnessedBy, notes }) /* stored value stays English */;
       onDone(true, given);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn’t record");
+      setError(e instanceof Error ? e.message : t("p7med.errRecord"));
       setBusy(false);
     }
   }
   return (
     <div className="mt-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
       <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] font-extrabold">Record a dose of {med.name}</span>
-        <span className="ms-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Given?</span>
+        <span className="text-[12px] font-extrabold">{t("p7med.recordDoseOf", { name: med.name })}</span>
+        <span className="ms-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("p7med.givenQ")}</span>
         <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
-          <button type="button" onClick={() => setGiven(true)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={given ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>✓ Yes</button>
-          <button type="button" onClick={() => setGiven(false)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={!given ? { background: "#c02636", color: "#fff" } : { color: "var(--ink-3)" }}>✕ No</button>
+          <button type="button" onClick={() => setGiven(true)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={given ? { background: "#0f7a43", color: "#fff" } : { color: "var(--ink-3)" }}>{t("p7med.yesBtn")}</button>
+          <button type="button" onClick={() => setGiven(false)} className="rounded-full px-3 py-1 text-[12px] font-bold" style={!given ? { background: "#c02636", color: "#fff" } : { color: "var(--ink-3)" }}>{t("p7med.noBtn")}</button>
         </div>
-        <button type="button" onClick={stampNow} className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">🕒 Now</button>
+        <button type="button" onClick={stampNow} className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">{t("p7med.nowBtn")}</button>
       </div>
       <div className="grid gap-2 sm:grid-cols-5">
-        <div><FieldLabel>Dose</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
-        <div><FieldLabel>Day given</FieldLabel><Input type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
-        <div><FieldLabel>Time</FieldLabel><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
-        <div><FieldLabel>Witnessed by{requireWitness ? " *" : ""}</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} placeholder={requireWitness ? "required" : ""} className="w-full" /></div>
-        <div><FieldLabel>Notes</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. no reaction" className="w-full" /></div>
+        <div><FieldLabel>{t("p7med.lblDose")}</FieldLabel><Input value={dose} onChange={(e) => setDose(e.target.value)} className="w-full" /></div>
+        <div><FieldLabel>{t("p7med.lblDayGiven")}</FieldLabel><Input type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} className="w-full" /></div>
+        <div><FieldLabel>{t("p7med.lblTime")}</FieldLabel><Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full" /></div>
+        <div><FieldLabel>{t("p7med.lblWitnessed")}{requireWitness ? " *" : ""}</FieldLabel><Input value={witnessedBy} onChange={(e) => setWitnessedBy(e.target.value)} placeholder={requireWitness ? t("p7med.phRequired") : ""} className="w-full" /></div>
+        <div><FieldLabel>{t("p7med.lblNotes")}</FieldLabel><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("p7med.phNotes")} className="w-full" /></div>
       </div>
-      {!approvedForDay(med, date, booked) && <div className="mt-1.5 rounded-lg bg-[#fbeede] px-3 py-1.5 text-[11.5px] font-bold text-[#a9660a]">⚠️ {fmt(date)} isn&rsquo;t {med.schedule === BOOKED_SCHEDULE ? "a day they're booked in" : "on the parent's approved days"} — you can still record it.</div>}
+      {!approvedForDay(med, date, booked) && <div className="mt-1.5 rounded-lg bg-[#fbeede] px-3 py-1.5 text-[11.5px] font-bold text-[#a9660a]">{med.schedule === BOOKED_SCHEDULE ? t("p7med.offBooked", { date: fmt(date) }) : t("p7med.offParent", { date: fmt(date) })}</div>}
       {error && <div className="mt-1.5 text-[12px] font-bold text-[var(--red)]">{error}</div>}
-      <div className="mt-2 flex gap-2"><Button sm variant={given ? "solid" : "danger"} disabled={busy} onClick={give}>{busy ? "Recording…" : given ? "✓ Confirm dose given" : "Record as not given"}</Button><Button sm onClick={() => onDone(false)}>Cancel</Button></div>
+      <div className="mt-2 flex gap-2"><Button sm variant={given ? "solid" : "danger"} disabled={busy} onClick={give}>{busy ? t("p7med.btnRecording") : given ? t("p7med.btnConfirmGiven") : t("p7med.btnRecordNotGiven")}</Button><Button sm onClick={() => onDone(false)}>{t("common.cancel")}</Button></div>
     </div>
   );
 }
 
 export function MedicationApp() {
+  const t = useT();
+  const { locale } = useI18n();
   const { settings } = useSettings();
   const med = settings.medication ?? {};
   // Deep-link from the Register: ?child=Name opens the add form pre-filled.
@@ -344,14 +352,14 @@ export function MedicationApp() {
   const canRecord = !(med.leadsOnly && role === "staff" && !lead);
   const parentMsg = (given: boolean) => {
     const informed = given ? (med.informParentGiven ?? true) : (med.informParentMissed ?? true);
-    return `✓ ${given ? "Administration logged" : "Logged as not given"}${informed ? " — parent informed" : ""}`;
+    return `${given ? t("p7med.adminLogged") : t("p7med.loggedNotGiven")}${informed ? " " + t("p7med.parentInformed") : ""}`;
   };
 
   const [bkgs, setBkgs] = useState<{ child?: string; days?: string[]; listing?: string }[]>([]);
   const [listingFilter, setListingFilter] = useState("");
   const refresh = useCallback(() => {
     // Fetch archived too so they're never lost — the UI shows Active / Archived.
-    apiGet<Med[]>("/api/medications?includeArchived=1").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Med[]>("/api/medications?includeArchived=1").then((m) => { setMeds(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : t("p7med.errLoad")));
     apiGet<AdminEvent[]>("/api/medications/administrations").then(setAdmins).catch(() => {});
     // Bookings power the dynamic "On every booked day" approval check.
     apiGet<{ child?: string; days?: string[]; listing?: string }[]>("/api/bookings").then(setBkgs).catch(() => {});
@@ -372,14 +380,14 @@ export function MedicationApp() {
 
   async function setArchived(m: Med, archived: boolean) {
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived }) }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p7med.errFailed")); }
   }
   // Only a record entered by mistake can be deleted: once a dose is recorded or
   // the parent has withdrawn consent it stays, archived (the server enforces it — d12s6).
   async function removeMed(m: Med) {
-    if (!window.confirm(`Delete ${m.name} for ${m.childName}? Only do this for a record entered by mistake — it has no doses and can't be recovered.`)) return;
+    if (!window.confirm(t("p7med.deleteConfirm", { med: m.name, child: m.childName }))) return;
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p7med.errDelete")); }
   }
   // One-tap log for the common case — stamps today + now with the given/not-given
   // outcome. The detailed form ("with time / notes") handles back-dating etc.
@@ -387,7 +395,7 @@ export function MedicationApp() {
     setLogging(m.id);
     setError(null);
     try { await apiPost(`/api/medications/${encodeURIComponent(m.id)}/administer`, { date: todayIso(), time: nowTime(), given, doseGiven: given ? m.dose : "Not given" }); flash(parentMsg(given)); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t record"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("p7med.errRecord")); }
     finally { setLogging(null); }
   }
 
@@ -406,7 +414,7 @@ export function MedicationApp() {
   const consented = active.filter((m) => m.consentGranted).length;
   const needsConsent = active.filter((m) => !m.consentGranted).length;
   const dosesToday = admins.filter((a) => a.date === todayIso()).length;
-  const tiles: [string, string | number][] = [["On file", active.length], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
+  const tiles: [string, string | number][] = [[t("p7med.tileOnFile"), active.length], [t("p7med.tileWithConsent"), consented], [t("p7med.tileNeedsConsent"), needsConsent], [t("p7med.tileDosesToday"), dosesToday]];
   const ql = q.trim().toLowerCase();
   const listingsFor = (name: string) => (bkgsByChild.get((name ?? "").trim().toLowerCase()) ?? []).map((b) => b.listing).filter(Boolean) as string[];
   const allListings = [...new Set(bkgs.map((b) => b.listing).filter(Boolean) as string[])].sort();
@@ -422,16 +430,16 @@ export function MedicationApp() {
           <div>
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💊</span>
-              Medication
+              {t("p7nav.medication")}
             </div>
-            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Authorised medicines and every dose given — nothing is administered without a parent’s consent.</p>
+            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{t("p7med.subtitle")}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="medication" compact />
             <SettingsLink />
             {!adding && (
               <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
-                ＋ Administer a medication
+                {t("p7med.adminBtn")}
               </button>
             )}
           </div>
@@ -454,7 +462,7 @@ export function MedicationApp() {
 
       {meds && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          {([[false, "Active", active.length], [true, "Archived", archivedMeds.length]] as [boolean, string, number][]).map(([arch, label, n]) => (
+          {([[false, t("p7med.tabActive"), active.length], [true, t("p7med.tabArchived"), archivedMeds.length]] as [boolean, string, number][]).map(([arch, label, n]) => (
             <button key={label} type="button" onClick={() => setShowArchived(arch)}
               className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
               style={showArchived === arch ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
@@ -464,19 +472,19 @@ export function MedicationApp() {
           {allListings.length > 0 && (
             <select value={listingFilter} onChange={(e) => setListingFilter(e.target.value)}
               className="ms-auto rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-bold outline-none focus:border-[#1d3a8f]">
-              <option value="">All listings</option>
+              <option value="">{t("p7bkl.allListings")}</option>
               {allListings.map((l) => <option key={l} value={l}>{l}</option>)}
             </select>
           )}
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search child or medicine…"
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("p7med.searchPh")}
             className={`${allListings.length > 0 ? "" : "ms-auto "}w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]`} />
         </div>
       )}
 
       {!meds ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("p7med.loadingWord")}</div>
       ) : shown.length === 0 ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{showArchived ? "No archived medications." : "No medications on file."}</Card>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{showArchived ? t("p7med.noArchived") : t("p7med.noMeds")}</Card>
       ) : (
         <div className="flex flex-col gap-2.5">
           {shown.map((m) => {
@@ -495,92 +503,92 @@ export function MedicationApp() {
                   </div>
                   <div className="flex flex-col items-start gap-1.5 sm:items-end">
                     {m.consentGranted ? (
-                      <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>consent on file</Badge>
+                      <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{t("p7med.consentOnFile")}</Badge>
                     ) : m.consentWithdrawnAt ? (
-                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>⚠️ parent removed consent</Badge>
+                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>{t("p7med.consentRemoved")}</Badge>
                     ) : (
-                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>no consent</Badge>
+                      <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "var(--red,#e21d27)" }}>{t("p7med.noConsentBadge")}</Badge>
                     )}
-                    {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⚠️ Expired</Badge>}
-                    {givenToday.length > 0 && (() => { const t = givenToday.map((a) => a.time).filter(Boolean).sort().join(", "); return <Badge tone={{ bg: "#0f7a43", fg: "#ffffff" }}>✓ Given today{t ? ` · ${t}` : ` · ${givenToday.length}×`}</Badge>; })()}
+                    {m.expiryDate && m.expiryDate < todayIso() && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>{t("p7med.expiredBadge")}</Badge>}
+                    {givenToday.length > 0 && (() => { const tms = givenToday.map((a) => a.time).filter(Boolean).sort().join(", "); return <Badge tone={{ bg: "#0f7a43", fg: "#ffffff" }}>{t("p7med.givenToday")}{tms ? ` · ${tms}` : ` · ${givenToday.length}×`}</Badge>; })()}
                     {doses.length > 0
-                      ? <span className="text-[11.5px] font-bold text-[#0f7a43]">✓ {doses.length} dose{doses.length === 1 ? "" : "s"} recorded</span>
-                      : <span className="text-[11.5px] text-[var(--ink-3)]">no doses recorded yet</span>}
+                      ? <span className="text-[11.5px] font-bold text-[#0f7a43]">{pickPlural(t, locale, "p7med.dosesRec", doses.length)}</span>
+                      : <span className="text-[11.5px] text-[var(--ink-3)]">{t("p7med.noDosesYet")}</span>}
                   </div>
                 </div>
 
                 {/* When */}
                 <div className="mt-3">
-                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>as needed</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {m.schedule}</Badge>}
+                  {m.asNeeded ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("p7med.asNeededBadge")}</Badge> : m.schedule && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>🔁 {scheduleLabel(t, m.schedule)}</Badge>}
                 </div>
 
                 {/* Details */}
                 {(m.instructions || m.parentNote) && (
                   <div className="mt-2.5 flex flex-col gap-1.5">
-                    {m.instructions && <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📋 <b>How to give:</b> {m.instructions}</div>}
-                    {m.parentNote && <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📝 <b>Parent note:</b> {m.parentNote}</div>}
+                    {m.instructions && <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📋 <b>{t("p7med.howToGive")}</b> {m.instructions}</div>}
+                    {m.parentNote && <div className="rounded-lg bg-[#f4f8ff] px-3 py-2 text-[12px] leading-snug text-[var(--ink-2)]">📝 <b>{t("p7med.parentNoteLbl")}</b> {m.parentNote}</div>}
                   </div>
                 )}
 
                 {/* Actions */}
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-3">
                   {m.archived ? (
-                    <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Archived — no new doses can be recorded.</span>
+                    <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p7med.archivedNoNew")}</span>
                   ) : m.consentGranted ? (
                     !canRecord ? (
-                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Only leads can record doses.</span>
+                      <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p7med.onlyLeads")}</span>
                     ) : med.requireWitness ? (
                       <>
-                        <Button sm variant="solid" onClick={() => setAdministering(administering === m.id ? null : m.id)}>{administering === m.id ? "Close" : "＋ Record a dose"}</Button>
-                        <span className="text-[11px] text-[var(--ink-3)]">a witness is required</span>
+                        <Button sm variant="solid" onClick={() => setAdministering(administering === m.id ? null : m.id)}>{administering === m.id ? t("p7med.closeWord") : t("p7med.recordDoseBtn")}</Button>
+                        <span className="text-[11px] text-[var(--ink-3)]">{t("p7med.witnessRequired")}</span>
                       </>
                     ) : confirm?.id === m.id ? (
                       <>
-                        <span className="text-[11.5px] font-bold text-[var(--ink)]">Confirm: {m.name} for {m.childName} — <span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? "GIVEN" : "NOT given"}</span> now?</span>
-                        {!approvedForDay(m, todayIso(), bookedDaysFor(m.childName)) && <span className="rounded-full bg-[#fbeede] px-2 py-0.5 text-[10.5px] font-bold text-[#a9660a]">⚠️ {m.schedule === BOOKED_SCHEDULE ? "not booked in today" : "not on parent's approved days"}</span>}
-                        <Button sm variant={confirm.given ? "solid" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? "Recording…" : "Confirm"}</Button>
-                        <Button sm onClick={() => setConfirm(null)}>Cancel</Button>
+                        <span className="text-[11.5px] font-bold text-[var(--ink)]">{t("p7med.confirmLine", { med: m.name, child: m.childName, state: "\u0001" }).split("\u0001")[0]}<span style={{ color: confirm.given ? "#0f7a43" : "#c02636" }}>{confirm.given ? t("p7med.stateGiven") : t("p7med.stateNotGiven")}</span>{t("p7med.confirmLine", { med: m.name, child: m.childName, state: "\u0001" }).split("\u0001")[1]}</span>
+                        {!approvedForDay(m, todayIso(), bookedDaysFor(m.childName)) && <span className="rounded-full bg-[#fbeede] px-2 py-0.5 text-[10.5px] font-bold text-[#a9660a]">⚠️ {m.schedule === BOOKED_SCHEDULE ? t("p7med.notBookedToday") : t("p7med.notParentDays")}</span>}
+                        <Button sm variant={confirm.given ? "solid" : "danger"} disabled={logging === m.id} onClick={() => { const g = confirm.given; setConfirm(null); quickLog(m, g); }}>{logging === m.id ? t("p7med.btnRecording") : t("p7med.confirmBtn")}</Button>
+                        <Button sm onClick={() => setConfirm(null)}>{t("common.cancel")}</Button>
                       </>
                     ) : (
                       <>
-                        <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Given?</span>
-                        <Button sm variant="solid" onClick={() => setConfirm({ id: m.id, given: true })}>✓ Yes</Button>
-                        <Button sm variant="danger" onClick={() => setConfirm({ id: m.id, given: false })}>✕ No</Button>
-                        <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? "Close" : "＋ with time / notes"}</button>
+                        <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("p7med.givenQ")}</span>
+                        <Button sm variant="solid" onClick={() => setConfirm({ id: m.id, given: true })}>{t("p7med.yesBtn")}</Button>
+                        <Button sm variant="danger" onClick={() => setConfirm({ id: m.id, given: false })}>{t("p7med.noBtn")}</Button>
+                        <button type="button" onClick={() => setAdministering(administering === m.id ? null : m.id)} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{administering === m.id ? t("p7med.closeWord") : t("p7med.withTimeNotes")}</button>
                       </>
                     )
                   ) : (
-                    <span className="text-[11.5px] font-bold text-[#c02636]">Consent needed before a dose can be recorded</span>
+                    <span className="text-[11.5px] font-bold text-[#c02636]">{t("p7med.consentNeeded")}</span>
                   )}
-                  <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? "Hide" : `History (${doses.length})`}</Button>
+                  <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? t("p7med.hideWord") : t("p7med.historyN", { n: doses.length })}</Button>
                   {canManage && (m.archived
                     ? m.consentWithdrawnAt
-                      ? <span className="text-[11px] text-[var(--ink-3)]">Parent withdrew consent — kept on the record; only they can authorise it again.</span>
+                      ? <span className="text-[11px] text-[var(--ink-3)]">{t("p7med.withdrewConsent")}</span>
                       : <>
-                          <Button sm variant="solid" onClick={() => setArchived(m, false)}>Restore</Button>
-                          {doses.length === 0 && <Button sm variant="danger" onClick={() => removeMed(m)}>Delete</Button>}
+                          <Button sm variant="solid" onClick={() => setArchived(m, false)}>{t("p7med.restoreBtn")}</Button>
+                          {doses.length === 0 && <Button sm variant="danger" onClick={() => removeMed(m)}>{t("p7med.deleteBtn")}</Button>}
                         </>
-                    : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
+                    : <Button sm variant="danger" onClick={() => setArchived(m, true)}>{t("p7med.archiveBtn")}</Button>)}
                 </div>
                 {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} booked={bookedDaysFor(m.childName)} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}
                 {openId === m.id && (
                   <div className="mt-2 border-t border-[var(--line)] pt-2">
                     {doses.length === 0 ? (
-                      <div className="text-[12px] text-[var(--ink-3)]">No doses recorded yet.</div>
+                      <div className="text-[12px] text-[var(--ink-3)]">{t("p7med.noDosesRecorded")}</div>
                     ) : (
                       doses.map((a) => (
                         <div key={a.id} className="flex flex-wrap items-center gap-x-1.5 border-b border-dashed border-[var(--line)] py-1 text-[12px] last:border-b-0">
-                          {(() => { const notGiven = a.given === false || a.doseGiven === "Not given"; return <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={notGiven ? { background: "#fdebec", color: "#c02636" } : { background: "#e7f6ee", color: "#0f7a43" }}>{notGiven ? "✕ Not given" : "✓ Given"}</span>; })()}
-                          <b>{fmt(a.date)}{a.time ? ` · ${a.time}` : ""}</b> — {a.doseGiven}
-                          <span className="text-[var(--ink-3)]">· by {a.administeredByName}{a.witnessedBy ? `, witnessed ${a.witnessedBy}` : ""}{a.notes ? ` · ${a.notes}` : ""}</span>
+                          {(() => { const notGiven = a.given === false || a.doseGiven === "Not given"; return <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={notGiven ? { background: "#fdebec", color: "#c02636" } : { background: "#e7f6ee", color: "#0f7a43" }}>{notGiven ? t("p7med.notGivenBadge") : t("p7med.givenBadge")}</span>; })()}
+                          <b>{fmt(a.date)}{a.time ? ` · ${a.time}` : ""}</b> — {a.doseGiven === "Not given" ? t("p7med.notGivenWord") : a.doseGiven}
+                          <span className="text-[var(--ink-3)]">· {t("p7med.byWho", { name: a.administeredByName ?? "" })}{a.witnessedBy ? `, ${t("p7med.witnessedWho", { name: a.witnessedBy })}` : ""}{a.notes ? ` · ${a.notes}` : ""}</span>
                         </div>
                       ))
                     )}
                     {(m.consentBy || m.expiryDate || m.storage) && (
                       <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
-                        {m.consentBy && `Consent by ${m.consentBy}${m.consentDate ? ` on ${fmt(m.consentDate.slice(0, 10))}` : ""}. `}
-                        {m.storage && `Stored: ${m.storage}. `}
-                        {m.expiryDate && `Expires ${fmt(m.expiryDate)}.`}
+                        {m.consentBy && `${m.consentDate ? t("p7med.consentOnDate", { name: m.consentBy, date: fmt(m.consentDate.slice(0, 10)) }) : t("p7med.consentByLine", { name: m.consentBy })}. `}
+                        {m.storage && `${t("p7med.storedLine", { s: m.storage })} `}
+                        {m.expiryDate && t("p7med.expiresLine", { date: fmt(m.expiryDate) })}
                       </div>
                     )}
                   </div>
