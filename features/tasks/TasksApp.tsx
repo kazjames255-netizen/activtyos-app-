@@ -12,6 +12,9 @@ import { useSettings, notificationChannel, type NotifyChannel } from "@/lib/sett
 import { MilestonesApp } from "@/features/milestones/MilestonesApp";
 import { TourLauncher } from "@/features/common/TourLauncher";
 
+import { useT, useI18n, tNow } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 // ─────────────────────────────────────────────────────────────────────────
 // Task Manager — the operator to-do system. A task hangs off a real record
 // (camp / booking / compliance / venue) — that's what makes it ActivityOS
@@ -77,8 +80,8 @@ interface Task {
 const PRIO: Record<Prio, { label: string; dot: string }> = {
   // Red → orange → dark blue → slate: urgent and high were two reds (red and
   // pink) that read as the same thing at a glance.
-  urgent: { label: "Urgent", dot: "#dc2626" }, high: { label: "High", dot: "#ea580c" },
-  med: { label: "Medium", dot: "#1e40af" }, low: { label: "Low", dot: "#475569" },
+  urgent: { get label() { return tNow("p7tk.prioUrgent"); }, dot: "#dc2626" }, high: { get label() { return tNow("p7tk.prioHigh"); }, dot: "#ea580c" },
+  med: { get label() { return tNow("p7tk.prioMedium"); }, dot: "#1e40af" }, low: { get label() { return tNow("p7tk.prioLow"); }, dot: "#475569" },
 };
 const PRANK: Record<Prio, number> = { urgent: 0, high: 1, med: 2, low: 3 };
 // The calendar paints a priority colour as a chip's GROUND. White on the pale
@@ -106,16 +109,16 @@ const byTimeThenPrio = (a: Task, b: Task) => {
 // a miss doesn't hand out a fresh array every call.
 const EMPTY_TASKS: Task[] = [];
 const COLS: { k: Status; label: string; color: string }[] = [
-  { k: "backlog", label: "Backlog", color: "#8a93a6" }, { k: "todo", label: "To do", color: "#3b82f6" },
-  { k: "prog", label: "In progress", color: "#f59e0b" }, { k: "done", label: "Done", color: "#16b364" },
+  { k: "backlog", get label() { return tNow("p7dash.taskBacklog"); }, color: "#8a93a6" }, { k: "todo", get label() { return tNow("p7dash.taskTodo"); }, color: "#3b82f6" },
+  { k: "prog", get label() { return tNow("p7dash.taskProg"); }, color: "#f59e0b" }, { k: "done", get label() { return tNow("p7dash.taskDone"); }, color: "#16b364" },
 ];
 const STATUS_C: Record<Status, string> = { backlog: "#8a93a6", todo: "#3b82f6", prog: "#f59e0b", done: "#16b364" };
 const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: string }> = {
-  child: { label: "Child", bg: "#fff1f5", fg: "#be2063", icon: "🧒" }, parent: { label: "Parent", bg: "#eef4fd", fg: "#1d3a8f", icon: "👤" },
-  book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" }, list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" },
-  venue: { label: "Location", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
-  camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
-  sales: { label: "Sales", bg: "#fff4e5", fg: "#a5600a", icon: "💼" },
+  child: { get label() { return tNow("p7tk.linkChild"); }, bg: "#fff1f5", fg: "#be2063", icon: "🧒" }, parent: { get label() { return tNow("p7tk.linkParent"); }, bg: "#eef4fd", fg: "#1d3a8f", icon: "👤" },
+  book: { get label() { return tNow("p7tk.linkBooking"); }, bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" }, list: { get label() { return tNow("p7tk.linkListing"); }, bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" },
+  venue: { get label() { return tNow("p7tk.linkLocation"); }, bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { get label() { return tNow("p7tk.linkCompliance"); }, bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
+  camp: { get label() { return tNow("p7tk.linkCamp"); }, bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, gen: { get label() { return tNow("p7tk.linkCategory"); }, bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
+  sales: { get label() { return tNow("p7tk.linkSales"); }, bg: "#fff4e5", fg: "#a5600a", icon: "💼" },
 };
 // The types the picker offers (old camp/comp still render on legacy tasks).
 const LINK_TYPES: LinkKind[] = ["child", "parent", "book", "list", "venue", "gen"];
@@ -174,6 +177,7 @@ function CatSwatch({ name, size = 10 }: { name: string; size?: number }) {
  *  need for today without hunting for the task it's on. Archived tasks'
  *  links drop out with the task. */
 function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: (id: string) => void }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(false);
@@ -278,10 +282,10 @@ const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString(
 function dueLabel(iso: string | null | undefined, today: string): { text: string; color: string } | null {
   if (!iso) return null;
   const d = daysBetween(today, iso);
-  if (d < 0) return { text: d === -1 ? "Yesterday" : `${-d}d ago`, color: "#c02636" };
-  if (d === 0) return { text: "Today", color: "#b45309" };
-  if (d === 1) return { text: "Tomorrow", color: "#8a86a3" };
-  return { text: `In ${d}d`, color: "#8a86a3" };
+  if (d < 0) return { text: d === -1 ? tNow("p7tk.dueYesterday") : tNow("p7tk.dueAgo", { n: -d }), color: "#c02636" };
+  if (d === 0) return { text: tNow("p7tk.dueToday"), color: "#b45309" };
+  if (d === 1) return { text: tNow("p7tk.dueTomorrow"), color: "#8a86a3" };
+  return { text: tNow("p7tk.dueIn", { n: d }), color: "#8a86a3" };
 }
 // Compose the calendar-event notes from a task so its labels, subtasks and
 // comments travel across to the Events calendar (max 1900 chars — the event
@@ -325,7 +329,7 @@ const asksAboutSeries = (f: Partial<Task>) => Object.keys(seriesWide(f)).length 
 let ME: Person = { name: "", email: "" };
 const isMine = (t: Task) => isMineOf(t, ME);
 const whoLabel = (t: Task) => whoLabelOf(t, ME);
-const personLabel = (who: string) => (who === "__unassigned" ? "Unassigned" : personLabelOf(who, ME));
+const personLabel = (who: string) => (who === "__unassigned" ? tNow("p7tk.unassigned") : personLabelOf(who, ME));
 
 // Natural-language quick-add: "Brief coaches tomorrow @Jess !high #Riverside".
 function parseQuick(raw: string, today: string): { t: string; who?: string; prio?: Prio; link?: TaskLink; due?: string | null; urls?: string[] } {
@@ -347,6 +351,7 @@ function parseQuick(raw: string, today: string): { t: string; who?: string; prio
 }
 
 export function TasksApp() {
+  const tr = useT(); const { locale } = useI18n();
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState("");
@@ -673,7 +678,7 @@ export function TasksApp() {
   const preview = qa.trim() ? parseQuick(qa, today) : null;
   const previewWhoUnknown = preview?.who && !teamNames.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
 
-  if (!tasks) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the task manager…</div></div>;
+  if (!tasks) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.loadingTM")}</div></div>;
 
   const openTask = openId ? all.find((t) => t.id === openId) ?? null : null;
   const TABS: [typeof tab, string][] = manager
@@ -691,7 +696,7 @@ export function TasksApp() {
       {/* Hero */}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("p7tk.taskManager")}</div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="tasks" compact />
             <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
@@ -713,7 +718,7 @@ export function TasksApp() {
                     the same and a second line would just be noise. */}
                 {dates > n && (
                   <div className="mt-0.5 text-[9.5px] font-semibold" style={{ color: on ? "#8a86a3" : "rgba(255,255,255,.62)" }}
-                    title={`${n} task${n === 1 ? "" : "s"}, ${dates} counting every date of a repeat`}>
+                    title={pickPlural(tr, locale, "p7tk.tasksTip", n, { dates })}>
                     🔁 {dates} dates
                   </div>
                 )}
@@ -725,7 +730,7 @@ export function TasksApp() {
         {/* Section tabs — a segmented control that sits on the hero */}
         <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-full bg-white/10 p-1 text-[12.5px] font-bold ring-1 ring-inset ring-white/15 backdrop-blur-sm">
           {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-full px-3.5 py-1.5 transition-colors" style={tab === k ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{l}</button>)}
-          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors" style={onMilestones ? { background: "#fff", color: "#6d28d9" } : { color: "rgba(255,255,255,.85)" }}>📍 Milestones</button>}
+          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors" style={onMilestones ? { background: "#fff", color: "#6d28d9" } : { color: "rgba(255,255,255,.85)" }}>{tr("p7tk.milestones")}</button>}
         </div>
       </div>
 
@@ -735,7 +740,7 @@ export function TasksApp() {
           {/* The Quick add action sits INSIDE the field it submits, so the row
               isn't a line of buttons with no obvious relationship to the input. */}
           <div className="flex min-w-[240px] flex-1 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] pe-1 focus-within:border-[#1d3a8f]">
-            <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
+            <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={tr(noAssignee ? "p7tk.quickPhNoWho" : "p7tk.quickPh")} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
             <button type="button" onClick={addQuick} disabled={!qa.trim()}
               className="shrink-0 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition disabled:opacity-35">
               Quick add
@@ -743,15 +748,15 @@ export function TasksApp() {
           </div>
           <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <QuickLinks tasks={all} me={me} onOpen={setOpenId} />
-          <button type="button" onClick={() => setRemOpen(true)} title="Task reminders"
+          <button type="button" onClick={() => setRemOpen(true)} title={tr("p7tk.remindersTip")}
             className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
             🔔 Reminders
           </button>
-          <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">+ New task</button>
+          <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">{tr("p7tk.newTaskBtn")}</button>
         </div>
         {preview && (
           <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-            <span className="text-[var(--ink-3)]">Preview:</span>
+            <span className="text-[var(--ink-3)]">{tr("p7tk.previewLbl")}</span>
             <span className="font-bold">{preview.t || "…"}</span>
             {preview.who && <span className="rounded-full px-2 py-0.5 font-bold" style={previewWhoUnknown ? { background: "#fde2e4", color: "#c02636" } : { background: "#eef4fd", color: BLUE }}>@{preview.who}{previewWhoUnknown ? " · not in team" : ""}</span>}
             {preview.prio && <span className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold"><span className="h-2 w-2 rounded-full" style={{ background: PRIO[preview.prio].dot }} />{PRIO[preview.prio].label}</span>}
@@ -760,14 +765,14 @@ export function TasksApp() {
             {preview.urls?.map((u) => { const k = urlKind(u); return <span key={u} className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]">{k.icon} {k.label}</span>; })}
           </div>
         )}
-        <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{noAssignee ? "" : <><b>@</b> assignee · </>}<b>!</b> priority · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date · paste a <b>link</b> (Google Drive, a web page) to attach it · or <b>+ New task</b> for the full form</div>
+        <div className="mt-1.5 text-[11px] text-[var(--ink-3)]"><Rich text={tr(noAssignee ? "p7tk.qhNoWho" : "p7tk.qhWho")} /></div>
       </div>}
 
       {/* Toolbar (tabs now live in the title card above) */}
       {!onMilestones && (
         <div className="mb-2.5 flex flex-wrap items-center gap-2">
           <div className="relative ms-auto">
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr("p7tk.searchTasksPh")} className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
           </div>
         </div>
       )}
@@ -775,24 +780,24 @@ export function TasksApp() {
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">When</span>
         {([["All", ""], ["Today", "today"], ["Tomorrow", "tomorrow"]] as const).map(([label, val]) => <button key={label} type="button" onClick={() => setDueScope(val)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope === val ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
-        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope && dueScope !== "today" && dueScope !== "tomorrow" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span>Pick date</span><input type="date" value={dueScope !== "today" && dueScope !== "tomorrow" ? dueScope : ""} onChange={(e) => setDueScope(e.target.value)} className="bg-transparent text-[11.5px] text-[var(--ink)] outline-none" /></label>
+        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope && dueScope !== "today" && dueScope !== "tomorrow" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span>{tr("p7tk.pickDate")}</span><input type="date" value={dueScope !== "today" && dueScope !== "tomorrow" ? dueScope : ""} onChange={(e) => setDueScope(e.target.value)} className="bg-transparent text-[11.5px] text-[var(--ink)] outline-none" /></label>
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Priority</span>
         {(["urgent", "high", "med", "low"] as Prio[]).map((p) => <button key={p} type="button" onClick={() => setPrioFilter(prioFilter === p ? "" : p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={prioFilter === p ? { borderColor: PRIO[p].dot, background: `${PRIO[p].dot}1a`, color: PRIO[p].dot } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span className="h-2 w-2 rounded-full" style={{ background: PRIO[p].dot }} />{PRIO[p].label}</button>)}
-        {filtersActive && <><button type="button" onClick={clearFilters} className="ms-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Clear ✕</button><span className="text-[11.5px] text-[var(--ink-3)]">{base.length} match{base.length === 1 ? "" : "es"}</span></>}
+        {filtersActive && <><button type="button" onClick={clearFilters} className="ms-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">{tr("p7tk.clearX")}</button><span className="text-[11.5px] text-[var(--ink-3)]">{pickPlural(tr, locale, "p7tk.matchN", base.length)}</span></>}
       </div>
       </>}
 
-      {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>One inbox across every company you work for</b> — tasks from all the providers you coach for land here together, each badged with the company it belongs to.</div>}
+      {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]">{tr("p7tk.freelancerInbox")}</div>}
 
       {/* Views */}
       {onMilestones ? (
         <MilestonesApp mode={role === "company" ? "ho" : "franchise"} embedded />
       ) : all.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center">
-          <div className="text-[15px] font-extrabold">No tasks yet</div>
-          <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">Add your first with the quick-add above — try <b>Set up Week 3 registers tomorrow @Sam !high #Bedford</b>. Some will also appear on their own once the auto-spawn engine ships.</p>
+          <div className="text-[15px] font-extrabold">{tr("p7tk.noTasksYet")}</div>
+          <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.addFirst")}</p>
         </div>
       ) : (<>
         {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
@@ -802,19 +807,19 @@ export function TasksApp() {
         {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId}
           onUnarchive={(t) => patch(t.id, { archived: false })}
           canDelete={role !== "staff"}
-          onDelete={(t) => { if (confirm(`Delete "${t.t}" permanently? This cannot be undone.`)) remove(t.id, true); }} />}
+          onDelete={(t) => { if (confirm(tr("p7tk.deleteConfirmNamed", { name: t.t }))) remove(t.id, true); }} />}
       </>)}
 
       {remOpen && (() => {
         const prefs = settings.notifications ?? {};
-        const rows: [string, string][] = [["task-due", "A task of yours is due today"], ["task-overdue", "A task of yours is overdue"]];
+        const rows: [string, string][] = [["task-due", tr("p7tk.remDue")], ["task-overdue", tr("p7tk.remOverdue")]];
         const set = (k: string, ch: NotifyChannel) =>
           void save({ settings: { ...settings, notifications: { ...prefs, [k]: ch === "off" ? false : ch === "bell" ? "bell" : true } } });
         return (
           <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={() => setRemOpen(false)}>
             <div className="w-full max-w-[520px] rounded-2xl bg-[var(--surface)] p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
-                <h3 className="text-[16px] font-extrabold text-[var(--ink)]">Task reminders</h3>
+                <h3 className="text-[16px] font-extrabold text-[var(--ink)]">{tr("p7tk.remindersTip")}</h3>
                 <button type="button" onClick={() => setRemOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
               </div>
               <p className="mt-1.5 text-[12.5px] text-[var(--ink-2)]">
@@ -831,7 +836,7 @@ export function TasksApp() {
                         style={notificationChannel(prefs, k) === c
                           ? { background: c === "off" ? "#fdeaee" : "#eaf0fc", color: c === "off" ? "#b3123c" : "#1d3a8f" }
                           : { background: "transparent", color: "var(--ink-3)" }}>
-                        {c === "both" ? "Bell + email" : c === "bell" ? "Bell only" : "Off"}
+                        {c === "both" ? tr("p7tk.chBoth") : c === "bell" ? tr("p7tk.chBell") : tr("p7tk.chOff")}
                       </button>
                     ))}
                   </div>
@@ -844,7 +849,7 @@ export function TasksApp() {
           </div>
         );
       })()}
-      {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
+      {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">{tr("p7tk.taskLogged")}</div>}
 
       {/* Ticked off — offer to file it away. "No" is the safe default (Enter /
           click-away / Esc all leave the task on the board, done but visible),
@@ -855,13 +860,13 @@ export function TasksApp() {
         return (
           <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/40 p-4 pt-[18vh]" onClick={close}>
             <div className="w-full max-w-[420px] rounded-2xl bg-[var(--surface)] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="text-[15px] font-extrabold text-[var(--ink)]">✓ Done — archive it?</div>
+              <div className="text-[15px] font-extrabold text-[var(--ink)]">{tr("p7tk.doneArchive")}</div>
               <p className="mt-1.5 text-[12.5px] text-[var(--ink-2)]">
-                <b>{t.t}</b> is marked complete. Archiving tucks it out of your lists; it stays in <b>Archive</b>, where you can bring it back.
+                <Rich text={tr("p7tk.markedComplete", { name: t.t })} />
               </p>
               <div className="mt-4 flex justify-end gap-2">
-                <button type="button" onClick={close} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">No, leave it</button>
-                <button type="button" autoFocus onClick={() => { patch(t.id, { archived: true }); close(); }} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white">Yes, archive</button>
+                <button type="button" onClick={close} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{tr("p7tk.noLeaveIt")}</button>
+                <button type="button" autoFocus onClick={() => { patch(t.id, { archived: true }); close(); }} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white">{tr("p7tk.yesArchive")}</button>
               </div>
             </div>
           </div>
@@ -877,12 +882,12 @@ export function TasksApp() {
             // The open date may have been one of the removed ones.
             if (openTask.due && (openTask.due < r.from || openTask.due > r.until) && openTask.status !== "done") setOpenId(null);
             refresh();
-            return `✓ Repeat updated — ${out.created} date${out.created === 1 ? "" : "s"} added, ${out.removed} removed${out.keptDone ? `, ${out.keptDone} done date${out.keptDone === 1 ? "" : "s"} kept` : ""}.`;
-          } catch (e) { return `⚠ ${e instanceof Error ? e.message : "Couldn't change the dates"}`; }
+            return `${tr("p7tk.repHead")} — ${pickPlural(tr, locale, "p7tk.repAdded", out.created)}, ${tr("p7tk.removedN", { n: out.removed })}${out.keptDone ? ", " + pickPlural(tr, locale, "p7tk.keptDone", out.keptDone) : ""}.`;
+          } catch (e) { return `⚠ ${e instanceof Error ? e.message : tr("p7tk.errDates")}`; }
         }}
         onDeleteSeries={async () => {
           if (!openTask.seriesId) return;
-          if (!confirm("Delete every task in this repeat? This cannot be undone.")) return;
+          if (!confirm(tr("p7tk.delRepeatConfirm"))) return;
           try { await api(`/api/tasks/series/${encodeURIComponent(openTask.seriesId)}`, { method: "DELETE" }); setOpenId(null); refresh(); }
           catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
         }} />}
@@ -892,7 +897,8 @@ export function TasksApp() {
 
 // ── Archive ─────────────────────────────────────────────────────────────────
 function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { tasks: Task[]; onOpen: (id: string) => void; onUnarchive: (t: Task) => void; onDelete: (t: Task) => void; canDelete: boolean }) {
-  if (tasks.length === 0) return <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[12.5px] text-[var(--ink-3)]">Nothing archived. Archive a task from its card to tuck it away here.</div>;
+  const tr = useT();
+  if (tasks.length === 0) return <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[12.5px] text-[var(--ink-3)]">{tr("p7tk.nothingArchived")}</div>;
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
       {tasks.map((t) => (
@@ -901,11 +907,11 @@ function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { task
           <button type="button" onClick={() => onOpen(t.id)} className="min-w-0 flex-1 truncate text-start text-[13px] font-semibold text-[var(--ink-2)]">{t.t}</button>
           {t.link && <span className="flex-none"><LinkChip link={t.link} /></span>}<UrlsBadge t={t} />
           {t.due && <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(t.due)}</span>}
-          <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Unarchive</button>
+          <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{tr("p7tk.unarchive")}</button>
           {/* Archive is where tasks go to be got rid of, so the delete belongs
               here rather than only inside the drawer. Operators only. */}
           {canDelete && (
-            <button type="button" onClick={() => onDelete(t)} title="Delete permanently"
+            <button type="button" onClick={() => onDelete(t)} title={tr("p7tk.deletePerm")}
               className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdeaee]">
               Delete
             </button>
@@ -918,6 +924,7 @@ function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { task
 
 // ── My Tasks — grouped list ─────────────────────────────────────────────────
 function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT();
   const open = tasks.filter((t) => t.status !== "done");
   const overdue = open.filter((t) => t.due && daysBetween(today, t.due) < 0).sort(byPrioDue);
   const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0).sort(byPrioDue);
@@ -925,7 +932,7 @@ function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]
   const done = tasks.filter((t) => t.status === "done");
   // Group heading colours are ink on the page, so they use the light accents.
   // The dark 500-weights they had (#C81E5E etc) sat at ~2.6:1 on the dimmed navy.
-  const groups: [string, Task[], string, string][] = [["Overdue", overdue, "Nothing overdue — nice.", "#C81E5E"], ["Today", todayT, "Clear for today.", "#16307a"], ["Upcoming", upcoming, "Nothing scheduled.", "#2f5fd0"], ["Done", done, "Nothing done yet.", "#0f7a43"]];
+  const groups: [string, Task[], string, string][] = [[tr("p7tk.gOverdue"), overdue, tr("p7tk.eOverdue"), "#C81E5E"], [tr("p7tk.gToday"), todayT, tr("p7tk.eToday"), "#16307a"], [tr("p7tk.gUpcoming"), upcoming, tr("p7tk.eUpcoming"), "#2f5fd0"], [tr("p7tk.gDone"), done, tr("p7tk.eDone"), "#0f7a43"]];
   return (
     <div className="space-y-4">
       {groups.map(([title, list, empty, color]) => (
@@ -945,6 +952,7 @@ function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]
 // (The Calendar shows every date regardless — that's what a calendar is for.)
 // One folded repeat: the next date, then its other dates on demand.
 function RepeatRows({ lead, rest, today, noAssignee, hideDone, onOpen, onStatus }: { lead: Task; rest: Task[]; today: string; noAssignee: boolean; hideDone: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT(); const { locale } = useI18n();
   const [open, setOpen] = useState(false);
   const row = (t: Task) => <TaskRow key={t.id} t={t} today={today} noAssignee={noAssignee} hideDone={hideDone} onOpen={onOpen} onStatus={onStatus} />;
   if (!rest.length) return row(lead);
@@ -954,7 +962,7 @@ function RepeatRows({ lead, rest, today, noAssignee, hideDone, onOpen, onStatus 
       <button type="button" onClick={() => setOpen((v) => !v)}
         className="ms-[58px] flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
         🔁 {lead.seriesFreq ? `${REPEAT_WORD[lead.seriesFreq] ?? lead.seriesFreq} · ` : ""}
-        {open ? "hide the other dates" : `${rest.length} more date${rest.length === 1 ? "" : "s"}`}
+        {open ? tr("p7tk.hideOtherDates") : pickPlural(tr, locale, "p7tk.moreDates", rest.length)}
         <span className="text-[9px]">{open ? "▲" : "▼"}</span>
       </button>
       {open && <div className="ms-[58px] space-y-2 border-s-2 border-dashed border-[var(--line)] ps-2">{rest.map(row)}</div>}
@@ -965,6 +973,7 @@ function RepeatRows({ lead, rest, today, noAssignee, hideDone, onOpen, onStatus 
 // One group (Overdue / Today / Upcoming / Done) — shows the first 10, then a
 // "Show N more" toggle so long lists stay compact.
 function TaskGroup({ title, list, empty, color, today, noAssignee, hideDone, onOpen, onStatus }: { title: string; list: Task[]; empty: string; color: string; today: string; noAssignee: boolean; hideDone: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT();
   const [expanded, setExpanded] = useState(false);
   // Fold first, then cap: "show 10" now means 10 jobs, not 10 dates of one job.
   const folded = useMemo(() => foldRepeats(list), [list]);
@@ -982,7 +991,7 @@ function TaskGroup({ title, list, empty, color, today, noAssignee, hideDone, onO
       {list.length === 0 ? <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{empty}</div>
         : <>
           <div className="space-y-2">{shown.map((f) => <RepeatRows key={f.lead.id} lead={f.lead} rest={f.rest} today={today} noAssignee={noAssignee} hideDone={hideDone} onOpen={onOpen} onStatus={onStatus} />)}</div>
-          {folded.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-2 w-full rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] py-2 text-[11.5px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? "Show less" : `Show ${folded.length - 10} more`}</button>}
+          {folded.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-2 w-full rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] py-2 text-[11.5px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? tr("p7tk.showLess") : tr("p7tk.showNMore", { n: folded.length - 10 })}</button>}
         </>}
     </div>
   );
@@ -992,11 +1001,12 @@ function TaskGroup({ title, list, empty, color, today, noAssignee, hideDone, onO
 // board card, calendar row, list row. One component so the three can't drift on
 // colour, rounding or what "complete" looks like.
 function SubProgress({ subs }: { subs: Sub[] }) {
+  const tr = useT();
   if (!subs.length) return null;
   const doneN = subs.filter((s) => s.done).length;
   const pct = Math.round((doneN / subs.length) * 100);
   return (
-    <span className="inline-flex flex-none items-center gap-1" title={`${doneN} of ${subs.length} subtasks done`}>
+    <span className="inline-flex flex-none items-center gap-1" title={tr("p7tk.subsDone", { a: doneN, b: subs.length })}>
       <span className="block h-1 w-8 overflow-hidden rounded-full bg-[var(--line)]">
         <span className="block h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? "#16b364" : "#3b82f6" }} />
       </span>
@@ -1006,6 +1016,7 @@ function SubProgress({ subs }: { subs: Sub[] }) {
 }
 
 function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task; today: string; noAssignee: boolean; hideDone?: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT();
   const done = t.status === "done";
   const subs = t.subs ?? [];
   const [openSubs, setOpenSubs] = useState(false);
@@ -1031,7 +1042,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
       </div>
       {/* Body — single row */}
       <div className="flex min-w-0 flex-1 items-center gap-2 px-2.5">
-        {!hideDone && <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label="Status" className="flex-none cursor-pointer rounded-full border px-2 py-0.5 text-[10px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>}
+        {!hideDone && <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => onStatus(t, e.target.value as Status)} aria-label={tr("p7tk.ariaStatus")} className="flex-none cursor-pointer rounded-full border px-2 py-0.5 text-[10px] font-extrabold outline-none transition-colors" style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>{COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}</select>}
         <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO[t.prio ?? "med"].dot }} />
         <button type="button" onClick={() => onOpen(t.id)} className="flex min-w-0 flex-1 items-center gap-2 text-start">
           <span className={`truncate text-[13px] ${done ? "text-[var(--ink-3)] line-through" : "font-extrabold"}`}>{t.t}</span>
@@ -1042,7 +1053,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
         <SubProgress subs={subs} />
         {subs.length > 0 && (
           <button type="button" onClick={(e) => { e.stopPropagation(); setOpenSubs((v) => !v); }}
-            aria-expanded={openSubs} title={openSubs ? "Hide subtasks" : "Show subtasks"}
+            aria-expanded={openSubs} title={openSubs ? tr("p7tk.hideSubs") : tr("p7tk.showSubs")}
             className="flex-none rounded-full border border-[var(--line)] px-1.5 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)] transition-colors hover:border-[#1d3a8f] hover:text-[#1d3a8f]">
             {subs.filter((s) => s.done).length}/{subs.length} <span className="text-[8px]">{openSubs ? "▲" : "▼"}</span>
           </button>
@@ -1072,6 +1083,7 @@ function TaskRow({ t, today, noAssignee, hideDone, onOpen, onStatus }: { t: Task
 
 // ── Board — kanban with drag ────────────────────────────────────────────────
 function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onStatus, onArchive }: { tasks: Task[]; noAssignee: boolean; onOpen: (id: string) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onStatus: (t: Task, s: Status) => void; onArchive: (t: Task) => void }) {
+  const tr = useT();
   const [over, setOver] = useState<Status | null>(null);
   const today = todayIso();
   return (
@@ -1081,13 +1093,14 @@ function Board({ tasks, noAssignee, onOpen, drag, setDrag, onDrop, onStatus, onA
           <BoardColumn key={c.k} c={c} list={tasks.filter((t) => (t.status ?? "todo") === c.k).slice().sort(byPrioDue)} today={today} noAssignee={noAssignee} over={over === c.k} setOver={setOver} drag={drag} setDrag={setDrag} onDrop={onDrop} onOpen={onOpen} onStatus={onStatus} onArchive={onArchive} />
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-[var(--ink-3)]">Drag a card between columns to move it, or click to open.</p>
+      <p className="mt-2 text-[11px] text-[var(--ink-3)]">{tr("p7tk.boardHint")}</p>
     </>
   );
 }
 
 // One kanban column — shows the first 10 cards, then a "Show N more" toggle.
 function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag, onDrop, onOpen, onStatus, onArchive }: { c: { k: Status; label: string; color: string }; list: Task[]; today: string; noAssignee: boolean; over: boolean; setOver: (s: Status | null) => void; drag: string | null; setDrag: (id: string | null) => void; onDrop: (id: string, s: Status) => void; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void; onArchive: (t: Task) => void }) {
+  const tr = useT();
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? list : list.slice(0, 10);
   return (
@@ -1124,7 +1137,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
                 <SubProgress subs={t.subs ?? []} />
                 {!noAssignee && whoLabel(t) && <span className="text-[10px] font-semibold text-[var(--ink-3)]">{whoLabel(t)}</span>}
                 <div className="ms-auto flex items-center gap-1">
-                  {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>}
+                  {t.status === "done" && <button type="button" onClick={(e) => { e.stopPropagation(); onArchive(t); }} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">{tr("p7tk.tabArchive")}</button>}
                   {/* The same status dropdown the list view uses. A lone "Done"
                       button could only move a card one way — every other status
                       needed a drag, and the board disagreed with the list about
@@ -1133,7 +1146,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
                       card already sits IN its status column under a header in
                       that colour, so a matching pill said it a third time and
                       clashed with the priority border next to it. */}
-                  <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); onStatus(t, e.target.value as Status); }} aria-label="Status"
+                  <select value={t.status ?? "todo"} onClick={(e) => e.stopPropagation()} onChange={(e) => { e.stopPropagation(); onStatus(t, e.target.value as Status); }} aria-label={tr("p7tk.ariaStatus")}
                     className="flex-none cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--ink-3)] outline-none transition-colors hover:border-[var(--ink-3)] hover:text-[var(--ink-2)]">
                     {COLS.map((col) => <option key={col.k} value={col.k} style={{ color: "var(--ink)" }}>{col.label}</option>)}
                   </select>
@@ -1143,8 +1156,8 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
           </div>
           );
         })}
-        {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-5 text-center text-[11px] text-[var(--ink-3)]">Drop here</div>}
-        {list.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="w-full rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] py-1.5 text-[11px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? "Show less" : `Show ${list.length - 10} more`}</button>}
+        {list.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-5 text-center text-[11px] text-[var(--ink-3)]">{tr("p7tk.dropHere")}</div>}
+        {list.length > 10 && <button type="button" onClick={() => setExpanded((v) => !v)} className="w-full rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] py-1.5 text-[11px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{expanded ? tr("p7tk.showLess") : tr("p7tk.showNMore", { n: list.length - 10 })}</button>}
       </div>
     </div>
   );
@@ -1152,6 +1165,7 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
 
 // ── Calendar — Day / Week / Month ───────────────────────────────────────────
 function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT();
   // Which day has its overflow list open.
   const [moreDay, setMoreDay] = useState<string | null>(null);
   // Month view calls this per cell (up to ~42) and week view per day (7), each
@@ -1175,7 +1189,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
   const step = view === "day" ? 1 : view === "week" ? 7 : 0;
   const stepBy = (dir: number) => { if (view === "month") { const [y, m] = anchor.split("-").map(Number); setAnchor(new Date(Date.UTC(y, m - 1 + dir, 1)).toISOString().slice(0, 10)); } else setAnchor(shiftIso(anchor, dir * step)); };
   const title = view === "day" ? new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
-    : view === "week" ? `Week of ${fmtDay(weekStart)}`
+    : view === "week" ? tr("p7tk.weekOf", { date: fmtDay(weekStart) })
     : new Date(`${anchor}T00:00:00Z`).toLocaleDateString(dl(), { month: "long", year: "numeric", timeZone: "UTC" });
   // Compact chip (month/week) — done tasks read struck-through and dimmed.
   const chip = (t: Task) => { const done = t.status === "done"; const bg = done ? "#16b364" : PRIO[t.prio ?? "med"].dot; return (
@@ -1196,10 +1210,10 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     // column resolves 2px wider and every label sits just off its column.
     <div className={`hidden ${DAY_COLS} gap-2 border border-transparent px-2.5 pb-1 text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)] md:grid`}>
       <span>Task</span>
-      <span>Category</span>
+      <span>{tr("p7tk.linkCategory")}</span>
       <span>Progress</span>
-      <span>{noAssignee ? "" : "Assigned to"}</span>
-      <span className="text-end">Status</span>
+      <span>{noAssignee ? "" : tr("p7tk.assignedTo")}</span>
+      <span className="text-end">{tr("p7tk.ariaStatus")}</span>
     </div>
   );
   const fullChip = (t: Task) => {
@@ -1215,7 +1229,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
         <span className="flex min-w-0 items-center gap-1">{t.link && <LinkChip link={t.link} size="xs" />}<UrlsBadge t={t} /></span>
         <span className="min-w-0"><SubProgress subs={t.subs ?? []} /></span>
         <span className="truncate text-[10.5px] text-[var(--ink-3)]">{noAssignee ? "" : whoLabel(t)}</span>
-        <select value={t.status ?? "todo"} onChange={(e) => onStatus(t, e.target.value as Status)} onClick={(e) => e.stopPropagation()} aria-label="Status"
+        <select value={t.status ?? "todo"} onChange={(e) => onStatus(t, e.target.value as Status)} onClick={(e) => e.stopPropagation()} aria-label={tr("p7tk.ariaStatus")}
           className="w-full cursor-pointer rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold outline-none"
           style={{ borderColor: `${sc}55`, background: `${sc}14`, color: sc }}>
           {COLS.map((c) => <option key={c.k} value={c.k} style={{ color: "var(--ink)" }}>{c.label}</option>)}
@@ -1275,7 +1289,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
     ))}</div>;
   } else {
     const list = on(anchor);
-    body = <div className="py-1">{list.length === 0 ? <div className="rounded-lg border border-dashed border-[var(--line)] py-8 text-center text-[12px] text-[var(--ink-3)]">Nothing due this day.</div> : <>{dayHeader}<div className="space-y-1.5">{list.map(fullChip)}</div></>}</div>;
+    body = <div className="py-1">{list.length === 0 ? <div className="rounded-lg border border-dashed border-[var(--line)] py-8 text-center text-[12px] text-[var(--ink-3)]">{tr("p7tk.nothingDueDay")}</div> : <>{dayHeader}<div className="space-y-1.5">{list.map(fullChip)}</div></>}</div>;
   }
 
   return (
@@ -1284,7 +1298,7 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
         <button type="button" onClick={() => stepBy(-1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">‹</button>
         <div className="min-w-[180px] text-[14px] font-extrabold">{title}</div>
         <button type="button" onClick={() => stepBy(1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-bold">›</button>
-        <button type="button" onClick={() => setAnchor(today)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">Today</button>
+        <button type="button" onClick={() => setAnchor(today)} className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">{tr("p7tk.dueToday")}</button>
         {/* Segmented control. The selected pill was a pale tint on white, which
             at this size read as "slightly lighter", not "selected" — it takes a
             solid fill and white text to say which view you're in at a glance. */}
@@ -1309,17 +1323,18 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
 // A search-as-you-type combobox. Each row shows a bold primary line and a muted
 // `sub` line (the disambiguating detail) so you pick the right record.
 function SearchSelect({ value, placeholder, options, onPick, inputCls }: { value: string; placeholder: string; options: { v: string; sub?: string }[]; onPick: (v: string) => void; inputCls: string }) {
+  const tr = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const ql = q.trim().toLowerCase();
   const filtered = (ql ? options.filter((o) => `${o.v} ${o.sub ?? ""}`.toLowerCase().includes(ql)) : options).slice(0, 60);
   return (
     <div className="relative">
-      <input value={open ? q : value} placeholder={value || `${placeholder} — type to search`} onFocus={() => { setOpen(true); setQ(""); }} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 160)} className={inputCls} />
+      <input value={open ? q : value} placeholder={value || tr("p7tk.typeToSearch", { ph: placeholder })} onFocus={() => { setOpen(true); setQ(""); }} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 160)} className={inputCls} />
       {open && (
         <div className="absolute start-0 end-0 z-30 mt-1 max-h-60 overflow-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg">
-          {value && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(""); setOpen(false); }} className="w-full border-b border-[var(--line)] px-3 py-1.5 text-start text-[11.5px] font-bold text-[var(--ink-3)] hover:bg-[#f7faff]">Clear selection</button>}
-          {filtered.length === 0 ? <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">No matches</div>
+          {value && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(""); setOpen(false); }} className="w-full border-b border-[var(--line)] px-3 py-1.5 text-start text-[11.5px] font-bold text-[var(--ink-3)] hover:bg-[#f7faff]">{tr("p7tk.clearSelection")}</button>}
+          {filtered.length === 0 ? <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">{tr("p7tk.noMatches")}</div>
             : filtered.map((o) => (
               <button type="button" key={o.v} onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(o.v); setOpen(false); }} className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-3 py-1.5 text-start last:border-b-0 hover:bg-[#eef4fd]">
                 <span className="text-[12.5px] font-bold text-[var(--ink)]">{o.v}</span>
@@ -1333,6 +1348,7 @@ function SearchSelect({ value, placeholder, options, onPick, inputCls }: { value
 }
 
 function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; opts: LinkOpts; inputCls: string }) {
+  const tr = useT();
   const k = link?.k ?? "";
   const { portal, bookOpts, childOpts, parentOpts, listings, locations, cats, salesOpts = [], catsInUse, onForgetCat } = opts;
   // HQ has no children or bookings to link to — it has a pipeline.
@@ -1342,37 +1358,37 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
   return (
     <div className="space-y-1.5">
       <select value={types.includes(k as LinkKind) ? k : (k || "")} onChange={(e) => setK(e.target.value)} className={inputCls}>
-        <option value="">— not linked —</option>
+        <option value="">{tr("p7tk.notLinked")}</option>
         {types.map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
       </select>
 
       {k === "book" && (bookOpts.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a booking" options={bookOpts.map((b) => ({ v: b.v, sub: b.sub }))} onPick={(v) => { const o = bookOpts.find((b) => b.v === v); onChange(o ? { k: "book", v: o.v, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "book", v: e.target.value })} placeholder="e.g. #APF-1042" className={inputCls} />)}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findBooking")} options={bookOpts.map((b) => ({ v: b.v, sub: b.sub }))} onPick={(v) => { const o = bookOpts.find((b) => b.v === v); onChange(o ? { k: "book", v: o.v, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "book", v: e.target.value })} placeholder={tr("p7tk.phBooking")} className={inputCls} />)}
 
       {k === "child" && (childOpts.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a child" options={childOpts.map((c) => ({ v: c.name, sub: c.sub }))} onPick={(v) => { const o = childOpts.find((c) => c.name === v); onChange(o ? { k: "child", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "child", v: e.target.value })} placeholder="Child name" className={inputCls} />)}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findChild")} options={childOpts.map((c) => ({ v: c.name, sub: c.sub }))} onPick={(v) => { const o = childOpts.find((c) => c.name === v); onChange(o ? { k: "child", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "child", v: e.target.value })} placeholder={tr("p7tk.phChild")} className={inputCls} />)}
 
       {k === "parent" && (parentOpts.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a parent" options={parentOpts.map((p) => ({ v: p.name, sub: p.sub }))} onPick={(v) => { const o = parentOpts.find((p) => p.name === v); onChange(o ? { k: "parent", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "parent", v: e.target.value })} placeholder="Parent name" className={inputCls} />)}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findParent")} options={parentOpts.map((p) => ({ v: p.name, sub: p.sub }))} onPick={(v) => { const o = parentOpts.find((p) => p.name === v); onChange(o ? { k: "parent", v: o.name, href: bookingHref(o.ref) } : null); }} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "parent", v: e.target.value })} placeholder={tr("p7tk.phParent")} className={inputCls} />)}
 
       {k === "list" && (listings.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a listing" options={listings.map((l) => ({ v: l.title, sub: l.location }))} onPick={(v) => onChange(v ? { k: "list", v } : null)} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "list", v: e.target.value })} placeholder="Listing name" className={inputCls} />)}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findListing")} options={listings.map((l) => ({ v: l.title, sub: l.location }))} onPick={(v) => onChange(v ? { k: "list", v } : null)} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "list", v: e.target.value })} placeholder={tr("p7tk.phListing")} className={inputCls} />)}
 
       {k === "venue" && (locations.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a location" options={locations.map((v) => ({ v }))} onPick={(v) => onChange(v ? { k: "venue", v } : null)} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder="Location or address" className={inputCls} />)}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findLocation")} options={locations.map((v) => ({ v }))} onPick={(v) => onChange(v ? { k: "venue", v } : null)} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder={tr("p7tk.phLocation")} className={inputCls} />)}
 
       {k === "sales" && (salesOpts.length
-        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a lead" options={salesOpts.map((o) => ({ v: o.v, sub: o.sub }))}
+        ? <SearchSelect value={link?.v ?? ""} placeholder={tr("p7tk.findLead")} options={salesOpts.map((o) => ({ v: o.v, sub: o.sub }))}
             onPick={(v) => { const o = salesOpts.find((x) => x.v === v); onChange(o ? { k: "sales", v: o.v, href: `/platform/sales?lead=${encodeURIComponent(o.id)}` } : null); }} inputCls={inputCls} />
-        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "sales", v: e.target.value })} placeholder="Lead or company name" className={inputCls} />)}
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "sales", v: e.target.value })} placeholder={tr("p7tk.phLead")} className={inputCls} />)}
 
       {k === "gen" && <>
-        <input list="task-cats" value={link?.v ?? ""} onChange={(e) => onChange({ k: "gen", v: e.target.value })} placeholder="Category — type a new one or pick" className={inputCls} />
+        <input list="task-cats" value={link?.v ?? ""} onChange={(e) => onChange({ k: "gen", v: e.target.value })} placeholder={tr("p7tk.phCategory")} className={inputCls} />
         <datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist>
         {/* The categories in their own colours, so you pick the one you'll
             actually see on the board rather than guessing from a name. */}
@@ -1387,7 +1403,7 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
                 <CatSwatch name={c} />{c}
               </button>
               {onForgetCat && !inUse && (
-                <button type="button" title={`Remove "${c}" from the category list`} onClick={() => onForgetCat(c)}
+                <button type="button" title={tr("p7tk.removeCat", { c })} onClick={() => onForgetCat(c)}
                   className="px-1 text-[12px] leading-none text-[var(--ink-3)] hover:text-[#c02636]">×</button>
               )}
             </span>;
@@ -1400,6 +1416,7 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
 
 // ── Create-task modal ───────────────────────────────────────────────────────
 export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: { name: string; email: string }[]; me: string; myEmail?: string; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+  const tr = useT(); const { locale } = useI18n();
   // HQ has no Events calendar of its own — offering to sync a platform task
   // to "the Events calendar" would point at a feature that doesn't exist there.
   const isPlatform = usePathname()?.split("/")[1] === "platform";
@@ -1444,27 +1461,27 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
         <div className="op-hero relative flex-none overflow-hidden px-5 pb-4 pt-3.5 text-white" style={{ background: STATUS_HERO[status] }}>
           <div aria-hidden className="pointer-events-none absolute -end-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center gap-2">
-            <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">New task</span>
-            {repeatOn && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">🔁 Repeats</span>}
+            <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-white/75">{tr("p7tk.newTask")}</span>
+            {repeatOn && <span className="rounded-full bg-white/18 px-2 py-0.5 text-[10.5px] font-extrabold ring-1 ring-white/25">{tr("p7tk.repeatsBadge")}</span>}
             <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
-          <input autoFocus value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }} placeholder="What needs doing?" aria-label="Task title"
+          <input autoFocus value={t} onChange={(e) => setT(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(); }} placeholder={tr("p7tk.whatNeedsDoing")} aria-label={tr("p7tk.ariaTaskTitle")}
             className="relative mt-1 w-full rounded-lg bg-white/10 px-2.5 py-1.5 text-[20px] font-extrabold leading-tight text-white outline-none ring-1 ring-white/25 placeholder:text-white/60 focus:bg-white/15 focus:ring-white/60" style={{ fontFamily: "var(--ff-display)" }} />
           <div className="relative mt-3 max-w-[520px]"><StatusButtons value={status} onChange={setStatus} /></div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-1 pt-4">
           <div className="gap-3 @2xl:columns-2 [&>*]:mb-3 [&>*]:break-inside-avoid">
-              <DSection icon="📋" tint="#1d3a8f" title="Details">
+              <DSection icon="📋" tint="#1d3a8f" title={tr("p7tk.secDetails")}>
                 <div className="space-y-3">
                   {!noAssignee && (
                     <div>
-                      <DLabel>Assigned to</DLabel>
+                      <DLabel>{tr("p7tk.assignedTo")}</DLabel>
                       <div className="flex items-center gap-2">
                         <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: who.trim() ? avatarTint(who) : "#cbd5e1" }}>{who.trim() ? initialsOf(who) : "?"}</span>
                         <input list="team-list-c" value={who}
                           onChange={(e) => { const v = e.target.value; setWho(v); setWhoEmail(team.find((p) => p.name.toLowerCase() === v.trim().toLowerCase())?.email ?? ""); }}
-                          placeholder="Unassigned — type a name" className={inputCls} />
+                          placeholder={tr("p7tk.phUnassigned")} className={inputCls} />
                         <datalist id="team-list-c">{team.map((p) => <option key={p.email || p.name} value={p.name}>{p.email}</option>)}</datalist>
                         {me && who.trim().toLowerCase() !== me.trim().toLowerCase() && (
                           <button type="button" onClick={() => { setWho(me); setWhoEmail(myEmail || ""); }}
@@ -1474,8 +1491,8 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-2.5">
-                    <label className="block"><DLabel>Due / deadline</DLabel><input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} /></label>
-                    <label className="block"><DLabel>Time (optional)</DLabel><input type="time" value={time} onChange={(e) => {
+                    <label className="block"><DLabel>{tr("p7tk.dDue")}</DLabel><input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} /></label>
+                    <label className="block"><DLabel>{tr("p7tk.dTime")}</DLabel><input type="time" value={time} onChange={(e) => {
                       setTime(e.target.value);
                       // A time with no date is a reminder that can never fire — the
                       // sweep keys off the due date. Setting a time means today.
@@ -1486,25 +1503,25 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                   <div className="rounded-xl border border-[#a5f3fc] bg-[#f0fdff] p-2.5">
                     <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-[0.07em] text-[#0e7490]">🔁 Repeat{repeatOn ? <span className="rounded-full bg-[#0e7490] px-1.5 py-px text-[9.5px] text-white">On</span> : null}</div>
                     <div className="grid grid-cols-2 gap-2.5">
-                      <label className="block"><DLabel>How often</DLabel>
+                      <label className="block"><DLabel>{tr("p7tk.dHow")}</DLabel>
                         <select value={rptFreq} onChange={(e) => setRptFreq(e.target.value as typeof rptFreq)} className={inputCls}>
-                          <option value="">Does not repeat</option>
-                          <option value="daily">Every day</option>
-                          <option value="weekdays">Every weekday (Mon–Fri)</option>
-                          <option value="weekly">Every week</option>
-                          <option value="monthly">Every month</option>
+                          <option value="">{tr("p7tk.dNoRepeat")}</option>
+                          <option value="daily">{tr("p7tk.fDaily")}</option>
+                          <option value="weekdays">{tr("p7tk.fWeekdaysLong")}</option>
+                          <option value="weekly">{tr("p7tk.fWeekly")}</option>
+                          <option value="monthly">{tr("p7tk.fMonthly")}</option>
                         </select>
                       </label>
                       <label className="block"><DLabel>Until</DLabel><input type="date" value={rptUntil} min={start} disabled={!repeatOn} onChange={(e) => setRptUntil(e.target.value)} className={`${inputCls} disabled:opacity-40`} /></label>
                     </div>
                     {repeatOn && (
                       <p className={`mt-2 text-[11.5px] ${repeatBad ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}`}>
-                        {repeatBad ? "Choose an end date on or after the start date." : `One task per date from ${fmtDay(start)} to ${fmtDay(rptUntil)}, each tickable on its own (max 366). You can change the dates later.`}
+                        {repeatBad ? tr("p7tk.repeatBad") : tr("p7tk.repeatInfo", { from: fmtDay(start), to: fmtDay(rptUntil) })}
                       </p>
                     )}
                   </div>
                   <div><DLabel>Priority</DLabel><PrioButtons value={prio} onChange={setPrio} /></div>
-                  <div><DLabel>Linked to</DLabel><LinkedPicker link={link} onChange={setLink} opts={opts} inputCls={inputCls} /></div>
+                  <div><DLabel>{tr("p7tk.dLinked")}</DLabel><LinkedPicker link={link} onChange={setLink} opts={opts} inputCls={inputCls} /></div>
                   <div>
                     <DLabel>Labels</DLabel>
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -1513,19 +1530,19 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                           #{l}<button type="button" onClick={() => setLabels(labels.filter((_, j) => j !== i))} aria-label={`Remove ${l}`} className="opacity-60 hover:opacity-100">×</button>
                         </span>
                       ); })}
-                      <input value={labelIn} onChange={(e) => setLabelIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && labelIn.trim()) { e.preventDefault(); setLabels([...labels, labelIn.trim()]); setLabelIn(""); } }} placeholder="+ add label, press Enter" className="w-[170px] rounded-full border border-dashed border-[#c7d2e5] bg-white px-3 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" />
+                      <input value={labelIn} onChange={(e) => setLabelIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && labelIn.trim()) { e.preventDefault(); setLabels([...labels, labelIn.trim()]); setLabelIn(""); } }} placeholder={tr("p7tk.phAddLabel")} className="w-[170px] rounded-full border border-dashed border-[#c7d2e5] bg-white px-3 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" />
                     </div>
                   </div>
                 </div>
               </DSection>
 
-              <DSection icon="✅" tint="#0f8a4a" title="Checklist" meta={subs.length ? `${subs.length} step${subs.length === 1 ? "" : "s"}` : undefined}>
+              <DSection icon="✅" tint="#0f8a4a" title={tr("p7tk.secChecklist")} meta={subs.length ? pickPlural(tr, locale, "p7tk.stepsN", subs.length) : undefined}>
                 {subs.length > 0 && (
                   <div className="mb-2 space-y-1.5">
                     {subs.map((x, i) => (
                       <div key={i} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-white px-2.5 py-2 text-[13px]">
                         <span className="h-[16px] w-[16px] flex-none rounded border-2 border-[#b7dcc6]" />
-                        <input value={x.t} onChange={(e) => setSubs(subs.map((y, j) => (j === i ? { ...y, t: e.target.value } : y)))} onBlur={() => { if (!x.t.trim()) setSubs(subs.filter((_, j) => j !== i)); }} aria-label="Step" title="Click to edit"
+                        <input value={x.t} onChange={(e) => setSubs(subs.map((y, j) => (j === i ? { ...y, t: e.target.value } : y)))} onBlur={() => { if (!x.t.trim()) setSubs(subs.filter((_, j) => j !== i)); }} aria-label={tr("p7tk.ariaStep")} title={tr("p7tk.clickToEdit")}
                           className="min-w-0 flex-1 rounded-md bg-transparent px-1 py-0.5 font-semibold outline-none hover:bg-[#f1f5f9] focus:bg-white focus:ring-2 focus:ring-[#0f8a4a]/25" />
                         {x.who && <span className="rounded-full bg-[#f0faf4] px-2 py-0.5 text-[11px] font-bold text-[#0f8a4a]">👤 {x.who}</span>}
                         <button type="button" onClick={() => setSubs(subs.filter((_, j) => j !== i))} aria-label={`Remove ${x.t}`} className="flex-none rounded-full px-1.5 text-[15px] text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c02636]">×</button>
@@ -1534,22 +1551,22 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                   </div>
                 )}
                 <div className="flex gap-1.5">
-                  <input value={subIn} onChange={(e) => setSubIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder="Add a step…" className={inputCls} />
-                  {!noAssignee && <input list="team-list-c" value={subWho} onChange={(e) => setSubWho(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder="Assign to" className="w-[118px] shrink-0 rounded-xl border border-[var(--line)] bg-[#f8fafc] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0f8a4a]" />}
+                  <input value={subIn} onChange={(e) => setSubIn(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder={tr("p7tk.phAddStep")} className={inputCls} />
+                  {!noAssignee && <input list="team-list-c" value={subWho} onChange={(e) => setSubWho(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }} placeholder={tr("p7tk.phAssignTo")} className="w-[118px] shrink-0 rounded-xl border border-[var(--line)] bg-[#f8fafc] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0f8a4a]" />}
                   <button type="button" onClick={addSub} disabled={!subIn.trim()} className="shrink-0 rounded-xl bg-[#0f8a4a] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Add</button>
                 </div>
               </DSection>
 
-              <DSection icon="🔗" tint="#2563eb" title="Links" meta={urls.length ? String(urls.length) : undefined}>
+              <DSection icon="🔗" tint="#2563eb" title={tr("p7tk.secLinks")} meta={urls.length ? String(urls.length) : undefined}>
                 {urls.length > 0 && <div className="mb-2 space-y-1.5">{urls.map((l, i) => <LinkTile key={l.url} l={l} onRemove={() => setUrls(urls.filter((_, j) => j !== i))} />)}</div>}
                 <LinkAdder existing={urls} me={me} onAdd={(u) => setUrls([...urls, u])} />
               </DSection>
 
               {!isPlatform && (
-                <DSection icon="📅" tint="#be185d" title="Events calendar">
+                <DSection icon="📅" tint="#be185d" title={tr("p7tk.secEvents")}>
                   <label className={`flex items-start gap-2.5 ${due ? "cursor-pointer" : "opacity-60"}`}>
                     <input type="checkbox" checked={toCal} disabled={!due} onChange={(e) => setToCal(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] flex-none accent-[#be185d]" />
-                    <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">Also show in the Events calendar</b><br />{due ? "Adds it to your sidebar calendar too." : "Set a due date first."}</span>
+                    <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">{tr("p7tk.alsoShowEvents")}</b><br />{due ? "Adds it to your sidebar calendar too." : "Set a due date first."}</span>
                   </label>
                 </DSection>
               )}
@@ -1557,10 +1574,10 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
         </div>
 
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] bg-white px-4 py-3">
-          <span className="hidden text-[11px] text-[var(--ink-3)] @2xl:inline">Tip: ⌘/Ctrl + Enter in the title creates it.</span>
+          <span className="hidden text-[11px] text-[var(--ink-3)] @2xl:inline">{tr("p7tk.tipCmdEnter")}</span>
           <div className="ms-auto flex gap-2">
             <button type="button" onClick={onClose} className="rounded-xl border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
-            <button type="button" onClick={submit} disabled={!t.trim() || repeatBad} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110 disabled:opacity-40">Create task</button>
+            <button type="button" onClick={submit} disabled={!t.trim() || repeatBad} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110 disabled:opacity-40">{tr("p7tk.createTask")}</button>
           </div>
         </div>
       </div>
@@ -1570,6 +1587,7 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
 
 // ── Team — per-assignee ─────────────────────────────────────────────────────
 function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen, onStatus }: { tasks: Task[]; team: string[]; filter: string; setFilter: (s: string) => void; sort: "up" | "down"; setSort: (s: "up" | "down") => void; today: string; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  const tr = useT();
   const people = filter ? [filter] : [...team, "__unassigned"];
   // Buckets matched on the EXACT `who` string, which quietly dropped tasks: a
   // task filed under your email and one filed under your name are both yours,
@@ -1665,6 +1683,7 @@ const D_INPUT = "w-full rounded-xl border border-[var(--line)] bg-[#f8fafc] px-3
 const DLabel = ({ children }: { children: ReactNode }) => <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-[0.07em] text-[var(--ink-3)]">{children}</div>;
 /** Status as four buttons on the coloured header. */
 function StatusButtons({ value, onChange }: { value: Status; onChange: (s: Status) => void }) {
+  const tr = useT();
   return (
     <div className="grid grid-cols-4 gap-1 rounded-xl bg-black/20 p-1">
       {COLS.map((c) => { const on = value === c.k; return (
@@ -1677,6 +1696,7 @@ function StatusButtons({ value, onChange }: { value: Status; onChange: (s: Statu
 }
 /** Priority as four coloured buttons. */
 function PrioButtons({ value, onChange }: { value: Prio; onChange: (p: Prio) => void }) {
+  const tr = useT();
   return (
     <div className="grid grid-cols-4 gap-1.5">
       {(Object.keys(PRIO) as Prio[]).map((p) => { const on = value === p; const c = PRIO[p].dot; return (
@@ -1691,21 +1711,23 @@ function PrioButtons({ value, onChange }: { value: Prio; onChange: (p: Prio) => 
 }
 /** A link tile (drawer + New task). */
 function LinkTile({ l, onRemove }: { l: TaskUrl; onRemove: () => void }) {
+  const tr = useT();
   const k = urlKind(l.url);
   return (
     <div className="group flex items-center gap-2.5 rounded-xl border border-[#dbe6fb] bg-gradient-to-r from-[#f5f9ff] to-white px-2.5 py-2">
       <span className="grid h-9 w-9 flex-none place-items-center rounded-lg bg-white text-[18px] shadow-sm ring-1 ring-[#dbe6fb]">{k.icon}</span>
       <a href={l.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-extrabold text-[#1d3a8f] group-hover:underline">{l.title || k.label} <span className="text-[11px]">↗</span></div>
-        <div className="truncate text-[10.5px] text-[var(--ink-3)]">{l.title ? k.label : l.url}{l.by ? ` · added by ${l.by}` : ""}</div>
+        <div className="truncate text-[10.5px] text-[var(--ink-3)]">{l.title ? k.label : l.url}{l.by ? tr("p7tk.addedByName", { name: l.by }) : ""}</div>
       </a>
-      <button type="button" title="Copy link" onClick={() => { void navigator.clipboard?.writeText(l.url); }} className="flex-none rounded-lg px-1.5 py-1 text-[12px] text-[var(--ink-3)] hover:bg-[#eef4ff] hover:text-[#1d3a8f]">⧉</button>
-      <button type="button" title="Remove link" onClick={onRemove} className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">×</button>
+      <button type="button" title={tr("p7tk.copyLink")} onClick={() => { void navigator.clipboard?.writeText(l.url); }} className="flex-none rounded-lg px-1.5 py-1 text-[12px] text-[var(--ink-3)] hover:bg-[#eef4ff] hover:text-[#1d3a8f]">⧉</button>
+      <button type="button" title={tr("p7tk.removeLink")} onClick={onRemove} className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">×</button>
     </div>
   );
 }
 /** Paste-a-link row (drawer + New task). */
 function LinkAdder({ existing, me, onAdd }: { existing: TaskUrl[]; me: string; onAdd: (u: TaskUrl) => void }) {
+  const tr = useT();
   const [urlIn, setUrlIn] = useState("");
   const [title, setTitle] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -1713,16 +1735,16 @@ function LinkAdder({ existing, me, onAdd }: { existing: TaskUrl[]; me: string; o
     const n = normaliseUrl(urlIn);
     if (n.error) { setErr(n.error); return; }
     if (!n.url) return;
-    if (existing.some((x) => x.url === n.url)) { setErr("That link is already on this task."); return; }
+    if (existing.some((x) => x.url === n.url)) { setErr(tr("p7tk.linkAlready")); return; }
     onAdd({ url: n.url, ...(title.trim() ? { title: title.trim() } : {}), by: me, at: new Date().toLocaleDateString(dl(), { day: "numeric", month: "short" }) });
     setUrlIn(""); setTitle(""); setErr(null);
   };
   return (
     <div className="space-y-1.5">
-      <input value={urlIn} onChange={(e) => { setUrlIn(e.target.value); setErr(null); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder="Paste a link — Google Drive, Docs, Sheets, a web page…" className={D_INPUT} />
+      <input value={urlIn} onChange={(e) => { setUrlIn(e.target.value); setErr(null); }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={tr("p7tk.phPasteLink")} className={D_INPUT} />
       <div className="flex gap-1.5">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder="Name it (optional)" className={D_INPUT} />
-        <button type="button" onClick={add} disabled={!urlIn.trim()} className="shrink-0 rounded-xl bg-[#2563eb] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Add link</button>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} placeholder={tr("p7tk.phNameIt")} className={D_INPUT} />
+        <button type="button" onClick={add} disabled={!urlIn.trim()} className="shrink-0 rounded-xl bg-[#2563eb] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">{tr("p7tk.addLink")}</button>
       </div>
       {err && <div className="text-[11.5px] font-bold text-[#c0392b]">{err}</div>}
     </div>
@@ -1732,20 +1754,21 @@ function LinkAdder({ existing, me, onAdd }: { existing: TaskUrl[]; me: string; o
  *  task (d11s8): the task's title and due date for context, every step with
  *  ONLY theirs tickable, and the comments. Least privilege — see tasks.ts. */
 function StepsOnlyDrawer({ task, me, myEmail, comment, setComment, onAddComment, onClose, onSave }: { task: Task; me: string; myEmail?: string; comment: string; setComment: (v: string) => void; onAddComment: () => void; onClose: () => void; onSave: (f: Partial<Task>) => void }) {
+  const tr = useT();
   const subs = task.subs ?? [];
   const mine = (x: Sub) => isMineOf(x, { name: me, email: myEmail ?? "" });
   return (
     <div className="fixed inset-0 z-[9999] flex justify-end bg-[#0f172a]/45 backdrop-blur-[2px]" onClick={onClose}>
       <div className="relative flex h-full w-full max-w-[560px] flex-col overflow-y-auto bg-[#f4f7fc] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-3)]">Your step on a task</span>
+          <span className="text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[var(--ink-3)]">{tr("p7tk.yourStep")}</span>
           <button type="button" onClick={onClose} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white text-[17px] font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">×</button>
         </div>
         <h2 className="mt-1 text-[19px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{task.t}</h2>
         <div className="mt-1 text-[12px] text-[var(--ink-3)]">
-          {task.due ? `Due ${fmtDay(task.due)}${task.time ? ` · ${task.time}` : ""}` : "No due date"}{task.who ? ` · task owner: ${task.who}` : ""}
+          {task.due ? tr("p7tk.dueOn", { date: fmtDay(task.due) }) + (task.time ? ` · ${task.time}` : "") : tr("p7tk.noDueDate")}{task.who ? tr("p7tk.taskOwner", { who: task.who }) : ""}
         </div>
-        <p className="mt-2 rounded-xl border border-[#c7d6f5] bg-[#eef4ff] px-3 py-2 text-[12px] text-[#1d3a8f]">You&rsquo;ve been given a step on this task. Tick yours when it&rsquo;s done, or leave a comment — the rest of the task stays with its owner.</p>
+        <p className="mt-2 rounded-xl border border-[#c7d6f5] bg-[#eef4ff] px-3 py-2 text-[12px] text-[#1d3a8f]">{tr("p7tk.gaveStep")}</p>
         <div className="mt-3 space-y-1.5">
           {subs.map((x, i) => (
             <label key={i} className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-[13px] ${mine(x) ? "border-[#0f8a4a]/40 bg-white" : "border-[var(--line)] bg-[#f8fafc] opacity-70"}`}>
@@ -1755,14 +1778,14 @@ function StepsOnlyDrawer({ task, me, myEmail, comment, setComment, onAddComment,
             </label>
           ))}
         </div>
-        <div className="mt-4 text-[12px] font-extrabold text-[var(--ink-2)]">Comments</div>
+        <div className="mt-4 text-[12px] font-extrabold text-[var(--ink-2)]">{tr("p7tk.secComments")}</div>
         <div className="mt-1.5 space-y-1.5">
           {(task.comments ?? []).map((c, i) => (
             <div key={i} className="rounded-xl bg-white px-3 py-2 text-[12.5px] ring-1 ring-[var(--line)]"><b>{c.who}</b> <span className="text-[11px] text-[var(--ink-3)]">{c.when}</span><div className="mt-0.5 whitespace-pre-wrap">{c.body}</div></div>
           ))}
         </div>
         <div className="mt-2 flex gap-1.5">
-          <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onAddComment(); }} placeholder="Add a comment…" className={D_INPUT} />
+          <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") onAddComment(); }} placeholder={tr("p7tk.phAddComment")} className={D_INPUT} />
           <button type="button" onClick={onAddComment} disabled={!comment.trim()} className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white disabled:opacity-35">Post</button>
         </div>
       </div>
@@ -1774,6 +1797,7 @@ const initialsOf = (name: string) => name.trim().split(/[\s@._-]+/).filter(Boole
 const AVATAR_TINTS = ["#1d3a8f", "#0f8a4a", "#b45309", "#be185d", "#0e7490", "#7c2d12", "#4338ca", "#15803d", "#c2410c", "#0369a1"];
 const avatarTint = (s: string) => AVATAR_TINTS[[...s.trim().toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AVATAR_TINTS.length];
 function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries, seriesStart, onEditSeries }: { task: Task; team: { name: string; email: string }[]; noAssignee: boolean; me: string; myEmail?: string; meDerived?: boolean; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>, scope?: "one" | "all") => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void; seriesStart?: string; onEditSeries: (r: { from: string; until: string; freq: string }) => Promise<string | null> }) {
+  const tr = useT(); const { locale } = useI18n();
   // HQ has no Events calendar of its own.
   const isPlatform = usePathname()?.split("/")[1] === "platform";
   // Editing when the repeat runs (its first/last date, how often).
@@ -1817,7 +1841,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
   // Closing the drawer with something typed but unsent is the other way work
   // got lost. Ask rather than discard.
   const closeGuarded = () => {
-    if ((comment.trim() || sub.trim()) && !confirm("You have something typed that hasn't been added yet. Close anyway?")) return;
+    if ((comment.trim() || sub.trim()) && !confirm(tr("p7tk.typedNotAdded"))) return;
     onClose();
   };
   // Given only a step on someone else's task: the cut-down view — their step(s)
@@ -1831,7 +1855,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
   const isOverdue = status !== "done" && !!task.due && task.due < todayIso;
   const subs = task.subs ?? [];
   const subsDone = subs.filter((x) => x.done).length;
-  const FREQ_WORD: Record<string, string> = { daily: "Every day", weekdays: "Every weekday", weekly: "Every week", monthly: "Every month" };
+  const FREQ_WORD: Record<string, string> = { get daily() { return tNow("p7tk.fDaily"); }, get weekdays() { return tNow("p7tk.fWeekdaysShort"); }, get weekly() { return tNow("p7tk.fWeekly"); }, get monthly() { return tNow("p7tk.fMonthly"); } };
   const lbl = (t: string) => <DLabel>{t}</DLabel>;
   const heroChip = "inline-flex items-center gap-1 rounded-full bg-white/18 px-2.5 py-1 text-[11.5px] font-bold text-white ring-1 ring-white/25 backdrop-blur-sm";
   return (
@@ -1852,11 +1876,11 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             {task.spawn && <span className="rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase text-[#7c5a06]">auto</span>}
             <button type="button" onClick={closeGuarded} aria-label="Close" className="ms-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px] font-bold text-white ring-1 ring-white/30 transition hover:bg-white/30">×</button>
           </div>
-          <input value={task.t} onChange={(e) => save({ t: e.target.value })} aria-label="Task title"
+          <input value={task.t} onChange={(e) => save({ t: e.target.value })} aria-label={tr("p7tk.ariaTaskTitle")}
             className="relative mt-1 w-full rounded-lg bg-transparent px-1 py-0.5 text-[20px] font-extrabold leading-tight text-white outline-none placeholder:text-white/60 hover:bg-white/10 focus:bg-white/15" style={{ fontFamily: "var(--ff-display)" }} />
           <div className="relative mt-2 flex flex-wrap items-center gap-1.5">
             <span className={heroChip} style={isOverdue ? { background: "#fee2e2", color: "#b91c1c" } : undefined}>
-              📅 {task.due ? `${fmtDay(task.due)}${task.time ? ` · ${task.time}` : ""}` : "No due date"}{due && status !== "done" ? ` · ${isOverdue ? "overdue" : due.text}` : ""}
+              📅 {task.due ? `${fmtDay(task.due)}${task.time ? ` · ${task.time}` : ""}` : tr("p7tk.noDueDate")}{due && status !== "done" ? ` · ${isOverdue ? tr("p7tk.overdueWord") : due.text}` : ""}
             </span>
             <span className={heroChip}><span className="h-2.5 w-2.5 rounded-full ring-2 ring-white/80" style={{ background: PRIO[prio].dot }} />{PRIO[prio].label}</span>
             {subs.length > 0 && <span className={heroChip}>✅ {subsDone}/{subs.length}</span>}
@@ -1882,13 +1906,13 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
          <div className="gap-3 @2xl:columns-2 [&>*]:mb-3 [&>*]:break-inside-avoid">
           {meDerived && (
             <div className="flex items-start gap-2 rounded-xl border border-[#f3d9a4] bg-[#fdf6e3] px-3 py-2 text-[11.5px] text-[#7c5a06]">
-              <span>⚠️</span><span>Your account has no name set, so &ldquo;{me}&rdquo; is being used. Set it in <b>Account → Name</b>.</span>
+              <span>⚠️</span><span><Rich text={tr("p7tk.noNameSet", { me })} /></span>
             </div>
           )}
 
           {task.seriesId && (
-            <DSection icon="🔁" tint="#0e7490" title="Repeat" meta={FREQ_WORD[task.seriesFreq ?? ""] ?? undefined}
-              right={!rangeEdit ? <button type="button" onClick={() => { setRangeMsg(null); setRangeEdit({ from: task.seriesFrom ?? seriesStart ?? task.due ?? "", until: task.seriesUntil ?? task.due ?? "", freq: task.seriesFreq ?? "daily" }); }} className="rounded-lg bg-[#0e7490] px-2.5 py-1 text-[11.5px] font-extrabold text-white shadow-sm hover:brightness-110">Edit dates</button> : null}>
+            <DSection icon="🔁" tint="#0e7490" title={tr("p7tk.secRepeat")} meta={FREQ_WORD[task.seriesFreq ?? ""] ?? undefined}
+              right={!rangeEdit ? <button type="button" onClick={() => { setRangeMsg(null); setRangeEdit({ from: task.seriesFrom ?? seriesStart ?? task.due ?? "", until: task.seriesUntil ?? task.due ?? "", freq: task.seriesFreq ?? "daily" }); }} className="rounded-lg bg-[#0e7490] px-2.5 py-1 text-[11.5px] font-extrabold text-white shadow-sm hover:brightness-110">{tr("p7tk.editDates")}</button> : null}>
               <div className="flex items-center gap-2 text-[13px] font-bold text-[var(--ink)]">
                 <span className="rounded-lg bg-[#ecfeff] px-2.5 py-1 text-[#0e7490] ring-1 ring-[#a5f3fc]">{(task.seriesFrom ?? seriesStart) ? fmtDay((task.seriesFrom ?? seriesStart)!) : "—"}</span>
                 <span className="text-[var(--ink-3)]">→</span>
@@ -1899,14 +1923,14 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                   <div className="grid grid-cols-3 gap-2">
                     <label>{lbl("From")}<input type="date" value={rangeEdit.from} onChange={(e) => setRangeEdit({ ...rangeEdit, from: e.target.value })} className={inputCls} /></label>
                     <label>{lbl("Until")}<input type="date" value={rangeEdit.until} min={rangeEdit.from} onChange={(e) => setRangeEdit({ ...rangeEdit, until: e.target.value })} className={inputCls} /></label>
-                    <label>{lbl("How often")}<select value={rangeEdit.freq} onChange={(e) => setRangeEdit({ ...rangeEdit, freq: e.target.value })} className={inputCls}><option value="daily">Every day</option><option value="weekdays">Weekdays</option><option value="weekly">Every week</option><option value="monthly">Every month</option></select></label>
+                    <label>{lbl(tr("p7tk.dHow"))}<select value={rangeEdit.freq} onChange={(e) => setRangeEdit({ ...rangeEdit, freq: e.target.value })} className={inputCls}><option value="daily">{tr("p7tk.fDaily")}</option><option value="weekdays">{tr("p7tk.fWeekdays")}</option><option value="weekly">{tr("p7tk.fWeekly")}</option><option value="monthly">{tr("p7tk.fMonthly")}</option></select></label>
                   </div>
-                  <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">Dates outside the new range are removed — except ones already done or archived, which are kept. New dates copy this task&rsquo;s details.</p>
+                  <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{tr("p7tk.rangeNote")}</p>
                   <div className="mt-2.5 flex items-center justify-end gap-2">
                     <button type="button" onClick={() => setRangeEdit(null)} className="rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
                     <button type="button" disabled={rangeBusy || !rangeEdit.from || !rangeEdit.until || rangeEdit.until < rangeEdit.from}
                       onClick={async () => { setRangeBusy(true); const msg = await onEditSeries(rangeEdit); setRangeBusy(false); setRangeMsg(msg); if (msg && !msg.startsWith("⚠")) setRangeEdit(null); }}
-                      className="rounded-lg bg-[#0e7490] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">{rangeBusy ? "Saving…" : "Save dates"}</button>
+                      className="rounded-lg bg-[#0e7490] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">{rangeBusy ? tr("p7tk.savingWord") : tr("p7tk.saveDates")}</button>
                   </div>
                 </div>
               )}
@@ -1915,18 +1939,18 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                   next edit silently follows a decision you made minutes ago. */}
               {scope && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
-                  <span>Your edits apply to <b>{scope === "all" ? "all dates in the repeat" : "just this date"}</b>.</span>
+                  <span><Rich text={tr("p7tk.editsApply", { scope: scope === "all" ? tr("p7tk.scopeAll") : tr("p7tk.scopeOne") })} bClass="" /></span>
                   <button type="button" onClick={() => setScope(null)} className="ms-auto font-extrabold text-[#0e7490] underline">Change</button>
                 </div>
               )}
             </DSection>
           )}
 
-          <DSection icon="📋" tint="#1d3a8f" title="Details">
+          <DSection icon="📋" tint="#1d3a8f" title={tr("p7tk.secDetails")}>
             <div className="space-y-3">
               {!noAssignee && (
                 <div>
-                  {lbl("Assigned to")}
+                  {lbl(tr("p7tk.dAssigned"))}
                   <div className="flex items-center gap-2">
                     <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-extrabold text-white" style={{ background: (task.who ?? "").trim() ? avatarTint(task.who ?? "") : "#cbd5e1" }}>{(task.who ?? "").trim() ? initialsOf(task.who ?? "") : "?"}</span>
                     <input list="team-list" value={task.who ?? ""}
@@ -1937,7 +1961,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                         const hit = team.find((p) => p.name.toLowerCase() === v.trim().toLowerCase());
                         save({ who: v, whoEmail: hit?.email ?? "" });
                       }}
-                      placeholder="Unassigned — type a name" className={inputCls} />
+                      placeholder={tr("p7tk.phUnassigned")} className={inputCls} />
                     {/* value is what lands in the field; the label disambiguates two
                         people with the same name. */}
                     <datalist id="team-list">{team.map((p) => <option key={p.email || p.name} value={p.name}>{p.email}</option>)}</datalist>
@@ -1965,7 +1989,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 <PrioButtons value={prio} onChange={(p) => save({ prio: p })} />
               </div>
               <div>
-                {lbl("Linked to")}
+                {lbl(tr("p7tk.dLinked"))}
                 <LinkedPicker link={task.link} onChange={(l) => save({ link: l })} opts={opts} inputCls={inputCls} />
               </div>
               <div>
@@ -1976,13 +2000,13 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                       #{l}<button type="button" onClick={() => save({ labels: (task.labels ?? []).filter((_, j) => j !== i) })} aria-label={`Remove ${l}`} className="opacity-60 hover:opacity-100">×</button>
                     </span>
                   ); })}
-                  <input value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && label.trim()) { save({ labels: [...(task.labels ?? []), label.trim()] }); setLabel(""); } }} placeholder="+ add label, press Enter" className="w-[170px] rounded-full border border-dashed border-[#c7d2e5] bg-white px-3 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" />
+                  <input value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && label.trim()) { save({ labels: [...(task.labels ?? []), label.trim()] }); setLabel(""); } }} placeholder={tr("p7tk.phAddLabel")} className="w-[170px] rounded-full border border-dashed border-[#c7d2e5] bg-white px-3 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" />
                 </div>
               </div>
             </div>
           </DSection>
 
-          <DSection icon="✅" tint="#0f8a4a" title="Checklist" meta={subs.length ? `${subsDone} of ${subs.length} done` : undefined}>
+          <DSection icon="✅" tint="#0f8a4a" title={tr("p7tk.secChecklist")} meta={subs.length ? tr("p7tk.checklistDone", { a: subsDone, b: subs.length }) : undefined}>
             {subs.length > 0 && (
               <div className="mb-2.5 h-2 overflow-hidden rounded-full bg-[#dcf3e5]"><div className="h-full rounded-full bg-gradient-to-r from-[#16b364] to-[#0f8a4a] transition-all" style={{ width: `${Math.round((subsDone / subs.length) * 100)}%` }} /></div>
             )}
@@ -1991,12 +2015,12 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
                 <div key={i} className={`flex items-center gap-2.5 rounded-xl border px-2.5 py-2 text-[13px] transition ${x.done ? "border-[#cfe8d8] bg-[#f0faf4]" : "border-[var(--line)] bg-white"}`}>
                   <input type="checkbox" checked={x.done} onChange={() => save({ subs: subs.map((y, j) => (j === i ? { ...y, done: !y.done } : y)) })} aria-label={x.done ? `Untick ${x.t}` : `Tick ${x.t}`} className="h-[18px] w-[18px] flex-none cursor-pointer accent-[#16b364]" />
                   {/* Editable in place — click the words to fix a typo. */}
-                  <input value={x.t} onChange={(e) => save({ subs: subs.map((y, j) => (j === i ? { ...y, t: e.target.value } : y)) })} onBlur={() => { if (!x.t.trim()) save({ subs: subs.filter((_, j) => j !== i) }); }} aria-label="Step" title="Click to edit"
+                  <input value={x.t} onChange={(e) => save({ subs: subs.map((y, j) => (j === i ? { ...y, t: e.target.value } : y)) })} onBlur={() => { if (!x.t.trim()) save({ subs: subs.filter((_, j) => j !== i) }); }} aria-label={tr("p7tk.ariaStep")} title={tr("p7tk.clickToEdit")}
                     className={"min-w-0 flex-1 rounded-md bg-transparent px-1 py-0.5 outline-none hover:bg-[#f1f5f9] focus:bg-white focus:ring-2 focus:ring-[#0f8a4a]/25 " + (x.done ? "text-[var(--ink-3)] line-through" : "font-semibold text-[var(--ink)]")} />
                   {/* Same datalist as the parent's assignee, so the two can't offer
                       different people. Blank = inherits the parent's owner. */}
                   {!noAssignee && (
-                    <input list="team-list" value={x.who ?? ""} placeholder="👤 anyone"
+                    <input list="team-list" value={x.who ?? ""} placeholder={tr("p7tk.phAnyone")}
                       onChange={(e) => save({ subs: subs.map((y, j) => (j === i ? { ...y, ...subOwner(e.target.value, team), who: e.target.value } : y)) })}
                       className="w-[112px] flex-none rounded-full border border-[var(--line)] bg-[#f8fafc] px-2.5 py-1 text-[11.5px] font-semibold outline-none focus:border-[#0f8a4a]" />
                   )}
@@ -2005,9 +2029,9 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               ))}
             </div>
             <div className={`${subs.length ? "mt-2" : ""} flex gap-1.5`}>
-              <input value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder="Add a step…" className={inputCls} />
+              <input value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder={tr("p7tk.phAddStep")} className={inputCls} />
               {!noAssignee && (
-                <input list="team-list" value={subWho} onChange={(e) => setSubWho(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder="Assign to"
+                <input list="team-list" value={subWho} onChange={(e) => setSubWho(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder={tr("p7tk.phAssignTo")}
                   className="w-[118px] shrink-0 rounded-xl border border-[var(--line)] bg-[#f8fafc] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#0f8a4a]" />
               )}
               <button type="button" onClick={addSub} disabled={!sub.trim()}
@@ -2015,7 +2039,7 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             </div>
           </DSection>
 
-          <DSection icon="🔗" tint="#2563eb" title="Links" meta={task.urls?.length ? String(task.urls.length) : undefined}>
+          <DSection icon="🔗" tint="#2563eb" title={tr("p7tk.secLinks")} meta={task.urls?.length ? String(task.urls.length) : undefined}>
             {(task.urls ?? []).length > 0 && (
               <div className="mb-2 space-y-1.5">
                 {(task.urls ?? []).map((l, i) => <LinkTile key={l.url} l={l} onRemove={() => save({ urls: (task.urls ?? []).filter((_, j) => j !== i) })} />)}
@@ -2023,13 +2047,13 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             )}
             <LinkAdder existing={task.urls ?? []} me={me} onAdd={(u) => save({ urls: [...(task.urls ?? []), u] })} />
             {(task.atts ?? []).length > 0 && <div className="mt-2">{(task.atts ?? []).map((a, i) => <div key={i} className="text-[12px] text-[var(--ink-2)]">📎 {a.name}</div>)}</div>}
-            <div className="mt-1.5 text-[10.5px] leading-snug text-[var(--ink-3)]">To attach a file, put it on Google Drive (or Dropbox/OneDrive) and paste its share link. Anyone opening it needs access to that file.</div>
+            <div className="mt-1.5 text-[10.5px] leading-snug text-[var(--ink-3)]">{tr("p7tk.attachNote")}</div>
           </DSection>
 
-          <DSection icon="💬" tint="#ea580c" title="Comments" meta={task.comments?.length ? String(task.comments.length) : undefined}>
+          <DSection icon="💬" tint="#ea580c" title={tr("p7tk.secComments")} meta={task.comments?.length ? String(task.comments.length) : undefined}>
             {(task.comments ?? []).length > 2 && (
               <button type="button" onClick={() => setAllComments((v) => !v)} className="mb-2 w-full rounded-lg border border-dashed border-[#fdc9a6] bg-[#fffaf6] px-3 py-1.5 text-[11.5px] font-extrabold text-[#c2410c] hover:bg-[#fff4ec]">
-                {allComments ? "▲ Show only the latest 2" : `▼ Show ${(task.comments ?? []).length - 2} earlier comment${(task.comments ?? []).length - 2 === 1 ? "" : "s"}`}
+                {allComments ? tr("p7tk.showLatest2") : pickPlural(tr, locale, "p7tk.showEarlier", (task.comments ?? []).length - 2)}
               </button>
             )}
             {(task.comments ?? []).length > 0 && (
@@ -2046,28 +2070,28 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
               </div>
             )}
             <div className="flex gap-1.5">
-              <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addComment(); }} placeholder="Write a comment…" className={inputCls} />
+              <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addComment(); }} placeholder={tr("p7tk.phWriteComment")} className={inputCls} />
               <button type="button" onClick={addComment} disabled={!comment.trim()}
                 className="shrink-0 rounded-xl bg-[#ea580c] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm disabled:opacity-35">Post</button>
             </div>
           </DSection>
 
           {!isPlatform && (
-            <DSection icon="📅" tint="#be185d" title="Events calendar" meta={task.calEventId ? "Showing" : undefined}>
+            <DSection icon="📅" tint="#be185d" title={tr("p7tk.secEvents")} meta={task.calEventId ? tr("p7tk.showingWord") : undefined}>
               {!task.due ? (
-                <div className="text-[12px] text-[var(--ink-3)]">Set a due date to show this task on the Events calendar.</div>
+                <div className="text-[12px] text-[var(--ink-3)]">{tr("p7tk.setDueToShow")}</div>
               ) : task.calEventId ? (
                 <>
-                  <div className="text-[12px] text-[var(--ink-2)]"><b className="text-[#0f8a4a]">✓ On the Events calendar.</b> Its labels, subtasks, links and comments show in the event notes — press Update after you change them.</div>
+                  <div className="text-[12px] text-[var(--ink-2)]"><Rich text={tr("p7tk.onCal")} bClass="text-[#0f8a4a]" /></div>
                   <div className="mt-2.5 flex gap-2">
-                    <button type="button" onClick={onSyncCal} className="rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Update event</button>
-                    <button type="button" onClick={onUnsyncCal} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12px] font-bold text-[var(--ink-2)]">Remove from calendar</button>
+                    <button type="button" onClick={onSyncCal} className="rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">{tr("p7tk.updateEvent")}</button>
+                    <button type="button" onClick={onUnsyncCal} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12px] font-bold text-[var(--ink-2)]">{tr("p7tk.removeFromCal")}</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="text-[12px] text-[var(--ink-2)]">Also show this task on the Events calendar, carrying its labels, subtasks, links and comments into the event notes.</div>
-                  <button type="button" onClick={onSyncCal} className="mt-2.5 rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Show in Events calendar</button>
+                  <div className="text-[12px] text-[var(--ink-2)]">{tr("p7tk.alsoShowThis")}</div>
+                  <button type="button" onClick={onSyncCal} className="mt-2.5 rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">{tr("p7tk.showInEvents")}</button>
                 </>
               )}
             </DSection>
@@ -2080,11 +2104,11 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
           <button type="button" onClick={onDelete} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">🗑 Delete{task.seriesId ? " this date" : ""}</button>
           {/* Deleting one date out of a 200-day repeat is rarely what you meant. */}
           {task.seriesId && (
-            <button type="button" onClick={onDeleteSeries} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete whole repeat</button>
+            <button type="button" onClick={onDeleteSeries} className="rounded-xl px-2.5 py-2 text-[12px] font-bold text-[#c02636] hover:bg-[#fdebec]">{tr("p7tk.deleteWholeRepeat")}</button>
           )}
           <div className="ms-auto flex gap-2">
-            <button type="button" onClick={onArchive} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Archive</button>
-            <button type="button" onClick={onClose} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110">Done</button>
+            <button type="button" onClick={onArchive} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{tr("p7tk.tabArchive")}</button>
+            <button type="button" onClick={onClose} className="rounded-xl bg-[#1d3a8f] px-5 py-2 text-[12.5px] font-extrabold text-white shadow-[0_6px_16px_-8px_rgba(29,58,143,.8)] hover:brightness-110">{tr("p7tk.gDone")}</button>
           </div>
         </div>
 
@@ -2098,22 +2122,22 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
           // Links, say) and couldn't be reached.
           <div className="fixed inset-0 z-[210] flex items-end justify-center bg-black/35 p-3 sm:items-center" onClick={(e) => e.stopPropagation()}>
             <div className="max-h-[calc(100vh-24px)] w-full max-w-[460px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-2xl">
-              <div className="text-[14.5px] font-extrabold text-[var(--ink)]">This is a repeating task</div>
+              <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{tr("p7tk.repeatingTask")}</div>
               <p className="mt-1 text-[12.5px] text-[var(--ink-2)]">
                 Apply this change to just <b>{task.due ? fmtDay(task.due) : "this date"}</b>, or to every date in the repeat?
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 <button type="button" onClick={() => answer("one")} className="rounded-xl border border-[var(--line)] px-3 py-2.5 text-start">
-                  <div className="text-[13px] font-extrabold text-[var(--ink)]">Just this date</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">The other dates stay as they are.</div>
+                  <div className="text-[13px] font-extrabold text-[var(--ink)]">{tr("p7tk.justThisDate")}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{tr("p7tk.otherDatesStay")}</div>
                 </button>
                 <button type="button" onClick={() => answer("all")} className="rounded-xl border border-[#1d3a8f] bg-[#eef4fd] px-3 py-2.5 text-start">
-                  <div className="text-[13px] font-extrabold text-[#1d3a8f]">All dates in the repeat</div>
-                  <div className="text-[11.5px] text-[var(--ink-2)]">Due dates, ticks and comments stay per-date — only what you changed travels.</div>
+                  <div className="text-[13px] font-extrabold text-[#1d3a8f]">{tr("p7tk.allDatesRepeat")}</div>
+                  <div className="text-[11.5px] text-[var(--ink-2)]">{tr("p7tk.perDateNote")}</div>
                 </button>
               </div>
               <div className="mt-2 flex items-center gap-2">
-                <p className="min-w-0 flex-1 text-[11px] text-[var(--ink-3)]">Asked once — the rest of your edits here follow the same choice until you change it.</p>
+                <p className="min-w-0 flex-1 text-[11px] text-[var(--ink-3)]">{tr("p7tk.askedOnce")}</p>
                 <button type="button" onClick={() => setPending(null)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Cancel</button>
               </div>
             </div>
