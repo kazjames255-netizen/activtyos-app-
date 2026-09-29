@@ -119,6 +119,41 @@ export async function franchiseLabel(tenantId: string, franchiseId: string): Pro
   return u.franchiseArea?.trim() ? `${nm} · ${u.franchiseArea.trim()}` : nm;
 }
 
+/** Nudge the recipient of an HQ message: ring their in-app bell (and email) so they actually know HQ has
+ *  written / replied / updated their bug — otherwise it sits unseen. Used for a reply AND for a conversation HQ starts. */
+async function notifyRecipient(t: ThreadDoc, text: string, fresh = false): Promise<void> {
+  const headline = fresh ? "Message from ActivityOS support" : "Reply from ActivityOS support";
+  const subj = fresh ? "ActivityOS support sent you a message" : "ActivityOS support replied";
+  const preview = text.length > 140 ? text.slice(0, 137) + "…" : text;
+  try {
+    if (t.party === "provider" && t.providerId) {
+      // A franchise's thread belongs to THAT franchise (its bell + its inbox), not head office's.
+      await notify({ tenantId: t.providerId, to: { kind: "tenant" }, category: "message", title: headline, body: preview, href: "/freelancer/support", subject: subj, franchiseId: t.franchiseId ?? null });
+    } else if (t.party === "customer" && t.email) {
+      if (t.providerId) {
+        await notify({ tenantId: t.providerId, to: { kind: "parent", email: t.email }, category: "message", title: headline, body: preview, href: "/custdash/activityos", subject: subj });
+      } else {
+        // A parent's own "Report a problem" thread has NO provider (providerId
+        // null), so this used to fall through and the reply reached nobody —
+        // no bell, no email. The parent bell is keyed on their email, so it
+        // needs no tenant; the email goes out under ActivityOS's own name.
+        const to = t.email.trim().toLowerCase();
+        const bell = await db.collection("notifications").add({
+          tenantId: "__platform__", audience: "parent", email: to, category: "message",
+          title: headline, body: preview, href: "/custdash/activityos", readAt: null, at: new Date().toISOString(),
+        });
+        if (await isMuted(to, "message")) await bell.set({ emailStatus: "muted" }, { merge: true });
+        else {
+          const link = `${webUrl}/custdash/activityos`;
+          const out = await sendMailDetailed(to, subj,
+            `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534"><p><strong>ActivityOS support</strong> ${fresh ? "sent you a message" : "replied to your message"}:</p><blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap">${preview.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</blockquote><p><a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open the conversation</a></p></div>`);
+          await bell.set({ emailStatus: out.status }, { merge: true });
+        }
+      }
+    }
+  } catch (e) { console.error("[support] notify failed", e); }
+}
+
 // ── The HQ side (platform-role only) ────────────────────────────────────────
 
 export const platformSupport = Router();
@@ -190,12 +225,15 @@ platformSupport.post("/", async (req, res) => {
     kind: "message",
     status: "open",
     unreadByHq: false,
+    unreadByUser: true,   // the provider/customer has an unread message from HQ
     messages: [msg("hq", body)],
     createdAt: at,
     updatedAt: at,
   };
   const ref = await db.collection("supportThreads").add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+  // A conversation HQ starts used to reach nobody: no bell, no email, and no unread flag on their side.
+  await notifyRecipient(doc, body, true);
 });
 
 // POST /:id/messages — HQ replies. Replying reopens a resolved thread.
@@ -221,36 +259,7 @@ platformSupport.post("/:id/messages", async (req, res) => {
     unreadByUser: true,   // the provider/customer now has an unread reply
     updatedAt: m.at,
   });
-  // Nudge the recipient: ring their in-app bell (and email) so they actually
-  // know HQ has replied / updated their bug — otherwise it sits unseen.
-  const preview = parsed.data.body.length > 140 ? parsed.data.body.slice(0, 137) + "…" : parsed.data.body;
-  try {
-    if (t.party === "provider" && t.providerId) {
-      // A franchise's thread belongs to THAT franchise (its bell + its inbox), not head office's.
-      await notify({ tenantId: t.providerId, to: { kind: "tenant" }, category: "message", title: "Reply from ActivityOS support", body: preview, href: "/freelancer/support", subject: "ActivityOS support replied", franchiseId: t.franchiseId ?? null });
-    } else if (t.party === "customer" && t.email) {
-      if (t.providerId) {
-        await notify({ tenantId: t.providerId, to: { kind: "parent", email: t.email }, category: "message", title: "Reply from ActivityOS support", body: preview, href: "/custdash/activityos", subject: "ActivityOS support replied" });
-      } else {
-        // A parent's own "Report a problem" thread has NO provider (providerId
-        // null), so this used to fall through and the reply reached nobody —
-        // no bell, no email. The parent bell is keyed on their email, so it
-        // needs no tenant; the email goes out under ActivityOS's own name.
-        const to = t.email.trim().toLowerCase();
-        const bell = await db.collection("notifications").add({
-          tenantId: "__platform__", audience: "parent", email: to, category: "message",
-          title: "Reply from ActivityOS support", body: preview, href: "/custdash/activityos", readAt: null, at: new Date().toISOString(),
-        });
-        if (await isMuted(to, "message")) await bell.set({ emailStatus: "muted" }, { merge: true });
-        else {
-          const link = `${webUrl}/custdash/activityos`;
-          const out = await sendMailDetailed(to, "ActivityOS support replied",
-            `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534"><p><strong>ActivityOS support</strong> replied to your message:</p><blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap">${preview.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</blockquote><p><a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open the conversation</a></p></div>`);
-          await bell.set({ emailStatus: out.status }, { merge: true });
-        }
-      }
-    }
-  } catch (e) { console.error("[support] notify failed", e); }
+  await notifyRecipient(t, parsed.data.body);
   res.json({ ok: true, message: m });
 });
 
