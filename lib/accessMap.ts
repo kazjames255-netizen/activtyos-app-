@@ -165,6 +165,7 @@ export const CAP_API: { prefix: string; area: string }[] = [
   { prefix: "/api/purchasing", area: "moneyops" },
   { prefix: "/api/suppliers", area: "moneyops" },
   { prefix: "/api/payments", area: "moneyops" },
+  { prefix: "/api/wallet", area: "finances" }, // the provider's outstanding customer-credit liability (GET /summary)
   { prefix: "/api/discounts", area: "marketing" },
   { prefix: "/api/referrals", area: "marketing" },
   { prefix: "/api/reviews", area: "marketing" },
