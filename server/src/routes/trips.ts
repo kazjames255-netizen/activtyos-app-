@@ -5,7 +5,7 @@ import { db } from "../firebase";
 import { esc } from "../lib/html";
 import { isPlainStaff, type Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
-import { franchiseChildIds } from "../lib/franchiseScope";
+import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import { loadSettings } from "../lib/tenantLibrary";
 import { bookingInSite, siteRecordFilter, staffSiteScope, type SiteScope } from "../lib/siteScope";
 
@@ -138,6 +138,7 @@ async function enrichTrip(
   childNames: string[],
   attendees: Attendee[] | undefined,
   site?: SiteScope | null,
+  franchiseId?: string | null,
 ): Promise<{ attendees: Attendee[]; childIds: string[] }> {
   const list: Attendee[] = (attendees ?? []).map((a) => ({ ...a }));
   for (const n of childNames) {
@@ -150,15 +151,22 @@ async function enrichTrip(
   // One tenant-wide scan resolves every name (per-name queries would be N×).
   const bookings = await col.firestore.collection("bookings").where("tenantId", "==", tenantId).get();
   const idsByName = new Map<string, Set<string>>();
+  const allowedIds = new Set<string>();
   const note = (name: string, id: string) => { const k = name.trim().toLowerCase(); idsByName.set(k, (idsByName.get(k) ?? new Set()).add(id)); };
   for (const d of bookings.docs) {
     const b = d.data() as { child?: string; childId?: string; listingId?: string; blockId?: string; kids?: { name?: string; childId?: string }[] };
     // A site-scoped planner (a site lead) links only children booked at their
     // sites — typing another site's child's name mustn't pull their medical notes.
     if (site && !bookingInSite(b, site)) continue;
+    // A franchise planner links only ITS OWN children — typing (or sending the id of) another franchise's or head
+    // office's child must not pull their medical notes or send their parent a consent request.
+    if (franchiseId && (b as { franchiseId?: string | null }).franchiseId !== franchiseId) continue;
+    if (b.childId) allowedIds.add(b.childId);
+    for (const k of b.kids ?? []) if (k.childId) allowedIds.add(k.childId);
     if (b.childId && b.child && !b.kids?.length) note(b.child, b.childId);
     for (const k of b.kids ?? []) if (k.childId && k.name) note(k.name, k.childId);
   }
+  if (franchiseId || site) for (const a of list) if (a.childId && !allowedIds.has(a.childId)) delete a.childId;
   // Only an UNAMBIGUOUS name links. With two children of the same name, the
   // last booking used to win — and the wrong parent was asked for consent.
   for (const a of list) {
@@ -281,7 +289,7 @@ trips.post("/", async (req, res) => {
     res.status(403).json({ error: "You can only plan trips for the sites you're assigned to" });
     return;
   }
-  const enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, parsed.data.attendees as Attendee[] | undefined, site);
+  const enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, parsed.data.attendees as Attendee[] | undefined, site, isFranchise(auth) ? auth.franchiseId : null);
   const doc = {
     ...parsed.data,
     attendees: enriched.attendees,
@@ -339,7 +347,7 @@ trips.put("/:id", async (req, res) => {
         const prev = (before.attendees as Attendee[] | undefined) ?? [];
         const incoming = (parsed.data.attendees as Attendee[] | undefined) ?? prev;
         const names = parsed.data.childNames ?? (before.childNames as string[] | undefined) ?? [];
-        const enriched = await enrichTrip(tenantId, names, incoming, site);
+        const enriched = await enrichTrip(tenantId, names, incoming, site, isFranchise(req.auth!) ? req.auth!.franchiseId : null);
         const who = req.user?.email ?? req.user?.uid ?? "provider";
         const now = new Date().toISOString();
         for (const a of enriched.attendees) {
