@@ -820,6 +820,85 @@ async function taskReminders() {
 }
 
 
+// ── Onboarding record retention (backend handoff doc #61) ────────────────
+// The Single Central Record holds bank details, an NI number and ID/DBS
+// scans for real people — it shouldn't be kept forever "just in case".
+//
+// RETENTION DECISION (a business call, not a purely technical one — flagged
+// for Kaz to confirm before real staff records go live):
+//   Purge a person's onboarding record (and their uploaded scans) SIX YEARS
+//   after they leave (their account is deactivated via Team & invites —
+//   invites.ts sets users/{uid}.disabled + disabledAt).
+//
+//   Why 6 years: it comfortably covers HMRC's statutory minimum for PAYE/
+//   payroll records (3 years after the end of the relevant tax year) and
+//   sits at the conservative end of common UK HR guidance for personnel
+//   files generally (up to 6 years covers the standard contract-claim
+//   limitation period). Picked deliberately long over short, per the
+//   handoff item's instruction to be conservative.
+//
+//   KNOWN TENSION, not yet resolved — flagging rather than guessing: the DBS
+//   Code of Practice recommends NOT holding the DBS certificate itself
+//   (dbsFile) beyond about 6 months in most cases, which is far shorter than
+//   6 years. This sweep purges the WHOLE record (and all its files,
+//   including dbsFile) on one timer for now, which is safe for the
+//   payroll/NI side but longer than best-practice for the DBS certificate
+//   scan specifically. Splitting that out (delete just the DBS file early,
+//   keep the rest) is a reasonable follow-up once this policy is confirmed.
+//
+// A record whose person never left (no disabled account found) is never
+// purged here — this only removes records for people confirmed gone.
+const ONBOARDING_RETENTION_YEARS = 6;
+
+async function deleteFilesFor(key: string, staff: string): Promise<void> {
+  const files = await db.collection("onboardFiles").where("key", "==", key).where("staff", "==", staff).get();
+  for (const f of files.docs) {
+    const chunks = await f.ref.collection("chunks").get();
+    const batch = db.batch();
+    chunks.docs.forEach((c) => batch.delete(c.ref));
+    batch.delete(f.ref);
+    await batch.commit();
+  }
+}
+
+export async function onboardingRetentionPurge(): Promise<void> {
+  const cutoff = new Date();
+  cutoff.setFullYear(cutoff.getFullYear() - ONBOARDING_RETENTION_YEARS);
+  const cutoffIso = cutoff.toISOString();
+
+  const recs = await db.collection("onboardRecords").get();
+  if (recs.empty) return;
+  // Cache disabled-leaver lookups per tenant so a big roster isn't N queries.
+  const leaversCache = new Map<string, Map<string, string>>(); // tenantId → lowercased name → disabledAt
+  const leaversFor = async (tenantId: string): Promise<Map<string, string>> => {
+    const hit = leaversCache.get(tenantId);
+    if (hit) return hit;
+    const snap = await db.collection("users").where("tenantId", "==", tenantId).where("disabled", "==", true).get();
+    const m = new Map<string, string>();
+    for (const u of snap.docs) {
+      const name = String(u.get("name") ?? "").trim().toLowerCase();
+      const disabledAt = String(u.get("disabledAt") ?? "");
+      if (name && disabledAt) m.set(name, disabledAt);
+    }
+    leaversCache.set(tenantId, m);
+    return m;
+  };
+
+  for (const r of recs.docs) {
+    const rec = r.data() as { tenantId?: string; key?: string; staff?: string };
+    if (!rec.tenantId || !rec.key || !rec.staff) continue;
+    const disabledAt = (await leaversFor(rec.tenantId)).get(rec.staff.trim().toLowerCase());
+    if (!disabledAt || disabledAt >= cutoffIso) continue; // still current, or left more recently than the cutoff
+    try {
+      await deleteFilesFor(rec.key, rec.staff);
+      await r.ref.delete();
+      console.log(`[sweeps] onboarding-retention purged ${r.id} (left ${disabledAt}, past the ${ONBOARDING_RETENTION_YEARS}-year retention window)`);
+    } catch (e) {
+      console.error(`[sweeps] onboarding-retention purge ${r.id}:`, (e as Error).message);
+    }
+  }
+}
+
 export function startSweeps(): void {
   // Every 5 minutes is plenty — the windows are hours wide, not minutes.
   sweep("task-reminders", 5 * 60_000, taskReminders);
@@ -843,4 +922,6 @@ export function startSweeps(): void {
   sweep("scheduled-emails", 60_000, scheduledEmailSends);
   // Learning Hub parent digest + homework nudges — inert unless HUB_DIGEST_ENABLED=1 (lib/hubDigestStore.ts).
   void import("./hubDigestStore").then((m) => m.startDigestSweeps());
+  // Once a day is plenty for a retention purge — see the policy comment above.
+  sweep("onboarding-retention", 24 * 60 * 60_000, onboardingRetentionPurge);
 }

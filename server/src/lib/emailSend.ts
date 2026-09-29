@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
-import { sendMailDetailed } from "./mailer";
+import { sendMailDetailed, type MailAttachment } from "./mailer";
 import { tenantSender } from "./sender";
 
 // The one-to-many send engine behind the Email page: POST /api/emails/send
@@ -78,6 +78,10 @@ export interface EmailSendInput {
   sentByName: string;
   /** Set when fired from the scheduled queue, for provenance. */
   scheduledId?: string;
+  /** Files attached to every recipient in this call (e.g. a payslip PDF —
+   *  routes/payslips.ts calls performEmailSend once per employee so each
+   *  gets only their own). */
+  attachments?: MailAttachment[];
 }
 
 export interface EmailHistoryDoc {
@@ -144,7 +148,7 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
       const subj = ctxs ? applyTokens(input.subject, ctx) : input.subject;
       const content = ctxs ? applyTokens(html, ctx, true) : html;
       const footer = input.audience === "all" ? unsubFooter(input.tenantId, to) : "";
-      const outcome = await sendMailDetailed(to, subj, content + footer + pixel(ref.id, to), sender);
+      const outcome = await sendMailDetailed(to, subj, content + footer + pixel(ref.id, to), sender, input.attachments?.length ? { attachments: input.attachments } : undefined);
       if (outcome.status === "sent") delivered++;
       else if (outcome.status === "suppressed") suppressed++;
       else failed++;

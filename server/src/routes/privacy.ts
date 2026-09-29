@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { notify } from "../lib/notify";
 import { exportChildLearning } from "../lib/hubPrivacy";
 import { ukTodayPlus } from "../lib/ukDate";
+import { decryptSensitive } from "./onboarding";
 
 // Data & privacy (shared, every portal) — the user's GDPR surface: see what's
 // held, download it, and request deletion. Deletion is a RECORDED REQUEST, not
@@ -73,7 +74,9 @@ async function gather(req: import("express").Request) {
     });
     // Their onboarding record. Referees' replies are held in `references` and
     // aren't part of it — a confidential reference is exempt from a self-serve copy.
-    out.onboarding = onboard.docs.filter((d) => same(d.get("staff"))).map((d) => ({ id: d.id, values: d.get("values") ?? {}, extra: d.get("extra") ?? [], submittedAt: d.get("submittedAt") ?? null, updatedAt: d.get("updatedAt") ?? null }));
+    // decryptSensitive: it's their own record (same access rule as the API),
+    // so the export shows the real bank/NI values rather than ciphertext.
+    out.onboarding = onboard.docs.filter((d) => same(d.get("staff"))).map((d) => decryptSensitive({ id: d.id, values: (d.get("values") ?? {}) as Record<string, Record<string, unknown>>, extra: d.get("extra") ?? [], submittedAt: d.get("submittedAt") ?? null, updatedAt: d.get("updatedAt") ?? null }));
   }
   if (auth.role === "parent") {
     // Everything held about the family, across every provider they've used.

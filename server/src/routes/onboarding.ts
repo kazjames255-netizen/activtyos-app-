@@ -4,6 +4,13 @@ import { db } from "../firebase";
 import { contentDisposition } from "../lib/contentDisposition";
 import type { Role } from "../middleware/role";
 import { unresolvedReferenceConcern } from "../lib/staffPolicy";
+// lib/fieldCrypto is shared with #39 (payroll's NI-number field) — reusing
+// its AES-256-GCM primitives rather than building a second crypto helper.
+// Its encryptField/decryptField return an opaque, unmarked base64url blob and
+// decryptField throws on anything malformed, so this file wraps them with its
+// own ENC_PREFIX envelope (below) to tell an encrypted value apart from a
+// pre-existing plaintext one, and to decrypt without ever throwing.
+import { decryptField as rawDecrypt, encryptField as rawEncrypt } from "../lib/fieldCrypto";
 
 // Staff onboarding / the Single Central Record, on the server.
 //
@@ -19,8 +26,22 @@ import { unresolvedReferenceConcern } from "../lib/staffPolicy";
 // of that tenant/franchise or the person the file belongs to — never by
 // colleagues, unlike the documents library which every member of staff reads.
 //
-// NB bank details / NI number are stored as entered. Encryption at rest and a
-// retention period are still owed (docs/amir-backend-outstanding.md).
+// Bank details / NI number: encrypted at rest (AES-256-GCM, lib/fieldCrypto)
+// — see ENCRYPTED_VALUE_IDS below, encrypted on write, decrypted only when
+// served to an authorised reader (manager or the person, same access rule as
+// ever — encryption never changes WHO can see it). A retention period is
+// enforced separately by lib/sweeps.ts (onboardingRetentionPurge) — see the
+// policy comment there. Both were previously owed here
+// (docs/amir-backend-outstanding.md #61).
+//
+// onboardFiles (the ID/DBS/address-proof scans) are NOT encrypted the same
+// way: they're stored as base64 chunks under a Firestore doc (the
+// Firestore-doc-as-storage pattern used until real object storage lands —
+// backend handoff #2), and field-level AES-GCM on top of that isn't a good
+// fit for binary blobs at this size (chunk-by-chunk re-encryption, key
+// management per chunk, and it still wouldn't get you real object-storage
+// properties like access-logged, expiring URLs). That's a real limitation,
+// tracked against #2 — flagged here rather than worked around.
 
 export const onboarding = Router();
 
@@ -32,6 +53,51 @@ const FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image
 const FILE_MAX = 15_000_000;
 const CHUNK_MAX_B64 = 700_000;
 const filesCol = db.collection("onboardFiles");
+
+// The field ids (features/team/OnboardingApp.tsx's default config) whose `.v`
+// is financial or identity data sensitive enough to encrypt at rest: the bank
+// details and pay rate marked `sensitive: true` in that config, plus the NI
+// number (not UI-flagged there, but explicitly in scope per the handoff
+// item). A tenant's own custom "extra" fields aren't covered — there's no
+// reliable server-side signal for what an operator-defined field holds.
+const ENCRYPTED_VALUE_IDS = new Set(["ni", "bankName", "bankHolder", "bankSort", "bankAccount", "payRate"]);
+
+// This route's own marker in front of lib/fieldCrypto's opaque ciphertext, so
+// a value can be told apart from legacy plaintext (records saved before this
+// shipped) without guessing from its shape. `same as ever` for anything else.
+const ENC_PREFIX = "enc:onboarding:v1:";
+const isEncryptedValue = (v: unknown): v is string => typeof v === "string" && v.startsWith(ENC_PREFIX);
+const encryptValue = (v: string): string => (v ? `${ENC_PREFIX}${rawEncrypt(v)}` : v);
+/** Never throws: a value that isn't ours (legacy plaintext), or that fails to
+ *  decrypt (wrong/rotated key, corruption), is handed back as-is rather than
+ *  blowing up the whole read. */
+function decryptValue(v: string): string {
+  if (!isEncryptedValue(v)) return v;
+  try { return rawDecrypt(v.slice(ENC_PREFIX.length)); }
+  catch (e) { console.error("[onboarding] decrypt failed — returning ciphertext marker rather than throwing:", (e as Error).message); return v; }
+}
+
+/** Encrypt the `.v` of every sensitive field before it's written. */
+function encryptSensitive(values: Record<string, Record<string, unknown>>): void {
+  for (const id of ENCRYPTED_VALUE_IDS) {
+    const v = values[id];
+    if (!v || typeof v.v !== "string" || !v.v || isEncryptedValue(v.v)) continue;
+    v.v = encryptValue(v.v);
+  }
+}
+
+/** Decrypt the `.v` of every sensitive field on the way out, for a caller
+ *  who's already been through the manager/own-record access check. Exported
+ *  so routes/privacy.ts's self-service data export (the record's own person,
+ *  same access rule) shows the real values rather than ciphertext. */
+export function decryptSensitive<T extends { values?: Record<string, Record<string, unknown>> }>(rec: T): T {
+  const values = rec.values;
+  if (values) for (const id of ENCRYPTED_VALUE_IDS) {
+    const v = values[id];
+    if (v && typeof v.v === "string" && isEncryptedValue(v.v)) v.v = decryptValue(v.v);
+  }
+  return rec;
+}
 
 async function ownName(uid: string | undefined): Promise<string> {
   if (!uid) return "";
@@ -70,11 +136,15 @@ onboarding.get("/", async (req, res) => {
     db.collection("onboarding").doc(s.key).get(),
     db.collection("onboardRecords").where("key", "==", s.key).get(),
   ]);
-  let records = recs.docs.map((d) => ({ staff: String(d.get("staff")), values: d.get("values") ?? {}, extra: d.get("extra") ?? [], submittedAt: d.get("submittedAt") ?? undefined, outstanding: d.get("outstanding") ?? undefined, lastEditedAt: d.get("lastEditedAt") ?? undefined, updatedAt: d.get("updatedAt") ?? null }));
+  let records = recs.docs.map((d) => ({ staff: String(d.get("staff")), values: (d.get("values") ?? {}) as Record<string, Record<string, unknown>>, extra: d.get("extra") ?? [], submittedAt: d.get("submittedAt") ?? undefined, outstanding: d.get("outstanding") ?? undefined, lastEditedAt: d.get("lastEditedAt") ?? undefined, updatedAt: d.get("updatedAt") ?? null }));
   if (!s.manager) {
     const me = await ownName(req.user?.uid);
     records = records.filter((r) => same(r.staff, me));
   }
+  // Decrypt only what's actually about to be served to this authorised
+  // caller (a manager sees everyone's, filtered above to just their own for
+  // a member of staff) — never decrypt a record this request won't return.
+  records = records.map(decryptSensitive);
   res.json({ fields: (cfg.get("fields") as unknown[] | undefined) ?? null, records });
 });
 
@@ -130,6 +200,7 @@ onboarding.put("/records/:staff", jsonBody({ limit: "1mb" }), async (req, res) =
   }
   const now = new Date().toISOString();
   const { submittedAt, outstanding, lastEditedAt } = parsed.data;
+  encryptSensitive(values); // bank details / NI number, at rest — see ENCRYPTED_VALUE_IDS
   await ref.set({
     key: s.key, tenantId: s.tenantId, franchiseId: s.auth.franchiseId ?? null, staff: before?.staff ?? staff, values, extra: parsed.data.extra,
     submittedAt: submittedAt ?? before?.submittedAt ?? null, outstanding: outstanding ?? before?.outstanding ?? [], lastEditedAt: lastEditedAt ?? before?.lastEditedAt ?? null,
