@@ -10,6 +10,8 @@ import type { Booking } from "../../../features/bookings/types";
 import { owedNow, isMoneyIn } from "../../../features/bookings/helpers";
 import { ukMonth, ukToday } from "../lib/ukDate";
 import { isFranchise, franchiseChildIds, franchiseFamilyEmails } from "../lib/franchiseScope";
+import { capsFor } from "../middleware/access";
+import { capLevel } from "../../../lib/accessMap";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI assistant — answers plain-English questions from the account's LIVE
@@ -688,6 +690,26 @@ export async function headOfficeSnapshot(tenantId: string) {
   };
 }
 
+/** The co-pilot answers from a snapshot, so a staff role set to None on an area in Setup → Roles & permissions must lose that slice of it too:
+ *  otherwise "who's in with a medical need / list the accidents / what are the team's tasks" was one question away from data the
+ *  API itself refuses that role (the matrix gated every /api route but this one, which reads the collections directly). */
+export function restrictStaffSnapshot(snap: Record<string, unknown>, caps: Record<string, "none" | "view" | "edit"> | null): Record<string, unknown> {
+  if (!caps) return snap;
+  const none = (area: string) => capLevel(caps, area) === "none";
+  const out: Record<string, unknown> = { ...snap };
+  const today = { ...((snap.today ?? {}) as Record<string, unknown>) };
+  if (none("registers")) { delete today.attendance; delete today.children; delete today.childrenWithSEND; }
+  if (none("medical") || none("registers")) delete today.childrenWithSEND;
+  if (none("meals")) delete today.meals;
+  if (none("listings") && none("timetable")) { delete today.sessions; delete out.upcomingSessions; }
+  out.today = today;
+  if (none("tasks")) { delete out.openTasks; delete out.taskSummary; }
+  if (none("incidents")) delete out.incidents;
+  if (none("medical") && none("customers")) delete out.childrenSummary;
+  if (none("staff")) delete out.team;
+  return out;
+}
+
 ai.post("/chat", async (req, res) => {
   if (!process.env.GROQ_API_KEY) {
     res.status(503).json({ error: "The AI assistant isn't configured on this server (GROQ_API_KEY is missing)." });
@@ -730,6 +752,7 @@ ai.post("/chat", async (req, res) => {
     // bookings, money and children — a real cross-franchise data leak.
     const fid = isFranchise(scope) ? scope.franchiseId : null;
     snapshot = await tenantSnapshot(scope.tenantId, isStaff, fid);
+    if (isStaff) snapshot = restrictStaffSnapshot(snapshot as Record<string, unknown>, await capsFor(req));
     howtoKey = isStaff ? "staff" : "operator";
     who = isStaff
       ? "a front-line staff member (e.g. a coach or activity leader) at an activity provider. The data is TODAY's operational picture only — the sessions running, the children expected in, and the team's tasks. You do NOT have their finances, revenue, who owes money, or booking approvals: those are the manager's, not a staff member's. If they ask about money, payments, owing families or approving bookings, say that's handled by their manager and you can't see it. Their portal's areas are: Dashboard, Timetable, Registers, Tasks, Messages."
