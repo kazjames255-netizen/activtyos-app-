@@ -58,14 +58,18 @@ async function buildItems(muted: string[]): Promise<Item[]> {
   if (on("support") || on("bug")) {
     const threads = await db.collection("supportThreads").get();
     for (const d of threads.docs) {
-      const th = d.data() as { kind?: string; providerName?: string; subject?: string; createdAt?: string; messages?: { body?: string; at?: string }[] };
+      const th = d.data() as { kind?: string; providerName?: string; subject?: string; createdAt?: string; messages?: { body?: string; at?: string; from?: string }[] };
       const type: NType = th.kind === "bug" ? "bug" : "support";
       if (!on(type)) continue;
       const last = (th.messages ?? []).at(-1);
+      // HQ's own reply is not news to HQ — only a thread waiting on HQ rings the bell.
+      if (last?.from === "hq") continue;
       const at = last?.at ?? th.createdAt;
       if (!at || at <= cutoff) continue;
       items.push({
-        id: `sup_${d.id}`, type,
+        // The id carries the message time: a provider's support chat is ONE ongoing thread, and a bare
+        // thread id stayed "read" forever once HQ had opened the bell, so every later message was silent.
+        id: `sup_${d.id}_${at}`, type,
         title: type === "bug" ? `Bug report${th.providerName ? ` — ${th.providerName}` : ""}` : `New support message${th.providerName ? ` — ${th.providerName}` : ""}`,
         body: th.subject || last?.body || "", href: `/platform/messages?thread=${d.id}`, at,
       });
