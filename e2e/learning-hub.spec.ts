@@ -144,7 +144,9 @@ test.describe("tutor builds topics and notes", () => {
     await page.locator('[role="tab"][data-top="quizzes"]').click();
     for (const sub of ["quizzes", "newquiz"]) await expect(reach(sub)).toBeVisible();
     await page.locator('[role="tab"][data-top="homework"]').click();
-    for (const sub of ["mark", "inbox", "results", "set"]) await expect(reach(sub)).toBeVisible();
+    // "mark" and "inbox" were merged into one "Marking & results" sub-tab (tabGroups.ts) — only
+    // "results" and "set" remain as distinct sub-tab ids.
+    for (const sub of ["results", "set"]) await expect(reach(sub)).toBeVisible();
     // Roving tabindex + arrow keys.
     await tops.first().focus();
     await page.keyboard.press("End");

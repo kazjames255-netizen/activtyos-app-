@@ -193,7 +193,11 @@ test.describe("the tutor's screens", () => {
     const dlg = page.locator("#hub-homework-form");
     await expect(dlg).toBeVisible({ timeout: 30_000 });
     await expect(dlg.locator("#hub-hw-quiz")).toHaveCount(0);
-    await expect(dlg.getByTestId("hub-hw-linked-rows")).toContainText(quizB, { timeout: 20_000 });
+    // LinkedRows (hub-hw-linked-rows) only renders once editing an EXISTING homework
+    // (HomeworkForm.tsx: `!!homework && ...`) — bare on creation, same as the lesson flow.
+    // The quiz is still carried as the preselected assessment: the ready-made title says so,
+    // and it's what drives the "who can't open it" warning below.
+    await expect(dlg.getByLabel("Title")).toHaveValue(quizB, { timeout: 20_000 });
     // F3: tick this run's child → the form says French isn't in their subjects, and Assign is blocked.
     await dlg.locator(`#hub-hw-student-${childId}`).click();
     const warn = dlg.getByTestId("hub-hw-unreachable");
