@@ -13,6 +13,7 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import type { ListingSummary } from "./types";
 import { CroppedImage } from "@/features/listings/ListingWizard";
+import { confirmLeavingBasket } from "@/features/listings/booking";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -157,6 +158,11 @@ export function BrowseApp() {
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
   const [myPostcode, setMyPostcode] = useState("");
   const [quickBook, setQuickBook] = useState<string | null>(null); // listing id in the quick-book modal
+  // Opening a different listing — the full page or another Quick Book — throws
+  // away whatever's in the one currently open's basket (component-local state,
+  // no cross-listing store). Warn first rather than staying silent about it.
+  const openListing = (id: string) => { if (confirmLeavingBasket()) router.push(`/book/${id}`); };
+  const openQuickBook = (id: string) => { if (confirmLeavingBasket()) setQuickBook(id); };
   // Which cards have their extra offers expanded (best offer shown by default so
   // every card is the same height).
   // Which chip groups are expanded, keyed `${listingId}:${group}` — so each card
@@ -558,7 +564,7 @@ export function BrowseApp() {
               {/* Frosted-panel card: title, provider and from-price sit on a
                   translucent navy band over the 16:9 image (cover-cropped to the
                   focal point). Details and one blue "More details" CTA below. */}
-              <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="relative block w-full overflow-hidden" aria-label={t("parent.moreDetailsFor", { name: l.name })}>
+              <button type="button" onClick={() => openListing(l.id)} className="relative block w-full overflow-hidden" aria-label={t("parent.moreDetailsFor", { name: l.name })}>
                 {hero ? (
                   <CroppedImage im={hero} className="w-full" style={{ aspectRatio: "16 / 9" }} />
                 ) : (
@@ -637,10 +643,10 @@ export function BrowseApp() {
                   );
                 })()}
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="rounded-lg border border-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-[var(--brand-2,var(--brand-2))] transition-colors hover:bg-[#eef4ff]">
+                  <button type="button" onClick={() => openListing(l.id)} className="rounded-lg border border-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-[var(--brand-2,var(--brand-2))] transition-colors hover:bg-[#eef4ff]">
                     {t("parent.moreInfo")}
                   </button>
-                  <button type="button" onClick={() => setQuickBook(l.id)} className="rounded-lg bg-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
+                  <button type="button" onClick={() => openQuickBook(l.id)} className="rounded-lg bg-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
                     {t("parent.quickBook")}
                   </button>
                 </div>

@@ -42,6 +42,26 @@ export function useOpensAt(opensAt?: string) {
     : "";
   return { locked, countdown, opensLabel };
 }
+// ─────────────────────────────────────────────────────────────────────────
+// A minimal signal — NOT a cross-listing store — so the browse flow can tell
+// whether the listing a parent currently has open has anything in its
+// basket, before a full navigation away throws it out silently. Multi-listing
+// baskets stay unsupported by design; this only lets the UI warn instead of
+// staying silent about it. See item 68, docs/amir-backend-outstanding.md.
+let parentBasketCount = 0;
+export function hasParentBasketItems() {
+  return parentBasketCount > 0;
+}
+/** Ask before a navigation that would throw away the open listing's basket.
+ * Shared by both basket implementations (this file and
+ * features/storefront/BookingPanel.tsx) so parents see the same wording
+ * wherever they're booking from. Returns true when it's fine to proceed. */
+export function confirmLeavingBasket(): boolean {
+  if (!hasParentBasketItems()) return true;
+  if (typeof window === "undefined") return true;
+  return window.confirm("Going to another club will clear your basket — continue?");
+}
+
 export type BasketItem = { id: string; name: string; timing: string; price: number; dates: string[]; rule?: BookRule;
   /** The chosen period's id — sent to the server so timings PRICE correctly
    * (the label in `timing` is display-only). */
@@ -91,6 +111,18 @@ export function useBooking(d: WizardDraft, booking: BlockBooking | null, weeks: 
   const [waitSel, setWaitSel] = useState<string[]>([]);
   const [waitDone, setWaitDone] = useState(false);
   const [basket, setBasket] = useState<BasketItem[]>([]);
+  // Report this listing's basket size to the module-level signal above, and
+  // clear it again the moment this instance goes away — a full navigation
+  // (unmount) or a completed booking (this component stops being rendered)
+  // both count as "nothing left to warn about".
+  useEffect(() => {
+    if (!parentMode) return;
+    parentBasketCount = basket.length;
+  }, [parentMode, basket.length]);
+  useEffect(() => {
+    if (!parentMode) return;
+    return () => { parentBasketCount = 0; };
+  }, [parentMode]);
   const [stage, setStage] = useState<"pick" | "checkout" | "done">("pick");
   const [child, setChild] = useState("");
   // Operator-side checkout: which parent it's for, a child per pass, and any

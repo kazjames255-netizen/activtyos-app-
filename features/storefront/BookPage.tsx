@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { apiPublic } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
+import { confirmLeavingBasket } from "@/features/listings/booking";
 import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
 import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
 
@@ -82,19 +83,24 @@ export function BookPage({ id }: { id: string }) {
   // Styled to match the storefront's own nav — bold, uppercase, tracked, no
   // underline — inheriting the page font from the header wrapper.
   const linkCls = "text-[11.5px] font-extrabold uppercase tracking-[0.05em] transition-opacity hover:opacity-70";
+  // Every link off this page is a real navigation to a different route, which
+  // unmounts the booking widget below and throws away whatever's in its
+  // basket with no chance to recover it — warn first rather than staying
+  // silent about it (item 68, docs/amir-backend-outstanding.md).
+  const guardNav = (e: React.MouseEvent) => { if (!confirmLeavingBasket()) e.preventDefault(); };
   // In preview, the provider gets a single "Close" affordance, never parent nav.
   const topRight = preview ? (
     <button type="button" onClick={() => window.close()} className={linkCls}>Close preview ✕</button>
   ) : signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
-    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} className={linkCls}>Sign in</Link>
+    <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} onClick={guardNav} className={linkCls}>Sign in</Link>
   ) : signedIn && !embedded ? (
     // Not shown in embeds — navigating a provider's iframe into the dashboard
     // would trap the parent page's visitor.
     <span className="flex items-center gap-4">
-      <Link href="/custdash/browse" className={linkCls}>← Back to activities</Link>
-      <Link href="/custdash" className={linkCls}>My home page</Link>
-      <Link href="/custdash/bookings" className={linkCls}>My bookings</Link>
+      <Link href="/custdash/browse" onClick={guardNav} className={linkCls}>← Back to activities</Link>
+      <Link href="/custdash" onClick={guardNav} className={linkCls}>My home page</Link>
+      <Link href="/custdash/bookings" onClick={guardNav} className={linkCls}>My bookings</Link>
     </span>
   ) : null;
 
@@ -117,7 +123,7 @@ export function BookPage({ id }: { id: string }) {
       )}
       {embedded && fromStore && (
         <div className="px-4 pt-3 text-[12.5px]">
-          <button type="button" onClick={() => window.history.back()} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>← All activities</button>
+          <button type="button" onClick={() => { if (confirmLeavingBasket()) window.history.back(); }} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>← All activities</button>
         </div>
       )}
       <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />

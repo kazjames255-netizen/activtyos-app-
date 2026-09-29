@@ -9,6 +9,12 @@ import { applyDiscounts, type DiscountRule } from "@/features/listings/discounts
 import type { ServerListing } from "@/features/listings/ListingWizard";
 import { PayModal } from "@/features/payments/PayModal";
 
+// Not currently wired into any route (features/listings/booking.ts's
+// BookingWidget/CustomerPage is what /book/{id} and Quick Book actually
+// render) — but kept in sync with the same basket-loss guard so it isn't a
+// live trap for a future page that does mount it. See item 68,
+// docs/amir-backend-outstanding.md.
+
 // ─────────────────────────────────────────────────────────────────────────
 // The parent checkout on /book/{id}: block → pass → timing → days →
 // children → add-ons → book. One pass/timing/days selection applied to all
