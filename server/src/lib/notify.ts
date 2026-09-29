@@ -338,6 +338,7 @@ export async function notify(input: NotifyInput): Promise<void> {
 
     let to: string | undefined;
     let footer: string | undefined;
+    let emailHref = href;
     if (parentEmail) {
       if (!input.ignoreMute && (await isMuted(parentEmail, input.category))) {
         await bell.set({ emailStatus: "muted" }, { merge: true });
@@ -347,7 +348,11 @@ export async function notify(input: NotifyInput): Promise<void> {
       footer = `You're receiving this because your child attends with ${provider.name}. You can turn these off in your account.`;
     } else {
       // A franchise's alert goes to the FRANCHISE's inbox, not head office's.
-      to = (franchiseId ? await franchiseEmail(input.tenantId, franchiseId) : undefined) ?? provider.email;
+      const frInbox = franchiseId ? await franchiseEmail(input.tenantId, franchiseId) : undefined;
+      to = frInbox ?? provider.email;
+      // That inbox belongs to the FRANCHISE account, whose portal is /franchise — the tenant's
+      // (company) link would be refused for it (one account = one portal).
+      if (frInbox && href) emailHref = href.replace(/^\/(company|freelancer|staff)\//, "/franchise/");
       footer = "You're receiving this because you're on this provider's team on ActivityOS.";
     }
     if (!to?.includes("@")) return;
@@ -357,10 +362,10 @@ export async function notify(input: NotifyInput): Promise<void> {
     // Otherwise wrap the (plain or rich) body in the standard layout — carrying
     // the PROVIDER's own logo for family-facing mail (never ActivityOS's).
     const logo = parentEmail ? await tenantLogo(input.tenantId) : undefined;
-    const link = href ? (href.startsWith("http") ? href : `${webUrl}${href}`) : "";
+    const link = emailHref ? (emailHref.startsWith("http") ? emailHref : `${webUrl}${emailHref}`) : "";
     const html = input.emailFullHtml
       ? input.emailFullHtml.replace(/\{\{VIEW_URL\}\}/g, link)
-      : layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, href, footer,
+      : layout(provider.name, input.emailHtml ?? `<p>${escapeHtml(input.body)}</p>`, emailHref, footer,
           parentEmail ? { branded: true, logoCid: logo?.cid } : undefined);
 
     const attachments = [...(input.attachments ?? []), ...(logo ? [logo] : [])];
