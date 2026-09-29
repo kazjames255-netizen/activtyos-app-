@@ -86,7 +86,11 @@ const planSchema = z.object({
   perFranchise: z.number().nonnegative().optional(),
   franchiseTiers: z.array(z.object({ upTo: z.number().int().positive().nullable(), price: z.number().nonnegative() })).max(8).optional(),
 });
-const pricingSchema = z.object({ plans: z.array(planSchema).min(1).max(12) });
+// The three tiers are what signup/upgrade/limits resolve against — a catalogue that drops one (or repeats an id) would leave new signups with no plan to price.
+const pricingSchema = z.object({ plans: z.array(planSchema).min(1).max(12) }).refine(
+  (v) => new Set(v.plans.map((p) => p.id)).size === v.plans.length && ["freelancer", "company", "franchise"].every((id) => v.plans.some((p) => p.id === id)),
+  { path: ["plans"], message: "The catalogue must contain each of the freelancer, company and franchise plans exactly once" },
+);
 
 export type PlanRec = Record<string, unknown> & { id: string };
 // The LIVE catalogue: the admin-saved config if present, else the seed. New
