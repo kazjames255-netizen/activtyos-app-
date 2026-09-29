@@ -139,7 +139,9 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
 
   const { owed, paid, refunds, owedTotal, paidTotal, refundTotal } = useMemo(() => {
     const all = (bookings ?? []).filter((b) => b.status !== "Declined").filter(matchF);
-    const owed = all.filter((b) => b.status !== "Cancelled" && OWED.has(b.pay) && b.amount > 0);
+    // Same rule as the server's payable() and My bookings' Pay button: a waitlisted / offered /
+    // awaiting-approval booking holds no place yet, so nothing is owed (and Pay now would be refused).
+    const owed = all.filter((b) => b.status !== "Cancelled" && OWED.has(b.pay) && b.amount > 0 && (b.status === "Confirmed" || b.pay === "Invoice sent"));
     const paid = all.filter((b) => b.pay === "Paid" || b.pay === "Funded")
       .sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? 1 : -1));
     const refunds = all.flatMap((b) => (b.refundLog ?? []).map((r) => ({ ...r, ref: b.ref, listing: b.listing })));

@@ -2707,6 +2707,9 @@ my.post("/trips/:id/consent", async (req, res) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return null;
     const t = snap.data()!;
+    // The parent screen only offers Give/Decline on an upcoming planned trip; enforce it here too, or a stale
+    // tab / direct call flips consent (and pings the provider "consent given") on a cancelled or finished trip.
+    if (t.status === "cancelled" || t.status === "completed" || String(t.date ?? "") < ukToday()) return "closed" as const;
     const attendees = (t.attendees as { childId?: string; consent?: string; consentAt?: string; consentBy?: string; n: string }[] | undefined) ?? [];
     const mine = attendees.find((a) => a.childId === parsed.data.childId);
     if (!mine) return null;
@@ -2721,6 +2724,7 @@ my.post("/trips/:id/consent", async (req, res) => {
     tx.set(ref, { attendees, consentObtained: allGranted, updatedAt: mine.consentAt }, { merge: true });
     return { tenantId: String(t.tenantId), destination: String(t.destination ?? "the trip"), childName: mine.n, allAnswered };
   });
+  if (result === "closed") { res.status(409).json({ error: "This trip is no longer open for consent — it has been cancelled or has already taken place." }); return; }
   if (!result) { res.status(404).json({ error: "That child isn't on this trip" }); return; }
 
   // Tell the team — and shout when the last answer lands.
