@@ -6,6 +6,8 @@
 
 export interface DiscountCodeDoc {
   tenantId: string;
+  /** The franchise that created it (null/absent = head office / freelancer). */
+  franchiseId?: string | null;
   code: string; // stored upper-cased
   type: "percent" | "amount" | "perAttendee"; // % of order · £ off order · £ off × attendees
   value: number; // percent (0–100) or pounds
@@ -48,12 +50,16 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
  *  ctx carries the redeemer's email (family-assigned codes), the listing being
  *  booked (listing-scoped codes) and the attendee count (per-attendee codes).
  *  The per-customer limit needs a DB read, so it's enforced in the route, not here. */
-export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string, ctx?: { email?: string; listingId?: string; attendees?: number }): CodeCheck {
+export function checkCode(c: DiscountCodeDoc, subtotal: number, today: string, ctx?: { email?: string; listingId?: string; attendees?: number; listingFranchiseId?: string | null }): CodeCheck {
   if (c.active === false) return { ok: false, reason: "This code is no longer active" };
   const reserved = reservedEmails(c);
   if (reserved.length && (!ctx?.email || !reserved.includes(ctx.email.trim().toLowerCase())))
     return { ok: false, reason: "This code is reserved for another customer" };
   if (c.listingId && ctx?.listingId && c.listingId !== ctx.listingId)
+    return { ok: false, reason: "This code doesn’t apply to this activity" };
+  // A code a FRANCHISE created only works on that franchise's own listings — never a sibling's or head office's.
+  // (Head office's / a freelancer's own codes carry no franchiseId and stay network-wide.) Callers that know the listing pass its owner.
+  if (c.franchiseId && ctx && ctx.listingFranchiseId !== undefined && (ctx.listingFranchiseId ?? null) !== c.franchiseId)
     return { ok: false, reason: "This code doesn’t apply to this activity" };
   if (c.expiry && c.expiry < today) return { ok: false, reason: "This code has expired" };
   if (c.usageLimit != null && (c.usedCount ?? 0) >= c.usageLimit) return { ok: false, reason: "This code has reached its usage limit" };

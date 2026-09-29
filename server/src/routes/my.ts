@@ -1304,7 +1304,7 @@ my.post("/bookings", async (req, res) => {
         const prior = await bookingsCol.where("email", "==", familyEmail).where("tenantId", "==", listing.tenantId).limit(1).get();
         if (!prior.empty) { res.status(400).json({ error: `Code ${l.code} is for new customers only` }); return; }
       }
-      const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length });
+      const check = checkCode(l.data, discounted, today, { email: familyEmail, listingId: input.listingId, attendees: amounts.length, listingFranchiseId: (listing as { franchiseId?: string | null }).franchiseId ?? null });
       if (!check.ok) { res.status(400).json({ error: check.reason }); return; }
       totalOff = round2(totalOff + check.off);
       if (l.data.referral && l.data.referrerEmail && familyEmail) referralHit = { referrerEmail: l.data.referrerEmail, code: l.code, friendDiscount: check.off };

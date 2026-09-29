@@ -363,7 +363,13 @@ discounts.post("/validate", async (req, res) => {
     const prior = await db.collection("bookings").where("email", "==", email.toLowerCase()).where("tenantId", "==", parsed.data.tenantId).limit(1).get();
     if (!prior.empty) { res.json({ valid: false, reason: "This code is for new customers only" }); return; }
   }
-  const check = checkCode(data, parsed.data.subtotal, ukToday(), { email, listingId: parsed.data.listingId, attendees: parsed.data.attendees });
+  // Which franchise owns the listing being priced (a franchise's code only works on its own listings).
+  let listingFranchiseId: string | null | undefined;
+  if (parsed.data.listingId) {
+    const l = await db.collection("listings").doc(parsed.data.listingId).get();
+    if (l.exists && l.get("tenantId") === parsed.data.tenantId) listingFranchiseId = (l.get("franchiseId") as string | null | undefined) ?? null;
+  }
+  const check = checkCode(data, parsed.data.subtotal, ukToday(), { email, listingId: parsed.data.listingId, attendees: parsed.data.attendees, listingFranchiseId });
   if (!check.ok) { res.json({ valid: false, reason: check.reason }); return; }
   res.json({ valid: true, code: normaliseCode(parsed.data.code), off: check.off, exclusive: !!data.exclusive });
 });
