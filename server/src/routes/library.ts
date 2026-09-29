@@ -70,7 +70,16 @@ library.get("/", async (req, res) => {
       snap = await db.collection("libraries").doc(docId).get();
     }
   }
-  res.json(snap.exists ? snap.data() : null);
+  const data = snap.exists ? snap.data() : null;
+  // Staff read the library for everything they render (venues, question sets, switches), but the business bank account printed on
+  // invoices is finance's, not theirs — a role set to Finances/Money: None must not be able to read it straight off this call.
+  const billing = (data?.settings as { billing?: Record<string, unknown> } | undefined)?.billing;
+  if (data && auth.role === "staff" && billing) {
+    const { bankName: _b, accountName: _a, sortCode: _s, accountNumber: _n, ...rest } = billing;
+    res.json({ ...data, settings: { ...data.settings, billing: rest } });
+    return;
+  }
+  res.json(data);
 });
 
 // PUT /api/library — replace the whole library (operators only).

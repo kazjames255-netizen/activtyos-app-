@@ -363,12 +363,14 @@ const readSettings = (d?: FirebaseFirestore.DocumentData) => ({
 messages.get("/settings", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
+  if (req.auth!.role === "staff") { res.status(403).json({ error: "Only the account holder can change message notification settings" }); return; }
   const snap = await db.collection("tenants").doc(tenantId).get();
   res.json(readSettings(snap.data()));
 });
 messages.put("/settings", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
+  if (req.auth!.role === "staff") { res.status(403).json({ error: "Only the account holder can change message notification settings" }); return; }
   const patch: { emailOnNewMessage?: boolean; notifyEmail?: string } = {};
   if (req.body && "emailOnNewMessage" in req.body) patch.emailOnNewMessage = req.body.emailOnNewMessage !== false;
   if (req.body && "notifyEmail" in req.body) {
