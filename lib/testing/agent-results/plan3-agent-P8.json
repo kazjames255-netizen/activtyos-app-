@@ -1,0 +1,250 @@
+{
+ "p3-p8-01": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Franchise (and its staff) could POST /api/messages and /api/messages/from-booking to head office's or a sibling franchise's family; the family received it, the sender could not even see the thread.",
+  "notes": "Now limited to franchiseFamilyEmails / the booking's franchiseId (same rule as /broadcast). Covered by e2e/comms-scoping.spec.ts.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-02": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A parent's message to the provider emailed head office's address even for a franchise family (the only inbox that family's thread shows in besides HO).",
+  "notes": "Routes to the franchise account inbox (lib/notify franchiseEmail) like every other team alert.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-03": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "GET /api/emails/suppressions returned the whole tenant's unsubscribe list to a franchise, and POST /suppress let a franchise silence head office's families for the whole tenant.",
+  "notes": "Both scoped to the franchise's own families.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-04": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "HQ replies to a franchise's support thread rang head office's bell/inbox, never the franchise's.",
+  "notes": "notify(... franchiseId: thread.franchiseId).",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-05": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "HQ replies to a parent's own 'Report a problem' thread (providerId null) notified nobody at all: no bell, no email.",
+  "notes": "Bell (email-keyed) + ActivityOS-branded email, honouring the parent's mute.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-06": {
+  "verdict": "fixed",
+  "method": "browser+api",
+  "actual": "Parent Accidents page 'Stop notifying me' was a localStorage flag the server never read; emails kept coming (medication had been fixed earlier, this one was missed).",
+  "notes": "Now PUT /api/notifications/prefs for accident+incident. Verified live and in e2e/comms-scoping.spec.ts.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-07": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A parent withdrawing medication consent told nobody on the team (staff found out when the dose button refused).",
+  "notes": "Team bell+email (key med-consent).",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-08": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Trip 'send message' wrote back the attendee list it read before sending, wiping any consent given while emails were going out.",
+  "notes": "Stamps 'sent' inside a transaction on the current list.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-09": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "ack-chase sweep read every incident of every tenant every 30 minutes (Firestore reads bill).",
+  "notes": "Range query on createdAt inside the 7-day chase window.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-10": {
+  "verdict": "fixed",
+  "method": "api+unit",
+  "actual": "Scheduled marketing emails used a recipient list frozen at schedule time, so someone who unsubscribed in between still got it (PECR).",
+  "notes": "Sweep re-applies suppression + explicit opt-out at send time; verified by calling the sweep directly against live data (a live API sweep at 02:26 ran stale code, see open items).",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-11": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Freelancer one-calendar clash error told a parent 'your existing booking APF-xxxx (09:00-15:30 ...)' naming ANOTHER family's booking ref and times.",
+  "notes": "Ref/times only when the clashing booking is the caller's own.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-12": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "POST /api/emails/inbound fell back to the public literal 'dev-inbound' secret in production when INBOUND_EMAIL_SECRET was unset.",
+  "notes": "Closed (401) in production when unset; DEPLOY.md updated.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-13": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Any provider could tag ANY childId in a Moment: that family got a 'new moment featuring ...' bell + email from a provider they never booked, and the caption showed in their feed.",
+  "notes": "POST/PUT /api/moments require the child to be booked with the caller (franchise-scoped).",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-14": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "HQ bell: support notification id was the bare thread id, so once HQ had opened the bell every later message in that (single, ongoing) thread stayed 'read' forever; HQ's own reply also re-appeared as 'New support message'.",
+  "notes": "Id includes the last message time; threads whose last message is HQ's are omitted.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-15": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "Setup -> Notifications never offered the 'listing ended' and 'stock low' switches although the server honours both keys.",
+  "notes": "Added to PROVIDER_NOTIFICATIONS.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-16": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Bell scoping matrix live: company sees all (franchise-tagged too), franchise only its own tagged alerts, plain staff only day-to-day categories and never booking/billing/incident, freelancer only its own tenant, parent only its own email; read state per person for franchise/staff (staff read-all did not clear the owner's); cross-tenant mark-read ids marked 0.",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-17": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Setup Notifications toggles live: 'bell' = bell without email, key false = no bell, email-delivery false = bell without email; default = bell + email attempt (emailStatus suppressed while MAIL_LIVE is off).",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-18": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Parent mute honoured per category: accident/medication 'given' -> bell + emailStatus muted; missed dose ignores mute (safety) and is attempted; unmute restores.",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-19": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Leave: staff request -> owner bell only (not franchise, not staff); decision -> that staff member's own bell + email. DSL alert for a franchise child goes to the franchise account holder only, details-free. Platform bell 403 for non-platform.",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-20": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Messaging isolation: parent A cannot open parent B's thread, freelancer cannot read company threads, plain staff cannot read threads it never wrote in, parent cannot use operator settings/broadcast/email send, staff cannot email-send, bad pref category 400.",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-21": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "e2e/comms-scoping.spec.ts 3/3 passed via scripts/e2e-locked.sh (franchise scoping, HQ reply routing, server-side accident mute).",
+  "notes": "",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-22": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "PUT /api/messages/settings wrote the shared TENANT doc for a franchise too: a franchise could set head office's notifyEmail (where every head-office booking / safeguarding / incident alert email goes) or switch its message emails off.",
+  "notes": "A franchise's switches now live on its own account (users/{uid}); its alerts and family messages honour them. Verified live: company settings unchanged after a franchise PUT.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-23": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "GET /api/messages/broadcasts returned head office's bulk-send history (with up to 500 recipient names+emails each) to a franchise.",
+  "notes": "Broadcast records carry franchiseId; a franchise sees only its own (older records stay head-office only).",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-24": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "A conversation HQ STARTS (POST /api/platform/support) notified nobody: no bell, no email, no unread flag on the provider/parent side.",
+  "notes": "Same notifier as a reply (title 'Message from ActivityOS support') + unreadByUser.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-25": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "Expense claim from a franchise's staff alerted head office only; the franchise manager who approves it was never told.",
+  "notes": "Alert carries the claim's franchiseId.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-26": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "Alert emails to a franchise's inbox linked into /company/... (the tenant's portal), which the franchise account cannot open (one account = one portal).",
+  "notes": "Email link rewritten to /franchise/... when the franchise inbox is the recipient.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-27": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "A staff member's calendar-reminder bell entry deep-linked to /staff/calendar (no such view) = 404.",
+  "notes": "notificationHref maps staff calendar->dash, incidents->incident.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-28": {
+  "verdict": "fixed",
+  "method": "api",
+  "actual": "Nothing throttled a parent's POST /api/messages although each one emails the provider's inbox.",
+  "notes": "30 sends/min/IP (429 beyond); header RateLimit-Remaining verified live.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-29": {
+  "verdict": "fixed",
+  "method": "code",
+  "actual": "'New message from a parent' email button went to the bare site root.",
+  "notes": "Links to /<portal>/messages of the inbox owner.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-30": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Regression: email-compliance scheduled 'one' send re-run manually (delivered=1), broadcast + listing-recipients, trips send-message live (attendee 'sent' stamped, consent preserved).",
+  "notes": "The first e2e-locked regression run had 2 email-compliance tests fail on 'fetch failed' while the API was hot-reloading, and a scheduled-send test failed with delivered 0 during a reload; all re-verified by probe.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ },
+ "p3-p8-31": {
+  "verdict": "open",
+  "method": "api",
+  "actual": "messages-broadcast.spec.ts fails when the standing parent already has a VISIBLE (deliberate 1:1) thread with the company: the broadcast body then legitimately shows in the inbox. My probes had created such a thread (cleaned up afterwards).",
+  "notes": "Spec precondition, not a product bug; the spec should clear the thread first or use a fresh parent.",
+  "at": "2026-09-30",
+  "agent": "plan3-P8"
+ }
+}
