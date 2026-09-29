@@ -11,6 +11,8 @@ import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useUnreadMessages } from "@/lib/use-unread";
 import { useBookingFlags } from "@/lib/use-booking-flags";
 import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
+import type { Me } from "@/lib/roles";
+import { capAreaForView, capLevel, featureKeysForView, firstOff } from "@/lib/accessMap";
 import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 import { Bell } from "./Bell";
@@ -75,6 +77,8 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Whether this account is a head office (has franchises). Combined with the
   // HO scope, tells us we're in the "all franchises" oversight view.
   const [hasFranchises, setHasFranchises] = useState(() => !!peekMe()?.hasFranchises);
+  // Staff: what their Roles & permissions role allows (null = not restricted) — the top-bar tabs follow it like the sidebar does.
+  const [staffCaps, setStaffCaps] = useState<Me["caps"]>(() => peekMe()?.caps ?? null);
   const hoScope = useHoScope();
   // The head-office COMBINED view (all franchises, scope === null) is a slim
   // oversight bar — the Bookings/Families operational tabs make no sense there
@@ -84,7 +88,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   // like a normal company. Non-HO operators always keep them.
   const hoCombined = portal === "company" && hasFranchises && !hoScope;
   useEffect(() => {
-    getMe().then((m) => { setMeName(m?.name ?? ""); setHasFranchises(!!m?.hasFranchises); }).catch(() => {});
+    getMe().then((m) => { setMeName(m?.name ?? ""); setHasFranchises(!!m?.hasFranchises); if (m?.role === "staff") setStaffCaps(m.caps ?? null); }).catch(() => {});
     // Update instantly when the user edits their name in Account settings.
     const onMe = (e: Event) => {
       const n = (e as CustomEvent<{ name?: string }>).detail?.name;
@@ -111,6 +115,12 @@ export function Header({ portal }: { portal: PortalKey }) {
   const hubLbl = useLbl();
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
+  // A staff tab is hidden when the operator switched its module off, or the member's role is None on its area (lib/accessMap.ts — same table as the sidebar).
+  const staffHides = (v: string) => {
+    if (portal !== "staff") return false;
+    const area = capAreaForView(portal, v);
+    return !!firstOff(features as unknown as Record<string, unknown>, featureKeysForView(portal, v)) || (!!area && capLevel(staffCaps, area) === "none");
+  };
   const [commOpen, setCommOpen] = useState(false);
   const commRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -140,10 +150,10 @@ export function Header({ portal }: { portal: PortalKey }) {
           ...(!hoCombined && findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingTip || t("p7shell.tipBookingsOk") }] : []),
           // Staff get Announcements + Messages promoted to the top bar (out of the sidebar).
           ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: t("header.announcements"), icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: t("p7shell.tipAnnouncements") }] : []),
-          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? t("p7shell.unreadTip", { n: unread }) : t("header.messages") }] : []),
+          ...(portal === "staff" && findNavItem(portal, "messages") && !staffHides("messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? t("p7shell.unreadTip", { n: unread }) : t("header.messages") }] : []),
           // Families promoted to the top bar — quick access to the family list.
           // Hidden in the head-office combined view (families are per-franchise).
-          ...(!hoCombined && findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: t("header.families") }] : []),
+          ...(!hoCombined && findNavItem(portal, "customers") && !staffHides("customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: t("header.families") }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
