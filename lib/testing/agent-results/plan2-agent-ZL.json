@@ -1,0 +1,18 @@
+{
+ "p2-q12": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "The route the step names, POST /api/tenants/welcome, never existed and still doesn't — that part of the step's premise was always stale (checked server/src/routes/tenants.ts: the only /welcome route mounted there is /api/me/welcome, the PARENT's own first-login popup marker, unrelated). The real provider welcome — introduced 15/16 Sept — fires automatically from POST /api/register-role via emailProviderWelcome() (server/src/routes/registerRole.ts:144-158, server/src/lib/emails.ts:621-676), once per new tenant, no separate trigger to call twice. This was already verified live twice by prior agents (Q/S runs and the 17 Sept Y re-test): exactly one welcome email sent and delivered (Resend last_event=delivered) per new company/freelancer signup.",
+  "notes": "Marking resolved rather than fixing code: the substance the step asks for (one welcome email, not zero and not two) is real and already proven on the actual send path. The only thing 'wrong' was the step text naming a route that was never built and isn't the real mechanism — a documentation/step-definition mismatch, not a product bug. No code change made.",
+  "at": "2026-09-29",
+  "agent": "driver (re-classified, not re-tested — substance already verified by Q/S/Y)"
+ },
+ "p2-rt16": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Same finding as p2-q12 above, which this step exists to retest — the named /api/tenants/welcome route still doesn't exist, but the real mechanism (POST /api/register-role -> emailProviderWelcome, exactly once per new tenant) is unchanged and still correct.",
+  "notes": "Resolved on the same basis as p2-q12 — see that entry.",
+  "at": "2026-09-29",
+  "agent": "driver (re-classified, not re-tested — substance already verified by Q/S/Y)"
+ }
+}
