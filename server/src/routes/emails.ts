@@ -8,6 +8,7 @@ import { ukNow } from "../lib/scheduler";
 import { inboundAddress, inboundConfigured, inboundDomain, tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
 import { ukToday } from "../lib/ukDate";
+import { franchiseFamilyEmails } from "../lib/franchiseScope";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
 // families: everyone who's booked, or one address. Reuses the transactional
@@ -258,6 +259,10 @@ emails.post("/suppress", async (req, res) => {
   if (!tenantId) return;
   const email = String((req.body as { email?: string }).email ?? "").trim().toLowerCase();
   if (!email.includes("@")) { res.status(400).json({ error: "A valid email is required" }); return; }
+  // Suppression is tenant-wide, so a franchise may only add ITS OWN families —
+  // not silence head office's or a sibling's audience.
+  const supScope = netScope(req);
+  if (typeof supScope === "string" && !(await franchiseFamilyEmails(tenantId, supScope)).has(email)) { res.status(404).json({ error: "That family isn't one of yours" }); return; }
   const existing = await suppressCol.where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
   if (existing.empty) await suppressCol.add({ tenantId, email, at: new Date().toISOString(), by: "operator" });
   const cust = await db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get();
@@ -274,9 +279,12 @@ emails.get("/suppressions", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await suppressCol.where("tenantId", "==", tenantId).get();
+  // A franchise sees only ITS OWN families on the list (head office sees the tenant's).
+  const listScope = req.auth!.role === "platform" ? undefined : netScope(req);
+  const mine = typeof listScope === "string" ? await franchiseFamilyEmails(tenantId, listScope) : null;
   const list = snap.docs
     .map((d) => { const v = d.data() as { email?: string; at?: string; by?: string }; return { id: d.id, email: v.email ?? "", at: v.at ?? null, by: v.by ?? "unsubscribe link" }; })
-    .filter((r) => r.email)
+    .filter((r) => r.email && (!mine || mine.has(r.email.toLowerCase())))
     .sort((a, b) => (`${b.at ?? ""}` < `${a.at ?? ""}` ? -1 : 1));
   res.json({ count: list.length, suppressions: list });
 });

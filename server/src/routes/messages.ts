@@ -6,6 +6,7 @@ import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
 import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
+import { franchiseEmail } from "../lib/notify";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { customerAreaOn } from "../lib/customerArea";
 import { webUrl } from "../lib/stripe";
@@ -202,6 +203,14 @@ messages.post("/", async (req, res) => {
     if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
     tenantId = auth.tenantId;
     parentEmail = parsed.data.parentEmail.toLowerCase();
+    // A franchise (and its staff) may only write to ITS OWN families — the same
+    // isolation the thread list, /broadcast and /listing-recipients enforce.
+    // Without this a franchise could open a thread with head office's or a
+    // sibling's family (who then saw it; the sender couldn't).
+    if (auth.franchiseId && (auth.role === "franchise" || auth.role === "staff") && !(await franchiseFamilyEmails(tenantId, auth.franchiseId)).has(parentEmail)) {
+      res.status(400).json({ error: "You can only message your own customers or families who've booked" });
+      return;
+    }
     customer = await myCustomer(tenantId, parentEmail);
     if (!customer && !(await hasBooking(tenantId, parentEmail))) {
       res.status(400).json({ error: "You can only message your own customers or families who've booked" });
@@ -267,7 +276,12 @@ messages.post("/", async (req, res) => {
     if (from === "parent") {
       const t = (await db.collection("tenants").doc(tenantId).get()).data();
       // Prefer the custom notification address; fall back to the account email.
-      const tEmail = (t?.notifyEmail as string) || (t?.email as string | undefined);
+      let tEmail = (t?.notifyEmail as string) || (t?.email as string | undefined);
+      // A franchise's family writes to THAT franchise (the only inbox that
+      // family's thread shows in besides head office's) — same routing every
+      // other team alert uses (lib/notify.ts), not head office's address.
+      const famFr = (await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", parentEmail).limit(20).get()).docs.map((d) => d.get("franchiseId") as string | null | undefined).find(Boolean);
+      if (famFr) tEmail = (await franchiseEmail(tenantId, famFr)) ?? tEmail;
       if (tEmail && t?.emailOnNewMessage !== false) {
         emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl, tenantId });
       }
@@ -296,6 +310,9 @@ messages.post("/from-booking", async (req, res) => {
   const bkSnap = await db.collection("bookings").where("tenantId", "==", tenantId).where("ref", "==", parsed.data.ref).limit(1).get();
   if (bkSnap.empty) { res.status(404).json({ error: "Booking not found" }); return; }
   const b = bkSnap.docs[0].data() as BookingLike;
+  // A franchise can only message the families booked on ITS OWN listings.
+  const fbAuth = req.auth!;
+  if ((fbAuth.role === "franchise" || fbAuth.role === "staff") && fbAuth.franchiseId && (bkSnap.docs[0].get("franchiseId") ?? null) !== fbAuth.franchiseId) { res.status(404).json({ error: "Booking not found" }); return; }
   if (!b.email || !isEmail(b.email)) { res.status(400).json({ error: "That booking has no valid email to message." }); return; }
 
   // All seven tokens from THIS booking, via the shared resolver. (Venues live on

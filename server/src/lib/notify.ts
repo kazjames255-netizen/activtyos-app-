@@ -269,7 +269,7 @@ async function franchiseOfAlert(input: NotifyInput): Promise<string | null> {
 }
 
 /** The franchise account's own address, for its alert emails. */
-async function franchiseEmail(tenantId: string, franchiseId: string): Promise<string | undefined> {
+export async function franchiseEmail(tenantId: string, franchiseId: string): Promise<string | undefined> {
   try {
     const u = await db.collection("users").doc(franchiseId).get();
     if (u.exists && u.get("tenantId") === tenantId && u.get("role") === "franchise") return (u.get("email") as string | undefined) ?? undefined;

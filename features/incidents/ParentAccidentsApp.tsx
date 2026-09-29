@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useI18n } from "@/lib/i18n/provider";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
@@ -37,8 +37,21 @@ export function ParentAccidentsApp() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<"accident" | "incident">("accident");
   const [acking, setAcking] = useState<string | null>(null);
-  const [muted, setMuted] = useState(() => typeof window !== "undefined" && localStorage.getItem("aos.accidentNotifyMuted") === "1");
-  const toggleMute = () => setMuted((m) => { const n = !m; try { localStorage.setItem("aos.accidentNotifyMuted", n ? "1" : "0"); } catch { /* ignore */ } return n; });
+  // Accident/incident emails — on until the family mutes them. This switch used
+  // to be a localStorage flag the server never saw, so "Turn off" changed the
+  // words here and the emails kept coming. It is the family's server-side
+  // preference now (/api/notifications/prefs, categories "accident" +
+  // "incident"): muting stops the EMAIL; every record still lands on the bell.
+  const [muted, setMuted] = useState(false);
+  useEffect(() => {
+    apiGet<{ muted?: Record<string, boolean> }>("/api/notifications/prefs").then((p) => setMuted(!!p.muted?.accident && !!p.muted?.incident)).catch(() => {});
+  }, []);
+  const toggleMute = () => {
+    const n = !muted;
+    setMuted(n);
+    Promise.all([apiPut("/api/notifications/prefs", { category: "accident", muted: n }), apiPut("/api/notifications/prefs", { category: "incident", muted: n })])
+      .catch(() => setMuted(!n));
+  };
 
   const refresh = useCallback(() => {
     // Accidents + any behaviour records the provider chose to share (the server
