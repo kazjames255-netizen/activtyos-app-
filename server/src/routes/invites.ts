@@ -464,14 +464,17 @@ invites.post("/:token/accept", async (req, res) => {
         // Carry the head-office-granted business name + territory onto the record.
         ...(invite.role === "franchise"
           ? (() => {
-              const fName = override.franchiseName || invite.franchiseName || null;
-              const fArea = override.franchiseArea || invite.franchiseArea || null;
+              // What head office set on the invite is LOCKED (the signup page shows it read-only): the joiner
+              // may only fill in what head office left blank — a crafted accept body can't rename the franchise.
+              const fName = invite.franchiseName || override.franchiseName || null;
+              const fArea = invite.franchiseArea || override.franchiseArea || null;
               // Territory ownership is two-sided:
               //  · franchise draws at sign-up → PROPOSED BY THE FRANCHISE (head office agrees)
               //  · head office drew it on the invite → PROPOSED BY HEAD OFFICE (the franchise approves)
               // Either way it starts "proposed"; the OTHER party signs it off.
               const invTerr = invite.franchiseTerritory as { areas?: unknown[] } | undefined;
-              const terr = override.franchiseTerritory
+              const hoDrew = !!(invTerr?.areas?.length);
+              const terr = override.franchiseTerritory && !hoDrew
                 ? { areas: override.franchiseTerritory.areas, status: override.franchiseTerritory.areas.length ? "proposed" : "draft", by: "franchise" }
                 : invTerr?.areas?.length
                   ? { areas: invTerr.areas, status: "proposed", by: "ho" }
