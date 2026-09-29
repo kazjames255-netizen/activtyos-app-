@@ -497,7 +497,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
           {g.items.map((l) => {
             const sev = SEV[l.severity] ?? SEV.minor;
             return (
-              <Card key={l.id} className="overflow-hidden p-0">
+              <Card key={l.id} className="aos-print-avoid overflow-hidden p-0">
                 <div className="h-1 w-full" style={{ background: sev.fg }} />
                 <div className="p-3">
                   <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">

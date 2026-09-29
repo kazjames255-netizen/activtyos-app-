@@ -86,7 +86,7 @@ export function StaffCertsApp() {
   const certCard = (ct: CredType) => {
     const r = mine(ct.id); const st = credStatus(r); const dl = daysUntil(r?.expiry);
     return (
-      <Card key={ct.id} className="p-3.5">
+      <Card key={ct.id} className="aos-print-avoid p-3.5">
         <div className="mb-1.5 flex items-center gap-2">
           {r?.fileData ? <button type="button" onClick={() => openCredFile(r.fileData)} title={t("staffp.certViewUploaded")} className="text-[13.5px] font-extrabold text-[#1d3a8f] hover:underline">{ct.name} 📎</button> : <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{ct.name}</span>}
           {ct.required && appliesTo(ct, ME, ME_ROLE) ? <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-bold text-[#c0392b]">{t("staffp.certRequired")}</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">{t("staffp.certOptional")}</span>}

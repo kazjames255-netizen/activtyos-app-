@@ -397,7 +397,7 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
           {filtered.length === 0 ? <Card className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">Nothing matches those filters.</Card> : (
             <div className="flex flex-col gap-1.5">
               {filtered.map((p) => (
-                <Card key={p.id} className="flex flex-wrap items-center gap-2.5 p-2.5 transition-shadow hover:shadow-[0_10px_24px_-12px_rgba(29,58,143,.45)]" style={{ borderLeftColor: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status], borderLeftWidth: "4px" }}>
+                <Card key={p.id} className="aos-print-avoid flex flex-wrap items-center gap-2.5 p-2.5 transition-shadow hover:shadow-[0_10px_24px_-12px_rgba(29,58,143,.45)]" style={{ borderLeftColor: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status], borderLeftWidth: "4px" }}>
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white shadow-sm" style={{ background: isOverdue(p) ? "#e2643b" : STATUS_ACCENT[p.status] }}>{p.customerName.trim()[0]?.toUpperCase() || "?"}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">

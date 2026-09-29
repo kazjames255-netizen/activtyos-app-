@@ -44,19 +44,21 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
       <PortalGuard portal={portalKey}>
         <PageTracker portal={portalKey} />
         <SubscriptionGate portal={portalKey}>
-        <div className="flex h-screen flex-col">
+        <div className="aos-shell-root flex h-screen flex-col">
           {/* HQ impersonation bar — full width across the top when viewing-as.
               PlatformViewBar covers the OTHER case: a platform account
               previewing an operator portal WITHOUT impersonating anyone —
               the data routes still answer with every tenant's rows merged
               together, so say so just as loudly. The two are mutually
-              exclusive. */}
-          <ImpersonationBar />
-          <PlatformViewBar portal={portalKey} />
-          <div className="flex min-h-0 flex-1">
+              exclusive. Neither is app content, so both are print:hidden —
+              see item 67 in docs/amir-backend-outstanding.md. */}
+          <div className="print:hidden"><ImpersonationBar /></div>
+          <div className="print:hidden"><PlatformViewBar portal={portalKey} /></div>
+          <div className="aos-shell-row flex min-h-0 flex-1">
           {/* Desktop-only rail; on mobile the Header's hamburger opens the same
-              Sidebar as a slide-over drawer. */}
-          <div className="hidden flex-none lg:block">
+              Sidebar as a slide-over drawer. Hidden outright when printing —
+              it's navigation chrome, never part of a printed record. */}
+          <div className="hidden flex-none print:hidden lg:block">
             <Sidebar portal={portalKey} />
           </div>
           {/* Light palette wraps the whole right column for custdash — the
@@ -64,8 +66,10 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
               surface rather than a dark header over a light body. */}
           <div className="flex min-w-0 flex-1 flex-col" style={light ? LIGHT_PALETTE : undefined}>
             {/* The top bar sits on the light surface in every portal — matching
-                the customer app — instead of the near-black operator surface. */}
-            <div style={light ? undefined : LIGHT_PALETTE}>
+                the customer app — instead of the near-black operator surface.
+                print:hidden: the top nav has no place in a printed payslip,
+                invoice, incident record or certificate. */}
+            <div className="print:hidden" style={light ? undefined : LIGHT_PALETTE}>
               <Header portal={portalKey} />
               {portalKey === "company" && <HoThemeSync />}
             </div>
@@ -76,19 +80,20 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {/* First-login onboarding launcher for staff. */}
             {portalKey === "staff" && <StaffWelcome />}
             {/* Persistent, non-blocking reminder bar for staff — outstanding
-                courses & documents, so first login isn't a wall of reading. */}
-            {portalKey === "staff" && <StaffReminderBanner />}
-            {/* Customer-only flashy newsflash for unseen provider posts. */}
-            {portalKey === "custdash" && <NewsflashBanner />}
-            {/* Customer-only running bar of the family's usable discount codes. */}
-            {portalKey === "custdash" && <CouponTicker />}
+                courses & documents, so first login isn't a wall of reading.
+                print:hidden: a banner, not part of any printed record. */}
+            {portalKey === "staff" && <div className="print:hidden"><StaffReminderBanner /></div>}
+            {/* Customer-only flashy newsflash for unseen provider posts. print:hidden as above. */}
+            {portalKey === "custdash" && <div className="print:hidden"><NewsflashBanner /></div>}
+            {/* Customer-only running bar of the family's usable discount codes. print:hidden as above. */}
+            {portalKey === "custdash" && <div className="print:hidden"><CouponTicker /></div>}
             {/* Operator trial / cancellation nudge bar — removed on request 2026-09-02;
                 revisit where/how to reinstate it. Component kept at
                 components/billing/TrialBanner.tsx. */}
             {/* The operator views each wrap themselves in the light palette, but
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
-            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}><SubscriptionLock portal={portalKey}>{props.children}</SubscriptionLock></main>
+            <main className="aos-shell-main min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}><SubscriptionLock portal={portalKey}>{props.children}</SubscriptionLock></main>
             {/* The 25-day acceptance-test logger. Renders nothing unless it's
                 been switched on from HQ → Testing, so providers never see it. */}
             <TestLogger />

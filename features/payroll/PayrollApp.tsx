@@ -51,7 +51,9 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const freqLabel = l.freqLabel || "Monthly";
   const taxWeek = Math.min(53, Math.max(1, Math.floor((Date.UTC(paid.getFullYear(), paid.getMonth(), paid.getDate()) - Date.UTC(taxYearStart, 3, 6)) / (7 * 86400000)) + 1));
   const taxPeriod = freqLabel === "Weekly" ? `Week ${taxWeek} · ${ty}` : freqLabel === "Monthly" ? `Month ${taxMonth} · ${ty}` : `${freqLabel} · ${ty}`;
-  const row = (k: string, v: string, strong = false) => `<tr><td>${escH(k)}</td><td style="text-align:right${strong ? ";font-weight:800" : ""}">${escH(v)}</td></tr>`;
+  // Inline break-inside, not a class — this payslip is fully standalone HTML
+  // opened via window.open()+document.write(), so it never gets app/globals.css.
+  const row = (k: string, v: string, strong = false) => `<tr style="break-inside:avoid;page-break-inside:avoid"><td>${escH(k)}</td><td style="text-align:right${strong ? ";font-weight:800" : ""}">${escH(v)}</td></tr>`;
   const basePay = l.basePayM ?? l.grossM;
   const unpaidM = l.unpaidLeaveM || 0, sickM = l.sickLeaveM || 0, lv = l.leave;
   const plural = (n: number) => `${n} day${n === 1 ? "" : "s"}`;

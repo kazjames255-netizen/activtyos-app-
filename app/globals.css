@@ -355,3 +355,50 @@ html[data-ho-office="1"] .op-hero {
 
 /* Dialog footer must be opaque so scrolled content never shows through behind the action buttons. */
 .hub-sheet-foot { background: var(--surface); border-top: 1px solid var(--line); position: relative; z-index: 1; }
+
+/* ── Print stylesheet (docs/amir-backend-outstanding.md item 67) ────────────
+ * Real @media print rules, not the single one-off Tailwind `print:hidden`
+ * that used to exist (features/testing/TestLogger.tsx). The sidebar, top
+ * header, impersonation/platform-view bars and the staff/parent banner strip
+ * are hidden via that same `print:hidden` utility, applied where they're
+ * rendered in app/[portal]/layout.tsx — that's a real @media print rule
+ * (Tailwind compiles it to exactly that), just applied consistently now
+ * instead of on one floating widget.
+ *
+ * The app shell also pins itself to the viewport height with inner scroll
+ * areas (`h-screen` on the root, `overflow-auto` on <main>) so the fixed
+ * chrome around it never scrolls — necessary on screen, but it would clip a
+ * printed page to a single sheet's worth of content and cut the rest. These
+ * three rules (keyed to marker classes on the three shell layers, not `*`,
+ * so nothing inside the actual page content is touched) let everything
+ * print at its natural height instead.
+ */
+@media print {
+  .aos-shell-root,
+  .aos-shell-row {
+    height: auto !important;
+    min-height: 0 !important;
+  }
+  .aos-shell-main {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+
+/* Reusable opt-in for any card/row/table-record a print-relevant page (a
+ * payslip, invoice, incident record, certificate…) doesn't want split
+ * across a page boundary. Inert on screen — `break-inside` only affects
+ * pagination contexts (print, or multi-column layout, neither in play here)
+ * — so applying it has no on-screen effect at all. */
+.aos-print-avoid {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Companion for a section that should always start its own fresh page
+ * (e.g. one certificate per child) rather than sharing a sheet with the
+ * next record. Also inert on screen for the same reason as above. */
+.aos-print-page-break {
+  break-after: page;
+  page-break-after: always;
+}

@@ -58,7 +58,11 @@ export function docHtml(kind: "po" | "invoice" | "bill", doc: Record<string, unk
   const items: LineItem[] = Array.isArray(doc.lineItems) && (doc.lineItems as LineItem[]).length
     ? (doc.lineItems as LineItem[])
     : [{ description: String(doc.description || doc.notes || "Amount"), qty: 1, unitPrice: Number(doc.amount) || 0 }];
-  const rows = items.map((li, i) => `<tr>${isPo ? `<td style="padding:8px 6px;border-bottom:1px solid #eee;color:#8a86a3;font-variant-numeric:tabular-nums">${String((i + 1) * 10).padStart(5, "0")}</td>` : ""}<td style="padding:8px 6px;border-bottom:1px solid #eee">${esc(li.description)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${li.qty ?? 1}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${gbp(li.unitPrice ?? 0)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right"><b>${gbp((li.qty ?? 1) * (li.unitPrice ?? 0))}</b></td></tr>`).join("");
+  // Inline break-inside (not a class): this HTML is also opened standalone via
+  // document.write() in a popup window with no access to app/globals.css, so a
+  // reusable class wouldn't do anything there — the rule has to travel with
+  // the markup itself.
+  const rows = items.map((li, i) => `<tr style="break-inside:avoid;page-break-inside:avoid">${isPo ? `<td style="padding:8px 6px;border-bottom:1px solid #eee;color:#8a86a3;font-variant-numeric:tabular-nums">${String((i + 1) * 10).padStart(5, "0")}</td>` : ""}<td style="padding:8px 6px;border-bottom:1px solid #eee">${esc(li.description)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${li.qty ?? 1}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right">${gbp(li.unitPrice ?? 0)}</td><td style="padding:8px 6px;border-bottom:1px solid #eee;text-align:right"><b>${gbp((li.qty ?? 1) * (li.unitPrice ?? 0))}</b></td></tr>`).join("");
   const subtotal = lineTotal(items);
   const rate = Number(doc.taxRate) || 0;
   const tax = Math.round(subtotal * rate) / 100;
