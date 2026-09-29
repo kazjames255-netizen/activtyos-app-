@@ -304,7 +304,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
     const isNewSeries = !editor.id && editor.repeat !== "none";
     if (isNewSeries && (!editor.repeatUntil || editor.repeatUntil <= editor.date)) { setError("For a repeat, pick an ‘until’ date after the start date."); return; }
     setSaving(true);
-    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, source: editor.source.trim() || undefined, notes: editor.notes.trim() || undefined };
+    const nn = <T,>(v: T | undefined): T | null | undefined => (v === undefined && editor.id ? null : v); // edit: emptied field → null = remove it
+    const body: Record<string, unknown> = { date: editor.date, category: catName, amount: amt, source: nn(editor.source.trim() || undefined), notes: nn(editor.notes.trim() || undefined) };
     if (isNewSeries) { body.repeat = editor.repeat; body.repeatUntil = editor.repeatUntil; }
     try {
       if (editor.id) await apiPut(`/api/income/${encodeURIComponent(editor.id)}`, body);

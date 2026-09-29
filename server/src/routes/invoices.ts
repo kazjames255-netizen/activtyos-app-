@@ -13,6 +13,7 @@ import { platformFallback, stripe, toPence } from "../lib/stripe";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { addDays, ukToday } from "../lib/ukDate";
+import { splitClears, applyClears } from "../lib/patchClear";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
 // rest of the server (lib/stripe.ts) and DEPLOY.md use. Accept all three or a
@@ -125,10 +126,20 @@ async function own(req: Request, id: string) {
 invoices.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Invoice not found" }); return; }
-  const parsed = invoiceSchema.partial().safeParse(req.body);
+  // null = remove that optional field, so an edit that blanks the VAT %, due date, reference… actually sticks.
+  const { body, clear } = splitClears(req.body, ["customerEmail", "customerAddress", "bookingRef", "reference", "poNumber", "poAttachmentUrl", "accountRef", "description", "taxRate", "dueDate", "notes"]);
+  const parsed = invoiceSchema.partial().safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
-  const patch = { ...p, ...(p.lineItems !== undefined ? { amount: grandTotal(p.lineItems, p.amount, p.taxRate) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
+  const patch: Record<string, unknown> = { ...p };
+  // The stored amount is subtotal + VAT, so re-derive it from the MERGED document whenever the lines or the VAT rate change
+  // (a patch with only lineItems used to drop the existing VAT; clearing the rate left the old rate on a no-VAT total).
+  const before = o.snap.data() as { lineItems?: LineItem[]; amount?: number; taxRate?: number };
+  if (p.lineItems !== undefined || p.taxRate !== undefined || clear.includes("taxRate")) {
+    const rate = clear.includes("taxRate") ? undefined : (p.taxRate ?? before.taxRate);
+    patch.amount = grandTotal(p.lineItems ?? before.lineItems, p.amount ?? before.amount, rate);
+  } else if (p.amount !== undefined) patch.amount = round2(p.amount);
+  applyClears(patch, clear);
   await o.snap.ref.set(patch, { merge: true });
   if (p.status === "paid" && o.snap.data()!.status !== "paid")
     await settleInvoiceBooking(o.snap.id, { via: "manual" }).catch((e) => console.error("[invoices] settle booking:", (e as Error).message));

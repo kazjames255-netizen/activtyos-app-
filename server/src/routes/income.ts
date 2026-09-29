@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { splitClears, applyClears } from "../lib/patchClear";
 import type { Role } from "../middleware/role";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 
@@ -126,9 +127,11 @@ async function own(req: Request, id: string) {
 income.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Income not found" }); return; }
-  const parsed = incomeSchema.partial().safeParse(req.body);
+  const { body, clear } = splitClears(req.body, ["source", "notes", "method"]); // null = remove the field
+  const parsed = incomeSchema.partial().safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const patch = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}) };
+  const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}) };
+  applyClears(patch, clear);
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
