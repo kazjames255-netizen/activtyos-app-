@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
+import { peekMe } from "@/components/auth/PortalGuard";
+import { capLevel } from "@/lib/accessMap";
 
 // Just the thread fields the badge and the dashboard card need — the full
 // model lives in features/messages.
@@ -32,6 +34,9 @@ let cachedAt = 0;
 let inflight: Promise<ThreadSummary[]> | null = null;
 
 function loadThreadsShared(force: boolean): Promise<ThreadSummary[]> {
+  // A staff role set to None on Messages is refused the threads (403) and sees no Messages tab: don't ask on every page.
+  const me = peekMe();
+  if (me?.role === "staff" && capLevel(me.caps, "messaging") === "none") return Promise.resolve([]);
   if (!force && cached && Date.now() - cachedAt < TTL_MS) return Promise.resolve(cached);
   if (inflight) return inflight;
   inflight = apiGet<ThreadSummary[]>("/api/messages/threads")
@@ -62,8 +67,11 @@ export function useUnreadMessages(portal: PortalKey): number {
   );
 
   const load = useCallback((force: boolean) => {
+    // HQ has no tenant/parent inbox (its own is /api/platform/support), so the
+    // threads endpoint 403s on every platform page — don't ask.
+    if (portal === "platform") return;
     loadThreadsShared(force).then(apply).catch(() => {});
-  }, [apply]);
+  }, [apply, portal]);
 
   useEffect(() => { load(false); }, [load]);
   // Realtime updates must reflect a genuine change, so bypass the TTL cache.

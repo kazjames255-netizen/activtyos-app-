@@ -24,6 +24,9 @@ export function useBookingFlags(portal: PortalKey): BookingFlags {
   const [flags, setFlags] = useState<BookingFlags>({ count: 0, tips: [] });
 
   const load = useCallback(() => {
+    // Staff have no Bookings tab (nothing reads these flags), and the whole bookings list on every page was a 403 for any role
+    // set to None on Bookings — console errors on every screen. Only portals that show the tab ask.
+    if (portal === "staff") return;
     const url = portal === "custdash" ? "/api/my/bookings" : "/api/bookings";
     apiGet<Booking[]>(url)
       .then((bs) => {
