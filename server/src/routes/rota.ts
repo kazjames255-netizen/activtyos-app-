@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -240,7 +241,7 @@ const clockSchema = z.object({
   // On clock-out: minutes actually spent on break, so payroll uses the real
   // break rather than the planned one (acceptance d16s3).
   breakMin: z.number().int().min(0).max(1440).optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
   name: z.string().trim().max(120).optional(),
 });
 rota.post("/clock", async (req, res) => {

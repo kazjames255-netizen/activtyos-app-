@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -189,7 +190,7 @@ const doneSchema = z.object({
   courseId: z.string().trim().min(1).max(80),
   title: z.string().trim().max(200),
   score: z.number().min(0).max(100),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
   staffName: z.string().trim().max(120).optional(),
 });
 // POST /api/learning/completions — a course passed. Staff record their own

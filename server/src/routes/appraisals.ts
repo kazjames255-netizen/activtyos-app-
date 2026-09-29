@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -25,7 +26,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const keyOf = (req: Request) => (req.auth!.franchiseId ? `${req.auth!.tenantId}__fr__${req.auth!.franchiseId}` : req.auth!.tenantId!);
 const docId = (key: string, id: string) => `${key}_${id}`.replace(/\//g, "_");
 
-const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const iso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date");
 const rating = z.number().int().min(1).max(5);
 const score = z.object({ id: z.string().max(80), rating: rating.optional(), note: z.string().max(1_000).optional() });
 const reviewSchema = z.object({

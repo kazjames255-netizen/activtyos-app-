@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { splitClears, applyClears } from "../lib/patchClear";
@@ -13,7 +14,7 @@ export const income = Router();
 const col = db.collection("income");
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const incomeSchema = z.object({
   date: isoDay,
   category: z.string().trim().min(1).max(60),

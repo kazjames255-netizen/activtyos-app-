@@ -12,7 +12,7 @@ import { renderMoneyDoc } from "../lib/moneyDoc";
 import { platformFallback, stripe, toPence } from "../lib/stripe";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
-import { addDays, ukToday } from "../lib/ukDate";
+import { addDays, ukToday, isRealDay } from "../lib/ukDate";
 import { splitClears, applyClears } from "../lib/patchClear";
 
 // PUBLIC_WEB_URL/APP_URL are this file's historic names; WEB_URL is what the
@@ -35,7 +35,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const STATUSES = ["draft", "sent", "paid", "cancelled"] as const;
 const OWED = new Set(["sent"]); // sent-but-unpaid is money still to collect
 
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
   qty: z.number().nonnegative().default(1),

@@ -54,7 +54,7 @@ import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../.
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
-import { ukToday, ukTodayPlus } from "../lib/ukDate";
+import { ukToday, ukTodayPlus, isRealDay } from "../lib/ukDate";
 import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
@@ -164,7 +164,7 @@ const legacySchema = z.object({
     .optional(),
 });
 
-const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected an ISO date (YYYY-MM-DD)");
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected an ISO date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 
 const cancelSchema = z.object({
   msg: z.string().max(500).optional(),

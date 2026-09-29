@@ -7,7 +7,7 @@ import { renderMoneyDoc } from "../lib/moneyDoc";
 import { buildPoPdf } from "../lib/moneyDocPdf";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 import { bareImageUrl, signImageUrl } from "../lib/signing";
 import { splitClears, applyClears } from "../lib/patchClear";
 
@@ -20,7 +20,7 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const STATUSES = ["draft", "sent", "received", "paid", "cancelled"] as const;
 const OUTSTANDING = new Set(["sent", "received"]); // committed money not yet paid
 
-const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)");
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date");
 const lineItemSchema = z.object({
   description: z.string().trim().max(200),
   qty: z.number().nonnegative().default(1),

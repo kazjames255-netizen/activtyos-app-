@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { AuthContext, Role } from "../middleware/role";
@@ -114,7 +115,7 @@ timeclock.get("/", async (req, res) => {
 // someone in from the board by name.
 const eventSchema = z.object({
   kind: z.enum(["in", "out", "break-start", "break-end"]),
-  day: z.string().regex(DAY),
+  day: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date"),
   name: z.string().trim().max(120).optional(),
   role: z.string().trim().max(80).optional(),
   loc: z.string().trim().max(160).optional(),

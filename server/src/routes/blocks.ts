@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
@@ -24,8 +25,8 @@ const blockSchema = z
   .object({
     listingId: z.string().min(1),
     name: z.string().trim().min(2).max(120),
-    startDate: z.string().regex(dateRe),
-    endDate: z.string().regex(dateRe),
+    startDate: z.string().regex(dateRe).refine(isRealDay, "Not a real calendar date"),
+    endDate: z.string().regex(dateRe).refine(isRealDay, "Not a real calendar date"),
     capacity: z.number().int().min(1).max(10_000),
     open: z.boolean().optional().default(true),
     schedule: z
@@ -39,7 +40,7 @@ const blockSchema = z
     sessions: z
       .array(
         z.object({
-          date: z.string().regex(dateRe),
+          date: z.string().regex(dateRe).refine(isRealDay, "Not a real calendar date"),
           start: z.string().regex(timeRe),
           end: z.string().regex(timeRe),
         }),

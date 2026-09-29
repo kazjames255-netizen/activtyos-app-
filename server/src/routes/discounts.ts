@@ -7,7 +7,7 @@ import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseS
 import { checkCode, normaliseCode, type DiscountCodeDoc } from "../lib/discountCodes";
 import { emailNewMessage } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 
 // Discount codes (Marketing) — operators create/manage promo codes; a parent
 // validates one against their basket before checkout (the actual apply happens
@@ -21,7 +21,7 @@ const codeBase = z.object({
   type: z.enum(["percent", "amount", "perAttendee"]),
   value: z.number().positive().max(100_000),
   minSpend: z.number().nonnegative().optional(),
-  expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").optional(),
+  expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date").optional(),
   usageLimit: z.number().int().positive().max(1_000_000).optional(),
   listingId: z.string().trim().max(60).optional(), // scope to one listing
   perCustomerLimit: z.boolean().optional(), // one use per customer

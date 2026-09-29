@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { notify, notifyTenantMember } from "../lib/notify";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 
 // Leave & absence (the holiday planner), on the server.
 //
@@ -32,8 +32,8 @@ const absenceSchema = z.object({
   staffId: z.string().max(120).optional(),
   name: z.string().trim().max(120).optional(),
   kind: z.enum(KINDS),
-  start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
+  end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
   half: z.enum(["am", "pm"]).nullable().optional(),
   fromTime: z.string().max(5).optional(),
   toTime: z.string().max(5).optional(),

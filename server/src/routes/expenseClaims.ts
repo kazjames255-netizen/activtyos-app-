@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -21,7 +22,7 @@ const CATS = ["Travel & mileage", "Equipment", "Activity materials", "Food & cat
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const claimSchema = z.object({
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
   category: z.enum(CATS),
   amount: z.number().positive().max(10_000),
   note: z.string().trim().max(500).default(""),

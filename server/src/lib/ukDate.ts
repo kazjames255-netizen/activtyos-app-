@@ -31,3 +31,11 @@ export function ukTodayPlus(n: number, d: Date = new Date()): string {
 export function ukMonth(d: Date = new Date()): string {
   return ukToday(d).slice(0, 7);
 }
+
+/** True only for a REAL calendar day in YYYY-MM-DD form. A bare /^\d{4}-\d{2}-\d{2}$/ accepts "2026-13-45" and "2026-02-31",
+ *  which then sort/compare as dates and get stored (an expense dated 2026-13-45 sat in the ledger). Use as a zod `.refine`. */
+export function isRealDay(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}

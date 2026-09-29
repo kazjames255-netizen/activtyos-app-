@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -59,8 +60,8 @@ const empSchema = z.object({
    *  /employees); when absent on an edit the previously-stored encrypted
    *  value is preserved, not wiped. */
   niNumber: z.string().trim().max(20).optional().refine((v) => !v || NI_RE.test(normalizeNi(v)), { message: "Not a valid NI number (2 letters, 6 digits, A–D), e.g. AB123456C" }),
-  startDate: z.string().regex(DAY).optional(),
-  leaveDate: z.string().regex(DAY).nullable().optional(),
+  startDate: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date").optional(),
+  leaveDate: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date").nullable().optional(),
   studentLoanPlan: z.enum(["none", "plan1", "plan2", "plan4", "plan5", "postgrad"]).optional().default("none"),
   director: z.boolean().optional().default(false),
   taxRegime: z.enum(["uk", "scotland", "wales"]).optional().default("uk"),
@@ -195,10 +196,10 @@ payroll.post("/runs", async (req, res) => {
   const key = await manager(req, res); if (!key) return;
   const parsed = z.object({
     period: z.string().trim().min(1).max(120),
-    paidOn: z.string().regex(DAY),
+    paidOn: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date"),
     freq: z.enum(["weekly", "fortnightly", "fourweekly", "monthly"]).optional(),
     hoursBasis: z.string().max(20).optional(),
-    window: z.object({ start: z.string().regex(DAY), end: z.string().regex(DAY) }).optional(),
+    window: z.object({ start: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date"), end: z.string().regex(DAY).refine(isRealDay, "Not a real calendar date") }).optional(),
     lines: z.array(lineSchema).min(1).max(1_000),
   }).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }

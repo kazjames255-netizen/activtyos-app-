@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isRealDay } from "../lib/ukDate";
 
 // Task Manager — the operator to-do system. A task hangs off a real operational
 // record (camp / booking / compliance / venue) which is what makes it ActivityOS
@@ -85,7 +85,7 @@ const taskSchema = z.object({
   // tasks. The email is the stable identity; the name is what's displayed.
   whoEmail: z.string().max(160).optional(),
   prio: z.enum(["urgent", "high", "med", "low"]).optional(),
-  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").nullable().optional(), // ISO date (yyyy-mm-dd) or null
+  due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").refine(isRealDay, "Not a real calendar date").nullable().optional(), // ISO date (yyyy-mm-dd) or null
   time: z.string().max(5).nullable().optional(),      // optional HH:MM deadline time
   status: z.enum(["backlog", "todo", "prog", "done"]).optional(),
   link: linkSchema.optional(),                        // {k,v} or null
@@ -105,7 +105,7 @@ const taskSchema = z.object({
   // is for. `seriesId` ties them together for a future "delete the series".
   repeat: z.object({
     freq: z.enum(["daily", "weekdays", "weekly", "monthly"]),
-    until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),   // inclusive end date
+    until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),   // inclusive end date
   }).optional(),
 });
 const partialSchema = taskSchema.partial();
@@ -312,8 +312,8 @@ tasks.put("/series/:seriesId", async (req, res) => {
 // adds are made from the repeat's own details (fresh: to do, subtasks unticked,
 // no comments). Dates in both are left exactly as they are.
 const rangeSchema = z.object({
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
+  until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(isRealDay, "Not a real calendar date"),
   freq: z.enum(["daily", "weekdays", "weekly", "monthly"]).optional(),
 });
 tasks.put("/series/:seriesId/range", async (req, res) => {
