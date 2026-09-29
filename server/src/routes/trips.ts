@@ -433,6 +433,7 @@ trips.post("/:id/send-message", async (req, res) => {
   for (const [tok, fn] of SEND_TOKENS) base = base.split(tok).join(fn(trip));
 
   let sent = 0;
+  const messaged = new Set<string>();
   for (const a of attendees) {
     if (!a.childId) continue;
     const email = await parentEmailForChild(a.childId);
@@ -450,10 +451,20 @@ trips.post("/:id/send-message", async (req, res) => {
       ref: o.snap.id,
     });
     a.sent = true;
+    messaged.add(a.childId);
     sent++;
   }
   const now = new Date().toISOString();
-  await o.snap.ref.set({ attendees: (trip.attendees as Attendee[]) ?? [], parentMsgSentAt: now, updatedAt: now }, { merge: true });
+  // Stamp "sent" onto the attendees as they are NOW (same reason as
+  // requestConsents): writing back the list read before the emails went out
+  // wiped any consent a parent gave (or declined) while they were sending.
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(o.snap.ref);
+    if (!fresh.exists) return;
+    const current = (fresh.get("attendees") as Attendee[] | undefined) ?? [];
+    for (const a of current) if (a.childId && messaged.has(a.childId)) a.sent = true;
+    tx.set(o.snap.ref, { attendees: current, parentMsgSentAt: now, updatedAt: now }, { merge: true });
+  });
   res.json({ ok: true, sent });
 });
 
