@@ -74,6 +74,34 @@ account.get("/", async (req, res) => {
   });
 });
 
+
+const normName = (n: string) => n.trim().toLowerCase().replace(/\s+/g, " ");
+/** Does a colleague's record already carry this name? Rota / payroll / compliance / onboarding / credentials / leave records are matched to a member
+ *  of staff BY NAME, so an unnamed account that names itself "Jane Rota" would otherwise inherit Jane's DBS reference, onboarding file (bank + NI),
+ *  payslips and appraisals whenever Jane has records but no login yet. Only reached the first time an unnamed account picks a name. */
+async function nameHasRecords(tenantId: string, franchiseId: string | null, name: string): Promise<boolean> {
+  const want = normName(name);
+  const key = franchiseId ? `${tenantId}__fr__${franchiseId}` : tenantId;
+  const hit = (v: unknown) => normName(String(v ?? "")) === want;
+  const has = async (col: string, field: string, value: string, nameField: string) =>
+    (await db.collection(col).where(field, "==", value).get()).docs.some((d) => hit(d.get(nameField)));
+  const listHas = async (col: string, id: string, field: string, pick: (r: Record<string, unknown>) => string) => {
+    const arr = (await db.collection(col).doc(id).get()).get(field);
+    return Array.isArray(arr) && arr.some((r) => r && typeof r === "object" && hit(pick(r as Record<string, unknown>)));
+  };
+  const checks = await Promise.all([
+    listHas("rotas", key, "staff", (r) => String(r.name ?? "")),
+    listHas("payrollConfig", key.replace(/\//g, "_"), "employees", (r) => String(r.name ?? "")),
+    listHas("leaveConfig", key, "profiles", (r) => String(r.name ?? "")),
+    listHas("libraries", tenantId, "staff", (r) => `${r.first ?? ""} ${r.last ?? ""}`),
+    has("certifications", "tenantId", tenantId, "staffName"),
+    has("onboardRecords", "key", key, "staff"),
+    has("credentialRecords", "key", key, "staff"),
+    has("absences", "rotaKey", key, "name"),
+  ]);
+  return checks.some(Boolean);
+}
+
 account.put("/", async (req, res) => {
   const auth = req.auth!;
   const uid = req.user?.uid;
@@ -102,7 +130,8 @@ account.put("/", async (req, res) => {
     if (want.toLowerCase() !== cur.toLowerCase()) {
       const taken = !cur && want && auth.tenantId
         ? (await db.collection("users").where("tenantId", "==", auth.tenantId).get()).docs
-            .some((d) => d.id !== uid && String(d.get("name") ?? "").trim().toLowerCase() === want.toLowerCase())
+            .some((d) => d.id !== uid && normName(String(d.get("name") ?? "")) === normName(want))
+          || (await nameHasRecords(auth.tenantId, auth.franchiseId ?? null, want))
         : true;
       if (cur || taken || !want) { delete data.name; nameLocked = true; }
     }
