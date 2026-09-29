@@ -21,7 +21,7 @@ const codeBase = z.object({
   type: z.enum(["percent", "amount", "perAttendee"]),
   value: z.number().positive().max(100_000),
   minSpend: z.number().nonnegative().optional(),
-  expiry: z.string().max(10).optional(),
+  expiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a date (YYYY-MM-DD)").optional(),
   usageLimit: z.number().int().positive().max(1_000_000).optional(),
   listingId: z.string().trim().max(60).optional(), // scope to one listing
   perCustomerLimit: z.boolean().optional(), // one use per customer
@@ -277,9 +277,21 @@ async function own(req: Request, id: string) {
 discounts.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Code not found" }); return; }
-  const parsed = codeBase.partial().refine(pctCheck).safeParse(req.body);
+  // An explicit null CLEARS an optional field (expiry, min-spend, usage cap, listing scope, assignee).
+  // Omitting a key leaves it alone — so without this the edit form could never remove an expiry or a cap.
+  const CLEARABLE = ["minSpend", "expiry", "usageLimit", "listingId", "assignedTo", "assignedName"] as const;
+  const body: Record<string, unknown> = { ...(req.body ?? {}) };
+  const clear = CLEARABLE.filter((k) => body[k] === null);
+  clear.forEach((k) => delete body[k]);
+  const parsed = codeBase.partial().refine(pctCheck).safeParse(body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const patch: Record<string, unknown> = { ...parsed.data, ...(parsed.data.code ? { code: normaliseCode(parsed.data.code) } : {}) };
+  for (const k of clear) patch[k] = FieldValue.delete();
+  // Renaming onto another code's name would leave two codes that validate ambiguously (POST refuses this too).
+  if (typeof patch.code === "string" && patch.code !== o.snap.data()!.code) {
+    const dupe = await col.where("tenantId", "==", o.snap.data()!.tenantId).where("code", "==", patch.code).limit(1).get();
+    if (!dupe.empty && dupe.docs[0].id !== o.snap.id) { res.status(409).json({ error: "You already have a code with that name" }); return; }
+  }
   const prevAssigned = (o.snap.data()!.assignedTo as string | undefined)?.toLowerCase();
   const prevGroupId = o.snap.data()!.assignedGroupId as string | undefined;
   const tenantId = o.snap.data()!.tenantId as string;

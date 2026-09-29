@@ -162,18 +162,21 @@ export function MarketingApp() {
     const value = Number(f.value);
     if (!f.code.trim() || !value || value <= 0) { setError("A code and a positive value are required."); return; }
     if (f.type === "percent" && value > 100) { setError("A percentage can’t exceed 100."); return; }
+    // On edit, a blank/unticked field must be sent explicitly (null / false) — an omitted key means "leave as is",
+    // so before this an expiry, cap or "one use per customer" tick could never be removed once saved.
+    const clr = <T,>(v: T | undefined): T | null | undefined => (v === undefined && editId ? null : v);
     const payload = {
       code: f.code, type: f.type, value,
-      minSpend: f.minSpend ? Number(f.minSpend) : undefined,
-      expiry: f.expiry || undefined,
-      usageLimit: f.usageLimit ? Number(f.usageLimit) : undefined,
-      assignedTo: f.assignedTo || undefined,
-      assignedName: f.assignedName || undefined,
+      minSpend: clr(f.minSpend ? Number(f.minSpend) : undefined),
+      expiry: clr(f.expiry || undefined),
+      usageLimit: clr(f.usageLimit ? Number(f.usageLimit) : undefined),
+      assignedTo: clr(f.assignedTo || undefined),
+      assignedName: clr(f.assignedName || undefined),
       // Sent as "" on edit so deselecting a group actually clears it.
       assignedGroupId: editId ? f.assignedGroupId : (f.assignedGroupId || undefined),
-      listingId: f.listingId || undefined,
-      perCustomerLimit: f.perCustomerLimit || undefined,
-      exclusive: f.exclusive || undefined,
+      listingId: clr(f.listingId || undefined),
+      perCustomerLimit: editId ? f.perCustomerLimit : (f.perCustomerLimit || undefined),
+      exclusive: editId ? f.exclusive : (f.exclusive || undefined),
     };
     try {
       if (editId) await api(`/api/discounts/${encodeURIComponent(editId)}`, { method: "PUT", body: JSON.stringify(payload) });
