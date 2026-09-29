@@ -92,7 +92,7 @@ appraisals.get("/", async (req, res) => {
   const m = await me(req);
   const own = docs.filter((d) => isMine(m, d)).map(({ review: r }) =>
     // The appraiser's working notes aren't the staff member's until it's put to them.
-    r.status === "signoff" || r.status === "complete" ? r : { ...r, manager: { ratings: [] } });
+    r.status === "signoff" || r.status === "complete" ? r : (({ probationOutcome: _outcome, ...rest }) => ({ ...rest, manager: { ratings: [] } }))(r)); // …nor the probation verdict before it's put to them
   res.json({ reviews: own, templates: c.templates ?? null });
 });
 
