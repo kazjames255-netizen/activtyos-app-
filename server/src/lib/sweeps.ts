@@ -718,6 +718,42 @@ export async function listingAutoExpire(): Promise<void> {
   }
 }
 
+// ── Inventory low stock ───────────────────────────────────────────────────
+// Setup → Inventory's "Low stock alerts" toggle only ever drove the UI (the
+// badge, the filter, the tile count) — nothing on the server actually told a
+// provider when an item crossed its own reorder level (acceptance p2-o6).
+// Scan items at/below minQty with the flag on, and bell it once per item —
+// fireOnce keyed by the item id only, same as listing-auto-expire above, so
+// a still-low item isn't re-bothered every sweep interval.
+export async function inventoryLowStock(): Promise<void> {
+  const snap = await db.collection("inventory").get();
+  if (snap.empty) return;
+  const settingsFor = settingsLoader();
+  for (const d of snap.docs) {
+    const it = d.data() as {
+      tenantId?: string; franchiseId?: string | null; name?: string;
+      quantity?: number; minQty?: number | null; location?: string;
+    };
+    const minQty = it.minQty;
+    const quantity = it.quantity ?? 0;
+    if (!it.tenantId || minQty == null || quantity > minQty) continue;
+    const inv = (await settingsFor(it.tenantId)).inventory ?? {};
+    if (inv.lowStockAlert === false) continue; // default on, same rule as the UI badge
+    await fireOnce(`inventory-low_${d.id}`, { tenantId: it.tenantId }, () =>
+      notify({
+        tenantId: it.tenantId!,
+        to: { kind: "tenant" },
+        category: "inventory",
+        key: "inventory-low",
+        franchiseId: it.franchiseId ?? null,
+        title: `Low stock: ${it.name ?? "an item"}`,
+        body: `${quantity} left${it.location ? ` at ${it.location}` : ""} — at or below the reorder level of ${minQty}.`,
+        href: "/company/inventory",
+      }),
+    ).catch((err) => console.error(`[sweeps] inventory low stock ${d.id}:`, (err as Error).message));
+  }
+}
+
 // ── Subscription sync ─────────────────────────────────────────────────────
 // Backstop for the Stripe webhook: pull every billed tenant's subscription
 // and reconcile status/periods + metered quantities. Keeps dev (no public
@@ -913,6 +949,8 @@ export function startSweeps(): void {
   // Counts/exports/HQ analytics accuracy only — Browse already hides a listing
   // with nothing bookable left, so this never affects what a parent can see.
   sweep("listing-auto-expire", 60 * 60_000, listingAutoExpire);
+  // Setup → Inventory "low stock" — one bell per item, not a re-check every run.
+  sweep("inventory-low-stock", 60 * 60_000, inventoryLowStock);
   sweep("trip-consent-chase", 6 * 60 * 60_000, tripConsentChase);
   // Automatic emails (Setup → Email → Automatic emails).
   sweep("session-reminders", 30 * 60_000, sessionReminders);

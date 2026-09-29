@@ -1,0 +1,29 @@
+{
+ "p2-m16": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "DELETE /api/income/series/:id and DELETE /api/expenses/series/:id now only delete occurrences with date >= today, keeping past ones (they already happened). Verified against the live dev API: created a weekly recurring income row (and separately an expense row) spanning 3 weeks in the past to 3 weeks in the future, deleted the series, and confirmed the response's {deleted, keptPast} matched exactly (3 future deleted, 3 past kept), and a follow-up GET showed only the past rows still present, none of them in the future.",
+  "notes": "Same bug, same fix shape, in both routes (income.ts and expenses.ts) — they're near-identical siblings.",
+  "evidence": "server/src/routes/income.ts (DELETE /series/:seriesId); server/src/routes/expenses.ts (DELETE /series/:seriesId); throwaway server/src/moneyBugsTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZF"
+ },
+ "p2-m26": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "(a) POST /api/purchasing/:id/email now builds a real PDF of the PO (new server/src/lib/moneyDocPdf.ts, jsPDF — same library the codebase already uses server-side for payslips) and sends it as an attachment via sendMail's existing (but previously unused by this route) opts.attachments. Verified buildPoPdf() directly returns real PDF bytes (starts with the %PDF- magic, non-trivial size), then called the real route end-to-end (POST /api/purchasing, then POST /:id/email) and it succeeded, exercising the PDF build + attachment send with no throw. (b) PUT /api/purchasing/:id now auto-creates a linked 'pending' expense (category/amount/supplier carried over, notes referencing the PO) the moment status transitions to \"received\" and no expense is linked yet — mirroring the shape of expenses.ts's own POST /. Verified: created a PO, PUT status->received, got an expenseId back, fetched that expense doc and confirmed amount/status/notes; re-saved status->received a second time and confirmed no duplicate expense was created (exactly 1 for that PO).",
+  "notes": "No PDF renderer existed for purchase orders before this (only an HTML renderer, lib/moneyDoc.ts, used for the email body) — this is a genuinely new file, not a rewire. It intentionally reuses moneyDoc.ts's field reading (supplier/lineItems/comments/deliveryAddress/etc.) so the emailed PDF matches the on-screen document. The existing frontend 'Add to expenses' button in features/money/PurchasingApp.tsx (manual, sets expenseId itself) is now redundant but harmless — it's already guarded by the same expenseId check, so it becomes a no-op once the server has already linked one. Left it as-is rather than touching more UI than the task asked for; worth removing in a later UI cleanup pass. invoices.ts has the identical 'no PDF attached' pattern for POST /api/invoices/:id/email — NOT in scope for this batch (only purchasing.ts was named), flagging it as a likely twin bug worth a follow-up.",
+  "evidence": "server/src/lib/moneyDocPdf.ts (new); server/src/routes/purchasing.ts (POST /:id/email, PUT /:id); throwaway server/src/moneyBugsTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZF"
+ },
+ "p2-o14": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "POST /api/my/bookings now reads the listing's ageCaps/ageCapsOn and, when on, matches each child to the tenant's ratio group (settings.ratioGroups) covering their age and enforces that group's per-day cap inside the same booking transaction as the block-wide capacity check — refusing (or waitlisting, per the listing's normal waitlist setting) exactly like a full block already does, and updating an in-memory running tally so two lines in the SAME basket can't both slip past the same day's cap. Verified against the live dev API: seeded a tenant with a ratio group 'Under 5s' (age 0-4) capped at 1 place/day on a listing with waitlist off, and a block with plenty of block-wide capacity (20). 1st under-5 booking (age 3) -> Confirmed. 2nd under-5 booking -> refused 409 ('Under 5s is full...') even though the block itself was nowhere near full, proving the band cap (not just block capacity) is what stopped it. A 3rd booking for a child OUTSIDE the capped band (age 8, no cap set for that band) still booked normally on the same day, proving the cap is per-band, not block-wide.",
+  "notes": "Enforcement is deliberately at the same GROUP granularity the existing block-wide fits check already uses (a date-group of same-day basket lines is placed or waitlisted as one atomic unit) — so if a mixed-age date-group would breach ANY represented band's cap on ANY day, the whole group is treated as not fitting, same all-or-nothing semantics the surrounding code already documents for block capacity ('the whole basket gets places or the whole basket waitlists'). A child whose age doesn't fall in any configured ratio group, or whose band has no cap set (only some bands need to be capped), is unaffected — matches the wizard's own 'blank = no limit' semantics for ageCaps.",
+  "evidence": "server/src/routes/my.ts (POST /bookings, inside the booking transaction); server/src/routes/listings.ts (ageCaps/ageCapsOn, unchanged — already stored/returned, only enforcement was missing); throwaway server/src/moneyBugsTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZF"
+ }
+}

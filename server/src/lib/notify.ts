@@ -50,7 +50,9 @@ export type NotifyCategory =
   /** Learning Hub (tutoring): new notes, homework set / marked, lessons scheduled — parent-facing. */
   | "learning"
   /** A listing auto-ended because every dated run on it passed. */
-  | "listing";
+  | "listing"
+  /** An inventory item fell to or below its reorder level (Setup → Inventory). */
+  | "inventory";
 
 export interface NotificationDoc {
   tenantId: string;

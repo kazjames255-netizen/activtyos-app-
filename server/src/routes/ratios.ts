@@ -10,6 +10,7 @@ import { staffSiteScope, type SiteScope } from "../lib/siteScope";
 import { DEFAULT_BANDS, bandFor, requiredStaff } from "../lib/ratios";
 import { staffPolicy } from "../lib/staffPolicy";
 import { ukToday } from "../lib/ukDate";
+import { loadSettings } from "../lib/tenantLibrary";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Ratios & groups — is a session safely staffed, and who's in which group?
@@ -240,6 +241,60 @@ async function siteBoardKeys(date: string, site: SiteScope): Promise<Set<string>
 }
 const pick = (o: Record<string, string>, keep: (k: string) => boolean) => Object.fromEntries(Object.entries(o).filter(([k]) => keep(k)));
 
+/** Board key (child id, else row key — see siteBoardKeys) → the child's age
+ *  on `date`, for every child booked anywhere in the tenant that day. Used
+ *  only to flag (never to block) a manual age-band override on the board. */
+async function boardChildAges(tenantId: string, date: string): Promise<Map<string, number>> {
+  const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
+  const todaysBlockIds = blocksSnap.docs.filter((d) => (d.data() as BlockDoc).sessions.some((s) => s.date === date)).map((d) => d.id);
+  if (!todaysBlockIds.length) return new Map();
+  const bookingSnaps = await Promise.all(todaysBlockIds.map((id) => db.collection("bookings").where("blockId", "==", id).get()));
+  const rows: { key: string; childId: string | null; age: number }[] = [];
+  const childIds = new Set<string>();
+  for (const snap of bookingSnaps)
+    for (const d of snap.docs)
+      for (const r of registerRows(fromDoc(d.data() as BookingDoc), date)) {
+        rows.push({ key: r.key, childId: r.childId ?? null, age: r.age ?? 0 });
+        if (r.childId) childIds.add(r.childId);
+      }
+  const childDocs = childIds.size ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid))) : [];
+  const dobById = new Map(childDocs.filter((d) => d.exists).map((d) => [d.id, (d.data() as Record<string, unknown>).dob as string | undefined]));
+  const ages = new Map<string, number>();
+  for (const r of rows) {
+    const age = (r.childId ? ageOn(dobById.get(r.childId), date) : null) ?? r.age;
+    ages.set(r.key, age);
+    if (r.childId) ages.set(r.childId, age);
+  }
+  return ages;
+}
+
+interface AgeBandGroup { id: string; name: string; ageFrom: number; ageTo: number }
+
+/** A manual child → group drag that puts a child outside that group's set
+ *  age band isn't refused (a manager may have a real reason — a mature or
+ *  SEN-supported child, keeping siblings together, etc.) but it also isn't
+ *  silent: this returns a clear warning listing every such move so the UI
+ *  can surface it. Only checks groups the tenant has actually configured
+ *  age bands for (Setup → Age groups & rooms); nothing to compare against
+ *  means nothing is flagged. */
+async function ageBandWarning(tenantId: string, franchiseId: string | null | undefined, date: string, overrides: Record<string, string>): Promise<string | null> {
+  const entries = Object.entries(overrides);
+  if (!entries.length) return null;
+  const settings = await loadSettings(tenantId, franchiseId);
+  const groups = (settings.ratioGroups as AgeBandGroup[] | undefined) ?? [];
+  if (!groups.length) return null;
+  const ages = await boardChildAges(tenantId, date);
+  const misplaced: string[] = [];
+  for (const [key, groupId] of entries) {
+    const age = ages.get(key);
+    const group = groups.find((g) => g.id === groupId);
+    if (age == null || !group) continue;
+    if (age < group.ageFrom || age > group.ageTo) misplaced.push(`age ${age} into ${group.name} (${group.ageFrom}–${group.ageTo})`);
+  }
+  if (!misplaced.length) return null;
+  return `${misplaced.length} child${misplaced.length > 1 ? "ren" : ""} moved outside their group's age band: ${misplaced.join(", ")}.`;
+}
+
 ratios.get("/board/:date", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !boardCanUse(auth.role)) {
@@ -290,7 +345,10 @@ ratios.put("/board/:date", async (req, res) => {
     updatedAt: new Date().toISOString(),
     updatedBy: req.user?.email ?? "unknown",
   });
-  res.json({ ok: true });
+  // Flag (never block) a manual override that puts a child outside their
+  // group's configured age band — a warning, not a refusal: see ageBandWarning.
+  const warning = await ageBandWarning(auth.tenantId, auth.franchiseId, req.params.date, parsed.data.overrides).catch(() => null);
+  res.json(warning ? { ok: true, warning } : { ok: true });
 });
 
 const putSchema = z.object({

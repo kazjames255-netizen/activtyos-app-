@@ -11,6 +11,7 @@ import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
 import { whereInChunks } from "../lib/firestoreIn";
+import { auditIncidentDeletion } from "../lib/incidentDeletionAudit";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -561,6 +562,16 @@ incidents.delete("/:id", async (req, res) => {
   if (!canManage(req.auth!.role)) {
     res.status(403).json({ error: "Only the provider can delete a safeguarding record" });
     return;
+  }
+  // A record with a DSL (designated safeguarding lead) decision on it isn't
+  // deleted with zero trace — write a minimal audit stub (who/when/that it
+  // had a DSL decision, not the content) before the delete goes ahead.
+  // Whether a hard delete should be allowed here at all is a separate,
+  // bigger product question this does not attempt to answer.
+  const rec = own.snap.data()!;
+  const hadDslDecision = Array.isArray(rec.dslLog) && rec.dslLog.length > 0;
+  if (hadDslDecision) {
+    await auditIncidentDeletion(req, own.snap.id, rec);
   }
   await own.snap.ref.delete();
   res.json({ ok: true });

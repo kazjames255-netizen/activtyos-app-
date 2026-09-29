@@ -1370,6 +1370,45 @@ my.post("/bookings", async (req, res) => {
         blockById.set(snap.id, block);
       }
 
+      // Per-age-group daily caps (Setup → Age groups, listing wizard "Limit
+      // places by age group"). Stored on the listing but never read at
+      // booking before now (p2-o14) — capacity was block-wide only. When on,
+      // a child is matched to the tenant's ratio group covering their age,
+      // and that group's remaining places for the day are checked exactly
+      // like the block-wide cap below (fits → seat it; doesn't → waitlist/
+      // refuse the same way a full block would).
+      const ageCapsOn = !!(listing as { ageCapsOn?: boolean }).ageCapsOn;
+      const ageCaps = ((listing as { ageCaps?: Record<string, number> }).ageCaps ?? {}) as Record<string, number>;
+      const ratioGroups = ageCapsOn
+        ? (((tenantSnap.data()?.settings as { ratioGroups?: { id: string; ageFrom: number; ageTo: number; name?: string }[] } | undefined)?.ratioGroups) ?? [])
+        : [];
+      const ageCapsActive = ageCapsOn && Object.keys(ageCaps).length > 0 && ratioGroups.length > 0;
+      const groupForAge = (age: number): string | undefined => ratioGroups.find((g) => age >= g.ageFrom && age <= g.ageTo)?.id;
+      // blockId → day → groupId → seats already held (active statuses only —
+      // same set blockDomain's countsTowardCapacity uses). Queried once, then
+      // updated in-memory as this basket's own groups claim seats, so two
+      // groups in the SAME basket can't both squeeze past the same cap.
+      const ageBooked = new Map<string, Map<string, Record<string, number>>>();
+      if (ageCapsActive) {
+        for (const [id, block] of blockById) {
+          const activeSnap = await tx.get(
+            bookingsCol.where("blockId", "==", id).where("status", "in", ["Confirmed", "Approval needed", "Offered"]),
+          );
+          const byDay = new Map<string, Record<string, number>>();
+          for (const d of activeSnap.docs) {
+            const bk = fromDoc(d.data() as BookingDoc);
+            const gid = typeof bk.age === "number" ? groupForAge(bk.age) : undefined;
+            if (!gid) continue;
+            for (const day of bk.days ?? block.sessions.map((s) => s.date)) {
+              const rec = byDay.get(day) ?? {};
+              rec[gid] = (rec[gid] ?? 0) + 1;
+              byDay.set(day, rec);
+            }
+          }
+          ageBooked.set(id, byDay);
+        }
+      }
+
       // Split the basket by DATE-GROUP, never by child (§E): items sharing
       // the same days book or queue together (siblings stay together on a
       // date), but a full Tuesday doesn't stop Wednesday from booking.
@@ -1415,8 +1454,43 @@ my.post("/bookings", async (req, res) => {
         for (const [blockId, wanted] of wantedBy) {
           const blk = working.get(blockId)!;
           const scope = blk.capacityScope ?? "listing";
+
+          // Per-child, per-day age-group demand this group places on this
+          // block — only for children whose age band actually has a cap set.
+          let ageFits = true;
+          let ageFullMsg: string | undefined;
+          const ageWanted = new Map<string, Record<string, number>>(); // day → groupId → seats
+          if (ageCapsActive) {
+            for (const i of idxs) {
+              const age = resolveChild(priced[i].item).age;
+              const gid = typeof age === "number" ? groupForAge(age) : undefined;
+              if (!gid || ageCaps[gid] === undefined) continue;
+              for (const s of priced[i].segments) {
+                if (s.blockId !== blockId) continue;
+                for (const d of s.days) {
+                  const rec = ageWanted.get(d) ?? {};
+                  rec[gid] = (rec[gid] ?? 0) + 1;
+                  ageWanted.set(d, rec);
+                }
+              }
+            }
+            const already = ageBooked.get(blockId) ?? new Map<string, Record<string, number>>();
+            outer: for (const [day, byGid] of ageWanted) {
+              for (const [gid, want] of Object.entries(byGid)) {
+                const cap = ageCaps[gid];
+                const have = already.get(day)?.[gid] ?? 0;
+                if (have + want > cap) {
+                  ageFits = false;
+                  const gname = ratioGroups.find((g) => g.id === gid)?.name || "that age group";
+                  ageFullMsg = `${gname} is full on ${prettyDay(day)}`;
+                  break outer;
+                }
+              }
+            }
+          }
+
           const fits =
-            blk.open &&
+            blk.open && ageFits &&
             (scope === "day"
               ? daysHaveSpace(blk, wanted).fits
               : blk.bookedCount + idxs.length <= blk.capacity);
@@ -1426,10 +1500,21 @@ my.post("/bookings", async (req, res) => {
             // each of those days (and the total) is exact.
             working.set(blockId, { ...blk, ...countsUpdate(blk, idxs.length, Object.keys(wanted)) });
             changed.add(blockId);
+            // Reflect these seats in the age tally so a LATER group in this
+            // same basket can't also squeeze past the same day's cap.
+            if (ageCapsActive && ageWanted.size) {
+              const byDay = ageBooked.get(blockId) ?? new Map<string, Record<string, number>>();
+              for (const [day, byGid] of ageWanted) {
+                const rec = byDay.get(day) ?? {};
+                for (const [gid, n] of Object.entries(byGid)) rec[gid] = (rec[gid] ?? 0) + n;
+                byDay.set(day, rec);
+              }
+              ageBooked.set(blockId, byDay);
+            }
           } else {
             if (listing.waitlist === false) {
               const fullDay = scope === "day" ? ("fullDay" in daysHaveSpace(blk, wanted) ? daysHaveSpace(blk, wanted).fullDay : undefined) : undefined;
-              throw new HttpError(409, fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off");
+              throw new HttpError(409, ageFullMsg ?? (fullDay ? `${prettyDay(fullDay)} is full and the waitlist is off` : "This block is full and the waitlist is off"));
             }
             if (queueCap !== null) {
               const depth = queueDepth.get(blockId) ?? {};

@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
 import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
+import { buildPoPdf } from "../lib/moneyDocPdf";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { ukToday } from "../lib/ukDate";
@@ -161,7 +162,32 @@ purchasing.put("/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
   if (p.attachmentUrl) p.attachmentUrl = bareImageUrl(p.attachmentUrl);
-  const patch = { ...p, ...(p.lineItems !== undefined ? { amount: totalOf(p.lineItems, p.amount) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
+  const patch: Record<string, unknown> = { ...p, ...(p.lineItems !== undefined ? { amount: totalOf(p.lineItems, p.amount) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
+  const before = o.snap.data() as Record<string, unknown>;
+  // Marking a PO/bill "received" is a real Money-out event: goods/services
+  // landed, so it belongs in the expenses picture automatically — it must
+  // not silently vanish until someone remembers to press "Add to expenses"
+  // (p2-m26). Skip if it's already linked (expenseId) so re-saving never
+  // double-books it.
+  if (patch.status === "received" && before.status !== "received" && !before.expenseId && !patch.expenseId) {
+    const amount = (patch.amount as number | undefined) ?? (before.amount as number) ?? 0;
+    const expenseBase = {
+      tenantId: before.tenantId,
+      franchiseId: before.franchiseId ?? null,
+      date: ukToday(),
+      category: (before.category as string) || "Supplies",
+      amount: round2(amount),
+      supplier: (before.supplier as string) || undefined,
+      notes: `From PO${before.reference ? ` ${before.reference}` : ""}`,
+      status: "pending" as const,
+      dueDate: (patch.dueDate as string | undefined) ?? (before.dueDate as string | undefined),
+      createdBy: req.user?.email ?? "unknown",
+      createdByName: req.user?.name ?? req.user?.email ?? "Operator",
+      createdAt: new Date().toISOString(),
+    };
+    const expenseRef = await db.collection("expenses").add(expenseBase);
+    patch.expenseId = expenseRef.id;
+  }
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
   res.json(signDoc({ id: after.id, ...(after.data() as Record<string, unknown>) }));
@@ -186,7 +212,17 @@ purchasing.post("/:id/email", async (req, res) => {
   const html = renderMoneyDoc("po", doc, billing);
   // A supplier replying to a PO must reach the provider who raised it.
   const sender = await tenantSender(o.snap.data()!.tenantId as string, (billing?.businessName as string) || undefined);
-  await sendMail(to, `Purchase order${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`, html, sender);
+  // Attach a real PDF of the PO — the email body alone isn't something a
+  // supplier can file/print as the order document (p2-m26).
+  const pdfBytes = buildPoPdf(doc, billing);
+  const filename = `po-${(doc.reference as string) || o.snap.id}.pdf`.replace(/[^a-z0-9.\-]+/gi, "-");
+  await sendMail(
+    to,
+    `Purchase order${doc.reference ? ` ${doc.reference}` : ""} from ${(billing?.businessName as string) || (tenant.data()?.name as string) || "your provider"}`,
+    html,
+    sender,
+    { attachments: [{ filename, content: pdfBytes, contentType: "application/pdf" }] },
+  );
   const emailedAt = new Date().toISOString();
   await o.snap.ref.set({ emailedAt }, { merge: true });
   res.json({ ok: true, emailedAt, to });

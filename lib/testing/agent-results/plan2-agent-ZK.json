@@ -1,0 +1,29 @@
+{
+ "p2-s18": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "PUT /api/ratios/board/:date (server/src/routes/ratios.ts) previously stored a manual child->group override with zero validation. It now still accepts every override (a manager's judgment call is never refused — a mature/SEN-supported child, a sibling group, etc. may be a real reason), but when a child is dragged into a group outside that group's configured age band (Setup -> Age groups & rooms, tenant settings.ratioGroups), the response carries a clear warning: {ok:true, warning:'1 child moved outside their group's age band: age 4 into <Group> (8-11).'}. Verified against the real route: a 4-year-old dragged into an 8-11 group returns the warning and still saves; a 10-year-old into the same group saves with no warning (not over-triggered); a tenant with no configured age-band groups is skipped entirely (nothing to compare against).",
+  "notes": "This is the more cautious of two defensible choices (accept-and-warn vs refuse outright) — a genuine judgment call, implemented as instructed, not a unilateral policy decision. The front end (features/ratios/RatiosApp.tsx) already computed an equivalent 'misplaced' flag CLIENT-SIDE for display; this fix adds the missing SERVER-side signal on the write itself, which the UI can now read from the PUT response (not touched in this batch — UI wiring, if wanted, is a separate small follow-up).",
+  "evidence": "server/src/routes/ratios.ts (ageBandWarning, boardChildAges, wired into PUT /board/:date); server/src/zkFixVerifyTest.mts (throwaway, deleted after run)",
+  "at": "2026-09-29",
+  "agent": "ZK"
+ },
+ "p2-s5": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "DELETE /api/incidents/:id (server/src/routes/incidents.ts) on a record carrying a DSL decision (dslLog non-empty) previously did a hard delete with zero trace. It now writes a minimal audit stub to a new `incidentDeletionAudit` collection FIRST (incidentId, tenantId, franchiseId, kind, childName, hadDslDecision:true, deletedBy, deletedAt — never the record's actual content/notes) and only then deletes. Verified: deleting a safeguarding record with a dslLog writes exactly one audit stub naming the deleter and timestamp, with the DSL note's confidential text absent from the stub; deleting a record with NO dslLog writes no stub at all (fix stays scoped to the described gap, not a blanket audit-everything change); the delete itself still succeeds either way (not blocked).",
+  "notes": "OPEN DECISION FOR KAZ, explicitly out of scope for this fix: whether a manager should be able to hard-delete a DSL-decided safeguarding record AT ALL. This fix only closes the 'no trace whatsoever' gap (a real, unambiguous problem regardless of that larger question) — it does not add any confirmation step, retention period, or restriction on the delete itself. No existing AuditLog/auditLog collection was found elsewhere in the codebase to reuse (grepped server/src; only a separate, unrelated `payrollAuditLog` exists, via server/src/lib/payrollAudit.ts, which this follows as a style precedent) — a small dedicated `incidentDeletionAudit` collection was added instead (server/src/lib/incidentDeletionAudit.ts), per the task's fallback instruction.",
+  "evidence": "server/src/routes/incidents.ts (DELETE /:id); server/src/lib/incidentDeletionAudit.ts; server/src/zkFixVerifyTest.mts (throwaway, deleted after run)",
+  "at": "2026-09-29",
+  "agent": "ZK"
+ },
+ "d5s2": {
+  "verdict": "pass",
+  "method": "code",
+  "actual": "The public marketing site's static v2 pages (public/v2/*.html) each had a footer 'Get the app' block with Apple App Store and Google Play badge links (href=\"#\", not even real store URLs) advertising a mobile app that does not exist. Removed the badge markup (the whole 'Get the app' heading + badges block) from all 19 affected pages: activly.html, companies.html, companies.prehero.html, dpa.html, franchises.html, freelancers.html, parents.html, platform-bookings.html, platform-comms.html, platform-finance.html, platform-safeguarding.html, platform-staff.html, pricing.html, privacy.html, safeguarding.html, schools.html, security.html, terms.html, tour.html. Verified with a grep for 'ft-store'/'Google Play'/'App Store' across public/v2/*.html afterward: no hits remain, except parents.html's pre-existing (and accurate) FAQ line 'No [app to download]. It runs in your phone's browser...' which was correctly left alone since it doesn't advertise a nonexistent app.",
+  "notes": "Simplest safe fix only, as instructed: deleted the badge markup, did not build a replacement or a real app-download flow. No build step for these static files, so no typecheck applies here.",
+  "evidence": "public/v2/*.html (19 files) — footer 'Get the app' block removed",
+  "at": "2026-09-29",
+  "agent": "ZK"
+ }
+}

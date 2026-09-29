@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
+import { addDays } from "../lib/ukDate";
 
 // ── Availability requests ───────────────────────────────────────────────────
 // An operator asks a specific staff member to submit their availability for a
@@ -167,6 +168,28 @@ availability.put("/mine", async (req, res) => {
 
   const snap = await reqs.where("tenantId", "==", auth.tenantId).get();
   const myReqs = snap.docs.filter((d) => `${d.data().staffEmail}` === email);
+
+  // A dated grid submission must stay inside the window that was actually
+  // requested — the client used to be trusted for this, so a submission with
+  // a date outside the window still saved (acceptance p2-h13). Bound each of
+  // this staffer's requests: a camp's dates run camp.startDate..+weeks*7-1;
+  // any other window with an explicit from/to (week/range) bounds by that.
+  // An "ongoing" request (no from/to) carries no bound — it's a standing
+  // pattern, not dated — and requests with no bound at all are ignored: with
+  // nothing that names a window, there's nothing to enforce.
+  if (p.data.grid) {
+    const ranges: { from: string; to: string }[] = [];
+    for (const d of myReqs) {
+      const camp = d.data().camp as { startDate?: string; weeks?: number } | null;
+      const window = d.data().window as { from?: string; to?: string } | undefined;
+      if (camp?.startDate && camp.weeks) ranges.push({ from: camp.startDate, to: addDays(camp.startDate, camp.weeks * 7 - 1) });
+      else if (window?.from && window?.to) ranges.push({ from: window.from, to: window.to });
+    }
+    if (ranges.length) {
+      const outside = Object.keys(p.data.grid).find((iso) => !ranges.some((r) => r.from <= iso && iso <= r.to));
+      if (outside) { res.status(400).json({ error: `${outside} is outside the requested availability window.` }); return; }
+    }
+  }
 
   // Rostered days are protected: a staffer can't drop availability for a day
   // they've been assigned to (they must request time off). Force assigned dates

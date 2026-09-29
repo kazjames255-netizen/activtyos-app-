@@ -1,0 +1,51 @@
+{
+ "p2-h12": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "GET /api/rota now cross-checks each shift's staffId against that day's approved absences (server/src/routes/rota.ts flagShiftsOnLeave/approvedLeaveByName, matched by name since absences.staffId is a name-slug, not the rota's own staff.id). Verified live: PUT /api/rota assigned a staffer to a shift; GET showed no flag; POST /api/leave/absences recorded approved leave covering that date; GET then showed needsCover:true and staffOnLeave:true on the same shift, with staffId unchanged (the assignment itself is never touched); cancelling the leave via POST /api/leave/absences/:id/cancel made the flag disappear on the next GET.",
+  "notes": "This fix was already present on the branch (commit 0eb0317c, 'Overnight P3 testing pass') before this batch started — re-verified against the live API rather than re-implemented.",
+  "evidence": "server/src/routes/rota.ts (flagShiftsOnLeave, approvedLeaveByName); throwaway server/src/plan2BatchHRTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZH",
+  "retest": 1
+ },
+ "p2-rt10": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Same mechanism as p2-h12, retested from the rota-and-leave angle: a shift assigned to a staffer with approved leave that day now carries needsCover/staffOnLeave; the flag clears on cancellation. See p2-h12 for the full run.",
+  "evidence": "server/src/routes/rota.ts; throwaway server/src/plan2BatchHRTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZH",
+  "retest": 1
+ },
+ "p2-h13": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "PUT /api/availability/mine now bounds a dated grid submission against the window(s) actually requested for that staffer (server/src/routes/availability.ts): a camp request bounds by camp.startDate..+weeks*7-1, a week/range request bounds by window.from/to; a submission with any grid date outside every bound is refused 400 before anything is written. Verified live: POST /api/availability/requests created a 'week' request with from/to a week out; PUT /mine with a grid date 10 days past the window's end returned 400; PUT /mine with a grid date inside the window returned 200 and saved.",
+  "notes": "An 'ongoing' request (no from/to) carries no bound, by design — it's a standing weekly pattern, not a dated one, so there's nothing to enforce against.",
+  "evidence": "server/src/routes/availability.ts (PUT /mine); throwaway server/src/plan2BatchHRTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZH",
+  "retest": 1
+ },
+ "p2-l1": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "POST /api/learning/completions reads the tenant's Setup -> Learning passMark (server/src/routes/learning.ts, via loadSettings, same convention as other Setup-configured thresholds) and refuses a score below it with 422 {code:'below_pass_mark'} instead of recording a completion; a passing score is stored with completed:true and the passMark it cleared. Verified live: PUT /api/library set settings.learning.passMark=90; a score of 70 was refused 422/below_pass_mark; a score of 95 was accepted 200, and the stored Firestore doc in learningCompletions carries completed:true, passMark:90, score:95.",
+  "notes": "This fix was already present on the branch (commit 67f5ba1c, 'Plan 2 day 7: server-side pass mark on completions') before this batch started — re-verified against the live API rather than re-implemented. The POST/GET responses don't echo a literal `completed` field back to the client (only the stored doc carries it), but that's moot in practice: anything that clears the 422 gate is by definition >= passMark, so every completion that reaches the client is a real pass.",
+  "evidence": "server/src/routes/learning.ts (doneSchema, POST /completions); throwaway server/src/plan2BatchHRTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZH",
+  "retest": 1
+ },
+ "p2-o6": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Built a real sweep, inventoryLowStock() in server/src/lib/sweeps.ts, registered once in startSweeps() (sweep('inventory-low-stock', 60*60_000, inventoryLowStock)) without touching any existing sweep. It scans the `inventory` collection for items at/below minQty with the tenant's Setup -> Inventory lowStockAlert flag on (default on, same rule the UI badge already used), and bells the tenant once per item via fireOnce (keyed by item id only, matching listingAutoExpire's convention) + notify({to:{kind:'tenant'}}) under a new 'inventory' NotifyCategory. Verified by calling the exported function directly against a seeded item (quantity 2, minQty 5): first call raised exactly one notification naming the item and its reorder level; a second call raised none (fireOnce dedup held).",
+  "notes": "Added the 'inventory' category to NotifyCategory (server/src/lib/notify.ts) since none of the existing categories fit; it's tenant-audience only, not added to the parent-mute CATEGORIES list or STAFF_CATEGORIES (matches how 'listing' alerts are scoped). sweeps.ts had unrelated concurrent work in progress (an uncommitted onboarding-retention sweep) — left entirely untouched; only my inventoryLowStock function and its one registration line were added.",
+  "evidence": "server/src/lib/sweeps.ts (inventoryLowStock, startSweeps); server/src/lib/notify.ts (NotifyCategory); throwaway server/src/plan2BatchHRTest.mts (deleted after the run)",
+  "at": "2026-09-29",
+  "agent": "ZH",
+  "retest": 1
+ }
+}

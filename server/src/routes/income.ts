@@ -98,16 +98,19 @@ income.post("/", async (req, res) => {
   res.status(201).json({ id: ref.id, ...base });
 });
 
-// Delete a whole recurring series in one go.
+// Delete the FUTURE occurrences of a recurring series. Past occurrences already
+// happened — they're real history and must stay on the books.
 income.delete("/series/:seriesId", async (req, res) => {
   const auth = req.auth!;
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).where("seriesId", "==", req.params.seriesId).get();
   if (snap.empty) { res.status(404).json({ error: "Series not found" }); return; }
+  const today = new Date().toISOString().slice(0, 10);
+  const future = snap.docs.filter((d) => (d.data().date as string) >= today);
   const batch = db.batch();
-  snap.docs.forEach((d) => batch.delete(d.ref));
+  future.forEach((d) => batch.delete(d.ref));
   await batch.commit();
-  res.json({ ok: true, deleted: snap.size });
+  res.json({ ok: true, deleted: future.length, keptPast: snap.size - future.length });
 });
 
 async function own(req: Request, id: string) {

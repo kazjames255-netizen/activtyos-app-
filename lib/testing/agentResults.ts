@@ -98,6 +98,12 @@ import ZH from "./agent-results/plan2-agent-ZH.json";
 // minimal audit stub before the hard delete; marketing v2 pages no longer
 // advertise a nonexistent iOS/Android app.
 import ZK from "./agent-results/plan2-agent-ZK.json";
+// 29 Sept — Money bugs batch: income/expense recurring-series delete no
+// longer wipes past (already-happened) occurrences; a PO email now attaches
+// a real PDF and marking a PO "received" auto-creates its linked expense;
+// per-age-band booking caps (Setup → Age groups) are now enforced at
+// checkout, not just stored.
+import ZF from "./agent-results/plan2-agent-ZF.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -126,4 +132,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(ZH as Record<string, AgentResult>),
   ...(ZK as Record<string, AgentResult>),
   ...(ZI as Record<string, AgentResult>),
+  ...(ZF as Record<string, AgentResult>),
 };
