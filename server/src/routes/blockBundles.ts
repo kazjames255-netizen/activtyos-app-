@@ -53,11 +53,11 @@ const bundleSchema = z.object({
   passIds: z.array(z.string().min(1)).max(50).default([]),
   archived: z.boolean().default(false),
   priced: z.boolean().default(false),
-  masterPrice: z.number().nonnegative().nullable().default(null),
+  masterPrice: z.number().nonnegative().max(1_000_000).nullable().default(null),
   calcOn: z.boolean().default(true),
-  passFlat: z.record(z.string(), z.number().nonnegative()).default({}),
+  passFlat: z.record(z.string(), z.number().nonnegative().max(1_000_000)).default({}),
   passMode: z.record(z.string(), z.literal("flat")).default({}),
-  periodPrice: z.record(z.string(), z.number().nonnegative()).default({}),
+  periodPrice: z.record(z.string(), z.number().nonnegative().max(1_000_000)).default({}),
 });
 
 function operatorTenant(req: Request, res: Response): string | null {

@@ -68,9 +68,9 @@ const discountRuleSchema = z.object({
   moreThan: z.number().int().nonnegative(),
   appliesTo: z.enum(["all", "after1", "second"]),
   method: z.enum(["price", "subtract", "percent"]),
-  value: z.number().nonnegative(),
+  value: z.number().nonnegative().max(1_000_000),
   beforeDate: z.string().max(10),
-});
+}).refine((r) => r.method !== "percent" || r.value <= 100, { message: "A percentage discount can't exceed 100", path: ["value"] });
 
 const strArr = z.array(z.string().max(400)).max(100);
 
