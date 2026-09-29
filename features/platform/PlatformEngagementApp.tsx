@@ -10,8 +10,24 @@ interface Payload { rows: Row[]; totalViews: number }
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
 const BLUE = "#1d3a8f";
 const dur = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`);
-const PRETTY: Record<string, string> = { moneyin: "Money in", moneyout: "Money out", dash: "Dashboard", home: "Home" };
+const PRETTY: Record<string, string> = { moneyin: "Money in", moneyout: "Money out", dash: "Dashboard", home: "Home", learninghub: "Learning hub" };
 const pretty = (v: string) => PRETTY[v] ?? v.replace(/[-_]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^\w/, (c) => c.toUpperCase());
+
+/** Two raw view keys can read as the same page ("dash" + "dashboard" are both "Dashboard") — fold them into one row so the list never shows the same name twice. */
+function mergeSameLabel(rows: Row[]): Row[] {
+  const by = new Map<string, Row>();
+  for (const r of rows) {
+    const k = pretty(r.view);
+    const m = by.get(k);
+    if (!m) { by.set(k, { ...r }); continue; }
+    const prevSecs = m.avgPrevSeconds * m.viewsPrev + r.avgPrevSeconds * r.viewsPrev;
+    m.views += r.views; m.viewsPrev += r.viewsPrev; m.totalSeconds += r.totalSeconds;
+    m.avgSeconds = m.views ? Math.round(m.totalSeconds / m.views) : 0;
+    m.avgPrevSeconds = m.viewsPrev ? Math.round(prevSecs / m.viewsPrev) : 0;
+    m.deltaPct = m.avgPrevSeconds ? (m.avgSeconds - m.avgPrevSeconds) / m.avgPrevSeconds : null;
+  }
+  return [...by.values()];
+}
 
 const FILTERS: [string, string][] = [["all", "All"], ["freelancer", "Freelancer"], ["company", "Company"]];
 
@@ -23,7 +39,7 @@ export function PlatformEngagementApp() {
   const [metric, setMetric] = useState<"visits" | "time">("visits");
 
   const load = useCallback(() => {
-    apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Payload>(`/api/platform/page-engagement?type=${type}`).then((p) => { setD({ ...p, rows: mergeSameLabel(p.rows) }); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, [type]);
   useEffect(load, [load]);
 

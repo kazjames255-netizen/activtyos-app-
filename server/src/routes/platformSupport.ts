@@ -296,6 +296,13 @@ platformSupport.put("/:id", async (req, res) => {
     const target = await db.collection("supportThreads").doc(parsed.data.duplicateOf).get();
     if (!target.exists) { res.status(404).json({ error: "The thread you marked this a duplicate of doesn't exist" }); return; }
   }
+  // Only a category HQ actually has configured (or "" to clear) — a typo'd id would otherwise show up as its own raw-id bucket in Support review.
+  if (parsed.data.category) {
+    const cfg = await CFG_REF().get();
+    const cats = (cfg.exists ? (cfg.data()!.categories as { id: string }[]) : null);
+    const known = (cats?.length ? cats : DEFAULT_SUPPORT_CATEGORIES).map((c) => c.id);
+    if (!known.includes(parsed.data.category)) { res.status(400).json({ error: "Unknown category" }); return; }
+  }
   const patch: Partial<ThreadDoc> = {};
   if (parsed.data.status) {
     patch.status = parsed.data.status;
