@@ -28,6 +28,16 @@ interface BookingsState {
 
   filter: BookingFilter;
   query: string;
+  // The list's secondary narrowing controls (listing / day / date-range /
+  // season). Lifted out of BookingsList's local state so BookingsApp can
+  // mirror them into the URL alongside filter/query/ref — a Back press
+  // used to leave the route untouched entirely (see openRef push below),
+  // and even once that was fixed, these four stayed local-only so a
+  // refresh or Back still silently reset them.
+  listingFilter: string;
+  dayFilter: string;
+  rangeFilter: "" | "today" | "yesterday" | "week";
+  seasonFilter: string;
   selected: Record<string, boolean>;
   openRef: string | null;
   showCreate: boolean;
@@ -42,6 +52,10 @@ interface BookingsState {
 
   setFilter: (f: BookingFilter) => void;
   setQuery: (q: string) => void;
+  setListingFilter: (v: string) => void;
+  setDayFilter: (v: string) => void;
+  setRangeFilter: (v: "" | "today" | "yesterday" | "week") => void;
+  setSeasonFilter: (v: string) => void;
   toggleSel: (ref: string) => void;
   clearSel: () => void;
   selectMany: (refs: string[]) => void;
@@ -72,6 +86,19 @@ interface BookingsState {
 
 const selectedRefs = (sel: Record<string, boolean>) =>
   Object.keys(sel).filter((k) => sel[k]);
+
+// Where the list was scrolled to right before a booking was opened — not
+// store STATE (it shouldn't trigger a re-render or ride in the URL), just
+// enough memory to put the list back where it was on close/Back.
+let scrollMemory: number | null = null;
+
+// The portal shell scrolls its own <main> (app/[portal]/layout.tsx), not
+// window/body — window.scrollY is always 0 here, so that's what needs
+// capturing and restoring, not the window.
+function scrollContainer(): (Element & { scrollTop: number }) | null {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLElement>(".aos-shell-main");
+}
 
 const TRANSIENT_KEYS = ["_cancelling", "_refundType", "_chgKi", "_chgDt"] as const;
 
@@ -109,6 +136,10 @@ export const useBookingsStore = create<BookingsState>()(
 
       filter: "all",
       query: "",
+      listingFilter: "",
+      dayFilter: "",
+      rangeFilter: "",
+      seasonFilter: "",
       selected: {},
       openRef: null,
       showCreate: false,
@@ -135,6 +166,10 @@ export const useBookingsStore = create<BookingsState>()(
 
       setFilter: (f) => set((s) => void (s.filter = f)),
       setQuery: (q) => set((s) => void (s.query = q)),
+      setListingFilter: (v) => set((s) => void (s.listingFilter = v)),
+      setDayFilter: (v) => set((s) => void (s.dayFilter = v)),
+      setRangeFilter: (v) => set((s) => void (s.rangeFilter = v)),
+      setSeasonFilter: (v) => set((s) => void (s.seasonFilter = v)),
       toggleSel: (ref) => set((s) => void (s.selected[ref] = !s.selected[ref])),
       clearSel: () => set((s) => void (s.selected = {})),
       // Tick every ref passed (the currently-visible/filtered rows) so a whole
@@ -203,14 +238,48 @@ export const useBookingsStore = create<BookingsState>()(
       },
 
       open: (ref) => {
-        set((s) => void (s.openRef = ref));
+        set((s) => {
+          // Only remember the list's scroll position on the transition INTO
+          // the split view (not switching between two already-open
+          // bookings) — that's the position Back/close should hand back.
+          if (!s.openRef) scrollMemory = scrollContainer()?.scrollTop ?? null;
+          s.openRef = ref;
+        });
         try {
-          window.scrollTo(0, 0);
+          const el = scrollContainer();
+          if (el) el.scrollTop = 0; else window.scrollTo(0, 0);
         } catch {
           /* noop */
         }
       },
-      close: () => set((s) => void (s.openRef = null)),
+      close: () => {
+        set((s) => void (s.openRef = null));
+        const y = scrollMemory;
+        scrollMemory = null;
+        if (y === null) return;
+        // The list going from compact back to full width doesn't remount it
+        // (same rows, just re-styled), but it DOES still need a reflow before
+        // its scrollHeight is tall enough to take `y` — setting it in the
+        // same tick can get silently clamped to whatever the (still-compact)
+        // height allows. requestAnimationFrame is the natural "after the
+        // repaint" hook, but a backgrounded tab defers it indefinitely,
+        // which would leave the list stuck at the top — setTimeout keeps
+        // (throttled, not suspended) firing even then.
+        const restore = () => {
+          try {
+            const el = scrollContainer();
+            if (el) el.scrollTop = y; else window.scrollTo(0, y);
+          } catch {
+            /* noop */
+          }
+        };
+        try {
+          requestAnimationFrame(restore);
+        } catch {
+          /* noop */
+        }
+        setTimeout(restore, 0);
+      },
 
       resolveMove: (ref, approve, reason, approveIndexes) => {
         void run(async () => {

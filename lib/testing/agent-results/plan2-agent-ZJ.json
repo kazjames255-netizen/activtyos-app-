@@ -1,0 +1,32 @@
+{
+ "p2-f18": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "Re-verified live in Chrome against a fresh HO tenant (company account with 2 franchises, seeded via /api/register-role + /api/invites, company /company/bookings). components/franchise/HoScope.tsx already carries the fix from an earlier commit (b0881d59, 'HQ scope + booking deep-links') — no code change was needed here. Confirmed the full cycle by hand: picking 'ZJ Franchise North' in the header scope switcher wrote ?hoScope=<franchiseId> to the URL and switched the chrome from black (HO combined) to blue (franchise); browser Back genuinely stepped back — URL lost ?hoScope, chrome went back to black, sidebar nav reverted to the HO menu (Overview/Franchises/Money) rather than the franchise menu; Forward restored ?hoScope=<franchiseId> and the blue theme; and reloading straight onto the ?hoScope=<franchiseId> URL restored the franchise view and blue theme on a cold load.",
+  "notes": "No product bug found this session — the fix already present in components/franchise/HoScope.tsx (writeUrlScope/readUrlScope + a popstate listener) covers exactly what the step describes. Not touched.",
+  "evidence": "components/franchise/HoScope.tsx (pre-existing fix, commit b0881d59); manual Chrome session against localhost:3000/company/bookings as a fresh company+2-franchise test tenant",
+  "at": "2026-09-29",
+  "agent": "ZJ",
+  "retest": 1
+ },
+ "p2-b6": {
+  "verdict": "pass",
+  "method": "browser",
+  "actual": "Fixed and verified live in Chrome. features/bookings/store.ts and features/bookings/BookingsApp.tsx (which owns the list/detail split — features/bookings/BookingsList.tsx renders it) now mirror the status filter, search text, listing/day/date-range/season narrowing and the open booking's ref into the URL, and restore the list's scroll position on close. Verified: (1) picking a status chip or the listing dropdown updates ?filter=/?listing= via history.replace, and a plain reload on that URL restores the same filtered view; (2) clicking a booking row pushes ?ref=<ref> (a real history entry) and scrolls the detail pane to the top; (3) scrolling the list down (captured scrollTop 376 on the app shell's own scroll container, .aos-shell-main — the page does not use window/body scroll), opening a booking, then browser Back closed the detail panel, stayed on the Bookings page (did not leave it), and restored the list's scrollTop to exactly 376 pixel-for-pixel; (4) with a listing filter AND an open booking both in the URL, Back removed only ?ref, correctly leaving ?listing= in place and the filter chip still showing 'HO Camp (3)'; (5) the pre-existing deep link /company/bookings?ref=APF-10314 still opens straight to that booking's detail panel, unchanged.",
+  "notes": "Two real bugs found and fixed beyond the original description: (a) the listing/day/date-range/season narrowing controls in BookingsList.tsx were local useState, never in the URL or store at all — moved into the zustand store (listingFilter/dayFilter/rangeFilter/seasonFilter + setters) so BookingsApp can mirror them. (b) the app shell scrolls its own <main class=\"aos-shell-main\"> (app/[portal]/layout.tsx), not window — the original scroll-restore attempt targeting window.scrollY was a no-op; store.ts now finds and scrolls that container. (c) a genuine race in the URL<->store sync: two separate effects (one reading URL into the store, one writing store back to the URL) could, under React 18 StrictMode's dev-only double-invoke of the same commit, write the pre-hydration EMPTY filter state back over a fresh deep link's filters (e.g. /company/bookings?listing=HO+Camp reliably lost the listing param on load) — replaced with a single direction-aware effect (features/bookings/BookingsApp.tsx) that only finalizes a URL as 'resolved' once the store's own values actually match it, which is StrictMode-safe.",
+  "evidence": "features/bookings/store.ts (setListingFilter/setDayFilter/setRangeFilter/setSeasonFilter, scrollContainer(), open()/close() scroll capture+restore); features/bookings/BookingsApp.tsx (unified URL<->store sync effect); features/bookings/BookingsList.tsx (listing/day/range/season lifted from local state into the store); manual Chrome session against localhost:3000/company/bookings as a fresh company+2-franchise test tenant with 8 seeded bookings",
+  "at": "2026-09-29",
+  "agent": "ZJ",
+  "retest": 1
+ },
+ "p2-f14": {
+  "verdict": "pass",
+  "method": "api",
+  "actual": "Re-verified live against a fresh tenant with a real head-office-own booking/income/expense plus two real franchises (F1 'ZJ Franchise North', F2 'ZJ Franchise South'), each with their own income and expense entries. GET /api/income and GET /api/expenses both partition cleanly by franchiseId (applyHoNetFilter in server/src/lib/franchiseScope.ts: __ho__ = franchiseId null, a franchiseId = exact match, no query = everything) — confirmed with real numbers: income tenant total=1050, HO-own=500 + F1=300 + F2=250 = 1050 (exact match); expenses tenant total=400, HO-own=200 + F1=120 + F2=80 = 400 (exact match). Both counts (3+3+3=... i.e. 1 HO + 1 F1 + 1 F2 = 3 total for each) also matched exactly, confirming no double-counting or dropped rows.",
+  "notes": "Confirms the original finding: this was never a product bug — the original test script's own Venue-only expense filter helper had a category-field naming mismatch, not the API. The HO-own/F1/F2 partition is structurally exact by construction (every income/expense row is stamped with either franchiseId=null (HO) or the creating franchise's id at write time, and applyHoNetFilter does a plain equality filter over that one field), so this is expected to keep passing rather than being a coincidence of this particular dataset. No code change made.",
+  "evidence": "server/src/routes/income.ts, server/src/routes/expenses.ts, server/src/lib/franchiseScope.ts (applyHoNetFilter); live curl checks against a throwaway company tenant (2 franchises) via GET /api/income and /api/expenses with ?franchiseId=__ho__ / ?franchiseId=<F1> / ?franchiseId=<F2> / no query, run 2026-09-29",
+  "at": "2026-09-29",
+  "agent": "ZJ",
+  "retest": 1
+ }
+}

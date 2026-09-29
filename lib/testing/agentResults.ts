@@ -111,6 +111,11 @@ import ZF from "./agent-results/plan2-agent-ZF.json";
 // ownership, are idempotent per-person, and enforce RSVP capacity; the AI
 // chat's portal is derived from the authenticated role, never the client body.
 import ZG from "./agent-results/plan2-agent-ZG.json";
+// 29 Sept — franchise/HQ scoping UX batch: the HO scope picker's Back-button
+// fix and the Bookings list's filter/scroll/open-booking history fix
+// re-verified live in Chrome; p2-f14's HO-own+F1+F2=total re-proven with a
+// correctly-written check (real bug was never in the product).
+import ZJ from "./agent-results/plan2-agent-ZJ.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -141,4 +146,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(ZI as Record<string, AgentResult>),
   ...(ZF as Record<string, AgentResult>),
   ...(ZG as Record<string, AgentResult>),
+  ...(ZJ as Record<string, AgentResult>),
 };

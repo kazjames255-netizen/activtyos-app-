@@ -99,12 +99,18 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
   const [denyReason, setDenyReason] = useState("");
   const submitDeny = (ref: string) => { resolveMove(ref, false, denyReason.trim() || undefined); setDenyingRef(null); setDenyReason(""); };
 
-  // Local, not in the store: a listing and a day are how you narrow the list
-  // while working, not a view worth remembering between visits.
-  const [listing, setListing] = useState("");
-  const [day, setDay] = useState("");
-  const [range, setRange] = useState<"" | "today" | "yesterday" | "week">("");
-  const [season, setSeason] = useState("");
+  // A listing / day / date-range / season narrow the list further, on top of
+  // the status tab and search. Lives in the store (not local state) so
+  // BookingsApp can mirror it into the URL — a refresh or Back used to reset
+  // these silently.
+  const listing = useBookingsStore((s) => s.listingFilter);
+  const setListing = useBookingsStore((s) => s.setListingFilter);
+  const day = useBookingsStore((s) => s.dayFilter);
+  const setDay = useBookingsStore((s) => s.setDayFilter);
+  const range = useBookingsStore((s) => s.rangeFilter);
+  const setRange = useBookingsStore((s) => s.setRangeFilter);
+  const season = useBookingsStore((s) => s.seasonFilter);
+  const setSeason = useBookingsStore((s) => s.setSeasonFilter);
   const [exporting, setExporting] = useState(false);
 
   const { settings } = useSettings();
