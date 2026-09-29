@@ -234,7 +234,14 @@ moments.get("/", async (req, res) => {
       .filter((d) => on.get(String(d.get("tenantId") ?? "")))
       .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
       .sort((a, b) => (`${(b as { createdAt?: string }).createdAt}` < `${(a as { createdAt?: string }).createdAt}` ? -1 : 1));
-    res.json(await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent"));
+    // A parent sees who shared it by NAME — never the staff member's sign-in email (postedBy is that, and postedByName
+    // falls back to it when the account has no display name).
+    const forParent = (await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent")).map((m) => {
+      const { postedBy: _pb, ...rest } = m as Record<string, unknown> & { postedBy?: unknown; postedByName?: unknown };
+      const nm = typeof rest.postedByName === "string" ? rest.postedByName : "";
+      return { ...rest, postedByName: nm.includes("@") ? "The team" : nm };
+    });
+    res.json(forParent);
     return;
   }
 

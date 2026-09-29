@@ -131,7 +131,9 @@ posts.get("/", async (req, res) => {
       .filter((p) => (p.status ?? "published") === "published")
       .filter((p) => !p.franchiseId || franSet.has(p.franchiseId));
     list.sort(feedSort);
-    res.json(list);
+    // Families see the sender as authorLabel ("Head office" / the franchise / the brand) — never a staff member's
+    // sign-in email, which postedBy / postedByName carry.
+    res.json(list.map(({ postedBy: _pb, postedByName: _pn, ...rest }) => rest));
     return;
   }
   const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
