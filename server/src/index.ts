@@ -28,7 +28,7 @@ import { rota } from "./routes/rota";
 import { timeclock } from "./routes/timeclock";
 import { payroll } from "./routes/payroll";
 import { onboarding } from "./routes/onboarding";
-import { credentials } from "./routes/credentials";
+import { credentials, credentialsPublic } from "./routes/credentials";
 import { images, uploads } from "./routes/uploads";
 import { invoices, invoicePublic } from "./routes/invoices";
 import { income } from "./routes/income";
@@ -237,6 +237,11 @@ app.use("/api/public/invoice", rateLimit("public-invoice", 60), invoicePublic);
 // Employment-reference form — the referee is an outsider with no account, so
 // the whole exchange rides on the unguessable token. See routes/references.ts.
 app.use("/api/public/reference", rateLimit("public-reference", 30), referencePublic);
+
+// Staff certificate "Scan to verify" QR page (/v/{ref}) — an inspector or
+// anyone else with the printed cert has no account, so this rides on the
+// unguessable ref, same as the two routes above. See routes/credentials.ts.
+app.use("/api/public/credentials", rateLimit("public-credentials", 60), credentialsPublic);
 
 // Marketing "Book a demo" lead capture — POST is public (the /demo form).
 // The limit is for the public "Book a demo" POST — not HQ reading its own list.

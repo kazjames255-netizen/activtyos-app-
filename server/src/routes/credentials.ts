@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { Router, json as jsonBody, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
@@ -17,6 +18,17 @@ import type { Role } from "../middleware/role";
 // a manager or the person the file belongs to — never a colleague.
 
 export const credentials = Router();
+
+// Public half — mounted separately, ABOVE requireAuth (see index.ts). The
+// unguessable `ref` on a verified record IS the authorisation, same contract
+// as the invoice pay link / reference token. "AOSC-" (Credential) so a ref
+// here can never collide with a course-completion certificate's "AOS-" ref
+// (features/learning/certificates.ts makeRef) once that gets its own
+// verify page — the two are different collections and must not be
+// interchangeable.
+export const credentialsPublic = Router();
+const REF_PREFIX = "AOSC-";
+const genRef = () => REF_PREFIX + randomBytes(6).toString("hex").toUpperCase();
 
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const keyOf = (tenantId: string, franchiseId: string | null) => (franchiseId ? `${tenantId}__fr__${franchiseId}` : tenantId);
@@ -122,9 +134,51 @@ credentials.put("/records/:id", jsonBody({ limit: "1mb" }), async (req, res) => 
     if (!f.exists || f.get("key") !== s.key || !same(String(f.get("staff") ?? ""), rec.staff)) { res.status(400).json({ error: "An attached file doesn't belong to this person — upload it again." }); return; }
   }
   const now = new Date().toISOString();
-  await ref.set({ ...rec, updatedAt: now, key: s.key, tenantId: s.tenantId, franchiseId: s.auth.franchiseId ?? null, savedBy: req.user?.email ?? null });
+  // The verification ref is generated once and kept for the life of the
+  // record (a re-save must not silently invalidate a QR someone already
+  // printed or scanned).
+  const credRef = ((before as (Rec & { ref?: string }) | undefined)?.ref) || genRef();
+  await ref.set({ ...rec, ref: credRef, updatedAt: now, key: s.key, tenantId: s.tenantId, franchiseId: s.auth.franchiseId ?? null, savedBy: req.user?.email ?? null });
   if (s.manager) await mirror(s.tenantId, s.key, rec, req.user?.email ?? null);
-  res.json({ ...rec, updatedAt: now });
+  res.json({ ...rec, ref: credRef, updatedAt: now });
+});
+
+// GET /api/public/credentials/:ref — the page the "Scan to verify" QR on a
+// printed/downloaded certificate points to (/v/<ref>). No auth: anyone
+// scanning the code must be able to check it. Deliberately minimal and
+// deliberately UNIFORM for every way a ref can fail to check out (missing,
+// pending, rejected, malformed) — so the response can never be used to learn
+// that a *different* ref exists, or that a *found* ref belongs to someone
+// whose certificate was rejected. Only a genuinely `verified` record ever
+// gets a real answer, and only the minimum needed to confirm it: holder
+// name, certificate type, verified-as-of date, expiry/status. Never the DBS
+// number, files, issuer, tenant internals or any other staff data.
+credentialsPublic.get("/:ref", async (req, res) => {
+  const notFound = () => res.json({ found: false });
+  const ref = String(req.params.ref ?? "").trim();
+  if (!/^[A-Za-z0-9-]{4,40}$/.test(ref)) { notFound(); return; }
+  const snap = await db.collection("credentialRecords").where("ref", "==", ref).limit(1).get();
+  if (snap.empty) { notFound(); return; }
+  const rec = snap.docs[0].data() as Rec & { ref?: string; key?: string };
+  if (rec.verified !== "verified" || !rec.key) { notFound(); return; }
+  const types = (await typesFor(rec.key)) ?? [];
+  const t = types.find((x) => x.id === rec.typeId);
+  const typeName = t?.name || (rec.typeId === "dbs" ? "DBS Check" : rec.typeId === "pfa" ? "Paediatric First Aid" : rec.typeId);
+  // Same "no expiry entered → derive from the type's renewal interval" rule
+  // as mirror() above, so this page never disagrees with the rota's check.
+  let expiry = rec.expiry || "";
+  if (!expiry && rec.issue && t?.renewMonths) { const d = new Date(`${rec.issue}T00:00:00Z`); d.setUTCMonth(d.getUTCMonth() + t.renewMonths); expiry = d.toISOString().slice(0, 10); }
+  const today = new Date().toISOString().slice(0, 10);
+  const expired = !!expiry && expiry < today;
+  res.json({
+    found: true,
+    status: expired ? "expired" : "valid",
+    ref,
+    name: rec.staff,
+    type: typeName,
+    verifiedOn: rec.updatedAt ? rec.updatedAt.slice(0, 10) : null,
+    expiry: expiry || null,
+  });
 });
 
 credentials.delete("/records/:id", async (req, res) => {
