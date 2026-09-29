@@ -382,6 +382,8 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "booking-cancel", group: "Bookings & money", label: "Cancellation request" },
   { key: "meal-order", group: "Bookings & money", label: "Meal ordered, or a change / removal requested" },
   { key: "billing", group: "Bookings & money", label: "Subscription & billing (trial, payment failed, ended)" },
+  { key: "listing-ended", group: "Bookings & money", label: "A listing ended (every run date has passed)" },
+  { key: "inventory-low", group: "Daily reminders", label: "Stock at or below its reorder level" },
   { key: "trip-consent", group: "Care & safeguarding", label: "Trip consent given or declined" },
   { key: "incident-ack", group: "Care & safeguarding", label: "Parent acknowledged an accident / incident" },
   { key: "incident-reply", group: "Care & safeguarding", label: "Parent replied on an incident thread" },
