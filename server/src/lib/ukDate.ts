@@ -44,3 +44,7 @@ export function isRealDay(s: string): boolean {
 export function isRealTime(s: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
 }
+
+/** Optional-field helpers: "" (the form's "not set") passes, anything else must be a real day / clock time (HH:MM or HH:MM:SS). */
+export const isBlankOrRealDay = (s: string): boolean => s === "" || isRealDay(s);
+export const isBlankOrRealTime = (s: string): boolean => s === "" || (/^\d{2}:\d{2}(:\d{2})?$/.test(s) && isRealTime(s.slice(0, 5)));

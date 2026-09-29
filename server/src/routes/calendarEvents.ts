@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { isRealDay, isBlankOrRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
@@ -15,10 +16,10 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 
 const eventBase = z.object({
   title: z.string().trim().min(1).max(160),
-  date: z.string().max(10),
-  endDate: z.string().max(10).optional(),
-  start: z.string().max(8).optional(),
-  end: z.string().max(8).optional(),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  endDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  start: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(),
+  end: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(),
   allDay: z.boolean().optional(),
   category: z.string().max(60).optional(),
   color: z.string().max(20).optional(),

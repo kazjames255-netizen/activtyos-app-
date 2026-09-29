@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { esc } from "../lib/html";
@@ -19,9 +20,9 @@ const canManage = (role: Role) => role === "company" || role === "freelancer" ||
 const tripSchema = z.object({
   destination: z.string().trim().min(1).max(160),
   address: z.string().trim().max(240).optional(),
-  date: z.string().max(10),
-  departTime: z.string().max(8).optional(),
-  returnTime: z.string().max(8).optional(),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  departTime: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(),
+  returnTime: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(),
   listingId: z.string().max(60).optional(),
   transport: z.string().trim().max(160).optional(),
   childNames: z.array(z.string().max(80)).max(200).default([]),
