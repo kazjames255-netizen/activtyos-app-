@@ -74,7 +74,7 @@ for (const loc of LOCALES) {
       for (const s of await leftovers(page)) seen.push(`[${name}] ${s}`);
     };
     await hub(page, "/freelancer/learninghub");
-    await page.locator('[data-top="lessons"]').first().click();
+    await page.locator('[data-top="lessons"]').first().click({ timeout: 30_000 });
     await page.locator("#hub-notes").waitFor({ timeout: 30_000 });
     await shot("curriculum");
 
@@ -84,14 +84,14 @@ for (const loc of LOCALES) {
     const hit = page.getByRole("button", { name: L.title, exact: true }).first();
     await hit.waitFor({ timeout: 30_000 });
     await shot("curriculum-search");
-    await hit.click();
+    await hit.click({ timeout: 30_000 });
     await page.getByTestId("lesson-tutor-panel").waitFor({ timeout: 30_000 });
     await shot("reader");
     await page.getByTestId("lesson-plan").scrollIntoViewIfNeeded().catch(() => undefined);
     await shot("reader-plan");
 
     // preview player, step by step
-    await page.getByTestId("lesson-preview").click();
+    await page.getByTestId("lesson-preview").click({ timeout: 30_000 });
     await page.getByTestId("lesson-player").waitFor({ timeout: 30_000 });
     await page.waitForTimeout(1200);
     await shot("player-start");
@@ -99,11 +99,11 @@ for (const loc of LOCALES) {
       const b = page.getByTestId(`preview-jump-${step}`);
       if (await b.count()) { await b.click({ force: true }).catch(() => undefined); await page.waitForTimeout(900); await shot(`player-${step}`); }
     }
-    await page.getByTestId("lesson-leave-open").first().click().catch(() => undefined);
+    await page.getByTestId("lesson-leave-open").first().click({ timeout: 15_000 }).catch(() => undefined);
 
     // editor (new lesson) + flashcards
-    await page.goto("/freelancer/learninghub", { waitUntil: "load" });
-    await page.locator('[data-top="lessons"]').first().click();
+    await page.goto("/freelancer/learninghub", { waitUntil: "load", timeout: 30_000 });
+    await page.locator('[data-top="lessons"]').first().click({ timeout: 30_000 });
     await page.locator("#hub-notes").waitFor({ timeout: 30_000 });
     const create = page.locator("#hub-notes button", { hasText: /\+|Create|Creează|Utwórz|Creu|إنشاء/ }).first();
     if (await create.count()) { await create.click().catch(() => undefined); await page.locator("#hub-note-editor").waitFor({ timeout: 15_000 }).catch(() => undefined); await shot("editor"); }
