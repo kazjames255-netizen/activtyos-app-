@@ -15,7 +15,7 @@ import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/Operator
 import { useSettings } from "@/lib/settings";
 import { openPayslip, PAYROLL_RUNS_KEY, type PayRun, type Line } from "./PayrollApp";
 import { useI18n } from "@/lib/i18n/provider";
-import { get as apiGet, isDemoMode } from "@/lib/api";
+import { get as apiGet, isDemoMode, openFile } from "@/lib/api";
 
 const rich = (s: string) => s.split("**").map((p, i) => (i % 2 ? <b key={i}>{p}</b> : p));
 
@@ -76,24 +76,37 @@ export function StaffPayslipsApp() {
         ) : (
           <div className="divide-y divide-[var(--line)]">
             {mine.map(({ run, line }) => (
-              <button
-                key={run.id}
-                type="button"
-                onClick={() => openPayslip(line, run.period, run.paidOn, provider, runs)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[#f6f8fd]"
-              >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef4fd] text-[15px]">🧾</span>
-                <span className="min-w-0">
-                  <span className="block text-[13px] font-bold text-[var(--ink)]">{run.period}</span>
-                  <span className="block text-[11.5px] text-[var(--ink-3)]">
-                    {t("staffp.payPaid", { date: new Date(run.paidOn).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) })} · {line.basis === "hour" ? t("staffp.payHoursAt", { h: line.hoursM, rate: line.rate.toFixed(2) }) : t("staffp.paySalary")}
+              <div key={run.id} className="flex w-full items-center gap-3 px-4 py-3 hover:bg-[#f6f8fd]">
+                <button
+                  type="button"
+                  onClick={() => openPayslip(line, run.period, run.paidOn, provider, runs)}
+                  className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                >
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#eef4fd] text-[15px]">🧾</span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-bold text-[var(--ink)]">{run.period}</span>
+                    <span className="block text-[11.5px] text-[var(--ink-3)]">
+                      {t("staffp.payPaid", { date: new Date(run.paidOn).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) })} · {line.basis === "hour" ? t("staffp.payHoursAt", { h: line.hoursM, rate: line.rate.toFixed(2) }) : t("staffp.paySalary")}
+                    </span>
                   </span>
-                </span>
-                <span className="ml-auto text-right">
+                </button>
+                <span className="text-right">
                   <span className="block text-[13px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(line.netM)}</span>
                   <span className="block text-[11px] text-[var(--ink-3)]">{t("staffp.payNetView")}</span>
                 </span>
-              </button>
+                {/* Real, persisted PDF (server-generated) alongside the HTML preview above —
+                    see docs/payroll-integrations-handoff.md §4. Demo mode has no server run to fetch. */}
+                {!demo && (
+                  <button
+                    type="button"
+                    onClick={() => openFile(`/api/payroll/runs/${run.id}/payslip/${encodeURIComponent(line.staffKey ?? line.id)}/pdf`)}
+                    title={t("staffp.payDownloadPdf")}
+                    className="ml-1 shrink-0 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white"
+                  >
+                    ⬇ {t("staffp.payDownloadPdf")}
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         )}

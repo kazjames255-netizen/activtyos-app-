@@ -252,6 +252,7 @@ const en = {
   payHoursAt: "{h} hrs @ £{rate}",
   paySalary: "Salary",
   payNetView: "net · view →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ These are **estimated** payslips for reference. PAYE, National Insurance and pension are computed on simplified UK 2026/27 bands. Your statutory itemised pay statement — the legal record — is issued by your employer's payroll provider and may differ (student loans, statutory pay, Scottish/Welsh tax etc.).",
 
   // ── My appraisals ──
@@ -574,6 +575,7 @@ const pl: Keys = {
   payHoursAt: "{h} godz. × £{rate}",
   paySalary: "Pensja",
   payNetView: "netto · zobacz →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ To są **szacunkowe** odcinki wypłat, poglądowo. PAYE, National Insurance i składki emerytalne są wyliczane według uproszczonych progów brytyjskich 2026/27. Oficjalny, szczegółowy odcinek wypłaty — dokument prawny — wystawia firma obsługująca płace Twojego pracodawcy i może się on różnić (pożyczki studenckie, świadczenia ustawowe, podatek w Szkocji/Walii itp.).",
 
   aprTitle: "Moje oceny okresowe",
@@ -893,6 +895,7 @@ const ro: Keys = {
   payHoursAt: "{h} ore × £{rate}",
   paySalary: "Salariu",
   payNetView: "net · vezi →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ Acestea sunt fluturași **estimativi**, doar orientativ. PAYE, National Insurance și pensia sunt calculate pe baza pragurilor simplificate din Marea Britanie 2026/27. Fluturașul oficial detaliat — documentul legal — este emis de firma de salarizare a angajatorului și poate fi diferit (împrumuturi pentru studenți, plăți statutare, impozit în Scoția/Țara Galilor etc.).",
 
   aprTitle: "Evaluările mele",
@@ -1212,6 +1215,7 @@ const ur: Keys = {
   payHoursAt: "{h} گھنٹے @ £{rate}",
   paySalary: "تنخواہ",
   payNetView: "خالص · دیکھیں ←",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ یہ حوالے کے لیے **تخمینی** پے سلپس ہیں۔ PAYE، National Insurance اور پنشن کا حساب برطانیہ 2026/27 کی سادہ کی گئی حدوں پر ہے۔ آپ کا قانونی تفصیلی پے اسٹیٹمنٹ — یعنی قانونی ریکارڈ — آپ کے آجر کا پے رول فراہم کنندہ جاری کرتا ہے اور یہ مختلف ہو سکتا ہے (اسٹوڈنٹ لون، قانونی ادائیگیاں، اسکاٹش/ویلش ٹیکس وغیرہ)۔",
 
   aprTitle: "میری کارکردگی کے جائزے",
@@ -1531,6 +1535,7 @@ const pa: Keys = {
   payHoursAt: "{h} ਘੰਟੇ @ £{rate}",
   paySalary: "ਤਨਖ਼ਾਹ",
   payNetView: "ਸ਼ੁੱਧ · ਦੇਖੋ →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ ਇਹ ਹਵਾਲੇ ਲਈ **ਅੰਦਾਜ਼ਨ** ਪੇਅ-ਸਲਿੱਪਾਂ ਹਨ। PAYE, National Insurance ਅਤੇ ਪੈਨਸ਼ਨ ਦੀ ਗਣਨਾ ਯੂਕੇ 2026/27 ਦੀਆਂ ਸਰਲ ਕੀਤੀਆਂ ਹੱਦਾਂ 'ਤੇ ਕੀਤੀ ਗਈ ਹੈ। ਤੁਹਾਡਾ ਕਾਨੂੰਨੀ ਵੇਰਵੇਵਾਰ ਤਨਖ਼ਾਹ ਬਿਆਨ — ਕਾਨੂੰਨੀ ਰਿਕਾਰਡ — ਤੁਹਾਡੇ ਮਾਲਕ ਦਾ ਪੇਅਰੋਲ ਪ੍ਰਦਾਤਾ ਜਾਰੀ ਕਰਦਾ ਹੈ ਅਤੇ ਇਹ ਵੱਖਰਾ ਹੋ ਸਕਦਾ ਹੈ (ਸਟੂਡੈਂਟ ਲੋਨ, ਕਾਨੂੰਨੀ ਅਦਾਇਗੀਆਂ, ਸਕਾਟਿਸ਼/ਵੈਲਸ਼ ਟੈਕਸ ਆਦਿ)।",
 
   aprTitle: "ਮੇਰੇ ਮੁਲਾਂਕਣ",
@@ -1850,6 +1855,7 @@ const bn: Keys = {
   payHoursAt: "{h} ঘণ্টা @ £{rate}",
   paySalary: "বেতন",
   payNetView: "নিট · দেখুন →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ এগুলো রেফারেন্সের জন্য **আনুমানিক** পে-স্লিপ। PAYE, National Insurance ও পেনশন যুক্তরাজ্যের 2026/27-এর সরলীকৃত সীমা অনুযায়ী হিসাব করা। আপনার আইনি বিস্তারিত বেতন বিবরণী — আইনি রেকর্ড — আপনার নিয়োগকর্তার পে-রোল প্রোভাইডার দেন এবং তা আলাদা হতে পারে (স্টুডেন্ট লোন, বিধিবদ্ধ পেমেন্ট, স্কটিশ/ওয়েলশ কর ইত্যাদি)।",
 
   aprTitle: "আমার মূল্যায়ন",
@@ -2169,6 +2175,7 @@ const ar: Keys = {
   payHoursAt: "{h} ساعة × £{rate}",
   paySalary: "راتب",
   payNetView: "الصافي · عرض ←",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ هذه قسائم راتب **تقديرية** للاطلاع فقط. تُحسب PAYE وNational Insurance والمعاش وفق شرائح المملكة المتحدة المبسّطة لعام 2026/27. يصدر كشف الراتب الرسمي المفصّل — وهو السجل القانوني — عن مزوّد الرواتب لدى صاحب العمل وقد يختلف (قروض الطلاب، المدفوعات القانونية، ضريبة اسكتلندا/ويلز وغيرها).",
 
   aprTitle: "تقييماتي",
@@ -2488,6 +2495,7 @@ const pt: Keys = {
   payHoursAt: "{h} h × £{rate}",
   paySalary: "Salário",
   payNetView: "líquido · ver →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ Estes recibos são **estimados**, apenas para referência. PAYE, National Insurance e pensão são calculados com escalões simplificados do Reino Unido para 2026/27. O seu recibo oficial detalhado — o registo legal — é emitido pelo processador salarial do seu empregador e pode ser diferente (empréstimos de estudante, pagamentos legais, imposto escocês/galês, etc.).",
 
   aprTitle: "As minhas avaliações",
@@ -2807,6 +2815,7 @@ const es: Keys = {
   payHoursAt: "{h} h × £{rate}",
   paySalary: "Salario",
   payNetView: "neto · ver →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ Estas nóminas son **estimadas**, solo como referencia. PAYE, National Insurance y la pensión se calculan con tramos simplificados del Reino Unido 2026/27. Tu nómina oficial detallada — el documento legal — la emite la gestoría de nóminas de tu empleador y puede ser distinta (préstamos de estudios, prestaciones legales, impuesto escocés/galés, etc.).",
 
   aprTitle: "Mis evaluaciones",
@@ -3126,6 +3135,7 @@ const fr: Keys = {
   payHoursAt: "{h} h × £{rate}",
   paySalary: "Salaire",
   payNetView: "net · voir →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ Ces fiches de paie sont **estimatives**, à titre indicatif. PAYE, National Insurance et la retraite sont calculés selon des barèmes britanniques simplifiés 2026/27. Votre bulletin officiel détaillé — le document légal — est émis par le prestataire de paie de votre employeur et peut différer (prêts étudiants, indemnités légales, impôt écossais/gallois, etc.).",
 
   aprTitle: "Mes entretiens",
@@ -3445,6 +3455,7 @@ const cy: Keys = {
   payHoursAt: "{h} awr @ £{rate}",
   paySalary: "Cyflog",
   payNetView: "net · gweld →",
+  payDownloadPdf: "PDF",
   payDisclaimer: "⚠ Slipiau cyflog **amcangyfrifedig** yw'r rhain, er gwybodaeth. Mae PAYE, National Insurance a phensiwn wedi'u cyfrifo ar fandiau symlach y DU 2026/27. Darparwr cyflogres eich cyflogwr sy'n cyhoeddi eich datganiad cyflog statudol manwl — y cofnod cyfreithiol — a gall fod yn wahanol (benthyciadau myfyrwyr, tâl statudol, treth yr Alban/Cymru ac ati).",
 
   aprTitle: "Fy arfarniadau",
