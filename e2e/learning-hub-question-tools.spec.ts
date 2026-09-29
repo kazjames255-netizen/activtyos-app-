@@ -199,7 +199,9 @@ test.describe("per-question help tools in a live lesson", () => {
     expect(Math.abs(d2.x - (d.x - 260)), "window followed the drag (x)").toBeLessThan(6);
     expect(Math.abs(d2.y - (d.y + 90)), "window followed the drag (y)").toBeLessThan(6);
     // One tap makes the window see-through (the question shows behind it), a second tap makes it solid again.
-    const opacity = () => dlg.evaluate((el) => Number(getComputedStyle(el).opacity));
+    // Ghost mode fades the CONTENT (floating-panel-body) and makes the frame's own background transparent
+    // (FloatingPanel.tsx) — the outer dialog element itself never gets an opacity style, so check the body.
+    const opacity = () => dlg.getByTestId("floating-panel-body").evaluate((el) => Number(getComputedStyle(el).opacity));
     expect(await opacity()).toBe(1);
     await dlg.getByTestId("floating-panel-ghost").click();
     await expect.poll(opacity).toBeLessThan(0.7);

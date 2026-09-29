@@ -162,8 +162,8 @@ test.describe("tutor authors in the UI", () => {
     await expect(dlg.getByRole("group", { name: "Year groups" })).toBeVisible();
     for (let i = 0; i < 5; i++) await dlg.getByRole("button", { name: /^Add “/ }).first().click();
     await expect(dlg.getByText("5 questions, 8 marks").first()).toBeVisible();
-    // Tutors are told why a paper with a written question waits.
-    await expect(dlg.getByText(/1 written, you mark this/)).toBeVisible();
+    // Tutors are told why a paper with a written question waits (AssessmentBuilder.tsx qzAbWrittenChip).
+    await expect(dlg.getByText(/Written answers you mark: 1/)).toBeVisible();
     await dlg.getByRole("switch").last().click(); // publish
     const saved = page.waitForResponse((r) => r.url().includes("/api/learning-hub/assessments") && r.request().method() === "POST");
     await dlg.locator('[data-testid="hub-save-assessment"]').click();
