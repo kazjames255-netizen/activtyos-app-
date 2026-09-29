@@ -24,7 +24,7 @@ interface Thread {
   subject: string;
   kind: "message" | "bug";
   report?: Report;                  // present on bug threads — the "pulled over" details
-  status: "open" | "resolved";
+  status: "open" | "in_progress" | "resolved"; // the API can also mark a thread in_progress — the inbox treats anything not resolved as open
   unread: boolean;                  // unread by HQ
   messages: Msg[];
   createdAt: string; updatedAt: string;
@@ -105,13 +105,13 @@ export function SupportInboxApp() {
       })
       .filter((t) => filter === "resolved" || t.status !== "resolved" || filter === "all")
       .filter((t) => !ql || t.name.toLowerCase().includes(ql) || t.email.toLowerCase().includes(ql) || t.providerName.toLowerCase().includes(ql) || t.subject.toLowerCase().includes(ql))
-      .sort((a, b) => (a.status === b.status ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.status === "open" ? -1 : 1));
+      .sort((a, b) => (a.status === b.status ? (a.updatedAt < b.updatedAt ? 1 : -1) : a.status !== "resolved" ? -1 : 1));
   }, [threads, filter, q]);
 
   const sel = threads.find((t) => t.id === selId) ?? null;
-  const openCount = threads.filter((t) => t.status === "open").length;
+  const openCount = threads.filter((t) => t.status !== "resolved").length;
   const unreadCount = threads.filter((t) => t.unread).length;
-  const bugCount = threads.filter((t) => t.kind === "bug" && t.status === "open").length;
+  const bugCount = threads.filter((t) => t.kind === "bug" && t.status !== "resolved").length;
 
   const openThread = (t: Thread) => {
     setSelId(t.id);
@@ -122,7 +122,7 @@ export function SupportInboxApp() {
     }
   };
   const reply = (body: string) => { if (sel) run(apiPost(`/api/platform/support/${sel.id}/messages`, { body })); };
-  const toggleResolved = () => { if (sel) run(apiPut(`/api/platform/support/${sel.id}`, { status: sel.status === "open" ? "resolved" : "open" })); };
+  const toggleResolved = () => { if (sel) run(apiPut(`/api/platform/support/${sel.id}`, { status: sel.status !== "resolved" ? "resolved" : "open" })); };
   const created = (id: string) => { setComposing(false); setSelId(id); refresh(); };
 
   return (
@@ -232,8 +232,8 @@ function Conversation({ t, onReply, onToggleResolved }: { t: Thread; onReply: (b
         </div>
         <button type="button" onClick={onToggleResolved}
           className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
-          style={t.status === "open" ? { borderColor: "#0f7a43", color: "#0f7a43" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-          {t.status === "open" ? "✓ Mark resolved" : "↩︎ Reopen"}
+          style={t.status !== "resolved" ? { borderColor: "#0f7a43", color: "#0f7a43" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+          {t.status !== "resolved" ? "✓ Mark resolved" : "↩︎ Reopen"}
         </button>
       </div>
 
