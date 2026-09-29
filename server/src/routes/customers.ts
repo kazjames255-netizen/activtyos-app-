@@ -4,7 +4,7 @@ import { auth, db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
 import { franchiseFamilyEmails, familyFranchiseMap, isFranchise, franchiseStamp } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
-import { bookingInSite, staffSiteScope } from "../lib/siteScope";
+import { siteFamilyEmails, staffSiteScope } from "../lib/siteScope";
 
 // Customers & families — the tenant's parent records. Mostly SELF-FILLING:
 // every booking (operator-taken or parent checkout) upserts the family via
@@ -109,17 +109,6 @@ const customerSchema = z.object({
 // ZodOptional, which short-circuits before the default runs, so an omitted
 // field really does stay omitted rather than being reset to "" / [].
 const customerPatchSchema = customerSchema.partial();
-
-/** Lower-cased booker emails with a booking at one of a site-scoped member of staff's sites. */
-async function siteFamilyEmails(tenantId: string, site: NonNullable<Awaited<ReturnType<typeof staffSiteScope>>>): Promise<Set<string>> {
-  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
-  const out = new Set<string>();
-  for (const d of snap.docs) {
-    const b = d.data() as { email?: string; listingId?: string | null; blockId?: string | null };
-    if (b.email && bookingInSite(b, site)) out.add(b.email.trim().toLowerCase());
-  }
-  return out;
-}
 
 // GET /api/customers — the caller's tenant's customers (staff may read;
 // platform may filter with ?tenantId= or see all).

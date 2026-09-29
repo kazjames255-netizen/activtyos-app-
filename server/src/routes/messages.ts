@@ -4,6 +4,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { isPlainStaff, type Role } from "../middleware/role";
+import { siteFamilyEmails, staffSiteScope } from "../lib/siteScope";
 import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
 import { franchiseAccount } from "../lib/notify";
@@ -214,6 +215,13 @@ messages.post("/", (req, res, next) => (req.auth?.role === "parent" ? parentSend
     if (auth.franchiseId && (auth.role === "franchise" || auth.role === "staff") && !(await franchiseFamilyEmails(tenantId, auth.franchiseId)).has(parentEmail)) {
       res.status(400).json({ error: "You can only message your own customers or families who've booked" });
       return;
+    }
+    if (auth.role === "staff") {
+      const site = await staffSiteScope(auth);
+      if (site && !(await siteFamilyEmails(tenantId, site)).has(parentEmail)) {
+        res.status(400).json({ error: "You can only message families booked at your sites" });
+        return;
+      }
     }
     customer = await myCustomer(tenantId, parentEmail);
     if (!customer && !(await hasBooking(tenantId, parentEmail))) {
@@ -556,6 +564,12 @@ messages.post("/listing-recipients", async (req, res) => {
     const fam = await franchiseFamilyEmails(tenantId, auth.franchiseId);
     for (const e of [...byEmail.keys()]) if (!fam.has(e)) byEmail.delete(e);
   }
+  // …and staff assigned to certain sites only reach the families booked at those sites.
+  const siteA = auth.role === "staff" ? await staffSiteScope(auth) : null;
+  if (siteA) {
+    const fam = await siteFamilyEmails(tenantId, siteA);
+    for (const e of [...byEmail.keys()]) if (!fam.has(e)) byEmail.delete(e);
+  }
   res.json([...byEmail.values()].sort((a, b) => (a.name < b.name ? -1 : 1)));
 });
 messages.post("/broadcast", async (req, res) => {
@@ -618,6 +632,12 @@ messages.post("/broadcast", async (req, res) => {
   // never company-wide. Head office reaches the whole tenant.
   if ((req.auth!.role === "franchise" || req.auth!.role === "staff") && req.auth!.franchiseId) {
     const fam = await franchiseFamilyEmails(tenantId, req.auth!.franchiseId);
+    for (const e of [...recipients.keys()]) if (!fam.has(e)) recipients.delete(e);
+  }
+  // Staff assigned to certain sites (Team & invites) broadcast only to the families booked at those sites.
+  const siteB = req.auth!.role === "staff" ? await staffSiteScope(req.auth!) : null;
+  if (siteB) {
+    const fam = await siteFamilyEmails(tenantId, siteB);
     for (const e of [...recipients.keys()]) if (!fam.has(e)) recipients.delete(e);
   }
   if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }

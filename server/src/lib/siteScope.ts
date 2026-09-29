@@ -42,6 +42,18 @@ export function bookingInSite(b: { listingId?: string | null; blockId?: string |
   return (!!b.listingId && scope.listings.has(b.listingId)) || (!!b.blockId && scope.blocks.has(b.blockId));
 }
 
+/** Lower-cased booker emails with a booking at one of a site-scoped member of staff's sites. */
+export async function siteFamilyEmails(tenantId: string, site: SiteScope): Promise<Set<string>> {
+  const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
+  const out = new Set<string>();
+  for (const d of snap.docs) {
+    const b = d.data() as { email?: string; listingId?: string | null; blockId?: string | null };
+    if (b.email && bookingInSite(b, site)) out.add(b.email.trim().toLowerCase());
+  }
+  return out;
+}
+
+
 /** The children booked at the scope's sites (siblings on a joint booking
  *  too) — like franchiseChildIds, for records that hang off a child rather
  *  than a listing (incidents, medication, moments, trips). */
