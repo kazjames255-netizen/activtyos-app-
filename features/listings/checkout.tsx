@@ -1126,6 +1126,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     parentMode ? "Pay" : "Payment",
   ];
   // The step names double as identifiers (the "Meals" pill is styled by name), so translate at display time only.
+  const tfcCopy = (f: keyof typeof TFC_FAILURE_COPY, part: "title" | "detail") => { const k = ({ "not-connected": "tfcNotConnected", "insufficient-funds": "tfcInsufficient", "provider-not-added": "tfcProviderNotAdded", "connection-failed": "tfcConnFailed", "connection-expired": "tfcConnExpired" } as Record<string, string>)[f]; return k ? tr(`p7ck.${k}_${part}`) : TFC_FAILURE_COPY[f][part]; };
   const stepLabel = (n: string) => ({ Dates: tr("p7ck.stepDates"), Parent: tr("p7ck.stepParent"), Children: tr("p7ck.stepChildren"), Meals: tr("p7ck.stepMeals"), Pay: tr("p7ck.stepPay"), Payment: tr("p7ck.stepPayment") } as Record<string, string>)[n] ?? n;
   /** Where "Children" sits — one further along for an operator. */
   const whoAt = parentMode ? 1 : 2;
@@ -2326,8 +2327,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     just noise dressed as an alarm. */}
                 {tfcFail ? (
                   <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: "#d9534f66", background: "#d9534f1a", color: tk.ink }}>
-                    <b>{TFC_FAILURE_COPY[tfcFail].title}</b>
-                    <div className="mt-0.5" style={{ color: tk.muted }}>{TFC_FAILURE_COPY[tfcFail].detail}</div>
+                    <b>{tfcCopy(tfcFail, "title")}</b>
+                    <div className="mt-0.5" style={{ color: tk.muted }}>{tfcCopy(tfcFail, "detail")}</div>
                   </div>
                 ) : !linkedAll && (
                   <div className="mt-2 text-[10.5px]" style={{ color: "#e0a020" }}>
