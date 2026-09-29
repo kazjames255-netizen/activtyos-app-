@@ -141,6 +141,21 @@ events.get("/", async (req, res) => {
     if (decoded.email)
       listen(db.collection("bookings").where("email", "==", decoded.email), "bookings");
     listen(db.collection("children").where("parentUid", "==", decoded.uid), "children");
+    // Accidents/incidents (routes/incidents.ts GET /) — scoped to THIS family's
+    // own children, same as the REST read. Firestore's `in` operator caps at 10
+    // values, so a family with more children needs one listener per chunk of 10
+    // (mirrors whereInChunks in lib/firestoreIn.ts). Without this, a newly
+    // logged accident never reaches a parent who already has the page open —
+    // only a fresh reload (a fresh REST fetch) would ever pick it up, because no
+    // Firestore listener was ever attached for this collection on a parent
+    // connection (found live, 29 Sept — item 71).
+    if (wanted === null || wanted.has("incidents")) {
+      const kids = await db.collection("children").where("parentUid", "==", decoded.uid).get();
+      const kidIds = [...new Set(kids.docs.map((d) => d.id))];
+      for (let i = 0; i < kidIds.length; i += 10) {
+        listen(db.collection("incidents").where("childId", "in", kidIds.slice(i, i + 10)), "incidents");
+      }
+    }
     listen(db.collection("hubAttempts").where("parentUid", "==", decoded.uid), "hubAttempts"); // Learning Hub: their own children's results (a tutor's marking arrives live)
     listen(db.collection("listings"), "listings"); // the browse marketplace
     listen(db.collection("blocks"), "blocks"); // availability changes
