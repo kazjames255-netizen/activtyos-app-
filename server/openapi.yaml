@@ -3351,6 +3351,13 @@ paths:
         `POST /api/messages/broadcast` do. Anything with no data behind it
         degrades to neutral prose (`{BookingRef}` to an empty string) — a family
         never receives a literal `{Token}`. A parent's message is never merged.
+
+
+        **Franchise scope** — a franchise (and its staff) may only message ITS
+        OWN families (booked on its listings): another franchise's or head
+        office's family is a 400 here and a 404 on `/from-booking`, the same
+        rule `/broadcast` and `/listing-recipients` already applied. A parent's
+        sends are rate-limited (429) because each one emails the provider.
       requestBody:
         required: true
         content:
@@ -3842,7 +3849,7 @@ paths:
     post:
       tags: [moments]
       summary: Share a moment (operators + staff)
-      description: Children can only be tagged if their record has photoConsent — 409 otherwise.
+      description: Children can only be tagged if their record has photoConsent — 409 otherwise — and only children booked with the caller (a franchise's own bookings for a franchise account) — 403 `child_not_yours` otherwise.
       requestBody:
         required: true
         content:
