@@ -5,16 +5,25 @@
 // Marcus Bell (matches the other staff self-service areas).
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
+import { getMe, peekMe } from "@/components/auth/PortalGuard";
+import { isDemoMode } from "@/lib/api";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, loadClock, loadClockSettings, slug, clockIn, clockOut, startBreak, endBreak,
   workedMs, fmtDur, hhmm, sinceLabel, shiftToday, useClockRefresh
 } from "./data";
 
-const ME = "Marcus Bell";
-const ME_ID = slug(ME);
+const DEMO_ME = "Marcus Bell";
 
 export function TimeClockApp() {
+  // Who "me" is: this account's name (the rota and the clock both key on it). It was a hardcoded "Marcus Bell" for every staff member,
+  // so anyone opening /staff/clockinout clocked in as him.
+  const [ME, setME] = useState<string>(() => (isDemoMode() ? DEMO_ME : (peekMe() as { name?: string } | null)?.name?.trim() || ""));
+  useEffect(() => {
+    if (isDemoMode()) return;
+    getMe().then((m) => { const n = (m as { name?: string }).name?.trim(); if (n) setME(n); }).catch(() => {});
+  }, []);
+  const ME_ID = slug(ME || "me");
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
   useClockRefresh(setAll);
   const [tick, setTick] = useState(0);
@@ -23,7 +32,7 @@ export function TimeClockApp() {
   useEffect(() => { const t = setInterval(() => setTick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
   void tick;
 
-  const me = all[ME_ID] || { id: ME_ID, name: ME, status: "out" as const, breakMs: 0, events: [], day: "" };
+  const me = all[ME_ID] || { id: ME_ID, name: ME || "Me", status: "out" as const, breakMs: 0, events: [], day: "" };
   const status = me.status;
   const worked = workedMs(me);
   const sh = shiftToday(ME);
@@ -60,9 +69,9 @@ export function TimeClockApp() {
         {/* clock card */}
         <Card className="p-5">
           <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#eef4fd] text-[16px] font-extrabold text-[#1d3a8f]">{ME.split(" ").map((w) => w[0]).join("")}</span>
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#eef4fd] text-[16px] font-extrabold text-[#1d3a8f]">{(ME || "Me").split(" ").map((w) => w[0]).join("").slice(0, 2)}</span>
             <div>
-              <div className="text-[15px] font-extrabold text-[var(--ink)]">{ME}</div>
+              <div className="text-[15px] font-extrabold text-[var(--ink)]">{ME || "Me"}</div>
               <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold" style={{ background: statusMeta.bg, color: statusMeta.tone }}><span className="h-2 w-2 rounded-full" style={{ background: statusMeta.dot }} />{statusMeta.label}{status !== "out" && me.clockInAt ? ` · since ${hhmm(me.clockInAt)}` : ""}</span>
             </div>
           </div>
