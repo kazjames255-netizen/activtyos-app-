@@ -397,12 +397,20 @@ function operatorTenant(req: import("express").Request, res: import("express").R
   return auth.tenantId;
 }
 
+/** The franchise a folder action is scoped to (a franchise or its staff), else null = head office / freelancer. */
+const folderFranchise = (req: Req): string | null => ((req.auth!.role === "franchise" || req.auth!.role === "staff") && req.auth!.franchiseId ? req.auth!.franchiseId : null);
+/** May the caller change this folder? Head office: any. A franchise: only folders it created. */
+const folderMine = (req: Req, f: { franchiseId?: string | null }): boolean => { const fr = folderFranchise(req); return !fr || f.franchiseId === fr; };
+
 // GET /api/messages/folders — this tenant's folders, newest name-sorted.
 messages.get("/folders", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await foldersCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  // A franchise sees its own folders (plus legacy unstamped ones); "__ho__" folders are head office's.
+  const fr = folderFranchise(req);
+  const list = (snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null })[])
+    .filter((f) => !fr || !f.franchiseId || f.franchiseId === fr);
   list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
   res.json(list);
 });
@@ -413,7 +421,7 @@ messages.post("/folders", async (req, res) => {
   if (!tenantId) return;
   const parsed = folderNameSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { tenantId, name: parsed.data.name, createdAt: new Date().toISOString() };
+  const doc = { tenantId, name: parsed.data.name, franchiseId: folderFranchise(req) ?? "__ho__", createdAt: new Date().toISOString() };
   const ref = await foldersCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -426,7 +434,7 @@ messages.put("/folders/:id", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = foldersCol.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Folder not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== tenantId || !folderMine(req, snap.data()!)) { res.status(404).json({ error: "Folder not found" }); return; }
   await ref.set({ name: parsed.data.name }, { merge: true });
   res.json({ id: ref.id, ...snap.data(), name: parsed.data.name });
 });
@@ -437,7 +445,7 @@ messages.delete("/folders/:id", async (req, res) => {
   if (!tenantId) return;
   const ref = foldersCol.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Folder not found" }); return; }
+  if (!snap.exists || snap.data()!.tenantId !== tenantId || !folderMine(req, snap.data()!)) { res.status(404).json({ error: "Folder not found" }); return; }
   const filed = await threadsCol.where("tenantId", "==", tenantId).where("folderId", "==", req.params.id).get();
   await Promise.all(filed.docs.map((d) => d.ref.set({ folderId: FieldValue.delete() }, { merge: true })));
   await ref.delete();
@@ -456,7 +464,8 @@ messages.put("/threads/:id/folder", async (req, res) => {
   if (!tSnap.exists || tSnap.data()!.tenantId !== tenantId || (staffUid !== null && !joinedAt(tSnap.data()!, staffUid))) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (folderId) {
     const fSnap = await foldersCol.doc(folderId).get();
-    if (!fSnap.exists || fSnap.data()!.tenantId !== tenantId) { res.status(400).json({ error: "Unknown folder" }); return; }
+    const fr = folderFranchise(req);
+    if (!fSnap.exists || fSnap.data()!.tenantId !== tenantId || (fr && fSnap.data()!.franchiseId && fSnap.data()!.franchiseId !== fr)) { res.status(400).json({ error: "Unknown folder" }); return; }
   }
   await tRef.set({ folderId: folderId ?? FieldValue.delete() }, { merge: true });
   res.json({ ok: true, folderId });
