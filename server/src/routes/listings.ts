@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import { librarySnap } from "../lib/tenantLibrary";
 import { canWrite } from "../middleware/role";
-import { isFranchise } from "../lib/franchiseScope";
+import { isFranchise, visibleToFranchise } from "../lib/franchiseScope";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
@@ -573,6 +573,26 @@ async function categoryNamesFor(tenantId: string, categoryIds: unknown): Promise
   return ids.map((id) => byId.get(id)).filter((n): n is string => !!n);
 }
 
+/** A listing may only point at a ticket bundle / meal menu its OWNER can use. Same tenant is not enough: a franchise
+ *  that pasted head office's (or a sibling's) bundle id got that bundle's name, timings and passes published on its
+ *  own listing. Head office / freelancers are unrestricted within their tenant. */
+async function foreignRefProblem(auth: Parameters<typeof visibleToFranchise>[0], tenantId: string, data: { blockId?: string | null; mealPlan?: Record<string, unknown> }): Promise<string | null> {
+  if (data.blockId) {
+    const b = await db.collection("blockBundles").doc(data.blockId).get();
+    if (!b.exists || b.get("tenantId") !== tenantId || !(await visibleToFranchise(auth, b.data() as { franchiseId?: string | null; createdBy?: string | null }))) return "Unknown ticket bundle (it must be one of yours)";
+  }
+  const menuIds = new Set<string>();
+  for (const v of Object.values(data.mealPlan ?? {})) {
+    const id = typeof v === "string" ? v : (v as { menuId?: string } | null)?.menuId;
+    if (id) menuIds.add(id);
+  }
+  for (const id of menuIds) {
+    const m = await db.collection("mealMenus").doc(id).get();
+    if (!m.exists || m.get("tenantId") !== tenantId || !(await visibleToFranchise(auth, m.data() as { franchiseId?: string | null; createdBy?: string | null }))) return "Unknown meal menu (it must be one of yours)";
+  }
+  return null;
+}
+
 listings.post("/", async (req, res) => {
   const auth = req.auth!;
   if (!canWrite(auth.role) || !auth.tenantId) {
@@ -588,6 +608,7 @@ listings.post("/", async (req, res) => {
   }
   const tenant = await db.collection("tenants").doc(auth.tenantId).get();
   const data = parsed.data;
+  { const bad = await foreignRefProblem(auth, auth.tenantId, data); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
     const problems = publishProblems(data as Record<string, unknown>);
     if (problems.length) {
@@ -664,6 +685,7 @@ listings.put("/:id", async (req, res) => {
     return;
   }
   const data: ListingInput = parsed.data;
+  { const bad = await foreignRefProblem(req.auth!, req.auth!.tenantId!, data); if (bad) { res.status(400).json({ error: bad }); return; } }
   if (data.status === "live") {
     const problems = publishProblems({ ...own.snap.data()!, ...data });
     if (problems.length) {
