@@ -40,13 +40,15 @@ for (const loc of LOCALES) {
     };
     await page.goto("/freelancer/learninghub", { waitUntil: "load" });
     await page.waitForSelector("#learning-hub, #learning-hub-off", { timeout: 60_000 });
+    // "Tools" is a minor sub-tab under the "Lessons" top tab (tabGroups.ts) — it isn't in the DOM until that top tab is active.
+    await page.locator(`[data-top="lessons"]`).first().click({ timeout: 30_000 });
     const b = page.locator(`[data-sub="tools"]`).first();
-    await b.click(); await page.waitForSelector("#hub-tools", { timeout: 30_000 });
+    await b.click({ timeout: 30_000 }); await page.waitForSelector("#hub-tools", { timeout: 30_000 });
     await shot("catalogue");
     for (const id of TOOLS) {
       const card = page.getByTestId(`tool-${id}`).first();
       if (!(await card.count())) { seen.push(`[${id}] tool card not found`); continue; }
-      await card.scrollIntoViewIfNeeded(); await card.click().catch(() => undefined);
+      await card.scrollIntoViewIfNeeded(); await card.click({ timeout: 15_000 }).catch(() => undefined);
       await page.waitForTimeout(1500);
       await shot(`tool-${id}`);
       await page.keyboard.press("Escape"); await page.waitForTimeout(300);
