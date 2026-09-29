@@ -7,6 +7,7 @@ import { isPlainStaff, type Role } from "../middleware/role";
 import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
 import { franchiseEmail } from "../lib/notify";
+import { rateLimit } from "../lib/rateLimit";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { customerAreaOn } from "../lib/customerArea";
 import { webUrl } from "../lib/stripe";
@@ -176,7 +177,10 @@ messages.get("/threads/:id", async (req, res) => {
 });
 
 // POST /api/messages — send (creating the thread if needed).
-messages.post("/", async (req, res) => {
+// A parent's send emails the provider's inbox every time, so it is the one spammable path here
+// (operators are the paying customer; their sends go to families they already serve). Bound it.
+const parentSendLimit = rateLimit("parent-message", 30);
+messages.post("/", (req, res, next) => (req.auth?.role === "parent" ? parentSendLimit(req, res, next) : next()), async (req, res) => {
   const auth = req.auth!;
   let tenantId: string, parentEmail: string, parentName: string, from: "operator" | "parent";
   let subject: string | undefined;
