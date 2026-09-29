@@ -473,7 +473,9 @@ listings.get("/:id", async (req, res) => {
   }
   const l = snap.data()!;
   const auth = req.auth!;
-  const own = auth.role === "platform" || (auth.tenantId && auth.tenantId === l.tenantId);
+  // "Own" = your tenant — but a franchise (and its staff) only owns ITS listings: drafts / hidden
+  // ones of head office or a sibling franchise stay private to them.
+  const own = auth.role === "platform" || (auth.tenantId && auth.tenantId === l.tenantId && (!isFranchise(auth) || (l.franchiseId ?? null) === auth.franchiseId));
   if (((l.status ?? "live") !== "live" || l.archived) && !own) {
     res.status(404).json({ error: "Listing not found" });
     return;
