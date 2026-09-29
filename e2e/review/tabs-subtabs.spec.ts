@@ -93,8 +93,11 @@ for (const vpName of ["390", "1440"] as const) {
     for (const r of await items.all()) expect((await r.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     // "minor" sub-tabs (e.g. Tools) deliberately render a smaller 32px icon tile (SubMenuCard.tsx's `h-8 w-8` vs `h-11 w-11`) — excluded from this check.
     for (const t of await page.locator('[data-testid="hub-submenu"] [role="tab"]:not([data-minor]) > span[aria-hidden]:first-child').all()) { const b = (await t.boundingBox())!; expect(b.width, "emoji tile size").toBeGreaterThanOrEqual(40); }
-    const boxes = await Promise.all((await items.all()).map((r) => r.boundingBox()));
-    if (vpName === "1440") expect(new Set(boxes.map((b) => Math.round(b!.y))).size, "all four items in one row").toBe(1);
+    // The minor "Tools" tab is shorter (min-h-48 vs 64) and vertically self-centered within the row, so its top edge
+    // sits a few px lower than the taller tabs' even though it's on the same visual line — excluded from the row-y check.
+    const rowItems = page.locator('[data-testid="hub-submenu"] [role="tab"]:not([data-minor])');
+    const boxes = await Promise.all((await rowItems.all()).map((r) => r.boundingBox()));
+    if (vpName === "1440") expect(new Set(boxes.map((b) => Math.round(b!.y))).size, "all non-minor items in one row").toBe(1);
     else {
       const sc = await page.locator('[data-testid="hub-submenu"] [role="tablist"]').evaluate((el) => ({ sw: (el.parentElement as HTMLElement).scrollWidth, cw: (el.parentElement as HTMLElement).clientWidth }));
       expect(sc.sw, "the row scrolls sideways at phone width").toBeGreaterThan(sc.cw);

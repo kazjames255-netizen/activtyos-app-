@@ -175,6 +175,11 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   const focus = focusFor === active;
   // A tab switched by click / Enter / a link moves focus to the panel heading (arrow-key roving keeps focus on the strip) and titles the page.
   const moveFocus = useRef(false);
+  // Bumped every time a click explicitly asks for focus (moveFocus.current = true), even when the click lands on the
+  // ALREADY-active sub (e.g. clicking a top tab whose default sub is already open) — active/activeSub.id don't change
+  // in that case, so the effect below can't rely on them alone or it silently never re-fires. Found live 29 Sept:
+  // hub-shell-a11y-links.spec.ts clicking "Quizzes" top then its (already-default) "Quizzes" sub moved focus nowhere.
+  const [focusNonce, setFocusNonce] = useState(0);
   useOnBrand(tenantId ?? "");
   useEffect(() => {
     const before = document.title;
@@ -193,7 +198,7 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
       target.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(t);
-  }, [active, activeSub?.id]);
+  }, [active, activeSub?.id, focusNonce]);
   const liveNow = useLiveNow(hub.childQs, !!tenantId && (!tutor ? !!hub.childId : true));
 
   // The Questions tab's unread badge — either side should see "someone's waiting" without opening the tab.
@@ -210,12 +215,14 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
 
   // Navigating clears any stale error banner.
   const go = useCallback((k: TabKey) => {
-    setError(null); setFocusFor(null); moveFocus.current = true; setPicked(k); setSub(null);
+    setError(null); setFocusFor(null); moveFocus.current = true; setFocusNonce((n) => n + 1); setPicked(k); setSub(null);
     setLinkParams({ tab: k, sub: null }, true); // a different tab never keeps the old lesson / quiz / homework open
   }, [setError]);
   // Grouped strip: a sub-tab opens its panel (and, for an action sub-tab, the existing dialog / overlay the old Home tile opened).
   const selectSub = useCallback((d: SubDef, opts?: { focus?: boolean }) => {
-    setError(null); setFocusFor(null); moveFocus.current = opts?.focus !== false;
+    const wantsFocus = opts?.focus !== false;
+    setError(null); setFocusFor(null); moveFocus.current = wantsFocus;
+    if (wantsFocus) setFocusNonce((n) => n + 1);
     setPicked(d.key); setSub(d.id);
     if (d.action === "intent" && d.intent) { setHubIntent(d.intent); setNonce((n) => n + 1); }
     setLinkParams({ tab: d.key, sub: d.id }, true);
@@ -228,7 +235,9 @@ export function LearningHubApp({ mode, initialChildId, initialTab, initialOpen, 
   }, [tutor, selectSub]);
   // Family hub: a sub-section pill under Learn / Quizzes opens its panel, same URL plumbing as the tutor's grouped strip.
   const selectFamSub = useCallback((d: FamSubDef, opts?: { focus?: boolean }) => {
-    setError(null); setFocusFor(null); moveFocus.current = opts?.focus !== false;
+    const wantsFocus = opts?.focus !== false;
+    setError(null); setFocusFor(null); moveFocus.current = wantsFocus;
+    if (wantsFocus) setFocusNonce((n) => n + 1);
     setPicked(d.key); setSub(d.id);
     setLinkParams({ tab: d.key, sub: d.id }, true);
   }, [setError]);

@@ -9,12 +9,15 @@ let fx: Fx;
 test.beforeAll(async () => { test.setTimeout(300_000); fx = await buildFixture(2, false); });
 
 // The panel key on screen. Tutors: the selected sub-tab's panel, or (top tabs with no sub-row) the top tab's panel; parents / kids: the flat tab's.
+// Family/kid views render TWO tab strips at once — a mobile FamilyTabBar (`sm:hidden`) and a desktop HubTabs
+// (`hidden sm:block`), both with aria-selected="true" — so every locator here must pick the VISIBLE one (Playwright's
+// `:visible` selector extension), or `.first()` can lock onto the hidden mobile strip at desktop width and time out.
 const selected = async (page: Page) => {
-  const t = page.locator('[role="tab"][aria-selected="true"]').first();
+  const t = page.locator('[role="tab"][aria-selected="true"]:visible').first();
   await t.waitFor({ timeout: 120_000 });
-  const sub = page.locator('[role="tab"][data-sub][aria-selected="true"]');
+  const sub = page.locator('[role="tab"][data-sub][aria-selected="true"]:visible');
   if (await sub.count()) return sub.first().getAttribute("data-panel");
-  const top = await page.locator('[role="tab"][data-top][aria-selected="true"]').first().getAttribute("data-top").catch(() => null);
+  const top = await page.locator('[role="tab"][data-top][aria-selected="true"]:visible').first().getAttribute("data-top").catch(() => null);
   // Single-sub tops carry no [data-sub] row at all, so the top id itself has to translate back to its one panel key
   // (tabGroups.ts / familyGroups.ts): "starting" (tutor's Entry tests) -> diagnostic, "today" (family/kid Home) -> home.
   if (top) return ({ progress: "dashboard", messages: "questions", starting: "diagnostic", today: "home" } as Record<string, string>)[top] ?? top;
@@ -22,7 +25,7 @@ const selected = async (page: Page) => {
 };
 const pick = (page: Page, sub: string) => page.locator(`[role="tab"][data-sub="${sub}"]`).click();
 // Cheap navigation (the shared dev server is busy): no per-link feature toggle, just wait for the tab strip.
-async function open(page: Page, url: string) { await page.goto(url, { waitUntil: "domcontentloaded" }); await page.locator('[role="tab"][aria-selected="true"]').first().waitFor({ timeout: 120_000 }); }
+async function open(page: Page, url: string) { await page.goto(url, { waitUntil: "domcontentloaded" }); await page.locator('[role="tab"][aria-selected="true"]:visible').first().waitFor({ timeout: 120_000 }); }
 
 for (const vpName of ["390", "1440"] as const) {
   test(`tutor links + focus + escape @${vpName}`, async ({ browser }) => {
@@ -70,7 +73,9 @@ for (const vpName of ["390", "1440"] as const) {
     const base = `/custdash/learninghub?child=${fx.kids[0].id}`;
     await open(page, `${base}&tab=diagnostic`);
     expect(await selected(page)).toBe("diagnostic");
-    expect((await page.locator('[role="tab"][data-panel="diagnostic"]').innerText()).trim()).toMatch(/^Starting quizzes/);
+    // The tab's own emoji renders on its own line before the label (innerText includes it) — match the label text
+    // anywhere rather than anchoring to the very start of the string.
+    expect((await page.locator('[role="tab"][data-panel="diagnostic"]').innerText()).trim()).toMatch(/Starting quizzes/);
     // familyGroups.ts: Messages has no family top at all ("leaves the tab bar entirely" — reachable only by a direct
     // link/notification), so no tab strip renders here; `open()`'s wait-for-a-tab would hang, so navigate directly.
     await page.goto(`${base}&tab=questions`, { waitUntil: "domcontentloaded" });
@@ -84,7 +89,10 @@ for (const vpName of ["390", "1440"] as const) {
       await open(page, `${base}&tab=${q}`);
       expect(await selected(page), `kid ?tab=${q}`).toBe(want);
     }
-    expect((await page.locator('[role="tab"][data-panel="diagnostic"]').innerText()).trim()).toMatch(/^Starting quiz$/);
+    // The loop above ends on tab=tools (falls back to Home for a kid), so "Learn" is no longer the active top and its
+    // sub-strip (which is where the diagnostic sub-tab lives) isn't rendered — the label check needs Learn active again.
+    await open(page, `${base}&tab=diagnostic`);
+    expect((await page.locator('[role="tab"][data-panel="diagnostic"]').innerText()).trim()).toMatch(/Starting quiz$/);
     await ctx.close();
   });
 }
