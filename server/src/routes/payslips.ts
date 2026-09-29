@@ -33,7 +33,7 @@ const docSafe = (s: string) => s.replace(/\//g, "_");
 const runs = db.collection("payrollRuns");
 const pdfs = db.collection("payslipPdfs");
 
-interface RunDoc { id: string; period: string; paidOn: string; lines: PayslipLine[]; payKey: string; publishedAt: string | null }
+interface RunDoc { id: string; period: string; paidOn: string; lines: PayslipLine[]; payKey: string; publishedAt: string | null; status?: string }
 
 async function loadRun(key: string, runId: string): Promise<RunDoc | null> {
   const snap = await runs.doc(docSafe(`${key}_${runId}`)).get();
@@ -134,6 +134,13 @@ payslips.post("/runs/:runId/payslip/email", async (req, res) => {
   const key = keyOf(auth.tenantId, auth.franchiseId);
   const run = await loadRun(key, String(req.params.runId));
   if (!run) { res.status(404).json({ error: "Pay run not found" }); return; }
+  // Segregation of duties (routes/payroll.ts, item #39): a run starts as
+  // "draft" and only becomes "approved" once a DIFFERENT person confirms it.
+  // Emailing a draft's payslips straight to staff would let the same one
+  // person who created it push unapproved figures out, defeating the point
+  // of the approval step — found in review while integrating this route
+  // with the approval work landing the same night.
+  if (run.status !== "approved") { res.status(409).json({ error: "This pay run hasn't been approved yet — approve it before emailing payslips" }); return; }
 
   const targets = parsed.data.employeeId
     ? run.lines.filter((l) => (l.staffKey ?? l.id) === parsed.data.employeeId)

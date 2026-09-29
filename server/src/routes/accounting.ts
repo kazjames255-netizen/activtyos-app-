@@ -247,6 +247,12 @@ accounting.post("/post/:runId", async (req, res) => {
   const runSnap = await runRef.get();
   if (!runSnap.exists || runSnap.get("payKey") !== scope.key) { res.status(404).json({ error: "Pay run not found" }); return; }
   const run = runSnap.data()!;
+  // Segregation of duties (routes/payroll.ts, item #39): a run starts as
+  // "draft" and only becomes "approved" once a DIFFERENT person confirms it.
+  // Posting a draft's figures as a real wages journal in QuickBooks/Xero/Sage
+  // would defeat that entirely — found in review while integrating this
+  // route with the approval work landing the same night.
+  if (run.status !== "approved") { res.status(409).json({ error: "This pay run hasn't been approved yet — approve it before posting to accounting" }); return; }
   const lines = (run.lines ?? []) as PayLine[];
   if (!lines.length) { res.status(400).json({ error: "This pay run has no lines to post" }); return; }
   const totals = computeTotals(lines);
