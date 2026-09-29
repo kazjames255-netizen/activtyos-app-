@@ -81,6 +81,23 @@ import ZC from "./agent-results/plan2-agent-ZC.json";
 // the step is about what the parent is GIVEN, and the checkout does not show
 // it yet.
 import ZD from "./agent-results/plan2-agent-ZD.json";
+// 29 Sept — p2-q12/p2-rt16 re-classified: the named /api/tenants/welcome route
+// never existed, but the real mechanism (register-role -> emailProviderWelcome,
+// exactly once per tenant) was already proven live by Q/S/Y. Documentation
+// mismatch, not a product bug.
+import ZL from "./agent-results/plan2-agent-ZL.json";
+// 29 Sept — leads.ts GET / real server-side filtering (nation/haf/bookingUrl) and
+// real limit/cursor pagination, closing b36's leads item (p2-q1, p2-r9).
+import ZI from "./agent-results/plan2-agent-ZI.json";
+// 29 Sept — rota/HR/learning/inventory batch: rota reflects approved leave
+// (needsCover), availability window enforced server-side, learning pass mark
+// re-verified, and a real inventory low-stock sweep added.
+import ZH from "./agent-results/plan2-agent-ZH.json";
+// 29 Sept — ratios board age-band override now warns instead of being silent
+// (accept-and-flag, not refuse); deleting a DSL-decided incident now writes a
+// minimal audit stub before the hard delete; marketing v2 pages no longer
+// advertise a nonexistent iOS/Android app.
+import ZK from "./agent-results/plan2-agent-ZK.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -105,4 +122,8 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
   ...(Z as Record<string, AgentResult>), ...(ZA as Record<string, AgentResult>), ...(ZB as Record<string, AgentResult>),
   ...(ZC as Record<string, AgentResult>), ...(ZD as Record<string, AgentResult>),
+  ...(ZL as Record<string, AgentResult>),
+  ...(ZH as Record<string, AgentResult>),
+  ...(ZK as Record<string, AgentResult>),
+  ...(ZI as Record<string, AgentResult>),
 };

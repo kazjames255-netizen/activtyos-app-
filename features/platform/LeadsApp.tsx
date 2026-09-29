@@ -567,7 +567,28 @@ export function LeadsApp() {
   // scenes: "warming" = nothing saved yet, ask again shortly; "refreshing" = a
   // newer copy is on its way, pick it up later.
   const later = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const load = (retry = true, fresh = false, tries = 0): Promise<void> => apiGet<{ leads: Lead[]; warming?: boolean; refreshing?: boolean }>(`/api/leads${fresh ? "?fresh=1" : ""}`)
+  // The server now paginates (`?limit=&cursor=` -> `{ leads, total, nextCursor }`,
+  // matching the hub bank / notes routes) instead of one uncapped response — this
+  // page still wants the whole (already-capped) list for its own client-side
+  // filter counts, so it walks pages rather than trusting a single reply to carry
+  // everything. A generous page size keeps the walk short while still meaning no
+  // single response is ever the full ~tens-of-thousands-row dump the old route sent.
+  const PAGE_SIZE = 2000;
+  const loadAllPages = async (fresh: boolean): Promise<{ leads: Lead[]; warming?: boolean; refreshing?: boolean }> => {
+    const first = await apiGet<{ leads: Lead[]; warming?: boolean; refreshing?: boolean; total?: number; nextCursor?: string | null }>(
+      `/api/leads?limit=${PAGE_SIZE}${fresh ? "&fresh=1" : ""}`,
+    );
+    if (first.warming) return first;
+    const all = [...(first.leads || [])];
+    let cursor = first.nextCursor ?? null;
+    while (cursor) {
+      const page = await apiGet<{ leads: Lead[]; nextCursor?: string | null }>(`/api/leads?limit=${PAGE_SIZE}&cursor=${cursor}`);
+      all.push(...(page.leads || []));
+      cursor = page.nextCursor ?? null;
+    }
+    return { leads: all, refreshing: first.refreshing };
+  };
+  const load = (retry = true, fresh = false, tries = 0): Promise<void> => loadAllPages(fresh)
     .then((r) => {
       if (later.current) clearTimeout(later.current);
       if (r.warming) { later.current = setTimeout(() => void load(), 4000); return; }

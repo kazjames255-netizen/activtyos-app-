@@ -231,12 +231,61 @@ export function warmLeads() {
     });
 }
 
+// Query params (all optional): `nation` (exact match against the row's `nation` field,
+// case-insensitive), `haf` (1/true or 0/false — matches the row's boolean `haf` field),
+// `bookingUrl` (substring match against the row's `bookingUrl`, e.g. a platform's
+// hostname) — these are REAL filters applied server-side, before the response is
+// built, not just decoration the client used to compute the same thing itself after
+// downloading everything. Pagination follows the same `?limit=&cursor=` ->
+// `{ items, total, nextCursor }` idiom as server/src/routes/hub/questions.ts and
+// learningHub.ts: cursor is an offset into the (filtered) list. Without limit/cursor,
+// the reply keeps its old shape (`leads: [...]`) for back-compat, but now also carries
+// `total`/`nextCursor` so a caller can start paging without a breaking change.
+const strParam = (v: unknown) => (typeof v === "string" && v ? v : null);
+const intParam = (v: unknown, dflt: number, max: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), max) : dflt; };
+
+function filterRows(items: Row[], nation: string | null, haf: boolean | null, bookingHost: string | null): Row[] {
+  if (!nation && haf === null && !bookingHost) return items;
+  return items.filter((r) => {
+    if (nation && String(r.nation ?? "").toLowerCase() !== nation) return false;
+    if (haf !== null && (r.haf === true) !== haf) return false;
+    if (bookingHost) {
+      const u = String(r.bookingUrl ?? "").toLowerCase();
+      if (!u || !u.includes(bookingHost)) return false;
+    }
+    return true;
+  });
+}
+
 leads.get("/", async (req, res) => {
   if (cache) {
     if (req.query.fresh === "1" || (Date.now() - cache.at > FRESH_MS && !overReadBudget("leads"))) refresh().catch(() => {});
-    const body = () => JSON.stringify({ leads: cache!.items, asOf: new Date(cache!.at).toISOString(), refreshing: !!inflight, truncated, cap: CACHE_MAX });
+    const nation = strParam(req.query.nation)?.toLowerCase() ?? null;
+    const hafRaw = req.query.haf;
+    const haf = hafRaw === "1" || hafRaw === "true" ? true : hafRaw === "0" || hafRaw === "false" ? false : null;
+    const bookingHost = strParam(req.query.bookingUrl)?.toLowerCase() ?? null;
+    const filtered = filterRows(cache.items, nation, haf, bookingHost);
+
+    const paged = req.query.limit !== undefined || req.query.cursor !== undefined;
+    const start = paged ? intParam(req.query.cursor, 0, 1_000_000) : 0;
+    // Unpaged default stays whatever the (already-capped, CACHE_MAX) filtered set is,
+    // for back-compat with a caller that never asks for a page — but a paged request
+    // caps at CACHE_MAX per page, so a single response can never again be "everything".
+    const limit = paged ? intParam(req.query.limit, 500, CACHE_MAX) : filtered.length;
+    const page = filtered.slice(start, start + limit);
+    const next = start + limit;
+
+    const body = () => JSON.stringify({
+      leads: page,
+      total: filtered.length,
+      nextCursor: paged && next < filtered.length ? String(next) : null,
+      asOf: new Date(cache!.at).toISOString(),
+      refreshing: !!inflight,
+      truncated,
+      cap: CACHE_MAX,
+    });
     if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""))) { res.type("json").send(body()); return; }
-    const key = `${cache.at}|${!!inflight}|${rev}`;
+    const key = `${cache.at}|${!!inflight}|${rev}|${nation ?? ""}|${haf}|${bookingHost ?? ""}|${start}|${limit}`;
     if (zipped?.key !== key) zipped = { key, buf: gzipSync(body()) };
     res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Encoding": "gzip", Vary: "Accept-Encoding" }).send(zipped.buf);
     return;
