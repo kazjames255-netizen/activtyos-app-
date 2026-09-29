@@ -81,7 +81,9 @@ const customerSchema = z.object({
   name: z.string().trim().min(1).max(120),
   firstName: z.string().trim().max(60).optional(),
   lastName: z.string().trim().max(60).optional(),
-  email: z.string().trim().max(160).default(""),
+  // Blank is allowed (a family with no email yet); anything else must look like one — "not an email" used to be saved and then
+  // emailed as a marketing contact.
+  email: z.string().trim().max(160).refine((v) => v === "" || z.string().email().safeParse(v).success, "Not a valid email address").default(""),
   phone: z.string().trim().max(40).default(""),
   // Which of the provider's own sites this family belongs to — the thing a
   // campaign is actually built on ("everyone interested in Bedford"). A home
