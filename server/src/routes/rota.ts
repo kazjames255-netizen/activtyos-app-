@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isRealDay, isRealTime } from "../lib/ukDate";
+import { isRealDay, isRealTime, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -39,9 +39,9 @@ const shiftSchema = z.object({
   staffId: z.string().max(80).nullable(),
   site: z.string().max(160).optional().default(""),
   role: z.string().max(80).optional().default(""),
-  date: z.string().max(10),
-  start: z.string().max(8),
-  end: z.string().max(8),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  start: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)"),
+  end: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)"),
 }).passthrough();
 const storeSchema = z.object({
   staff: z.array(staffSchema).max(1_000),

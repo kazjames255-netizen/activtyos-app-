@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { librarySnap } from "../lib/tenantLibrary";
@@ -159,7 +160,7 @@ const orderItemSchema = z.union([
 const orderSchema = z.object({
   tenantId: z.string().min(1).max(60),
   listingId: z.string().max(60).optional(),
-  date: z.string().max(10),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
   childName: z.string().trim().min(1).max(80),
   childId: z.string().max(60).optional(),
   items: z.array(orderItemSchema).min(1).max(20),

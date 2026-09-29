@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay, isBlankOrRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
@@ -45,9 +46,9 @@ const medSchema = z.object({
   asNeeded: z.boolean().default(false), // PRN
   storage: z.string().trim().max(200).optional(),
   heldOnSite: z.boolean().default(false),
-  startDate: z.string().max(10).optional(),
-  endDate: z.string().max(10).optional(),
-  expiryDate: z.string().max(10).optional(),
+  startDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  endDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  expiryDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   // Parental consent — the authorising artefact. No consent, no medicine.
   consentBy: z.string().trim().max(120).optional(),
   consentDate: z.string().max(25).optional(),
@@ -312,8 +313,8 @@ medications.delete("/:id", async (req, res) => {
 // ——— Administration log (the MAR) ———
 
 const administerSchema = z.object({
-  date: z.string().max(10),
-  time: z.string().max(8).optional(),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  time: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)").optional(),
   doseGiven: z.string().trim().min(1).max(120),
   /** The outcome, first-class. `doseGiven` is free text ("5ml", "Not given"),
    *  which is no basis for deciding whether to tell a parent their child
@@ -509,9 +510,9 @@ const authoriseSchema = z.object({
   schedule: z.string().trim().max(200).optional(),
   asNeeded: z.boolean().default(false),
   storage: z.string().trim().max(200).optional(),
-  startDate: z.string().max(10).optional(),
-  endDate: z.string().max(10).optional(),
-  expiryDate: z.string().max(10).optional(),
+  startDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  endDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
+  expiryDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   notes: z.string().trim().max(1_000).optional(),
 });
 

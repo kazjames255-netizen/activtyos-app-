@@ -54,7 +54,7 @@ import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../.
 import { bookingDocId } from "./bookings";
 import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
-import { ukToday, ukTodayPlus, isRealDay } from "../lib/ukDate";
+import { ukToday, ukTodayPlus, isRealDay, isBlankOrRealDay } from "../lib/ukDate";
 import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
@@ -112,7 +112,7 @@ const itemSchema = z.object({
   // scheduled day-menu. They ride the add-on pipeline (as per-day extras), so
   // the cost lands in the booking total and is paid with the booking.
   meals: z
-    .array(z.object({ menuItemId: z.string().max(60), date: z.string().max(10) }))
+    .array(z.object({ menuItemId: z.string().max(60), date: z.string().max(10).refine(isRealDay, "Not a real calendar date") }))
     .max(60)
     .optional(),
 });
@@ -2022,7 +2022,7 @@ const amendSchema = z.object({
     z.array(z.object({ childName: z.string().max(80).optional(), childId: z.string().max(60).optional(), from: z.string().max(10), to: z.string().max(10) })),
     z.record(z.string().max(10)),
   ]).optional(),
-  preferredDate: z.string().max(10).optional(),
+  preferredDate: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   // A timing change — the pass's period title (e.g. "Full Day"); the UI only
   // offers the block bundle's listed periods, never a free time.
   timing: z.string().max(80).optional(),

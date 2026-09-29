@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
@@ -45,8 +46,8 @@ const configSchema = z.object({
 const timetableSchema = z.object({
   listingId: z.string().max(60).nullable().optional(),
   name: z.string().trim().min(1).max(120),
-  dateFrom: z.string().max(10),
-  dateTo: z.string().max(10),
+  dateFrom: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  dateTo: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
   excluded: z.array(z.string().max(10)).max(62).default([]),
   config: configSchema,
   dayList: z.array(dayInfoSchema).max(31),

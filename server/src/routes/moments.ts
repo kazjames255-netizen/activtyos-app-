@@ -8,7 +8,7 @@ import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { notify, parentEmailForChild } from "../lib/notify";
-import { ukToday } from "../lib/ukDate";
+import { ukToday, isBlankOrRealDay } from "../lib/ukDate";
 import { siteChildIds, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
 import { customerAreaOn } from "../lib/customerArea";
 import { whereInChunks } from "../lib/firestoreIn";
@@ -39,7 +39,7 @@ const momentBase = z.object({
   caption: z.string().trim().max(500).optional(),
   activity: z.string().trim().max(60).optional(), // e.g. "Arts & crafts", "Swimming"
   photoType: z.enum(["child", "work"]).default("child"), // "work" = a photo of their work (no faces → no consent needed)
-  date: z.string().max(10).optional(),
+  date: z.string().max(10).refine(isBlankOrRealDay, "Not a real calendar date").optional(),
   blockId: z.string().max(60).optional(),
   listingId: z.string().max(60).optional(),
   childIds: z.array(z.string().max(60)).max(30).default([]),

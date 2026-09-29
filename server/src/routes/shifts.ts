@@ -1,4 +1,5 @@
 import { Router, type Request } from "express";
+import { isRealDay, isBlankOrRealTime } from "../lib/ukDate";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
@@ -17,9 +18,9 @@ const canRead = (role: Role) => role === "staff" || canManage(role);
 const shiftSchema = z.object({
   staffId: z.string().max(60).optional(),
   staffName: z.string().trim().min(1).max(80),
-  date: z.string().max(10),
-  start: z.string().max(8),
-  end: z.string().max(8),
+  date: z.string().max(10).refine(isRealDay, "Not a real calendar date"),
+  start: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)"),
+  end: z.string().max(8).refine(isBlankOrRealTime, "Not a real time (HH:MM)"),
   role: z.string().trim().max(80).optional(),
   listingId: z.string().max(60).optional(),
   notes: z.string().trim().max(500).optional(),
