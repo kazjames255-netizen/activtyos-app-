@@ -356,8 +356,13 @@ P("cap p-progress", async (page) => {
 });
 P("cap p-invite", async (page) => { await page.goto(`/custdash/learninghub?invite=${X.inviteToken}`); await page.getByTestId(/hub-invite-enrol-/).first().waitFor({ timeout: 60_000 }).catch(() => undefined); await page.waitForTimeout(1500); await shot(page, "p-invite"); });
 P("cap p-handover", async (page) => {
-  await go(page, parentUrl("home"));
-  await page.locator("[data-testid='hub-hand-over'],[data-testid='hub-hand-over-toggle']").first().scrollIntoViewIfNeeded(); await page.waitForTimeout(800); await shot(page, "p-handover");
+  // The "Hand over" strip is gone (Kaz: "remove the handover function completely and just have it on front page
+  // very simple") — handing a child the device is now just the child-switcher chips in the hero banner
+  // (family/FamilyContext.tsx's ChildSwitcher, hub-child-switcher). ChildSwitcher only renders on a routed
+  // Level 2/3 URL (/[portal]/learninghub/[childId]…, FamilyContext.tsx's `routed` flag) — parentUrl()'s
+  // `?child=` query form never sets that, so go to the routed path directly for this one capture.
+  await go(page, `/custdash/learninghub/${kid().id}?tab=home`);
+  await page.locator("[data-testid='hub-child-switcher']").first().scrollIntoViewIfNeeded(); await page.waitForTimeout(800); await shot(page, "p-handover");
 });
 
 const phone = { width: 390, height: 844 };
