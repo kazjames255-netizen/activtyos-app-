@@ -156,7 +156,7 @@ const createSchema = z.object({
   email: z.string().max(200),
   subject: z.string().min(1).max(300),
   body: z.string().min(1).max(5000),
-});
+}).refine((v) => v.party !== "customer" || z.string().trim().email().safeParse(v.email).success, { path: ["email"], message: "Enter a valid customer email — the reply is emailed to it" });
 platformSupport.post("/", async (req, res) => {
   const parsed = createSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
@@ -199,7 +199,7 @@ platformSupport.post("/", async (req, res) => {
 });
 
 // POST /:id/messages — HQ replies. Replying reopens a resolved thread.
-const replySchema = z.object({ body: z.string().min(1).max(5000) });
+const replySchema = z.object({ body: z.string().trim().min(1).max(5000) });
 platformSupport.post("/:id/messages", async (req, res) => {
   const parsed = replySchema.safeParse(req.body ?? {});
   if (!parsed.success) {
@@ -288,6 +288,13 @@ platformSupport.put("/:id", async (req, res) => {
   if (!snap.exists) {
     res.status(404).json({ error: "No such thread" });
     return;
+  }
+  // A thread can't be a duplicate of itself (it would drop out of the primary
+  // count AND count itself as its own duplicate), or of one that doesn't exist.
+  if (parsed.data.duplicateOf) {
+    if (parsed.data.duplicateOf === req.params.id) { res.status(400).json({ error: "A thread can't be a duplicate of itself" }); return; }
+    const target = await db.collection("supportThreads").doc(parsed.data.duplicateOf).get();
+    if (!target.exists) { res.status(404).json({ error: "The thread you marked this a duplicate of doesn't exist" }); return; }
   }
   const patch: Partial<ThreadDoc> = {};
   if (parsed.data.status) {
