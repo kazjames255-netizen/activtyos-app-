@@ -46,7 +46,10 @@ test("start issues a seed and a plan with NO answer key; another parent's child 
   expect(s.plan.items.length).toBe(s.cfg.n);
   expect(JSON.stringify(s.plan)).not.toMatch(/answer|correct/i); // the plan is facts to ask, never the marks
   expect(s.cfg.approachSec).toBe(0); // no timer by default
-  await expect(apiPost(`${HUB}/games/sessions${q()}`, await token(accounts.parent), { childId: "not-my-child", mode: "quick" })).rejects.toThrow();
+  // `?childId=` (query) wins over the body on the server (see resolveCtx/gamesApi.ts), so the attempt has to put
+  // the foreign id in the QUERY string — the body-only version this used to send was silently ignored server-side
+  // and always fell back to this run's own (legitimate) child, proving nothing.
+  await expect(apiPost(`${HUB}/games/sessions?tenantId=${tenantId}&childId=not-my-child`, await token(accounts.parent), { mode: "quick" })).rejects.toThrow();
 });
 
 test("finish: the SERVER re-simulates the run; a claimed score means nothing; finish is idempotent", async () => {
