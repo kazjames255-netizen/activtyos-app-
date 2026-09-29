@@ -34,6 +34,53 @@ interface ClockRecord {
   events: ClockEvent[]; day: string;
 }
 
+// Tenant-wide pay-policy settings (grace minutes, rounding, pay basis, lead
+// label) — was per-device localStorage (Amir 63): every manager's browser
+// had its own copy, so the same late clock-in could pay differently
+// depending who ran the timesheet. One doc per tenant (or franchise), same
+// key convention as the clock records above and payroll's `payrollConfig`.
+const clockCfg = (key: string) => db.collection("clockSettings").doc(key.replace(/\//g, "_"));
+interface ClockPaySettings {
+  payPolicy: "actual" | "scheduled" | "scheduled-less-late";
+  autoPayOvertime: boolean;
+  graceMin: number;
+  rounding: 0 | 5 | 15;
+  leadLabel: string;
+}
+const DEFAULT_CLOCK_SETTINGS: ClockPaySettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
+const settingsSchema = z.object({
+  payPolicy: z.enum(["actual", "scheduled", "scheduled-less-late"]),
+  autoPayOvertime: z.boolean(),
+  graceMin: z.number().int().min(0).max(120),
+  rounding: z.union([z.literal(0), z.literal(5), z.literal(15)]),
+  leadLabel: z.string().trim().min(1).max(60),
+});
+
+// GET /api/timeclock/settings — the tenant's pay-policy settings. Managers
+// AND staff can read (a staff member's own timesheet display computes
+// against this too); only a manager can change it (PUT below).
+timeclock.get("/settings", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !(canManage(auth.role) || auth.role === "staff")) { res.status(403).json({ error: "Forbidden" }); return; }
+  const snap = await clockCfg(keyOf(auth.tenantId, auth.franchiseId)).get();
+  const data = snap.data() ?? {};
+  const { tenantId: _t, franchiseId: _f, updatedAt: _a, updatedBy: _b, ...rest } = data;
+  res.json({ ...DEFAULT_CLOCK_SETTINGS, ...rest });
+});
+
+// PUT /api/timeclock/settings — a manager sets the tenant's clock & pay
+// policy so every manager's timesheet computes the same pay from the same
+// place, instead of each browser's own localStorage copy.
+timeclock.put("/settings", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Only a manager can change clock & pay-policy settings" }); return; }
+  const parsed = settingsSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const key = keyOf(auth.tenantId, auth.franchiseId);
+  await clockCfg(key).set({ ...parsed.data, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, updatedAt: new Date().toISOString(), updatedBy: req.user?.email ?? null }, { merge: true });
+  res.json({ ok: true, settings: parsed.data });
+});
+
 /** The signed-in member of staff's own name, from their account. */
 async function ownName(uid: string | undefined): Promise<string> {
   if (!uid) return "";

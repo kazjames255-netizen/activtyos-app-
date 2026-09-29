@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useTenantSettings } from "@/lib/settings";
 import {
-  type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
+  type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings, syncClockSettings, useClockSettingsRefresh,
   offToday, workedMs, paidMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut, useClockRefresh
 } from "./data";
 
@@ -24,6 +24,7 @@ export function TimesheetsApp() {
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
   useClockRefresh(setAll);
   const [settings, setSettings] = useState<ClockSettings>(loadClockSettings);
+  useClockSettingsRefresh(setSettings);
   const { settings: tenantSettings } = useTenantSettings();
   const breakPaid = tenantSettings.scheduling?.breakPaid === "paid";
   const [q, setQ] = useState("");
@@ -32,7 +33,7 @@ export function TimesheetsApp() {
   const [statusFilter, setStatusFilter] = useState<"all" | "in" | "break" | "needs" | "out">("all");
   const [nudges, setNudges] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); }, []);
+  useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); void syncClockSettings(); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const saveSettings = (s: ClockSettings) => { setSettings(s); saveClockSettings(s); };
 

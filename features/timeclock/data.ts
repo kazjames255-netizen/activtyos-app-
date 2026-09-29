@@ -8,7 +8,7 @@
 // (docs/timeclock-handoff.md). Matched to people by name (demo).
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { useEffect } from "react";
-import { get as apiGet, isDemoMode, patch as apiPatch, post as apiPost } from "@/lib/api";
+import { get as apiGet, isDemoMode, patch as apiPatch, post as apiPost, put as apiPut } from "@/lib/api";
 import { ukShiftHours } from "@/features/payroll/payCalc";
 
 export type ClockStatus = "out" | "in" | "break";
@@ -55,8 +55,46 @@ const read = <T,>(key: string): T | null => { try { return JSON.parse(localStora
 const write = (key: string, v: unknown) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* ignore */ } };
 
 // ── Settings ────────────────────────────────────────────────────────────────
+// Tenant-wide now (server, GET/PUT /api/timeclock/settings) — used to be a
+// per-device localStorage copy, so two managers' browsers could disagree on
+// grace minutes / rounding / pay basis and pay the same late clock-in
+// differently (Amir 63). This module keeps a same-device cache under the old
+// key so every screen can still read it synchronously; syncClockSettings()
+// (started by startClockSync) keeps that cache honest from the server, the
+// same pattern loadClock/syncClock already use for the records themselves.
+// Demo mode has no server, so it stays localStorage-only there.
 export const loadClockSettings = (): ClockSettings => ({ ...DEFAULT_CLOCK_SETTINGS, ...(read<Partial<ClockSettings>>(CLOCK_SETTINGS_KEY) || {}) });
-export const saveClockSettings = (s: ClockSettings) => write(CLOCK_SETTINGS_KEY, s);
+export const CLOCK_SETTINGS_EVENT = "aos:clock-settings";
+let settingsSyncing: Promise<void> | null = null;
+export function syncClockSettings(): Promise<void> {
+  if (typeof window === "undefined" || isDemoMode()) return Promise.resolve();
+  if (settingsSyncing) return settingsSyncing;
+  settingsSyncing = apiGet<Partial<ClockSettings>>("/api/timeclock/settings")
+    .then((s) => { write(CLOCK_SETTINGS_KEY, { ...DEFAULT_CLOCK_SETTINGS, ...s }); window.dispatchEvent(new Event(CLOCK_SETTINGS_EVENT)); })
+    .catch(() => {})
+    .finally(() => { settingsSyncing = null; });
+  return settingsSyncing;
+}
+/** Re-read the settings cache whenever the server copy lands. */
+export function useClockSettingsRefresh(onChange: (s: ClockSettings) => void): void {
+  useEffect(() => {
+    const h = () => onChange(loadClockSettings());
+    window.addEventListener(CLOCK_SETTINGS_EVENT, h);
+    return () => window.removeEventListener(CLOCK_SETTINGS_EVENT, h);
+  }, [onChange]);
+}
+// A manager saves the tenant's pay policy. Optimistic local cache update so
+// the screen that just changed it doesn't flicker, then a real PUT — same
+// "say so on failure" pattern as sendEvent, since a change that only this
+// manager's browser thinks happened is the exact bug this replaces.
+export function saveClockSettings(s: ClockSettings): void {
+  write(CLOCK_SETTINGS_KEY, s);
+  window.dispatchEvent(new Event(CLOCK_SETTINGS_EVENT));
+  if (isDemoMode()) return;
+  void apiPut("/api/timeclock/settings", s)
+    .then(() => syncClockSettings())
+    .catch((e: unknown) => { alert(`Your pay-policy change wasn't saved for the team: ${e instanceof Error ? e.message : "no connection"}. Try again.`); void syncClockSettings(); });
+}
 
 // ── Rota lookups (scheduled shift + rate for a person today) ────────────────
 interface RotaShift { staffId: string | null; date: string; start: string; end: string; in?: string; out?: string; clockedBreakMin?: number }
@@ -185,7 +223,8 @@ let clockTimer: ReturnType<typeof setInterval> | null = null;
 export function startClockSync(): void {
   if (clockTimer || typeof window === "undefined" || isDemoMode()) return;
   void syncClock();
-  clockTimer = setInterval(() => { if (document.visibilityState === "visible") void syncClock(); }, 30_000);
+  void syncClockSettings();
+  clockTimer = setInterval(() => { if (document.visibilityState === "visible") { void syncClock(); void syncClockSettings(); } }, 30_000);
 }
 /** Re-read the cache whenever the server copy lands. */
 export function useClockRefresh(onChange: (all: Record<string, ClockRecord>) => void): void {
