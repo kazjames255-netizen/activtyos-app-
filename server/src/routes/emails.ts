@@ -260,6 +260,22 @@ emails.post("/suppress", async (req, res) => {
   res.json({ ok: true, email });
 });
 
+// GET /api/emails/suppressions — every address suppressed from this tenant's
+// marketing mail (one-click unsubscribe links, or the ✕ in an audience card),
+// so an operator can see who's on the list and why. Read-only: suppression is
+// per-tenant (see emailSuppressions above), so there's no cross-tenant view
+// even for platform — pass ?tenantId= like every other op-scoped read here.
+emails.get("/suppressions", async (req, res) => {
+  const tenantId = opScope(req, res);
+  if (!tenantId) return;
+  const snap = await suppressCol.where("tenantId", "==", tenantId).get();
+  const list = snap.docs
+    .map((d) => { const v = d.data() as { email?: string; at?: string; by?: string }; return { id: d.id, email: v.email ?? "", at: v.at ?? null, by: v.by ?? "unsubscribe link" }; })
+    .filter((r) => r.email)
+    .sort((a, b) => (`${b.at ?? ""}` < `${a.at ?? ""}` ? -1 : 1));
+  res.json({ count: list.length, suppressions: list });
+});
+
 // GET /api/emails/sender — the identity this tenant's mail goes out under, so
 // the composer can show it before anything is sent. The address is the
 // platform's for everyone (one authenticated sending domain); only the name

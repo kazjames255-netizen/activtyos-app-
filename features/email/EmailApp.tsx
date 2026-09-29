@@ -1427,6 +1427,41 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
     </div>
   );
 }
+// The suppression list (item #45 of the backend handoff): everyone who's
+// unsubscribed via the one-click link in an email footer, or been removed
+// from an audience card (✕). Always excluded from marketing sends — see
+// server/src/routes/emails.ts marketBlock(). Read-only: the data model has
+// no "resume" flow (a genuine unsubscribe is meant to stick, per PECR), so
+// this is informational only for now.
+type Suppression = { id: string; email: string; at: string | null; by: string };
+function SuppressionsPanel() {
+  const [rows, setRows] = useState<Suppression[] | null>(null);
+  const [q, setQ] = useState("");
+  const load = useCallback(() => apiGet<{ suppressions: Suppression[] }>(withNet("/api/emails/suppressions")).then((d) => setRows(d.suppressions)).catch(() => setRows([])), []);
+  useEffect(() => { load(); }, [load]);
+  useRealtime(["emailSuppressions"], load);
+  const ql = q.trim().toLowerCase();
+  const shown = rows ? (ql ? rows.filter((r) => r.email.toLowerCase().includes(ql)) : rows) : null;
+  const fmt = (iso: string | null) => iso ? new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  return (
+    <div>
+      <div className="mb-3 rounded-lg border-l-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Always excluded.</b> Anyone on this list is skipped on every marketing send, regardless of opt-in or booking status — added by the one-click unsubscribe link in an email footer, or by removing them from an audience card. This is a record, not an editor — there's no un-suppress action yet.</div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search suppressed emails…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
+      {shown === null
+        ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        : shown.length === 0
+        ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">{ql ? `No suppressed address matches "${q}".` : "Nobody's unsubscribed yet."}</div>
+        : <div className="flex flex-col gap-2">{shown.map((r) => (
+            <div key={r.id} data-ui="card" className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+              <div className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-[var(--ink)]">{r.email}</div>
+              <Badge tone={r.by === "operator" ? { bg: "var(--panel)", fg: "var(--ink-2)" } : { bg: "#fdebec", fg: "#c02636" }}>{r.by === "operator" ? "Removed by operator" : "Unsubscribed"}</Badge>
+              <span className="flex-none text-[11.5px] text-[var(--ink-3)]">{fmt(r.at)}</span>
+            </div>
+          ))}</div>}
+    </div>
+  );
+}
+
 function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Audience) => void; payMethods?: string[]; seasons?: Season[] }) {
   const { bookings, listings, locations, allAudience, liveSegments } = useCampaignData();
   const [enquiries, setEnquiries] = useState<EnquiryRec[]>(() => readLS<EnquiryRec[]>(LS_ENQ, []));
@@ -1440,7 +1475,11 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const removeFromNotBooked = (email: string) => { removeEnquiryPerson(email); suppressPerson(email); };
   const [period, setPeriod] = useState<"30" | "90" | "all">("all");
   const [nowMs] = useState(() => Date.now());
-  const [sub, setSub] = useState<"segments" | "enquiries">("enquiries");
+  const [sub, setSub] = useState<"segments" | "enquiries" | "suppressed">("enquiries");
+  const [suppressedCount, setSuppressedCount] = useState<number | null>(null);
+  const loadSuppressedCount = useCallback(() => apiGet<{ count: number }>(withNet("/api/emails/suppressions")).then((d) => setSuppressedCount(d.count)).catch(() => {}), []);
+  useEffect(() => { loadSuppressedCount(); }, [loadSuppressedCount]);
+  useRealtime(["emailSuppressions"], loadSuppressedCount);
   const [q, setQ] = useState("");
   const [enqLoc, setEnqLoc] = useState("all");
   const [segLoc, setSegLoc] = useState("");
@@ -1539,6 +1578,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: combinedNotBooked?.count ?? 0 },
     { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
+    { k: "suppressed" as const, label: "🚫 Unsubscribed", count: suppressedCount ?? 0 },
   ];
   // Groups tab: build a live family group from the location + listing + season
   // filters (all preset to "All"). A season is just a session-date window, so it
@@ -1605,6 +1645,8 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
               {(enqLoc === "all" ? enqBreakdown : enqBreakdown.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />)}
             </div>}
       </>)}
+
+      {sub === "suppressed" && <SuppressionsPanel />}
 
     </div>
   );
