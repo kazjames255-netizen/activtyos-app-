@@ -168,7 +168,11 @@ test("tutor Home: one tap on Open (or a not-started name) opens that child's pro
 
   await page.locator(`[data-testid="snapshot-open"][data-child="${lowId}"]`).click();
   await expect(tabOf(page, /^Progress/)).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
-  await expect(page.getByText(lowName).first()).toBeVisible({ timeout: 30_000 });
+  // :visible filters out the (hidden) child-picker <option> sharing this name — an unscoped
+  // getByText(lowName).first() can pick that DOM node over the actual on-screen text, and the
+  // Progress panel has two possible layouts (empty-state vs "hub-progress") so this can't be
+  // scoped to a single container either.
+  await expect(page.locator(`:visible:text("${lowName}")`).first()).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole("tab", { name: "Home", exact: true }).click();
   await page.locator(`[data-testid="snapshot-not-started-open"][data-child="${blankId}"]`).click();

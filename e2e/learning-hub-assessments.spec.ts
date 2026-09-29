@@ -117,7 +117,7 @@ test.describe("config and the question bank", () => {
   test("GET /config: merged hub settings for tutor and family", async () => {
     const t = (await raw(`${HUB}/config`, tutor)).body;
     expect(t.canEdit).toBe(true);
-    expect(t.hub.questionKinds.map((k: J) => k.mark)).toEqual(["choice", "multi", "exact", "numeric", "match", "order", "manual"]); // matching + ordering were added to the defaults
+    expect(t.hub.questionKinds.map((k: J) => k.mark)).toEqual(["choice", "multi", "exact", "numeric", "match", "order", "tool", "manual"]); // matching, ordering + tool questions were added to the defaults
     expect(t.hub.passMarkPct).toBe(70);
     const p = (await raw(`${HUB}/config${pq()}`, parent)).body;
     expect(p.canEdit).toBe(false);
