@@ -14,6 +14,9 @@
 
 import { dateLocale as dl } from "@/lib/i18n/format";
 import { useEffect, useRef, useState } from "react";
+import { tNow, useI18n } from "@/lib/i18n/provider";
+import { pickPlural } from "@/lib/i18n/plural";
+import { Rich } from "@/components/i18n/Rich";
 import Link from "next/link";
 import { get as apiGet, api } from "@/lib/api";
 import { money, PAY_METHODS } from "@/features/bookings/helpers";
@@ -28,6 +31,7 @@ import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
 import type { WizardDraft } from "./ListingWizard";
 import { mealDayPlan, dishesForDay } from "@/features/meals/plan";
+import { useT } from "@/lib/i18n/provider";
 
 export type ParentRow = { id: string; name: string; email?: string; children?: ChildProfile[] };
 
@@ -48,7 +52,7 @@ export function useParents(skip = false) {
       // An empty address book and a failed request look identical otherwise.
       .catch((e) => {
         if (!alive) return;
-        setError(e instanceof Error ? e.message : "Couldn't load your parents.");
+        setError(e instanceof Error ? e.message : tNow("p7ck.errParents"));
         setState("error");
       });
     return () => {
@@ -164,19 +168,19 @@ export function ageOn(dob: string | undefined, iso: string): number | null {
   if (m < 0 || (m === 0 && on.getUTCDate() < b.getUTCDate())) age -= 1;
   return age;
 }
-export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
+export function ageProblem(d: WizardDraft, c: ChildProfile, tr?: (k: string, v?: Record<string, string | number>) => string): string | null {
   if (d.allowOutOfRange) return null; // the operator has said they'll take them
   const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
   if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
   const age = ageOn(c.dob, d.runFrom);
   if (age === null) return null; // no date of birth yet — nothing to judge
-  if (Number.isFinite(from) && age < from) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
-  if (Number.isFinite(to) && age > to) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
+  if (Number.isFinite(from) && age < from) return tr ? tr("p7ck.ageTooOld", { name: c.name || tr("p7ck.thisChild"), age, from: d.ageFrom, to: d.ageTo }) : `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
+  if (Number.isFinite(to) && age > to) return tr ? tr("p7ck.ageTooOld", { name: c.name || tr("p7ck.thisChild"), age, from: d.ageFrom, to: d.ageTo }) : `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
   return null;
 }
 /** Out of range, but the listing accepts out-of-range children — a heads-up
  *  (not a block) that the place has to be approved by the provider. */
-export function ageApprovalNote(d: WizardDraft, c: ChildProfile): string | null {
+export function ageApprovalNote(d: WizardDraft, c: ChildProfile, tr?: (k: string, v?: Record<string, string | number>) => string): string | null {
   if (!d.allowOutOfRange) return null;
   const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
   if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
@@ -184,7 +188,7 @@ export function ageApprovalNote(d: WizardDraft, c: ChildProfile): string | null 
   if (age === null) return null;
   const outside = (Number.isFinite(from) && age < from) || (Number.isFinite(to) && age > to);
   if (!outside) return null;
-  return `${c.name || "This child"} is outside the ${d.ageFrom}–${d.ageTo} age range, so this place has to be approved by the provider — you'll book now and they'll confirm.`;
+  return tr ? tr("p7ck.ageOutsideNote", { name: c.name || tr("p7ck.thisChild"), from: d.ageFrom, to: d.ageTo }) : `${c.name || "This child"} is outside the ${d.ageFrom}–${d.ageTo} age range, so this place has to be approved by the provider — you'll book now and they'll confirm.`;
 }
 /** Going back was a faint line of underlined text; at every stage it is now a
  *  button that looks like one, so the way out is as findable as the way on. */
@@ -217,6 +221,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
    *  public settings (child questions, char limits, DOB rule). */
   tenantId?: string;
 }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState<ChildProfile>({ name: "", photoConsent: false });
@@ -225,8 +231,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // tk.line is a hairline meant for dividers; on the dark themes it left the
   // fields with no visible edge at all.
   const inpStyle = { background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink };
-  const problem = draft.name.trim() ? ageProblem(d, draft) : null;
-  const approvalNote = draft.name.trim() && !problem ? ageApprovalNote(d, draft) : null;
+  const problem = draft.name.trim() ? ageProblem(d, draft, tr) : null;
+  const approvalNote = draft.name.trim() && !problem ? ageApprovalNote(d, draft, tr) : null;
   // The provider's own questions, narrowed to this listing and this child's
   // age. `d.runFrom` rather than today, matching ageProblem above: the age
   // that matters is the one they'll be on the first day they attend, and two
@@ -245,11 +251,11 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // them at once, not the first — being sent back three times running for one
   // more field each time is the worst version of this.
   const missing = [
-    !draft.name.trim() && "their name",
+    !draft.name.trim() && tr("p7ck.missTheirName"),
     // Compulsory unless the provider has said otherwise — and never optional
     // while a question is age-gated, because there is no age without it.
-    !draft.dob && needDob && "their date of birth",
-    !draft.sex && settings.collectGender && "boy or girl",
+    !draft.dob && needDob && tr("p7ck.missDob"),
+    !draft.sex && settings.collectGender && tr("p7ck.missSex"),
     // A question the provider marked "must be answered" is as required as the
     // built-ins, and joins the same one-shot list rather than being a second
     // rejection after this one is satisfied.
@@ -283,12 +289,12 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 
   return (
     <>
-      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>Your children</div>
+      <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{tr("p7ck.yourChildren")}</div>
 
       {saved.length > 0 && (
         <div className="mt-1.5">
           <div className="text-[11px]" style={{ color: tk.muted }}>
-            Click to add child to dates.
+            {tr("p7ck.clickToAdd")}
             {/* State the range. Chips only said "out of age range", so a listing
                 whose ages were set wrong (4–4 rather than 4–11) looked like the
                 children were at fault, with no way to see why from this screen. */}
@@ -296,9 +302,9 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
               if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
               const range = Number.isFinite(from) && Number.isFinite(to)
-                ? (from === to ? `age ${from}` : `ages ${from}–${to}`)
-                : Number.isFinite(from) ? `age ${from} and over` : `up to age ${to}`;
-              return <> This listing is for <b>{range}</b>{d.allowOutOfRange ? " — others can ask for a place." : "."}</>;
+                ? (from === to ? tr("p7ck.rangeAge", { from }) : tr("p7ck.rangeAges", { from, to }))
+                : Number.isFinite(from) ? tr("p7ck.rangeOver", { from }) : tr("p7ck.rangeUpTo", { to });
+              return <Rich text={tr("p7ck.listingFor", { range, tail: d.allowOutOfRange ? tr("p7ck.tailOthers") : "." })} />;
             })()}
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -306,12 +312,12 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 not — one dropping out of sight because it hasn't been added
                 yet looks like it's been lost. The chip just changes state. */}
             {[...new Map(saved.map((sv) => [sv.name.trim().toLowerCase(), sv])).values()].map((sv) => {
-              const bad = ageProblem(d, sv);
+              const bad = ageProblem(d, sv, tr);
               const added = roster.some((r) => (r.id && r.id === sv.id) || r.name === sv.name);
               const c = sexTint(sv.sex, added);
               return (
                 <button key={sv.id ?? sv.name} type="button" disabled={!!bad}
-                  title={bad ?? (added ? `Take ${sv.name} off this booking` : `Add ${sv.name} to this booking`)}
+                  title={bad ?? (added ? tr("p7ck.takeOffBooking", { name: sv.name }) : tr("p7ck.addToBooking", { name: sv.name }))}
                   onClick={() => {
                     if (added) { setRoster(roster.filter((r) => !((r.id && r.id === sv.id) || r.name === sv.name))); return; }
                     onAdded(sv.name.trim());
@@ -319,7 +325,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   }}
                   className={`border-2 px-3 py-1.5 text-[12px] font-bold disabled:opacity-45 ${tk.round}`}
                   style={{ borderColor: c.border, background: c.bg, color: c.ink }}>
-                  {added ? "✓ " : "+ "}{sv.name}{bad ? " · out of age range" : ""}
+                  {added ? "✓ " : "+ "}{sv.name}{bad ? tr("p7ck.outOfAgeRange") : ""}
                 </button>
               );
             })}
@@ -344,21 +350,21 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                   {/* On the solid fill the muted greys vanish, so the actions
                       follow the row's state too. */}
                   <button type="button" onClick={() => { setDraft(c); setEditing(i); setOpen(true); }}
-                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>Edit details</button>
+                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>{tr("p7ck.editDetails")}</button>
                   {/* Off the booking entirely — their dates go and they drop
                       back to a pale chip above, ready to add again. Deleting
                       the profile belongs in the profile area, not mid-booking. */}
                   <button type="button"
                     onClick={() => { onUnassignAll(c.name.trim()); setRoster(roster.filter((_, n) => n !== i)); }}
-                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>Not coming</button>
+                    className="text-[11.5px] font-bold" style={{ color: "rgba(255,255,255,.9)" }}>{tr("p7ck.notComing")}</button>
                 </div>
                 {/* Says what just happened and where to change it — a child
                     silently landing on every date is the surprise worth
                     heading off. */}
                 <div className="mt-1 text-[11px] leading-[1.45]" style={{ color: "rgba(255,255,255,.85)" }}>
                   {on > 0
-                    ? "Added to all dates — you can take them off individual dates below."
-                    : "Not on any dates yet — tap their name on a pass below."}
+                    ? tr("p7ck.addedAllDates")
+                    : tr("p7ck.notOnAnyDates")}
                 </div>
               </div>
             );
@@ -408,12 +414,12 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
         <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
           <div className="flex flex-wrap gap-2">
             <div className="min-w-[150px] flex-1">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Child&rsquo;s full name <span style={{ color: "#f87171" }}>*</span></div>
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblChildName")} <span style={{ color: "#f87171" }}>*</span></div>
               <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                placeholder="First and last name" className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
+                placeholder={tr("p7ck.phFullName")} className={inp} style={{ ...inpStyle, ...flag(!draft.name.trim()) }} />
             </div>
             <div className="w-[150px]">
-              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Date of birth {needDob ? <span style={{ color: "#f87171" }}>*</span> : <span className="font-normal">— optional</span>}</div>
+              <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblDob")} {needDob ? <span style={{ color: "#f87171" }}>*</span> : <span className="font-normal">{tr("p7ck.optionalDash")}</span>}</div>
               <input type="date" value={draft.dob ?? ""} onChange={(e) => setDraft({ ...draft, dob: e.target.value })}
                 className={inp} style={{ ...inpStyle, ...flag(!draft.dob) }} />
             </div>
@@ -437,7 +443,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             <button type="button" onClick={() => photoRef.current?.click()}
               className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-full border-2 border-dashed"
               style={{ borderColor: `${tk.ink}40`, color: tk.muted }}
-              title={draft.photo ? "Change photo" : "Add a photo"}>
+              title={draft.photo ? tr("p7ck.changePhoto") : tr("p7ck.addPhoto")}>
               {draft.photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={draft.photo} alt="" className="h-full w-full object-cover" />
@@ -447,7 +453,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
             </button>
             <div className="min-w-0 flex-1">
               <div className="text-[11.5px] font-bold" style={{ color: tk.ink }}>
-                A photo of {draft.name.trim() || "your child"} <span className="font-normal">— optional</span>
+                {tr("p7ck.photoOf", { name: draft.name.trim() || tr("p7ck.yourChildWord") })} <span className="font-normal">{tr("p7ck.optionalDash")}</span>
               </div>
               <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
                 It goes on the register so staff who haven&rsquo;t met them know who they&rsquo;re
@@ -455,11 +461,11 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               </div>
               {draft.photo ? (
                 <button type="button" onClick={() => setDraft({ ...draft, photo: undefined })}
-                  className="mt-1 text-[10.5px] font-bold" style={{ color: tk.muted }}>Remove photo</button>
+                  className="mt-1 text-[10.5px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.removePhoto")}</button>
               ) : (
                 <button type="button" onClick={() => photoRef.current?.click()}
                   className={`mt-1.5 border-2 px-2.5 py-1 text-[11px] font-extrabold ${tk.round}`}
-                  style={{ borderColor: tk.accent, color: tk.accent }}>📷 Add a photo</button>
+                  style={{ borderColor: tk.accent, color: tk.accent }}>{tr("p7ck.addPhotoBtn")}</button>
               )}
             </div>
             <input ref={photoRef} type="file" accept="image/*" className="hidden"
@@ -479,12 +485,10 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {settings.collectionCheck !== "off" && (
           <div className={`mt-2.5 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}33` }}>
             <div className="mb-1 text-[11.5px] font-bold" style={{ color: tk.ink }}>
-              Collection {pinMode ? "PIN" : "password"} <span className="font-normal">— optional</span>
+              {pinMode ? tr("p7ck.collectionPin") : tr("p7ck.collectionPassword")} <span className="font-normal">{tr("p7ck.optionalDash")}</span>
             </div>
             <div className="mb-1.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-              Pick {pinMode ? "a number" : "a word"} only your family knows. If <b style={{ color: tk.ink }}>anyone other than you</b> comes
-              to collect {draft.name.trim() || "your child"} — a grandparent, a friend, another parent on the
-              school run — staff will ask them for it, and won&rsquo;t hand over without it.
+              <Rich text={tr(pinMode ? "p7ck.collectionHelpNum" : "p7ck.collectionHelpWord", { name: draft.name.trim() || tr("p7ck.yourChildWord") })} bClass="" />
             </div>
             <input value={draft.collectionPassword ?? ""}
               maxLength={CHILD_LIMITS.collectionPassword}
@@ -498,26 +502,26 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           )}
 
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Allergies <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblAllergies")} <span className="font-normal">{tr("p7ck.optionalDash")}</span></div>
             <input value={draft.allergies ?? ""} onChange={(e) => setDraft({ ...draft, allergies: e.target.value })}
-              maxLength={limitFor(settings, "allergies", CHILD_LIMITS)} placeholder="Nuts, dairy…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "allergies", CHILD_LIMITS)} placeholder={tr("p7ck.phAllergies")} className={inp} style={inpStyle} />
           </div>
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Medical <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblMedical")} <span className="font-normal">{tr("p7ck.optionalDash")}</span></div>
             <input value={draft.medical ?? ""} onChange={(e) => setDraft({ ...draft, medical: e.target.value })}
-              maxLength={limitFor(settings, "medical", CHILD_LIMITS)} placeholder="Asthma inhaler, epilepsy plan…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "medical", CHILD_LIMITS)} placeholder={tr("p7ck.phMedical")} className={inp} style={inpStyle} />
           </div>
           {settings.collectSend && (
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>SEND / additional needs <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblSend")} <span className="font-normal">{tr("p7ck.optionalDash")}</span></div>
             <input value={draft.send ?? ""} onChange={(e) => setDraft({ ...draft, send: e.target.value })}
-              maxLength={limitFor(settings, "send", CHILD_LIMITS)} placeholder="Autism, ADHD, 1:1 support, sensory needs…" className={inp} style={inpStyle} />
+              maxLength={limitFor(settings, "send", CHILD_LIMITS)} placeholder={tr("p7ck.phSend")} className={inp} style={inpStyle} />
             {/* The upload only appears once they've told us there's something
                 to support — asking for a plan before that is asking twice. */}
             {settings.collectSendPlan && !!draft.send?.trim() && (
               <div className={`mt-2 border border-dashed p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}4d` }}>
                 <div className="text-[11px] font-bold" style={{ color: tk.ink }}>
-                  SEND or EHCP plan <span className="font-normal">— optional</span>
+                  {tr("p7ck.lblEhcp")} <span className="font-normal">{tr("p7ck.optionalDash")}</span>
                 </div>
                 <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
                   If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
@@ -525,10 +529,10 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 {draft.sendPlanId ? (
                   <div className="mt-1.5 flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold" style={{ color: tk.ink }}>
-                      📎 {draft.sendPlanName ?? "Plan attached"}
+                      📎 {draft.sendPlanName ?? tr("p7ck.planAttached")}
                     </span>
                     <button type="button" onClick={() => setDraft({ ...draft, sendPlanId: undefined, sendPlanName: undefined })}
-                      className="text-[11px] font-bold" style={{ color: tk.muted }}>Remove</button>
+                      className="text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.removeWord")}</button>
                   </div>
                 ) : planPct !== null ? (
                   <div className="mt-2">
@@ -554,7 +558,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                       e.target.value = "";
                       if (!f) return;
                       if (f.size > PLAN_MAX_BYTES) {
-                        setPlanError(`${f.name} is ${Math.round(f.size / 1_000_000)}MB — the limit is ${PLAN_MAX_BYTES / 1_000_000}MB.`);
+                        setPlanError(tr("p7ck.planTooBig", { name: f.name, mb: Math.round(f.size / 1_000_000), max: PLAN_MAX_BYTES / 1_000_000 }));
                         return;
                       }
                       setPlanError(null);
@@ -563,7 +567,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                         const ref = await uploadPlan(f, setPlanPct);
                         setDraft({ ...draft, sendPlanId: ref.id, sendPlanName: ref.name });
                       } catch (err) {
-                        setPlanError(err instanceof Error ? err.message : "That upload didn't finish — try again.");
+                        setPlanError(err instanceof Error ? err.message : tr("p7ck.uploadFailed"));
                       } finally {
                         setPlanPct(null);
                       }
@@ -578,15 +582,15 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           )}
 
           <div className="mt-2">
-            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>Likes &amp; dislikes <span className="font-normal">— optional</span></div>
+            <div className="mb-1 text-[11px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.lblLikes")} <span className="font-normal">{tr("p7ck.optionalDash")}</span></div>
             <div className="mb-1 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
               What settles them and what doesn&rsquo;t — football and drawing, or loud rooms and being rushed. It helps staff on day one.
             </div>
             <div className="flex flex-wrap gap-2">
               <input value={draft.likes ?? ""} onChange={(e) => setDraft({ ...draft, likes: e.target.value })} maxLength={limitFor(settings, "likes", CHILD_LIMITS)}
-                placeholder="Likes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
+                placeholder={tr("p7ck.phLikes")} className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
               <input value={draft.dislikes ?? ""} onChange={(e) => setDraft({ ...draft, dislikes: e.target.value })} maxLength={limitFor(settings, "dislikes", CHILD_LIMITS)}
-                placeholder="Dislikes…" className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
+                placeholder={tr("p7ck.phDislikes")} className={`${inp} min-w-[130px] flex-1`} style={inpStyle} />
             </div>
           </div>
 
@@ -612,8 +616,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               a neutral default. */}
           {settings.collectGender && (
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Boy or girl? <span style={{ color: "#f87171" }}>*</span></span>
-            {([["boy", "Boy"], ["girl", "Girl"]] as const).map(([v, l]) => {
+            <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>{tr("p7ck.lblBoyGirl")} <span style={{ color: "#f87171" }}>*</span></span>
+            {([["boy", tr("p7ck.boy")], ["girl", tr("p7ck.girl")]] as const).map(([v, l]) => {
               const on = draft.sex === v;
               const c = sexTint(v);
               return (
@@ -626,7 +630,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
                 </button>
               );
             })}
-            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>Used on the register and to colour their name in your list.</span>
+            <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>{tr("p7ck.boyGirlNote")}</span>
           </div>
           )}
 
@@ -635,8 +639,8 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
               photos shouldn't be asking families to rule on it. */}
           {settings.askPhotoConsent && (
             <div className="mt-2.5 flex items-center gap-2">
-              <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>Happy for photos of them to be used?</span>
-              {[["Yes", true], ["No", false]].map(([l, v]) => (
+              <span className="flex-1 text-[12px]" style={{ color: tk.ink }}>{tr("p7ck.photosQ")}</span>
+              {[[tr("p7ck.yesWord"), true], [tr("p7ck.noWord"), false]].map(([l, v]) => (
                 <button key={String(l)} type="button" onClick={() => setDraft({ ...draft, photoConsent: v as boolean })}
                   className={`border px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
                   style={draft.photoConsent === v
@@ -649,14 +653,13 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {tried && missing.length > 0 && !problem && (
             <div className={`mt-2.5 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>
-              Before you can add {draft.name.trim() || "this child"}, we still need{" "}
-              {missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`}.
+              {tr("p7ck.stillNeed", { name: draft.name.trim() || tr("p7ck.thisChildLower"), list: new Intl.ListFormat(dl(), { style: "long", type: "conjunction" }).format(missing) })}
             </div>
           )}
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={add}
               className={`flex-1 py-2 text-[12.5px] font-extrabold ${tk.round}`}
-              style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? "Save details" : "Add child"}</button>
+              style={{ background: tk.accent, color: tk.accentInk }}>{editing !== null ? tr("p7ck.saveDetails") : tr("p7ck.addChild")}</button>
             <button type="button" onClick={() => { setOpen(false); setEditing(null); setTried(false); setDraft({ name: "", photoConsent: false }); }}
               className="text-[12px] font-bold" style={{ color: tk.muted }}>Cancel</button>
           </div>
@@ -686,9 +689,9 @@ function ckDarkBg(hex: string): boolean {
 // bank/cash/tfc are fixed rails (card routes to Stripe); voucher is handled
 // separately because it only shows once a scheme has a reference to quote.
 function parentMethodEntry(m: string): [string, string] | null {
-  if (/card/i.test(m)) return ["card", "Card"];
-  if (/bank|transfer/i.test(m)) return ["bank", "Bank transfer"];
-  if (/cash/i.test(m)) return ["cash", "Cash on the day"];
+  if (/card/i.test(m)) return ["card", tNow("p7ck.methodCard")];
+  if (/bank|transfer/i.test(m)) return ["bank", tNow("p7ck.methodBank")];
+  if (/cash/i.test(m)) return ["cash", tNow("p7ck.methodCash")];
   if (/tax.?free|tfc/i.test(m)) return ["tfc", "Tax-Free Childcare"];
   if (/haf|funded/i.test(m)) return ["haf", m];
   if (/voucher/i.test(m)) return null;
@@ -702,6 +705,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
 }) {
+  const tr = useT();
+  const { locale } = useI18n();
   const parentMode = mode === "parent";
   const { list: parents, state: parentsState, error: parentsError } = useParents(parentMode);
   // The operator's method list is the provider's own (Setup & features); the
@@ -774,7 +779,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // Show vouchers whenever the listing accepts them and a scheme has details to
   // quote. If it's too close for the money to clear, the deadline note below
   // still cautions the family — but the option no longer silently vanishes.
-  if (payList.some((m) => /voucher/i.test(m)) && vouchers.length) parentOpts.push(["voucher", "Childcare vouchers"]);
+  if (payList.some((m) => /voucher/i.test(m)) && vouchers.length) parentOpts.push(["voucher", tr("p7ck.methodVouchers")]);
   const method = parentMode || payList.includes(rawMethod) ? rawMethod : payList[0];
   // The full-page checkout scrolls itself, so the page underneath must stop —
   // otherwise there are two scrollbars and the outer one moves nothing you can
@@ -1000,15 +1005,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         // was charged more than the screen said.
         body: JSON.stringify({ tenantId, code, subtotal: b.total, attendees, ...(d.id ? { listingId: d.id } : {}) }),
       });
-      if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ?? "That code can’t be used on this booking"); return; }
+      if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ?? tr("p7ck.codeNoUse")); return; }
       // Exclusivity: an exclusive code can't join others, and can't be added when others are already on.
       if (appliedCodes.length && (r.exclusive || appliedCodes.some((a) => a.exclusive))) {
-        setCodeErr(`${r.exclusive ? (r.code ?? code) : appliedCodes.find((a) => a.exclusive)!.code} can’t be combined with other codes`);
+        setCodeErr(tr("p7ck.codeNoCombine", { code: r.exclusive ? (r.code ?? code) : appliedCodes.find((a) => a.exclusive)!.code }));
         return;
       }
       setAppliedCodes((a) => [...a, { code: r.code ?? code, off: r.off!, exclusive: !!r.exclusive }]);
       setCodeInput("");
-    } catch (e) { setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
+    } catch (e) { setCodeErr(e instanceof Error ? e.message : tr("p7ck.codeCheckFail")); }
     finally { setCodeBusy(false); }
   }
   // Capped at the pass subtotal, matching the server's own cap
@@ -1120,6 +1125,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     ...(hasMeals ? ["Meals"] : []),
     parentMode ? "Pay" : "Payment",
   ];
+  // The step names double as identifiers (the "Meals" pill is styled by name), so translate at display time only.
+  const stepLabel = (n: string) => ({ Dates: tr("p7ck.stepDates"), Parent: tr("p7ck.stepParent"), Children: tr("p7ck.stepChildren"), Meals: tr("p7ck.stepMeals"), Pay: tr("p7ck.stepPay"), Payment: tr("p7ck.stepPayment") } as Record<string, string>)[n] ?? n;
   /** Where "Children" sits — one further along for an operator. */
   const whoAt = parentMode ? 1 : 2;
   const mealsAt = whoAt + 1 + ordered.length; // index of the "Meals" step (only valid when hasMeals)
@@ -1167,7 +1174,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             const done = i < stepNow, now = i === stepNow;
             return (
               <button key={`${name}-${i}`} type="button" onClick={() => goStep(i)} disabled={i > stepNow}
-                title={done ? `Back to ${name.toLowerCase()}` : name}
+                title={done ? tr("p7ck.backTo", { step: stepLabel(name) }) : stepLabel(name)}
                 className={`border-2 px-2.5 py-1 text-[11.5px] font-extrabold transition-colors ${tk.round} ${name === "Meals" ? "animate-pulse" : ""}`}
                 style={name === "Meals"
                   ? { borderColor: "#38bdf8", background: now ? "#38bdf8" : "#38bdf826", color: now ? "#042a3d" : "#7dd3fc" }
@@ -1176,14 +1183,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   : done
                     ? { borderColor: `${tk.ink}59`, color: tk.ink, background: "transparent", cursor: "pointer" }
                     : { borderColor: tk.line, color: tk.muted, background: "transparent" }}>
-                {done && <span aria-hidden>← </span>}{name}
+                {done && <span aria-hidden>← </span>}{stepLabel(name)}
               </button>
             );
           })}
           {parentMode && (
             <span className="ms-auto flex items-center gap-3 text-[12px] font-extrabold">
-              <Link href="/custdash" className="underline" style={{ color: tk.accent }}>← My home page</Link>
-              <Link href="/custdash/bookings" className="underline" style={{ color: tk.accent }}>My bookings</Link>
+              <Link href="/custdash" className="underline" style={{ color: tk.accent }}>{tr("p7ck.myHomePage")}</Link>
+              <Link href="/custdash/bookings" className="underline" style={{ color: tk.accent }}>{tr("p7ck.myBookings")}</Link>
             </span>
           )}
         </div>
@@ -1215,7 +1222,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             )}
           </div>
         ))}
-        {!parentMode && <div className="text-[10.5px]" style={{ color: tk.muted }}>Prices are editable — discounts recalculate from what you set.</div>}
+        {!parentMode && <div className="text-[10.5px]" style={{ color: tk.muted }}>{tr("p7ck.pricesEditable")}</div>}
       </div>
       )}
 
@@ -1227,27 +1234,27 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <div className={`mt-4 flex items-center gap-2 border px-3 py-2 ${tk.round}`} style={{ borderColor: tk.accent, background: `${tk.accent}1a` }}>
           <span className="flex-1 text-[12.5px] font-bold" style={{ color: tk.ink }}>
             {b.parent.name}
-            {b.parent.id === "new" && <span className="ms-1.5 text-[11px] font-normal" style={{ color: tk.muted }}>— new account</span>}
+            {b.parent.id === "new" && <span className="ms-1.5 text-[11px] font-normal" style={{ color: tk.muted }}>{tr("p7ck.newAccount")}</span>}
           </span>
-          <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>Change</button>
+          <button type="button" onClick={() => b.setParent(null)} className="text-[11.5px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.changeWord")}</button>
         </div>
       ) : (
         <>
-          <div className="mt-3 font-bold uppercase" style={{ ...label, color: tk.ink }}>Whose booking is this?</div>
+          <div className="mt-3 font-bold uppercase" style={{ ...label, color: tk.ink }}>{tr("p7ck.whoseBooking")}</div>
 
           <div className={`mt-1.5 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
-            <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>1 · Already booked with you</div>
-            <div className="mb-1.5 mt-0.5 text-[11px] leading-[1.4]" style={{ color: tk.muted }}>Their account &amp; children are ready to pick. <span title="Someone who only registered but never booked isn't here — use option 2 and we'll link their account.">Registered-only? Use option 2.</span></div>
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
+            <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optAlready")}</div>
+            <div className="mb-1.5 mt-0.5 text-[11px] leading-[1.4]" style={{ color: tk.muted }}>{tr("p7ck.optAlreadyBody")} <span title={tr("p7ck.regOnlyTip")}>{tr("p7ck.regOnlyUse2")}</span></div>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr("p7ck.phSearchNameEmail")}
               className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
             <div className="mt-1 text-[11px]" style={{ color: parentsState === "error" ? "#fca5a5" : tk.ink }}>
               {parentsState === "loading"
-                ? "Loading your parents…"
+                ? tr("p7ck.loadingParents")
                 : parentsState === "error"
-                  ? `Couldn't load your parents — ${parentsError}`
+                  ? tr("p7ck.errParentsN", { err: parentsError ?? "" })
                   : parents.length === 0
-                    ? "No families on your account yet — use option 2."
-                    : `${parents.length} famil${parents.length === 1 ? "y" : "ies"} on your account`}
+                    ? tr("p7ck.noFamilies")
+                    : pickPlural(tr, locale, "p7ck.familiesN", parents.length)}
             </div>
             {q.trim() && (
               <div className="mt-1.5 flex flex-col gap-1">
@@ -1258,7 +1265,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   </button>
                 ))}
                 {matches.length === 0 && (
-                  <div className="text-[11px]" style={{ color: tk.muted }}>Nobody by that name has booked with you — use option 2 below.</div>
+                  <div className="text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.nobodyByName")}</div>
                 )}
               </div>
             )}
@@ -1266,14 +1273,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
           <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>2 · Anyone else</div>
-              <div className="text-[11px] leading-[1.4]" style={{ color: tk.muted }} title="If that email already has an ActivityOS account we'll use it, not make a second. They're emailed the booking, a password link and a way to pay. Next step: each child's name, DOB and boy/girl.">New / never booked — they&rsquo;re emailed the booking &amp; a link to pay.</div>
+              <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.optElse")}</div>
+              <div className="text-[11px] leading-[1.4]" style={{ color: tk.muted }} title={tr("p7ck.optElseTip")}>{tr("p7ck.optElseBody")}</div>
             </div>
             <div className="mt-1.5 grid grid-cols-2 gap-1.5">
               {(["name", "email", "phone", "address"] as const).map((k) => (
                 <div key={k} className={k === "address" || k === "name" ? "col-span-2" : ""}>
                   <div className="mb-0.5 text-[10px] font-bold" style={{ color: tk.muted }}>
-                    {{ name: "Parent's full name", email: "Email", phone: "Phone", address: "Address" }[k]}
+                    {{ name: tr("p7ck.fldName"), email: tr("p7ck.fldEmail"), phone: tr("p7ck.fldPhone"), address: tr("p7ck.fldAddress") }[k]}
                   </div>
                   <input value={np[k]} onChange={(e) => setNp({ ...np, [k]: e.target.value })}
                     className={`aos-in w-full border px-2.5 py-1.5 text-[12.5px] outline-none ${tk.round}`}
@@ -1293,7 +1300,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               onClick={() => b.setParent({ id: "new", name: np.name.trim(), email: np.email.trim(), phone: np.phone.trim(), address: np.address.trim() })}
               className={`w-full py-2 text-[12.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
-              {npReady ? `Set up ${np.name.trim()} →` : "Fill in all four to carry on"}
+              {npReady ? tr("p7ck.setUpName", { name: np.name.trim() }) : tr("p7ck.fillAllFour")}
             </button>
           </div>
         </>
@@ -1303,7 +1310,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         <button type="button" disabled={!b.parent} onClick={() => setCkStage("who")}
           className={`mt-3 w-full py-2.5 text-[13px] font-extrabold disabled:opacity-40 ${tk.round}`}
           style={{ background: tk.accent, color: tk.accentInk }}>
-          {b.parent ? `Book for ${b.parent.name} →` : "Find the parent first"}
+          {b.parent ? tr("p7ck.bookForName", { name: b.parent.name }) : tr("p7ck.findParentFirst")}
         </button>
       )}
 
@@ -1317,12 +1324,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               onAdded={(name) => b.clearRemovalsFor(name)}
  />
           )}
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>Who&rsquo;s on each pass</div>
+          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.muted }}>{tr("p7ck.whosOnEachPass")}</div>
           {(
             <div className="mt-1.5 text-[11px]" style={{ color: tk.muted }}>
               {roster.length === 0
-                ? "Add a child above to get started."
-                : "Tap a name to take them off."}
+                ? tr("p7ck.addChildAbove")
+                : tr("p7ck.tapNameOff")}
             </div>
           )}
 
@@ -1349,7 +1356,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       );
                     })()}
                     <button type="button" onClick={() => b.removeItem(x.id)}
-                      title={x.dates.length === 1 ? "Remove this day" : `Remove this ${x.dates.length}-day pass`}
+                      title={x.dates.length === 1 ? tr("p7ck.removeDay") : tr("p7ck.removePassN", { n: x.dates.length })}
                       className="flex-none px-1 text-[15px] leading-none"
                       style={{ color: tk.muted }}>×</button>
                   </div>
@@ -1360,17 +1367,17 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     <div className="mt-2">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="text-[11px]" style={{ color: tk.muted }}>
-                          {x.dates.length === 1 ? "Who's coming" : `Who's on all ${x.dates.length} days`}
+                          {x.dates.length === 1 ? tr("p7ck.whosComing") : tr("p7ck.whosOnAllN", { n: x.dates.length })}
                         </span>
-                        {roster.length === 0 && <span className="text-[11px]" style={{ color: "#c2410c" }}>add a child above</span>}
+                        {roster.length === 0 && <span className="text-[11px]" style={{ color: "#c2410c" }}>{tr("p7ck.addChildAboveLower")}</span>}
                         {roster.map((c) => {
                           const name = c.name.trim();
                           const going = b.childrenOn(x.id).includes(name);
                           return (
                             <button key={name} type="button" onClick={() => b.toggleChild(x.id, name)}
                               title={x.dates.length === 1
-                                ? (going ? `Take ${name} off this day` : `Put ${name} on this day`)
-                                : (going ? `Take ${name} off this ${x.dates.length}-day pass` : `Put ${name} on this ${x.dates.length}-day pass`)}
+                                ? (going ? tr("p7ck.takeOffDay", { name }) : tr("p7ck.putOnDay", { name }))
+                                : (going ? tr("p7ck.takeOffPassN", { name, n: x.dates.length }) : tr("p7ck.putOnPassN", { name, n: x.dates.length }))}
                               className={`border-2 px-2.5 py-[3px] text-[11.5px] font-bold ${tk.round}`}
                               style={going
                                 ? { borderColor: sexTint(c.sex, true).border, background: sexTint(c.sex, true).bg, color: sexTint(c.sex, true).ink }
@@ -1419,7 +1426,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                             ))}
                             <div className="mt-0.5 flex items-baseline justify-between gap-3 border-t pt-1 text-[12.5px] font-extrabold"
                               style={{ borderColor: tk.line }}>
-                              <span style={{ color: tk.ink }}>Pass total</span>
+                              <span style={{ color: tk.ink }}>{tr("p7ck.passTotal")}</span>
                               <span style={{ color: tk.ink }}>{money(Math.max(0, gross - off))}</span>
                             </div>
                           </div>
@@ -1427,7 +1434,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       })()}
                       <button type="button" onClick={() => b.editDates(x.id)}
                         className="mt-1.5 text-[11px] font-bold underline underline-offset-2" style={{ color: tk.muted }}>
-                        {x.dates.length === 1 ? "Change this date" : `Change which ${x.dates.length} days`}
+                        {x.dates.length === 1 ? tr("p7ck.changeThisDate") : tr("p7ck.changeWhichN", { n: x.dates.length })}
                       </button>
                     </div>
                   )}
@@ -1446,8 +1453,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           is paid with the booking. Optional, one meal per child per day. */}
       {ckStage === "meals" && (
         <div>
-          <div className="text-[15px] font-extrabold" style={{ color: tk.ink }}>🍽 Add meals <span className="text-[12px] font-semibold" style={{ color: tk.muted }}>· optional</span></div>
-          <p className="mb-3 mt-0.5 text-[12px]" style={{ color: tk.muted }}>Pick a meal for any day — you pay for them with your booking. Allergens shown with ⚠. You can skip this.</p>
+          <div className="text-[15px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.addMealsHead")} <span className="text-[12px] font-semibold" style={{ color: tk.muted }}>{tr("p7ck.optionalDot")}</span></div>
+          <p className="mb-3 mt-0.5 text-[12px]" style={{ color: tk.muted }}>{tr("p7ck.mealsIntro")}</p>
           <div className="flex flex-col gap-3">
             {mealKids.map((kid, ki) => {
               const slots = mealSlots.filter((s) => s.kid === kid);
@@ -1483,7 +1490,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                     <button key={it.id} type="button" onClick={() => b.pickMeal(kid, date, on ? null : it.id)}
                                       className="rounded-full px-2 py-[3px] text-[11.5px] font-bold"
                                       style={on ? { background: tk.accent, color: tk.accentInk } : { border: `1px solid ${tk.line}`, color: tk.ink }}
-                                      title={(it.allergens?.length ?? 0) > 0 ? `Contains ${it.allergens!.join(", ")}` : undefined}>
+                                      title={(it.allergens?.length ?? 0) > 0 ? tr("p7ck.contains", { list: it.allergens!.join(", ") }) : undefined}>
                                       {on ? "✓ " : ""}{it.name}{it.price > 0 ? ` · ${money(it.price)}` : ""}{(it.allergens?.length ?? 0) > 0 ? " ⚠" : ""}
                                     </button>
                                   );
@@ -1506,7 +1513,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             })}
           </div>
           <button type="button" onClick={() => setCkStage("pay")} className={`mt-4 w-full py-3 text-[13.5px] font-extrabold ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}>
-            {mealTotal > 0 ? `Next — meals ${money(mealTotal)} →` : "Next →"}
+            {mealTotal > 0 ? tr("p7ck.nextMeals", { amt: money(mealTotal) }) : tr("p7ck.nextArrow")}
           </button>
           <BackBtn tk={tk} onClick={() => { if (addons.length) { setExtraIdx(ordered.length - 1); setCkStage("extras"); } else setCkStage("who"); }} className="mt-3">
             Back to {ordered.length ? ordered[ordered.length - 1].name : "children"}
@@ -1533,7 +1540,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         )}
         {mealTotal > 0 && (
           <div className="flex items-baseline justify-between text-[11.5px]" style={{ color: tk.muted }}>
-            <span>Meals</span><b style={{ color: tk.ink }}>{money(mealTotal)}</b>
+            <span>{tr("p7ck.stepMeals")}</span><b style={{ color: tk.ink }}>{money(mealTotal)}</b>
           </div>
         )}
         <div className="mt-2 flex items-baseline justify-between text-[14px]">
@@ -1549,13 +1556,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             (an exclusive one stands alone); tap again to remove. */}
         {parentMode && (
           <div className="mt-3 border-t pt-2.5" style={{ borderColor: tk.line }}>
-            <div className="mb-1.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>🏷️ Have discount codes?</div>
+            <div className="mb-1.5 text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{tr("p7ck.haveCodes")}</div>
             <div className="flex gap-1.5">
               <input
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void applyCode(codeInput); } }}
-                placeholder="Type a code…"
+                placeholder={tr("p7ck.phTypeCode")}
                 className="min-w-0 flex-1 rounded-lg px-2.5 py-2 text-[12.5px] uppercase outline-none"
                 style={{ background: tk.inputBg, border: `1px solid ${tk.line}`, color: tk.ink }}
               />
@@ -1564,14 +1571,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             {codeErr && <div className="mt-1 text-[11px]" style={{ color: "#ef5350" }}>{codeErr}</div>}
             {myCoupons.length > 0 && (
               <div className="mt-2">
-                <div className="mb-1 text-[11px]" style={{ color: tk.muted }}>Tap your codes to apply — they stack:</div>
+                <div className="mb-1 text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.tapCodes")}</div>
                 <div className="flex flex-wrap gap-1.5">
                   {myCoupons.map((c) => {
                     const active = isApplied(c.code);
                     return (
                       <button key={c.code} type="button" onClick={() => void applyCode(c.code)} className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11.5px] font-bold transition-transform hover:-translate-y-px" style={active ? { background: tk.accent, color: tk.accentInk, border: `1.5px solid ${tk.accent}` } : { background: "transparent", color: tk.ink, border: `1.5px solid ${tk.accent}` }}>
                         <span style={{ color: active ? tk.accentInk : tk.accent }}>{active ? "✓" : "＋"}</span>
-                        {c.code} · {c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)}/child` : `${money(c.value)} off`}
+                        {c.type === "percent" ? tr("p7ck.codeOffPct", { code: c.code, v: c.value }) : c.type === "perAttendee" ? tr("p7ck.codePerChild", { code: c.code, amt: money(c.value) }) : tr("p7ck.codeOffAmt", { code: c.code, amt: money(c.value) })}
                       </button>
                     );
                   })}
@@ -1609,7 +1616,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     );
                   })}
                   <input type="range" min={0} max={walletAvail} step={0.01} value={walletApplied}
-                    onChange={(e) => setWalletUse(parseFloat(e.target.value))} aria-label="How much wallet credit to use"
+                    onChange={(e) => setWalletUse(parseFloat(e.target.value))} aria-label={tr("p7ck.walletAria")}
                     className="h-1.5 flex-1 cursor-pointer" style={{ accentColor: tk.accent }} />
                 </div>
                 {walletApplied < walletAvail && (
@@ -1620,14 +1627,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               </div>
             )}
             <div className="mt-1.5 flex items-baseline justify-between border-t pt-1.5 text-[15px] font-extrabold" style={{ borderColor: tk.line, color: tk.ink }}>
-              <span>Due now</span>
+              <span>{tr("p7ck.dueNow")}</span>
               <b>{money(amountDue)}</b>
             </div>
           </>
         )}
         {/* Final say on the price — for a one-off arrangement a rule can't express. Operators only. */}
         {!parentMode && <div className="mt-2 flex items-center gap-2">
-          <span className="flex-1 text-[11.5px]" style={{ color: tk.muted }}>Override the total</span>
+          <span className="flex-1 text-[11.5px]" style={{ color: tk.muted }}>{tr("p7ck.overrideTotal")}</span>
           <span className="flex items-center gap-1">
             <span className="text-[11px]" style={{ color: tk.muted }}>£</span>
             <input type="number" min={0} step="0.01" value={b.totalOverride ?? ""} placeholder={calculated.toFixed(2)}
@@ -1655,7 +1662,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         );
         const ready =
           roster.length > 0 && unassigned === 0 && shortPasses.length === 0 && clashes.length === 0 && outstanding.length === 0;
-        const next = "Next";
+        const next = tr("p7ck.ctaNext");
         return (
           <>
             {/* Where the booking stands, once rather than per card. */}
@@ -1666,7 +1673,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   Booking so far
                   <span className="ms-1.5 text-[11px] font-semibold" style={{ color: tk.muted }}>
                     {b.basket.length} pass{b.basket.length === 1 ? "" : "es"}
-                    {b.saved > 0 ? ` · ${money(b.saved)} saved` : ""}
+                    {b.saved > 0 ? tr("p7ck.savedAmt", { amt: money(b.saved) }) : ""}
                   </span>
                 </span>
                 <span className="flex items-baseline gap-2">
@@ -1679,13 +1686,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             <button type="button" disabled={!ready} onClick={() => { setExtraIdx(0); setCkStage(addons.length ? "extras" : hasMeals ? "meals" : "pay"); }}
               className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`}
               style={{ background: tk.accent, color: tk.accentInk }}>
-              {roster.length === 0 ? "Add a child first"
-                : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
-                : unassigned > 0 || shortPasses.length > 0 ? "Put a child on every pass"
-                : outstanding.length > 0 ? `Answer “${outstanding[0].label}” for ${outstanding[0].who}`
+              {roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
+                : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
+                : unassigned > 0 || shortPasses.length > 0 ? tr("p7ck.ctaPutChild")
+                : outstanding.length > 0 ? tr("p7ck.ctaAnswer", { label: outstanding[0].label, who: outstanding[0].who })
                 : next}
             </button>
-            <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">Back to dates</BackBtn>
+            <BackBtn tk={tk} onClick={() => b.setStage("pick")} className="mt-2 w-full justify-center">{tr("p7ck.backToDates")}</BackBtn>
           </>
         );
       })()}
@@ -1732,8 +1739,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         // a one-off for a single child is one tap either way, and "every day"
         // is meaningless on something that isn't per-day.
         const sweep = kids.length > 1
-          ? (perDay ? "Everyone, every day" : "Everyone")
-          : (perDay ? "Every day" : null);
+          ? (perDay ? tr("p7ck.everyoneEveryDay") : tr("p7ck.everyoneWord"))
+          : (perDay ? tr("p7ck.everyDay") : null);
         const buttons = (
           <div className="flex flex-none flex-wrap gap-2">
             {sweep && (
@@ -1749,10 +1756,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 are a scroll away past sixty date tiles. */}
             {anyPicked ? (
               <button type="button" onClick={() => step(1)} disabled={unanswered.length > 0}
-                className={`${btn} disabled:opacity-50`} style={solid}>Next →</button>
+                className={`${btn} disabled:opacity-50`} style={solid}>{tr("p7ck.nextArrow")}</button>
             ) : (
               <button type="button" onClick={() => { clearAll(); step(1); }}
-                className={btn} style={ghost}>Skip →</button>
+                className={btn} style={ghost}>{tr("p7ck.skipArrow")}</button>
             )}
           </div>
         );
@@ -1830,8 +1837,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                 ? { borderColor: kc.bg, background: kc.bg, color: kc.ink }
                                 : { borderColor: kc.bg, background: "transparent", color: kc.bg }}>
                               {perDay
-                                ? (all ? `✓ All ${x.dates.length} days` : "Every day")
-                                : (days.length ? `✓ Yes · ${money(a.price)}` : `Add · ${money(a.price)}`)}
+                                ? (all ? tr("p7ck.allNDays", { n: x.dates.length }) : tr("p7ck.everyDay"))
+                                : (days.length ? tr("p7ck.yesPrice", { amt: money(a.price) }) : tr("p7ck.addPrice", { amt: money(a.price) }))}
                             </button>
                           </div>
                           {perDay && (
@@ -1886,7 +1893,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                                       </div>
                                     ) : (
                                       <input value={val} onChange={(e) => b.setAnswer(x.id, kid, a.id, q.id, e.target.value)}
-                                        placeholder="Your answer…"
+                                        placeholder={tr("p7ck.phYourAnswer")}
                                         className={`aos-in w-full border px-2.5 py-1.5 text-[12px] outline-none ${tk.round}`}
                                         style={{ background: tk.inputBg, color: tk.ink, borderColor: needsAnswer ? "#f87171" : `${tk.ink}4d` }} />
                                     )}
@@ -1932,7 +1939,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 );
               })}
               <div className="mt-1 flex items-baseline justify-between text-[14px] font-extrabold">
-                <span style={{ color: tk.ink }}>So far</span>
+                <span style={{ color: tk.ink }}>{tr("p7ck.soFar")}</span>
                 <span style={{ color: tk.accent }}>{money(b.total + addonTotal)}</span>
               </div>
             </div>
@@ -1948,13 +1955,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 <button type="button" onClick={() => step(1)} disabled={unanswered.length > 0}
                   className={`ms-auto px-5 py-2 text-[12.5px] font-extrabold disabled:opacity-50 ${tk.round}`}
                   style={{ background: tk.accent, color: tk.accentInk, boxShadow: `0 10px 22px -12px ${tk.accent}` }}>
-                  {unanswered.length ? `${unanswered[0].kid} needs ${unanswered[0].label.toLowerCase()}` : "Next →"}
+                  {unanswered.length ? tr("p7ck.needsAnswer", { kid: unanswered[0].kid, what: unanswered[0].label.toLowerCase() }) : tr("p7ck.nextArrow")}
                 </button>
               ) : (
                 <button type="button" onClick={() => { clearAll(); step(1); }}
                   className={`ms-auto border-2 px-4 py-2 text-[12.5px] font-extrabold ${tk.round}`}
                   style={{ borderColor: tk.muted, color: tk.ink }}>
-                  Skip →
+                  {tr("p7ck.skipArrow")}
                 </button>
               )}
             </div>
@@ -1977,15 +1984,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       {ckStage === "pay" && grandTotal <= 0 && parentMode && (
         <div className={`mt-3 border px-3 py-2.5 text-[12.5px] leading-[1.5] ${tk.round}`}
           style={{ borderColor: tk.line, color: tk.ink }}>
-          <b>Nothing to pay.</b> <span style={{ color: tk.muted }}>This booking is free &mdash;
-          confirm it below and you&rsquo;re done.</span>
+          <Rich text={tr("p7ck.freeHead")} />
         </div>
       )}
 
       {ckStage === "pay" && !(grandTotal <= 0 && parentMode) && (
         <div className="mt-3">
           <div className="font-bold uppercase" style={{ ...label, color: tk.muted }}>
-            {parentMode ? "How you\u2019ll pay" : "How the parent is paying"}
+            {parentMode ? tr("p7ck.howYoullPayHead") : tr("p7ck.howParentPaying")}
           </div>
           <select value={method} onChange={(e) => setMethod(e.target.value)}
             className={`mt-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
@@ -2046,12 +2052,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[13px] font-extrabold"
                     style={{ background: "rgba(255,255,255,.22)", color: "#fff" }}>£</span>
                   <div>
-                    <div className="text-[13px] font-extrabold leading-tight text-white">Pay from your HMRC account</div>
-                    <div className="text-[10.5px] leading-tight" style={{ color: "rgba(255,255,255,.8)" }}>Tax-Free Childcare</div>
+                    <div className="text-[13px] font-extrabold leading-tight text-white">{tr("p7ck.payFromHmrc")}</div>
+                    <div className="text-[10.5px] leading-tight" style={{ color: "rgba(255,255,255,.8)" }}>{tr("p7ck.methodTfc")}</div>
                   </div>
                   <span className="ms-auto shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-extrabold"
                     style={{ background: linkedAll ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.2)", color: linkedAll ? "#065f3c" : "#fff" }}>
-                    {linkedAll ? "✓ Linked" : `${linkedCount}/${roster.length} linked`}
+                    {linkedAll ? tr("p7ck.linkedShort") : tr("p7ck.linkedOfN", { a: linkedCount, n: roster.length })}
                   </span>
                 </div>
 
@@ -2071,13 +2077,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className="text-[12.5px] font-bold" style={{ color: tk.ink }}>{c.name}</span>
                           {ref
-                            ? <span className="text-[11px] font-bold" style={{ color: TFC_GREEN }}>✓ linked</span>
+                            ? <span className="text-[11px] font-bold" style={{ color: TFC_GREEN }}>{tr("p7ck.linkedCheck")}</span>
                             : (
                               <button type="button"
                                 onClick={() => { setTfcFail(null); setTfcConnecting(c.name); }}
                                 className={`ms-auto border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
                                 style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
-                                Login with HMRC
+                                {tr("p7ck.loginHmrc")}
                               </button>
                             )}
                         </div>
@@ -2085,7 +2091,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           <input value={voucherRefs[c.name] ?? ref}
                             onChange={(e) => { setVoucherRefs((m) => ({ ...m, [c.name]: e.target.value.toUpperCase() })); }}
                             placeholder={referenceHint(c.name)}
-                            aria-label={`Payment reference for ${c.name}`}
+                            aria-label={tr("p7ck.payRefFor", { name: c.name })}
                             className={`w-full border px-2.5 py-1.5 pe-8 text-[12.5px] font-semibold tracking-wide ${tk.round}`}
                             style={{ borderColor: typed ? (looksRight ? `${TFC_GREEN}80` : "#e0a020") : `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
                           {typed && looksRight && (
@@ -2098,8 +2104,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                             paragraph telling it so. */}
                         {!looksRight && (
                           <div className="mt-1 text-[10.5px] leading-[1.45]" style={{ color: typed ? "#e0a020" : tk.muted }}>
-                            {typed ? "Double-check — " : "From your HMRC account · "}
-                            usually <b style={{ color: tk.ink }}>{referencePrefix(c.name)}</b> + 5 digits + <b style={{ color: tk.ink }}>TFC</b>
+                            {typed ? tr("p7ck.doubleCheck") : tr("p7ck.fromHmrcAcct")}
+                            <Rich text={tr("p7ck.usuallyRef", { prefix: referencePrefix(c.name) })} bClass="" />
                           </div>
                         )}
                       </div>
@@ -2118,20 +2124,20 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                 {!linkedAll && (() => {
                   const settingName = (cc.settingName ?? "").trim() || (ckSettings.providerName ?? "").trim();
                   const rows = ([
-                    ["Setting name", settingName],
-                    ["Ofsted / registration number", cc.registrationNumber],
-                    ["Postcode", cc.postcode],
+                    [tr("p7ck.settingNameLbl"), settingName],
+                    [tr("p7ck.ofstedNo"), cc.registrationNumber],
+                    [tr("p7ck.postcodeLbl"), cc.postcode],
                   ] as const).filter(([, v]) => (v ?? "").trim());
                   return (
                     <details className={`mt-2 border ${tk.round}`} style={{ borderColor: `${tk.ink}26` }}>
                       <summary className="cursor-pointer px-2.5 py-2 text-[11.5px] font-bold" style={{ color: tk.ink }}>
-                        Not added this provider to your HMRC account yet?
+                        {tr("p7ck.notAddedHmrc")}
                       </summary>
                       <div className="border-t px-2.5 py-2" style={{ borderColor: `${tk.ink}1a` }}>
                         <ol className="flex list-decimal flex-col gap-1 ps-4 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
-                          <li>Sign in at <b style={{ color: tk.ink }}>gov.uk/sign-in-childcare-account</b> and add a childcare provider.</li>
-                          <li>Search for {settingName ? <b style={{ color: tk.ink }}>{settingName}</b> : "this provider"} and add them.</li>
-                          <li>Come back here and pay.</li>
+                          <li><Rich text={tr("p7ck.signInGov")} /></li>
+                          <li>{settingName ? <Rich text={tr("p7ck.searchProviderNamed", { name: settingName })} /> : tr("p7ck.searchProviderThis")}</li>
+                          <li>{tr("p7ck.comeBackPay")}</li>
                         </ol>
                         {rows.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2" style={{ borderColor: `${tk.ink}1a` }}>
@@ -2145,7 +2151,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                         )}
                         {!settingName && (
                           <div className="mt-2 text-[11px]" style={{ color: "#e0a020" }}>
-                            Your provider hasn&rsquo;t published the name HMRC holds them under — ask them before you pay.
+                            {tr("p7ck.notPublished")}
                           </div>
                         )}
                       </div>
@@ -2158,7 +2164,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     what's left. A bar and two rows say it at a glance. */}
                 <div className="mt-3 border-t pt-3" style={{ borderColor: `${tk.ink}1a` }}>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>How you&rsquo;ll pay</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>{tr("p7ck.howYoullPayShort")}</span>
                     <span className="text-[20px] font-extrabold tracking-[-0.01em]" style={{ color: tk.ink }}>{money(amountDue)}</span>
                   </div>
                   <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full" style={{ background: `${tk.ink}14` }}>
@@ -2168,12 +2174,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
                   <div className="mt-2 flex items-center gap-2">
                     <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TFC_BAR }} />
-                    <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>Tax-Free Childcare</span>
+                    <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>{tr("p7ck.methodTfc")}</span>
                     <span className="ms-auto flex items-center gap-1">
                       <span className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>£</span>
                       <input inputMode="decimal" value={tfcAmount} onChange={(e) => setTfcAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                         placeholder={String(amountDue.toFixed(2))}
-                        aria-label="Amount from Tax-Free Childcare"
+                        aria-label={tr("p7ck.amtFromTfc")}
                         className={`w-[86px] border px-2 py-1 text-end text-[12.5px] font-extrabold ${tk.round}`}
                         style={{ borderColor: `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
                     </span>
@@ -2189,8 +2195,8 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   {/* What's actually in the account. */}
                   {available !== null && fromTfc <= available && (
                     <div className="mt-2 text-[11px]" style={{ color: tk.muted }}>
-                      Balance <b style={{ color: tk.ink }}>{money(available)}</b>
-                      {simulatedBalance && <span style={{ color: "#e0a020" }}> · example figure</span>}
+                      <Rich text={tr("p7ck.balanceLine", { amt: money(available) })} bClass="" />
+                      {simulatedBalance && <span style={{ color: "#e0a020" }}> {tr("p7ck.exampleFigure")}</span>}
                     </div>
                   )}
 
@@ -2200,24 +2206,24 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     <div className={`mt-2 flex flex-wrap items-center gap-2 border px-2.5 py-2 ${tk.round}`}
                       style={{ borderColor: "#e0a02066", background: "#e0a0201a" }}>
                       <span className="text-[11.5px]" style={{ color: tk.ink }}>
-                        <b>{money(fromTfc - available)} short</b> · balance {money(available)}
-                        {simulatedBalance && <span style={{ color: "#e0a020" }}> (example)</span>}
+                        <Rich text={tr("p7ck.shortBy", { amt: money(fromTfc - available), bal: money(available) })} />
+                        {simulatedBalance && <span style={{ color: "#e0a020" }}> {tr("p7ck.examplePar")}</span>}
                       </span>
                       <button type="button"
                         onClick={() => { setTfcAmount(available.toFixed(2)); if (restOpts[0]) setTfcRest(restOpts[0][0]); }}
                         className={`ms-auto border-2 px-2.5 py-1 text-[11px] font-bold ${tk.round}`}
                         style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
-                        Split it
+                        {tr("p7ck.splitIt")}
                       </button>
                       <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>
-                        Or top up at <b style={{ color: tk.ink }}>gov.uk/sign-in-childcare-account</b>
+                        <Rich text={tr("p7ck.orTopUp")} bClass="" />
                       </span>
                     </div>
                   )}
 
                   {remainder > 0 && (
                     <div className="mt-2.5">
-                      <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>Pay the rest by</div>
+                      <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>{tr("p7ck.payTheRest")}</div>
                       <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {restOpts.map(([k, label]) => (
                           <button key={k} type="button" onClick={() => setTfcRest(k)}
@@ -2236,29 +2242,27 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                           Reconciliation exists to clean up. */}
                       {restSel === "voucher" && (
                         <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: `${tk.ink}26`, color: tk.muted }}>
-                          You&rsquo;ll pay the {money(remainder)} balance through your voucher scheme
-                          {vouchers.length ? ` (${vouchers.slice(0, 3).map((v) => v.name).join(", ")}${vouchers.length > 3 ? " and others" : ""})` : ""}.
-                          Your provider will send you the details and the reference to quote.
+                          {tr("p7ck.restVoucher", { amt: money(remainder), schemes: vouchers.length ? ` (${vouchers.slice(0, 3).map((v) => v.name).join(", ")}${vouchers.length > 3 ? tr("p7ck.andOthers") : ""})` : "" })}
                         </div>
                       )}
                       {restSel === "cash" && (
                         <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: `${tk.ink}26`, color: tk.muted }}>
-                          Bring the {money(remainder)} balance on the day — your provider will mark it paid.
+                          {tr("p7ck.restCash", { amt: money(remainder) })}
                         </div>
                       )}
                       {restSel === "bank" && (() => {
                         const bank = ckSettings.billing ?? {};
                         const rows = ([
-                          ["Account name", bank.accountName || bank.businessName],
-                          ["Sort code", bank.sortCode],
-                          ["Account number", bank.accountNumber],
-                          ["Bank", bank.bankName],
+                          [tr("p7ck.acctName"), bank.accountName || bank.businessName],
+                          [tr("p7ck.sortCode"), bank.sortCode],
+                          [tr("p7ck.acctNumber"), bank.accountNumber],
+                          [tr("p7ck.bankLbl"), bank.bankName],
                         ] as const).filter(([, v]) => (v ?? "").trim());
                         return (
                           <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}26` }}>
                             {rows.length > 0 ? (
                               <>
-                                <div className="text-[11px]" style={{ color: tk.muted }}>Send {money(remainder)} to</div>
+                                <div className="text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.sendTo", { amt: money(remainder) })}</div>
                                 {rows.map(([label, v]) => (
                                   <div key={label} className="mt-1 flex flex-wrap items-baseline gap-x-2">
                                     <span className="text-[11px]" style={{ color: tk.muted }}>{label}</span>
@@ -2268,14 +2272,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                               </>
                             ) : (
                               <div className="text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
-                                Your provider will send you their bank details to pay the {money(remainder)} balance.
+                                {tr("p7ck.bankWillSend", { amt: money(remainder) })}
                               </div>
                             )}
                             <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
                               {/* The booking reference doesn't exist until the booking does, so
                                   don't pretend to show it — say where it will be. */}
-                              Use your <b style={{ color: tk.ink }}>booking reference</b> as the payment reference — we&rsquo;ll
-                              show it the moment you&rsquo;ve booked and email it to you, so your provider can match the transfer.
+                              <Rich text={tr("p7ck.useBookingRef")} bClass="" />
                             </div>
                           </div>
                         );
@@ -2290,7 +2293,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     carries the only part that was actually news. */}
                 {!HMRC_CONNECTED && (
                   <div className="mt-2.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-                    Pay it from your HMRC account — we&rsquo;ll match it to this booking by reference.
+                    {tr("p7ck.payFromHmrcNote")}
                   </div>
                 )}
 
@@ -2328,7 +2331,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   </div>
                 ) : !linkedAll && (
                   <div className="mt-2 text-[10.5px]" style={{ color: "#e0a020" }}>
-                    Link each child, or type the reference you pay under, to continue.
+                    {tr("p7ck.linkEachChild")}
                   </div>
                 )}
                 </div>
@@ -2338,10 +2341,9 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
           {parentMode && method === "voucher" && (
             <div className={`mt-2 border px-3 py-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
-              <div className="text-[12px] font-bold" style={{ color: tk.ink }}>Which scheme do you use?</div>
+              <div className="text-[12px] font-bold" style={{ color: tk.ink }}>{tr("p7ck.whichScheme")}</div>
               <div className="mt-0.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
-                Your employer decides this. Telling us means we can match your payment when it
-                arrives.
+                {tr("p7ck.schemeHelp")}
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {vouchers.map((v) => (
@@ -2360,13 +2362,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   style={voucherId === NOT_LISTED
                     ? { borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }
                     : { borderColor: `${tk.ink}40`, color: tk.muted }}>
-                  Mine isn&rsquo;t listed
+                  {tr("p7ck.notListed")}
                 </button>
               </div>
 
               {chosenVoucher && (
                 <div className={`mt-2.5 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}26`, background: tk.inputBg }}>
-                  <div className="text-[11px]" style={{ color: tk.muted }}>Pay {chosenVoucher.name} using</div>
+                  <div className="text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.payUsing", { scheme: chosenVoucher.name })}</div>
                   {/* Every detail they've given us, labelled. A scheme asking
                       for a setting name and getting an account number is a
                       payment that doesn't arrive. */}
@@ -2383,13 +2385,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     );
                   })}
                   {voucherDetails.some((d) => /website|url|link|portal/i.test(d.label) || /^https?:\/\//i.test(d.value)) && (
-                    <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>Tap the link to sign in and pay — it goes straight to {chosenVoucher.name}.</div>
+                    <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.tapLinkPay", { scheme: chosenVoucher.name })}</div>
                   )}
                   <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
-                    Send <b style={{ color: tk.ink }}>{money(grandTotal)}</b> through their website,
-                    quoting {voucherDetails.length === 1 ? "that" : "those"} details.
-                    We&rsquo;ll email {voucherDetails.length === 1 ? "it" : "them"} to
-                    you as well.
+                    <Rich text={tr(voucherDetails.length === 1 ? "p7ck.sendThroughOne" : "p7ck.sendThroughMany", { amt: money(grandTotal) })} bClass="" />
                   </div>
 
                   {/* Force the parent to give THEIR own reference so the provider
@@ -2397,14 +2396,14 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       two separate references. */}
                   {roster.length > 0 && (
                     <div className="mt-3 border-t pt-3" style={{ borderColor: `${tk.ink}1a` }}>
-                      <div className="text-[12px] font-bold" style={{ color: tk.ink }}>Your payment reference{roster.length > 1 ? "s" : ""}</div>
-                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>The reference you&rsquo;ll pay under (your {chosenVoucher.name} account/reference), so your provider can match your payment when it lands. {roster.length > 1 ? "One per child — siblings can pay under separate references." : ""}</div>
+                      <div className="text-[12px] font-bold" style={{ color: tk.ink }}>{roster.length > 1 ? tr("p7ck.yourPayRefs") : tr("p7ck.yourPayRef")}</div>
+                      <div className="mt-0.5 text-[11px]" style={{ color: tk.muted }}>{tr("p7ck.refHelp", { scheme: chosenVoucher.name })} {roster.length > 1 ? tr("p7ck.refHelpSiblings") : ""}</div>
                       <div className="mt-2 flex flex-col gap-2">
                         {roster.map((c) => (
                           <div key={c.name} className="flex flex-wrap items-center gap-2">
                             {roster.length > 1 && <span className="min-w-[92px] text-[12px] font-semibold" style={{ color: tk.ink }}>{c.name}</span>}
                             <input value={voucherRefs[c.name] ?? ""} onChange={(e) => setVoucherRefs((r) => ({ ...r, [c.name]: e.target.value }))}
-                              placeholder="e.g. your account/reference number" className={`flex-1 border px-3 py-2 text-[13px] ${tk.round}`}
+                              placeholder={tr("p7ck.phAcctRef")} className={`flex-1 border px-3 py-2 text-[13px] ${tk.round}`}
                               style={{ borderColor: (voucherRefs[c.name] ?? "").trim() ? `${tk.ink}33` : "#e0a020", background: tk.inputBg, color: tk.ink }} />
                           </div>
                         ))}
@@ -2415,7 +2414,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               )}
               {voucherId === NOT_LISTED && (
                 <div className="mt-2.5 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
-                  No problem — book anyway and we&rsquo;ll be in touch with how to pay.
+                  {tr("p7ck.noProblemBook")}
                 </div>
               )}
 
@@ -2425,13 +2424,12 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
               {vWindow.tooClose && (
                 <div className={`mt-2.5 border-2 px-3 py-2 text-[11.5px] leading-[1.5] ${tk.round}`}
                   style={{ borderColor: "#f59e0b", color: tk.ink }}>
-                  <b>Heads up &mdash; {vWindow.closeReason}.</b>{" "}
+                  <Rich text={tr("p7ck.headsUp", { reason: vWindow.closeReason ?? "" })} />{" "}
                   <span style={{ color: tk.muted }}>
-                    Voucher payments usually take a few working days to reach us, so please send it
-                    today.{" "}
+                    {tr("p7ck.voucherSlow")}{" "}
                     {ckSettings.voucherWhenClose === "approve"
-                      ? "We'll check it's arrived and confirm your place."
-                      : "If it doesn't arrive in time we may not be able to hold the place."}
+                      ? tr("p7ck.closeApprove")
+                      : tr("p7ck.closeNoHold")}
                   </span>
                 </div>
               )}
@@ -2442,11 +2440,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                     has to work out which one is theirs — and telling them when
                     it must ARRIVE, when it spends days in transit, is telling
                     them to be late. */}
-                Please send it by <b style={{ color: tk.ink }}>{vWindow.sendBy ? fmtDate(vWindow.sendBy) : `${vWindow.daysToPay} days from now`}</b>{" "}
-                so it reaches us in time. Your place is held until then; after that it may be
-                released, so tell us if something&rsquo;s gone wrong rather than leaving it. The
-                booking shows as <b style={{ color: tk.ink }}>awaiting voucher payment</b> until the
-                money arrives.
+                <Rich text={tr("p7ck.sendByLine", { when: vWindow.sendBy ? fmtDate(vWindow.sendBy) : tr("p7ck.daysFromNow", { n: vWindow.daysToPay ?? 0 }) })} bClass="" />
               </div>
             </div>
           )}
@@ -2460,13 +2454,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                   owed. */}
               {grandTotal <= 0 ? (
                 <>
-                  Nothing to collect &mdash; this booking is <b>£0</b>, so no invoice or payment
-                  link is sent.
+                  {tr("p7ck.opNothingCollect")}
                 </>
               ) : (
                 <>
-                  The booking is held as <b>Invoice sent</b> and the parent gets the payment-link
-                  email. Mark it paid from the booking itself once the money lands.
+                  {tr("p7ck.opInvoiceHeld")}
                 </>
               )}
             </div>
@@ -2480,31 +2472,31 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
 
       {ckStage === "pay" && parentMode && (
         <div className="mt-3">
-          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>Contact phone</label>
-          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 07700 900123"
+          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.contactPhone")}</label>
+          <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={tr("p7ck.phPhone")}
             className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: phone.trim() ? tk.line : tk.accent, color: tk.ink }} />
           <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
             {phone.trim()
-              ? (phonePrefilled ? "From your provider — edit it if it's changed." : "So your provider can reach you about this booking.")
-              : "We need a contact number to complete your booking."}
+              ? (phonePrefilled ? tr("p7ck.phoneFromProvider") : tr("p7ck.phoneReach"))
+              : tr("p7ck.phoneNeed")}
           </div>
         </div>
       )}
 
       {ckStage === "pay" && homeVisit && (
         <div className="mt-3">
-          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>We&rsquo;ll come to you — confirm the address</label>
-          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder="House number and street"
+          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>{tr("p7ck.weCome")}</label>
+          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder={tr("p7ck.phHouse")}
             className={`mb-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
-          <input value={serviceAddress.postcode} onChange={(e) => setServiceAddress((s) => ({ ...s, postcode: e.target.value.toUpperCase() }))} placeholder="Postcode"
+          <input value={serviceAddress.postcode} onChange={(e) => setServiceAddress((s) => ({ ...s, postcode: e.target.value.toUpperCase() }))} placeholder={tr("p7ck.postcodeLbl")}
             className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
             style={{ background: tk.inputBg, borderColor: serviceAddress.postcode.trim() ? tk.line : tk.accent, color: tk.ink }} />
           <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
             {serviceAddress.postcode.trim()
-              ? (addressPrefilled ? "From your account — edit it if this session is somewhere else (e.g. a grandparent's)." : "Where this session will actually happen. We'll check it's in the provider's coverage area.")
-              : "We need the postcode to confirm you're within the provider's home-visit coverage."}
+              ? (addressPrefilled ? tr("p7ck.addrPrefilled") : tr("p7ck.addrWhere"))
+              : tr("p7ck.addrNeed")}
           </div>
         </div>
       )}
@@ -2559,22 +2551,22 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           });
           else b.setStage("done");
         }}>
-        {booking?.busy ? "Booking…"
-          : !parentMode && !b.parent ? "Find the parent first"
-          : parentMode && !phone.trim() ? "Add your contact phone"
-          : homeVisit && !serviceAddress.postcode.trim() ? "Add the visit address"
-          : roster.length === 0 ? "Add a child first"
-          : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
-          : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`
-          : shortPasses.length > 0 ? `One child needs all ${shortPasses[0].dates.length} days of the ${shortPasses[0].name}`
+        {booking?.busy ? tr("p7ck.ctaBooking")
+          : !parentMode && !b.parent ? tr("p7ck.findParentFirst")
+          : parentMode && !phone.trim() ? tr("p7ck.ctaAddPhone")
+          : homeVisit && !serviceAddress.postcode.trim() ? tr("p7ck.ctaVisitAddr")
+          : roster.length === 0 ? tr("p7ck.ctaAddChildFirst")
+          : unassigned > 0 ? pickPlural(tr, locale, "p7ck.ctaNobody", unassigned)
+          : clashes.length > 0 ? tr("p7ck.ctaClash", { name: clashes[0].name, date: fmtDate(clashes[0].iso) })
+          : shortPasses.length > 0 ? tr("p7ck.ctaShort", { n: shortPasses[0].dates.length, pass: shortPasses[0].name })
           // "Confirm & pay £0.00" and "Send payment link · £0.00" both promise
           // something that isn't going to happen.
-          : grandTotal <= 0 ? (parentMode ? "Confirm booking" : "Create booking · nothing to collect")
+          : grandTotal <= 0 ? (parentMode ? tr("p7ck.ctaConfirm") : tr("p7ck.ctaCreateFree"))
           // Paying by voucher happens on the scheme's website, not here — so
           // the button confirms the booking, it doesn't take a payment.
-          : parentMode && method === "voucher" ? "Confirm booking"
-          : parentMode ? `Confirm & pay ${money(amountDue)}`
-          : `Send payment link & create · ${money(amountDue)}`}
+          : parentMode && method === "voucher" ? tr("p7ck.ctaConfirm")
+          : parentMode ? tr("p7ck.ctaConfirmPay", { amt: money(amountDue) })
+          : tr("p7ck.ctaSendLink", { amt: money(amountDue) })}
       </button>}
 
       <div className="mt-2 text-[11px] leading-[1.5]" style={{ color: tk.muted }}>{d.cancellation}</div>
