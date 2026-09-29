@@ -659,6 +659,7 @@ async function scheduledEmailSends(): Promise<void> {
     if (!s.tenantId || !s.sendAt || s.sendAt > now) continue;
     await fireOnce(`schedmail_${d.id}`, { tenantId: s.tenantId }, async () => {
       let recipients = (s.recipients ?? []).filter((r) => r.includes("@"));
+      const frozenCount = recipients.length;
       // The list was frozen when the email was SCHEDULED. A family who unsubscribed
       // (or was opted out / removed from marketing) in the meantime must not get a
       // marketing email anyway — re-apply the suppression + explicit opt-out rules
@@ -689,7 +690,7 @@ async function scheduledEmailSends(): Promise<void> {
         scheduledId: d.id,
         franchiseId: (s as { franchiseId?: string | null }).franchiseId ?? null,
       });
-      await d.ref.set({ status: "sent", sentAt: new Date().toISOString(), emailId: sent.id }, { merge: true });
+      await d.ref.set({ status: "sent", sentAt: new Date().toISOString(), emailId: sent.id, ...(frozenCount > recipients.length ? { droppedAtSend: frozenCount - recipients.length } : {}) }, { merge: true });
     }).catch((err) => console.error(`[sweeps] scheduled email ${d.id}:`, (err as Error).message));
   }
 }
