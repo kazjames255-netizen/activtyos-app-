@@ -261,7 +261,8 @@ children.put("/:id", async (req, res) => {
   const mine = [...bookings.docs, ...(allTenant?.docs ?? [])].filter((d) => {
     const b = d.data() as { childId?: string; kids?: { childId?: string }[]; franchiseId?: string | null };
     const has = b.childId === id || !!b.kids?.some((k) => k.childId === id);
-    const inFranchise = auth.role !== "franchise" || (b.franchiseId ?? null) === auth.franchiseId;
+    // A franchise's lead staff carry its franchiseId too: they may change care details only for THEIR franchise's children.
+    const inFranchise = !((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) || (b.franchiseId ?? null) === auth.franchiseId;
     return has && inFranchise;
   });
   if (!mine.length) { res.status(404).json({ error: "Child not found for this account" }); return; }

@@ -591,6 +591,12 @@ incidents.get("/:id/dossier", async (req, res) => {
   // isn't assigned to is a real, named permissions gate, not a lookup miss —
   // 403 says so honestly instead of masquerading as "not found".
   if (!snap.exists || snap.data()!.tenantId !== scope.tenantId) { res.status(404).json({ error: "Record not found" }); return; }
+  // A franchise (and its staff) opens dossiers only for records of ITS OWN children / logged by it — the same
+  // rule as the list. Without it, any franchisee could pull head office's or a sibling's family contact details.
+  const frId = (req.auth!.role === "franchise" || req.auth!.role === "staff") && req.auth!.franchiseId ? req.auth!.franchiseId : null;
+  const frKids = frId ? await franchiseChildIds(scope.tenantId, frId) : null;
+  const frMine = (x: { franchiseId?: unknown; childId?: unknown }) => !frId || x.franchiseId === frId || (typeof x.childId === "string" && !!frKids?.has(x.childId));
+  if (!frMine(snap.data()!)) { res.status(404).json({ error: "Record not found" }); return; }
   if (!staffMayRead(req, snap.data()!, lead)) { res.status(403).json({ error: "You don't have access to this record" }); return; }
   const rec = snap.data()!;
   const childName = String(rec.childName ?? "");
@@ -627,6 +633,7 @@ incidents.get("/:id/dossier", async (req, res) => {
 
   const bookings = bsnap.docs
     .map((d) => d.data() as Record<string, unknown>)
+    .filter((b) => !frId || b.franchiseId === frId) // a franchise sees only ITS OWN bookings of the child
     .filter((b) => (childId && b.childId === childId) || nameMatch(b))
     .map((b) => ({ listing: b.listing as string, dates: (b.dates ?? b.sessionLabel) as string, status: b.status as string, createdAt: b.createdAt as string, booker: b.booker as string, email: b.email as string, phone: b.phone as string }))
     .sort((a, b) => String(b.createdAt ?? "").localeCompare(String(a.createdAt ?? "")))
@@ -639,7 +646,7 @@ incidents.get("/:id/dossier", async (req, res) => {
   // The child's other records — through the same staff filter as the record
   // itself, or opening an ordinary accident showed staff the confidential
   // safeguarding concerns about that child.
-  const history = isnap.docs.filter((d) => staffMayRead(req, d.data(), lead))
+  const history = isnap.docs.filter((d) => frMine(d.data()) && staffMayRead(req, d.data(), lead))
     .map((d) => { const x = d.data() as Record<string, unknown>; return { id: d.id, childId: x.childId as string | undefined, childName: x.childName as string | undefined, kind: x.kind as string, date: x.date as string, category: (x.concernCategory ?? x.incidentType ?? x.injury) as string, severity: x.severity as string, description: x.description as string }; })
     .filter((h) => h.id !== req.params.id && ((childId && h.childId === childId) || (h.childName && h.childName.trim().toLowerCase() === childName.trim().toLowerCase())))
     .map((h) => ({ kind: h.kind, date: h.date, category: h.category, severity: h.severity, description: h.description }))
