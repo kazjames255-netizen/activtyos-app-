@@ -38,7 +38,31 @@ export const qePension = (annualGross: number) => Math.min(Math.max(annualGross 
 /** How an hourly person's hours are found: their contract, or their APPROVED
  *  timesheets (clock in/out). "rota" is the old name for the timesheet source. */
 export type PaidFrom = "contracted" | "rota" | "timesheet";
-export interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean; paidFrom?: PaidFrom; source?: "team" | "manual" }
+/** Which student/postgrad loan plan (if any) a deduction is due under —
+ *  field only; the 9%/6% deduction calc itself is a separate task
+ *  (docs/payroll-integrations-handoff.md §2). */
+export type StudentLoanPlan = "none" | "plan1" | "plan2" | "plan4" | "plan5" | "postgrad";
+/** Which country's PAYE bands apply — field only; Scottish/Welsh band rates
+ *  are a separate task (handoff §1/§2). Rest-of-UK bands are what payeAnnual
+ *  below actually applies regardless of this field for now. */
+export type TaxRegime = "uk" | "scotland" | "wales";
+export interface Emp {
+  id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean; paidFrom?: PaidFrom; source?: "team" | "manual";
+  /** UK National Insurance number. Server-side only: encrypted at rest
+   *  (server/src/lib/fieldCrypto.ts) and never round-tripped to the browser
+   *  in a listing — present here only as the logical field's shape for the
+   *  API boundary (server/src/routes/payroll.ts), never populated by a GET. */
+  niNumber?: string;
+  /** ISO date (YYYY-MM-DD) this employment started. */
+  startDate?: string;
+  /** ISO date this employment ended, or null/absent while still employed. */
+  leaveDate?: string | null;
+  studentLoanPlan?: StudentLoanPlan;
+  /** Company director — NI is calculated differently for directors (annual
+   *  earnings period); the calc itself is out of scope here, field only. */
+  director?: boolean;
+  taxRegime?: TaxRegime;
+}
 // A one-off addition (taxable — overtime/bonus/holiday pay) or after-tax deduction (advance/other) on a single pay run.
 export interface AdjItem { id: string; label: string; amount: number }
 // Per-employee, per-period overrides applied in the pay run — everything editable

@@ -356,8 +356,19 @@ export function PayrollApp() {
       catch (e) { flash(`⚠ The pay run wasn't saved: ${errMsg(e)}`); return; }
       finally { setBusy(false); }
     }
-    flash(`✅ ${period} — ${lines.length} payslips generated (${gbp0(totalNet)} net · ${FREQ_LABEL[freq]}).${demo ? "" : " Publish them to staff from the Payslips tab."}`);
+    flash(`✅ ${period} — ${lines.length} payslips generated (${gbp0(totalNet)} net · ${FREQ_LABEL[freq]}).${demo ? "" : " Approve it (by a different person) from the Payslips tab, then publish to staff."}`);
     setTab("payslips");
+  };
+  // Segregation of duties (server-enforced): a run is created as a draft and
+  // must be approved by someone OTHER than whoever created it before it can
+  // be published to staff.
+  const approveRun = async (r: PayRun) => {
+    if (!window.confirm(`Approve ${r.period}'s pay run? Someone other than whoever created it has to do this.`)) return;
+    try {
+      const run = await apiPost<PayRun>(`/api/payroll/runs/${encodeURIComponent(r.id)}/approve`, {});
+      setRuns((rs) => rs.map((x) => (x.id === r.id ? { ...x, status: run.status } : x)));
+      flash("✅ Run approved — you can now publish it to staff.");
+    } catch (e) { flash(`⚠ ${errMsg(e)}`); }
   };
   const publishRun = async (r: PayRun, on: boolean) => {
     if (on && !window.confirm(`Publish ${r.period}'s payslips to the ${r.lines.length} people on it? Each sees only their own estimated payslip under My payslips.`)) return;
@@ -515,9 +526,11 @@ export function PayrollApp() {
             <div className="space-y-4">{runs.map((r) => (
               <div key={r.id}>
                 <div className="mb-1.5 flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span><span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(`${r.paidOn}T12:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span>
-                  {!demo && (r.publishedAt
-                    ? <span className="ml-auto flex items-center gap-2"><span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">📣 Published to staff</span><button type="button" onClick={() => publishRun(r, false)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Unpublish</button></span>
-                    : <button type="button" onClick={() => publishRun(r, true)} className="ml-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📣 Publish to staff</button>)}
+                  {!demo && (r.status !== "approved"
+                    ? <button type="button" onClick={() => approveRun(r)} className="ml-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#b9770e] hover:border-[#b9770e]">✅ Approve run</button>
+                    : (r.publishedAt
+                      ? <span className="ml-auto flex items-center gap-2"><span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">📣 Published to staff</span><button type="button" onClick={() => publishRun(r, false)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Unpublish</button></span>
+                      : <button type="button" onClick={() => publishRun(r, true)} className="ml-auto rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📣 Publish to staff</button>))}
                 </div>
                 <div className="grid gap-1.5 sm:grid-cols-2">{r.lines.map((l) => (
                   <button key={l.id} type="button" onClick={() => showPayslip(l, r.period, r.paidOn)} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-left hover:border-[#1d3a8f]"><span className="text-[12.5px] font-bold text-[var(--ink)]">{l.name}</span><span className="text-[11px] text-[var(--ink-3)]">{l.role}</span><span className="ml-auto text-[12px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</span><span className="text-[11px] font-bold text-[#1d3a8f]">🧾 Payslip</span></button>
